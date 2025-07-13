@@ -41,6 +41,10 @@ export class SweepManager extends EventEmitter {
 		}
 	};
 
+	// Timers and monitoring
+	private processMonitorInterval: ReturnType<typeof setInterval> | null = null;
+	private dataTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
 	private healthMonitorInterval: ReturnType<typeof setInterval>;
 
 	// SSE emitter reference
@@ -123,7 +127,7 @@ export class SweepManager extends EventEmitter {
 		logInfo('🏥 Health check:', {
 			isRunning: this.isRunning,
 			hasSweepProcess: processState.isRunning,
-			pid: processState.processId,
+			pid: processState.actualProcessPid,
 			inFrequencyTransition: cycleState.inFrequencyTransition,
 			isCycling: cycleState.isCycling,
 			lastDataReceived: this.cyclingHealth.lastDataReceived?.toISOString(),
@@ -175,10 +179,10 @@ export class SweepManager extends EventEmitter {
 		}
 
 		// 2. Check if process is still alive using process manager
-		if (processState.isRunning && processState.processId) {
-			const isAlive = this.processManager.isProcessAlive();
+		if (processState.isRunning && processState.actualProcessPid) {
+			const isAlive = this.processManager.isProcessAlive(processState.actualProcessPid);
 			if (isAlive) {
-				logInfo(`✅ Process ${processState.processId} is still alive`);
+				logInfo(`✅ Process ${processState.actualProcessPid} is still alive`);
 			} else {
 				// Process no longer exists or cannot be signaled
 				needsRecovery = true;
@@ -268,7 +272,8 @@ export class SweepManager extends EventEmitter {
 			// Initialize cycling using frequency cycler service
 			this.frequencyCycler.initializeCycling({
 				frequencies: validatedFreqs,
-				cycleTime: cycleTime || 10000
+				cycleTime: cycleTime || 10000,
+				switchingTime: 1000 // Default switching time
 			});
 
 			this.isRunning = true;
@@ -342,7 +347,8 @@ export class SweepManager extends EventEmitter {
 		this.frequencyCycler.clearAllTimers();
 
 		// Stop the sweep process using process manager
-		await this.processManager.stopProcess();
+		const processState = this.processManager.getProcessState();
+		await this.processManager.stopProcess(processState);
 
 		// Clear buffer and reset services
 		this.bufferManager.clearBuffer();
@@ -470,16 +476,17 @@ export class SweepManager extends EventEmitter {
 		}
 
 		// Move to next frequency using frequency cycler
-		const nextFreq = this.frequencyCycler.cycleToNext();
-
-		// Emit switching status
-		this._emitEvent('status_change', {
-			status: 'switching',
-			nextFrequency: nextFreq
+		await this.frequencyCycler.cycleToNext(async (nextFreq) => {
+			// Emit switching status
+			this._emitEvent('status_change', {
+				status: 'switching',
+				nextFrequency: nextFreq
+			});
 		});
 
 		// Stop current process using process manager
-		await this.processManager.stopProcess();
+		const processState = this.processManager.getProcessState();
+		await this.processManager.stopProcess(processState);
 
 		// Wait before switching using frequency cycler
 		this.frequencyCycler.startSwitchTimer(() => {
@@ -564,7 +571,7 @@ export class SweepManager extends EventEmitter {
 			this.processManager.setEventHandlers({
 				onStdout: handleStdout,
 				onStderr: handleStderr,
-				onExit: (code, signal) => {
+				onExit: (code: number | null, signal: string | null) => {
 					logInfo('Process exited', { code, signal });
 					this._handleProcessExit(code, signal);
 				}
@@ -688,7 +695,8 @@ export class SweepManager extends EventEmitter {
 	 */
 	private async _stopSweepProcess(): Promise<void> {
 		// Use ProcessManager for all process operations
-		await this.processManager.stopProcess();
+		const currentProcessState = this.processManager.getProcessState();
+		await this.processManager.stopProcess(currentProcessState);
 		
 		// Clear monitoring timers
 		this._clearMonitoring();
@@ -779,7 +787,7 @@ export class SweepManager extends EventEmitter {
 			signalStrength: data.metadata?.signalStrength || this._getSignalStrength(data.power),
 			dbValues: data.binData || [],
 			frequency: data.frequency,
-			unit: data.unit,
+			unit: data.unit || 'MHz',
 			db: data.power,
 			peakBinIndex: 0 // BufferManager handles peak detection
 		};
@@ -844,11 +852,11 @@ export class SweepManager extends EventEmitter {
 			const processState = this.processManager.getProcessState();
 			
 			// Only kill hackrf_sweep processes that aren't ours
-			if (processState.isRunning && processState.pgid) {
+			if (processState.isRunning && processState.sweepProcessPgid) {
 				// Kill all hackrf_sweep processes except our current process group
 				await new Promise<void>((resolve) => {
 					exec(
-						`pgrep -x hackrf_sweep | grep -v "^${processState.pgid}$" | xargs -r kill -9`,
+						`pgrep -x hackrf_sweep | grep -v "^${processState.sweepProcessPgid}$" | xargs -r kill -9`,
 						() => resolve()
 					);
 				});
@@ -971,17 +979,17 @@ export class SweepManager extends EventEmitter {
 			analysis: errorAnalysis 
 		});
 
-		// Check if frequency should be blacklisted using FrequencyCycler
-		if (errorAnalysis.frequencyErrorCount > 3) {
+		// Check if frequency should be blacklisted using ErrorTracker
+		if (this.errorTracker.shouldBlacklistFrequency(frequency.value)) {
 			this.frequencyCycler.blacklistFrequency(frequency);
-			logWarn('Frequency blacklisted by FrequencyCycler', { frequency });
+			logWarn('Frequency blacklisted by ErrorTracker', { frequency });
 		}
 
 		// Emit error event
 		this._emitError(error.message, 'sweep_error', error);
 
 		// Check if we should stop using ErrorTracker
-		if (!this.errorTracker.shouldContinueOperation()) {
+		if (this.errorTracker.hasMaxConsecutiveErrors() || this.errorTracker.hasMaxFailuresPerMinute()) {
 			logError('ErrorTracker recommends stopping sweep', {
 				analysis: errorAnalysis,
 				recommendedAction: errorAnalysis.recommendedAction
@@ -1047,7 +1055,7 @@ export class SweepManager extends EventEmitter {
 		}
 
 		// Start recovery using ErrorTracker
-		this.errorTracker.startRecovery(reason);
+		this.errorTracker.startRecovery();
 		this.cyclingHealth.recovery.isRecovering = true;
 
 		this._emitEvent('recovery_start', {
@@ -1101,14 +1109,14 @@ export class SweepManager extends EventEmitter {
 		// Monitor process every 2 seconds
 		this.processMonitorInterval = setInterval(() => {
 			const processState = this.processManager.getProcessState();
-			if (!processState.isRunning || !processState.pid) return;
+			if (!processState.isRunning || !processState.actualProcessPid) return;
 
 			try {
 				// Check if process is still alive using ProcessManager
-				if (!this.processManager.isProcessAlive()) {
+				if (!this.processManager.isProcessAlive(processState.actualProcessPid)) {
 					logError(
 						'Process monitor: Process no longer exists',
-						{ pid: processState.pid },
+						{ pid: processState.actualProcessPid },
 						'process-dead'
 					);
 					// Process is dead, trigger exit handler
@@ -1118,10 +1126,10 @@ export class SweepManager extends EventEmitter {
 
 				// Check buffer health using BufferManager
 				const bufferStats = this.bufferManager.getBufferStats();
-				if (bufferStats.sizeKB > bufferStats.maxSizeKB * 0.8) {
+				if (bufferStats.bufferUtilization > 80) {
 					logWarn(
 						'Buffer size warning',
-						{ bufferSizeKB: bufferStats.sizeKB },
+						{ bufferUtilization: bufferStats.bufferUtilization },
 						'buffer-size-warning'
 					);
 				}
@@ -1129,7 +1137,7 @@ export class SweepManager extends EventEmitter {
 				logError(
 					'Process monitor error',
 					{ 
-						pid: processState.pid,
+						pid: processState.actualProcessPid,
 						error: error instanceof Error ? error.message : String(error)
 					},
 					'process-monitor-error'
@@ -1161,7 +1169,7 @@ export class SweepManager extends EventEmitter {
 						lastDataReceived: this.cyclingHealth.lastDataReceived?.toISOString(),
 						isRunning: this.isRunning,
 						processRunning: processState.isRunning,
-						pid: processState.pid,
+						pid: processState.actualProcessPid,
 						inFrequencyTransition: cycleState.inFrequencyTransition
 					},
 					'data-timeout'
@@ -1201,6 +1209,27 @@ export class SweepManager extends EventEmitter {
 				resolve({ availablePercent, totalMB, availableMB });
 			});
 		});
+	}
+
+	/**
+	 * Check if an error message indicates a critical system failure
+	 */
+	private _isCriticalError(message: string): boolean {
+		const criticalPatterns = [
+			/no hackrf boards found/i,
+			/hackrf_open\(\) failed/i,
+			/resource busy/i,
+			/permission denied/i,
+			/libusb_open\(\) failed/i,
+			/usb error/i,
+			/hackrf_is_streaming\(\) failed/i,
+			/hackrf_start_rx\(\) failed/i,
+			/device not found/i,
+			/initialization failed/i,
+			/fatal error/i
+		];
+
+		return criticalPatterns.some(pattern => pattern.test(message));
 	}
 
 	/**

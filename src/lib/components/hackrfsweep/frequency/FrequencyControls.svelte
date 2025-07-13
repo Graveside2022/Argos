@@ -50,7 +50,7 @@
 					document.dispatchEvent(event);
 				}, 50))}
 				{disabled}
-				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover/50 transition-all duration-200"
+				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover hover:border-opacity-50 transition-all duration-200"
 			>
 				2.4 GHz
 			</button>
@@ -61,7 +61,7 @@
 					document.dispatchEvent(event);
 				}, 50))}
 				{disabled}
-				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover/50 transition-all duration-200"
+				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover hover:border-opacity-50 transition-all duration-200"
 			>
 				5 GHz
 			</button>
@@ -72,7 +72,7 @@
 					document.dispatchEvent(event);
 				}, 50))}
 				{disabled}
-				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover/50 transition-all duration-200"
+				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover hover:border-opacity-50 transition-all duration-200"
 			>
 				915 MHz
 			</button>
@@ -83,7 +83,7 @@
 					document.dispatchEvent(event);
 				}, 50))}
 				{disabled}
-				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover/50 transition-all duration-200"
+				class="preset-btn px-3 py-2 text-xs bg-bg-card/40 border border-border-primary/40 rounded-lg hover:bg-bg-card/60 hover:border-border-hover hover:border-opacity-50 transition-all duration-200"
 			>
 				433 MHz
 			</button>
@@ -101,10 +101,24 @@
 	}
 
 	.saasfly-btn-add {
-		@apply bg-neon-cyan/20 border border-neon-cyan/40 hover:bg-neon-cyan/30 hover:border-neon-cyan/60 text-neon-cyan transition-all duration-200;
+		@apply border text-neon-cyan transition-all duration-200;
+		background-color: rgb(from var(--neon-cyan) r g b / 0.2);
+		border-color: rgb(from var(--neon-cyan) r g b / 0.4);
+	}
+	
+	.saasfly-btn-add:hover {
+		background-color: rgb(from var(--neon-cyan) r g b / 0.3);
+		border-color: rgb(from var(--neon-cyan) r g b / 0.6);
 	}
 
 	.saasfly-btn-secondary {
-		@apply bg-bg-card/40 border border-border-primary/40 hover:bg-bg-card/60 hover:border-border-hover/50 text-text-primary transition-all duration-200;
+		@apply border text-text-primary transition-all duration-200;
+		background-color: rgb(from var(--bg-card) r g b / 0.4);
+		border-color: rgb(from var(--border-primary) r g b / 0.4);
+	}
+	
+	.saasfly-btn-secondary:hover {
+		background-color: rgb(from var(--bg-card) r g b / 0.6);
+		border-color: var(--border-hover);
 	}
 </style>

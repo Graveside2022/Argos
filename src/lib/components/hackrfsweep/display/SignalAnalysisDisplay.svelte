@@ -6,7 +6,7 @@
 
 <!-- Signal Analysis Card -->
 <div
-	class="saasfly-dashboard-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/90 via-bg-card/70 to-bg-card/50 border border-border-primary/50 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-bg-card/95 hover:via-bg-card/75 hover:to-bg-card/55 transition-all duration-300"
+	class="saasfly-dashboard-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/90 via-bg-card/70 to-bg-card/50 border border-border-primary/50 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/95 hover:via-bg-card/75 hover:to-bg-card/55 transition-all duration-300"
 >
 	<div class="flex items-center mb-8">
 		<div
@@ -41,7 +41,7 @@
 	<!-- Signal Metrics Grid -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
 		<div
-			class="saasfly-metric-card p-6 bg-gradient-to-br from-orange-500/10 to-orange-500/5 rounded-xl border border-orange-400/20 hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-orange-500/15 hover:to-orange-500/8 hover:shadow-lg hover:shadow-orange-400/20 transition-all duration-300"
+			class="saasfly-metric-card p-6 bg-gradient-to-br from-orange-500/10 to-orange-500/5 rounded-xl border border-orange-400/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-orange-500/15 hover:to-orange-500/8 hover:shadow-lg hover:shadow-orange-400/20 transition-all duration-300"
 		>
 			<div class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2">
 				dB Level
@@ -51,7 +51,7 @@
 			</div>
 		</div>
 		<div
-			class="saasfly-metric-card p-6 bg-gradient-to-br from-signal-strong/10 to-signal-strong/5 rounded-xl border border-signal-strong/20 hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-signal-strong/15 hover:to-signal-strong/8 hover:shadow-lg hover:shadow-signal-strong/20 transition-all duration-300"
+			class="saasfly-metric-card p-6 bg-gradient-to-br from-signal-strong/10 to-signal-strong/5 rounded-xl border border-signal-strong/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-signal-strong/15 hover:to-signal-strong/8 hover:shadow-lg hover:shadow-signal-strong/20 transition-all duration-300"
 		>
 			<div class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2">
 				Signal Strength
@@ -61,7 +61,7 @@
 			</div>
 		</div>
 		<div
-			class="saasfly-metric-card p-6 bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 rounded-xl border border-neon-cyan/20 hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-neon-cyan/15 hover:to-neon-cyan/8 hover:shadow-lg hover:shadow-neon-cyan/20 transition-all duration-300"
+			class="saasfly-metric-card p-6 bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 rounded-xl border border-neon-cyan/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-neon-cyan/15 hover:to-neon-cyan/8 hover:shadow-lg hover:shadow-neon-cyan/20 transition-all duration-300"
 		>
 			<div class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2">
 				Target
@@ -71,7 +71,7 @@
 			</div>
 		</div>
 		<div
-			class="saasfly-metric-card p-6 bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-xl border border-accent-primary/20 hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-accent-primary/15 hover:to-accent-primary/8 hover:shadow-lg hover:shadow-accent-primary/20 transition-all duration-300"
+			class="saasfly-metric-card p-6 bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-xl border border-accent-primary/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-accent-primary/15 hover:to-accent-primary/8 hover:shadow-lg hover:shadow-accent-primary/20 transition-all duration-300"
 		>
 			<div class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2">
 				Detected
@@ -81,7 +81,7 @@
 			</div>
 		</div>
 		<div
-			class="saasfly-metric-card p-6 bg-gradient-to-br from-purple-400/10 to-purple-400/5 rounded-xl border border-purple-400/20 hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-purple-400/15 hover:to-purple-400/8 hover:shadow-lg hover:shadow-purple-400/20 transition-all duration-300"
+			class="saasfly-metric-card p-6 bg-gradient-to-br from-purple-400/10 to-purple-400/5 rounded-xl border border-purple-400/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-purple-400/15 hover:to-purple-400/8 hover:shadow-lg hover:shadow-purple-400/20 transition-all duration-300"
 		>
 			<div class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2">
 				Offset
