@@ -1,0 +1,567 @@
+/* Monochromatic Theme Override - Preserving Signal Strength Colors */
+
+:root {
+	/* Core monochromatic palette */
+	--mono-bg-primary: #0a0a0a;
+	--mono-bg-secondary: #141414;
+	--mono-bg-card: #141414;
+	--mono-bg-input: #1a1a1a;
+	--mono-bg-hover: #2d2d2d;
+	--mono-bg-button: #404040;
+
+	/* Text hierarchy */
+	--mono-text-primary: #ffffff;
+	--mono-text-secondary: #a3a3a3;
+	--mono-text-tertiary: #737373;
+	--mono-text-muted: #525252;
+
+	/* UI elements */
+	--mono-border: #262626;
+	--mono-border-hover: #404040;
+
+	/* Signal strength colors - PRESERVED */
+	--signal-weak: #60a5fa; /* Blue */
+	--signal-moderate: #fbbf24; /* Yellow */
+	--signal-strong: #ff6b35; /* Orange */
+	--signal-very-strong: #dc2626; /* Red */
+}
+
+/* Override colorful accents with monochrome */
+.glass-panel,
+.glass-panel-light {
+	background: var(--mono-bg-secondary) !important;
+	border-color: var(--mono-border) !important;
+}
+
+.glass-button {
+	background: var(--mono-bg-button) !important;
+	border-color: var(--mono-border) !important;
+	color: var(--mono-text-primary) !important;
+}
+
+.glass-button:hover {
+	background: var(--mono-bg-hover) !important;
+	border-color: var(--mono-border-hover) !important;
+}
+
+.glass-input {
+	background: var(--mono-bg-input) !important;
+	border-color: var(--mono-border) !important;
+	color: var(--mono-text-primary) !important;
+}
+
+.glass-input:focus {
+	border-color: var(--mono-border-hover) !important;
+	box-shadow: 0 0 0 1px var(--mono-border-hover) !important;
+}
+
+/* Remove neon glows except for signal strength */
+.neon-text,
+.shadow-neon-cyan,
+.shadow-neon-cyan-sm,
+.shadow-neon-cyan-lg {
+	text-shadow: none !important;
+	box-shadow: none !important;
+}
+
+/* Remove blue text shadows and replace with soft white glow */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-heading,
+.text-h1,
+.text-h2,
+.text-h3,
+.text-h4,
+.text-display-1,
+.text-display-2 {
+	text-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Remove any cyan/blue glows from text */
+.text-neon-cyan,
+.text-accent-primary {
+	text-shadow: none !important;
+}
+
+/* Monochrome navigation */
+.nav-link {
+	color: var(--mono-text-secondary) !important;
+}
+
+.nav-link:hover,
+.nav-link.active {
+	color: var(--mono-text-primary) !important;
+	background: var(--mono-bg-hover) !important;
+}
+
+/* Monochrome cards */
+.saasfly-feature-card,
+.saasfly-dashboard-card,
+.saasfly-metric-card {
+	background: var(--mono-bg-card) !important;
+	border-color: var(--mono-border) !important;
+}
+
+.saasfly-feature-card:hover,
+.saasfly-dashboard-card:hover,
+.saasfly-metric-card:hover {
+	border-color: var(--mono-border-hover) !important;
+	background: var(--mono-bg-secondary) !important;
+}
+
+/* Monochrome buttons - but preserve start/stop colors */
+.saasfly-btn-secondary,
+.saasfly-btn-ghost {
+	background: var(--mono-bg-button) !important;
+	border-color: var(--mono-border) !important;
+	color: var(--mono-text-primary) !important;
+}
+
+.saasfly-btn-secondary:hover,
+.saasfly-btn-ghost:hover {
+	background: var(--mono-bg-hover) !important;
+	border-color: var(--mono-border-hover) !important;
+}
+
+/* Start button - Cyan like sweep control */
+#startButton {
+	background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+	color: white !important;
+}
+
+#startButton:hover {
+	background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%) !important;
+}
+
+/* Keep stop button red */
+#stopButton:not(:disabled) {
+	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+/* Load Frequencies button - Purple */
+#loadFrequenciesButton {
+	background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%) !important;
+	color: white !important;
+	border-color: #9333ea !important;
+}
+
+#loadFrequenciesButton:hover {
+	background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+	border-color: #a855f7 !important;
+}
+
+/* Signal Analysis color - Yellow/Amber */
+.signal-analysis-value,
+#dbLevelValue {
+	color: #facc15 !important;
+}
+
+/* Update the dB current value display */
+#dbCurrentValue {
+	background: var(--mono-bg-card) !important;
+	border-color: #facc15 !important;
+	color: #facc15 !important;
+}
+
+/* Icon colors to match their sections */
+/* Frequency Configuration icon - Green like Add Frequency */
+.frequency-config-icon {
+	background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	background-clip: text !important;
+}
+
+/* Sweep Control icon - Cyan */
+.sweep-control-icon {
+	background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	background-clip: text !important;
+}
+
+/* External Tools icon - Purple */
+.external-tools-icon {
+	background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%) !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: transparent !important;
+	background-clip: text !important;
+}
+
+/* External Tools header - Keep white */
+.external-tools-header {
+	color: #ffffff !important;
+}
+
+/* Signal Analysis icon and header - Yellow/Amber */
+.signal-analysis-icon,
+.signal-analysis-header {
+	color: #facc15 !important;
+}
+
+/* Update card header backgrounds to match */
+.saasfly-feature-card:has(.external-tools-icon) .group-hover\:border-purple-400\/40:hover {
+	border-color: rgba(168, 85, 247, 0.4) !important;
+}
+
+.saasfly-feature-card:has(.sweep-control-icon) .group-hover\:border-cyan-400\/40:hover {
+	border-color: rgba(6, 182, 212, 0.4) !important;
+}
+
+.saasfly-dashboard-card:has(.signal-analysis-icon) {
+	border-color: rgba(250, 204, 21, 0.2) !important;
+}
+
+.saasfly-dashboard-card:has(.signal-analysis-icon):hover {
+	border-color: rgba(250, 204, 21, 0.4) !important;
+}
+
+/* Signal strength gradient classes - PRESERVED */
+.gradient-weak {
+	background: linear-gradient(to right, var(--signal-weak), var(--signal-weak)) !important;
+}
+
+.gradient-moderate {
+	background: linear-gradient(to right, var(--signal-weak), var(--signal-moderate)) !important;
+}
+
+.gradient-strong {
+	background: linear-gradient(
+		to right,
+		var(--signal-weak),
+		var(--signal-moderate),
+		var(--signal-strong)
+	) !important;
+}
+
+.gradient-very-strong {
+	background: linear-gradient(
+		to right,
+		var(--signal-weak),
+		var(--signal-moderate),
+		var(--signal-strong),
+		var(--signal-very-strong)
+	) !important;
+}
+
+/* Signal strength text colors - PRESERVED */
+.text-signal-weak {
+	color: var(--signal-weak) !important;
+}
+
+.text-signal-moderate {
+	color: var(--signal-moderate) !important;
+}
+
+.text-signal-strong {
+	color: var(--signal-strong) !important;
+}
+
+.text-signal-very-strong {
+	color: var(--signal-very-strong) !important;
+}
+
+/* Blue marker for signal strength */
+#dbCurrentIndicator {
+	background: #3b82f6 !important; /* Keep blue */
+	box-shadow:
+		0 0 8px rgba(59, 130, 246, 0.6),
+		0 0 16px rgba(59, 130, 246, 0.4) !important;
+}
+
+#dbCurrentIndicator::before {
+	border-top-color: #3b82f6 !important;
+}
+
+#dbCurrentValue {
+	background: var(--mono-bg-card) !important;
+	border-color: #3b82f6 !important;
+	color: #3b82f6 !important;
+}
+
+/* Remove colored backgrounds from non-signal elements */
+.bg-gradient-to-r,
+.bg-gradient-to-br {
+	background: var(--mono-bg-card) !important;
+}
+
+/* Status badges - monochrome */
+.bg-accent-primary\/10 {
+	background: var(--mono-bg-secondary) !important;
+}
+
+.border-accent-primary\/20 {
+	border-color: var(--mono-border) !important;
+}
+
+.text-accent-primary {
+	color: var(--mono-text-secondary) !important;
+}
+
+/* Remove all animated glows except signal strength */
+.animate-pulse:not(.signal-indicator-fill):not(.status-indicator),
+.animate-\[pulse_2s_infinite\] {
+	animation: none !important;
+}
+
+/* Add specific styles for card icon containers */
+.saasfly-feature-card .p-3.bg-gradient-to-br {
+	transition: all 0.3s ease;
+}
+
+/* Frequency Configuration card icon - Green */
+.saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br {
+	background: linear-gradient(
+		135deg,
+		rgba(52, 211, 153, 0.2) 0%,
+		rgba(16, 185, 129, 0.1) 100%
+	) !important;
+	border-color: rgba(52, 211, 153, 0.2) !important;
+}
+
+.saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br svg {
+	color: #34d399 !important;
+}
+
+/* Sweep Control card icon - Cyan */
+.saasfly-feature-card:nth-child(2) .p-3.bg-gradient-to-br {
+	background: linear-gradient(
+		135deg,
+		rgba(6, 182, 212, 0.2) 0%,
+		rgba(8, 145, 178, 0.1) 100%
+	) !important;
+	border-color: rgba(6, 182, 212, 0.2) !important;
+}
+
+.saasfly-feature-card:nth-child(2) .p-3.bg-gradient-to-br svg {
+	color: #06b6d4 !important;
+}
+
+/* External Tools card icon - Purple  */
+.saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br {
+	background: linear-gradient(
+		135deg,
+		rgba(168, 85, 247, 0.2) 0%,
+		rgba(147, 51, 234, 0.1) 100%
+	) !important;
+	border-color: rgba(168, 85, 247, 0.2) !important;
+}
+
+.saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br svg {
+	color: #a855f7 !important;
+}
+
+/* Signal Analysis card - Yellow/Amber */
+.saasfly-dashboard-card .p-3.bg-gradient-to-br {
+	background: linear-gradient(
+		135deg,
+		rgba(250, 204, 21, 0.2) 0%,
+		rgba(250, 204, 21, 0.1) 100%
+	) !important;
+	border-color: rgba(250, 204, 21, 0.2) !important;
+}
+
+.saasfly-dashboard-card .p-3.bg-gradient-to-br svg {
+	color: #facc15 !important;
+}
+
+/* Monochrome focus states */
+*:focus {
+	outline-color: var(--mono-border-hover) !important;
+}
+
+/* Monochrome scrollbar */
+::-webkit-scrollbar-track {
+	background: var(--mono-bg-secondary) !important;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--mono-bg-button) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--mono-bg-hover) !important;
+}
+
+/* Add Frequency button - Green */
+#addFrequencyButton,
+.add-frequency-btn {
+	background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+	color: white !important;
+	border-color: #16a34a !important;
+}
+
+#addFrequencyButton:hover,
+.add-frequency-btn:hover {
+	background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
+	border-color: #22c55e !important;
+}
+
+/* Section header text colors - Keep white */
+.frequency-config-header,
+.sweep-control-header,
+.external-tools-header,
+.saasfly-feature-card h3 {
+	color: #ffffff !important;
+}
+
+/* HackRF Sweep branding */
+.hackrf-brand {
+	color: #f97316 !important; /* Orange for HackRF */
+}
+
+.sweep-brand {
+	color: #ffffff !important; /* White for Sweep */
+}
+
+/* Signal strength label - Always white */
+.signal-strength-label {
+	color: #ffffff !important;
+}
+
+/* Signal strength value text - changes color based on strength */
+#signalStrengthText.signal-weak {
+	color: #60a5fa !important; /* Blue */
+}
+
+#signalStrengthText.signal-moderate {
+	color: #fbbf24 !important; /* Yellow */
+}
+
+#signalStrengthText.signal-strong {
+	color: #ff6b35 !important; /* Orange */
+}
+
+#signalStrengthText.signal-very-strong {
+	color: #dc2626 !important; /* Red */
+}
+
+/* No Signal text - Always white */
+#signalStrengthText.signal-no-signal,
+#signalStrengthText:not([class*='signal-']) {
+	color: #ffffff !important;
+}
+
+/* Default signal strength text to white */
+#signalStrengthText {
+	color: #ffffff !important;
+}
+
+/* Override text-signal-none to be white */
+.text-signal-none {
+	color: #ffffff !important;
+}
+
+/* Keep frequency display monochrome */
+.frequency-item {
+	background: var(--mono-bg-secondary) !important;
+	border-color: var(--mono-border) !important;
+}
+
+.frequency-item:hover {
+	border-color: var(--mono-border-hover) !important;
+}
+
+/* Monochrome status messages */
+.status-success,
+.status-info,
+.status-warning,
+.status-error {
+	background: var(--mono-bg-secondary) !important;
+	border-color: var(--mono-border) !important;
+	color: var(--mono-text-primary) !important;
+}
+
+/* Override any remaining colorful elements */
+[class*='bg-neon-cyan'],
+[class*='border-neon-cyan'],
+[class*='text-neon-cyan'] {
+	background-color: var(--mono-bg-secondary) !important;
+	border-color: var(--mono-border) !important;
+	color: var(--mono-text-secondary) !important;
+}
+
+/* Keep the signal strength scale markers visible */
+.signal-indicator .absolute[data-db] {
+	background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.signal-indicator .absolute[data-db]:hover {
+	background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Ensure all uppercase labels are white by default */
+.uppercase.tracking-wide:not(.signal-scale-label),
+.text-text-muted.uppercase:not(.signal-scale-label) {
+	color: #ffffff !important;
+}
+
+/* Signal Strength Scale specifically grey */
+.signal-scale-label,
+.uppercase.tracking-wide.text-center {
+	color: #737373 !important;
+}
+
+/* Color-matched glows for icon boxes */
+/* Frequency Configuration - Green glow */
+.saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br {
+	box-shadow:
+		0 0 15px rgba(52, 211, 153, 0.2),
+		0 0 25px rgba(52, 211, 153, 0.1) !important;
+}
+
+/* Sweep Control - Cyan glow */
+.saasfly-feature-card:nth-child(2) .p-3.bg-gradient-to-br {
+	box-shadow:
+		0 0 15px rgba(6, 182, 212, 0.2),
+		0 0 25px rgba(6, 182, 212, 0.1) !important;
+}
+
+/* Analysis Tools - Purple glow */
+.saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br {
+	box-shadow:
+		0 0 15px rgba(168, 85, 247, 0.2),
+		0 0 25px rgba(168, 85, 247, 0.1) !important;
+}
+
+/* Signal Analysis - Yellow glow */
+.saasfly-dashboard-card .p-3.bg-gradient-to-br {
+	box-shadow:
+		0 0 15px rgba(250, 204, 21, 0.2),
+		0 0 25px rgba(250, 204, 21, 0.1) !important;
+}
+
+/* Dimmed soft white glow for HackRF branding */
+.hackrf-brand,
+.sweep-brand {
+	text-shadow:
+		0 0 10px rgba(255, 255, 255, 0.15),
+		0 0 20px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Change specific labels to grey */
+/* Signal Strength Scale - specific selector */
+.relative.pb-20 > .text-sm.text-text-muted.uppercase.tracking-wide.mb-8.text-center {
+	color: #737373 !important;
+}
+
+/* DB Level, Signal Strength, Target, Detected, Offset labels */
+.saasfly-metric-card .text-sm.text-text-muted.uppercase,
+.saasfly-metric-value + .text-sm,
+.metric-label {
+	color: #737373 !important;
+}
+
+/* Cycle Time label */
+label[for='cycleTime'] {
+	color: #737373 !important;
+}
+
+/* Frequencies label in the list */
+#frequencyList:empty::before {
+	color: #737373 !important;
+}

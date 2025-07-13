@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import fonts used by HackRF */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+
+/* Import HackRF CSS files */
+@import './src/styles/hackrf/custom-components-exact.css';
+@import './src/styles/hackrf/geometric-backgrounds.css';
+@import './src/styles/hackrf/saasfly-buttons.css';
+@import './src/styles/hackrf/monochrome-theme.css';
+
+/* Additional custom styles for HackRF components */
+@layer components {
+	/* Animation delays */
+	.animation-delay-2000 {
+		animation-delay: 2s;
+	}
+	.animation-delay-4000 {
+		animation-delay: 4s;
+	}
+	.animation-delay-6000 {
+		animation-delay: 6s;
+	}
+
+	/* Override glassmorphism styles for stronger effect */
+	.glass-panel {
+		background: rgba(17, 17, 17, 0.6) !important;
+		backdrop-filter: blur(12px) !important;
+		-webkit-backdrop-filter: blur(12px) !important;
+		border: 1px solid rgba(255, 255, 255, 0.1) !important;
+		box-shadow:
+			0 8px 32px rgba(0, 0, 0, 0.4),
+			0 2px 12px rgba(0, 0, 0, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.05),
+			inset 0 0 20px rgba(255, 255, 255, 0.02);
+	}
+
+	.glass-panel-light {
+		background: rgba(26, 26, 26, 0.5) !important;
+		backdrop-filter: blur(12px) !important;
+		-webkit-backdrop-filter: blur(12px) !important;
+		border: 1px solid rgba(255, 255, 255, 0.1) !important;
+		box-shadow:
+			0 4px 16px rgba(0, 0, 0, 0.3),
+			0 1px 6px rgba(0, 0, 0, 0.2),
+			inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	}
+
+	.glass-input {
+		background: rgba(26, 26, 26, 0.4) !important;
+		backdrop-filter: blur(12px) !important;
+		-webkit-backdrop-filter: blur(12px) !important;
+		border: 1px solid rgba(255, 255, 255, 0.1) !important;
+		box-shadow:
+			0 2px 8px rgba(0, 0, 0, 0.2),
+			inset 0 1px 0 rgba(255, 255, 255, 0.03);
+	}
+
+	.glass-input:focus {
+		background: rgba(26, 26, 26, 0.5) !important;
+		border-color: rgba(59, 130, 246, 0.5) !important;
+		box-shadow:
+			0 0 0 3px rgba(59, 130, 246, 0.1),
+			0 2px 8px rgba(0, 0, 0, 0.2),
+			inset 0 1px 0 rgba(255, 255, 255, 0.03);
+	}
+
+	.glass-button {
+		background: rgba(255, 255, 255, 0.1) !important;
+		backdrop-filter: blur(12px) !important;
+		-webkit-backdrop-filter: blur(12px) !important;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.glass-button::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.1) 50%,
+			transparent 100%
+		);
+	}
+
+	.glass-status {
+		background: rgba(26, 26, 26, 0.3) !important;
+		backdrop-filter: blur(12px) !important;
+		-webkit-backdrop-filter: blur(12px) !important;
+		border: 1px solid rgba(255, 255, 255, 0.08) !important;
+	}
+
+	/* Enhanced glass header with monochrome glow */
+	.glass-header {
+		background: rgba(10, 10, 10, 0.8) !important;
+		backdrop-filter: blur(16px) saturate(180%) !important;
+		-webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 4px 20px rgba(0, 0, 0, 0.5),
+			inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	}
+}
+
+/* Font utilities */
+.font-body {
+	font-family:
+		'Inter',
+		system-ui,
+		-apple-system,
+		sans-serif;
+}
+
+.font-heading {
+	font-family:
+		'Inter',
+		system-ui,
+		-apple-system,
+		sans-serif;
+}
+
+.font-mono {
+	font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/* Line height utilities */
+.leading-body {
+	line-height: 1.5;
+}
+
+.leading-heading {
+	line-height: 1.25;
+}
+
+/* Navigation link styles */
+.nav-link {
+	@apply text-text-secondary hover:text-text-primary relative;
+}
+
+.nav-link.active {
+	@apply text-neon-cyan;
+}
+
+.nav-link.active::after {
+	content: '';
+	position: absolute;
+	bottom: -4px;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: currentColor;
+	border-radius: 1px;
+}
+
+/* Mobile navigation styles */
+.mobile-nav-link {
+	@apply text-text-secondary hover:text-text-primary hover:bg-bg-hover;
+}
+
+.mobile-nav-link.active {
+	@apply text-neon-cyan bg-neon-cyan/10;
+}
+
+/* Status indicator */
+.status-indicator {
+	@apply w-2 h-2 bg-green-500 rounded-full animate-pulse;
+}
+
+/* Logo icon hover effect */
+.logo-icon {
+	@apply transition-transform duration-300 hover:scale-110;
+}

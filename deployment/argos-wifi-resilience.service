@@ -1,0 +1,31 @@
+[Unit]
+Description=Argos WiFi Resilience Manager
+Documentation=https://github.com/yourusername/Argos
+After=network.target wpa_supplicant.service NetworkManager.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/projects/Argos
+
+# Run the WiFi resilience monitor
+ExecStart=/usr/local/bin/argos-wifi-resilience.sh monitor
+
+# Restart configuration
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-wifi-resilience
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Allow network operations
+PrivateNetwork=false
+
+[Install]
+WantedBy=multi-user.target

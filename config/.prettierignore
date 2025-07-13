@@ -1,0 +1,22 @@
+# Ignore artifacts:
+build
+coverage
+.svelte-kit
+package
+node_modules
+
+# Ignore all lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Ignore all minified files
+*.min.js
+*.min.css
+
+# Ignore generated files
+*.generated.*
+**/generated/**
+
+# Ignore specific files
+CHANGELOG.md

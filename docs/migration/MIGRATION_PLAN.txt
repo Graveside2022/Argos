@@ -1,0 +1,833 @@
+ARGOSFINAL MIGRATION PLAN - PIXEL-PERFECT DESIGN PRESERVATION
+=============================================================
+
+This document outlines the complete migration strategy for consolidating the HackRF Sweep Monitor (port 3002) and Kismet Operations Center (port 8005) into a unified SvelteKit application using a single technology stack: Svelte/SvelteKit, TypeScript, Node.js + Express.js, Vite, and Tailwind CSS.
+
+**CRITICAL REQUIREMENT**: This migration will preserve 100% of the existing HTML design, CSS styling, layout, colors, fonts, animations, and visual elements. NO design changes will be made. The migration is purely technical - moving from vanilla JS/Express to SvelteKit while maintaining EXACT visual and functional parity.
+
+==========================================================================
+PHASE 0: DESIGN PRESERVATION AUDIT AND DOCUMENTATION
+==========================================================================
+
+0.1 Complete Design Inventory - HackRF Monitor (Port 3002)
+----------------------------------------------------------
+CRITICAL: Document EVERY visual element BEFORE migration begins
+
+Source Files to Audit:
+- /home/pi/projects/hackrfsweep/hackrfsweep_v1/public/index.html
+- /home/pi/projects/hackrfsweep/hackrfsweep_v1/public/css/styles.css (if exists)
+- Any inline styles in HTML
+- Any JavaScript-generated styles
+
+Design Elements to Document:
+- Exact HTML structure and element hierarchy
+- All CSS classes and their properties
+- Color values (hex, rgb, rgba) - MUST match exactly
+- Font families, sizes, weights, line-heights
+- Spacing (margins, paddings) - pixel-perfect
+- Border styles, radiuses, shadows
+- Background colors, gradients, images
+- Animation keyframes and transitions
+- Hover states and interactive effects
+- Z-index layering
+- Flexbox/Grid layouts
+- Media queries and breakpoints
+- Custom scrollbar styles
+- SVG elements and their properties
+- Canvas rendering specifics
+
+Create Reference Document:
+- Take full-page screenshots at multiple resolutions
+- Document every UI state (loading, error, success, etc.)
+- Record all animations/transitions as videos
+- Export color palette with exact values
+- List all external resources (fonts, icons, images)
+
+0.2 Complete Design Inventory - Kismet Operations (Port 8005)
+-------------------------------------------------------------
+Source Files to Audit:
+- Port 8005 project files (specific location to be determined based on current deployment)
+- CSS files from the Kismet Operations interface
+- Any existing Svelte/SvelteKit components if already using the framework
+- Theme files (dark, light, tactical)
+- Any component-specific styles
+
+Design Elements to Document:
+- All theme variations with exact color values
+- Cesium map integration styling
+- Socket.IO status indicators
+- Device list table styling
+- Control panel layouts
+- Modal/dialog designs
+- Toast/notification styles
+- Loading spinners and animations
+- Icon usage and sizes
+- Button states and styles
+- Form input designs
+- Tab navigation styles
+- Dropdown menu designs
+- Progress bar styles
+- Badge and pill designs
+
+0.3 Design Preservation Strategy
+--------------------------------
+**MANDATORY APPROACH**:
+1. Copy ALL existing CSS files verbatim to ArgosFinal
+2. Use scoped styles in Svelte components to avoid conflicts
+3. Import original CSS files without modification
+4. Use :global() wrapper where necessary to preserve specificity
+5. NO Tailwind classes on migrated components initially
+6. Keep all class names identical to original
+7. Preserve all inline styles exactly
+8. Maintain exact DOM structure
+
+**FORBIDDEN ACTIONS**:
+- Do NOT "improve" any designs
+- Do NOT consolidate similar styles
+- Do NOT update color schemes
+- Do NOT change spacing or sizing
+- Do NOT modernize UI elements
+- Do NOT add new animations
+- Do NOT remove "redundant" styles
+- Do NOT optimize CSS during migration
+
+==========================================================================
+UNIFIED TECHNOLOGY STACK APPROACH
+==========================================================================
+
+Both port 3002 (HackRF Sweep Monitor) and port 8005 (Kismet Operations) will be 
+consolidated into a single SvelteKit application using:
+
+- **Framework**: Svelte/SvelteKit (already configured in ArgosFinal)
+- **Language**: TypeScript for type safety
+- **Runtime**: Node.js with Express.js compatibility through SvelteKit adapters
+- **Build Tool**: Vite (integrated with SvelteKit)
+- **Styling**: Tailwind CSS for new components + preserved original CSS
+- **State Management**: Svelte stores
+- **Real-time Communication**: Native WebSockets + Server-Sent Events
+
+Key Benefits of Unified Stack:
+- Single deployment and maintenance point
+- Shared components and utilities
+- Consistent development experience
+- Better performance through code sharing
+- Simplified build and deployment process
+
+Migration Strategy:
+- Port 3002: Migrate from Express.js/Vanilla JS to SvelteKit routes and components
+- Port 8005: Integrate existing functionality into the SvelteKit structure
+- Both applications will share the same codebase but maintain separate routes
+
+==========================================================================
+PHASE 1: PROJECT SETUP AND ENVIRONMENT CONFIGURATION
+==========================================================================
+
+1.1 Initial Setup
+-----------------
+- Navigate to ArgosFinal directory: cd /home/pi/projects/ArgosFinal
+- Install dependencies: npm install
+- Create .env file for environment variables
+- Configure ports and external service URLs
+
+1.2 Environment Variables
+------------------------
+Create .env file with:
+- PUBLIC_HACKRF_PORT=3002 (for initial proxy during migration)
+- PUBLIC_BACKEND_PORT=8005 (Express backend API)
+- PUBLIC_FRONTEND_PORT=8006 (SvelteKit frontend)
+- PUBLIC_OPENWEBRX_URL=http://localhost:8073
+- PUBLIC_SPECTRUM_ANALYZER_URL=http://localhost:8092
+- PORT=8006 (ArgosFinal SvelteKit frontend port)
+
+Port Architecture:
+- 8005: Express.js Backend API (handles all business logic, WebSocket connections, and service proxying)
+- 8006: SvelteKit Frontend (serves the UI and connects to backend API)
+- The frontend makes API calls to the backend on port 8005
+- WebSocket connections are established with the backend on port 8005
+
+1.3 Development Server Setup
+---------------------------
+- Run: npm run dev
+- Access at: http://localhost:5173
+- Verify basic navigation works
+- Check Tailwind CSS compilation
+
+==========================================================================
+PHASE 2: BACKEND API MIGRATION
+==========================================================================
+
+2.1 HackRF API Migration
+------------------------
+Source: /home/pi/projects/hackrfsweep/hackrfsweep_v1/src/server.js
+
+IMPORTANT: API routes are handled by the Express backend on port 8005, NOT in SvelteKit.
+The SvelteKit frontend (port 8006) will make HTTP/WebSocket calls to the backend.
+
+Backend API routes (Express - Port 8005):
+- +server.ts (main API handler)
+- health/+server.ts (health check endpoint)
+- start-sweep/+server.ts (start frequency cycling)
+- stop-sweep/+server.ts (stop frequency cycling)
+- cycle-status/+server.ts (get cycling status)
+- emergency-stop/+server.ts (emergency halt)
+
+SSE Implementation:
+- data-stream/+server.ts (Server-Sent Events for real-time data)
+- Implement EventSource handling
+- Port frequency cycling logic
+- Maintain WebSocket compatibility
+
+2.2 Kismet API Migration  
+------------------------
+Source: Port 8005 Express Backend API (provides REST endpoints and WebSocket services)
+
+Backend API routes for Kismet (Express - Port 8005):
+- +server.ts (main API handler)
+- proxy/[...path]/+server.ts (Kismet service proxy)
+- wigle/[...path]/+server.ts (WigleToTAK proxy)
+- run-script/+server.ts (script execution)
+- health/+server.ts (health check)
+- info/+server.ts (system information)
+
+Socket.IO Migration:
+- Create WebSocket handler in hooks.server.ts
+- Port Socket.IO logic to native WebSockets or socket.io adapter
+- Implement real-time event handling
+- Maintain backward compatibility
+
+2.3 Shared Server Logic
+----------------------
+Create in /src/lib/server/:
+- hackrf/sweepManager.ts (HackRF process management)
+- hackrf/frequencyManager.ts (frequency cycling logic)
+- kismet/scriptRunner.ts (script execution logic)
+- kismet/proxyHandler.ts (proxy configuration)
+- shared/logger.ts (unified logging)
+- shared/errorHandler.ts (error management)
+
+==========================================================================
+PHASE 3: FRONTEND COMPONENT MIGRATION - PIXEL-PERFECT PRESERVATION
+==========================================================================
+
+**CRITICAL**: This phase requires EXTREME CARE to preserve exact design
+
+3.1 HackRF UI Components - Design-First Migration
+-------------------------------------------------
+Source: /home/pi/projects/hackrfsweep/hackrfsweep_v1/public/
+
+Step 1: Pre-Migration Design Capture
+- Screenshot every component state
+- Document exact pixel dimensions
+- Record all CSS property values
+- Note JavaScript-driven style changes
+- Export all assets (images, fonts, icons)
+
+Step 2: CSS Preservation Strategy
+- Copy entire CSS file to /src/lib/styles/hackrf-original.css
+- Import in app.css with: @import '$lib/styles/hackrf-original.css';
+- DO NOT modify any CSS values
+- DO NOT convert to Tailwind
+- Keep all vendor prefixes
+- Preserve all browser hacks
+- Maintain all !important declarations
+
+Step 3: HTML-to-Svelte Conversion Rules
+Create components with EXACT HTML structure:
+
+Example - FrequencyDisplay.svelte:
+```svelte
+<script>
+  // Only logic, no style modifications
+  export let frequency = '';
+  export let unit = 'MHz';
+</script>
+
+<!-- EXACT HTML structure from original -->
+<div class="frequency-display-wrapper">
+  <div class="frequency-display">
+    <span class="freq-value">{frequency}</span>
+    <span class="freq-unit">{unit}</span>
+  </div>
+</div>
+
+<style>
+  /* Use :global() to ensure exact specificity */
+  :global(.frequency-display-wrapper) {
+    /* Empty - styles come from hackrf-original.css */
+  }
+</style>
+```
+
+Components to create (with exact preservation):
+- FrequencyDisplay.svelte - preserve LCD-style display
+- SpectrumVisualizer.svelte - maintain canvas rendering exactly
+- ControlPanel.svelte - keep button styles/spacing identical
+- StatusIndicator.svelte - preserve animation timing
+- FrequencyTable.svelte - maintain table styling exactly
+
+Step 4: JavaScript Logic Preservation
+- Keep all timing values identical (delays, intervals)
+- Preserve all animation durations
+- Maintain exact event handling behavior
+- Keep all console.log statements (for compatibility)
+- Preserve all global variable names in stores
+- Maintain exact function names for debugging
+
+Step 5: Verification Checklist
+□ Side-by-side visual comparison passes
+□ All animations match frame-by-frame
+□ Hover states identical
+□ Click areas unchanged
+□ Responsive breakpoints preserved
+□ No layout shifts
+□ Colors match exactly (#000000 not #000)
+□ Fonts render identically
+□ Spacing pixel-perfect
+
+3.2 Kismet UI Components - Theme-Aware Design Preservation
+----------------------------------------------------------
+Source: Port 8005 Kismet Operations application views and components
+
+Step 1: Theme System Preservation
+- Copy ALL theme CSS files exactly:
+  - /public/css/theme-dark.css → /src/lib/styles/kismet-theme-dark.css
+  - /public/css/theme-light.css → /src/lib/styles/kismet-theme-light.css
+  - /public/css/theme-tactical.css → /src/lib/styles/kismet-theme-tactical.css
+- Preserve theme switching mechanism exactly
+- Keep all CSS custom properties (--var-name)
+- Maintain theme class application logic
+
+Step 2: Component Migration with Design Lock
+DeviceList.svelte:
+```svelte
+<script>
+  // Preserve exact data structure
+  export let devices = [];
+  export let sortColumn = 'last_seen';
+  export let sortDirection = 'desc';
+</script>
+
+<!-- EXACT table structure from original -->
+<div class="device-list-container">
+  <table class="device-table">
+    <thead>
+      <tr>
+        <!-- Preserve all classes, data attributes -->
+        <th class="sortable" data-sort="mac">MAC Address</th>
+        <th class="sortable" data-sort="vendor">Vendor</th>
+        <!-- etc... -->
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Exact row structure -->
+    </tbody>
+  </table>
+</div>
+```
+
+Step 3: Cesium Map Integration
+- DO NOT modify map container dimensions
+- Preserve all Cesium viewer options exactly
+- Keep all map styling unchanged
+- Maintain exact marker/icon styles
+- Preserve popup/tooltip designs
+
+Step 4: WebSocket Visual Indicators
+- Keep connection status indicators identical
+- Preserve loading spinner designs
+- Maintain exact notification styles
+- Keep all transition timings
+- Preserve status badge colors/shapes
+
+Components requiring special attention:
+- MapView.svelte - Cesium must render identically
+- ThemeSelector.svelte - preserve dropdown design
+- StatusPanel.svelte - maintain status light animations
+- ControlDashboard.svelte - keep button layouts exact
+- DeviceList.svelte - preserve table styling completely
+
+3.3 Shared Components
+--------------------
+Create in /src/lib/components/shared/:
+- Navigation.svelte (unified navigation bar)
+- StatusBar.svelte (global system status)
+- ErrorDisplay.svelte (error handling)
+- LoadingSpinner.svelte (loading states)
+- ConfirmDialog.svelte (action confirmations)
+
+==========================================================================
+PHASE 4: STATE MANAGEMENT AND INTEGRATION
+==========================================================================
+
+4.1 Svelte Stores Setup
+----------------------
+Create in /src/lib/stores/:
+- hackrf.ts (HackRF state management)
+- kismet.ts (Kismet state management)
+- notifications.ts (system notifications)
+- websocket.ts (WebSocket connection state)
+- theme.ts (application theme)
+
+4.2 Real-time Data Flow
+----------------------
+- Implement SSE store for HackRF data stream
+- Create WebSocket store for Kismet updates
+- Set up auto-reconnection logic
+- Handle connection failures gracefully
+- Implement data caching for offline scenarios
+
+4.3 Cross-Component Communication
+---------------------------------
+- Create event bus for component communication
+- Implement shared notification system
+- Set up global error handling
+- Create unified logging system
+- Implement performance monitoring
+
+==========================================================================
+PHASE 5: STYLING AND THEME MIGRATION - ZERO DESIGN CHANGES
+==========================================================================
+
+**CRITICAL**: This phase is about organizing styles, NOT changing them
+
+5.1 CSS Migration - Verbatim Copy Strategy
+-------------------------------------------
+Step 1: Complete CSS Inventory
+- List ALL CSS files from both applications
+- Document load order (critical for cascade)
+- Note any dynamically loaded styles
+- Identify inline style blocks
+- Map JavaScript style manipulations
+
+Step 2: Direct CSS Transfer
+```
+HackRF CSS Files:
+/public/css/styles.css → /src/lib/styles/hackrf/styles.css
+/public/css/[any-other].css → /src/lib/styles/hackrf/[any-other].css
+
+Kismet CSS Files:
+/public/css/main.css → /src/lib/styles/kismet/main.css
+/public/css/theme-*.css → /src/lib/styles/kismet/theme-*.css
+/public/css/[any-other].css → /src/lib/styles/kismet/[any-other].css
+```
+
+Step 3: Import Strategy in app.css
+```css
+/* Preserve exact load order */
+/* HackRF Styles */
+@import '$lib/styles/hackrf/styles.css';
+
+/* Kismet Styles */
+@import '$lib/styles/kismet/main.css';
+@import '$lib/styles/kismet/theme-dark.css';
+@import '$lib/styles/kismet/theme-light.css';
+@import '$lib/styles/kismet/theme-tactical.css';
+
+/* DO NOT add any new styles here */
+```
+
+5.2 Theme System - Preserve Exact Behavior
+------------------------------------------
+**DO NOT CREATE NEW THEME SYSTEM**
+
+Preservation Requirements:
+- Keep exact theme class names (e.g., 'theme-dark', 'theme-light')
+- Preserve localStorage key names for theme preference
+- Maintain exact theme switching logic
+- Keep all CSS custom properties unchanged
+- Preserve theme-specific image/asset paths
+
+Theme Implementation:
+```javascript
+// In theme store - preserve exact original logic
+export const theme = writable(localStorage.getItem('selectedTheme') || 'theme-dark');
+
+// Apply theme exactly as original
+theme.subscribe(value => {
+  // Remove all theme classes
+  document.body.classList.remove('theme-dark', 'theme-light', 'theme-tactical');
+  // Add selected theme
+  document.body.classList.add(value);
+  // Store preference with same key
+  localStorage.setItem('selectedTheme', value);
+});
+```
+
+5.3 Style Isolation Strategy
+----------------------------
+**Purpose**: Prevent style conflicts, NOT to change designs
+
+Isolation Rules:
+1. Wrap page-specific styles in page selectors:
+   ```css
+   /* For HackRF pages */
+   [data-page="hackrf"] .component { /* original styles */ }
+   
+   /* For Kismet pages */
+   [data-page="kismet"] .component { /* original styles */ }
+   ```
+
+2. Use CSS Modules only for scope, not modification:
+   ```svelte
+   <style>
+     /* Import original styles */
+     @import '$lib/styles/hackrf/component.css';
+     
+     /* DO NOT add new styles */
+   </style>
+   ```
+
+3. Preserve Specificity:
+   - Keep all !important declarations
+   - Maintain exact selector specificity
+   - Preserve pseudo-selector order
+   - Keep media query breakpoints
+
+**FORBIDDEN**:
+- NO Tailwind classes on migrated components
+- NO CSS-in-JS conversions
+- NO style "optimizations"
+- NO removing "duplicate" styles
+- NO changing units (px to rem)
+- NO color format changes (#fff to #ffffff)
+- NO font stack modifications
+- NO viewport unit changes
+
+==========================================================================
+PHASE 6: TESTING AND VALIDATION - DESIGN FIDELITY FOCUS
+==========================================================================
+
+6.1 Visual Regression Testing
+-----------------------------
+**PRIORITY**: Ensure zero visual changes
+
+Testing Tools:
+- Set up Percy, Chromatic, or similar visual testing
+- Configure pixel-by-pixel comparison
+- Set 0% difference threshold
+- Test at multiple viewport sizes
+- Test all theme variations
+
+Visual Test Cases:
+1. Initial page load appearance
+2. All interactive states (hover, active, focus)
+3. Animation start/middle/end frames
+4. Loading states
+5. Error states
+6. Empty states
+7. Data-populated states
+8. Responsive breakpoints
+9. Theme switching transitions
+10. Modal/overlay rendering
+
+Manual Visual Checklist:
+□ Colors match exactly (use color picker)
+□ Fonts render identically
+□ Spacing is pixel-perfect
+□ Borders/shadows unchanged
+□ Icons display correctly
+□ Images load at correct size
+□ Animations timing matches
+□ Scroll behavior identical
+□ Z-index layering preserved
+□ Print styles work (if any)
+
+6.2 Functional Testing - Behavior Preservation
+----------------------------------------------
+API Testing:
+- Verify all endpoints return identical responses
+- Check response headers match
+- Validate status codes unchanged
+- Ensure timing/delays preserved
+- Test error responses match exactly
+
+Real-time Features:
+- SSE connection establishment
+- WebSocket message format
+- Reconnection behavior
+- Data update frequency
+- Event order preservation
+
+User Interaction Testing:
+- Click targets same size
+- Keyboard navigation identical
+- Form submission behavior
+- Drag/drop (if any) works same
+- Context menu behavior
+- Double-click actions
+- Long-press actions
+
+6.3 Cross-Browser Design Validation
+-----------------------------------
+Test Browsers (same as originals):
+- Chrome/Chromium (primary)
+- Firefox
+- Safari (if applicable)
+- Edge
+- Mobile browsers
+
+Browser-Specific Checks:
+- Font rendering differences
+- CSS property support
+- JavaScript API availability
+- Performance characteristics
+- Developer tools compatibility
+
+6.4 Performance Benchmarking
+----------------------------
+**Goal**: Match or exceed original performance
+
+Metrics to Match:
+- First Contentful Paint
+- Time to Interactive
+- Total Blocking Time
+- Cumulative Layout Shift (must be 0)
+- Bundle size comparison
+
+Performance Tests:
+- Initial page load time
+- Route navigation speed
+- Real-time data handling
+- Memory usage patterns
+- CPU usage on Raspberry Pi
+
+6.5 Automated Design Verification
+---------------------------------
+Create automated tests:
+```javascript
+// Example Playwright test
+test('HackRF page matches original design', async ({ page }) => {
+  // Navigate to original
+  await page.goto('http://localhost:3002');
+  const originalScreenshot = await page.screenshot();
+  
+  // Navigate to new
+  await page.goto('http://localhost:5173/hackrf');
+  const newScreenshot = await page.screenshot();
+  
+  // Compare
+  expect(newScreenshot).toMatchSnapshot(originalScreenshot, {
+    maxDiffPixels: 0 // Zero tolerance
+  });
+});
+```
+
+6.6 User Acceptance Criteria
+----------------------------
+Design Preservation Checklist:
+□ Users cannot tell the difference visually
+□ All workflows function identically
+□ No "improvement" suggestions from users
+□ Muscle memory actions still work
+□ No retraining required
+□ Existing bookmarks work (with redirects)
+□ Browser extensions still compatible
+□ Accessibility unchanged
+
+==========================================================================
+PHASE 7: DEPLOYMENT PREPARATION
+==========================================================================
+
+7.1 Build Configuration
+----------------------
+- Configure production build
+- Set up environment variables
+- Optimize for Raspberry Pi
+- Configure static file serving
+- Set up reverse proxy if needed
+
+7.2 Service Migration
+--------------------
+- Create systemd service file
+- Update startup scripts
+- Configure auto-restart
+- Set up logging
+- Plan rollback strategy
+
+7.3 Documentation
+----------------
+- Update README with new setup
+- Document API changes
+- Create migration guide
+- Update configuration docs
+- Document troubleshooting steps
+
+==========================================================================
+PHASE 8: CUTOVER AND MONITORING
+==========================================================================
+
+8.1 Staged Cutover
+-----------------
+- Deploy ArgosFinal alongside existing services
+- Test all functionality in parallel
+- Gradually redirect traffic
+- Monitor for issues
+- Keep rollback ready
+
+8.2 Final Migration
+------------------
+- Stop services on ports 3002 (HackRF monitor)
+- Keep Express backend running on port 8005
+- Deploy SvelteKit frontend on port 8006
+- Update all references:
+  - Frontend UI: port 8006 (SvelteKit)
+  - Backend API: port 8005 (Express)
+  - Frontend makes API calls to backend: http://localhost:8005/api/*
+- Verify all integrations work
+- Update external service configurations
+- Remove old code (keep backups)
+
+8.3 Post-Migration
+-----------------
+- Monitor performance metrics
+- Gather user feedback
+- Fix any emerging issues
+- Optimize based on usage patterns
+- Plan future enhancements
+
+==========================================================================
+TIMELINE ESTIMATE
+==========================================================================
+
+Phase 1: 2-4 hours (setup and configuration)
+Phase 2: 8-12 hours (backend API migration)
+Phase 3: 10-16 hours (frontend component migration)
+Phase 4: 6-8 hours (state management)
+Phase 5: 4-6 hours (styling and themes)
+Phase 6: 6-8 hours (testing)
+Phase 7: 4-6 hours (deployment prep)
+Phase 8: 2-4 hours (cutover)
+
+Total Estimate: 42-64 hours of development time
+
+==========================================================================
+RISKS AND MITIGATION
+==========================================================================
+
+1. Real-time Data Performance
+   - Risk: SSE/WebSocket performance issues
+   - Mitigation: Implement data throttling and caching
+
+2. Hardware Compatibility
+   - Risk: Performance issues on Raspberry Pi
+   - Mitigation: Optimize bundle size and lazy load
+
+3. Service Integration
+   - Risk: Breaking existing integrations
+   - Mitigation: Maintain API compatibility layer
+
+4. Data Loss
+   - Risk: Loss of configuration or data
+   - Mitigation: Comprehensive backup strategy
+
+5. User Disruption
+   - Risk: Downtime during migration
+   - Mitigation: Staged rollout with fallback option
+
+==========================================================================
+SUCCESS CRITERIA - PIXEL-PERFECT MIGRATION
+==========================================================================
+
+Design Preservation (HIGHEST PRIORITY):
+- [ ] 100% visual fidelity - users see NO difference
+- [ ] All CSS preserved exactly as original
+- [ ] Animations/transitions timing identical
+- [ ] Theme switching works exactly the same
+- [ ] No layout shifts or flickers
+- [ ] Fonts render identically
+- [ ] Colors match precisely (verified with picker)
+- [ ] Responsive breakpoints unchanged
+- [ ] Print styles (if any) preserved
+- [ ] Browser compatibility identical
+
+Functional Preservation:
+- [ ] All existing functionality works identically
+- [ ] API responses match exactly
+- [ ] WebSocket/SSE behavior unchanged
+- [ ] Error handling identical
+- [ ] Performance meets or exceeds original
+- [ ] Hardware integration works the same
+- [ ] External service connections maintained
+- [ ] Data formats unchanged
+- [ ] URL structure compatible (with redirects)
+- [ ] Browser storage keys preserved
+
+Technical Success:
+- [ ] Zero data loss during migration
+- [ ] No breaking changes to APIs
+- [ ] Backward compatibility maintained
+- [ ] Same or better performance metrics
+- [ ] Development environment works
+- [ ] Build process documented
+- [ ] Deployment automated
+- [ ] Rollback plan tested
+- [ ] Monitoring in place
+- [ ] Documentation complete
+
+User Experience:
+- [ ] No retraining required
+- [ ] No user-visible changes
+- [ ] No workflow disruptions
+- [ ] Bookmarks continue working
+- [ ] Browser extensions compatible
+- [ ] Keyboard shortcuts preserved
+- [ ] Accessibility unchanged
+- [ ] Mobile experience identical
+- [ ] Load times same or faster
+- [ ] No new bugs introduced
+
+CRITICAL REMINDERS:
+1. This is a TECHNICAL migration, not a redesign
+2. ANY visual change is a FAILURE
+3. "Improvements" are FORBIDDEN
+4. Modern stack is for developer experience only
+5. Users should not know migration happened
+6. Preserve EVERYTHING, optimize NOTHING
+7. When in doubt, keep it identical
+8. Test visually at every step
+9. Document all preservation decisions
+10. Success = Invisible Migration
+
+==========================================================================
+
+APPENDIX A: COMMON PITFALLS TO AVOID
+====================================
+
+1. "While we're at it" Syndrome
+   - DO NOT fix "issues" you notice
+   - DO NOT improve performance
+   - DO NOT update dependencies
+   - DO NOT modernize UI patterns
+   - DO NOT consolidate similar code
+
+2. Framework Defaults
+   - DO NOT use SvelteKit layouts for styling
+   - DO NOT apply Vite optimizations
+   - DO NOT enable TypeScript strict mode if it breaks compatibility
+   - DO NOT use new CSS features
+   - DO NOT leverage framework conveniences that change behavior
+
+3. CSS Modernization Traps
+   - DO NOT convert px to rem
+   - DO NOT use CSS variables unless already present
+   - DO NOT apply Tailwind to existing components
+   - DO NOT remove vendor prefixes
+   - DO NOT "clean up" unused styles
+
+4. JavaScript Refactoring Urges
+   - DO NOT convert callbacks to promises
+   - DO NOT use modern array methods if not already used
+   - DO NOT change variable names
+   - DO NOT extract common functions
+   - DO NOT apply DRY principles during migration
+
+5. Testing Shortcuts
+   - DO NOT skip visual regression tests
+   - DO NOT test only happy paths
+   - DO NOT ignore edge cases
+   - DO NOT trust "it looks the same to me"
+   - DO NOT skip browser compatibility tests
+
+Remember: Migration first, improvements never (during this phase).
+
+==========================================================================

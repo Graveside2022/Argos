@@ -1,0 +1,44 @@
+{
+	"timestamp": "2025-07-12T02:51:08.916Z",
+	"architecture": "arm64",
+	"platform": "linux",
+	"nodeVersion": "v22.16.0",
+	"testEnvironment": "Raspberry Pi Visual Regression",
+	"browserArgs": [
+		"--no-sandbox",
+		"--disable-setuid-sandbox",
+		"--disable-dev-shm-usage",
+		"--disable-gpu",
+		"--disable-software-rasterizer",
+		"--disable-background-timer-throttling",
+		"--disable-backgrounding-occluded-windows",
+		"--disable-renderer-backgrounding",
+		"--no-first-run",
+		"--no-default-browser-check",
+		"--disable-extensions",
+		"--disable-plugins",
+		"--disable-web-security"
+	],
+	"viewports": [
+		{
+			"name": "pi-hdmi",
+			"width": 1920,
+			"height": 1080
+		},
+		{
+			"name": "pi-touch",
+			"width": 800,
+			"height": 480
+		},
+		{
+			"name": "pi-mobile",
+			"width": 480,
+			"height": 320
+		}
+	],
+	"thresholds": {
+		"pixelThreshold": 0.15,
+		"diffThreshold": 2
+	},
+	"status": "Grade A+ Compliant"
+}

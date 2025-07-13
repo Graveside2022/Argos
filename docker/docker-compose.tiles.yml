@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  tileserver:
+    image: maptiler/tileserver-gl:latest
+    container_name: argos-tileserver
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./map-data/tiles:/data
+      - ./map-data/config:/config
+    environment:
+      - TILESERVER_CONFIG=/config/config.json
+    restart: unless-stopped
+    command: --verbose
+    
+  # Optional: OpenMapTiles for vector tiles
+  openmaptiles:
+    image: openmaptiles/openmaptiles-tools:latest
+    container_name: argos-openmaptiles
+    volumes:
+      - ./map-data/openmaptiles:/data
+    profiles:
+      - tools
+      
+volumes:
+  map-data:
+    driver: local

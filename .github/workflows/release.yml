@@ -1,0 +1,56 @@
+# .github/workflows/release.yml
+
+name: 'CD: Create Release Package'
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    name: 'Build and Package Application'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@v4
+
+      - name: 'Setup Node.js v20'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 'Install All Dependencies for Build'
+        run: npm ci
+
+      - name: 'Build Application for Production'
+        run: npm run build
+
+      - name: 'Assemble Clean Production Package'
+        run: |
+          mkdir release
+          cp -r build/ release/
+          cp package.json release/
+          # This next step is critical for a lean production environment.
+          # It removes all development-only packages (like vitest, eslint),
+          # resulting in a smaller, more secure, and faster installation on the Pi.
+          cd release
+          npm ci --omit=dev
+          cd ..
+
+      - name: 'Create Compressed Release Tarball'
+        run: tar -czvf argos-final-${{ github.ref_name }}.tar.gz release
+
+      - name: 'Create GitHub Release and Upload Artifact'
+        # This action automates creating a release page on GitHub.
+        uses: softprops/action-gh-release@v1
+        with:
+          # This tells the action to upload the .tar.gz file we just created.
+          files: argos-final-${{ github.ref_name }}.tar.gz
+        env:
+          # This token is a secure, temporary key provided by GitHub Actions.
+          # It requires no setup on your part and allows the workflow to
+          # create a release on your behalf.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
