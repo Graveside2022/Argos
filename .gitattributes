@@ -62,6 +62,30 @@
 # Enable syntax highlighting for Svelte files on GitHub
 *.svelte linguist-language=Svelte
 
+# Hide development and configuration files from GitHub repository view
+# This makes README.md the primary focus when visitors view the repo
+.dockerignore linguist-generated=true
+.editorconfig linguist-generated=true
+.env.example linguist-generated=true
+.lintstagedrc.json linguist-generated=true
+.prettierignore linguist-generated=true
+.prettierrc linguist-generated=true
+Dockerfile linguist-generated=true
+app.d.ts linguist-generated=true
+builder.config.json linguist-generated=true
+docker-compose.yml linguist-generated=true
+install.sh linguist-generated=true
+package-lock.json linguist-generated=true
+package.json linguist-vendored=true
+quick-install.sh linguist-generated=true
+svelte.config.js linguist-generated=true
+tailwind.config.js linguist-generated=true
+tsconfig.json linguist-generated=true
+vite.config.ts linguist-generated=true
+
+# Ensure README.md is prominently featured
+README.md linguist-documentation=false
+
 # Large files handling (if using Git LFS)
 # *.psd filter=lfs diff=lfs merge=lfs -text
 # *.ai filter=lfs diff=lfs merge=lfs -text
