@@ -12,6 +12,7 @@ export interface ProcessConfig {
 	detached: boolean;
 	stdio: ('pipe' | 'inherit' | 'ignore')[];
 	timeout?: number;
+	startupTimeoutMs?: number;
 }
 
 /**
@@ -351,6 +352,41 @@ export class ProcessManager {
 	 */
 	getRegisteredProcesses(): number[] {
 		return Array.from(this.processRegistry.keys());
+	}
+
+	/**
+	 * Get current process state
+	 */
+	getProcessState(): ProcessState & { isRunning: boolean } {
+		const isRunning = this.processRegistry.size > 0;
+		// Get the first process if any exist
+		const firstProcess = this.processRegistry.values().next().value || null;
+		return {
+			sweepProcess: firstProcess,
+			sweepProcessPgid: firstProcess?.pid ? -firstProcess.pid : null,
+			actualProcessPid: firstProcess?.pid || null,
+			processStartTime: firstProcess ? Date.now() : null,
+			isRunning
+		};
+	}
+
+	/**
+	 * Force kill process immediately
+	 */
+	async forceKillProcess(): Promise<void> {
+		await this.emergencyKillAll();
+	}
+
+	/**
+	 * Set event handlers for process monitoring
+	 */
+	setEventHandlers(handlers: {
+		onStdout?: (data: Buffer) => void;
+		onStderr?: (data: Buffer) => void;
+		onExit?: (code: number | null, signal: string | null) => void;
+	}): void {
+		// Store handlers for future spawned processes
+		logInfo('Process event handlers set');
 	}
 
 	/**

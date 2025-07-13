@@ -6,11 +6,11 @@
 
 <!-- System Status Card -->
 <div
-	class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
+	class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
 >
 	<div class="flex items-center mb-6">
 		<div
-			class="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-xl mr-4 border border-green-400/20 group-hover:border-border-hover/50 group-hover:shadow-lg group-hover:shadow-green-400/20 transition-all duration-300"
+			class="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-xl mr-4 border border-green-400/20 group-hover:border-border-hover hover:border-opacity-50 group-hover:shadow-lg group-hover:shadow-green-400/20 transition-all duration-300"
 		>
 			<svg
 				class="w-6 h-6 text-green-400 group-hover:scale-110 transition-transform duration-300"
@@ -44,7 +44,7 @@
 		</div>
 	</div>
 	<div
-		class="saasfly-status-card text-text-secondary min-h-[3rem] flex items-center px-4 py-3 bg-gradient-to-r from-bg-card/30 to-bg-card/20 rounded-xl border border-border-primary/30 hover:border-border-hover/50 hover:bg-gradient-to-r hover:from-bg-card/40 hover:to-bg-card/30 hover:shadow-lg hover:shadow-neon-cyan/10 transition-all duration-300"
+		class="saasfly-status-card text-text-secondary min-h-[3rem] flex items-center px-4 py-3 bg-gradient-to-r from-bg-card/30 to-bg-card/20 rounded-xl border border-border-primary/30 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-r hover:from-bg-card/40 hover:to-bg-card/30 hover:shadow-lg hover:shadow-neon-cyan/10 transition-all duration-300"
 		class:status-ready={systemStatus.isReady}
 		class:status-error={!systemStatus.isReady}
 	>

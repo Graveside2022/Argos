@@ -75,7 +75,7 @@ export class WigleService {
 				throw new Error(data.message || 'Unknown error');
 			}
 		} catch (error) {
-			logError('Failed to update TAK settings:', error);
+			logError('Failed to update TAK settings:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -97,7 +97,7 @@ export class WigleService {
 				throw new Error(data.message || 'Unknown error');
 			}
 		} catch (error) {
-			logError('Failed to update multicast state:', error);
+			logError('Failed to update multicast state:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -120,7 +120,7 @@ export class WigleService {
 				throw new Error(data.message || 'Unknown error');
 			}
 		} catch (error) {
-			logError('Failed to update analysis mode:', error);
+			logError('Failed to update analysis mode:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -146,7 +146,7 @@ export class WigleService {
 				throw new Error(data.message || 'Unknown error');
 			}
 		} catch (error) {
-			logError('Failed to update antenna sensitivity:', error);
+			logError('Failed to update antenna sensitivity:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -166,7 +166,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to load antenna settings');
 			}
 		} catch (error) {
-			logError('Failed to load antenna settings:', error);
+			logError('Failed to load antenna settings:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -192,7 +192,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to list files');
 			}
 		} catch (error) {
-			logError('Failed to list Wigle files:', error);
+			logError('Failed to list Wigle files:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -218,7 +218,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to start broadcast');
 			}
 		} catch (error) {
-			logError('Failed to start broadcast:', error);
+			logError('Failed to start broadcast:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -242,7 +242,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to stop broadcast');
 			}
 		} catch (error) {
-			logError('Failed to stop broadcast:', error);
+			logError('Failed to stop broadcast:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -265,7 +265,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to add to whitelist');
 			}
 		} catch (error) {
-			logError('Failed to add to whitelist:', error);
+			logError('Failed to add to whitelist:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}
@@ -287,7 +287,7 @@ export class WigleService {
 				throw new Error(data.message || 'Failed to add to blacklist');
 			}
 		} catch (error) {
-			logError('Failed to add to blacklist:', error);
+			logError('Failed to add to blacklist:', { error: error instanceof Error ? error.message : String(error) });
 			throw error;
 		}
 	}

@@ -369,25 +369,27 @@ export class BufferManager {
 		const issues: string[] = [];
 
 		// Check frequency range
-		if (data.startFreq >= data.endFreq) {
+		if (data.startFreq !== undefined && data.endFreq !== undefined && data.startFreq >= data.endFreq) {
 			issues.push('Invalid frequency range');
 		}
 
 		// Check power values
-		if (data.powerValues.length === 0) {
+		if (data.powerValues && data.powerValues.length === 0) {
 			issues.push('No power values');
 		}
 
 		// Check for reasonable power values (-150 to +50 dBm)
-		const unreasonablePowers = data.powerValues.filter(p => p < -150 || p > 50);
-		if (unreasonablePowers.length > 0) {
-			issues.push(`${unreasonablePowers.length} unreasonable power values`);
-		}
+		if (data.powerValues) {
+			const unreasonablePowers = data.powerValues.filter(p => p < -150 || p > 50);
+			if (unreasonablePowers.length > 0) {
+				issues.push(`${unreasonablePowers.length} unreasonable power values`);
+			}
 
-		// Check for too many identical values (potential stuck device)
-		const uniqueValues = new Set(data.powerValues);
-		if (uniqueValues.size === 1 && data.powerValues.length > 10) {
-			issues.push('All power values identical (possible stuck device)');
+			// Check for too many identical values (potential stuck device)
+			const uniqueValues = new Set(data.powerValues);
+			if (uniqueValues.size === 1 && data.powerValues.length > 10) {
+				issues.push('All power values identical (possible stuck device)');
+			}
 		}
 
 		// Check timestamp validity
@@ -442,6 +444,13 @@ export class BufferManager {
 		}
 
 		return { status, issues, recommendations };
+	}
+
+	/**
+	 * Parse spectrum line (alias for existing parseLine method)
+	 */
+	parseSpectrumLine(line: string): ParsedLine {
+		return this.parseLine(line);
 	}
 
 	/**

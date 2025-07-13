@@ -159,7 +159,7 @@
 		{#if controlState.canEmergencyStop}
 			<button
 				on:click={emergencyStop}
-				class="saasfly-btn w-full mt-2 bg-red-600/20 border-red-500/40 hover:bg-red-600/30 hover:border-border-hover/50 text-red-400"
+				class="saasfly-btn w-full mt-2 bg-red-600/20 border-red-500/40 hover:bg-red-600/30 hover:border-border-hover hover:border-opacity-50 text-red-400"
 			>
 				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
@@ -217,10 +217,10 @@
 	}
 
 	.saasfly-btn-start {
-		@apply bg-green-600/20 border border-green-500/40 text-green-400 hover:bg-green-600/30 hover:border-border-hover/50 hover:shadow-lg hover:shadow-green-400/20;
+		@apply bg-green-600/20 border border-green-500/40 text-green-400 hover:bg-green-600/30 hover:border-border-hover hover:border-opacity-50 hover:shadow-lg hover:shadow-green-400/20;
 	}
 
 	.saasfly-btn-stop {
-		@apply bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 hover:border-border-hover/50 hover:shadow-lg hover:shadow-red-400/20;
+		@apply bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 hover:border-border-hover hover:border-opacity-50 hover:shadow-lg hover:shadow-red-400/20;
 	}
 </style>

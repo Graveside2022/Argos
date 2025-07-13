@@ -2,35 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+	/* Neon cyan color palette */
+	--neon-cyan: #00d2ff;
+	--neon-cyan-light: #66e5ff;
+}
+
 /* Custom component styles from the HackRF page */
 @layer components {
 	/* Glass effects */
 	.glass-panel {
-		@apply bg-bg-card/80 backdrop-blur-xl border border-border-primary/40;
+		@apply backdrop-blur-xl border;
+		background-color: color-mix(in srgb, rgb(var(--bg-card)) 80%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
 	}
 
 	.glass-panel-light {
-		@apply bg-bg-card/60 backdrop-blur-md border border-border-primary/30;
+		@apply backdrop-blur-md border;
+		background-color: color-mix(in srgb, rgb(var(--bg-card)) 60%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--border-primary)) 30%, transparent);
 	}
 
 	.glass-button {
-		@apply bg-bg-button/20 backdrop-blur-sm border border-border-primary/40 
-           hover:bg-bg-button/40 hover:border-border-hover/60 transition-all duration-200;
+		@apply backdrop-blur-sm border transition-all duration-200;
+		background-color: color-mix(in srgb, rgb(var(--bg-button)) 20%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+	}
+	.glass-button:hover {
+		background-color: color-mix(in srgb, rgb(var(--bg-button)) 40%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--border-hover)) 60%, transparent);
 	}
 
 	.glass-input {
-		@apply bg-bg-input/60 backdrop-blur-sm border border-border-primary/40 
-           text-text-primary placeholder-text-muted
-           focus:bg-bg-input/80 focus:border-accent-primary/60 focus:outline-none
-           transition-all duration-200;
+		@apply backdrop-blur-sm border text-text-primary focus:outline-none transition-all duration-200;
+		background-color: color-mix(in srgb, rgb(var(--bg-input)) 60%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+	}
+	.glass-input:focus {
+		background-color: color-mix(in srgb, rgb(var(--bg-input)) 80%, transparent);
+		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 60%, transparent);
+	}
+	.glass-input::placeholder {
+		color: rgb(var(--text-muted));
 	}
 
 	/* Saasfly components */
 	.saasfly-feature-card {
-		@apply rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 
-           border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl 
-           hover:border-accent-primary/30 hover:bg-gradient-to-br hover:from-bg-card/90 
-           hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300;
+		@apply rounded-2xl p-8 border backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300;
+		background: linear-gradient(to bottom right, 
+			color-mix(in srgb, rgb(var(--bg-card)) 80%, transparent),
+			color-mix(in srgb, rgb(var(--bg-card)) 60%, transparent),
+			color-mix(in srgb, rgb(var(--bg-card)) 40%, transparent));
+		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+	}
+	.saasfly-feature-card:hover {
+		background: linear-gradient(to bottom right, 
+			color-mix(in srgb, rgb(var(--bg-card)) 90%, transparent),
+			color-mix(in srgb, rgb(var(--bg-card)) 70%, transparent),
+			color-mix(in srgb, rgb(var(--bg-card)) 50%, transparent));
+		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 30%, transparent);
 	}
 
 	.saasfly-button-primary {
@@ -39,9 +69,11 @@
 	}
 
 	.saasfly-button-secondary {
-		@apply px-6 py-3 bg-bg-button/20 text-text-primary font-medium rounded-lg 
-           border border-border-primary hover:bg-bg-button/40 hover:border-border-hover 
-           transition-all duration-200;
+		@apply px-6 py-3 text-text-primary font-medium rounded-lg border border-border-primary hover:border-border-hover transition-all duration-200;
+		background-color: color-mix(in srgb, rgb(var(--bg-button)) 20%, transparent);
+	}
+	.saasfly-button-secondary:hover {
+		background-color: color-mix(in srgb, rgb(var(--bg-button)) 40%, transparent);
 	}
 
 	/* Navigation styles */
@@ -54,12 +86,15 @@
 	}
 
 	.mobile-nav-link {
-		@apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
-           text-text-secondary hover:text-accent-primary hover:bg-bg-hover/20;
+		@apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-text-secondary hover:text-accent-primary;
+	}
+	.mobile-nav-link:hover {
+		background-color: color-mix(in srgb, rgb(var(--bg-hover)) 20%, transparent);
 	}
 
 	.mobile-nav-link.active {
-		@apply text-accent-primary bg-bg-hover/20;
+		@apply text-accent-primary;
+		background-color: color-mix(in srgb, rgb(var(--bg-hover)) 20%, transparent);
 	}
 
 	/* Status indicators */
@@ -69,11 +104,13 @@
 
 	/* HackRF brand styles */
 	.hackrf-brand {
-		@apply bg-gradient-to-r from-accent-primary to-accent-hover bg-clip-text text-transparent;
+		color: #fa923c !important;
+		text-shadow: none;
 	}
 
 	.sweep-brand {
-		@apply bg-gradient-to-r from-neon-cyan to-neon-cyan-light bg-clip-text text-transparent;
+		color: #ffffff !important;
+		text-shadow: none;
 	}
 
 	/* Shadow effects */
@@ -99,9 +136,11 @@
 
 	/* Frequency components */
 	.frequency-item {
-		@apply flex items-center justify-between p-4 rounded-lg bg-bg-input/50 
-           border border-border-primary hover:border-accent-primary/50 
-           transition-all duration-200;
+		@apply flex items-center justify-between p-4 rounded-lg border border-border-primary transition-all duration-200;
+		background-color: color-mix(in srgb, rgb(var(--bg-input)) 50%, transparent);
+	}
+	.frequency-item:hover {
+		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 50%, transparent);
 	}
 
 	.frequency-config-icon {
@@ -114,7 +153,8 @@
 
 	/* Sweep control styles */
 	.sweep-control-active {
-		@apply border-accent-primary bg-accent-primary/10;
+		@apply border-accent-primary;
+		background-color: color-mix(in srgb, rgb(var(--accent-primary)) 10%, transparent);
 	}
 
 	/* Spectrum display */

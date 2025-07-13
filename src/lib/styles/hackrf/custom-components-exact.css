@@ -100,8 +100,8 @@
 	--signal-very-strong: #dc2626;
 
 	/* Borders */
-	--border-primary: #262626;
-	--border-hover: rgba(255, 255, 255, 0.12);
+	--border-primary: 38 38 38; /* #262626 in RGB format for Tailwind opacity modifiers */
+	--border-hover: 255 255 255; /* White in RGB for Tailwind opacity modifiers */
 
 	/* Shadows - Node.js Style */
 	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);

@@ -17,6 +17,11 @@ export interface CycleState {
 	inFrequencyTransition: boolean;
 	cycleTimer: ReturnType<typeof setTimeout> | null;
 	switchTimer: ReturnType<typeof setTimeout> | null;
+	// Additional properties accessed by sweepManager
+	frequencies: FrequencyConfig[];
+	cycleTime: number;
+	frequencyCount: number;
+	currentFrequency: FrequencyConfig | null;
 }
 
 /**
@@ -28,7 +33,11 @@ export class FrequencyCycler {
 		isCycling: false,
 		inFrequencyTransition: false,
 		cycleTimer: null,
-		switchTimer: null
+		switchTimer: null,
+		frequencies: [],
+		cycleTime: 0,
+		frequencyCount: 0,
+		currentFrequency: null
 	};
 
 	private cycleConfig: CycleConfig = {
@@ -47,6 +56,11 @@ export class FrequencyCycler {
 		this.cycleState.currentIndex = 0;
 		this.cycleState.isCycling = config.frequencies.length > 1;
 		this.cycleState.inFrequencyTransition = false;
+		// Update additional CycleState properties
+		this.cycleState.frequencies = [...config.frequencies];
+		this.cycleState.cycleTime = config.cycleTime;
+		this.cycleState.frequencyCount = config.frequencies.length;
+		this.cycleState.currentFrequency = config.frequencies[0] || null;
 
 		// Dynamically adjust switching time
 		this.cycleConfig.switchingTime = Math.min(
@@ -130,6 +144,8 @@ export class FrequencyCycler {
 			(this.cycleState.currentIndex + 1) % this.cycleConfig.frequencies.length;
 
 		const nextFreq = this.getCurrentFrequency();
+		// Update currentFrequency in state
+		this.cycleState.currentFrequency = nextFreq;
 		if (!nextFreq) {
 			logError('No next frequency available');
 			return;
@@ -346,6 +362,55 @@ export class FrequencyCycler {
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime
 		});
+	}
+
+	/**
+	 * Reset cycling state
+	 */
+	resetCycling(): void {
+		this.stopCycling();
+		this.cycleState.currentIndex = 0;
+		this.cycleState.isCycling = false;
+		this.cycleState.inFrequencyTransition = false;
+		logInfo('🔄 Cycling reset');
+	}
+
+	/**
+	 * Clear all active timers
+	 */
+	clearAllTimers(): void {
+		if (this.cycleState.cycleTimer) {
+			clearTimeout(this.cycleState.cycleTimer);
+			this.cycleState.cycleTimer = null;
+		}
+		if (this.cycleState.switchTimer) {
+			clearTimeout(this.cycleState.switchTimer);
+			this.cycleState.switchTimer = null;
+		}
+		logInfo('⏱️ All timers cleared');
+	}
+
+	/**
+	 * Emergency stop all cycling operations
+	 */
+	emergencyStop(): void {
+		this.stopCycling();
+		this.clearAllTimers();
+		logWarn('🚨 Emergency stop - frequency cycling halted');
+	}
+
+	/**
+	 * Start cycle timer with callback
+	 */
+	startCycleTimer(callback: () => void): void {
+		this.cycleState.cycleTimer = setTimeout(callback, this.cycleConfig.cycleTime);
+	}
+
+	/**
+	 * Start switch timer with callback
+	 */
+	startSwitchTimer(callback: () => void): void {
+		this.cycleState.switchTimer = setTimeout(callback, this.cycleConfig.switchingTime);
 	}
 
 	/**
