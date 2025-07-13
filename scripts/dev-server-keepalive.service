@@ -1,0 +1,22 @@
+[Unit]
+Description=Development Server Keep-Alive Monitor
+After=network.target tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/projects/Argos
+ExecStart=/home/pi/projects/Argos/scripts/dev-server-keepalive.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=NODE_OPTIONS=--max-old-space-size=2048
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/pi/.local/bin
+
+[Install]
+WantedBy=multi-user.target

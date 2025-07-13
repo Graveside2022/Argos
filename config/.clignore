@@ -1,0 +1,106 @@
+# Claude Code ignore file - prevents scanning of memory-intensive files
+
+# Log files
+*.log
+/tmp/*.log
+logs/
+
+# Build artifacts
+.svelte-kit/
+dist/
+build/
+
+# Dependencies (already handled by default)
+node_modules/
+
+# Large test data
+*.dump
+*.sql
+*.tar
+*.gz
+*.zip
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Prevent scanning of backup directories
+*_backup*/
+backups/
+
+# pnpm specific
+.pnpm-store/
+pnpm-lock.yaml
+
+# Test artifacts and coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+*.lcov
+
+# Documentation that Claude doesn't need to parse
+docs/images/
+docs/videos/
+*.pdf
+*.docx
+
+# Generated files
+*.min.js
+*.min.css
+*-lock.json
+package-lock.json
+
+# IDE and editor files
+.idea/
+.vscode/settings.json
+.vscode/tasks.json
+*.swp
+*.swo
+
+# Media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.svg
+*.mp4
+*.webm
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files (security)
+.env*
+!.env.example
+
+# Specific heavy directories in your project
+static/fonts/
+static/images/
+tests/visual/baselines/
+tests/visual/screenshots/
+scripts/*-check.js
+scripts/*-validator.js
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary TypeScript files
+*.tsbuildinfo
+tsconfig.tsbuildinfo

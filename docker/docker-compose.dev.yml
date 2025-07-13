@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: argos-final:dev
+    container_name: argos-final-dev
+    ports:
+      - "5173:5173"
+      - "24678:24678"  # Vite HMR port
+    environment:
+      - NODE_ENV=development
+      - PORT=5173
+      - PUBLIC_BASE_URL=http://localhost:5173
+      - PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL:-http://localhost:8005}
+      - PUBLIC_WS_URL=${PUBLIC_WS_URL:-ws://localhost:8005}
+      - PUBLIC_HACKRF_API_URL=${PUBLIC_HACKRF_API_URL:-http://localhost:8092}
+      - PUBLIC_KISMET_API_URL=${PUBLIC_KISMET_API_URL:-http://localhost:2501}
+      - PUBLIC_WIGLETOAK_API_URL=${PUBLIC_WIGLETOAK_API_URL:-http://localhost:8000}
+      - PUBLIC_OPENWEBRX_URL=${PUBLIC_OPENWEBRX_URL:-http://localhost:8073}
+      - PUBLIC_SPECTRUM_ANALYZER_URL=${PUBLIC_SPECTRUM_ANALYZER_URL:-http://localhost:8092}
+      - PUBLIC_HACKRF_WS_URL=${PUBLIC_HACKRF_WS_URL:-ws://localhost:8092}
+      - PUBLIC_KISMET_WS_URL=${PUBLIC_KISMET_WS_URL:-ws://localhost:2501}
+      - PUBLIC_ENABLE_DEBUG=${PUBLIC_ENABLE_DEBUG:-true}
+      - PUBLIC_ENABLE_MOCK_DATA=${PUBLIC_ENABLE_MOCK_DATA:-false}
+    volumes:
+      - .:/app:rw
+      - /app/node_modules
+      - /app/.svelte-kit
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - argos-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  argos-network:
+    driver: bridge
+    name: argos-network

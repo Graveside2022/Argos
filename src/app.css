@@ -1,0 +1,350 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom component styles from the HackRF page */
+@layer components {
+	/* Glass effects */
+	.glass-panel {
+		@apply bg-bg-card/80 backdrop-blur-xl border border-border-primary/40;
+	}
+
+	.glass-panel-light {
+		@apply bg-bg-card/60 backdrop-blur-md border border-border-primary/30;
+	}
+
+	.glass-button {
+		@apply bg-bg-button/20 backdrop-blur-sm border border-border-primary/40 
+           hover:bg-bg-button/40 hover:border-border-hover/60 transition-all duration-200;
+	}
+
+	.glass-input {
+		@apply bg-bg-input/60 backdrop-blur-sm border border-border-primary/40 
+           text-text-primary placeholder-text-muted
+           focus:bg-bg-input/80 focus:border-accent-primary/60 focus:outline-none
+           transition-all duration-200;
+	}
+
+	/* Saasfly components */
+	.saasfly-feature-card {
+		@apply rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 
+           border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl 
+           hover:border-accent-primary/30 hover:bg-gradient-to-br hover:from-bg-card/90 
+           hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300;
+	}
+
+	.saasfly-button-primary {
+		@apply px-6 py-3 bg-accent-primary text-black font-semibold rounded-lg 
+           hover:bg-accent-hover hover:shadow-lg transition-all duration-200;
+	}
+
+	.saasfly-button-secondary {
+		@apply px-6 py-3 bg-bg-button/20 text-text-primary font-medium rounded-lg 
+           border border-border-primary hover:bg-bg-button/40 hover:border-border-hover 
+           transition-all duration-200;
+	}
+
+	/* Navigation styles */
+	.nav-link {
+		@apply text-text-secondary hover:text-accent-primary transition-colors duration-200;
+	}
+
+	.nav-link.active {
+		@apply text-accent-primary font-semibold;
+	}
+
+	.mobile-nav-link {
+		@apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
+           text-text-secondary hover:text-accent-primary hover:bg-bg-hover/20;
+	}
+
+	.mobile-nav-link.active {
+		@apply text-accent-primary bg-bg-hover/20;
+	}
+
+	/* Status indicators */
+	.status-indicator {
+		@apply w-2 h-2 rounded-full;
+	}
+
+	/* HackRF brand styles */
+	.hackrf-brand {
+		@apply bg-gradient-to-r from-accent-primary to-accent-hover bg-clip-text text-transparent;
+	}
+
+	.sweep-brand {
+		@apply bg-gradient-to-r from-neon-cyan to-neon-cyan-light bg-clip-text text-transparent;
+	}
+
+	/* Shadow effects */
+	.shadow-red-glow {
+		box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+	}
+
+	.shadow-mono-glow {
+		box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+	}
+
+	.status-connected {
+		@apply bg-green-500 animate-pulse;
+	}
+
+	.status-disconnected {
+		@apply bg-red-500;
+	}
+
+	.status-connecting {
+		@apply bg-yellow-500 animate-pulse;
+	}
+
+	/* Frequency components */
+	.frequency-item {
+		@apply flex items-center justify-between p-4 rounded-lg bg-bg-input/50 
+           border border-border-primary hover:border-accent-primary/50 
+           transition-all duration-200;
+	}
+
+	.frequency-config-icon {
+		@apply text-accent-primary;
+	}
+
+	.frequency-config-header {
+		@apply text-text-primary group-hover:text-accent-primary;
+	}
+
+	/* Sweep control styles */
+	.sweep-control-active {
+		@apply border-accent-primary bg-accent-primary/10;
+	}
+
+	/* Spectrum display */
+	.spectrum-container {
+		@apply bg-bg-card rounded-xl border border-border-primary p-6;
+	}
+
+	.signal-strength-bar {
+		@apply h-full transition-all duration-300;
+	}
+
+	/* Error states */
+	.error-panel {
+		@apply bg-error-bg border border-error-border rounded-lg p-4;
+	}
+
+	.recovery-panel {
+		@apply bg-recovery-bg border border-recovery-border rounded-lg p-4;
+	}
+}
+
+/* Geometric background styles */
+.geometric-background {
+	@apply fixed inset-0 overflow-hidden pointer-events-none;
+	z-index: 0;
+}
+
+.depth-gradient {
+	@apply absolute inset-0;
+	background: radial-gradient(
+		ellipse at center,
+		rgba(20, 20, 20, 0) 0%,
+		rgba(10, 10, 10, 0.8) 100%
+	);
+}
+
+.floating-shapes {
+	@apply absolute inset-0;
+}
+
+.grid-pattern {
+	@apply absolute inset-0 opacity-5;
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+	background-size: 50px 50px;
+}
+
+.hexagon-overlay {
+	@apply absolute inset-0 opacity-10;
+	background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E");
+	background-size: 60px 60px;
+}
+
+.circuit-lines {
+	@apply absolute inset-0 opacity-5;
+	background-image:
+		linear-gradient(
+			45deg,
+			transparent 48%,
+			rgba(255, 255, 255, 0.1) 49%,
+			rgba(255, 255, 255, 0.1) 51%,
+			transparent 52%
+		),
+		linear-gradient(
+			-45deg,
+			transparent 48%,
+			rgba(255, 255, 255, 0.1) 49%,
+			rgba(255, 255, 255, 0.1) 51%,
+			transparent 52%
+		);
+	background-size: 20px 20px;
+}
+
+.accent-triangle {
+	@apply absolute w-0 h-0 opacity-5;
+	border-style: solid;
+}
+
+.triangle-1 {
+	top: 10%;
+	right: 15%;
+	border-width: 0 50px 86.6px 50px;
+	border-color: transparent transparent rgba(255, 255, 255, 0.1) transparent;
+	transform: rotate(15deg);
+}
+
+.triangle-2 {
+	bottom: 20%;
+	left: 10%;
+	border-width: 0 75px 129.9px 75px;
+	border-color: transparent transparent rgba(255, 255, 255, 0.05) transparent;
+	transform: rotate(-30deg);
+}
+
+.triangle-3 {
+	top: 50%;
+	left: 50%;
+	border-width: 0 40px 69.3px 40px;
+	border-color: transparent transparent rgba(163, 163, 163, 0.1) transparent;
+	transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* Animations */
+@keyframes scan {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes neonPulse {
+	0%,
+	100% {
+		opacity: 0.8;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+@keyframes scanLine {
+	0% {
+		transform: translateY(-100%);
+	}
+	100% {
+		transform: translateY(100%);
+	}
+}
+
+@keyframes activeFrequency {
+	0%,
+	100% {
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+	}
+	50% {
+		box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4);
+	}
+}
+
+/* Header gradient */
+.header-gradient-sweep {
+	background: linear-gradient(180deg, rgba(20, 20, 20, 0.95) 0%, rgba(10, 10, 10, 0.8) 100%);
+}
+
+/* Geometric background styles */
+.geometric-background {
+	@apply absolute inset-0 overflow-hidden pointer-events-none;
+}
+
+.depth-gradient {
+	@apply absolute inset-0;
+	background: radial-gradient(ellipse at center, transparent 0%, rgba(10, 10, 10, 0.4) 100%);
+}
+
+.floating-shapes {
+	@apply absolute inset-0;
+	background-image:
+		radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+		radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+		radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+}
+
+.grid-pattern {
+	@apply absolute inset-0 opacity-10;
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+	background-size: 50px 50px;
+}
+
+.hexagon-overlay {
+	@apply absolute inset-0 opacity-5;
+	background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E");
+	background-size: 60px 60px;
+}
+
+.circuit-lines {
+	@apply absolute inset-0 opacity-5;
+	background-image:
+		linear-gradient(
+			45deg,
+			transparent 48%,
+			rgba(255, 255, 255, 0.1) 49%,
+			rgba(255, 255, 255, 0.1) 51%,
+			transparent 52%
+		),
+		linear-gradient(
+			-45deg,
+			transparent 48%,
+			rgba(255, 255, 255, 0.1) 49%,
+			rgba(255, 255, 255, 0.1) 51%,
+			transparent 52%
+		);
+	background-size: 30px 30px;
+}
+
+.accent-triangle {
+	@apply absolute w-0 h-0 opacity-10;
+	border-style: solid;
+}
+
+.triangle-1 {
+	top: 10%;
+	left: 5%;
+	border-left-width: 0;
+	border-right-width: 100px;
+	border-bottom-width: 100px;
+	border-color: transparent rgba(255, 255, 255, 0.05) transparent transparent;
+	transform: rotate(15deg);
+}
+
+.triangle-2 {
+	bottom: 20%;
+	right: 10%;
+	border-left-width: 80px;
+	border-right-width: 0;
+	border-top-width: 80px;
+	border-color: rgba(255, 255, 255, 0.05) transparent transparent transparent;
+	transform: rotate(-30deg);
+}
+
+.triangle-3 {
+	top: 50%;
+	left: 60%;
+	border-left-width: 60px;
+	border-right-width: 60px;
+	border-bottom-width: 60px;
+	border-color: transparent transparent rgba(255, 255, 255, 0.03) transparent;
+	transform: rotate(45deg);
+}

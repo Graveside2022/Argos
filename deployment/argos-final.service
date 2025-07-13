@@ -1,0 +1,32 @@
+[Unit]
+Description=Argos Production Server
+Documentation=https://github.com/yourusername/Argos
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/projects/Argos
+
+# Environment variables for production
+Environment="NODE_ENV=production"
+Environment="PORT=4173"
+Environment="HOST=0.0.0.0"
+
+# Run the production preview server
+ExecStart=/usr/bin/npm run preview
+
+# Restart configuration
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-final
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

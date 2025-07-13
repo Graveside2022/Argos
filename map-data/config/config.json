@@ -1,0 +1,35 @@
+{
+	"options": {
+		"paths": {
+			"root": "/data",
+			"fonts": "/data/fonts",
+			"styles": "/data/styles",
+			"mbtiles": "/data/tiles"
+		},
+		"serveStaticMaps": true,
+		"formatQuality": {
+			"png": 90,
+			"jpeg": 80,
+			"webp": 90
+		}
+	},
+	"styles": {
+		"osm-bright": {
+			"style": "osm-bright/style.json",
+			"tilejson": {
+				"bounds": [-180, -85.05112877980659, 180, 85.05112877980659]
+			}
+		},
+		"dark-matter": {
+			"style": "dark-matter/style.json",
+			"tilejson": {
+				"bounds": [-180, -85.05112877980659, 180, 85.05112877980659]
+			}
+		}
+	},
+	"data": {
+		"osm": {
+			"mbtiles": "osm.mbtiles"
+		}
+	}
+}

@@ -1,0 +1,27 @@
+[Unit]
+Description=Argos Process Manager
+Documentation=https://github.com/yourusername/Argos
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/projects/Argos
+
+# Run the process manager
+ExecStart=/usr/local/bin/argos-process-manager.sh monitor
+
+# Restart configuration
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-process-manager
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
