@@ -206,39 +206,59 @@
 </script>
 
 <div class="min-h-screen bg-black">
-	<!-- Header -->
-	<header class="bg-gray-900 border-b border-gray-800 p-4">
-		<div class="container mx-auto flex items-center justify-between">
-			<div class="flex items-center gap-4">
-				<a href="/" class="text-cyan-500 hover:text-cyan-400 transition-colors">
-					← Back to Console
-				</a>
-				<h1 class="text-xl font-bold text-white">Kismet Interface</h1>
-				<a
-					href="/tactical-map-simple"
-					class="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center gap-2"
-				>
-					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-						<path
-							fill-rule="evenodd"
-							d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l3.707 3.707A1 1 0 0018 17.414V6a1 1 0 00-.293-.707z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-					View Tactical Map
-				</a>
-			</div>
+	<!-- Professional Header with Glass Effect -->
+	<header class="sticky top-0 z-50 backdrop-blur-2xl bg-bg-primary/80 border-b border-border-primary/50 shadow-xl">
+		<div class="container mx-auto px-4">
+			<div class="flex items-center justify-between h-16">
+				<!-- Left Section -->
+				<div class="flex items-center gap-6">
+					<!-- Back to Console Button -->
+					<a
+						href="/"
+						class="flex items-center space-x-2 px-4 py-2 rounded-lg glass-button hover:bg-bg-hover/20 transition-all duration-200"
+					>
+						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+							<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+						</svg>
+						Back to Console
+					</a>
+					
+					<!-- Title with Icon -->
+					<div class="flex items-center space-x-3">
+						<!-- WiFi Icon -->
+						<div
+							class="p-3 rounded-xl transition-all duration-300"
+							style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.1) 100%) !important; border: 1px solid rgba(0, 212, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.15) !important;"
+						>
+							<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" style="color: #00d4ff !important;">
+								<path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"></path>
+							</svg>
+						</div>
+						<div class="flex flex-col">
+							<h1 class="font-heading text-h4 font-semibold tracking-tight leading-tight">
+								<span class="kismet-brand">Kismet</span>
+								<span class="text-white font-bold">Network Monitor</span>
+							</h1>
+							<span class="font-mono text-caption uppercase tracking-widest" style="color: #9CA3AF !important;">
+								Wireless Network Detection
+							</span>
+						</div>
+					</div>
+				</div>
 
-			<button
-				on:click={toggleKismet}
-				disabled={kismetStatus === 'starting' || kismetStatus === 'stopping'}
-				class="px-6 py-2 rounded font-medium transition-all duration-200 flex items-center gap-2
-          {kismetStatus === 'stopped' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
-          {kismetStatus === 'running' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
-          {kismetStatus === 'starting' || kismetStatus === 'stopping'
-					? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-					: ''}"
-			>
+				<!-- Right Section - Buttons -->
+				<div class="flex items-center gap-3">
+					<!-- Start/Stop Kismet Button -->
+					<button
+						on:click={toggleKismet}
+						disabled={kismetStatus === 'starting' || kismetStatus === 'stopping'}
+						class="saasfly-btn
+						{kismetStatus === 'stopped' ? 'saasfly-btn-start' : ''}
+						{kismetStatus === 'running' ? 'saasfly-btn-stop' : ''}
+						{kismetStatus === 'starting' || kismetStatus === 'stopping'
+							? 'saasfly-btn-loading'
+							: ''}"
+					>
 				{#if kismetStatus === 'stopped'}
 					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 						<path
@@ -277,6 +297,23 @@
 					Stopping...
 				{/if}
 			</button>
+			
+			<!-- View Tactical Map Button -->
+			<a
+				href="/tactical-map-simple"
+				class="saasfly-btn saasfly-btn-spectrum"
+			>
+				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+					<path
+						fill-rule="evenodd"
+						d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l3.707 3.707A1 1 0 0018 17.414V6a1 1 0 00-.293-.707z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				View Tactical Map
+			</a>
+		</div>
+			</div>
 		</div>
 	</header>
 
@@ -429,5 +466,114 @@
 <style>
 	:global(body) {
 		overflow: hidden;
+	}
+
+	/* Saasfly button styles */
+	:global(.saasfly-btn) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		font-weight: 500;
+		transition-property: all;
+		transition-duration: 200ms;
+	}
+
+	:global(.saasfly-btn:focus) {
+		outline: none;
+		box-shadow:
+			0 0 0 2px var(--bg-primary),
+			0 0 0 4px currentColor;
+	}
+
+	/* Start button - Cyan gradient */
+	:global(.saasfly-btn-start) {
+		background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+		color: white !important;
+		border: none !important;
+		box-shadow:
+			0 2px 8px rgba(14, 165, 233, 0.3),
+			0 0 20px rgba(14, 165, 233, 0.1) !important;
+	}
+
+	:global(.saasfly-btn-start:hover:not(:disabled)) {
+		background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%) !important;
+		box-shadow:
+			0 4px 12px rgba(14, 165, 233, 0.4),
+			0 0 30px rgba(14, 165, 233, 0.2) !important;
+		transform: translateY(-1px);
+	}
+
+	/* Stop button - Red gradient */
+	:global(.saasfly-btn-stop) {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+		color: white !important;
+		border: none !important;
+		box-shadow:
+			0 2px 8px rgba(239, 68, 68, 0.3),
+			0 0 20px rgba(239, 68, 68, 0.1) !important;
+	}
+
+	:global(.saasfly-btn-stop:hover:not(:disabled)) {
+		background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+		box-shadow:
+			0 4px 12px rgba(239, 68, 68, 0.4),
+			0 0 30px rgba(239, 68, 68, 0.2) !important;
+		transform: translateY(-1px);
+	}
+
+	/* Spectrum analyzer button - Blue gradient */
+	:global(.saasfly-btn-spectrum) {
+		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+		color: white !important;
+		border: none !important;
+		box-shadow:
+			0 2px 8px rgba(59, 130, 246, 0.3),
+			0 0 20px rgba(59, 130, 246, 0.1) !important;
+	}
+
+	:global(.saasfly-btn-spectrum:hover) {
+		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+		box-shadow:
+			0 4px 12px rgba(59, 130, 246, 0.4),
+			0 0 30px rgba(59, 130, 246, 0.2) !important;
+		transform: translateY(-1px);
+	}
+
+	/* Loading state */
+	:global(.saasfly-btn-loading) {
+		background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+		color: white !important;
+		border: none !important;
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	:global(.saasfly-btn:disabled) {
+		opacity: 0.5;
+		cursor: not-allowed;
+		transform: none !important;
+	}
+
+	/* Glass button styles */
+	:global(.glass-button) {
+		background: rgba(20, 20, 20, 0.6);
+		border: 1px solid rgba(38, 38, 38, 0.6);
+		color: #a3a3a3;
+		transition: all 0.2s ease;
+	}
+
+	:global(.glass-button:hover) {
+		background: rgba(26, 26, 26, 0.8);
+		border-color: rgba(64, 64, 64, 0.8);
+		color: #ffffff;
+	}
+
+	/* Kismet brand styles */
+	:global(.kismet-brand) {
+		color: #00d4ff;
+		text-shadow: none;
 	}
 </style>
