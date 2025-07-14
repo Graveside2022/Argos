@@ -11,8 +11,25 @@ export const POST: RequestHandler = async ({ request }) => {
     
     if (action === 'start') {
       try {
+        // Ensure GPS configuration is in place
+        await execAsync('sudo test -f /etc/kismet/kismet_site.conf || sudo /home/ubuntu/projects/Argos/scripts/configure-kismet-gps.sh');
+        
+        // Start Kismet service
         await execAsync('sudo systemctl start kismet');
-        return json({ success: true, message: 'Kismet started successfully' });
+        
+        // Wait a moment for Kismet to initialize
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Auto-enable the WiFi source if Kismet is running
+        try {
+          // Use curl to add the source via Kismet's API
+          const addSourceCmd = `curl -s -X POST http://localhost:2501/datasource/add_source.json -d 'json={"source":"wlx00c0caadcedb:type=linuxwifi"}' || true`;
+          await execAsync(addSourceCmd);
+        } catch (err) {
+          console.log('Source may already be added or Kismet is still starting:', err);
+        }
+        
+        return json({ success: true, message: 'Kismet started successfully with GPS and WiFi source' });
       } catch (error: unknown) {
         return json({ 
           success: false, 
