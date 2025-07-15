@@ -26,6 +26,14 @@
 	let scanStatus = '';
 	let scanProgress: string[] = [];
 	let showScanProgress = false;
+	
+	function clearResults() {
+		scanProgress = [];
+		scanResults = [];
+		scanStatus = '';
+		showScanProgress = false;
+		showScanResults = false;
+	}
 
 	onMount(() => {
 		// GSM Evil runs on port 80 on the same host
@@ -208,7 +216,7 @@
 		}
 		
 		isScanning = true;
-		showScanResults = false;
+		showScanResults = true;  // Always show results table
 		showScanProgress = true;
 		scanProgress = [];
 		scanStatus = '';
@@ -263,13 +271,8 @@
 									console.log('Scan complete. Results:', scanResults.length, 'frequencies');
 									// Force UI update with small delay
 									setTimeout(() => {
-										showScanResults = true;
 										scanResults = [...scanResults];
 									}, 100);
-									// Hide progress after a short delay to show completion
-									setTimeout(() => {
-										showScanProgress = false;
-									}, 3000);
 								}
 							}
 						} catch (e) {
@@ -294,12 +297,7 @@
 					if (data.strongestFrequency) {
 						selectedFrequency = data.strongestFrequency;
 						scanResults = data.scanResults || [];
-						showScanResults = true;
 						scanProgress = [...scanProgress, `[FALLBACK] Selected ${data.strongestFrequency} MHz (strongest signal)`];
-						// Hide progress after showing fallback result
-						setTimeout(() => {
-							showScanProgress = false;
-						}, 3000);
 					}
 				}
 			} catch (fallbackError) {
@@ -307,7 +305,6 @@
 			}
 		} finally {
 			isScanning = false;
-			// Progress visibility is handled when results arrive
 		}
 	}
 	
@@ -422,10 +419,10 @@
 						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
-					<!-- Scan Area Button (only show when stopped) -->
+					<!-- Scan Area and Clear Results Buttons (only show when stopped) -->
 					{#if gsmStatus === 'stopped'}
 						<button
-							class="control-btn scan-btn-header"
+							class="control-btn scan-btn-yellow"
 							on:click={scanFrequencies}
 							disabled={isScanning}
 						>
@@ -440,6 +437,16 @@
 								</svg>
 								<span class="font-bold">Scan Area</span>
 							{/if}
+						</button>
+						
+						<button
+							class="control-btn clear-btn-blue"
+							on:click={clearResults}
+						>
+							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+							</svg>
+							<span class="font-bold">Clear Results</span>
 						</button>
 					{/if}
 					
@@ -497,14 +504,14 @@
 					</div>
 				</div>
 				
-				<!-- Scan Progress Console (Larger) -->
-				{#if showScanProgress && scanProgress.length > 0}
-					<div class="scan-progress-console">
-						<div class="console-header">
-							<span class="console-title">FREQUENCY SCAN CONSOLE</span>
-							<span class="console-status">{isScanning ? 'SCANNING...' : 'COMPLETE'}</span>
-						</div>
-						<div class="console-body">
+				<!-- Scan Progress Console (Always visible) -->
+				<div class="scan-progress-console">
+					<div class="console-header">
+						<span class="console-title">FREQUENCY SCAN CONSOLE</span>
+						<span class="console-status">{isScanning ? 'SCANNING...' : scanProgress.length > 0 ? 'COMPLETE' : 'READY'}</span>
+					</div>
+					<div class="console-body">
+						{#if scanProgress.length > 0}
 							{#each scanProgress as line}
 								<div class="console-line {line.startsWith('[ERROR]') ? 'error' : line.startsWith('[CMD]') ? 'command' : line.startsWith('[TEST') ? 'test' : line.includes('=====') ? 'header' : ''}">
 									{line}
@@ -513,15 +520,19 @@
 							{#if isScanning}
 								<div class="console-cursor">█</div>
 							{/if}
-						</div>
+						{:else}
+							<div class="console-line text-gray-500">Frequency scanner console ready.</div>
+							<div class="console-line text-gray-500">Click "Scan Area" to begin scanning for GSM frequencies.</div>
+							<div class="console-line text-gray-500">The scanner will test multiple frequencies and show real-time progress here.</div>
+						{/if}
 					</div>
-				{/if}
+				</div>
 				
-				<!-- Scan Results Table -->
-				{#if showScanResults && scanResults.length > 0}
-					<div class="scan-results-table">
-						<h4 class="table-title">Frequency Scan Results</h4>
-						<div class="table-container">
+				<!-- Scan Results Table (Always visible) -->
+				<div class="scan-results-table">
+					<h4 class="table-title">Frequency Scan Results</h4>
+					<div class="table-container">
+						{#if scanResults.length > 0}
 							<table class="frequency-table">
 								<thead>
 									<tr>
@@ -575,10 +586,21 @@
 									{/each}
 								</tbody>
 							</table>
-						</div>
-						<p class="table-footer">Found {scanResults.length} active frequencies • Sorted by GSM frame count</p>
+						{:else}
+							<div class="empty-table">
+								<p class="text-gray-500">No scan results yet. Click "Scan Area" to search for GSM frequencies.</p>
+								<p class="text-gray-600 text-sm mt-2">The scanner will automatically detect active GSM channels in your area.</p>
+							</div>
+						{/if}
 					</div>
-				{/if}
+					<p class="table-footer">
+						{#if scanResults.length > 0}
+							Found {scanResults.length} active frequencies • Sorted by GSM frame count
+						{:else}
+							Awaiting frequency scan results
+						{/if}
+					</p>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -714,19 +736,6 @@
 			</div>
 		{/if}
 		
-		{#if isLoading && gsmStatus !== 'starting'}
-			<div class="absolute inset-0 flex items-center justify-center bg-gray-900">
-				<div class="text-center">
-					<div class="inline-flex items-center justify-center w-16 h-16 mb-4">
-						<svg class="animate-spin h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-						</svg>
-					</div>
-					<p class="text-gray-400 font-mono">Loading GSM Evil Interface...</p>
-				</div>
-			</div>
-		{/if}
 
 		{#if gsmStatus === 'stopped' && !isLoading}
 			<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800">
@@ -1128,15 +1137,29 @@
 		z-index: 50;
 	}
 
-	/* Scan Button in Header */
-	.scan-btn-header {
+	/* Yellow Scan Button */
+	.scan-btn-yellow {
+		background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+		border: 1px solid rgba(251, 191, 36, 0.3) !important;
+		color: white !important;
+		box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	}
+
+	.scan-btn-yellow:hover:not(:disabled) {
+		background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%) !important;
+		box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+		transform: translateY(-1px);
+	}
+
+	/* Blue Clear Button */
+	.clear-btn-blue {
 		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
 		border: 1px solid rgba(37, 99, 235, 0.3) !important;
 		color: white !important;
 		box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
-	.scan-btn-header:hover:not(:disabled) {
+	.clear-btn-blue:hover:not(:disabled) {
 		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
 		box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
@@ -1500,6 +1523,17 @@
 		margin-top: 1rem;
 		font-style: italic;
 	}
+
+	.empty-table {
+		padding: 3rem 2rem;
+		text-align: center;
+		color: #9ca3af;
+	}
+
+	.empty-table p {
+		margin: 0;
+	}
+
 
 	@keyframes blink {
 		0%, 50% { opacity: 1; }
