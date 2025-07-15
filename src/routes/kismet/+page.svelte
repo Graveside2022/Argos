@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import GPSStatusButton from '$lib/components/kismet/GPSStatusButton.svelte';
 
 	let iframeUrl = '';
 	let isLoading = true;
@@ -72,7 +73,11 @@
 	}
 
 	async function startKismet() {
-		if (kismetStatus === 'starting' || kismetStatus === 'stopping') return;
+		console.log('startKismet called, current status:', kismetStatus);
+		if (kismetStatus === 'starting' || kismetStatus === 'stopping') {
+			console.log('Returning early because status is:', kismetStatus);
+			return;
+		}
 
 		kismetStatus = 'starting';
 
@@ -183,14 +188,19 @@
 	}
 
 	function toggleKismet() {
+		console.log('toggleKismet called, current status:', kismetStatus);
 		if (kismetStatus === 'running') {
+			console.log('Kismet is running, calling stopKismet');
 			stopKismet().catch((error) => {
 				console.error('Error stopping Kismet:', error);
 			});
 		} else if (kismetStatus === 'stopped') {
+			console.log('Kismet is stopped, calling startKismet');
 			startKismet().catch((error) => {
 				console.error('Error starting Kismet:', error);
 			});
+		} else {
+			console.log('Kismet is in state:', kismetStatus, '- not starting or stopping');
 		}
 	}
 
@@ -208,8 +218,8 @@
 <div class="min-h-screen bg-black">
 	<!-- Professional Header with Glass Effect -->
 	<header class="sticky top-0 z-50 backdrop-blur-2xl bg-bg-primary/80 border-b border-border-primary/50 shadow-xl">
-		<div class="container mx-auto px-4">
-			<div class="flex items-center justify-between h-16">
+		<div class="w-full">
+			<div class="flex items-center justify-between h-16 pl-2 pr-2">
 				<!-- Left Section -->
 				<div class="flex items-center gap-6">
 					<!-- Back to Console Button -->
@@ -248,6 +258,14 @@
 
 				<!-- Right Section - Buttons -->
 				<div class="flex items-center gap-3">
+					<!-- Status Debug Info -->
+					<div class="text-xs font-mono text-gray-400">
+						Status: {kismetStatus}
+					</div>
+					
+					<!-- GPS Status Button -->
+					<GPSStatusButton />
+					
 					<!-- Start/Stop Kismet Button -->
 					<button
 						on:click={toggleKismet}

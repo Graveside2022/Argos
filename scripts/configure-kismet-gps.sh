@@ -13,7 +13,7 @@ sudo tee /etc/kismet/kismet_site.conf > /dev/null << 'EOF'
 # This file is loaded after kismet.conf and overrides settings
 
 # Enable GPS support
-gps=true
+gps=gpsd
 
 # Use gpsd for GPS data
 gpstype=gpsd
@@ -31,9 +31,8 @@ gps_log=true
 # Only log GPS data if accuracy is better than this
 gps_accuracy=10
 
-# Auto-add WiFi source on startup
-# wlx00c0caadcedb with mt76x2u driver
-source=wlx00c0caadcedb:type=linuxwifi
+# NOTE: WiFi source will be added dynamically after startup
+# This prevents startup failures if the adapter has issues
 
 # Optional: Set hop rate for channel scanning (packets/sec)
 # Lower values = more time per channel
@@ -42,7 +41,7 @@ source=wlx00c0caadcedb:type=linuxwifi
 
 # Optional: Lock to specific channels
 # Example: only scan 2.4GHz channels 1,6,11
-#source=wlx00c0caadcedb:type=linuxwifi,channels="1,6,11"
+#source=<adapter>:type=linuxwifi,channels="1,6,11"
 
 # Enable beaconing/active scanning (if legal in your area)
 # dot11_active_scanning=true
@@ -52,10 +51,10 @@ echo "GPS configuration added to /etc/kismet/kismet_site.conf"
 echo ""
 echo "Testing configuration..."
 
-# Check if Kismet can parse the config
-if sudo kismet --check-config 2>&1 | grep -q "ERROR"; then
+# Check if Kismet can parse the config (with timeout to prevent hanging)
+if sudo timeout 5 kismet --check-config 2>&1 | grep -q "ERROR"; then
     echo "⚠️  Configuration error detected!"
-    sudo kismet --check-config 2>&1 | grep "ERROR"
+    sudo timeout 5 kismet --check-config 2>&1 | grep "ERROR"
 else
     echo "✓ Configuration is valid"
 fi
@@ -64,5 +63,6 @@ echo ""
 echo "GPS integration complete!"
 echo "When Kismet starts, it will automatically:"
 echo "  - Connect to gpsd for GPS data"
-echo "  - Enable source wlx00c0caadcedb"
 echo "  - Log GPS tracks with captured data"
+echo ""
+echo "Note: WiFi sources need to be added manually or via the start script"
