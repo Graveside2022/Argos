@@ -247,9 +247,9 @@
 								scanProgress = [...scanProgress, data.message];
 								// Auto-scroll to bottom
 								setTimeout(() => {
-									const progressDiv = document.querySelector('.scan-progress-container');
-									if (progressDiv) {
-										progressDiv.scrollTop = progressDiv.scrollHeight;
+									const consoleBody = document.querySelector('.console-body');
+									if (consoleBody) {
+										consoleBody.scrollTop = consoleBody.scrollHeight;
 									}
 								}, 10);
 							}
@@ -422,6 +422,27 @@
 						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
+					<!-- Scan Area Button (only show when stopped) -->
+					{#if gsmStatus === 'stopped'}
+						<button
+							class="control-btn scan-btn-header"
+							on:click={scanFrequencies}
+							disabled={isScanning}
+						>
+							{#if isScanning}
+								<svg class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 10.586V7z" clip-rule="evenodd" />
+								</svg>
+								Scanning...
+							{:else}
+								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+								</svg>
+								<span class="font-bold">Scan Area</span>
+							{/if}
+						</button>
+					{/if}
+					
 					<!-- Start/Stop GSM Evil Button -->
 					<button
 						on:click={toggleGSMEvil}
@@ -458,84 +479,103 @@
 		</div>
 	</header>
 
-	<!-- Frequency Selector Panel -->
+	<!-- Frequency Selector Panel (Compact) -->
 	{#if gsmStatus === 'stopped'}
-		<div class="frequency-panel">
+		<div class="frequency-panel-compact">
 			<div class="frequency-container">
-				<div class="frequency-header">
-					<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M14.064 2.64a1 1 0 011.296 1.408l-1 1.25a1 1 0 11-1.568-1.248l1-1.25a1 1 0 01.272-.16zM5.936 2.64a1 1 0 01.272.16l1 1.25a1 1 0 01-1.568 1.248l-1-1.25A1 1 0 015.936 2.64zM10 6a4 4 0 00-4 4c0 .601.132 1.17.368 1.68l-3.076 3.076a1 1 0 101.414 1.414l3.076-3.076A3.978 3.978 0 0010 14a4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4z"/>
-					</svg>
-					<h3 class="text-lg font-semibold text-white">Select Frequency</h3>
-				</div>
-				
-				<div class="frequency-options">
-					<button
-						class="freq-btn scan-btn-blue"
-						on:click={scanFrequencies}
-						disabled={isScanning}
-					>
-						{#if isScanning}
-							<svg class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 10.586V7z" clip-rule="evenodd" />
-							</svg>
-							Scanning...
-						{:else}
-							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-							</svg>
-							Scan Area
+				<!-- Frequency Selection Bar -->
+				<div class="frequency-bar">
+					<div class="freq-selection">
+						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M14.064 2.64a1 1 0 011.296 1.408l-1 1.25a1 1 0 11-1.568-1.248l1-1.25a1 1 0 01.272-.16zM5.936 2.64a1 1 0 01.272.16l1 1.25a1 1 0 01-1.568 1.248l-1-1.25A1 1 0 015.936 2.64zM10 6a4 4 0 00-4 4c0 .601.132 1.17.368 1.68l-3.076 3.076a1 1 0 101.414 1.414l3.076-3.076A3.978 3.978 0 0010 14a4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4z"/>
+						</svg>
+						<span class="text-sm text-gray-400">Selected Frequency:</span>
+						<span class="text-lg font-bold text-green-500">{selectedFrequency} MHz</span>
+						{#if scanStatus}
+							<span class="scan-status-inline">{scanStatus}</span>
 						{/if}
-					</button>
-				</div>
-				
-				<div class="selected-freq-display">
-					Selected: <span class="text-green-500 font-bold">{selectedFrequency} MHz</span>
-				</div>
-				
-				{#if scanStatus}
-					<div class="scan-status">
-						{scanStatus}
 					</div>
-				{/if}
+				</div>
 				
+				<!-- Scan Progress Console (Larger) -->
 				{#if showScanProgress && scanProgress.length > 0}
-					<div class="scan-progress-container">
-						<div class="scan-progress-terminal">
+					<div class="scan-progress-console">
+						<div class="console-header">
+							<span class="console-title">FREQUENCY SCAN CONSOLE</span>
+							<span class="console-status">{isScanning ? 'SCANNING...' : 'COMPLETE'}</span>
+						</div>
+						<div class="console-body">
 							{#each scanProgress as line}
-								<div class="scan-progress-line {line.startsWith('[ERROR]') ? 'error' : line.startsWith('[CMD]') ? 'command' : line.startsWith('[TEST') ? 'test' : line.includes('=====') ? 'header' : ''}">
+								<div class="console-line {line.startsWith('[ERROR]') ? 'error' : line.startsWith('[CMD]') ? 'command' : line.startsWith('[TEST') ? 'test' : line.includes('=====') ? 'header' : ''}">
 									{line}
 								</div>
 							{/each}
 							{#if isScanning}
-								<div class="scan-progress-cursor">█</div>
+								<div class="console-cursor">█</div>
 							{/if}
 						</div>
 					</div>
 				{/if}
 				
+				<!-- Scan Results Table -->
 				{#if showScanResults && scanResults.length > 0}
-					<div class="scan-results">
-						<h4 class="text-sm font-semibold text-gray-300 mb-2">Scan Results - All Active Frequencies:</h4>
-						<div class="scan-results-grid">
-							{#each scanResults as result}
-								<button
-									class="scan-result-btn {selectedFrequency === result.frequency ? 'selected' : ''}"
-									on:click={() => selectedFrequency = result.frequency}
-									title="{result.power.toFixed(1)} dB{result.frameCount !== undefined ? ` - ${result.frameCount} frames` : ''}"
-								>
-									<span class="freq-value">{result.frequency} MHz</span>
-									<span class="freq-power">{result.power.toFixed(1)} dB</span>
-									<span class="freq-strength {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
-									{#if result.frameCount !== undefined}
-										<span class="freq-frames {result.hasGsmActivity ? 'active' : 'inactive'}">
-											{result.frameCount} frames {result.hasGsmActivity ? '✓' : ''}
-										</span>
-									{/if}
-								</button>
-							{/each}
+					<div class="scan-results-table">
+						<h4 class="table-title">Frequency Scan Results</h4>
+						<div class="table-container">
+							<table class="frequency-table">
+								<thead>
+									<tr>
+										<th>Frequency</th>
+										<th>Signal Strength</th>
+										<th>Quality</th>
+										<th>GSM Frames</th>
+										<th>Activity</th>
+										<th>Action</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
+										<tr class="{selectedFrequency === result.frequency ? 'selected' : ''}">
+											<td class="freq-cell">{result.frequency} MHz</td>
+											<td class="signal-cell">
+												<div class="signal-bar">
+													<div class="signal-value">{result.power.toFixed(1)} dB</div>
+													<div class="signal-meter">
+														<div class="signal-fill" style="width: {Math.max(0, Math.min(100, (result.power + 80) * 2))}%"></div>
+													</div>
+												</div>
+											</td>
+											<td>
+												<span class="quality-badge {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
+											</td>
+											<td class="frames-cell">
+												{#if result.frameCount !== undefined}
+													<span class="frame-count">{result.frameCount}</span>
+												{:else}
+													<span class="no-data">-</span>
+												{/if}
+											</td>
+											<td class="activity-cell">
+												{#if result.hasGsmActivity}
+													<span class="activity-yes">✓</span>
+												{:else}
+													<span class="activity-no">✗</span>
+												{/if}
+											</td>
+											<td>
+												<button 
+													class="select-btn {selectedFrequency === result.frequency ? 'selected' : ''}"
+													on:click={() => selectedFrequency = result.frequency}
+												>
+													{selectedFrequency === result.frequency ? 'Selected' : 'Select'}
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
 						</div>
-						<p class="text-xs text-gray-400 mt-2">Found {scanResults.length} active frequencies. Click any to select.</p>
+						<p class="table-footer">Found {scanResults.length} active frequencies • Sorted by GSM frame count</p>
 					</div>
 				{/if}
 			</div>
@@ -650,7 +690,7 @@
 	{/if}
 
 	<!-- Main Content -->
-	<div class="relative" style="height: calc(100vh - {gsmStatus === 'running' && detailedStatus ? '144px' : gsmStatus === 'stopped' ? '200px' : '64px'});">
+	<div class="relative" style="height: calc(100vh - {gsmStatus === 'running' && detailedStatus ? '144px' : gsmStatus === 'stopped' ? '120px' : '64px'});">
 		{#if gsmStatus === 'starting'}
 			<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 z-50">
 				<div class="text-center max-w-md">
@@ -1087,187 +1127,352 @@
 		z-index: 50;
 	}
 
-	/* Frequency Panel */
-	.frequency-panel {
+	/* Scan Button in Header */
+	.scan-btn-header {
+		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+		border: 1px solid rgba(37, 99, 235, 0.3) !important;
+		color: white !important;
+		box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	}
+
+	.scan-btn-header:hover:not(:disabled) {
+		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+		box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+		transform: translateY(-1px);
+	}
+
+	/* Compact Frequency Panel */
+	.frequency-panel-compact {
 		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
 		border-bottom: 1px solid #333;
-		padding: 1.5rem 1rem;
+		padding: 0.75rem 1rem;
 	}
 
-	.frequency-container {
-		max-width: 1200px;
-		margin: 0 auto;
-	}
-
-	.frequency-header {
+	.frequency-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
 		justify-content: center;
+		margin-bottom: 0.5rem;
 	}
 
-	.frequency-options {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.freq-btn {
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border: 1px solid #444;
-		border-radius: 0.375rem;
-		padding: 0.75rem;
-		color: white;
-		cursor: pointer;
-		transition: all 0.3s ease;
+	.freq-selection {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 0.75rem;
+		padding: 0.5rem 1rem;
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.5rem;
 	}
 
-	.freq-btn:hover {
-		background: linear-gradient(135deg, #333 0%, #222 100%);
-		border-color: #555;
-		transform: translateY(-1px);
-	}
-
-	.freq-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.freq-selected {
-		background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-		border-color: rgba(16, 185, 129, 0.5) !important;
-		box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-	}
-
-	.scan-btn {
-		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-		border-color: rgba(239, 68, 68, 0.5);
-	}
-	
-	.scan-btn-blue {
-		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-		border-color: rgba(37, 99, 235, 0.5) !important;
-		color: white;
-		min-width: 200px;
-		font-weight: 600;
-		box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-	}
-	
-	.scan-btn-blue:hover {
-		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-		border-color: rgba(59, 130, 246, 0.5) !important;
-		transform: translateY(-1px);
-		box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-	}
-	
-	.scan-btn-blue:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-		transform: none;
-		box-shadow: none;
-	}
-
-	.scan-btn:hover:not(:disabled) {
-		background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-	}
-
-	.freq-value {
-		font-size: 1rem;
-		font-weight: 600;
-	}
-
-	.freq-strength {
+	.scan-status-inline {
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: #60a5fa;
+		font-style: italic;
+		margin-left: 1rem;
 	}
 
-	.selected-freq-display {
-		text-align: center;
+	/* Large Console for Scan Progress */
+	.scan-progress-console {
+		margin: 1rem 0;
+		background: #000;
+		border: 2px solid #333;
+		border-radius: 0.5rem;
+		overflow: hidden;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+	}
+
+	.console-header {
+		background: linear-gradient(to right, #1a1a1a, #2a2a2a);
+		padding: 0.75rem 1rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid #444;
+	}
+
+	.console-title {
+		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 		font-size: 0.875rem;
-		color: #9ca3af;
+		font-weight: bold;
+		color: #22c55e;
+		letter-spacing: 0.05em;
 	}
-	
-	.scan-status {
-		text-align: center;
-		font-size: 0.875rem;
-		color: #60a5fa;
-		margin-top: 0.5rem;
-		font-style: italic;
-	}
-	
-	.scan-progress-container {
-		margin-top: 1rem;
-		max-height: 300px;
-		overflow-y: auto;
-		background: #0a0a0a;
-		border: 1px solid #333;
-		border-radius: 0.375rem;
-		padding: 0.75rem;
-	}
-	
-	.scan-progress-terminal {
+
+	.console-status {
 		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 		font-size: 0.75rem;
-		line-height: 1.4;
+		color: #fbbf24;
+		animation: pulse 2s infinite;
 	}
-	
-	.scan-progress-line {
+
+	.console-body {
+		padding: 1rem;
+		max-height: 400px;
+		overflow-y: auto;
+		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		background: rgba(0, 0, 0, 0.8);
+	}
+
+	.console-line {
 		color: #9ca3af;
 		white-space: pre-wrap;
 		word-break: break-all;
+		margin-bottom: 0.25rem;
 	}
-	
-	.scan-progress-line.error {
+
+	.console-line.error {
 		color: #ef4444;
-	}
-	
-	.scan-progress-line.command {
-		color: #22c55e;
-	}
-	
-	.scan-progress-line.test {
-		color: #60a5fa;
-	}
-	
-	.scan-progress-line.header {
-		color: #fbbf24;
 		font-weight: bold;
 	}
-	
-	.scan-progress-cursor {
+
+	.console-line.command {
+		color: #22c55e;
+	}
+
+	.console-line.test {
+		color: #60a5fa;
+	}
+
+	.console-line.header {
+		color: #fbbf24;
+		font-weight: bold;
+		margin-top: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.console-cursor {
 		display: inline-block;
 		animation: blink 1s infinite;
 		color: #22c55e;
+		font-weight: bold;
 	}
-	
+
+	/* Custom scrollbar for console */
+	.console-body::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	.console-body::-webkit-scrollbar-track {
+		background: #1a1a1a;
+		border-radius: 5px;
+	}
+
+	.console-body::-webkit-scrollbar-thumb {
+		background: #444;
+		border-radius: 5px;
+		border: 1px solid #333;
+	}
+
+	.console-body::-webkit-scrollbar-thumb:hover {
+		background: #555;
+	}
+
+	/* Scan Results Table */
+	.scan-results-table {
+		margin-top: 1rem;
+		background: rgba(0, 0, 0, 0.3);
+		border: 1px solid #333;
+		border-radius: 0.5rem;
+		padding: 1rem;
+	}
+
+	.table-title {
+		font-size: 1rem;
+		font-weight: 600;
+		color: #fff;
+		margin-bottom: 1rem;
+		text-align: center;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.table-container {
+		overflow-x: auto;
+		border-radius: 0.375rem;
+		border: 1px solid #333;
+	}
+
+	.frequency-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+	}
+
+	.frequency-table thead {
+		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+	}
+
+	.frequency-table th {
+		padding: 0.75rem 1rem;
+		text-align: left;
+		font-weight: 600;
+		color: #fff;
+		border-bottom: 2px solid #444;
+		text-transform: uppercase;
+		font-size: 0.75rem;
+		letter-spacing: 0.05em;
+	}
+
+	.frequency-table tbody tr {
+		background: rgba(255, 255, 255, 0.02);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		transition: all 0.2s ease;
+	}
+
+	.frequency-table tbody tr:hover {
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.frequency-table tbody tr.selected {
+		background: rgba(34, 197, 94, 0.1);
+		border-left: 3px solid #22c55e;
+	}
+
+	.frequency-table td {
+		padding: 0.75rem 1rem;
+		color: #e5e7eb;
+	}
+
+	.freq-cell {
+		font-weight: 600;
+		font-family: 'Courier New', monospace;
+		color: #fff;
+	}
+
+	.signal-bar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.signal-value {
+		font-weight: 600;
+		color: #fff;
+	}
+
+	.signal-meter {
+		width: 100px;
+		height: 6px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.signal-fill {
+		height: 100%;
+		background: linear-gradient(to right, #ef4444, #fbbf24, #22c55e);
+		transition: width 0.3s ease;
+	}
+
+	.quality-badge {
+		display: inline-block;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+
+	.quality-badge.very-strong {
+		background: rgba(16, 185, 129, 0.2);
+		color: #10b981;
+		border: 1px solid rgba(16, 185, 129, 0.3);
+	}
+
+	.quality-badge.strong {
+		background: rgba(52, 211, 153, 0.2);
+		color: #34d399;
+		border: 1px solid rgba(52, 211, 153, 0.3);
+	}
+
+	.quality-badge.good {
+		background: rgba(251, 191, 36, 0.2);
+		color: #fbbf24;
+		border: 1px solid rgba(251, 191, 36, 0.3);
+	}
+
+	.quality-badge.moderate {
+		background: rgba(245, 158, 11, 0.2);
+		color: #f59e0b;
+		border: 1px solid rgba(245, 158, 11, 0.3);
+	}
+
+	.quality-badge.weak {
+		background: rgba(239, 68, 68, 0.2);
+		color: #ef4444;
+		border: 1px solid rgba(239, 68, 68, 0.3);
+	}
+
+	.frames-cell {
+		text-align: center;
+	}
+
+	.frame-count {
+		font-weight: 600;
+		color: #60a5fa;
+		font-family: 'Courier New', monospace;
+	}
+
+	.no-data {
+		color: #6b7280;
+		font-style: italic;
+	}
+
+	.activity-cell {
+		text-align: center;
+	}
+
+	.activity-yes {
+		color: #22c55e;
+		font-size: 1.25rem;
+		font-weight: bold;
+	}
+
+	.activity-no {
+		color: #ef4444;
+		font-size: 1.25rem;
+		font-weight: bold;
+	}
+
+	.select-btn {
+		padding: 0.375rem 0.75rem;
+		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+		border: 1px solid #444;
+		border-radius: 0.25rem;
+		color: #fff;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-transform: uppercase;
+	}
+
+	.select-btn:hover {
+		background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+		border-color: #555;
+	}
+
+	.select-btn.selected {
+		background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+		border-color: rgba(34, 197, 94, 0.5);
+		color: #fff;
+		cursor: default;
+	}
+
+	.table-footer {
+		text-align: center;
+		font-size: 0.75rem;
+		color: #9ca3af;
+		margin-top: 1rem;
+		font-style: italic;
+	}
+
 	@keyframes blink {
 		0%, 50% { opacity: 1; }
 		51%, 100% { opacity: 0; }
-	}
-	
-	/* Custom scrollbar for scan progress */
-	.scan-progress-container::-webkit-scrollbar {
-		width: 8px;
-	}
-	
-	.scan-progress-container::-webkit-scrollbar-track {
-		background: #1a1a1a;
-		border-radius: 4px;
-	}
-	
-	.scan-progress-container::-webkit-scrollbar-thumb {
-		background: #333;
-		border-radius: 4px;
-	}
-	
-	.scan-progress-container::-webkit-scrollbar-thumb:hover {
-		background: #444;
 	}
 
 	/* Status Panel */
@@ -1422,103 +1627,6 @@
 	@keyframes pulse-wave {
 		0%, 100% { transform: scale(1); opacity: 0.3; }
 		50% { transform: scale(1.1); opacity: 0.1; }
-	}
-	
-	/* Scan Results Styles */
-	.scan-results {
-		margin-top: 1rem;
-		padding: 1rem;
-		background: rgba(0, 0, 0, 0.3);
-		border: 1px solid #333;
-		border-radius: 0.5rem;
-	}
-	
-	.scan-results-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-	}
-	
-	.scan-result-btn {
-		padding: 0.5rem;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid #333;
-		border-radius: 0.25rem;
-		color: white;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.75rem;
-	}
-	
-	.scan-result-btn:hover {
-		background: rgba(255, 255, 255, 0.1);
-		border-color: #666;
-	}
-	
-	.scan-result-btn.selected {
-		background: rgba(34, 197, 94, 0.2);
-		border-color: rgb(34, 197, 94);
-	}
-	
-	.freq-strength {
-		font-size: 0.625rem;
-		padding: 0.125rem 0.25rem;
-		border-radius: 0.125rem;
-		background: rgba(255, 255, 255, 0.1);
-	}
-	
-	.freq-frames {
-		font-size: 0.625rem;
-		padding: 0.125rem 0.25rem;
-		border-radius: 0.125rem;
-		margin-top: 0.125rem;
-	}
-	
-	.freq-frames.active {
-		background: rgba(34, 197, 94, 0.2);
-		color: rgb(34, 197, 94);
-	}
-	
-	.freq-frames.inactive {
-		background: rgba(239, 68, 68, 0.2);
-		color: rgb(248, 113, 113);
-	}
-	
-	.freq-strength.very-strong {
-		color: #10b981;
-		background: rgba(16, 185, 129, 0.2);
-	}
-	
-	.freq-strength.strong {
-		color: #34d399;
-		background: rgba(52, 211, 153, 0.2);
-	}
-	
-	.freq-strength.good {
-		color: #fbbf24;
-		background: rgba(251, 191, 36, 0.2);
-	}
-	
-	.freq-strength.moderate {
-		color: #f59e0b;
-		background: rgba(245, 158, 11, 0.2);
-	}
-	
-	.freq-strength.weak {
-		color: #ef4444;
-		background: rgba(239, 68, 68, 0.2);
-	}
-	
-	.freq-power {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #fff;
-		margin: 0.25rem 0;
 	}
 
 </style>
