@@ -259,8 +259,17 @@
 								if (data.result.success && data.result.bestFrequency) {
 									selectedFrequency = data.result.bestFrequency;
 									scanResults = data.result.scanResults || [];
-									showScanResults = true;
 									scanStatus = `Selected ${data.result.bestFrequency} MHz with ${data.result.bestFrequencyFrames} GSM frames`;
+									console.log('Scan complete. Results:', scanResults.length, 'frequencies');
+									// Force UI update with small delay
+									setTimeout(() => {
+										showScanResults = true;
+										scanResults = [...scanResults];
+									}, 100);
+									// Hide progress after a short delay to show completion
+									setTimeout(() => {
+										showScanProgress = false;
+									}, 3000);
 								}
 							}
 						} catch (e) {
@@ -287,6 +296,10 @@
 						scanResults = data.scanResults || [];
 						showScanResults = true;
 						scanProgress = [...scanProgress, `[FALLBACK] Selected ${data.strongestFrequency} MHz (strongest signal)`];
+						// Hide progress after showing fallback result
+						setTimeout(() => {
+							showScanProgress = false;
+						}, 3000);
 					}
 				}
 			} catch (fallbackError) {
@@ -294,10 +307,7 @@
 			}
 		} finally {
 			isScanning = false;
-			// Keep progress visible for 30 seconds
-			setTimeout(() => {
-				showScanProgress = false;
-			}, 30000);
+			// Progress visibility is handled when results arrive
 		}
 	}
 	
