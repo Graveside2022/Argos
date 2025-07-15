@@ -58,10 +58,9 @@ export const POST: RequestHandler = async () => {
       }
     });
     
-    // Sort frequencies by power level and take top 10 for GSM testing
+    // Sort frequencies by power level and test all of them
     const candidateFreqs = Array.from(strongFrequencies.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
+      .sort((a, b) => b[1] - a[1]);
     
     if (candidateFreqs.length === 0) {
       return json({
@@ -124,8 +123,8 @@ export const POST: RequestHandler = async () => {
     // Find the best frequency (most GSM frames)
     const bestFreq = results.find(r => r.hasGsmActivity) || results[0];
     
-    // Format results message
-    const summaryLines = results.slice(0, 10).map(r => 
+    // Format results message - show all results
+    const summaryLines = results.map(r => 
       `${r.frequency} MHz: ${r.power.toFixed(1)} dB (${r.strength}) - ${r.frameCount} frames${r.hasGsmActivity ? ' ✓' : ''}`
     );
     
