@@ -419,38 +419,7 @@
 						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
-					<!-- Scan Area and Clear Results Buttons (only show when stopped) -->
-					{#if gsmStatus === 'stopped'}
-						<button
-							class="control-btn scan-btn-yellow"
-							on:click={scanFrequencies}
-							disabled={isScanning}
-						>
-							{#if isScanning}
-								<svg class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 10.586V7z" clip-rule="evenodd" />
-								</svg>
-								Scanning...
-							{:else}
-								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-								</svg>
-								<span class="font-bold">Scan Area</span>
-							{/if}
-						</button>
-						
-						<button
-							class="control-btn clear-btn-blue"
-							on:click={clearResults}
-						>
-							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-							</svg>
-							<span class="font-bold">Clear Results</span>
-						</button>
-					{/if}
-					
-					<!-- Start/Stop GSM Evil Button -->
+					<!-- Start/Stop GSM Evil Button (moved to left) -->
 					<button
 						on:click={toggleGSMEvil}
 						disabled={gsmStatus === 'starting' || gsmStatus === 'stopping'}
@@ -460,27 +429,37 @@
 						{gsmStatus === 'starting' || gsmStatus === 'stopping' ? 'btn-loading' : ''}"
 					>
 						{#if gsmStatus === 'stopped'}
-							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-							</svg>
 							<span class="font-bold">Start GSM Evil</span>
 						{:else if gsmStatus === 'running'}
-							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
-							</svg>
 							<span class="font-bold">Stop GSM Evil</span>
 						{:else if gsmStatus === 'starting'}
-							<svg class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 10.586V7z" clip-rule="evenodd" />
-							</svg>
-							Starting...
+							<span class="font-bold">Starting...</span>
 						{:else}
-							<svg class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 10.586V7z" clip-rule="evenodd" />
-							</svg>
-							Stopping...
+							<span class="font-bold">Stopping...</span>
 						{/if}
 					</button>
+					
+					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
+					{#if gsmStatus === 'stopped'}
+						<button
+							class="control-btn scan-btn-yellow"
+							on:click={scanFrequencies}
+							disabled={isScanning}
+						>
+							{#if isScanning}
+								<span class="font-bold">Scanning...</span>
+							{:else}
+								<span class="font-bold">Start Scan</span>
+							{/if}
+						</button>
+						
+						<button
+							class="control-btn clear-btn-blue"
+							on:click={clearResults}
+						>
+							<span class="font-bold">Clear Results</span>
+						</button>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -490,24 +469,10 @@
 	{#if gsmStatus === 'stopped'}
 		<div class="frequency-panel-compact">
 			<div class="frequency-container">
-				<!-- Frequency Selection Bar -->
-				<div class="frequency-bar">
-					<div class="freq-selection">
-						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M14.064 2.64a1 1 0 011.296 1.408l-1 1.25a1 1 0 11-1.568-1.248l1-1.25a1 1 0 01.272-.16zM5.936 2.64a1 1 0 01.272.16l1 1.25a1 1 0 01-1.568 1.248l-1-1.25A1 1 0 015.936 2.64zM10 6a4 4 0 00-4 4c0 .601.132 1.17.368 1.68l-3.076 3.076a1 1 0 101.414 1.414l3.076-3.076A3.978 3.978 0 0010 14a4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4z"/>
-						</svg>
-						<span class="text-sm text-gray-400">Selected Frequency:</span>
-						<span class="text-lg font-bold text-green-500">{selectedFrequency} MHz</span>
-						{#if scanStatus}
-							<span class="scan-status-inline">{scanStatus}</span>
-						{/if}
-					</div>
-				</div>
-				
 				<!-- Scan Progress Console (Always visible) -->
 				<div class="scan-progress-console">
 					<div class="console-header">
-						<span class="console-title">FREQUENCY SCAN CONSOLE</span>
+						<span class="console-title">CONSOLE</span>
 						<span class="console-status">{isScanning ? 'SCANNING...' : scanProgress.length > 0 ? 'COMPLETE' : 'READY'}</span>
 					</div>
 					<div class="console-body">
@@ -593,13 +558,11 @@
 							</div>
 						{/if}
 					</div>
-					<p class="table-footer">
-						{#if scanResults.length > 0}
+					{#if scanResults.length > 0}
+						<p class="table-footer">
 							Found {scanResults.length} active frequencies • Sorted by GSM frame count
-						{:else}
-							Awaiting frequency scan results
-						{/if}
-					</p>
+						</p>
+					{/if}
 				</div>
 			</div>
 		</div>
