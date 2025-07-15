@@ -436,15 +436,8 @@
 						{/if}
 					</button>
 					
-					<!-- Clear Results and Start Scan Buttons (only show when stopped) -->
+					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
 					{#if gsmStatus === 'stopped'}
-						<button
-							class="control-btn clear-btn-blue"
-							on:click={clearResults}
-						>
-							<span class="font-bold">Clear Results</span>
-						</button>
-						
 						<button
 							class="control-btn scan-btn-yellow"
 							on:click={scanFrequencies}
@@ -455,6 +448,13 @@
 							{:else}
 								<span class="font-bold">Start Scan</span>
 							{/if}
+						</button>
+						
+						<button
+							class="control-btn clear-btn-blue"
+							on:click={clearResults}
+						>
+							<span class="font-bold">Clear Results</span>
 						</button>
 					{/if}
 				</div>
@@ -1107,18 +1107,20 @@
 		transform: translateY(-1px);
 	}
 	
-	/* Back to Console Button */
+	/* Back to Console Button - matches default control-btn gray style */
 	.back-btn-style {
-		background: rgba(75, 85, 99, 0.2);
-		border: 1px solid rgba(75, 85, 99, 0.3);
-		color: #e5e7eb;
+		background: rgba(107, 114, 128, 0.2);
+		border: 1px solid rgba(107, 114, 128, 0.3);
+		color: #ffffff;
 		text-decoration: none;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	}
 	
 	.back-btn-style:hover {
-		background: rgba(75, 85, 99, 0.3);
-		border-color: rgba(75, 85, 99, 0.4);
+		background: rgba(107, 114, 128, 0.3);
+		border-color: rgba(107, 114, 128, 0.4);
 		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
 	/* Compact Frequency Panel */
