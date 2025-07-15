@@ -1135,12 +1135,6 @@
 		padding: 0.75rem 1rem;
 	}
 
-	.frequency-bar {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-bottom: 0.5rem;
-	}
 
 	.freq-selection {
 		display: flex;
