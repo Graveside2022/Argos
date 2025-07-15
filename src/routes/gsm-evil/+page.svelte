@@ -1107,20 +1107,20 @@
 		transform: translateY(-1px);
 	}
 	
-	/* Back to Console Button - matches default control-btn gray style */
+	/* Back to Console Button - muted gray style */
 	.back-btn-style {
-		background: rgba(107, 114, 128, 0.2);
-		border: 1px solid rgba(107, 114, 128, 0.3);
-		color: #ffffff;
+		background: rgba(55, 65, 81, 0.3);
+		border: 1px solid rgba(55, 65, 81, 0.4);
+		color: #d1d5db;
 		text-decoration: none;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 	}
 	
 	.back-btn-style:hover {
-		background: rgba(107, 114, 128, 0.3);
-		border-color: rgba(107, 114, 128, 0.4);
+		background: rgba(55, 65, 81, 0.4);
+		border-color: rgba(55, 65, 81, 0.5);
 		transform: translateY(-1px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 	}
 
 	/* Compact Frequency Panel */
