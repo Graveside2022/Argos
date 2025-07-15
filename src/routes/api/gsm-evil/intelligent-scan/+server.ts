@@ -96,6 +96,26 @@ export const POST: RequestHandler = async () => {
       
       const frameCount = parseInt(packetCount.trim()) || 0;
       
+      // Analyze channel types based on frame patterns
+      let channelType = '';
+      let controlChannel = false;
+      
+      if (frameCount > 0) {
+        if (frameCount > 10 && frameCount < 100) {
+          // Moderate frame count - likely control channel
+          channelType = 'BCCH/CCCH';
+          controlChannel = true;
+        } else if (frameCount >= 100) {
+          // High frame count - likely traffic channel
+          channelType = 'TCH';
+          controlChannel = false;
+        } else {
+          // Low frame count - could be SDCCH or weak signal
+          channelType = 'SDCCH';
+          controlChannel = false;
+        }
+      }
+      
       // Kill grgsm_livemon
       await execAsync(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
       
@@ -112,7 +132,9 @@ export const POST: RequestHandler = async () => {
         power: power,
         frameCount: frameCount,
         hasGsmActivity: frameCount > 10, // At least 10 frames in 3 seconds
-        strength: strength
+        strength: strength,
+        channelType: channelType,
+        controlChannel: controlChannel
       });
       
       // Brief pause between tests
