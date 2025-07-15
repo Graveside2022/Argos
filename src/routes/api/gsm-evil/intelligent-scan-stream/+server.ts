@@ -134,34 +134,24 @@ export const POST: RequestHandler = async ({ request }) => {
           let channelType = '';
           let controlChannel = false;
           
+          // For now, we'll use a heuristic based on frame count patterns
+          // Control channels typically have steady, moderate frame rates
+          // High frame counts often indicate traffic channels
           if (frameCount > 0) {
-            // Capture some packets to analyze channel types
-            const { stdout: channelData } = await execAsync(
-              'sudo timeout 1 tcpdump -i lo -nn port 4729 -A 2>/dev/null | grep -E "BCCH|CCCH|SDCCH|SACCH|FACCH|TCH" | head -20'
-            ).catch(() => ({ stdout: '' }));
-            
-            if (channelData.includes('BCCH') || channelData.includes('CCCH')) {
+            if (frameCount > 10 && frameCount < 100) {
+              // Moderate frame count - likely control channel
+              channelType = 'BCCH/CCCH';
               controlChannel = true;
-              if (channelData.includes('BCCH')) {
-                channelType = 'BCCH';
-              } else if (channelData.includes('CCCH')) {
-                channelType = 'CCCH';
-              }
-            } else if (channelData.includes('SDCCH')) {
-              channelType = 'SDCCH';
-            } else if (channelData.includes('TCH')) {
+            } else if (frameCount >= 100) {
+              // High frame count - likely traffic channel
               channelType = 'TCH';
+              controlChannel = false;
+            } else {
+              // Low frame count - could be SDCCH or weak signal
+              channelType = 'SDCCH';
+              controlChannel = false;
             }
             
-            // Also check for System Information messages which indicate control channels
-            const { stdout: sysInfo } = await execAsync(
-              'sudo timeout 1 grgsm_decode -c C0 2>&1 | grep -E "System Information|Paging Request" | head -5'
-            ).catch(() => ({ stdout: '' }));
-            
-            if (sysInfo.includes('System Information') && !channelType) {
-              controlChannel = true;
-              channelType = 'BCCH';
-            }
           }
           
           // Kill grgsm_livemon
@@ -180,7 +170,7 @@ export const POST: RequestHandler = async ({ request }) => {
           sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
           sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
           if (channelType) {
-            sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel)' : ''}`);
+            sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
           }
           sendUpdate('[SCAN] ');
           
