@@ -74,8 +74,7 @@ export const POST: RequestHandler = async ({ request }) => {
         
         // Sort frequencies by power level
         const candidateFreqs = Array.from(strongFrequencies.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10);
+          .sort((a, b) => b[1] - a[1]);
         
         if (candidateFreqs.length === 0) {
           sendUpdate('[ERROR] No frequencies with sufficient signal strength found');
@@ -84,9 +83,9 @@ export const POST: RequestHandler = async ({ request }) => {
         }
         
         sendUpdate(`[SCAN] Found ${strongFrequencies.size} active frequencies`);
-        sendUpdate(`[SCAN] Selecting top 10 strongest signals for GSM frame analysis`);
+        sendUpdate(`[SCAN] Will test ALL ${candidateFreqs.length} frequencies for GSM frame analysis`);
         sendUpdate('[SCAN] ');
-        sendUpdate('[SCAN] Top 10 frequencies by signal strength:');
+        sendUpdate('[SCAN] All frequencies by signal strength:');
         
         candidateFreqs.forEach(([freq, power], idx) => {
           sendUpdate(`[SCAN] ${(idx + 1).toString().padStart(2)}. ${freq} MHz @ ${power.toFixed(1)} dB`);
@@ -95,6 +94,8 @@ export const POST: RequestHandler = async ({ request }) => {
         sendUpdate('[SCAN] ');
         sendUpdate('[SCAN] Phase 2: GSM Frame Detection');
         sendUpdate('[SCAN] Testing each frequency for actual GSM activity...');
+        const estimatedTime = candidateFreqs.length * 5.5;
+        sendUpdate(`[SCAN] Estimated time: ${Math.ceil(estimatedTime)} seconds (~${Math.ceil(estimatedTime/60)} minutes)`);
         sendUpdate('[SCAN] ');
         
         // Phase 2: Test each candidate frequency
@@ -103,7 +104,7 @@ export const POST: RequestHandler = async ({ request }) => {
         for (let i = 0; i < candidateFreqs.length; i++) {
           const [freq, power] = candidateFreqs[i];
           
-          sendUpdate(`[TEST ${i + 1}/10] Testing ${freq} MHz...`);
+          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Testing ${freq} MHz...`);
           sendUpdate(`[CMD] $ grgsm_livemon_headless -f ${freq}M -g 40`);
           
           // Start grgsm_livemon
@@ -112,13 +113,13 @@ export const POST: RequestHandler = async ({ request }) => {
           );
           
           const pid = gsmPid.trim();
-          sendUpdate(`[TEST ${i + 1}/10] Waiting for demodulator initialization...`);
+          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Waiting for demodulator initialization...`);
           
           // Wait for initialization
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
-          sendUpdate(`[TEST ${i + 1}/10] Counting GSMTAP packets for 3 seconds...`);
+          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
           
           // Count GSMTAP packets
           const { stdout: packetCount } = await execAsync(
@@ -140,8 +141,8 @@ export const POST: RequestHandler = async ({ request }) => {
           
           const hasActivity = frameCount > 10;
           
-          sendUpdate(`[TEST ${i + 1}/10] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
-          sendUpdate(`[TEST ${i + 1}/10] Signal: ${power.toFixed(1)} dB (${strength})`);
+          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
+          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
           sendUpdate('[SCAN] ');
           
           results.push({
