@@ -1166,11 +1166,11 @@
 	}
 
 	.console-title {
-		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-		font-size: 0.875rem;
-		font-weight: bold;
+		font-size: 1rem;
+		font-weight: 600;
 		color: #ffffff;
 		letter-spacing: 0.05em;
+		text-transform: uppercase;
 	}
 
 	.console-status {
