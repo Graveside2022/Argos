@@ -416,21 +416,6 @@
 						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
-					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
-					{#if gsmStatus === 'stopped'}
-						<button
-							class="control-btn scan-btn-yellow"
-							on:click={scanFrequencies}
-							disabled={isScanning}
-						>
-							{#if isScanning}
-								<span class="font-bold">Scanning...</span>
-							{:else}
-								<span class="font-bold">Start Scan</span>
-							{/if}
-						</button>
-					{/if}
-					
 					<!-- Start/Stop GSM Evil Button -->
 					<button
 						on:click={toggleGSMEvil}
@@ -451,12 +436,25 @@
 						{/if}
 					</button>
 					
+					<!-- Clear Results and Start Scan Buttons (only show when stopped) -->
 					{#if gsmStatus === 'stopped'}
 						<button
 							class="control-btn clear-btn-blue"
 							on:click={clearResults}
 						>
 							<span class="font-bold">Clear Results</span>
+						</button>
+						
+						<button
+							class="control-btn scan-btn-yellow"
+							on:click={scanFrequencies}
+							disabled={isScanning}
+						>
+							{#if isScanning}
+								<span class="font-bold">Scanning...</span>
+							{:else}
+								<span class="font-bold">Start Scan</span>
+							{/if}
 						</button>
 					{/if}
 				</div>
@@ -489,16 +487,14 @@
 								<div class="console-cursor">█</div>
 							{/if}
 						{:else}
-							<div class="console-line text-gray-500">Frequency scanner console ready.</div>
-							<div class="console-line text-gray-500">Click "Scan Area" to begin scanning for GSM frequencies.</div>
-							<div class="console-line text-gray-500">The scanner will test multiple frequencies and show real-time progress here.</div>
+							<div class="console-line text-gray-500">Click Start Scan to begin</div>
 						{/if}
 					</div>
 				</div>
 				
 				<!-- Scan Results Table (Always visible) -->
 				<div class="scan-results-table">
-					<h4 class="table-title">Scan Results</h4>
+					<h4 class="table-title"><span style="color: #ff0000;">Scan</span> Results</h4>
 					<div class="table-container">
 						{#if scanResults.length > 0}
 							<table class="frequency-table">
@@ -1113,15 +1109,15 @@
 	
 	/* Back to Console Button */
 	.back-btn-style {
-		background: rgba(107, 114, 128, 0.2);
-		border: 1px solid rgba(107, 114, 128, 0.3);
-		color: #ffffff;
+		background: rgba(75, 85, 99, 0.2);
+		border: 1px solid rgba(75, 85, 99, 0.3);
+		color: #e5e7eb;
 		text-decoration: none;
 	}
 	
 	.back-btn-style:hover {
-		background: rgba(107, 114, 128, 0.3);
-		border-color: rgba(107, 114, 128, 0.4);
+		background: rgba(75, 85, 99, 0.3);
+		border-color: rgba(75, 85, 99, 0.4);
 		transform: translateY(-1px);
 	}
 
