@@ -1186,7 +1186,7 @@
 
 	.console-body {
 		padding: 1rem;
-		max-height: 400px;
+		height: 400px;
 		overflow-y: auto;
 		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 		font-size: 0.875rem;
@@ -1271,6 +1271,9 @@
 		overflow-x: auto;
 		border-radius: 0.375rem;
 		border: 1px solid #333;
+		min-height: 300px;
+		max-height: 400px;
+		overflow-y: auto;
 	}
 
 	.frequency-table {
@@ -1479,7 +1482,10 @@
 	}
 
 	.empty-table {
-		padding: 3rem 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 300px;
 		text-align: center;
 		color: #9ca3af;
 	}
