@@ -469,7 +469,7 @@
 				<!-- Scan Progress Console (Always visible) -->
 				<div class="scan-progress-console">
 					<div class="console-header">
-						<span class="console-title">CONSOLE</span>
+						<span class="console-title" style="color: #ff0000;">CONSOLE</span>
 						{#if isScanning}
 							<span class="console-status">SCANNING...</span>
 						{:else if scanProgress.length > 0}
