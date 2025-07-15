@@ -21,18 +21,18 @@ export const POST: RequestHandler = async ({ request }) => {
           }, { status: 400 });
         }
         
-        // Use the public access script with frequency parameter
+        // Use the auto-IMSI script with frequency parameter
         const freq = frequency || '947.2';
-        console.log(`Starting GSM Evil on ${freq} MHz...`);
-        const { stdout, stderr } = await execAsync(`sudo /home/ubuntu/projects/Argos/scripts/gsm-evil-public.sh ${freq} 45`, {
+        console.log(`Starting GSM Evil on ${freq} MHz with IMSI sniffer auto-enabled...`);
+        const { stdout, stderr } = await execAsync(`sudo /home/ubuntu/projects/Argos/scripts/gsm-evil-with-auto-imsi.sh ${freq} 45`, {
           timeout: 15000 // 15 second timeout
         });
         
         console.log('Start output:', stdout);
         if (stderr) console.error('Start stderr:', stderr);
         
-        // Verify it started - check for GsmEvil.py (capital G)
-        const checkResult = await execAsync('pgrep -f "GsmEvil.py"').catch(() => ({ stdout: '' }));
+        // Verify it started - check for GsmEvil.py or GsmEvil_auto.py (capital G)
+        const checkResult = await execAsync('pgrep -f "GsmEvil(_auto)?\\.py"').catch(() => ({ stdout: '' }));
         if (!checkResult.stdout.trim()) {
           // Also check if port 80 is listening
           const portCheck = await execAsync('sudo lsof -i :80 | grep LISTEN').catch(() => ({ stdout: '' }));

@@ -40,9 +40,9 @@ export const GET: RequestHandler = async () => {
       // Not running
     }
 
-    // Check GSMEvil2 with exact match
+    // Check GSMEvil2 with exact match (including auto version)
     try {
-      const { stdout: gsmevilCheck } = await execAsync('ps aux | grep -E "python3? GsmEvil\\.py" | grep -v grep | head -1');
+      const { stdout: gsmevilCheck } = await execAsync('ps aux | grep -E "python3? GsmEvil(_auto)?\\.py" | grep -v grep | head -1');
       if (gsmevilCheck.trim()) {
         const parts = gsmevilCheck.trim().split(/\s+/);
         const pid = parseInt(parts[1]);
