@@ -416,7 +416,22 @@
 						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
-					<!-- Start/Stop GSM Evil Button (moved to left) -->
+					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
+					{#if gsmStatus === 'stopped'}
+						<button
+							class="control-btn scan-btn-yellow"
+							on:click={scanFrequencies}
+							disabled={isScanning}
+						>
+							{#if isScanning}
+								<span class="font-bold">Scanning...</span>
+							{:else}
+								<span class="font-bold">Start Scan</span>
+							{/if}
+						</button>
+					{/if}
+					
+					<!-- Start/Stop GSM Evil Button -->
 					<button
 						on:click={toggleGSMEvil}
 						disabled={gsmStatus === 'starting' || gsmStatus === 'stopping'}
@@ -436,20 +451,7 @@
 						{/if}
 					</button>
 					
-					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
 					{#if gsmStatus === 'stopped'}
-						<button
-							class="control-btn scan-btn-yellow"
-							on:click={scanFrequencies}
-							disabled={isScanning}
-						>
-							{#if isScanning}
-								<span class="font-bold">Scanning...</span>
-							{:else}
-								<span class="font-bold">Start Scan</span>
-							{/if}
-						</button>
-						
 						<button
 							class="control-btn clear-btn-blue"
 							on:click={clearResults}
@@ -470,7 +472,11 @@
 				<div class="scan-progress-console">
 					<div class="console-header">
 						<span class="console-title">CONSOLE</span>
-						<span class="console-status">{isScanning ? 'SCANNING...' : scanProgress.length > 0 ? 'COMPLETE' : 'READY'}</span>
+						{#if isScanning}
+							<span class="console-status">SCANNING...</span>
+						{:else if scanProgress.length > 0}
+							<span class="console-status">COMPLETE</span>
+						{/if}
 					</div>
 					<div class="console-body">
 						{#if scanProgress.length > 0}
@@ -492,7 +498,7 @@
 				
 				<!-- Scan Results Table (Always visible) -->
 				<div class="scan-results-table">
-					<h4 class="table-title">Frequency Scan Results</h4>
+					<h4 class="table-title">Scan Results</h4>
 					<div class="table-container">
 						{#if scanResults.length > 0}
 							<table class="frequency-table">
@@ -550,8 +556,7 @@
 							</table>
 						{:else}
 							<div class="empty-table">
-								<p class="text-gray-500">No scan results yet. Click "Scan Area" to search for GSM frequencies.</p>
-								<p class="text-gray-600 text-sm mt-2">The scanner will automatically detect active GSM channels in your area.</p>
+								<p class="text-gray-500">No results available</p>
 							</div>
 						{/if}
 					</div>
