@@ -5,6 +5,7 @@
 	import { SignalAggregator } from './SignalAggregator';
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
+	import SimpleRSSIButton from '$lib/components/map/SimpleRSSIButton.svelte';
 
 	// Define GPS API response interfaces
 	interface GPSPositionData {
@@ -209,6 +210,10 @@
 	// System info for Pi popup
 	let systemInfo: SystemInfo | null = null;
 	let _systemInfoInterval: NodeJS.Timeout | null = null;
+
+	// RSSI Localization state
+	let rssiEnabled = false;
+	let selectedRSSIDevice: string | null = null;
 
 	// Signal storage
 	const signals = new Map<string, SimplifiedSignal>();
@@ -789,9 +794,9 @@
 							{
 								icon: L.divIcon({
 									html: deviceIconSVG,
-									iconSize: [40, 40],
-									iconAnchor: [20, 20],
-									className: 'kismet-marker'
+									iconSize: rssiEnabled && selectedRSSIDevice === device.macaddr ? [50, 50] : [40, 40],
+									iconAnchor: rssiEnabled && selectedRSSIDevice === device.macaddr ? [25, 25] : [20, 20],
+									className: rssiEnabled && selectedRSSIDevice === device.macaddr ? 'kismet-marker selected-rssi' : 'kismet-marker'
 								})
 							}
 						);
@@ -848,6 +853,19 @@
 							if (marker) {
 								marker.openPopup();
 							}
+							
+							// RSSI device selection
+							if (rssiEnabled) {
+								if (selectedRSSIDevice === device.macaddr) {
+									selectedRSSIDevice = null;
+									console.log('RSSI: Deselected device');
+								} else {
+									selectedRSSIDevice = device.macaddr;
+									console.log('RSSI: Selected device', device.macaddr);
+								}
+								// Update visual feedback
+								void fetchKismetDevices();
+							}
 						});
 
 						if (map) {
@@ -860,12 +878,13 @@
 						const deviceIconSVG = getDeviceIconSVG(device, iconColor);
 
 						if (marker) {
+							const isSelected = rssiEnabled && selectedRSSIDevice === device.macaddr;
 							marker.setIcon(
 								L.divIcon({
 									html: deviceIconSVG,
-									iconSize: [30, 30],
-									iconAnchor: [15, 15],
-									className: 'kismet-marker'
+									iconSize: isSelected ? [40, 40] : [30, 30],
+									iconAnchor: isSelected ? [20, 20] : [15, 15],
+									className: isSelected ? 'kismet-marker selected-rssi' : 'kismet-marker'
 								})
 							);
 						}
@@ -1429,6 +1448,18 @@
 				&lt; -80 dBm (Weak)
 			</span>
 		</div>
+
+		<!-- Simple RSSI Toggle Button -->
+		<SimpleRSSIButton 
+			{rssiEnabled}
+			onToggle={(enabled) => {
+				rssiEnabled = enabled;
+				console.log('RSSI Localization:', enabled ? 'Enabled' : 'Disabled');
+				if (!enabled) {
+					selectedRSSIDevice = null;
+				}
+			}}
+		/>
 	</div>
 
 	<!-- Signal Info Bar (Now Kismet Data) -->
@@ -2552,6 +2583,17 @@
 
 	:global(.kismet-marker svg) {
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+	}
+
+	/* Selected RSSI device */
+	:global(.kismet-marker.selected-rssi svg) {
+		filter: drop-shadow(0 0 10px #ff8800) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+		animation: pulse-glow 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse-glow {
+		0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px #ff8800) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+		50% { transform: scale(1.05); filter: drop-shadow(0 0 20px #ff8800) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
 	}
 
 	/* iPhone Portrait Mode (320px - 428px width) */

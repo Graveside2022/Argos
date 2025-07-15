@@ -43,6 +43,9 @@ export class GPSService {
 				const fixType = fix === 3 ? '3D' : fix === 2 ? '2D' : 'No';
 				const gpsStatus = `GPS: ${fixType} Fix (${satellites} sats)`;
 
+				// Debug logging
+				console.log('[GPS Debug] Raw fix value:', fix, 'Fix type:', fixType, 'Satellites:', satellites);
+
 				// Update country and formatted coordinates
 				const currentCountry = detectCountry(position.lat, position.lon);
 				const formattedCoords = formatCoordinates(position.lat, position.lon);
@@ -60,6 +63,8 @@ export class GPSService {
 					formattedCoords,
 					mgrsCoord
 				});
+				
+				console.log('[GPS Debug] Updated store with hasGPSFix:', fix >= 2, 'fixType:', fixType);
 			} else {
 				updateGPSStatus({ gpsStatus: 'GPS: No Fix' });
 			}

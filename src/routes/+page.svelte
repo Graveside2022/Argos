@@ -20,6 +20,10 @@
 	function navigateToTacticalMap() {
 		void goto('/tactical-map-simple');
 	}
+
+	function navigateToGSMEvil() {
+		void goto('/gsm-evil');
+	}
 </script>
 
 <svelte:head>
@@ -126,6 +130,21 @@
 			<p class="mission-desc">Data Broadcasting</p>
 		</div>
 
+		<div
+			class="mission-card mission-gsm"
+			on:click={navigateToGSMEvil}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToGSMEvil()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"></path>
+			</svg>
+			<h2 class="mission-title">GSM Evil</h2>
+			<p class="mission-desc">Cellular Analysis</p>
+		</div>
+
 		<div class="mission-card mission-docs">
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -156,6 +175,7 @@
 		--mission-spectrum: #fb923c;
 		--mission-location: #10b981;
 		--mission-broadcast: #8b5cf6;
+		--mission-gsm: #ff0000;
 
 		/* Text Colors */
 		--text-primary: #ffffff;
@@ -373,6 +393,11 @@
 	.mission-analyze {
 		--mission-color: #06b6d4;
 		--mission-glow: rgba(6, 182, 212, 0.3);
+	}
+
+	.mission-gsm {
+		--mission-color: var(--mission-gsm);
+		--mission-glow: rgba(255, 0, 0, 0.3);
 	}
 
 	/* Mission Icons */

@@ -1,0 +1,20 @@
+[Unit]
+Description=Robust WiFi Keepalive Service
+After=network.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/ubuntu/projects/Argos/scripts/wifi-keepalive-robust.sh
+Restart=always
+RestartSec=10
+User=root
+StandardOutput=journal
+StandardError=journal
+
+# Ensure service starts even if network isn't ready
+StartLimitIntervalSec=0
+StartLimitBurst=0
+
+[Install]
+WantedBy=multi-user.target
