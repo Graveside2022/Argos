@@ -19,7 +19,7 @@
 		currentFrequency: '947.2',
 		message: 'Checking...'
 	};
-	let scanResults: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean }[] = [];
+	let scanResults: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean; channelType?: string; controlChannel?: boolean }[] = [];
 	let showScanResults = false;
 	let capturedIMSIs: any[] = [];
 	let totalIMSIs = 0;
@@ -526,8 +526,9 @@
 								<thead>
 									<tr>
 										<th>Frequency</th>
-										<th>Signal Strength</th>
+										<th>Signal</th>
 										<th>Quality</th>
+										<th>Channel Type</th>
 										<th>GSM Frames</th>
 										<th>Activity</th>
 										<th>Action</th>
@@ -537,16 +538,16 @@
 									{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
 										<tr class="{selectedFrequency === result.frequency ? 'selected' : ''}">
 											<td class="freq-cell">{result.frequency} MHz</td>
-											<td class="signal-cell">
-												<div class="signal-bar">
-													<div class="signal-value">{result.power.toFixed(1)} dB</div>
-													<div class="signal-meter">
-														<div class="signal-fill" style="width: {Math.max(0, Math.min(100, (result.power + 80) * 2))}%"></div>
-													</div>
-												</div>
-											</td>
+											<td class="signal-cell">{result.power.toFixed(1)} dB</td>
 											<td>
 												<span class="quality-badge {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
+											</td>
+											<td>
+												{#if result.channelType}
+													<span class="channel-type {result.controlChannel ? 'control' : ''}">{result.channelType}</span>
+												{:else}
+													<span class="channel-type unknown">-</span>
+												{/if}
 											</td>
 											<td class="frames-cell">
 												{#if result.frameCount !== undefined}
@@ -1376,6 +1377,11 @@
 		text-transform: uppercase;
 	}
 
+	.quality-badge.excellent {
+		background: rgba(147, 51, 234, 0.2);
+		color: #9333ea;
+		border: 1px solid rgba(147, 51, 234, 0.3);
+	}
 	.quality-badge.very-strong {
 		background: rgba(16, 185, 129, 0.2);
 		color: #10b981;
@@ -1404,6 +1410,31 @@
 		background: rgba(239, 68, 68, 0.2);
 		color: #ef4444;
 		border: 1px solid rgba(239, 68, 68, 0.3);
+	}
+	
+	.channel-type {
+		display: inline-block;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		font-family: monospace;
+	}
+	
+	.channel-type.control {
+		background: rgba(59, 130, 246, 0.2);
+		color: #3b82f6;
+		border: 1px solid rgba(59, 130, 246, 0.3);
+	}
+	
+	.channel-type.unknown {
+		color: #6b7280;
+	}
+	
+	.channel-type:not(.control):not(.unknown) {
+		background: rgba(107, 114, 128, 0.2);
+		color: #9ca3af;
+		border: 1px solid rgba(107, 114, 128, 0.3);
 	}
 
 	.frames-cell {

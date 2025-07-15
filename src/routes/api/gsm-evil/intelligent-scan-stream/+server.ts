@@ -10,6 +10,8 @@ interface FrequencyTestResult {
   frameCount: number;
   hasGsmActivity: boolean;
   strength: string;
+  channelType?: string;
+  controlChannel?: boolean;
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -121,12 +123,46 @@ export const POST: RequestHandler = async ({ request }) => {
           sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
           sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
           
-          // Count GSMTAP packets
+          // Count GSMTAP packets and analyze channel types
           const { stdout: packetCount } = await execAsync(
             'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
           ).catch(() => ({ stdout: '0' }));
           
           const frameCount = parseInt(packetCount.trim()) || 0;
+          
+          // Analyze channel types if frames detected
+          let channelType = '';
+          let controlChannel = false;
+          
+          if (frameCount > 0) {
+            // Capture some packets to analyze channel types
+            const { stdout: channelData } = await execAsync(
+              'sudo timeout 1 tcpdump -i lo -nn port 4729 -A 2>/dev/null | grep -E "BCCH|CCCH|SDCCH|SACCH|FACCH|TCH" | head -20'
+            ).catch(() => ({ stdout: '' }));
+            
+            if (channelData.includes('BCCH') || channelData.includes('CCCH')) {
+              controlChannel = true;
+              if (channelData.includes('BCCH')) {
+                channelType = 'BCCH';
+              } else if (channelData.includes('CCCH')) {
+                channelType = 'CCCH';
+              }
+            } else if (channelData.includes('SDCCH')) {
+              channelType = 'SDCCH';
+            } else if (channelData.includes('TCH')) {
+              channelType = 'TCH';
+            }
+            
+            // Also check for System Information messages which indicate control channels
+            const { stdout: sysInfo } = await execAsync(
+              'sudo timeout 1 grgsm_decode -c C0 2>&1 | grep -E "System Information|Paging Request" | head -5'
+            ).catch(() => ({ stdout: '' }));
+            
+            if (sysInfo.includes('System Information') && !channelType) {
+              controlChannel = true;
+              channelType = 'BCCH';
+            }
+          }
           
           // Kill grgsm_livemon
           await execAsync(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
@@ -143,6 +179,9 @@ export const POST: RequestHandler = async ({ request }) => {
           
           sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
           sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
+          if (channelType) {
+            sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel)' : ''}`);
+          }
           sendUpdate('[SCAN] ');
           
           results.push({
@@ -150,7 +189,9 @@ export const POST: RequestHandler = async ({ request }) => {
             power: power,
             frameCount: frameCount,
             hasGsmActivity: hasActivity,
-            strength: strength
+            strength: strength,
+            channelType: channelType,
+            controlChannel: controlChannel
           });
           
           // Brief pause
