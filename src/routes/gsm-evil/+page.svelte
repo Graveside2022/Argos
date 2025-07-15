@@ -384,12 +384,9 @@
 					<!-- Back to Console Button -->
 					<a
 						href="/"
-						class="back-btn"
+						class="control-btn back-btn-style"
 					>
-						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-						</svg>
-						Back to Console
+						<span class="font-bold">Back to Console</span>
 					</a>
 					<div class="title-section">
 						<div class="title-wrapper">
@@ -844,25 +841,6 @@
 		gap: 1rem;
 	}
 
-	.back-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #9ca3af;
-		text-decoration: none;
-		font-size: 0.875rem;
-		transition: all 0.2s ease;
-	}
-
-	.back-btn:hover {
-		background: rgba(255, 255, 255, 0.1);
-		border-color: rgba(255, 255, 255, 0.2);
-		color: #fff;
-	}
 
 
 	.title-section {
@@ -1127,6 +1105,20 @@
 		box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
 	}
+	
+	/* Back to Console Button */
+	.back-btn-style {
+		background: rgba(107, 114, 128, 0.2);
+		border: 1px solid rgba(107, 114, 128, 0.3);
+		color: #ffffff;
+		text-decoration: none;
+	}
+	
+	.back-btn-style:hover {
+		background: rgba(107, 114, 128, 0.3);
+		border-color: rgba(107, 114, 128, 0.4);
+		transform: translateY(-1px);
+	}
 
 	/* Compact Frequency Panel */
 	.frequency-panel-compact {
@@ -1176,7 +1168,7 @@
 		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 		font-size: 0.875rem;
 		font-weight: bold;
-		color: #22c55e;
+		color: #ffffff;
 		letter-spacing: 0.05em;
 	}
 
