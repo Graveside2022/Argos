@@ -565,12 +565,15 @@
 						<div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
 							<div style="display: flex; align-items: center; gap: 0.75rem;">
 								<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-								<span class="status-text font-medium">Radio Monitor (GRGSM) • {detailedStatus.grgsm.running ? 'Active' : 'Inactive'}</span>
-								<span class="status-detail text-gray-400">{selectedFrequency} MHz</span>
+								<span class="status-text font-medium">GSM Demodulator (gr-gsm)</span>
 							</div>
 							<div style="display: flex; align-items: center; gap: 0.75rem;">
 								<div class="status-indicator {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
-								<span class="status-text font-medium">Web Interface (Port 80) • {detailedStatus.gsmevil.webInterface ? 'Online' : 'Offline'}</span>
+								<span class="status-text font-medium">Web Interface (Port 80)</span>
+							</div>
+							<div style="display: flex; align-items: center; gap: 0.75rem;">
+								<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
+								<span class="status-text font-medium">HackRF One SDR</span>
 							</div>
 						</div>
 					</div>
