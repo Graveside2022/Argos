@@ -19,10 +19,11 @@
 		currentFrequency: '947.2',
 		message: 'Checking...'
 	};
-	let scanResults: { frequency: string; power: number; strength: string }[] = [];
+	let scanResults: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean }[] = [];
 	let showScanResults = false;
 	let capturedIMSIs: any[] = [];
 	let totalIMSIs = 0;
+	let scanStatus = '';
 
 	onMount(() => {
 		// GSM Evil runs on port 80 on the same host
@@ -206,15 +207,18 @@
 		
 		isScanning = true;
 		showScanResults = false;
+		scanStatus = 'Performing intelligent scan... Testing for GSM frame activity';
+		
 		try {
-			const response = await fetch('/api/gsm-evil/scan', {
+			// Use intelligent scan that tests for actual GSM frames
+			const response = await fetch('/api/gsm-evil/intelligent-scan', {
 				method: 'POST'
 			});
 			
 			if (response.ok) {
 				const data = await response.json();
-				if (data.strongestFrequency) {
-					selectedFrequency = data.strongestFrequency;
+				if (data.bestFrequency) {
+					selectedFrequency = data.bestFrequency;
 					// Store scan results
 					if (data.scanResults && data.scanResults.length > 0) {
 						scanResults = data.scanResults;
@@ -222,15 +226,36 @@
 					}
 					// Show scan summary
 					if (data.message) {
-						console.log('Scan results:', data.message);
+						console.log('Intelligent scan results:', data.message);
+						scanStatus = `Selected ${data.bestFrequency} MHz with ${data.bestFrequencyFrames} GSM frames`;
+					}
+				}
+			} else {
+				// Fallback to regular scan if intelligent scan fails
+				const fallbackResponse = await fetch('/api/gsm-evil/scan', {
+					method: 'POST'
+				});
+				
+				if (fallbackResponse.ok) {
+					const data = await fallbackResponse.json();
+					if (data.strongestFrequency) {
+						selectedFrequency = data.strongestFrequency;
+						scanResults = data.scanResults || [];
+						showScanResults = true;
+						scanStatus = 'Using RF power scan (fallback mode)';
 					}
 				}
 			}
 		} catch (error) {
 			console.error('Scan failed:', error);
 			alert('Failed to scan frequencies');
+			scanStatus = '';
 		} finally {
 			isScanning = false;
+			// Clear status after a few seconds
+			setTimeout(() => {
+				scanStatus = '';
+			}, 5000);
 		}
 	}
 	
@@ -416,6 +441,12 @@
 					Selected: <span class="text-green-500 font-bold">{selectedFrequency} MHz</span>
 				</div>
 				
+				{#if scanStatus}
+					<div class="scan-status">
+						{scanStatus}
+					</div>
+				{/if}
+				
 				{#if showScanResults && scanResults.length > 0}
 					<div class="scan-results">
 						<h4 class="text-sm font-semibold text-gray-300 mb-2">Scan Results - All Active Frequencies:</h4>
@@ -424,11 +455,16 @@
 								<button
 									class="scan-result-btn {selectedFrequency === result.frequency ? 'selected' : ''}"
 									on:click={() => selectedFrequency = result.frequency}
-									title="{result.power.toFixed(1)} dB"
+									title="{result.power.toFixed(1)} dB{result.frameCount !== undefined ? ` - ${result.frameCount} frames` : ''}"
 								>
 									<span class="freq-value">{result.frequency} MHz</span>
 									<span class="freq-power">{result.power.toFixed(1)} dB</span>
 									<span class="freq-strength {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
+									{#if result.frameCount !== undefined}
+										<span class="freq-frames {result.hasGsmActivity ? 'active' : 'inactive'}">
+											{result.frameCount} frames {result.hasGsmActivity ? '✓' : ''}
+										</span>
+									{/if}
 								</button>
 							{/each}
 						</div>
@@ -1086,6 +1122,14 @@
 		font-size: 0.875rem;
 		color: #9ca3af;
 	}
+	
+	.scan-status {
+		text-align: center;
+		font-size: 0.875rem;
+		color: #60a5fa;
+		margin-top: 0.5rem;
+		font-style: italic;
+	}
 
 	/* Status Panel */
 	.status-panel {
@@ -1287,6 +1331,23 @@
 		padding: 0.125rem 0.25rem;
 		border-radius: 0.125rem;
 		background: rgba(255, 255, 255, 0.1);
+	}
+	
+	.freq-frames {
+		font-size: 0.625rem;
+		padding: 0.125rem 0.25rem;
+		border-radius: 0.125rem;
+		margin-top: 0.125rem;
+	}
+	
+	.freq-frames.active {
+		background: rgba(34, 197, 94, 0.2);
+		color: rgb(34, 197, 94);
+	}
+	
+	.freq-frames.inactive {
+		background: rgba(239, 68, 68, 0.2);
+		color: rgb(248, 113, 113);
 	}
 	
 	.freq-strength.very-strong {
