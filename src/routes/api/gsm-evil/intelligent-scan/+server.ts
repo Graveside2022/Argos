@@ -11,6 +11,8 @@ interface FrequencyTestResult {
   frameCount: number;
   hasGsmActivity: boolean;
   strength: string;
+  channelType?: string;
+  controlChannel?: boolean;
 }
 
 export const POST: RequestHandler = async () => {
