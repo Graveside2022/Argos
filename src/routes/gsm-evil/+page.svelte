@@ -469,7 +469,7 @@
 				<!-- Scan Progress Console (Always visible) -->
 				<div class="scan-progress-console">
 					<div class="console-header">
-						<span class="console-title" style="color: #ff0000;">CONSOLE</span>
+						<span class="console-title">CONSOLE</span>
 						{#if isScanning}
 							<span class="console-status">SCANNING...</span>
 						{:else if scanProgress.length > 0}
@@ -487,7 +487,7 @@
 								<div class="console-cursor">█</div>
 							{/if}
 						{:else}
-							<div class="console-line text-gray-500">Click Start Scan to begin</div>
+							<div class="console-line text-gray-500">Click 'Start Scan' to begin</div>
 						{/if}
 					</div>
 				</div>
