@@ -27,26 +27,29 @@ import sqlite3
 import json
 
 try:
-    conn = sqlite3.connect('/usr/src/gsmevil2/database/imsi.db')
-    cursor = conn.cursor()
+    # Connect to both databases
+    imsi_conn = sqlite3.connect('/usr/src/gsmevil2/database/imsi.db')
+    towers_conn = sqlite3.connect('/home/ubuntu/projects/Argos/data/celltowers/towers.db')
+    
+    imsi_cursor = imsi_conn.cursor()
+    towers_cursor = towers_conn.cursor()
     
     # Get total count
-    cursor.execute('SELECT COUNT(*) FROM imsi_data')
-    total = cursor.fetchone()[0]
+    imsi_cursor.execute('SELECT COUNT(*) FROM imsi_data')
+    total = imsi_cursor.fetchone()[0]
     
-    # Get latest 10 IMSIs
-    cursor.execute('''
+    # Get all IMSIs
+    imsi_cursor.execute('''
         SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time 
         FROM imsi_data 
-        ORDER BY id DESC 
-        LIMIT 10
+        ORDER BY id DESC
     ''')
     
-    rows = cursor.fetchall()
+    rows = imsi_cursor.fetchall()
     imsis = []
     
     for row in rows:
-        imsis.append({
+        imsi_entry = {
             "id": row[0],
             "imsi": row[1],
             "tmsi": row[2] or "N/A",
@@ -54,10 +57,39 @@ try:
             "mnc": row[4],
             "lac": row[5],
             "ci": row[6],
-            "timestamp": row[7]
-        })
+            "timestamp": row[7],
+            "lat": None,
+            "lon": None
+        }
+        
+        # Try to get location from towers database
+        if row[3] and row[4] and row[5] and row[6]:  # If we have MCC, MNC, LAC, CI
+            towers_cursor.execute('''
+                SELECT lat, lon 
+                FROM towers 
+                WHERE mcc = ? AND net = ? AND area = ? AND cell = ?
+                LIMIT 1
+            ''', (row[3], row[4], row[5], row[6]))
+            
+            location = towers_cursor.fetchone()
+            if location:
+                imsi_entry["lat"] = location[0]
+                imsi_entry["lon"] = location[1]
+            # Hardcoded location for Cell ID 13721 (from OpenCellID website)
+            # ANY device using LAC 4207 and CI 13721 gets this location
+            elif row[5] == 4207 and row[6] == 13721:
+                imsi_entry["lat"] = 50.006592
+                imsi_entry["lon"] = 8.288978
+            # Hardcoded location for Cell ID 13720 (from OpenCellID website)
+            # ANY device using LAC 4207 and CI 13720 gets this location
+            elif row[5] == 4207 and row[6] == 13720:
+                imsi_entry["lat"] = 50.014965
+                imsi_entry["lon"] = 8.293576
+        
+        imsis.append(imsi_entry)
     
-    conn.close()
+    imsi_conn.close()
+    towers_conn.close()
     
     print(json.dumps({
         "success": True,

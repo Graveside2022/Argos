@@ -19,7 +19,7 @@ export const GET: RequestHandler = async () => {
 
     // Use tshark to get GSM burst data directly
     const { stdout: burstData } = await execAsync(
-      'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e data.data 2>/dev/null | head -4',
+      'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e data.data 2>/dev/null | head -20',
       { timeout: 2000 }
     ).catch(() => ({ stdout: '' }));
 
@@ -29,7 +29,7 @@ export const GET: RequestHandler = async () => {
       // Each line contains hex data from a packet
       const lines = burstData.split('\n').filter(line => line.trim().length > 0);
       
-      frames = lines.slice(0, 4).map(line => {
+      frames = lines.slice(0, 20).map(line => {
         // Each line is the data portion of GSMTAP
         // Format as space-separated hex pairs
         if (line.length >= 16) { // At least 8 bytes
