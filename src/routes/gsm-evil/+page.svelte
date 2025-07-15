@@ -21,11 +21,14 @@
 	};
 	let scanResults: { frequency: string; power: number; strength: string }[] = [];
 	let showScanResults = false;
+	let capturedIMSIs: any[] = [];
+	let totalIMSIs = 0;
 
 	onMount(() => {
 		// GSM Evil runs on port 80 on the same host
 		const host = window.location.hostname;
-		iframeUrl = `http://${host}:80`;
+		// Default to IMSI sniffer page for better UX
+		iframeUrl = `http://${host}:80/imsi`;
 		
 		// Check initial GSM Evil status
 		checkGSMStatus().catch((error) => {
@@ -68,6 +71,9 @@
 						console.log('GSM Evil detected as running');
 						gsmStatus = 'running';
 						hasError = false;
+						// Ensure iframe URL points to IMSI sniffer when GSM Evil is already running
+						const host = window.location.hostname;
+						iframeUrl = `http://${host}:80/imsi`;
 					} else if (!isRunning && gsmStatus === 'running') {
 						console.log('GSM Evil detected as stopped');
 						gsmStatus = 'stopped';
@@ -106,11 +112,14 @@
 					gsmStatus = 'running';
 					hasError = false;
 					isLoading = true; // Reset loading state for iframe
-					// Force reload iframe with a slight delay
+					// Update iframe URL to IMSI sniffer page and force reload
+					const host = window.location.hostname;
+					iframeUrl = `http://${host}:80/imsi`;
+					// Force reload iframe with a slight delay to ensure GSM Evil is ready
 					setTimeout(() => {
 						const iframe = document.querySelector('iframe');
 						if (iframe) {
-							iframe.src = iframe.src; // Force reload
+							iframe.src = iframeUrl; // Load IMSI sniffer page
 						}
 					}, 2000);
 					checkGSMStatus();
@@ -257,12 +266,28 @@
 		}
 	}
 	
+	async function fetchIMSIs() {
+		try {
+			const response = await fetch('/api/gsm-evil/imsi');
+			if (response.ok) {
+				const data = await response.json();
+				if (data.success) {
+					capturedIMSIs = data.imsis;
+					totalIMSIs = data.total;
+				}
+			}
+		} catch (error) {
+			console.error('Failed to fetch IMSIs:', error);
+		}
+	}
+	
 	function startFrameUpdates() {
 		// Fetch real frames and activity every 2 seconds when GSM Evil is running
 		frameUpdateInterval = setInterval(() => {
 			if (gsmStatus === 'running') {
 				fetchRealFrames();
 				checkActivity();
+				fetchIMSIs();
 			}
 		}, 2000);
 		
@@ -270,6 +295,7 @@
 		if (gsmStatus === 'running') {
 			fetchRealFrames();
 			checkActivity();
+			fetchIMSIs();
 		}
 	}
 </script>
@@ -303,7 +329,7 @@
 									<span class="gsm-brand">GSM</span>
 									<span class="evil-brand">Evil</span>
 								</h1>
-								<span class="subtitle">
+								<span class="subtitle font-bold">
 									Cellular Network Analysis
 								</span>
 							</div>
@@ -315,8 +341,8 @@
 				<div class="flex items-center gap-3">
 					<!-- Status Debug Info -->
 					<div class="text-xs font-mono">
-						<span class="text-white">Status:</span>
-						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'}">{gsmStatus}</span>
+						<span class="text-white font-bold">Status:</span>
+						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
 					</div>
 					
 					<!-- Start/Stop GSM Evil Button -->
@@ -417,6 +443,79 @@
 	{#if gsmStatus === 'running' && detailedStatus}
 		<div class="status-panel">
 			<div class="status-grid">
+				<!-- IMSI Capture Status -->
+				<div class="status-card">
+					<div class="status-card-header">
+						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+						</svg>
+						<span class="font-semibold">IMSI Capture</span>
+						<span class="text-xs text-gray-400 ml-2">(Live Data) • {detailedStatus.dataCollection.active ? 'Receiving' : 'No Data'}</span>
+					</div>
+					<div class="frame-monitor">
+						<div class="frame-header">
+							{#if totalIMSIs > 0}
+								<span class="text-xs text-green-400 blink">● {totalIMSIs} IMSIs captured</span>
+							{:else}
+								<span class="text-xs text-yellow-400">● Waiting for IMSIs</span>
+							{/if}
+						</div>
+						<div class="frame-display">
+							{#if capturedIMSIs.length > 0}
+								<div class="imsi-header text-xs text-gray-500 mb-1">
+									<span style="width: 140px; display: inline-block;">IMSI</span>
+									<span style="width: 80px; display: inline-block;">MCC/MNC</span>
+									<span>Time</span>
+								</div>
+								{#each capturedIMSIs.slice(0, 4) as imsi, i}
+									<div class="frame-line {i === 0 ? 'text-green-400' : ''}">
+										<span style="width: 140px; display: inline-block; font-family: monospace;">{imsi.imsi}</span>
+										<span style="width: 80px; display: inline-block;">{imsi.mcc}/{imsi.mnc}</span>
+										<span class="text-xs">{imsi.timestamp.split(' ')[0]}</span>
+									</div>
+								{/each}
+							{:else}
+								<div class="frame-line text-gray-500">No IMSIs captured yet...</div>
+								<div class="frame-line text-gray-600">Waiting for mobile devices...</div>
+								<div class="frame-line text-gray-600">IMSI sniffer is active</div>
+								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+
+				<!-- GSM Capture Status -->
+				<div class="status-card">
+					<div class="status-card-header">
+						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+							<path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+						</svg>
+						<span class="font-semibold">GSM Capture</span>
+					</div>
+					<div class="frame-monitor">
+						<div class="frame-header">
+							<span class="text-xs text-gray-400">Raw GSM Frames</span>
+							<span class="text-xs text-gray-400">
+								{activityStatus.currentFrequency} MHz • {activityStatus.message}
+							</span>
+						</div>
+						<div class="frame-display">
+							{#if gsmFrames.length > 0}
+								{#each gsmFrames.slice(0, 6) as frame, i}
+									<div class="frame-line {i === 0 ? 'text-green-400' : ''}">{frame}</div>
+								{/each}
+							{:else}
+								<div class="frame-line text-gray-500">No GSM frames captured yet...</div>
+								<div class="frame-line text-gray-600">Waiting for GSM data...</div>
+								{#if !activityStatus.hasActivity}
+									<div class="frame-line text-yellow-500">No GSM data detected - try different frequencies</div>
+								{/if}
+								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+
 				<!-- Radio Monitor Status -->
 				<div class="status-card">
 					<div class="status-card-header">
@@ -425,81 +524,18 @@
 							<path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
 						</svg>
 						<span class="font-semibold">Radio Monitor</span>
-						<span class="text-xs text-gray-400 ml-2">(GRGSM)</span>
 					</div>
 					<div class="status-card-content">
-						<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-						<span class="status-text font-medium">{detailedStatus.grgsm.running ? 'Active' : 'Inactive'}</span>
-						<span class="status-detail text-gray-400">{selectedFrequency} MHz</span>
-					</div>
-				</div>
-
-				<!-- Web Interface Status -->
-				<div class="status-card">
-					<div class="status-card-header">
-						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8h8V6z" clip-rule="evenodd"/>
-						</svg>
-						<span class="font-semibold">Web Interface</span>
-						<span class="text-xs text-gray-400 ml-2">(Port 80)</span>
-					</div>
-					<div class="status-card-content">
-						<div class="status-indicator {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
-						<span class="status-text font-medium">{detailedStatus.gsmevil.webInterface ? 'Online' : 'Offline'}</span>
-						{#if detailedStatus.gsmevil.pid}
-							<span class="status-detail">PID: {detailedStatus.gsmevil.pid}</span>
-						{/if}
-					</div>
-				</div>
-
-				<!-- IMSI Capture Status -->
-				<div class="status-card expanded">
-					<div class="status-card-header">
-						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
-						</svg>
-						<span class="font-semibold">IMSI Capture</span>
-						<span class="text-xs text-gray-400 ml-2">(Live Data)</span>
-					</div>
-					<div class="status-card-content">
-						<div class="status-indicator {detailedStatus.dataCollection.active ? 'active pulse' : 'inactive'}"></div>
-						<span class="status-text font-medium">{detailedStatus.dataCollection.active ? 'Receiving' : 'No Data'}</span>
-						{#if detailedStatus.dataCollection.lastActivity}
-							<span class="status-detail">Last: {detailedStatus.dataCollection.lastActivity}</span>
-						{/if}
-					</div>
-					<div class="frame-monitor">
-						<div class="frame-header">
-							<span class="text-xs text-gray-400">GSM Activity Monitor</span>
-							{#if activityStatus.hasActivity}
-								<span class="text-xs text-green-400 blink">● Active ({activityStatus.packetCount} pkt/s)</span>
-							{:else}
-								<span class="text-xs text-yellow-400">● No Activity</span>
-							{/if}
-						</div>
-						<div class="activity-status text-xs text-gray-400 mb-2">
-							<div>Frequency: {activityStatus.currentFrequency} MHz</div>
-							<div>Status: {activityStatus.message}</div>
-							{#if !activityStatus.hasActivity}
-								<div class="text-yellow-500 mt-1">No GSM data detected - try different frequencies</div>
-							{/if}
-						</div>
-						<div class="frame-display">
-							{#if gsmFrames.length > 0}
-								{#each gsmFrames as frame, i}
-									<div class="frame-line {i === 0 ? 'text-green-400' : ''}">{frame}</div>
-								{/each}
-								{#if gsmFrames.length < 4}
-									{#each Array(4 - gsmFrames.length) as _, i}
-										<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-									{/each}
-								{/if}
-							{:else}
-								<div class="frame-line text-gray-500">No frames captured yet...</div>
-								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-							{/if}
+						<div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+							<div style="display: flex; align-items: center; gap: 0.75rem;">
+								<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
+								<span class="status-text font-medium">Radio Monitor (GRGSM) • {detailedStatus.grgsm.running ? 'Active' : 'Inactive'}</span>
+								<span class="status-detail text-gray-400">{selectedFrequency} MHz</span>
+							</div>
+							<div style="display: flex; align-items: center; gap: 0.75rem;">
+								<div class="status-indicator {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
+								<span class="status-text font-medium">Web Interface (Port 80) • {detailedStatus.gsmevil.webInterface ? 'Online' : 'Offline'}</span>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -524,6 +560,7 @@
 						<p>1. Initializing radio hardware...</p>
 						<p>2. Tuning to frequency...</p>
 						<p>3. Starting web interface...</p>
+						<p>4. Enabling IMSI sniffer...</p>
 						<p class="text-xs mt-4">This takes 10-15 seconds</p>
 					</div>
 				</div>
@@ -617,6 +654,9 @@
 						<p class="text-gray-400 text-sm mt-6">
 							Ensure HackRF is connected and gr-gsm is properly configured
 						</p>
+						<p class="text-gray-400 text-sm mt-2">
+							IMSI sniffer interface will open automatically after starting
+						</p>
 					</div>
 				</div>
 			</div>
@@ -641,8 +681,8 @@
 								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 							</svg>
 						</div>
-						<p class="text-gray-400 font-mono">GSM Evil web interface loading...</p>
-						<p class="text-xs text-gray-500 mt-2">If this takes too long, try refreshing the page</p>
+						<p class="text-gray-400 font-mono">Loading IMSI Sniffer interface...</p>
+						<p class="text-xs text-gray-500 mt-2">IMSI capture will start automatically</p>
 					</div>
 				</div>
 			{/if}
@@ -1118,9 +1158,7 @@
 	}
 
 	.frame-monitor {
-		margin-top: 1rem;
-		padding-top: 1rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		margin-top: 0.75rem;
 	}
 
 	.frame-header {

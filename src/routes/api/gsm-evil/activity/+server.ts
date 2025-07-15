@@ -31,7 +31,7 @@ export const GET: RequestHandler = async () => {
     // Look for the IMSI database file that GSM Evil creates
     let recentIMSI = false;
     try {
-      const dbPath = '/usr/src/gsmevil2/imsi.db';
+      const dbPath = '/usr/src/gsmevil2/database/imsi.db';
       const stats = await fs.stat(dbPath);
       const now = Date.now();
       const fileAge = now - stats.mtimeMs;
