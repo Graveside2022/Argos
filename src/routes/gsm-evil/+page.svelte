@@ -24,6 +24,8 @@
 	let capturedIMSIs: any[] = [];
 	let totalIMSIs = 0;
 	let scanStatus = '';
+	let scanProgress: string[] = [];
+	let showScanProgress = false;
 
 	onMount(() => {
 		// GSM Evil runs on port 80 on the same host
@@ -207,31 +209,73 @@
 		
 		isScanning = true;
 		showScanResults = false;
-		scanStatus = 'Performing intelligent scan... Testing for GSM frame activity';
+		showScanProgress = true;
+		scanProgress = [];
+		scanStatus = '';
 		
 		try {
-			// Use intelligent scan that tests for actual GSM frames
-			const response = await fetch('/api/gsm-evil/intelligent-scan', {
+			// Use streaming endpoint for real-time progress
+			const response = await fetch('/api/gsm-evil/intelligent-scan-stream', {
 				method: 'POST'
 			});
 			
-			if (response.ok) {
-				const data = await response.json();
-				if (data.bestFrequency) {
-					selectedFrequency = data.bestFrequency;
-					// Store scan results
-					if (data.scanResults && data.scanResults.length > 0) {
-						scanResults = data.scanResults;
-						showScanResults = true;
-					}
-					// Show scan summary
-					if (data.message) {
-						console.log('Intelligent scan results:', data.message);
-						scanStatus = `Selected ${data.bestFrequency} MHz with ${data.bestFrequencyFrames} GSM frames`;
+			if (!response.ok) {
+				throw new Error('Scan request failed');
+			}
+			
+			const reader = response.body?.getReader();
+			const decoder = new TextDecoder();
+			
+			if (!reader) {
+				throw new Error('No response body');
+			}
+			
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				
+				const chunk = decoder.decode(value);
+				const lines = chunk.split('\n');
+				
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						try {
+							const data = JSON.parse(line.slice(6));
+							
+							if (data.message) {
+								// Add progress message
+								scanProgress = [...scanProgress, data.message];
+								// Auto-scroll to bottom
+								setTimeout(() => {
+									const progressDiv = document.querySelector('.scan-progress-container');
+									if (progressDiv) {
+										progressDiv.scrollTop = progressDiv.scrollHeight;
+									}
+								}, 10);
+							}
+							
+							if (data.result) {
+								// Handle final result
+								if (data.result.success && data.result.bestFrequency) {
+									selectedFrequency = data.result.bestFrequency;
+									scanResults = data.result.scanResults || [];
+									showScanResults = true;
+									scanStatus = `Selected ${data.result.bestFrequency} MHz with ${data.result.bestFrequencyFrames} GSM frames`;
+								}
+							}
+						} catch (e) {
+							console.error('Failed to parse SSE data:', e);
+						}
 					}
 				}
-			} else {
-				// Fallback to regular scan if intelligent scan fails
+			}
+		} catch (error) {
+			console.error('Scan failed:', error);
+			scanProgress = [...scanProgress, `[ERROR] ${error}`];
+			
+			// Fallback to regular scan
+			try {
+				scanProgress = [...scanProgress, '[FALLBACK] Attempting basic RF power scan...'];
 				const fallbackResponse = await fetch('/api/gsm-evil/scan', {
 					method: 'POST'
 				});
@@ -242,20 +286,18 @@
 						selectedFrequency = data.strongestFrequency;
 						scanResults = data.scanResults || [];
 						showScanResults = true;
-						scanStatus = 'Using RF power scan (fallback mode)';
+						scanProgress = [...scanProgress, `[FALLBACK] Selected ${data.strongestFrequency} MHz (strongest signal)`];
 					}
 				}
+			} catch (fallbackError) {
+				scanProgress = [...scanProgress, '[ERROR] Fallback scan also failed'];
 			}
-		} catch (error) {
-			console.error('Scan failed:', error);
-			alert('Failed to scan frequencies');
-			scanStatus = '';
 		} finally {
 			isScanning = false;
-			// Clear status after a few seconds
+			// Keep progress visible for 30 seconds
 			setTimeout(() => {
-				scanStatus = '';
-			}, 5000);
+				showScanProgress = false;
+			}, 30000);
 		}
 	}
 	
@@ -444,6 +486,21 @@
 				{#if scanStatus}
 					<div class="scan-status">
 						{scanStatus}
+					</div>
+				{/if}
+				
+				{#if showScanProgress && scanProgress.length > 0}
+					<div class="scan-progress-container">
+						<div class="scan-progress-terminal">
+							{#each scanProgress as line}
+								<div class="scan-progress-line {line.startsWith('[ERROR]') ? 'error' : line.startsWith('[CMD]') ? 'command' : line.startsWith('[TEST') ? 'test' : line.includes('=====') ? 'header' : ''}">
+									{line}
+								</div>
+							{/each}
+							{#if isScanning}
+								<div class="scan-progress-cursor">█</div>
+							{/if}
+						</div>
 					</div>
 				{/if}
 				
@@ -1132,6 +1189,75 @@
 		color: #60a5fa;
 		margin-top: 0.5rem;
 		font-style: italic;
+	}
+	
+	.scan-progress-container {
+		margin-top: 1rem;
+		max-height: 300px;
+		overflow-y: auto;
+		background: #0a0a0a;
+		border: 1px solid #333;
+		border-radius: 0.375rem;
+		padding: 0.75rem;
+	}
+	
+	.scan-progress-terminal {
+		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+		font-size: 0.75rem;
+		line-height: 1.4;
+	}
+	
+	.scan-progress-line {
+		color: #9ca3af;
+		white-space: pre-wrap;
+		word-break: break-all;
+	}
+	
+	.scan-progress-line.error {
+		color: #ef4444;
+	}
+	
+	.scan-progress-line.command {
+		color: #22c55e;
+	}
+	
+	.scan-progress-line.test {
+		color: #60a5fa;
+	}
+	
+	.scan-progress-line.header {
+		color: #fbbf24;
+		font-weight: bold;
+	}
+	
+	.scan-progress-cursor {
+		display: inline-block;
+		animation: blink 1s infinite;
+		color: #22c55e;
+	}
+	
+	@keyframes blink {
+		0%, 50% { opacity: 1; }
+		51%, 100% { opacity: 0; }
+	}
+	
+	/* Custom scrollbar for scan progress */
+	.scan-progress-container::-webkit-scrollbar {
+		width: 8px;
+	}
+	
+	.scan-progress-container::-webkit-scrollbar-track {
+		background: #1a1a1a;
+		border-radius: 4px;
+	}
+	
+	.scan-progress-container::-webkit-scrollbar-thumb {
+		background: #333;
+		border-radius: 4px;
+	}
+	
+	.scan-progress-container::-webkit-scrollbar-thumb:hover {
+		background: #444;
 	}
 
 	/* Status Panel */
