@@ -244,6 +244,13 @@
 		unknown: 0
 	};
 
+	// Cell tower state
+	const cellTowers = new Map<string, any>();
+	const cellTowerMarkers = new Map<string, LeafletMarker>();
+	let cellTowerCount = 0;
+	let showCellTowers = false;
+	let cellTowerInterval: NodeJS.Timeout | null = null;
+
 	// Subscriptions
 	let spectrumUnsubscribe: (() => void) | null = null;
 	let updateInterval: NodeJS.Timeout | null = null;
@@ -362,6 +369,172 @@
 		// Clear whitelist
 		whitelistedMACs.clear();
 		whitelistedDeviceCount = 0;
+		
+		// Clear cell towers
+		cellTowerMarkers.forEach((marker) => {
+			map?.removeLayer(marker);
+		});
+		cellTowerMarkers.clear();
+		cellTowers.clear();
+		cellTowerCount = 0;
+	}
+	
+	// Fetch cell towers from GSM Evil
+	async function fetchCellTowers() {
+		try {
+			const response = await fetch('/api/tactical-map/cell-towers');
+			if (response.ok) {
+				const data = await response.json();
+				if (data.success && data.towers) {
+					// Process each tower
+					for (const tower of data.towers) {
+						await addCellTower(tower);
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error fetching cell towers:', error);
+		}
+	}
+	
+	// Add cell tower to map
+	async function addCellTower(tower: any) {
+		const towerId = `${tower.mcc}-${tower.mnc}-${tower.lac}-${tower.ci}`;
+		
+		// Skip if already displayed
+		if (cellTowers.has(towerId)) return;
+		
+		// Check if tower has location data
+		if (tower.lat && tower.lon) {
+			try {
+				const location = {
+					lat: tower.lat,
+					lon: tower.lon,
+					range: tower.range || null,
+					carrier: tower.carrier || 'Unknown Carrier'
+				};
+					
+				// Determine tower status
+				let status = 'ok';
+				let iconColor = '#10b981'; // Green
+				
+				if (tower.mcc === '000' || tower.mcc === '001' || tower.mcc === '999') {
+					status = 'fake';
+					iconColor = '#dc2626'; // Dark red
+				} else if (tower.radio === 'UMTS' || tower.radio === 'LTE') {
+					status = 'modern';
+					iconColor = '#3b82f6'; // Blue
+				} else if (!location.carrier || location.carrier === 'Unknown Carrier') {
+					status = 'unknown';
+					iconColor = '#f59e0b'; // Orange
+				}
+					
+					// Create tower icon
+					const towerIcon = L.divIcon({
+						className: 'cell-tower-marker',
+						html: `
+							<div style="position: relative; width: 30px; height: 30px;">
+								<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));">
+									<path fill="${iconColor}" d="M12,2A3,3 0 0,1 15,5V9A3,3 0 0,1 12,12A3,3 0 0,1 9,9V5A3,3 0 0,1 12,2M19,18A1,1 0 0,1 20,19A1,1 0 0,1 19,20C18.5,20 18.12,19.65 18,19.22L15.78,17C15.65,17.12 15.5,17.18 15.33,17.22L16.5,22H7.5L8.67,17.22C8.5,17.18 8.35,17.12 8.22,17L6,19.22C5.88,19.65 5.5,20 5,20A1,1 0 0,1 4,19A1,1 0 0,1 5,18C5.5,18 5.88,18.35 6,18.78L8.22,16.56C8.08,16.4 8,16.21 8,16V12.83C8.59,12.93 9.19,13 9.8,13H14.2C14.81,13 15.41,12.93 16,12.83V16C16,16.21 15.92,16.4 15.78,16.56L18,18.78C18.12,18.35 18.5,18 19,18M12,14A1,1 0 0,0 11,15A1,1 0 0,0 12,16A1,1 0 0,0 13,15A1,1 0 0,0 12,14Z"/>
+								</svg>
+								${status === 'fake' ? '<div style="position: absolute; top: -5px; right: -5px; font-size: 16px;">⚠️</div>' : ''}
+							</div>
+						`,
+						iconSize: [30, 30],
+						iconAnchor: [15, 15]
+					});
+					
+					// Create marker
+					const marker = L.marker([location.lat, location.lon], {
+						icon: towerIcon
+					});
+					
+					// Add popup with tower info
+					const popupContent = `
+						<div style="font-family: sans-serif; min-width: 250px;">
+							<h4 style="margin: 0 0 8px 0; color: ${iconColor}">
+								Cell Tower
+							</h4>
+							<table style="width: 100%; border-collapse: collapse;">
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">MCC-MNC:</td>
+									<td style="padding: 4px 0;">${tower.mcc}-${tower.mnc}</td>
+								</tr>
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">LAC/CI:</td>
+									<td style="padding: 4px 0;">${tower.lac}/${tower.ci}</td>
+								</tr>
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Location:</td>
+									<td style="padding: 4px 0;">${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}</td>
+								</tr>
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Radio:</td>
+									<td style="padding: 4px 0;">${tower.radio || 'GSM'}</td>
+								</tr>
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Status:</td>
+									<td style="padding: 4px 0; color: ${iconColor}">${status.toUpperCase()}</td>
+								</tr>
+								${location.range ? `
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Range:</td>
+									<td style="padding: 4px 0;">${location.range}m</td>
+								</tr>
+								` : ''}
+								${tower.samples ? `
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Samples:</td>
+									<td style="padding: 4px 0;">${tower.samples}</td>
+								</tr>
+								` : ''}
+							</table>
+						</div>
+					`;
+					
+					marker.bindPopup(popupContent, {
+						maxWidth: 250,
+						className: status === 'fake' || status === 'suspicious' ? 'signal-popup' : 'pi-popup'
+					});
+					
+					if (map && showCellTowers) {
+						marker.addTo(map);
+					}
+					
+				cellTowerMarkers.set(towerId, marker);
+				cellTowers.set(towerId, { ...tower, location, status });
+				cellTowerCount = cellTowers.size;
+			} catch (error) {
+				console.error('Error adding tower to map:', error);
+			}
+		}
+	}
+	
+	// Toggle cell tower display
+	function toggleCellTowers() {
+		showCellTowers = !showCellTowers;
+		
+		if (showCellTowers) {
+			// Show all cell tower markers
+			cellTowerMarkers.forEach((marker) => {
+				if (map) marker.addTo(map);
+			});
+			// Start fetching cell towers
+			fetchCellTowers();
+			if (!cellTowerInterval) {
+				cellTowerInterval = setInterval(fetchCellTowers, 30000); // Update every 30 seconds
+			}
+		} else {
+			// Hide all cell tower markers
+			cellTowerMarkers.forEach((marker) => {
+				map?.removeLayer(marker);
+			});
+			// Stop fetching
+			if (cellTowerInterval) {
+				clearInterval(cellTowerInterval);
+				cellTowerInterval = null;
+			}
+		}
 	}
 
 	// Get signal color based on power
@@ -1356,6 +1529,10 @@
 			clearInterval(kismetInterval);
 			kismetInterval = null;
 		}
+		if (cellTowerInterval) {
+			clearInterval(cellTowerInterval);
+			cellTowerInterval = null;
+		}
 
 		if (statusCheckInterval) {
 			clearInterval(statusCheckInterval);
@@ -1770,6 +1947,15 @@
 				>
 					Clear
 				</button>
+				<button
+					on:click={toggleCellTowers}
+					class="cell-tower-button-footer {showCellTowers ? 'active' : ''}"
+				>
+					<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M12,2A3,3 0 0,1 15,5V9A3,3 0 0,1 12,12A3,3 0 0,1 9,9V5A3,3 0 0,1 12,2M19,18A1,1 0 0,1 20,19A1,1 0 0,1 19,20C18.5,20 18.12,19.65 18,19.22L15.78,17C15.65,17.12 15.5,17.18 15.33,17.22L16.5,22H7.5L8.67,17.22C8.5,17.18 8.35,17.12 8.22,17L6,19.22C5.88,19.65 5.5,20 5,20A1,1 0 0,1 4,19A1,1 0 0,1 5,18C5.5,18 5.88,18.35 6,18.78L8.22,16.56C8.08,16.4 8,16.21 8,16V12.83C8.59,12.93 9.19,13 9.8,13H14.2C14.81,13 15.41,12.93 16,12.83V16C16,16.21 15.92,16.4 15.78,16.56L18,18.78C18.12,18.35 18.5,18 19,18M12,14A1,1 0 0,0 11,15A1,1 0 0,0 12,16A1,1 0 0,0 13,15A1,1 0 0,0 12,14Z"/>
+					</svg>
+					{cellTowerCount > 0 ? cellTowerCount : ''} Towers
+				</button>
 			</div>
 		{/if}
 
@@ -1963,6 +2149,41 @@
 		background: #333;
 		color: white !important;
 		cursor: not-allowed;
+	}
+
+	.cell-tower-button-footer {
+		padding: 0.25rem 0.75rem;
+		border: none;
+		border-radius: 4px;
+		font-size: 11px;
+		cursor: pointer;
+		transition: all 0.2s;
+		white-space: nowrap;
+		height: 28px;
+		background: #444;
+		color: #aaa !important;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.cell-tower-button-footer:hover {
+		background: #555;
+		color: #fff !important;
+	}
+
+	.cell-tower-button-footer.active {
+		background: #10b981;
+		color: white !important;
+	}
+
+	.cell-tower-button-footer.active:hover {
+		background: #059669;
+	}
+
+	.cell-tower-button-footer svg {
+		width: 14px;
+		height: 14px;
 	}
 
 	.start-kismet-button-footer {

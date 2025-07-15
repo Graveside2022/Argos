@@ -354,3 +354,6 @@ CODE_OF_CONDUCT.md
 DEFENSE_CONTRACTOR_UI_RESEARCH.md
 SECURITY.md
 .coral_env/
+# Large data files
+map-data/*.csv
+map-data/cell_towers_*.csv

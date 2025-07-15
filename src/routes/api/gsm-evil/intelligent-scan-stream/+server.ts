@@ -106,7 +106,7 @@ export const POST: RequestHandler = async ({ request }) => {
         for (let i = 0; i < candidateFreqs.length; i++) {
           const [freq, power] = candidateFreqs[i];
           
-          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Testing ${freq} MHz...`);
+          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Testing ${freq} MHz...`);
           sendUpdate(`[CMD] $ grgsm_livemon_headless -f ${freq}M -g 40`);
           
           // Start grgsm_livemon
@@ -115,13 +115,13 @@ export const POST: RequestHandler = async ({ request }) => {
           );
           
           const pid = gsmPid.trim();
-          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Waiting for demodulator initialization...`);
+          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Waiting for demodulator initialization...`);
           
           // Wait for initialization
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
-          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
+          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
           
           // Count GSMTAP packets and analyze channel types
           const { stdout: packetCount } = await execAsync(
@@ -167,10 +167,10 @@ export const POST: RequestHandler = async ({ request }) => {
           
           const hasActivity = frameCount > 10;
           
-          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
-          sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
+          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
+          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
           if (channelType) {
-            sendUpdate(`[TEST ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
+            sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
           }
           sendUpdate('[SCAN] ');
           
