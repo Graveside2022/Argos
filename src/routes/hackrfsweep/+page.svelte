@@ -1305,19 +1305,19 @@
 </div>
 
 <style>
-	/* Neon Glow Effects */
+	/* Neon Glow Effects - DISABLED */
 	:global(h1),
 	:global(h2),
 	:global(h3),
 	:global(.text-glow) {
-		text-shadow:
+		/* text-shadow:
 			0 0 10px rgba(0, 212, 255, 0.5),
 			0 0 20px rgba(0, 212, 255, 0.3),
-			0 0 30px rgba(0, 212, 255, 0.1);
-		animation: textGlow 3s ease-in-out infinite;
+			0 0 30px rgba(0, 212, 255, 0.1); */
+		/* animation: textGlow 3s ease-in-out infinite; */
 	}
 
-	@keyframes textGlow {
+	/* @keyframes textGlow {
 		0%,
 		100% {
 			text-shadow:
@@ -1331,7 +1331,7 @@
 				0 0 30px rgba(0, 212, 255, 0.5),
 				0 0 45px rgba(0, 212, 255, 0.3);
 		}
-	}
+	} */
 
 	/* Cyan neon glow for buttons */
 	:global(button) {
