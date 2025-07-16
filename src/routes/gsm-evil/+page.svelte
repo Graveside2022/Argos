@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	
 	let iframeUrl = '';
 	let isLoading = true;
@@ -20,7 +20,6 @@
 		message: 'Checking...'
 	};
 	let scanResults: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean; channelType?: string; controlChannel?: boolean }[] = [];
-	let showScanResults = false;
 	let capturedIMSIs: any[] = [];
 	let totalIMSIs = 0;
 	let scanStatus = '';
@@ -558,7 +557,39 @@
 		'450-07': 'KT',
 		'450-08': 'KT',
 		'450-11': 'SK Telecom',
-		'450-12': 'SK Telecom'
+		'450-12': 'SK Telecom',
+		// Sweden (240) - Additional
+		'240-08': 'Telenor Sverige',
+		'240-42': 'Telenor Connexion',
+		// Nigeria (621)
+		'621-30': 'MTN Nigeria',
+		// Ukraine (255)
+		'255-03': 'Kyivstar',
+		// Portugal (268) - Additional
+		'268-01': 'Vodafone',
+		'268-06': 'MEO',
+		// International (901)
+		'901-40': 'Orange M2M/IoT',
+		// Turkey (286) - Additional
+		'286-02': 'Vodafone',
+		// Vietnam (452)
+		'452-04': 'Viettel',
+		// Czech Republic (230)
+		'230-03': 'Vodafone',
+		// Ghana (620)
+		'620-01': 'MTN',
+		// Germany (262) - Additional
+		'262-23': 'Drillisch Online',
+		// Croatia (219)
+		'219-01': 'T-Mobile',
+		// Hungary (216)
+		'216-70': 'Vodafone',
+		// Ukraine (255) - Additional
+		'255-01': 'Vodafone',
+		// United Arab Emirates (424)
+		'424-02': 'Etisalat',
+		// Bosnia and Herzegovina (218)
+		'218-05': 'm:tel'
 	};
 
 	// MCC to Country mapping with flag emojis and country codes
@@ -833,7 +864,7 @@
 				
 				if (!towerGroups[towerId]) {
 					const country = mccToCountry[mcc] || { name: 'Unknown', flag: '🏳️', code: '??' };
-					const carrier = mncToCarrier[mccMnc] || 'Unknown Carrier';
+					const carrier = mncToCarrier[mccMnc] || 'Unknown';
 					
 					// Determine status based on carrier and MCC
 					let status = 'ok';
@@ -847,7 +878,7 @@
 						// Unknown country
 						status = 'suspicious';
 						statusSymbol = '🚨';
-					} else if (carrier === 'Unknown Carrier') {
+					} else if (carrier === 'Unknown') {
 						// Unknown carrier
 						status = 'unknown';
 						statusSymbol = '⚠️';
@@ -924,7 +955,6 @@
 		scanResults = [];
 		scanStatus = '';
 		showScanProgress = false;
-		showScanResults = false;
 	}
 
 	onMount(() => {
@@ -1108,13 +1138,14 @@
 		}
 		
 		isScanning = true;
-		showScanResults = true;  // Always show results table
 		showScanProgress = true;
 		scanProgress = [];
-		scanStatus = '';
+		scanStatus = 'Scanning 25 GSM frequencies...';
 		
 		try {
-			// Use streaming endpoint for real-time progress
+			// Use the streaming endpoint to show progress
+			scanProgress = [];
+			
 			const response = await fetch('/api/gsm-evil/intelligent-scan-stream', {
 				method: 'POST'
 			});
@@ -1123,93 +1154,60 @@
 				throw new Error('Scan request failed');
 			}
 			
-			const reader = response.body?.getReader();
+			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
-			
-			if (!reader) {
-				throw new Error('No response body');
-			}
+			let buffer = '';
 			
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
 				
-				const chunk = decoder.decode(value);
-				const lines = chunk.split('\n');
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
 				
 				for (const line of lines) {
 					if (line.startsWith('data: ')) {
 						try {
-							const data = JSON.parse(line.slice(6));
-							
-							if (data.message) {
-								// Add progress message
-								scanProgress = [...scanProgress, data.message];
+							const json = JSON.parse(line.slice(6));
+							if (json.message) {
+								scanProgress = [...scanProgress, json.message];
 								// Auto-scroll to bottom
-								setTimeout(() => {
-									const consoleBody = document.querySelector('.console-body');
-									if (consoleBody) {
-										consoleBody.scrollTop = consoleBody.scrollHeight;
-									}
-								}, 10);
+								await tick();
+								const progressEl = document.querySelector('.scan-progress-body');
+								if (progressEl) {
+									progressEl.scrollTop = progressEl.scrollHeight;
+								}
 							}
-							
-							if (data.result) {
-								// Handle final result
-								console.log('=== SCAN RESULT RECEIVED ===');
-								console.log('Full result object:', data.result);
-								if (data.result.success && data.result.bestFrequency) {
-									selectedFrequency = data.result.bestFrequency;
-									scanResults = data.result.scanResults || [];
-									scanStatus = `Selected ${data.result.bestFrequency} MHz with ${data.result.bestFrequencyFrames} GSM frames`;
+							if (json.result) {
+								const data = json.result;
+								console.log('Scan response:', data);
+								
+								if (data.bestFrequency) {
+									selectedFrequency = data.bestFrequency;
+									scanResults = data.scanResults || [];
+									scanStatus = `Found ${scanResults.length} active frequencies. Best: ${data.bestFrequency} MHz`;
+									scanProgress = [...scanProgress, '[SCAN] Scan complete!', `[SCAN] Found ${scanResults.length} active frequencies`];
+									
 									console.log('Scan complete. Results:', scanResults.length, 'frequencies');
 									console.log('scanResults:', scanResults);
-									console.log('showScanResults before:', showScanResults);
-									console.log('gsmStatus:', gsmStatus);
-									// Force UI update with small delay
-									setTimeout(() => {
-										scanResults = [...scanResults];
-										showScanResults = true;
-										console.log('showScanResults after:', showScanResults);
-										console.log('scanResults after spread:', scanResults);
-									}, 100);
 								} else {
-									console.error('Scan failed or no results:', data.result);
+									scanStatus = 'No active frequencies found';
+									scanResults = [];
+									scanProgress = [...scanProgress, '[SCAN] No active frequencies detected'];
 								}
 							}
 						} catch (e) {
-							console.error('Failed to parse SSE data:', e);
+							console.error('Error parsing SSE data:', e);
 						}
 					}
 				}
 			}
 		} catch (error) {
 			console.error('Scan failed:', error);
-			scanProgress = [...scanProgress, `[ERROR] ${error}`];
-			
-			// Fallback to regular scan
-			try {
-				scanProgress = [...scanProgress, '[FALLBACK] Attempting basic RF power scan...'];
-				const fallbackResponse = await fetch('/api/gsm-evil/scan', {
-					method: 'POST'
-				});
-				
-				if (fallbackResponse.ok) {
-					const data = await fallbackResponse.json();
-					if (data.strongestFrequency) {
-						selectedFrequency = data.strongestFrequency;
-						scanResults = data.scanResults || [];
-						scanProgress = [...scanProgress, `[FALLBACK] Selected ${data.strongestFrequency} MHz (strongest signal)`];
-						console.log('Fallback scan results:', scanResults.length, 'frequencies');
-						// Force UI update
-						setTimeout(() => {
-							scanResults = [...scanResults];
-						}, 100);
-					}
-				}
-			} catch (fallbackError) {
-				scanProgress = [...scanProgress, '[ERROR] Fallback scan also failed'];
-			}
+			scanProgress = [...scanProgress, `[ERROR] Scan failed: ${(error as Error).message}`];
+			scanStatus = 'Scan failed';
+			scanResults = [];
 		} finally {
 			isScanning = false;
 		}
@@ -1220,8 +1218,25 @@
 			const response = await fetch('/api/gsm-evil/frames');
 			if (response.ok) {
 				const data = await response.json();
+				
 				if (data.frames && data.frames.length > 0) {
-					gsmFrames = data.frames;
+					// Append new frames to existing ones (console-like behavior)
+					gsmFrames = [...gsmFrames, ...data.frames];
+					
+					// Keep only the last 25 frames to prevent memory issues
+					if (gsmFrames.length > 25) {
+						gsmFrames = gsmFrames.slice(-25);
+					}
+					
+					// Force Svelte to update
+					gsmFrames = gsmFrames;
+					
+					// Auto-scroll to bottom after adding new frames
+					await tick();
+					const frameDisplay = document.querySelector('.gsm-capture-card .frame-display');
+					if (frameDisplay) {
+						frameDisplay.scrollTop = frameDisplay.scrollHeight;
+					}
 				}
 			}
 		} catch (error) {
@@ -1263,6 +1278,9 @@
 	}
 	
 	function startFrameUpdates() {
+		// Clear frames when starting
+		gsmFrames = [];
+		
 		// Fetch real frames and activity every 2 seconds when GSM Evil is running
 		frameUpdateInterval = setInterval(() => {
 			if (gsmStatus === 'running') {
@@ -1414,10 +1432,6 @@
 				<!-- Scan Results Table (Always visible) -->
 				<div class="scan-results-table">
 					<h4 class="table-title"><span style="color: #ff0000;">Scan</span> Results</h4>
-					<!-- Debug info -->
-					<div style="font-size: 0.7rem; color: #666; margin-top: 0.5rem;">
-						Debug: scanResults.length = {scanResults.length}, showScanResults = {showScanResults}, gsmStatus = {gsmStatus}
-					</div>
 					<div class="table-container">
 						{#if scanResults.length > 0}
 							<table class="frequency-table">
@@ -1493,8 +1507,8 @@
 	{#if gsmStatus === 'running' && detailedStatus}
 		<div class="status-panel">
 			<div class="status-grid">
-				<!-- IMSI Capture Status -->
-				<div class="status-card {capturedIMSIs.length > 5 ? 'expanded' : ''}">
+				<!-- IMSI Capture Status (Left) -->
+				<div class="status-card">
 					<div class="status-card-header">
 						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
 							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
@@ -1514,45 +1528,39 @@
 							{#if capturedIMSIs.length > 0}
 								<div class="tower-groups">
 									<div class="tower-header">
-										<span class="header-mcc">MCC-MNC</span>
-										<span class="tower-separator">|</span>
 										<span class="header-carrier">Carrier</span>
 										<span class="tower-separator">|</span>
 										<span class="header-country">🌍 Country</span>
-										<span class="tower-separator">|</span>
-										<span class="header-devices">Total Devices</span>
 										<span class="tower-separator">|</span>
 										<span class="header-location">Cell tower location</span>
 										<span class="tower-separator">|</span>
 										<span class="header-lac">LAC/CI</span>
 										<span class="tower-separator">|</span>
-										<span class="header-status">Status</span>
+										<span class="header-mcc">MCC-MNC</span>
+										<span class="tower-separator">|</span>
+										<span class="header-devices">Devices</span>
 									</div>
 									{#each groupedTowers as tower}
 										<div class="tower-line">
-											<span class="tower-mcc">{tower.mccMnc}</span>
+											<span class="tower-carrier {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.carrier}</span>
 											<span class="tower-separator">|</span>
-											<span class="tower-carrier">{tower.carrier.substring(0, 12)}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-country">{tower.country.flag} {tower.country.name}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-devices">{tower.count}</span>
+											<span class="tower-country">{tower.country.flag} {tower.country.code}</span>
 											<span class="tower-separator">|</span>
 											<span class="tower-location">
 												{#if tower.location}
-													{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(4)}
+													<span class="text-green-400">{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(4)}</span>
 												{:else if !towerLookupAttempted[`${tower.mccMnc}-${tower.lac}-${tower.ci}`]}
 													<span class="text-xs text-yellow-500">Loading...</span>
 												{:else}
-													<span class="text-xs text-gray-500">Not in database</span>
+													<span class="text-xs" style="color: #94a3b8;">Roaming</span>
 												{/if}
 											</span>
 											<span class="tower-separator">|</span>
-											<span class="tower-lac">{tower.lac}/{tower.ci}</span>
+											<span class="tower-lac {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.lac}/{tower.ci}</span>
 											<span class="tower-separator">|</span>
-											<span class="tower-status status-{tower.status}">
-												{tower.statusSymbol}
-											</span>
+											<span class="tower-mcc {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.mccMnc}</span>
+											<span class="tower-separator">|</span>
+											<span class="tower-devices">{tower.count}</span>
 										</div>
 									{/each}
 								</div>
@@ -1566,8 +1574,8 @@
 					</div>
 				</div>
 
-				<!-- GSM Capture Status -->
-				<div class="status-card">
+				<!-- GSM Capture Status (Right) -->
+				<div class="status-card gsm-capture-card">
 					<div class="status-card-header">
 						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
 							<path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -1584,7 +1592,7 @@
 						<div class="frame-display">
 							{#if gsmFrames.length > 0}
 								{#each gsmFrames as frame, i}
-									<div class="frame-line {i === 0 ? 'text-green-400' : ''}">{frame}</div>
+									<div class="frame-line {i === gsmFrames.length - 1 ? 'text-green-400' : ''}">{frame}</div>
 								{/each}
 							{:else}
 								<div class="frame-line text-gray-500">No GSM frames captured yet...</div>
@@ -2435,7 +2443,7 @@
 
 	.status-grid {
 		display: grid;
-		grid-template-columns: minmax(600px, 3fr) minmax(350px, 1fr);
+		grid-template-columns: minmax(600px, 2fr) minmax(350px, 1fr);
 		gap: 1rem;
 		max-width: 1400px;
 		margin: 0 auto;
@@ -2496,13 +2504,11 @@
 		color: #ff0000;
 	}
 
-	.status-card.expanded {
-		grid-column: span 2;
-	}
 
 	.frame-monitor {
 		margin-top: 0.75rem;
 	}
+	
 
 	.frame-header {
 		display: flex;
@@ -2518,8 +2524,7 @@
 		padding: 0.5rem;
 		font-family: 'Courier New', monospace;
 		font-size: 0.75rem;
-		height: 400px;
-		max-height: 600px;
+		height: 420px;
 		overflow-y: auto;
 	}
 	
@@ -2552,7 +2557,7 @@
 	.tower-carrier {
 		color: #f1f5f9;
 		font-weight: 500;
-		min-width: 100px;
+		min-width: 140px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		text-align: center;
@@ -2586,8 +2591,9 @@
 	}
 	
 	.tower-lac {
-		color: #10b981;
+		color: #94a3b8;
 		font-family: monospace;
+		font-size: 0.75rem;
 		min-width: 80px;
 		text-align: center;
 	}
@@ -2618,7 +2624,7 @@
 	}
 	
 	.header-carrier {
-		min-width: 100px;
+		min-width: 140px;
 		text-align: center;
 	}
 	
@@ -2702,15 +2708,26 @@
 
 	.frame-line {
 		color: #9ca3af;
-		line-height: 1.4;
-		white-space: pre;
-		font-size: 0.85rem;
-		font-family: monospace;
-		padding: 0.25rem 0;
+		line-height: 1.1;
+		white-space: nowrap;
+		font-size: 0.75rem;
+		font-family: 'Courier New', monospace;
+		font-weight: bold;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		padding: 0.1rem 0;
 	}
 
 	.text-green-400 {
 		color: #4ade80;
+	}
+	
+	.text-yellow-500 {
+		color: #eab308;
+	}
+	
+	.text-orange-400 {
+		color: #fb923c;
 	}
 
 	.blink {
