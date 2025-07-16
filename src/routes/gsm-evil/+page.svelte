@@ -833,7 +833,7 @@
 				
 				if (!towerGroups[towerId]) {
 					const country = mccToCountry[mcc] || { name: 'Unknown', flag: '🏳️', code: '??' };
-					const carrier = mncToCarrier[mccMnc] || 'Unknown Carrier';
+					const carrier = mncToCarrier[mccMnc] || 'Unknown';
 					
 					// Determine status based on carrier and MCC
 					let status = 'ok';
@@ -847,7 +847,7 @@
 						// Unknown country
 						status = 'suspicious';
 						statusSymbol = '🚨';
-					} else if (carrier === 'Unknown Carrier') {
+					} else if (carrier === 'Unknown') {
 						// Unknown carrier
 						status = 'unknown';
 						statusSymbol = '⚠️';
@@ -1495,17 +1495,19 @@
 						<span class="font-semibold">IMSI Capture</span>
 						<span class="text-xs text-gray-400 ml-2">(Live Data) • {detailedStatus.dataCollection.active ? 'Receiving' : 'No Data'}</span>
 					</div>
-					<div class="frame-monitor">
-						<div class="frame-header">
-							{#if totalIMSIs > 0}
-								<span class="text-xs text-green-400 blink">● {totalIMSIs} IMSIs captured</span>
-							{:else}
-								<span class="text-xs text-yellow-400">● Waiting for IMSIs</span>
-							{/if}
-						</div>
-						<div class="frame-display">
-							{#if capturedIMSIs.length > 0}
-								<div class="tower-groups">
+					<div class="dual-capture-container">
+						<!-- IMSI Capture Section -->
+						<div class="capture-section">
+							<div class="frame-header">
+								{#if totalIMSIs > 0}
+									<span class="text-xs text-green-400 blink">● {totalIMSIs} IMSIs captured</span>
+								{:else}
+									<span class="text-xs text-yellow-400">● Waiting for IMSIs</span>
+								{/if}
+							</div>
+							<div class="frame-display">
+								{#if capturedIMSIs.length > 0}
+									<div class="tower-groups">
 									<div class="tower-header">
 										<span class="header-mcc">MCC-MNC</span>
 										<span class="tower-separator">|</span>
@@ -1513,7 +1515,7 @@
 										<span class="tower-separator">|</span>
 										<span class="header-country">🌍 Country</span>
 										<span class="tower-separator">|</span>
-										<span class="header-devices">Total Devices</span>
+										<span class="header-devices">Devices</span>
 										<span class="tower-separator">|</span>
 										<span class="header-location">Cell tower location</span>
 										<span class="tower-separator">|</span>
@@ -1557,17 +1559,9 @@
 							{/if}
 						</div>
 					</div>
-				</div>
-
-				<!-- GSM Capture Status -->
-				<div class="status-card">
-					<div class="status-card-header">
-						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-						</svg>
-						<span class="font-semibold">GSM Capture</span>
-					</div>
-					<div class="frame-monitor">
+					
+					<!-- GSM Capture Section -->
+					<div class="capture-section">
 						<div class="frame-header">
 							<span class="text-xs">
 								<span style="color: white;">Listening on</span>
@@ -1590,7 +1584,6 @@
 						</div>
 					</div>
 				</div>
-			</div>
 		</div>
 	{/if}
 
@@ -2491,10 +2484,23 @@
 
 	.status-card.expanded {
 		grid-column: span 2;
+		max-width: 100%;
 	}
 
 	.frame-monitor {
 		margin-top: 0.75rem;
+	}
+	
+	.dual-capture-container {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+		margin-top: 0.75rem;
+	}
+	
+	.capture-section {
+		display: flex;
+		flex-direction: column;
 	}
 
 	.frame-header {
@@ -2574,7 +2580,7 @@
 	.tower-devices {
 		color: #3b82f6;
 		font-weight: 600;
-		min-width: 90px;
+		min-width: 60px;
 		text-align: center;
 	}
 	
@@ -2622,7 +2628,7 @@
 	}
 	
 	.header-devices {
-		min-width: 90px;
+		min-width: 60px;
 		text-align: center;
 	}
 	
