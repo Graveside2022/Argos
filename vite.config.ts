@@ -18,6 +18,9 @@ export default defineConfig({
 		exclude: ['@deck.gl/core', '@deck.gl/layers']
 	},
 	server: {
+		port: 5173,
+		strictPort: true, // Fail instead of auto-selecting ports
+		host: '0.0.0.0',
 		hmr: {
 			timeout: 60000,
 			overlay: false
