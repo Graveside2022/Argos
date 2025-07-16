@@ -9,95 +9,126 @@ export const POST: RequestHandler = async () => {
   try {
     console.log('Starting GSM frequency scan...');
     
-    // Full GSM900 downlink band frequencies to check
+    // Strongest GSM900 downlink band frequencies to check
     const checkFreqs = [
-      '935.2', '936.0', '937.0', '938.0', '939.0', '940.0', '941.0', '942.0',
-      '943.0', '944.0', '945.0', '946.0', '947.2', '948.6', '949.0', '950.0',
-      '951.0', '952.0', '953.0', '954.0', '955.0', '956.0', '957.6', '958.0', '959.0'
+      '944.0', '949.0', '947.2'
     ];
     
-    console.log(`Testing ${checkFreqs.length} frequencies for GSM activity...`);
+    console.log(`Testing ${checkFreqs.length} strongest frequencies for GSM activity...`);
     
     const results: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean; channelType?: string; controlChannel?: boolean }[] = [];
     
     // Test each frequency for actual GSM frames
     for (const freq of checkFreqs) {
       console.log(`Testing ${freq} MHz...`);
+      let pid = '';
       
-      // Start grgsm_livemon briefly
-      const { stdout: gsmPid } = await execAsync(
-        `sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
-      );
-      
-      const pid = gsmPid.trim();
-      
-      // Wait for initialization
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Count GSMTAP packets for 3 seconds
-      const { stdout: packetCount } = await execAsync(
-        'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
-      ).catch(() => ({ stdout: '0' }));
-      
-      const frameCount = parseInt(packetCount.trim()) || 0;
-      
-      // Analyze channel types based on frame patterns
-      let channelType = '';
-      let controlChannel = false;
-      
-      if (frameCount > 0) {
-        if (frameCount > 10 && frameCount < 100) {
-          // Moderate frame count - likely control channel
-          channelType = 'BCCH/CCCH';
-          controlChannel = true;
-        } else if (frameCount >= 100) {
-          // High frame count - likely traffic channel
-          channelType = 'TCH';
-          controlChannel = false;
-        } else {
-          // Low frame count - could be SDCCH or weak signal
-          channelType = 'SDCCH';
-          controlChannel = false;
+      try {
+        // Start grgsm_livemon briefly
+        const { stdout: gsmPid } = await execAsync(
+          `sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
+        );
+        
+        pid = gsmPid.trim();
+        
+        // Validate process started
+        if (!pid || pid === '0') {
+          throw new Error('Failed to start grgsm_livemon_headless');
         }
-      }
-      
-      // Kill grgsm_livemon
-      await execAsync(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
-      
-      // Determine strength based on frame count (since we don't have RF power)
-      let strength = 'No Signal';
-      let power = -100;
-      if (frameCount > 200) {
-        strength = 'Excellent';
-        power = -25;
-      } else if (frameCount > 150) {
-        strength = 'Very Strong';
-        power = -30;
-      } else if (frameCount > 100) {
-        strength = 'Strong';
-        power = -35;
-      } else if (frameCount > 50) {
-        strength = 'Good';
-        power = -45;
-      } else if (frameCount > 10) {
-        strength = 'Moderate';
-        power = -55;
-      } else if (frameCount > 0) {
-        strength = 'Weak';
-        power = -65;
-      }
-      
-      // Only add frequencies with GSM activity
-      if (frameCount > 0) {
-        results.push({
-          frequency: freq,
-          power: power,
-          frameCount: frameCount,
-          hasGsmActivity: frameCount > 10,
-          strength: strength,
-          channelType: channelType,
-          controlChannel: controlChannel
-        });
+        
+        // Wait for initialization
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Count GSMTAP packets for 3 seconds
+        let frameCount = 0;
+        try {
+          const { stdout: packetCount } = await execAsync(
+            'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
+          );
+          frameCount = parseInt(packetCount.trim()) || 0;
+        } catch (tcpdumpError) {
+          // Alternative method if tcpdump fails
+          try {
+            const { stdout: altCount } = await execAsync(
+              'sudo timeout 3 netstat -u | grep -c 4729 || echo 0'
+            );
+            frameCount = parseInt(altCount.trim()) || 0;
+          } catch (altError) {
+            console.log(`Network connection lost for ${freq} MHz`);
+            frameCount = 0;
+          }
+        }
+        
+        // Analyze channel types based on frame patterns
+        let channelType = '';
+        let controlChannel = false;
+        
+        if (frameCount > 0) {
+          if (frameCount > 10 && frameCount < 100) {
+            // Moderate frame count - likely control channel
+            channelType = 'BCCH/CCCH';
+            controlChannel = true;
+          } else if (frameCount >= 100) {
+            // High frame count - likely traffic channel
+            channelType = 'TCH';
+            controlChannel = false;
+          } else {
+            // Low frame count - could be SDCCH or weak signal
+            channelType = 'SDCCH';
+            controlChannel = false;
+          }
+        }
+        
+        // Determine strength based on frame count (since we don't have RF power)
+        let strength = 'No Signal';
+        let power = -100;
+        if (frameCount > 200) {
+          strength = 'Excellent';
+          power = -25;
+        } else if (frameCount > 150) {
+          strength = 'Very Strong';
+          power = -30;
+        } else if (frameCount > 100) {
+          strength = 'Strong';
+          power = -35;
+        } else if (frameCount > 50) {
+          strength = 'Good';
+          power = -45;
+        } else if (frameCount > 10) {
+          strength = 'Moderate';
+          power = -55;
+        } else if (frameCount > 0) {
+          strength = 'Weak';
+          power = -65;
+        }
+        
+        // Only add frequencies with GSM activity
+        if (frameCount > 0) {
+          results.push({
+            frequency: freq,
+            power: power,
+            frameCount: frameCount,
+            hasGsmActivity: frameCount > 10,
+            strength: strength,
+            channelType: channelType,
+            controlChannel: controlChannel
+          });
+        }
+        
+      } catch (freqError) {
+        console.log(`Error testing ${freq} MHz: ${(freqError as Error).message}`);
+        // Continue with next frequency
+      } finally {
+        // CRITICAL: Always kill grgsm_livemon process regardless of success/failure
+        if (pid && pid !== '0') {
+          try {
+            await execAsync(`sudo kill ${pid} 2>/dev/null`);
+          } catch (killError) {
+            console.log(`Warning: Failed to clean up process ${pid}`);
+            // Try force kill
+            await execAsync(`sudo kill -9 ${pid} 2>/dev/null`).catch(() => {});
+          }
+        }
       }
       
       // Brief pause between tests

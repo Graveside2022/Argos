@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
+	import { gsmEvilStore } from '$lib/stores/gsmEvilStore';
 	
 	let iframeUrl = '';
 	let isLoading = true;
@@ -8,8 +9,20 @@
 	let gsmStatus: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
 	let statusCheckInterval: ReturnType<typeof setInterval>;
 	let detailedStatus: any = null;
-	let selectedFrequency = '947.2';
-	let isScanning = false;
+	// Store-managed state via reactive statements
+	$: selectedFrequency = $gsmEvilStore.selectedFrequency;
+	$: isScanning = $gsmEvilStore.isScanning;
+	$: scanResults = $gsmEvilStore.scanResults;
+	$: capturedIMSIs = $gsmEvilStore.capturedIMSIs;
+	$: totalIMSIs = $gsmEvilStore.totalIMSIs;
+	$: scanStatus = $gsmEvilStore.scanStatus;
+	$: scanProgress = $gsmEvilStore.scanProgress;
+	$: showScanProgress = $gsmEvilStore.showScanProgress;
+	$: towerLocations = $gsmEvilStore.towerLocations;
+	$: towerLookupAttempted = $gsmEvilStore.towerLookupAttempted;
+	$: scanButtonText = $gsmEvilStore.scanButtonText;
+	
+	// Non-store managed state
 	let gsmFrames: string[] = [];
 	let frameUpdateInterval: ReturnType<typeof setInterval>;
 	let activityStatus = {
@@ -19,14 +32,9 @@
 		currentFrequency: '947.2',
 		message: 'Checking...'
 	};
-	let scanResults: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean; channelType?: string; controlChannel?: boolean }[] = [];
-	let capturedIMSIs: any[] = [];
-	let totalIMSIs = 0;
-	let scanStatus = '';
-	let scanProgress: string[] = [];
-	let showScanProgress = false;
-	let towerLocations: { [key: string]: any } = {};
-	let towerLookupAttempted: { [key: string]: boolean } = {};
+
+	// Real-time frequency parsing state
+	let currentFrequencyData: any = {};
 	
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
 	$: groupedTowers = capturedIMSIs && towerLocations && towerLookupAttempted && groupIMSIsByTower();
@@ -831,16 +839,12 @@
 			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
 			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
 				// console.log('Fetching location for tower:', towerId);
-				towerLookupAttempted[towerId] = true;
-				// Force re-render
-				towerLookupAttempted = { ...towerLookupAttempted };
+				gsmEvilStore.markTowerLookupAttempted(towerId);
 				
 				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
 				if (result && result.found) {
 					// console.log('Location found for tower:', towerId, result.location);
-					towerLocations[towerId] = result.location;
-					// Force re-render by creating a new object
-					towerLocations = { ...towerLocations };
+					gsmEvilStore.updateTowerLocation(towerId, result.location);
 				} else {
 					// console.log('No location found for tower:', towerId);
 				}
@@ -949,12 +953,18 @@
 	// 	}
 	// }
 	
+	function handleScanButton() {
+		if (isScanning) {
+			// Stop the scan
+			gsmEvilStore.stopScan();
+		} else {
+			// Start the scan
+			scanFrequencies();
+		}
+	}
+
 	function clearResults() {
-		// console.log('Clearing results...');
-		scanProgress = [];
-		scanResults = [];
-		scanStatus = '';
-		showScanProgress = false;
+		gsmEvilStore.clearResults();
 	}
 
 	onMount(() => {
@@ -1095,9 +1105,18 @@
 			}
 		} catch (error) {
 			console.error('Failed to stop GSM Evil:', error);
-			gsmStatus = 'running';
+			// Set to stopped anyway to show the scan interface
+			gsmStatus = 'stopped';
 			hasError = true;
 			errorMessage = error instanceof Error ? error.message : 'Failed to stop GSM Evil';
+			
+			// Clear the status check interval to prevent it from resetting
+			if (statusCheckInterval) {
+				clearInterval(statusCheckInterval);
+			}
+			
+			// Alert user about the issue
+			alert('Failed to stop GSM Evil due to permissions. Showing scan interface anyway.');
 		}
 	}
 	
@@ -1137,22 +1156,31 @@
 			return;
 		}
 		
-		isScanning = true;
-		showScanProgress = true;
-		scanProgress = [];
-		scanStatus = 'Scanning 25 GSM frequencies...';
+		// Start the scan in store - this changes button to "Stop Scan"
+		gsmEvilStore.startScan();
 		
 		try {
-			// Use the streaming endpoint to show progress
-			scanProgress = [];
+			// Get abort controller for stop functionality
+			const abortController = gsmEvilStore.getAbortController();
 			
+			// Add client-side timeout (6 minutes) slightly longer than server timeout
+			const timeoutController = new AbortController();
+			const timeoutId = setTimeout(() => {
+				timeoutController.abort();
+			}, 360000); // 6 minutes
+			
+			// Use the streaming endpoint to show progress
 			const response = await fetch('/api/gsm-evil/intelligent-scan-stream', {
-				method: 'POST'
+				method: 'POST',
+				signal: abortController?.signal || timeoutController.signal // This enables the stop button
 			});
 			
 			if (!response.ok) {
-				throw new Error('Scan request failed');
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
+			
+			// Clear client timeout since we got a response
+			clearTimeout(timeoutId);
 			
 			if (!response.body) {
 				throw new Error('No response body');
@@ -1163,6 +1191,12 @@
 			let buffer = '';
 			
 			while (true) {
+				// Check if user clicked stop
+				if (abortController?.signal.aborted) {
+					reader.cancel();
+					return;
+				}
+				
 				const { done, value } = await reader.read();
 				if (done) break;
 				
@@ -1175,7 +1209,9 @@
 						try {
 							const json = JSON.parse(line.slice(6));
 							if (json.message) {
-								scanProgress = [...scanProgress, json.message];
+								// REAL-TIME PROGRESS - Results populate while scanning
+								gsmEvilStore.addScanProgress(json.message);
+								
 								// Auto-scroll to bottom
 								await tick();
 								const progressEl = document.querySelector('.scan-progress-body');
@@ -1187,18 +1223,41 @@
 								const data = json.result;
 								// console.log('Scan response:', data);
 								
-								if (data.bestFrequency) {
-									selectedFrequency = data.bestFrequency;
-									scanResults = data.scanResults || [];
-									scanStatus = `Found ${scanResults.length} active frequencies. Best: ${data.bestFrequency} MHz`;
-									scanProgress = [...scanProgress, '[SCAN] Scan complete!', `[SCAN] Found ${scanResults.length} active frequencies`];
+								if (data.type === 'frequency_result') {
+									// REAL-TIME RESULTS - Add individual frequency results as they complete
+									gsmEvilStore.addScanResult(data.result);
 									
-									// console.log('Scan complete. Results:', scanResults.length, 'frequencies');
-									// console.log('scanResults:', scanResults);
-								} else {
-									scanStatus = 'No active frequencies found';
-									scanResults = [];
-									scanProgress = [...scanProgress, '[SCAN] No active frequencies detected'];
+									// Update progress status
+									gsmEvilStore.setScanStatus(`Testing frequencies... ${data.progress.completed}/${data.progress.total} complete`);
+									
+									// Automatically select the best frequency so far (highest frame count)
+									if (data.result.frameCount > 0) {
+										// Check if this is better than current selection
+										const currentResults = $gsmEvilStore.scanResults;
+										const currentSelected = currentResults.find(r => r.frequency === $gsmEvilStore.selectedFrequency);
+										
+										if (!currentSelected || data.result.frameCount > (currentSelected.frameCount || 0)) {
+											gsmEvilStore.setSelectedFrequency(data.result.frequency);
+										}
+									}
+									
+									// console.log('Real-time result:', data.result);
+								} else if (data.type === 'scan_complete' || data.bestFrequency) {
+									// SCAN COMPLETE - Final results processing
+									if (data.bestFrequency) {
+										gsmEvilStore.setSelectedFrequency(data.bestFrequency);
+										gsmEvilStore.setScanResults(data.scanResults || []);
+										gsmEvilStore.setScanStatus(`Found ${data.scanResults?.length || 0} active frequencies. Best: ${data.bestFrequency} MHz`);
+										gsmEvilStore.addScanProgress('[SCAN] Scan complete!');
+										gsmEvilStore.addScanProgress(`[SCAN] Found ${data.scanResults?.length || 0} active frequencies`);
+										
+										// console.log('Scan complete. Results:', data.scanResults?.length || 0, 'frequencies');
+										// console.log('scanResults:', data.scanResults);
+									} else {
+										gsmEvilStore.setScanStatus('No active frequencies found');
+										gsmEvilStore.setScanResults([]);
+										gsmEvilStore.addScanProgress('[SCAN] No active frequencies detected');
+									}
 								}
 							}
 						} catch (e) {
@@ -1208,14 +1267,36 @@
 				}
 			}
 		} catch (error) {
-			console.error('Scan failed:', error);
-			scanProgress = [...scanProgress, `[ERROR] Scan failed: ${(error as Error).message}`];
-			scanStatus = 'Scan failed';
-			scanResults = [];
+			if (error instanceof Error && error.name === 'AbortError') {
+				// User clicked stop or timeout - this is normal
+				if (timeoutController.signal.aborted) {
+					gsmEvilStore.addScanProgress('[ERROR] Scan timeout - operation took too long');
+					gsmEvilStore.setScanStatus('Scan timeout');
+				} else {
+					gsmEvilStore.addScanProgress('[SCAN] Scan stopped by user');
+					gsmEvilStore.setScanStatus('Scan stopped');
+				}
+			} else {
+				// Real error - differentiate between network and process errors
+				console.error('Scan failed:', error);
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+				
+				if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('HTTP')) {
+					gsmEvilStore.addScanProgress('[ERROR] Network connection lost - check server status');
+					gsmEvilStore.setScanStatus('Network error');
+				} else {
+					gsmEvilStore.addScanProgress(`[ERROR] Scan failed: ${errorMessage}`);
+					gsmEvilStore.setScanStatus('Scan failed');
+				}
+				
+				gsmEvilStore.setScanResults([]);
+			}
 		} finally {
-			isScanning = false;
+			// Always complete the scan - button returns to "Start Scan"
+			gsmEvilStore.completeScan();
 		}
 	}
+	
 	
 	async function fetchRealFrames() {
 		try {
@@ -1271,8 +1352,7 @@
 			if (response.ok) {
 				const data = await response.json();
 				if (data.success) {
-					capturedIMSIs = data.imsis;
-					totalIMSIs = data.total;
+					gsmEvilStore.setCapturedIMSIs(data.imsis);
 				}
 			}
 		} catch (error) {
@@ -1379,15 +1459,10 @@
 					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
 					{#if gsmStatus === 'stopped'}
 						<button
-							class="control-btn scan-btn-yellow"
-							on:click={scanFrequencies}
-							disabled={isScanning}
+							class="control-btn {isScanning ? 'scan-btn-purple' : 'scan-btn-yellow'}"
+							on:click={handleScanButton}
 						>
-							{#if isScanning}
-								<span class="font-bold">Scanning...</span>
-							{:else}
-								<span class="font-bold">Start Scan</span>
-							{/if}
+							<span class="font-bold">{scanButtonText}</span>
 						</button>
 						
 						<button
@@ -1481,7 +1556,7 @@
 											<td>
 												<button 
 													class="select-btn {selectedFrequency === result.frequency ? 'selected' : ''}"
-													on:click={() => selectedFrequency = result.frequency}
+													on:click={() => gsmEvilStore.setSelectedFrequency(result.frequency)}
 												>
 													{selectedFrequency === result.frequency ? 'Selected' : 'Select'}
 												</button>
@@ -2029,6 +2104,20 @@
 	.scan-btn-yellow:hover:not(:disabled) {
 		background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%) !important;
 		box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+		transform: translateY(-1px);
+	}
+
+	/* Purple Stop Scan Button */
+	.scan-btn-purple {
+		background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+		border: 1px solid rgba(139, 92, 246, 0.3) !important;
+		color: white !important;
+		box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	}
+
+	.scan-btn-purple:hover:not(:disabled) {
+		background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%) !important;
+		box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
 	}
 
