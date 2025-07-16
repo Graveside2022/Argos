@@ -75,16 +75,6 @@ try:
             if location:
                 imsi_entry["lat"] = location[0]
                 imsi_entry["lon"] = location[1]
-            # Hardcoded location for Cell ID 13721 (from OpenCellID website)
-            # ANY device using LAC 4207 and CI 13721 gets this location
-            elif row[5] == 4207 and row[6] == 13721:
-                imsi_entry["lat"] = 50.006592
-                imsi_entry["lon"] = 8.288978
-            # Hardcoded location for Cell ID 13720 (from OpenCellID website)
-            # ANY device using LAC 4207 and CI 13720 gets this location
-            elif row[5] == 4207 and row[6] == 13720:
-                imsi_entry["lat"] = 50.014965
-                imsi_entry["lon"] = 8.293576
         
         imsis.append(imsi_entry)
     
