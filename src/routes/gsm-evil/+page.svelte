@@ -1475,7 +1475,7 @@
 		<div class="status-panel">
 			<div class="status-grid">
 				<!-- IMSI Capture Status -->
-				<div class="status-card">
+				<div class="status-card {capturedIMSIs.length > 5 ? 'expanded' : ''}">
 					<div class="status-card-header">
 						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
 							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
@@ -2526,7 +2526,8 @@
 		padding: 0.5rem;
 		font-family: 'Courier New', monospace;
 		font-size: 0.75rem;
-		height: 200px;
+		height: 400px;
+		max-height: 600px;
 		overflow-y: auto;
 	}
 	
@@ -2538,9 +2539,9 @@
 	.tower-line {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.2rem 0;
-		font-size: 0.75rem;
+		gap: 0.5rem;
+		padding: 0.3rem 0;
+		font-size: 0.8125rem;
 		font-family: monospace;
 		white-space: nowrap;
 	}
@@ -2604,14 +2605,14 @@
 	.tower-header {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.3rem 0;
-		font-size: 0.7rem;
+		gap: 0.5rem;
+		padding: 0.4rem 0;
+		font-size: 0.75rem;
 		font-family: monospace;
 		font-weight: bold;
 		color: #64748b;
 		border-bottom: 1px solid #333;
-		margin-bottom: 0.3rem;
+		margin-bottom: 0.4rem;
 	}
 	
 	.header-mcc {
