@@ -27,9 +27,10 @@
 	let scanProgress: string[] = [];
 	let showScanProgress = false;
 	let towerLocations: { [key: string]: any } = {};
+	let towerLookupAttempted: { [key: string]: boolean } = {};
 	
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
-	$: groupedTowers = capturedIMSIs && towerLocations && groupIMSIsByTower();
+	$: groupedTowers = capturedIMSIs && towerLocations && towerLookupAttempted && groupIMSIsByTower();
 	
 	// MNC to Carrier mapping (MCC-MNC format)
 	const mncToCarrier: { [key: string]: string } = {
@@ -797,8 +798,12 @@
 		const towers = groupIMSIsByTower();
 		towers.forEach(async (tower) => {
 			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-			if (!towerLocations[towerId]) {
+			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
 				console.log('Fetching location for tower:', towerId);
+				towerLookupAttempted[towerId] = true;
+				// Force re-render
+				towerLookupAttempted = { ...towerLookupAttempted };
+				
 				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
 				if (result && result.found) {
 					console.log('Location found for tower:', towerId, result.location);
@@ -1517,8 +1522,10 @@
 											<span class="tower-location">
 												{#if tower.location}
 													{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(4)}
+												{:else if !towerLookupAttempted[`${tower.mccMnc}-${tower.lac}-${tower.ci}`]}
+													<span class="text-xs text-yellow-500">Loading...</span>
 												{:else}
-													<span class="text-xs text-gray-500">No location data</span>
+													<span class="text-xs text-gray-500">Not in database</span>
 												{/if}
 											</span>
 											<span class="tower-separator">|</span>
