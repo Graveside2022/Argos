@@ -321,6 +321,7 @@ docker-images/
 .gemini/
 .agent/
 .development-archive/
+bmad-method/
 
 # Enhanced Environment Security
 .envrc
