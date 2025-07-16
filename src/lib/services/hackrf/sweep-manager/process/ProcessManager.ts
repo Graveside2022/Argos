@@ -380,7 +380,7 @@ export class ProcessManager {
 	/**
 	 * Set event handlers for process monitoring
 	 */
-	setEventHandlers(handlers: {
+	setEventHandlers(_handlers: {
 		onStdout?: (data: Buffer) => void;
 		onStderr?: (data: Buffer) => void;
 		onExit?: (code: number | null, signal: string | null) => void;

@@ -44,11 +44,43 @@ export const POST: RequestHandler = async ({ request }) => {
       result = stmt.get(mcc, mnc, lac, ci);
       db.close();
     } catch (dbError) {
-      console.log('Database not available, using sample data');
+      console.log('Database not available, will try API');
     }
 
-    // If no result from DB, check sample data
+    // If no result from DB, try OpenCellID API
     if (!result) {
+      const apiKey = 'pk.d6291c07a2907c915cd8994fb22bc189';
+      const apiUrl = `https://opencellid.org/cell/get?key=${apiKey}&mcc=${mcc}&mnc=${mnc}&lac=${lac}&cellid=${ci}&format=json`;
+      
+      try {
+        console.log('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
+        const apiResponse = await fetch(apiUrl);
+        
+        if (apiResponse.ok) {
+          const apiData = await apiResponse.json();
+          
+          if (apiData.lat && apiData.lon) {
+            console.log('Found in OpenCellID API:', apiData);
+            return json({
+              success: true,
+              found: true,
+              location: {
+                lat: parseFloat(apiData.lat),
+                lon: parseFloat(apiData.lon),
+                range: parseInt(apiData.range) || 1000,
+                samples: parseInt(apiData.samples) || 1,
+                source: 'opencellid-api'
+              }
+            });
+          }
+        } else {
+          console.log('OpenCellID API returned:', apiResponse.status, apiResponse.statusText);
+        }
+      } catch (apiError) {
+        console.error('OpenCellID API error:', apiError);
+      }
+      
+      // Check sample data as last resort
       const key = `${mcc}-${String(mnc).padStart(2, '0')}-${lac}-${ci}`;
       const sampleData = sampleTowers[key];
       
@@ -70,7 +102,7 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({
         success: true,
         found: false,
-        message: 'Tower not found in database'
+        message: 'Tower not found in database or API'
       });
     }
 

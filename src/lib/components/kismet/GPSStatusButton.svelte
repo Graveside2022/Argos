@@ -18,9 +18,9 @@
 
 	$: ({ status } = $gpsStore);
 	
-	// Debug logging
-	$: console.log('[GPS Button Debug] Status:', status);
-	$: console.log('[GPS Button Debug] hasGPSFix:', status.hasGPSFix, 'fixType:', status.fixType, 'satellites:', status.satellites);
+	// Debug logging - commented out for production
+	// $: console.log('[GPS Button Debug] Status:', status);
+	// $: console.log('[GPS Button Debug] hasGPSFix:', status.hasGPSFix, 'fixType:', status.fixType, 'satellites:', status.satellites);
 
 	function toggleDetails() {
 		showDetails = !showDetails;
@@ -42,7 +42,7 @@
 		const buttonClass = status.hasGPSFix 
 			? (status.fixType === '3D' ? 'saasfly-btn-add' : 'saasfly-btn-spectrum')
 			: 'saasfly-btn-stop';
-		console.log('[GPS Button Debug] Button class:', buttonClass);
+		// console.log('[GPS Button Debug] Button class:', buttonClass);
 		return buttonClass;
 	}
 </script>

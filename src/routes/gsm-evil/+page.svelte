@@ -28,6 +28,9 @@
 	let showScanProgress = false;
 	let towerLocations: { [key: string]: any } = {};
 	
+	// Reactive variable for grouped towers that updates when IMSIs or locations change
+	$: groupedTowers = capturedIMSIs && towerLocations && groupIMSIsByTower();
+	
 	// MNC to Carrier mapping (MCC-MNC format)
 	const mncToCarrier: { [key: string]: string } = {
 		// USA (310)
@@ -794,12 +797,16 @@
 		const towers = groupIMSIsByTower();
 		towers.forEach(async (tower) => {
 			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-			if (!towerLocations[towerId] && !tower.location) {
+			if (!towerLocations[towerId]) {
+				console.log('Fetching location for tower:', towerId);
 				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
 				if (result && result.found) {
+					console.log('Location found for tower:', towerId, result.location);
 					towerLocations[towerId] = result.location;
-					// Force re-render
+					// Force re-render by creating a new object
 					towerLocations = { ...towerLocations };
+				} else {
+					console.log('No location found for tower:', towerId);
 				}
 			}
 		});
@@ -841,6 +848,9 @@
 						statusSymbol = '⚠️';
 					}
 					
+					// Always check towerLocations for the latest location data
+					const location = towerLocations[towerId] || ((imsi.lat && imsi.lon) ? { lat: imsi.lat, lon: imsi.lon } : null);
+					
 					towerGroups[towerId] = {
 						mcc: mcc,
 						mnc: mnc,
@@ -856,7 +866,7 @@
 						isNew: false, // We'll implement detection later
 						status: status,
 						statusSymbol: statusSymbol,
-						location: (imsi.lat && imsi.lon) ? { lat: imsi.lat, lon: imsi.lon } : (towerLocations[towerId] || null)
+						location: location
 					};
 				}
 				
@@ -1494,7 +1504,7 @@
 										<span class="tower-separator">|</span>
 										<span class="header-status">Status</span>
 									</div>
-									{#each groupIMSIsByTower() as tower}
+									{#each groupedTowers as tower}
 										<div class="tower-line">
 											<span class="tower-mcc">{tower.mccMnc}</span>
 											<span class="tower-separator">|</span>
