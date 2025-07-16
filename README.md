@@ -13,46 +13,74 @@ Argos is a comprehensive web-based control center for Software Defined Radio (SD
 - **Responsive Professional Interface** - Desktop and mobile ready
 - **Full TypeScript Implementation** - Enterprise-grade reliability
 
-## ⚡ One-Click Professional Installation
+## 🚀 Installation Options
 
-**For Raspberry Pi or Debian/Ubuntu systems:**
+Choose the installation method that best fits your needs:
+
+### **Option A: Git Clone Installation** (Recommended for most users)
+
+Perfect for fresh Dragon OS installations or when you want the latest version:
+
+```bash
+# Clone and install in one process
+git clone https://github.com/Graveside2022/Argos.git
+cd Argos
+bash install-from-git.sh
+```
+
+**✅ Best for:**
+- Fresh Dragon OS installations
+- Users who want latest updates
+- Systems with internet connectivity
+- First-time installations
+
+[📖 **Detailed Git Installation Guide**](README-GIT-INSTALLATION.md)
+
+### **Option B: Direct Copy Deployment** (For offline/field operations)
+
+Perfect for offline deployments or when copying to multiple systems:
+
+```bash
+# 1. Copy entire project folder via SCP/CyberDuck to target system
+# 2. Then run on target system:
+cd /home/pi/projects/Argos
+bash fix-hardcoded-paths.sh
+bash deploy-dragon-os.sh
+```
+
+**✅ Best for:**
+- Offline field operations
+- Air-gapped systems
+- Multiple system deployments
+- When you have customized configurations
+
+[📖 **Detailed Copy Deployment Guide**](README-DRAGON-OS-DEPLOYMENT.md)
+
+---
+
+## 📋 System Requirements
+
+- **Dragon OS** (recommended) or **Debian/Ubuntu** system
+- **3GB+ free disk space**
+- **2GB+ RAM** (4GB+ recommended)
+- **sudo privileges**
+- **HackRF One** hardware (for SDR operations)
+
+**Both installation methods provide:**
+
+✅ **Complete System Setup**: Node.js, Docker, SDR tools, dependencies  
+✅ **Hardware Configuration**: HackRF, GPS, WiFi adapter permissions  
+✅ **Service Management**: Systemd auto-start services  
+✅ **Security**: Firewall configuration and access controls  
+✅ **Interactive Setup**: OpenCellID API key configuration  
+✅ **Verification**: Comprehensive post-installation testing  
+
+## 🔧 Legacy Installation (curl command)
+
+For compatibility with older documentation:
 
 ```bash
 cd && curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/quick-install.sh | bash
-```
-
-This single command provides a **complete professional installation**:
-
-✅ **Automatic Setup**: Creates `/projects/Argos` directory structure  
-✅ **Full Dependencies**: Installs Node.js, Docker, Git, and system tools  
-✅ **HackRF Integration**: Downloads and configures HackRF Docker container  
-✅ **Service Management**: Configures systemd services for auto-startup  
-✅ **Security Configuration**: Sets up firewall and access controls  
-✅ **Professional Monitoring**: Installs CPU protection and process management  
-✅ **Network Resilience**: Configures WiFi reconnection for mobile deployments  
-
-**System Requirements:**
-- Raspberry Pi 4+ (2GB+ RAM) or Debian/Ubuntu system  
-- 4GB+ free disk space  
-- Internet connection for initial setup  
-- HackRF One hardware (for SDR spectrum analysis)
-
-**Installation takes 5-10 minutes and requires no technical knowledge.**
-
-## 🔧 Manual Installation
-
-If you prefer manual installation:
-
-```bash
-# 1. Clone repository
-git clone https://github.com/Graveside2022/Argos.git
-cd Argos
-
-# 2. Run setup script
-./scripts/install-system.sh
-
-# 3. Start services
-./scripts/start-all.sh
 ```
 
 ## 💻 Access
