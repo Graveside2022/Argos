@@ -19,7 +19,7 @@ export const GET: RequestHandler = async () => {
 
     // Use tshark to get GSM burst data directly
     const { stdout: burstData } = await execAsync(
-      'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e data.data 2>/dev/null | head -20',
+      'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e data.data 2>/dev/null | head -10',
       { timeout: 2000 }
     ).catch(() => ({ stdout: '' }));
 
@@ -29,12 +29,31 @@ export const GET: RequestHandler = async () => {
       // Each line contains hex data from a packet
       const lines = burstData.split('\n').filter(line => line.trim().length > 0);
       
-      frames = lines.slice(0, 20).map(line => {
-        // Each line is the data portion of GSMTAP
-        // Format as space-separated hex pairs
-        if (line.length >= 16) { // At least 8 bytes
-          const formatted = line.substring(0, 24).match(/.{2}/g)?.join(' ');
-          return formatted || '';
+      frames = lines.slice(0, 5).map(line => {
+        // Parse the data - tshark might not give us gsmtap.type, so we'll analyze the data
+        const hexData = line.trim();
+        
+        if (hexData.length >= 16) { // At least 8 bytes
+          // Show up to 32 hex chars (16 bytes) for better visibility
+          const formatted = hexData.substring(0, 32).match(/.{2}/g)?.join(' ') || '';
+          
+          // Try to identify burst type by pattern
+          let burstType = '';
+          if (hexData.startsWith('2b2b2b2b2b2b2b2b2b')) {
+            burstType = ' [IDLE]';
+          } else if (hexData.length === 16) { // 8 bytes
+            burstType = ' [ACCESS]';
+          } else if (formatted.includes('00 00 00 00 00 00')) {
+            burstType = ' [FCH]'; // Frequency Correction
+          } else if (formatted.includes('25 ') || formatted.includes('2d ')) {
+            burstType = ' [SCH]'; // Synchronization
+          } else if (hexData.length >= 230) { // ~115 bytes
+            burstType = ' [NORMAL]';
+          } else {
+            burstType = ' [DATA]';
+          }
+          
+          return formatted + burstType;
         }
         return '';
       }).filter(f => f.length > 0);

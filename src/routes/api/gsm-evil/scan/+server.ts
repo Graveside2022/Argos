@@ -9,23 +9,6 @@ export const POST: RequestHandler = async () => {
   try {
     console.log('Starting GSM frequency scan...');
     
-    // Quick scan of GSM900 band to find strongest signal
-    const { stdout } = await execAsync(
-      'timeout 10 hackrf_sweep -f 935:960 -l 32 -g 20 | grep -E "^[0-9]" | sort -k6 -n | head -20',
-      { timeout: 15000 }
-    );
-    
-    if (!stdout) {
-      return json({
-        success: false,
-        message: 'No signals detected'
-      });
-    }
-    
-    // Parse the sweep results to find strongest signals
-    const lines = stdout.split('\n').filter(line => line.trim());
-    const strongFrequencies = new Map<string, number>();
-    
     // Full GSM900 downlink band frequencies to check
     const checkFreqs = [
       '935.2', '936.0', '937.0', '938.0', '939.0', '940.0', '941.0', '942.0',
@@ -33,72 +16,110 @@ export const POST: RequestHandler = async () => {
       '951.0', '952.0', '953.0', '954.0', '955.0', '956.0', '957.6', '958.0', '959.0'
     ];
     
-    lines.forEach(line => {
-      const parts = line.split(',').map(p => p.trim());
-      if (parts.length >= 7) {
-        const startFreq = parseInt(parts[2]) / 1e6; // Convert to MHz
-        const endFreq = parseInt(parts[3]) / 1e6;
-        const power = parseFloat(parts[6]); // Signal strength in dB
-        
-        // Check if any of our target frequencies fall in this range
-        checkFreqs.forEach(freq => {
-          const f = parseFloat(freq);
-          if (f >= startFreq && f <= endFreq && power > -50) { // Only consider strong signals
-            const existing = strongFrequencies.get(freq) || -100;
-            strongFrequencies.set(freq, Math.max(existing, power));
-          }
-        });
+    console.log(`Testing ${checkFreqs.length} frequencies for GSM activity...`);
+    
+    const results: { frequency: string; power: number; strength: string; frameCount?: number; hasGsmActivity?: boolean; channelType?: string; controlChannel?: boolean }[] = [];
+    
+    // Test each frequency for actual GSM frames
+    for (const freq of checkFreqs) {
+      console.log(`Testing ${freq} MHz...`);
+      
+      // Start grgsm_livemon briefly
+      const { stdout: gsmPid } = await execAsync(
+        `sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
+      );
+      
+      const pid = gsmPid.trim();
+      
+      // Wait for initialization
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Count GSMTAP packets for 3 seconds
+      const { stdout: packetCount } = await execAsync(
+        'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
+      ).catch(() => ({ stdout: '0' }));
+      
+      const frameCount = parseInt(packetCount.trim()) || 0;
+      
+      // Analyze channel types based on frame patterns
+      let channelType = '';
+      let controlChannel = false;
+      
+      if (frameCount > 0) {
+        if (frameCount > 10 && frameCount < 100) {
+          // Moderate frame count - likely control channel
+          channelType = 'BCCH/CCCH';
+          controlChannel = true;
+        } else if (frameCount >= 100) {
+          // High frame count - likely traffic channel
+          channelType = 'TCH';
+          controlChannel = false;
+        } else {
+          // Low frame count - could be SDCCH or weak signal
+          channelType = 'SDCCH';
+          controlChannel = false;
+        }
       }
-    });
-    
-    // Find strongest frequency
-    let strongestFreq = '947.2';
-    let strongestPower = -100;
-    
-    strongFrequencies.forEach((power, freq) => {
-      if (power > strongestPower) {
-        strongestPower = power;
-        strongestFreq = freq;
+      
+      // Kill grgsm_livemon
+      await execAsync(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
+      
+      // Determine strength based on frame count (since we don't have RF power)
+      let strength = 'No Signal';
+      let power = -100;
+      if (frameCount > 200) {
+        strength = 'Excellent';
+        power = -25;
+      } else if (frameCount > 150) {
+        strength = 'Very Strong';
+        power = -30;
+      } else if (frameCount > 100) {
+        strength = 'Strong';
+        power = -35;
+      } else if (frameCount > 50) {
+        strength = 'Good';
+        power = -45;
+      } else if (frameCount > 10) {
+        strength = 'Moderate';
+        power = -55;
+      } else if (frameCount > 0) {
+        strength = 'Weak';
+        power = -65;
       }
-    });
-    
-    // Build sorted results
-    const results: { frequency: string; power: number; strength: string }[] = [];
-    
-    checkFreqs.forEach(freq => {
-      const power = strongFrequencies.get(freq);
-      if (power !== undefined && power > -80) { // Only include detectable signals
-        let strength = 'Weak';
-        
-        // More granular strength classification
-        if (power > -25) strength = 'Excellent';
-        else if (power > -30) strength = 'Very Strong';
-        else if (power > -35) strength = 'Strong';
-        else if (power > -45) strength = 'Good';
-        else if (power > -55) strength = 'Moderate';
-        else if (power > -65) strength = 'Fair';
-        
+      
+      // Only add frequencies with GSM activity
+      if (frameCount > 0) {
         results.push({
           frequency: freq,
           power: power,
-          strength: strength
+          frameCount: frameCount,
+          hasGsmActivity: frameCount > 10,
+          strength: strength,
+          channelType: channelType,
+          controlChannel: controlChannel
         });
       }
-    });
+      
+      // Brief pause between tests
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
     
-    // Sort by power (strongest first)
-    results.sort((a, b) => b.power - a.power);
+    // Sort by frame count (most active first)
+    results.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0));
+    
+    // Find the best frequency (most GSM frames)
+    const bestFreq = results.find(r => r.hasGsmActivity) || results[0];
     
     // Create summary message
-    const topResults = results.slice(0, 10);
-    const summaryLines = topResults.map(r => 
-      `${r.frequency} MHz: ${r.power.toFixed(1)} dB (${r.strength})`
+    const summaryLines = results.slice(0, 10).map(r => 
+      `${r.frequency} MHz: ${r.frameCount} frames (${r.strength})${r.controlChannel ? ' - Control Channel' : ''}`
     );
     
     return json({
       success: true,
-      strongestFrequency: strongestFreq,
-      message: `Scan complete! Found ${results.length} active frequencies.\n\nTop 10 strongest:\n${summaryLines.join('\n')}`,
+      strongestFrequency: bestFreq ? bestFreq.frequency : '947.2',
+      bestFrequencyFrames: bestFreq ? bestFreq.frameCount : 0,
+      message: `Scan complete! Found ${results.length} active frequencies.\n\n${results.length > 0 ? `Top frequencies:\n${summaryLines.join('\n')}` : 'No GSM activity detected on any frequency.'}`,
       scanResults: results,
       totalFound: results.length
     });
