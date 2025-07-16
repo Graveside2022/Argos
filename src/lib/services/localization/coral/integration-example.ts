@@ -24,6 +24,10 @@ export async function setupLocalizer() {
   // The Coral acceleration happens transparently
   
   // Example usage in your existing code:
+  // const kismetDevices = []; // Your Kismet devices array
+  // const gpsPosition = { lat: 0, lon: 0, altitude: 0, accuracy: 10 }; // Your GPS position
+  
+  /* Example commented out - uncomment and adapt to your needs
   kismetDevices.forEach(device => {
     if (device.signal?.last_signal && gpsPosition) {
       localizer.addMeasurement({
@@ -41,12 +45,17 @@ export async function setupLocalizer() {
       });
     }
   });
+  */
   
   // Get predictions - automatically uses Coral when beneficial
+  // const selectedDevice = { macaddr: '00:00:00:00:00:00' }; // Your selected device
+  // const mapBounds = { north: 0, south: 0, east: 0, west: 0 }; // Your map bounds
+  /* Example commented out
   const prediction = await localizer.predictForDevice(
     selectedDevice.macaddr,
     mapBounds
   );
+  */
   
   // Update heat map visualization
   heatMapService.updateLayer('rssi-prediction', {

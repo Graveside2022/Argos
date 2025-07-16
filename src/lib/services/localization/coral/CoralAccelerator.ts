@@ -59,7 +59,7 @@ export class CoralAccelerator extends EventEmitter {
                 this.commandQueue.delete(message.id);
               }
             }
-          } catch (e) {
+          } catch (_e) {
             console.error('Failed to parse Coral message:', line);
           }
         }

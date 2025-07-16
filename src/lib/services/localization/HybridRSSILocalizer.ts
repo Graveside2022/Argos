@@ -7,7 +7,7 @@
 
 import { RSSILocalizer } from './RSSILocalizer';
 import { CoralAccelerator, createCoralAccelerator } from './coral/CoralAccelerator';
-import type { RSSIMeasurement, GPRPrediction, GeoBounds } from './types';
+import type { GPRPrediction, GeoBounds } from './types';
 
 export class HybridRSSILocalizer extends RSSILocalizer {
   private coral: CoralAccelerator | null = null;

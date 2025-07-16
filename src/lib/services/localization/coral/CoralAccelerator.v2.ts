@@ -36,7 +36,8 @@ export class CoralAccelerator extends EventEmitter {
       const fallbackPython = 'python3'; // Use system Python as fallback
       
       // Try Coral environment first, fall back to system Python
-      const pythonExe = require('fs').existsSync(pythonPath) ? pythonPath : fallbackPython;
+      const fs = await import('fs');
+      const pythonExe = fs.existsSync(pythonPath) ? pythonPath : fallbackPython;
       
       console.log(`Starting Coral worker with ${pythonExe}`);
       
@@ -101,13 +102,14 @@ export class CoralAccelerator extends EventEmitter {
           this.emit('ready');
           break;
           
-        case 'result':
+        case 'result': {
           const callback = this.commandQueue.get(message.id);
           if (callback) {
             callback(message.data);
             this.commandQueue.delete(message.id);
           }
           break;
+        }
           
         case 'error':
           console.error('Coral error:', message.error);
@@ -134,7 +136,7 @@ export class CoralAccelerator extends EventEmitter {
     this.cleanup();
     
     // Clear pending commands
-    for (const [id, callback] of this.commandQueue) {
+    for (const [_id, callback] of this.commandQueue) {
       callback(null);
     }
     this.commandQueue.clear();
