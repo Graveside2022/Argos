@@ -1312,13 +1312,25 @@
 					</div>
 				</div>
 
-				<!-- Right Section - Buttons -->
+				<!-- Right Section - Status Indicators and Buttons -->
 				<div class="flex items-center gap-3">
-					<!-- Status Debug Info -->
-					<div class="text-xs font-mono">
-						<span class="text-white font-bold">Status:</span>
-						<span class="{gsmStatus === 'running' ? 'text-green-500' : 'text-red-500'} font-bold">{gsmStatus}</span>
-					</div>
+					<!-- System Status Indicators (only show when running) -->
+					{#if gsmStatus === 'running' && detailedStatus}
+						<div class="flex items-center gap-4 text-xs mr-4">
+							<div class="flex items-center gap-2">
+								<div class="status-indicator-small {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
+								<span class="text-gray-300">GSM Demodulator</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="status-indicator-small {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
+								<span class="text-gray-300">Web Interface</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<div class="status-indicator-small {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
+								<span class="text-gray-300">HackRF One</span>
+							</div>
+						</div>
+					{/if}
 					
 					<!-- Start/Stop GSM Evil Button -->
 					<button
@@ -1575,33 +1587,6 @@
 								{/if}
 								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
 							{/if}
-						</div>
-					</div>
-				</div>
-
-				<!-- Radio Monitor Status -->
-				<div class="status-card">
-					<div class="status-card-header">
-						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-							<path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-						</svg>
-						<span class="font-semibold">Radio Monitor</span>
-					</div>
-					<div class="status-card-content">
-						<div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
-							<div style="display: flex; align-items: center; gap: 0.75rem;">
-								<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-								<span class="status-text font-medium">GSM Demodulator (gr-gsm)</span>
-							</div>
-							<div style="display: flex; align-items: center; gap: 0.75rem;">
-								<div class="status-indicator {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
-								<span class="status-text font-medium">Web Interface (Port 80)</span>
-							</div>
-							<div style="display: flex; align-items: center; gap: 0.75rem;">
-								<div class="status-indicator {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-								<span class="status-text font-medium">HackRF One SDR</span>
-							</div>
 						</div>
 					</div>
 				</div>
@@ -2443,7 +2428,7 @@
 
 	.status-grid {
 		display: grid;
-		grid-template-columns: minmax(400px, 2fr) minmax(250px, 1fr) minmax(250px, 1fr);
+		grid-template-columns: minmax(600px, 3fr) minmax(350px, 1fr);
 		gap: 1rem;
 		max-width: 1400px;
 		margin: 0 auto;
@@ -2553,15 +2538,17 @@
 	.tower-mcc {
 		color: #94a3b8;
 		font-size: 0.75rem;
-		min-width: 55px;
+		min-width: 70px;
+		text-align: center;
 	}
 	
 	.tower-carrier {
 		color: #f1f5f9;
 		font-weight: 500;
-		min-width: 80px;
+		min-width: 100px;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		text-align: center;
 	}
 	
 	.tower-flag {
@@ -2569,30 +2556,33 @@
 	}
 	
 	.tower-country {
-		min-width: 110px;
+		min-width: 120px;
 		font-size: 0.75rem;
 		color: #f1f5f9;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		text-align: center;
 	}
 	
 	.tower-separator {
 		color: #475569;
 		font-size: 0.7rem;
+		padding: 0 0.25rem;
 	}
 	
 	.tower-devices {
 		color: #3b82f6;
 		font-weight: 600;
-		min-width: 75px;
+		min-width: 90px;
 		text-align: center;
 	}
 	
 	.tower-lac {
 		color: #10b981;
 		font-family: monospace;
-		min-width: 70px;
+		min-width: 80px;
+		text-align: center;
 	}
 	
 	.tower-new {
@@ -2616,41 +2606,47 @@
 	}
 	
 	.header-mcc {
-		min-width: 55px;
+		min-width: 70px;
+		text-align: center;
 	}
 	
 	.header-carrier {
-		min-width: 80px;
+		min-width: 100px;
+		text-align: center;
 	}
 	
 	.header-country {
-		min-width: 110px;
-		text-align: left;
+		min-width: 120px;
+		text-align: center;
 		font-size: 0.7rem;
 	}
 	
 	.header-devices {
-		min-width: 75px;
+		min-width: 90px;
 		text-align: center;
 	}
 	
 	.header-lac {
-		min-width: 70px;
+		min-width: 80px;
+		text-align: center;
 	}
 	
 	.header-status {
-		min-width: 45px;
+		min-width: 50px;
+		text-align: center;
 	}
 	
 	.header-location {
-		min-width: 140px;
+		min-width: 160px;
+		text-align: center;
 	}
 	
 	.tower-location {
-		min-width: 140px;
+		min-width: 160px;
 		font-family: monospace;
 		font-size: 0.75rem;
 		color: #9ca3af;
+		text-align: center;
 	}
 	
 	.tower-location button {
@@ -2669,6 +2665,12 @@
 	
 	.tower-status {
 		min-width: 45px;
+		text-align: center;
+		font-weight: bold;
+	}
+	
+	.tower-status {
+		min-width: 50px;
 		text-align: center;
 		font-weight: bold;
 	}
@@ -2719,6 +2721,22 @@
 
 	.status-indicator.pulse {
 		animation: pulse 2s infinite;
+	}
+	
+	.status-indicator-small {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		transition: all 0.3s ease;
+	}
+	
+	.status-indicator-small.active {
+		background: #10b981;
+		box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+	}
+	
+	.status-indicator-small.inactive {
+		background: #6b7280;
 	}
 
 	.status-text {
