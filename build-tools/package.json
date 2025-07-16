@@ -6,6 +6,8 @@
 	"scripts": {
 		"validate:env": "node src/lib/server/validate-env.js",
 		"dev": "npm run validate:env && NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port 5173 --host 0.0.0.0",
+		"dev:clean": "npm run kill-dev && npm run dev",
+		"kill-dev": "lsof -ti:5173 | xargs kill -9 2>/dev/null || true",
 		"build": "npm run validate:env && vite build",
 		"preview": "npm run validate:env && vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
