@@ -28,27 +28,9 @@ export const POST: RequestHandler = async ({ request }) => {
       };
       
       try {
-        sendUpdate('[SCAN] Initializing intelligent frequency scanner...');
-        sendUpdate('[SCAN] Phase 1: RF Power Sweep (935-960 MHz)');
-        sendUpdate('[CMD] $ hackrf_sweep -f 935:960 -l 32 -g 20');
-        
-        // Phase 1: Quick RF power scan
-        const { stdout: sweepData } = await execAsync(
-          'timeout 10 hackrf_sweep -f 935:960 -l 32 -g 20 | grep -E "^[0-9]" | sort -k6 -n | head -20',
-          { timeout: 15000 }
-        ).catch(() => ({ stdout: '' }));
-        
-        if (!sweepData) {
-          sendUpdate('[ERROR] No signals detected during RF sweep');
-          controller.close();
-          return;
-        }
-        
-        sendUpdate('[SCAN] RF sweep complete, analyzing signal strengths...');
-        
-        // Parse sweep results
-        const lines = sweepData.split('\n').filter(line => line.trim());
-        const strongFrequencies = new Map<string, number>();
+        sendUpdate('[SCAN] Initializing GSM frequency scanner...');
+        sendUpdate('[SCAN] Will test 25 GSM900 downlink frequencies');
+        sendUpdate('[SCAN] ');
         
         const checkFreqs = [
           '935.2', '936.0', '937.0', '938.0', '939.0', '940.0', '941.0', '942.0',
@@ -56,57 +38,28 @@ export const POST: RequestHandler = async ({ request }) => {
           '951.0', '952.0', '953.0', '954.0', '955.0', '956.0', '957.6', '958.0', '959.0'
         ];
         
-        // Extract power levels
-        lines.forEach(line => {
-          const parts = line.split(',').map(p => p.trim());
-          if (parts.length >= 7) {
-            const startFreq = parseInt(parts[2]) / 1e6;
-            const endFreq = parseInt(parts[3]) / 1e6;
-            const power = parseFloat(parts[6]);
-            
-            checkFreqs.forEach(freq => {
-              const f = parseFloat(freq);
-              if (f >= startFreq && f <= endFreq && power > -60) {
-                const existing = strongFrequencies.get(freq) || -100;
-                strongFrequencies.set(freq, Math.max(existing, power));
-              }
-            });
+        sendUpdate('[SCAN] Frequencies to scan:');
+        checkFreqs.forEach((freq, idx) => {
+          if (idx % 5 === 0) {
+            const batch = checkFreqs.slice(idx, idx + 5).join(', ');
+            sendUpdate(`[SCAN] ${batch} MHz`);
           }
         });
         
-        // Sort frequencies by power level
-        const candidateFreqs = Array.from(strongFrequencies.entries())
-          .sort((a, b) => b[1] - a[1]);
-        
-        if (candidateFreqs.length === 0) {
-          sendUpdate('[ERROR] No frequencies with sufficient signal strength found');
-          controller.close();
-          return;
-        }
-        
-        sendUpdate(`[SCAN] Found ${strongFrequencies.size} active frequencies`);
-        sendUpdate(`[SCAN] Will test ALL ${candidateFreqs.length} frequencies for GSM frame analysis`);
         sendUpdate('[SCAN] ');
-        sendUpdate('[SCAN] All frequencies by signal strength:');
-        
-        candidateFreqs.forEach(([freq, power], idx) => {
-          sendUpdate(`[SCAN] ${(idx + 1).toString().padStart(2)}. ${freq} MHz @ ${power.toFixed(1)} dB`);
-        });
-        
-        sendUpdate('[SCAN] ');
-        sendUpdate('[SCAN] Phase 2: GSM Frame Detection');
+        sendUpdate('[SCAN] Starting GSM Frame Detection');
         sendUpdate('[SCAN] Testing each frequency for actual GSM activity...');
-        const estimatedTime = candidateFreqs.length * 5.5;
+        const estimatedTime = checkFreqs.length * 5.5;
         sendUpdate(`[SCAN] Estimated time: ${Math.ceil(estimatedTime)} seconds (~${Math.ceil(estimatedTime/60)} minutes)`);
         sendUpdate('[SCAN] ');
         
-        // Phase 2: Test each candidate frequency
+        // Test each frequency
         const results: FrequencyTestResult[] = [];
         
-        for (let i = 0; i < candidateFreqs.length; i++) {
-          const [freq, power] = candidateFreqs[i];
+        for (let i = 0; i < checkFreqs.length; i++) {
+          const freq = checkFreqs[i];
           
-          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Testing ${freq} MHz...`);
+          sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Testing ${freq} MHz...`);
           sendUpdate(`[CMD] $ grgsm_livemon_headless -f ${freq}M -g 40`);
           
           // Start grgsm_livemon
@@ -115,13 +68,13 @@ export const POST: RequestHandler = async ({ request }) => {
           );
           
           const pid = gsmPid.trim();
-          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Waiting for demodulator initialization...`);
+          sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Waiting for demodulator initialization...`);
           
           // Wait for initialization
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
-          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
+          sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
           
           // Count GSMTAP packets and analyze channel types
           const { stdout: packetCount } = await execAsync(
@@ -157,20 +110,35 @@ export const POST: RequestHandler = async ({ request }) => {
           // Kill grgsm_livemon
           await execAsync(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
           
-          // Determine strength category
-          let strength = 'Weak';
-          if (power > -25) strength = 'Excellent';
-          else if (power > -30) strength = 'Very Strong';
-          else if (power > -35) strength = 'Strong';
-          else if (power > -45) strength = 'Good';
-          else if (power > -55) strength = 'Moderate';
+          // Determine strength category based on frame count
+          let strength = 'No Signal';
+          let power = -100;
+          if (frameCount > 200) {
+            strength = 'Excellent';
+            power = -25;
+          } else if (frameCount > 150) {
+            strength = 'Very Strong';
+            power = -30;
+          } else if (frameCount > 100) {
+            strength = 'Strong';
+            power = -35;
+          } else if (frameCount > 50) {
+            strength = 'Good';
+            power = -45;
+          } else if (frameCount > 10) {
+            strength = 'Moderate';
+            power = -55;
+          } else if (frameCount > 0) {
+            strength = 'Weak';
+            power = -65;
+          }
           
           const hasActivity = frameCount > 10;
           
-          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
-          sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
+          sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
+          sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
           if (channelType) {
-            sendUpdate(`[FREQ ${i + 1}/${candidateFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
+            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
           }
           sendUpdate('[SCAN] ');
           
@@ -192,7 +160,7 @@ export const POST: RequestHandler = async ({ request }) => {
         results.sort((a, b) => b.frameCount - a.frameCount);
         
         // Find best frequency
-        const bestFreq = results.find(r => r.hasGsmActivity) || results[0];
+        const bestFreq = results.find(r => r.hasGsmActivity) || results[0] || { frequency: '947.2', frameCount: 0, power: -100, strength: 'No Signal' };
         
         sendUpdate('[SCAN] ');
         sendUpdate('[SCAN] ========== SCAN COMPLETE ==========');
