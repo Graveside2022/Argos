@@ -821,7 +821,7 @@
 	
 	// Debug reactive statement
 	$: if (scanResults.length > 0) {
-		console.log('scanResults updated:', scanResults.length, 'items');
+		// console.log('scanResults updated:', scanResults.length, 'items');
 	}
 	
 	// Fetch tower locations when new IMSIs are captured
@@ -830,19 +830,19 @@
 		towers.forEach(async (tower) => {
 			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
 			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
-				console.log('Fetching location for tower:', towerId);
+				// console.log('Fetching location for tower:', towerId);
 				towerLookupAttempted[towerId] = true;
 				// Force re-render
 				towerLookupAttempted = { ...towerLookupAttempted };
 				
 				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
 				if (result && result.found) {
-					console.log('Location found for tower:', towerId, result.location);
+					// console.log('Location found for tower:', towerId, result.location);
 					towerLocations[towerId] = result.location;
 					// Force re-render by creating a new object
 					towerLocations = { ...towerLocations };
 				} else {
-					console.log('No location found for tower:', towerId);
+					// console.log('No location found for tower:', towerId);
 				}
 			}
 		});
@@ -938,19 +938,19 @@
 	}
 	
 	// Lookup tower location and update display
-	async function lookupTowerLocation(tower: any) {
-		const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-		const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-		
-		if (result && result.found) {
-			towerLocations[towerId] = result.location;
-			// Force re-render
-			towerLocations = towerLocations;
-		}
-	}
+	// async function lookupTowerLocation(tower: any) {
+	// 	const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
+	// 	const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
+	// 	
+	// 	if (result && result.found) {
+	// 		towerLocations[towerId] = result.location;
+	// 		// Force re-render
+	// 		towerLocations = { ...towerLocations };
+	// 	}
+	// }
 	
 	function clearResults() {
-		console.log('Clearing results...');
+		// console.log('Clearing results...');
 		scanProgress = [];
 		scanResults = [];
 		scanStatus = '';
@@ -1001,14 +1001,14 @@
 				if (gsmStatus !== 'starting' && gsmStatus !== 'stopping') {
 					const isRunning = data.status === 'running';
 					if (isRunning && gsmStatus === 'stopped') {
-						console.log('GSM Evil detected as running');
+						// console.log('GSM Evil detected as running');
 						gsmStatus = 'running';
 						hasError = false;
 						// Ensure iframe URL points to IMSI sniffer when GSM Evil is already running
 						const host = window.location.hostname;
 						iframeUrl = `http://${host}:80/imsi`;
 					} else if (!isRunning && gsmStatus === 'running') {
-						console.log('GSM Evil detected as stopped');
+						// console.log('GSM Evil detected as stopped');
 						gsmStatus = 'stopped';
 					}
 				}
@@ -1019,9 +1019,9 @@
 	}
 	
 	async function startGSMEvil() {
-		console.log('Starting GSM Evil...');
+		// console.log('Starting GSM Evil...');
 		if (gsmStatus === 'starting' || gsmStatus === 'stopping') {
-			console.log('GSM Evil is already changing state');
+			// console.log('GSM Evil is already changing state');
 			return;
 		}
 		
@@ -1037,7 +1037,7 @@
 			});
 			
 			const data = await response.json() as { success: boolean; message: string };
-			console.log('Start response:', data);
+			// console.log('Start response:', data);
 			
 			if (response.ok && data.success) {
 				// Wait a bit for the service to fully start
@@ -1071,7 +1071,7 @@
 	async function stopGSMEvil() {
 		if (gsmStatus === 'starting' || gsmStatus === 'stopping') return;
 		
-		console.log('Stopping GSM Evil...');
+		// console.log('Stopping GSM Evil...');
 		gsmStatus = 'stopping';
 		
 		try {
@@ -1084,12 +1084,12 @@
 			});
 			
 			const data = await response.json() as { success: boolean; message: string };
-			console.log('Stop response:', data);
+			// console.log('Stop response:', data);
 			
 			if (response.ok && data.success) {
 				gsmStatus = 'stopped';
 				hasError = false;
-				console.log('GSM Evil stopped successfully');
+				// console.log('GSM Evil stopped successfully');
 			} else {
 				throw new Error(data.message || 'Failed to stop GSM Evil');
 			}
@@ -1102,19 +1102,19 @@
 	}
 	
 	function toggleGSMEvil() {
-		console.log('Toggle GSM Evil, current status:', gsmStatus);
+		// console.log('Toggle GSM Evil, current status:', gsmStatus);
 		if (gsmStatus === 'running') {
-			console.log('GSM Evil is running, stopping...');
+			// console.log('GSM Evil is running, stopping...');
 			stopGSMEvil().catch((error) => {
 				console.error('Error stopping GSM Evil:', error);
 			});
 		} else if (gsmStatus === 'stopped') {
-			console.log('GSM Evil is stopped, starting...');
+			// console.log('GSM Evil is stopped, starting...');
 			startGSMEvil().catch((error) => {
 				console.error('Error starting GSM Evil:', error);
 			});
 		} else {
-			console.log('GSM Evil is in state:', gsmStatus, '- not starting or stopping');
+			// console.log('GSM Evil is in state:', gsmStatus, '- not starting or stopping');
 		}
 	}
 	
@@ -1154,6 +1154,10 @@
 				throw new Error('Scan request failed');
 			}
 			
+			if (!response.body) {
+				throw new Error('No response body');
+			}
+			
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -1181,7 +1185,7 @@
 							}
 							if (json.result) {
 								const data = json.result;
-								console.log('Scan response:', data);
+								// console.log('Scan response:', data);
 								
 								if (data.bestFrequency) {
 									selectedFrequency = data.bestFrequency;
@@ -1189,8 +1193,8 @@
 									scanStatus = `Found ${scanResults.length} active frequencies. Best: ${data.bestFrequency} MHz`;
 									scanProgress = [...scanProgress, '[SCAN] Scan complete!', `[SCAN] Found ${scanResults.length} active frequencies`];
 									
-									console.log('Scan complete. Results:', scanResults.length, 'frequencies');
-									console.log('scanResults:', scanResults);
+									// console.log('Scan complete. Results:', scanResults.length, 'frequencies');
+									// console.log('scanResults:', scanResults);
 								} else {
 									scanStatus = 'No active frequencies found';
 									scanResults = [];
@@ -1228,8 +1232,7 @@
 						gsmFrames = gsmFrames.slice(-25);
 					}
 					
-					// Force Svelte to update
-					gsmFrames = gsmFrames;
+					// Force Svelte to update - no longer needed with proper array handling
 					
 					// Auto-scroll to bottom after adding new frames
 					await tick();
@@ -1807,7 +1810,7 @@
 
 	.gsm-brand {
 		color: #ff0000;
-		text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+		/* text-shadow: 0 0 20px rgba(255, 0, 0, 0.5); */
 	}
 
 	.evil-brand {
@@ -2660,20 +2663,6 @@
 		font-size: 0.75rem;
 		color: #9ca3af;
 		text-align: center;
-	}
-	
-	.tower-location button {
-		padding: 0.125rem 0.5rem;
-		border-radius: 0.25rem;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		transition: all 0.2s ease;
-	}
-	
-	.tower-location button:hover {
-		background: rgba(255, 255, 255, 0.1);
-		border-color: rgba(255, 255, 255, 0.2);
-		color: #e5e7eb;
 	}
 	
 	.tower-status {
