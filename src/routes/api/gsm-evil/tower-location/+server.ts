@@ -59,7 +59,10 @@ export const POST: RequestHandler = async ({ request }) => {
         if (apiResponse.ok) {
           const apiData = await apiResponse.json();
           
-          if (apiData.lat && apiData.lon) {
+          // Check if API returned an error
+          if (apiData.error) {
+            console.log('OpenCellID API error:', apiData.error, 'for tower:', { mcc, mnc, lac, ci });
+          } else if (apiData.lat && apiData.lon) {
             console.log('Found in OpenCellID API:', apiData);
             return json({
               success: true,
@@ -72,6 +75,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 source: 'opencellid-api'
               }
             });
+          } else {
+            console.log('OpenCellID API returned incomplete data:', apiData);
           }
         } else {
           console.log('OpenCellID API returned:', apiResponse.status, apiResponse.statusText);
