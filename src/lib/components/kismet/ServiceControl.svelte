@@ -185,7 +185,7 @@
 		text-transform: uppercase;
 		letter-spacing: 2px;
 		color: #fff;
-		text-shadow: 0 0 10px rgba(124, 58, 237, 0.8);
+		/* text-shadow: 0 0 10px rgba(124, 58, 237, 0.8); */
 	}
 
 	.status-indicator {

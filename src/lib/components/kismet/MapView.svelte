@@ -125,7 +125,7 @@
 		text-transform: uppercase;
 		letter-spacing: 2px;
 		color: #fff;
-		text-shadow: 0 0 10px rgba(124, 58, 237, 0.8);
+		/* text-shadow: 0 0 10px rgba(124, 58, 237, 0.8); */
 	}
 
 	.map-controls {
@@ -212,7 +212,7 @@
 		text-transform: uppercase;
 		letter-spacing: 3px;
 		color: #00d2ff;
-		text-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
+		/* text-shadow: 0 0 20px rgba(0, 210, 255, 0.8); */
 		margin-bottom: 10px;
 	}
 

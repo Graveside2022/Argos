@@ -355,9 +355,7 @@
 	.mission-card:hover {
 		transform: translateY(-8px) scale(1.02);
 		border-color: var(--mission-color);
-		box-shadow:
-			0 20px 40px rgba(0, 0, 0, 0.4),
-			0 0 30px var(--mission-glow);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 	}
 
 	.mission-card:hover::before {
@@ -406,13 +404,13 @@
 		height: 64px;
 		margin-bottom: 1.5rem;
 		color: var(--mission-color);
-		filter: drop-shadow(0 0 10px var(--mission-glow));
+		/* filter: drop-shadow(0 0 10px var(--mission-glow)); */
 		transition: all 0.3s ease;
 	}
 
 	.mission-card:hover .mission-icon {
 		transform: scale(1.1);
-		filter: drop-shadow(0 0 20px var(--mission-glow));
+		/* filter: drop-shadow(0 0 20px var(--mission-glow)); */
 	}
 
 	/* Mission Text */
@@ -444,7 +442,7 @@
 		height: 12px;
 		border-radius: 50%;
 		background: var(--mission-color);
-		box-shadow: 0 0 10px var(--mission-glow);
+		/* box-shadow: 0 0 10px var(--mission-glow); */
 		animation: status-pulse 2s ease-in-out infinite;
 	}
 

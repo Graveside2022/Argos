@@ -184,7 +184,7 @@
 		text-transform: uppercase;
 		letter-spacing: 2px;
 		color: #fff;
-		text-shadow: 0 0 10px rgba(124, 58, 237, 0.8);
+		/* text-shadow: 0 0 10px rgba(124, 58, 237, 0.8); */
 	}
 
 	.last-update {
@@ -241,7 +241,7 @@
 		font-size: 1.8em;
 		font-weight: 700;
 		color: #00d2ff;
-		text-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
+		/* text-shadow: 0 0 10px rgba(0, 210, 255, 0.6); */
 		line-height: 1;
 		margin-bottom: 4px;
 		font-family: 'Courier New', monospace;
