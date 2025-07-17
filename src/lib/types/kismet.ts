@@ -12,6 +12,7 @@ export interface KismetDevice {
 	frequency: number;
 	packets: number;
 	datasize: number;
+	ssid?: string;  // Add SSID field for WiFi networks
 	location?: {
 		lat: number;
 		lon: number;
