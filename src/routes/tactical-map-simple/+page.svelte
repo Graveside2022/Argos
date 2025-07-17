@@ -1134,9 +1134,15 @@
 						const popupContent = `
               <div style="font-family: sans-serif; min-width: 200px;">
                 <h4 style="margin: 0 0 8px 0; color: ${getSignalColor(device.signal?.last_signal || -100)}">
-                  Kismet Device
+                  ${device.ssid || 'Kismet Device'}
                 </h4>
                 <table style="width: 100%; border-collapse: collapse;">
+                  ${device.ssid ? `
+                  <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">SSID:</td>
+                    <td style="padding: 4px 0; font-weight: bold; color: #00ff88;">${device.ssid}</td>
+                  </tr>
+                  ` : ''}
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Type:</td>
                     <td style="padding: 4px 0;">${device.type || 'Unknown'}</td>
@@ -1161,7 +1167,7 @@
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Manufacturer:</td>
-                    <td style="padding: 4px 0;">${device.manufacturer}</td>
+                    <td style="padding: 4px 0;">${device.manufacturer || 'Unknown'}</td>
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
@@ -1222,9 +1228,15 @@
 						const popupContent = `
               <div style="font-family: sans-serif; min-width: 200px;">
                 <h4 style="margin: 0 0 8px 0; color: ${getSignalColor(device.signal?.last_signal || -100)}">
-                  Kismet Device
+                  ${device.ssid || 'Kismet Device'}
                 </h4>
                 <table style="width: 100%; border-collapse: collapse;">
+                  ${device.ssid ? `
+                  <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">SSID:</td>
+                    <td style="padding: 4px 0; font-weight: bold; color: #00ff88;">${device.ssid}</td>
+                  </tr>
+                  ` : ''}
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Type:</td>
                     <td style="padding: 4px 0;">${device.type || 'Unknown'}</td>
@@ -1249,7 +1261,7 @@
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Manufacturer:</td>
-                    <td style="padding: 4px 0;">${device.manufacturer}</td>
+                    <td style="padding: 4px 0;">${device.manufacturer || 'Unknown'}</td>
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
