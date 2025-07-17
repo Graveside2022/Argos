@@ -1200,8 +1200,20 @@
 
 				// Update or create markers for each device
 				const devices = data.devices;
+				let devicesWithLocation = 0;
+				let devicesWithoutLocation = 0;
+				let markersCreated = 0;
+				let markersUpdated = 0;
+				
 				devices.forEach((device: KismetDevice) => {
 					const markerId = `kismet_${device.mac}`;
+					
+					// Track location data
+					if (device.location?.lat && device.location?.lon) {
+						devicesWithLocation++;
+					} else {
+						devicesWithoutLocation++;
+					}
 
 					// Check if marker already exists
 					let marker = kismetMarkers.get(markerId);
@@ -1301,6 +1313,7 @@
 
 						if (map) {
 							marker.addTo(map);
+							markersCreated++;
 						}
 						kismetMarkers.set(markerId, marker);
 					} else {
@@ -1318,6 +1331,7 @@
 									className: isSelected ? 'kismet-marker selected-rssi' : 'kismet-marker'
 								})
 							);
+							markersUpdated++;
 						}
 
 						// Update popup if needed
@@ -1377,6 +1391,10 @@
 					// Store device data
 					kismetDevices.set(markerId, device);
 				});
+				
+				// Debug: Log processing summary
+				console.log(`Kismet Debug: Devices with location: ${devicesWithLocation}, without location: ${devicesWithoutLocation}`);
+				console.log(`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`);
 
 				// Clean up markers for devices that no longer exist
 				kismetMarkers.forEach((marker, id) => {
