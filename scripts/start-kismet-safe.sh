@@ -9,7 +9,7 @@ echo "Starting Kismet safely..."
 sudo test -f /etc/kismet/kismet_site.conf || sudo /home/ubuntu/projects/Argos/scripts/configure-kismet-gps.sh
 
 # Start Kismet service
-sudo systemctl start kismet
+sudo systemctl start kismet-auto-wlan1
 
 # Wait for Kismet to be ready
 echo "Waiting for Kismet to initialize..."

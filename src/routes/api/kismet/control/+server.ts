@@ -35,7 +35,7 @@ export const POST: RequestHandler = async ({ request }) => {
       }
     } else if (action === 'stop') {
       try {
-        await execAsync('sudo systemctl stop kismet');
+        await execAsync('sudo systemctl stop kismet-auto-wlan1');
         return json({ success: true, message: 'Kismet stopped successfully' });
       } catch (error: unknown) {
         return json({ 
@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
       }
     } else if (action === 'status') {
       try {
-        const { stdout } = await execAsync('systemctl is-active kismet');
+        const { stdout } = await execAsync('systemctl is-active kismet-auto-wlan1');
         const isActive = stdout.trim() === 'active';
         return json({ 
           success: true, 

@@ -28,6 +28,10 @@
 	function navigateToRFEmitter() {
 		window.open('http://100.79.154.94:3001', '_blank');
 	}
+
+	function navigateToFusion() {
+		void goto('/fusion');
+	}
 </script>
 
 <svelte:head>
@@ -158,13 +162,31 @@
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"></path>
+				<path d="M13 2L8.5 13H12L11 22L15.5 11H12L13 2Z"/>
 			</svg>
 			<h2 class="mission-title">
 				<span style="color: #fb923c;">RF</span>
 				<span>Emitter</span>
 			</h2>
 			<p class="mission-desc">Signal Generation</p>
+		</div>
+
+		<div
+			class="mission-card mission-fusion"
+			on:click={navigateToFusion}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToFusion()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path d="M12 2L2 7v10c0 5.55 3.84 9.739 9 11 5.16-1.261 9-5.45 9-11V7l-10-5z"/>
+			</svg>
+			<h2 class="mission-title">
+				<span style="color: #68d391;">Fusion</span>
+				<span>Security Center</span>
+			</h2>
+			<p class="mission-desc">Unified Intelligence Platform</p>
 		</div>
 
 		<div class="mission-card mission-docs">
@@ -198,6 +220,7 @@
 		--mission-location: #10b981;
 		--mission-broadcast: #8b5cf6;
 		--mission-gsm: #ff0000;
+		--mission-fusion: #68d391;
 
 		/* Text Colors */
 		--text-primary: #ffffff;
@@ -423,6 +446,10 @@
 	.mission-emitter {
 		--mission-color: var(--mission-spectrum);
 		--mission-glow: rgba(251, 146, 60, 0.3);
+	}
+	.mission-fusion {
+		--mission-color: var(--mission-fusion);
+		--mission-glow: rgba(104, 211, 145, 0.3);
 	}
 
 	/* Mission Icons */
