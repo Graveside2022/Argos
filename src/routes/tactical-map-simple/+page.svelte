@@ -54,7 +54,7 @@
 			free: number;
 			percentage: number;
 		};
-		temperature: number;
+		temperature: number | null;
 		uptime: number;
 		battery?: {
 			level: number;
@@ -604,27 +604,90 @@
 	// Fetch system information
 	async function fetchSystemInfo() {
 		try {
-			const response = await fetch('/api/system/info');
+			console.log('Fetching system info from /api/system/info...');
+			
+			// Add timeout to the fetch
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+			
+			const response = await fetch('/api/system/info', {
+				signal: controller.signal,
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				}
+			});
+			
+			clearTimeout(timeoutId);
+			console.log('System info response status:', response.status);
+			console.log('System info response headers:', Object.fromEntries(response.headers.entries()));
+			
 			if (response.ok) {
-				systemInfo = (await response.json()) as SystemInfo;
+				const responseText = await response.text();
+				console.log('Raw response text:', responseText);
+				
+				try {
+					systemInfo = JSON.parse(responseText) as SystemInfo;
+					console.log('System info parsed successfully:', systemInfo);
+				} catch (parseError) {
+					console.error('Failed to parse JSON response:', parseError);
+					console.error('Response text was:', responseText);
+				}
+			} else {
+				const errorText = await response.text();
+				console.error('System info response not ok:', response.status, errorText);
 			}
 		} catch (error) {
-			console.error('Error fetching system info:', error);
+			if (error instanceof Error && error.name === 'AbortError') {
+				console.error('System info fetch timed out after 10 seconds');
+			} else {
+				console.error('Error fetching system info:', error);
+			}
 		}
 	}
 
 	// Show Pi popup with system information
 	async function showPiPopup() {
-		if (!userMarker) return;
+		if (!userMarker) {
+			console.error('No user marker available for popup');
+			return;
+		}
+
+		console.log('Opening Pi popup...');
+		
+		// Show loading message first
+		const loadingPopup = L.popup({
+			maxWidth: 300,
+			className: 'pi-popup',
+			autoClose: false,
+			closeOnClick: false
+		}).setContent('<div style="padding: 10px; color: #fff;">Loading system info...</div>');
+		
+		userMarker.bindPopup(loadingPopup).openPopup();
 
 		// Fetch latest system info
 		await fetchSystemInfo();
 
 		if (!systemInfo) {
-			userMarker.setPopupContent('<div style="padding: 10px;">Loading system info...</div>');
-			userMarker.openPopup();
+			console.error('No system info available after fetch');
+			const errorPopup = L.popup({
+				maxWidth: 300,
+				className: 'pi-popup',
+				autoClose: false,
+				closeOnClick: false
+			}).setContent(`
+				<div style="padding: 10px; color: #ff4444;">
+					<h4>Failed to load system info</h4>
+					<p>Check the browser console for error details.</p>
+					<p>API might be unreachable or returning invalid data.</p>
+				</div>
+			`);
+			
+			userMarker.bindPopup(errorPopup).openPopup();
 			return;
 		}
+
+		console.log('Building popup content with system info:', systemInfo);
 
 		// Format uptime
 		const hours = Math.floor(systemInfo.uptime / 3600);
@@ -711,9 +774,12 @@
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Temperature:</td>
             <td style="padding: 4px 0;">
-              <span style="color: ${systemInfo.temperature > 70 ? '#ff4444' : systemInfo.temperature > 60 ? '#ffaa00' : '#00ff00'}">
-                ${systemInfo.temperature.toFixed(1)}°C
-              </span>
+              ${systemInfo.temperature !== null 
+                ? `<span style="color: ${systemInfo.temperature > 70 ? '#ff4444' : systemInfo.temperature > 60 ? '#ffaa00' : '#00ff00'}">
+                     ${systemInfo.temperature.toFixed(1)}°C
+                   </span>`
+                : '<span style="color: #888;">N/A</span>'
+              }
             </td>
           </tr>
           <tr>
@@ -739,8 +805,17 @@
       </div>
     `;
 
-		userMarker.setPopupContent(popupContent);
-		userMarker.openPopup();
+		console.log('Popup content built successfully, length:', popupContent.length);
+
+		// Create and bind popup on demand
+		const popup = L.popup({
+			maxWidth: 300,
+			className: 'pi-popup',
+			autoClose: false,
+			closeOnClick: false
+		}).setContent(popupContent);
+		
+		userMarker.bindPopup(popup).openPopup();
 	}
 
 	// Get device icon SVG based on type - Enhanced with more device categories
@@ -951,15 +1026,26 @@
         </svg>`;
 		}
 
-		// Unknown device (default)
+		// Unknown device (skull icon for easy identification)
 		return `
-      <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="15" cy="15" r="8" fill="none" stroke="${color}" stroke-width="2" opacity="0.7"/>
-        <text x="15" y="19" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="${color}">?</text>
-        <circle cx="15" cy="7" r="1.5" fill="${color}" opacity="0.5"/>
-        <circle cx="23" cy="15" r="1.5" fill="${color}" opacity="0.5"/>
-        <circle cx="15" cy="23" r="1.5" fill="${color}" opacity="0.5"/>
-        <circle cx="7" cy="15" r="1.5" fill="${color}" opacity="0.5"/>
+      <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+        <!-- Skull shape -->
+        <path d="M15 4 C20 4 24 8 24 13 C24 16 23 18 21 19 L21 22 C21 23 20 24 19 24 L11 24 C10 24 9 23 9 22 L9 19 C7 18 6 16 6 13 C6 8 10 4 15 4 Z" fill="${color}" stroke="#fff" stroke-width="1"/>
+        <!-- Eye sockets -->
+        <circle cx="12" cy="12" r="2.5" fill="#000"/>
+        <circle cx="18" cy="12" r="2.5" fill="#000"/>
+        <!-- Glowing eyes -->
+        <circle cx="12" cy="12" r="1" fill="#ff0000" opacity="0.8"/>
+        <circle cx="18" cy="12" r="1" fill="#ff0000" opacity="0.8"/>
+        <!-- Nasal cavity -->
+        <path d="M15 14 L13 18 L17 18 Z" fill="#000"/>
+        <!-- Teeth -->
+        <rect x="13" y="20" width="1" height="2" fill="#fff"/>
+        <rect x="15" y="19" width="1" height="3" fill="#fff"/>
+        <rect x="17" y="20" width="1" height="2" fill="#fff"/>
+        <!-- Warning triangle -->
+        <path d="M15 25 L12 29 L18 29 Z" fill="#ff0000" opacity="0.6"/>
+        <text x="15" y="28" text-anchor="middle" font-family="Arial" font-size="6" font-weight="bold" fill="#fff">!</text>
       </svg>`;
 	}
 
@@ -1016,27 +1102,31 @@
 						userMarker.setLatLng([userPosition.lat, userPosition.lon]);
 					} else {
 						// Create user marker with American flag emoji
+						console.log('Creating user marker (American flag)...');
 						const userIcon = L.divIcon({
 							className: 'user-marker',
-							html: '<div style="font-size: 36px; text-align: center; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));">🇺🇸</div>',
+							html: '<div style="font-size: 36px; text-align: center; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); cursor: pointer; z-index: 1000;">🇺🇸</div>',
 							iconSize: [40, 40],
 							iconAnchor: [20, 20]
 						});
 						userMarker = L.marker([userPosition.lat, userPosition.lon], {
 							icon: userIcon
 						}).addTo(map);
+						
+						console.log('User marker created and added to map:', userMarker);
 
-						// Add click handler to user marker
-						userMarker.on('click', () => {
+						// Add click handler to user marker (remove popup binding that might interfere)
+						userMarker.on('click', (e) => {
+							console.log('American flag clicked!', e);
+							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
-
-						// Bind popup to user marker
-						userMarker.bindPopup('', {
-							maxWidth: 300,
-							className: 'pi-popup',
-							autoClose: false,
-							closeOnClick: false
+						
+						// Also add double-click for testing
+						userMarker.on('dblclick', (e) => {
+							console.log('American flag double-clicked!', e);
+							e.originalEvent?.stopPropagation();
+							void showPiPopup();
 						});
 
 						map.setView([userPosition.lat, userPosition.lon], 15);
