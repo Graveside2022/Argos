@@ -743,68 +743,224 @@
 		userMarker.openPopup();
 	}
 
-	// Get device icon SVG based on type
+	// Get device icon SVG based on type - Enhanced with more device categories
 	function getDeviceIconSVG(device: KismetDevice, color: string): string {
 		const type = device.type?.toLowerCase() || '';
 		const manufacturer = device.manufacturer?.toLowerCase() || '';
+		const mac = device.mac?.toLowerCase() || '';
 
-		// Access Point / Router icon (antenna with waves)
+		// Router/Access Point/Infrastructure
 		if (
 			type.includes('ap') ||
 			type.includes('access') ||
 			manufacturer.includes('arris') ||
 			manufacturer.includes('router') ||
-			manufacturer.includes('gateway')
+			manufacturer.includes('gateway') ||
+			manufacturer.includes('netgear') ||
+			manufacturer.includes('linksys') ||
+			manufacturer.includes('tp-link') ||
+			manufacturer.includes('cisco') ||
+			manufacturer.includes('ubiquiti')
 		) {
 			return `
         <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-          <!-- Router body -->
-          <rect x="10" y="20" width="10" height="6" fill="${color}" stroke="#fff" stroke-width="0.5"/>
-          <!-- Antenna -->
-          <line x1="15" y1="20" x2="15" y2="10" stroke="${color}" stroke-width="2"/>
-          <!-- Signal waves -->
-          <path d="M 10 15 Q 15 13 20 15" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8"/>
-          <path d="M 7 12 Q 15 9 23 12" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
-          <path d="M 4 9 Q 15 5 26 9" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.4"/>
-        </svg>
-      `;
+          <rect x="10" y="20" width="10" height="4" fill="${color}" stroke="#fff" stroke-width="0.5"/>
+          <rect x="13" y="18" width="4" height="2" fill="${color}"/>
+          <line x1="15" y1="18" x2="15" y2="12" stroke="${color}" stroke-width="2"/>
+          <path d="M10 14 Q15 10 20 14" stroke="${color}" stroke-width="1.5" fill="none"/>
+          <path d="M8 16 Q15 8 22 16" stroke="${color}" stroke-width="1" fill="none" opacity="0.6"/>
+        </svg>`;
 		}
 
-		// Mobile/Client device icon (smartphone/laptop outline)
+		// Smartphone (Apple/Android)
 		if (
-			type.includes('client') ||
-			type.includes('mobile') ||
-			manufacturer.includes('phone') ||
-			manufacturer.includes('smartphone') ||
+			manufacturer.includes('apple') && (manufacturer.includes('iphone') || type.includes('phone')) ||
+			manufacturer.includes('samsung') && type.includes('phone') ||
 			manufacturer.includes('android') ||
-			manufacturer.includes('iphone')
+			type.includes('mobile') ||
+			type.includes('phone')
 		) {
 			return `
         <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-          <!-- Phone body -->
-          <rect x="11" y="8" width="8" height="14" rx="1" fill="none" stroke="${color}" stroke-width="2"/>
-          <!-- Screen -->
-          <rect x="12.5" y="10" width="5" height="9" fill="${color}" opacity="0.3"/>
-          <!-- Home button -->
-          <circle cx="15" cy="20.5" r="0.8" fill="${color}"/>
-        </svg>
-      `;
+          <rect x="11" y="6" width="8" height="18" rx="2" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="12" y="8" width="6" height="12" fill="#fff" opacity="0.3"/>
+          <circle cx="15" cy="22" r="1" fill="#fff"/>
+          <rect x="13" y="7" width="4" height="0.5" fill="#fff" opacity="0.5"/>
+        </svg>`;
 		}
 
-		// Unknown device icon (network node)
+		// Laptop/Computer
+		if (
+			manufacturer.includes('intel') ||
+			manufacturer.includes('dell') ||
+			manufacturer.includes('hp') && !type.includes('printer') ||
+			manufacturer.includes('lenovo') ||
+			manufacturer.includes('asus') ||
+			manufacturer.includes('acer') ||
+			(manufacturer.includes('apple') && !manufacturer.includes('iphone') && !manufacturer.includes('ipad')) ||
+			type.includes('computer') ||
+			type.includes('laptop')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="12" width="14" height="10" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="9" y="13" width="12" height="7" fill="#fff" opacity="0.3"/>
+          <rect x="6" y="22" width="18" height="2" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <circle cx="15" cy="23" r="0.5" fill="#fff"/>
+        </svg>`;
+		}
+
+		// Tablet (iPad/Android tablets)
+		if (
+			manufacturer.includes('ipad') ||
+			(manufacturer.includes('apple') && type.includes('tablet')) ||
+			type.includes('tablet')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="7" width="12" height="16" rx="2" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="10" y="9" width="10" height="12" fill="#fff" opacity="0.3"/>
+          <circle cx="15" cy="8" r="0.5" fill="#fff"/>
+          <circle cx="15" cy="22" r="1" fill="#fff"/>
+        </svg>`;
+		}
+
+		// Smart TV/Media Device
+		if (
+			manufacturer.includes('samsung') && type.includes('tv') ||
+			manufacturer.includes('lg') ||
+			manufacturer.includes('roku') ||
+			manufacturer.includes('chromecast') ||
+			manufacturer.includes('apple') && type.includes('tv') ||
+			type.includes('media') ||
+			type.includes('streaming') ||
+			type.includes('tv')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="10" width="18" height="12" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="7" y="11" width="16" height="8" fill="#fff" opacity="0.3"/>
+          <rect x="13" y="22" width="4" height="2" fill="${color}"/>
+          <rect x="10" y="24" width="10" height="1" fill="${color}"/>
+        </svg>`;
+		}
+
+		// Gaming Console
+		if (
+			manufacturer.includes('sony') && (type.includes('playstation') || type.includes('gaming')) ||
+			manufacturer.includes('microsoft') && type.includes('xbox') ||
+			manufacturer.includes('nintendo') ||
+			type.includes('gaming') ||
+			type.includes('console')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="7" y="12" width="16" height="8" rx="2" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <circle cx="11" cy="16" r="1.5" fill="#fff"/>
+          <circle cx="19" cy="16" r="1.5" fill="#fff"/>
+          <rect x="14" y="14" width="2" height="4" fill="#fff"/>
+          <rect x="13" y="15" width="4" height="2" fill="#fff"/>
+        </svg>`;
+		}
+
+		// Smart Home/IoT Device
+		if (
+			manufacturer.includes('amazon') ||
+			manufacturer.includes('google') ||
+			manufacturer.includes('nest') ||
+			manufacturer.includes('ring') ||
+			manufacturer.includes('philips') ||
+			manufacturer.includes('sonos') ||
+			type.includes('iot') ||
+			type.includes('smart')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="15" cy="15" r="8" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <circle cx="15" cy="15" r="4" fill="#fff" opacity="0.3"/>
+          <circle cx="15" cy="15" r="2" fill="#fff"/>
+          <circle cx="8" cy="10" r="1.5" fill="${color}" opacity="0.6"/>
+          <circle cx="22" cy="10" r="1.5" fill="${color}" opacity="0.6"/>
+          <circle cx="8" cy="20" r="1.5" fill="${color}" opacity="0.6"/>
+          <circle cx="22" cy="20" r="1.5" fill="${color}" opacity="0.6"/>
+        </svg>`;
+		}
+
+		// Printer
+		if (
+			manufacturer.includes('hp') && type.includes('printer') ||
+			manufacturer.includes('canon') ||
+			manufacturer.includes('epson') ||
+			manufacturer.includes('brother') ||
+			type.includes('printer')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="12" width="14" height="8" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="10" y="8" width="10" height="4" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="10" y="20" width="10" height="3" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <rect x="9" y="15" width="2" height="1" fill="#fff"/>
+          <circle cx="23" cy="16" r="1" fill="#fff"/>
+        </svg>`;
+		}
+
+		// Security Camera
+		if (
+			manufacturer.includes('ring') ||
+			manufacturer.includes('arlo') ||
+			manufacturer.includes('nest') && type.includes('camera') ||
+			type.includes('camera') ||
+			type.includes('security')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="15" cy="15" r="6" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <circle cx="15" cy="15" r="3" fill="#fff"/>
+          <circle cx="15" cy="15" r="1.5" fill="${color}"/>
+          <rect x="21" y="14" width="3" height="2" fill="${color}"/>
+          <circle cx="18" cy="10" r="1" fill="${color}"/>
+        </svg>`;
+		}
+
+		// Network Bridge/Switch
+		if (
+			type.includes('bridge') ||
+			type.includes('switch') ||
+			manufacturer.includes('switch')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="7" y="13" width="16" height="6" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
+          <circle cx="10" cy="16" r="1" fill="#00ff00"/>
+          <circle cx="13" cy="16" r="1" fill="#00ff00"/>
+          <circle cx="16" cy="16" r="1" fill="#ffff00"/>
+          <circle cx="19" cy="16" r="1" fill="#ff0000"/>
+          <rect x="22" y="15" width="2" height="2" fill="#fff"/>
+        </svg>`;
+		}
+
+		// Generic Client Device
+		if (
+			type.includes('client')
+		) {
+			return `
+        <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+          <rect x="11" y="8" width="8" height="14" rx="1" fill="none" stroke="${color}" stroke-width="2"/>
+          <rect x="12.5" y="10" width="5" height="9" fill="${color}" opacity="0.3"/>
+          <circle cx="15" cy="20.5" r="0.8" fill="${color}"/>
+        </svg>`;
+		}
+
+		// Unknown device (default)
 		return `
       <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-        <!-- Node circle -->
-        <circle cx="15" cy="15" r="8" fill="none" stroke="${color}" stroke-width="2"/>
-        <!-- Question mark -->
-        <text x="15" y="19" text-anchor="middle" font-size="10" font-weight="bold" fill="${color}">?</text>
-        <!-- Connection points -->
-        <circle cx="15" cy="7" r="1.5" fill="${color}"/>
-        <circle cx="23" cy="15" r="1.5" fill="${color}"/>
-        <circle cx="15" cy="23" r="1.5" fill="${color}"/>
-        <circle cx="7" cy="15" r="1.5" fill="${color}"/>
-      </svg>
-    `;
+        <circle cx="15" cy="15" r="8" fill="none" stroke="${color}" stroke-width="2" opacity="0.7"/>
+        <text x="15" y="19" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="${color}">?</text>
+        <circle cx="15" cy="7" r="1.5" fill="${color}" opacity="0.5"/>
+        <circle cx="23" cy="15" r="1.5" fill="${color}" opacity="0.5"/>
+        <circle cx="15" cy="23" r="1.5" fill="${color}" opacity="0.5"/>
+        <circle cx="7" cy="15" r="1.5" fill="${color}" opacity="0.5"/>
+      </svg>`;
 	}
 
 	// Calculate signal position (spiral pattern)
