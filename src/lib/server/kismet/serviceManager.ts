@@ -77,7 +77,7 @@ export class KismetServiceManager {
   }
 
   /**
-   * Stop the Kismet service
+   * Stop the Kismet service with proper USB adapter reset
    */
   static async stop(): Promise<{ success: boolean; message: string }> {
     try {
@@ -86,16 +86,77 @@ export class KismetServiceManager {
         return { success: false, message: 'Kismet is not running' };
       }
 
-      // Kill the Kismet process
-      await execAsync('pkill -f "kismet"');
+      // Kill the Kismet process cleanly
+      await execAsync('pkill -TERM kismet');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await execAsync('pkill -KILL kismet').catch(() => {}); // Force kill if needed
       
-      // Wait a moment for the service to stop
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Remove monitor interface if it exists
+      await execAsync('iw dev kismon0 del').catch(() => {}); // Ignore errors if interface doesn't exist
+      
+      // Reset ALL USB WiFi adapters to fix "stuck in monitor mode" issue
+      try {
+        // Find all USB wireless interfaces (typically start with wlx)
+        const { stdout: interfaces } = await execAsync('ip link show | grep -E "wlx[0-9a-f]{12}" | cut -d: -f2 | tr -d " "');
+        const wifiInterfaces = interfaces.trim().split('\n').filter(Boolean);
+        
+        for (const interfaceName of wifiInterfaces) {
+          try {
+            console.log(`Resetting USB WiFi interface: ${interfaceName}`);
+            
+            // Bring interface down
+            await execAsync(`ip link set ${interfaceName} down`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Get interface MAC to find corresponding USB device
+            const { stdout: macOutput } = await execAsync(`ip link show ${interfaceName} | grep -oE '([0-9a-f]{2}:){5}[0-9a-f]{2}'`);
+            const macAddr = macOutput.trim();
+            
+            if (macAddr) {
+              // Find USB device by searching for wireless interfaces
+              const { stdout: usbDevices } = await execAsync('lsusb | grep -iE "(wireless|wifi|802\\.11|network|ethernet)"');
+              
+              if (usbDevices) {
+                // Try to find and reset each potential wireless USB device
+                const usbLines = usbDevices.split('\n').filter(Boolean);
+                for (const usbLine of usbLines) {
+                  const busMatch = usbLine.match(/Bus (\d+) Device (\d+)/);
+                  if (busMatch) {
+                    const [, bus, device] = busMatch;
+                    try {
+                      // Unbind and rebind USB device to reset its state
+                      await execAsync(`echo '${bus}-${device}' > /sys/bus/usb/drivers/usb/unbind`);
+                      await new Promise(resolve => setTimeout(resolve, 1000));
+                      await execAsync(`echo '${bus}-${device}' > /sys/bus/usb/drivers/usb/bind`);
+                      console.log(`Reset USB device at Bus ${bus} Device ${device}`);
+                    } catch (usbResetError) {
+                      console.warn(`Failed to reset USB device ${bus}-${device}:`, usbResetError);
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Wait for device to reinitialize
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Bring interface back up
+            await execAsync(`ip link set ${interfaceName} up`);
+            console.log(`Interface ${interfaceName} reset complete`);
+            
+          } catch (interfaceError) {
+            console.warn(`Failed to reset interface ${interfaceName}:`, interfaceError);
+          }
+        }
+      } catch (resetError) {
+        console.warn('USB adapter reset failed:', resetError);
+        // Continue anyway - basic stop still worked
+      }
       
       // Verify it stopped
       const newStatus = await this.getStatus();
       if (!newStatus.running) {
-        return { success: true, message: 'Kismet stopped successfully' };
+        return { success: true, message: 'Kismet stopped successfully with adapter reset' };
       } else {
         return { success: false, message: 'Failed to stop Kismet' };
       }
