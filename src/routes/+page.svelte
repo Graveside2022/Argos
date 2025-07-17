@@ -24,6 +24,10 @@
 	function navigateToGSMEvil() {
 		void goto('/gsm-evil');
 	}
+
+	function navigateToRFEmitter() {
+		window.open('http://100.79.154.94:3001', '_blank');
+	}
 </script>
 
 <svelte:head>
@@ -143,6 +147,24 @@
 			</svg>
 			<h2 class="mission-title">GSM Evil</h2>
 			<p class="mission-desc">Cellular Analysis</p>
+		</div>
+
+		<div
+			class="mission-card mission-emitter"
+			on:click={navigateToRFEmitter}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToRFEmitter()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path d="M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"></path>
+			</svg>
+			<h2 class="mission-title">
+				<span style="color: #fb923c;">RF</span>
+				<span>Emitter</span>
+			</h2>
+			<p class="mission-desc">Signal Generation</p>
 		</div>
 
 		<div class="mission-card mission-docs">
@@ -396,6 +418,11 @@
 	.mission-gsm {
 		--mission-color: var(--mission-gsm);
 		--mission-glow: rgba(255, 0, 0, 0.3);
+	}
+
+	.mission-emitter {
+		--mission-color: var(--mission-spectrum);
+		--mission-glow: rgba(251, 146, 60, 0.3);
 	}
 
 	/* Mission Icons */

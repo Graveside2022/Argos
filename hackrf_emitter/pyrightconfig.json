@@ -1,0 +1,14 @@
+{
+    "include": [
+        "backend",
+        "test_*.py",
+        "*.py"
+    ],
+    "extraPaths": [
+        "backend"
+    ],
+    "pythonVersion": "3.8",
+    "typeCheckingMode": "basic",
+    "reportMissingImports": "none",
+    "reportMissingTypeStubs": false
+} 
