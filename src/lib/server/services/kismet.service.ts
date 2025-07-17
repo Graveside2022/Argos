@@ -18,6 +18,7 @@ export interface KismetDevice {
   frequency: number;
   packets: number;
   datasize: number;
+  ssid?: string;  // Add SSID field for WiFi networks
   location: {
     lat: number;
     lon: number;
@@ -197,6 +198,7 @@ export class KismetService {
         frequency: ((d.channel as number) || 0) * 5 + 2400,
         packets: (d.packets as number) || 0,
         datasize: (d.packets as number) || 0,
+        ssid: (d.ssid as string) || (d.name as string) || undefined,  // Extract SSID/name
         location: {
           lat: ((d.location as Record<string, unknown>)?.lat as number) || 
                gpsPosition.latitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE,
@@ -213,6 +215,18 @@ export class KismetService {
       const rawSignal = this.extractSignalFromDevice(d);
       const rawType = (d['kismet.device.base.type'] as string) || 'Unknown';
 
+      // Extract SSID from multiple possible locations in Kismet data
+      let ssid: string | undefined = undefined;
+      if (d['dot11.device']) {
+        const dot11 = d['dot11.device'] as Record<string, unknown>;
+        ssid = (dot11['dot11.device.last_beaconed_ssid'] as string) || 
+               (dot11['dot11.device.advertised_ssid_map'] as Record<string, unknown>)?.['ssid'] as string ||
+               undefined;
+      }
+      if (!ssid && d['kismet.device.base.name']) {
+        ssid = d['kismet.device.base.name'] as string;
+      }
+
       return {
         mac: (d['kismet.device.base.macaddr'] as string) || 'Unknown',
         last_seen: ((d['kismet.device.base.last_time'] as number) || 0) * 1000,
@@ -227,6 +241,7 @@ export class KismetService {
         frequency: ((d['kismet.device.base.channel'] as number) || 0) * 5 + 2400,
         packets: (d['kismet.device.base.packets.total'] as number) || 0,
         datasize: (d['kismet.device.base.packets.total'] as number) || 0,
+        ssid: ssid,  // Include SSID data
         location: {
           lat: ((d['kismet.device.base.location'] as Record<string, unknown>)?.['kismet.common.location.lat'] as number) ||
                gpsPosition.latitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE,
