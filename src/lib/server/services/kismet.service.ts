@@ -140,7 +140,7 @@ export class KismetService {
     // Method 2: Try direct REST API endpoints
     try {
       logWarn('Attempting direct Kismet REST API...');
-      const timestamp = Math.floor(Date.now() / 1000) - 300; // 5 minutes ago
+      const timestamp = Math.floor(Date.now() / 1000) - 1800; // 30 minutes ago for better coverage
       const response = await KismetProxy.proxyGet(`/devices/last-time/${timestamp}/devices.json`);
       
       if (Array.isArray(response)) {

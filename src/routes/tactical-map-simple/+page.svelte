@@ -1397,6 +1397,7 @@
 				console.log(`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`);
 
 				// Clean up markers for devices that no longer exist
+				let removedDevices = 0;
 				kismetMarkers.forEach((marker, id) => {
 					if (!data.devices.find((d: KismetDevice) => `kismet_${d.mac}` === id)) {
 						if (map) {
@@ -1404,8 +1405,13 @@
 						}
 						kismetMarkers.delete(id);
 						kismetDevices.delete(id);
+						removedDevices++;
 					}
 				});
+				
+				if (removedDevices > 0) {
+					console.log(`Kismet Debug: Removed ${removedDevices} stale device markers`);
+				}
 
 				// Update the reactive counter and distributions
 				kismetDeviceCount = kismetDevices.size;
