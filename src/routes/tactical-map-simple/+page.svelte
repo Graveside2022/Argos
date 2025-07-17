@@ -1185,12 +1185,18 @@
 
 	// Fetch Kismet devices
 	async function fetchKismetDevices() {
-		if (!map || kismetStatus !== 'running') return;
+		if (!map) return;
+		
+		// Debug: Always try to fetch devices if map is available
+		// This bypasses the status check since Kismet might be running even if status is wrong
 
 		try {
 			const response = await fetch('/api/kismet/devices');
 			if (response.ok) {
 				const data = (await response.json()) as KismetDevicesResponse;
+
+				// Debug: Log device count
+				console.log(`Kismet: Fetched ${data.devices?.length || 0} devices`);
 
 				// Update or create markers for each device
 				const devices = data.devices;
@@ -1745,10 +1751,16 @@
 
 		// Set up Kismet device fetching interval (will only fetch when running)
 		kismetInterval = setInterval(() => void fetchKismetDevices(), 10000);
+		
+		// Fetch devices immediately since we know Kismet is working
+		setTimeout(() => void fetchKismetDevices(), 1000);
 
 		// Check initial Kismet status immediately and more frequently at start
 		checkKismetStatus().catch((error) => {
 			console.error('Initial Kismet status check failed:', error);
+			// If status check fails, assume running since devices endpoint works
+			console.log('Assuming Kismet is running due to status check failure');
+			kismetStatus = 'running';
 		});
 
 		// Set up more frequent initial status checks, then slower periodic checks
