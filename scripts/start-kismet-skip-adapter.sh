@@ -4,12 +4,12 @@
 echo "Starting Kismet (adapter will need manual configuration)..."
 
 # Stop any existing Kismet
-sudo systemctl stop kismet 2>/dev/null
+sudo systemctl stop kismet-auto-wlan1 2>/dev/null
 sleep 2
 
 # Start Kismet service
 echo "Starting Kismet service..."
-sudo systemctl start kismet
+sudo systemctl start kismet-auto-wlan1
 
 # Wait for Kismet to be ready
 echo "Waiting for Kismet to initialize..."
@@ -28,20 +28,20 @@ echo ""
 if [ "$ready" = false ]; then
     echo "❌ Kismet failed to start"
     echo "Checking status..."
-    sudo systemctl status kismet --no-pager | head -10
+    sudo systemctl status kismet-auto-wlan1 --no-pager | head -10
     exit 1
 fi
 
 # Show adapter status but don't try to add it
 echo ""
 echo "=== Adapter Status ==="
-if ip link show wlx00c0caadcedb 2>/dev/null; then
+if ip link show wlan1 2>/dev/null; then
     echo "✓ Adapter is present"
     echo ""
     echo "To add the adapter manually:"
     echo "1. Open Kismet at http://$(hostname -I | cut -d' ' -f1):2501"
     echo "2. Go to Data Sources"
-    echo "3. Add source: wlx00c0caadcedb"
+    echo "3. Add source: wlan1"
     echo "4. Type: linuxwifi"
 else
     echo "❌ Adapter not found"
