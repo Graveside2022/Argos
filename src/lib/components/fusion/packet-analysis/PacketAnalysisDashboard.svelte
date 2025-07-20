@@ -12,14 +12,14 @@
 	let filteredPackets: AnalyzedPacket[] = [];
 	let filters: any = {};
 	let isConnected = false;
-	let ws: WebSocket | null = null;
+	let eventSource: EventSource | null = null;
 	
 	// Port scanning detection interval
 	let portScanInterval: number;
 	
 	onMount(() => {
-		// Connect to WebSocket for real-time packet data
-		connectWebSocket();
+		// Connect to Event Stream for real-time packet data
+		connectEventStream();
 		
 		// Run port scanning detection every 30 seconds
 		portScanInterval = setInterval(() => {
@@ -28,47 +28,53 @@
 	});
 	
 	onDestroy(() => {
-		if (ws) {
-			ws.close();
+		if (eventSource) {
+			eventSource.close();
 		}
 		if (portScanInterval) {
 			clearInterval(portScanInterval);
 		}
 	});
 	
-	function connectWebSocket() {
+	function connectEventStream() {
 		try {
-			ws = new WebSocket(`ws://${window.location.host}/api/ws`);
+			// Close existing connection if any
+			if (eventSource) {
+				eventSource.close();
+			}
 			
-			ws.onopen = () => {
-				console.log('WebSocket connected for packet analysis');
+			eventSource = new EventSource('/api/fusion/stream?channel=wireshark');
+			
+			eventSource.addEventListener('open', () => {
+				console.log('EventSource connected for packet analysis');
 				isConnected = true;
-				// Subscribe to Wireshark packet stream
-				ws.send(JSON.stringify({ 
-					type: 'subscribe', 
-					channel: 'wireshark' 
-				}));
-			};
+			});
 			
-			ws.onmessage = (event) => {
+			eventSource.addEventListener('packet', (event) => {
 				const data = JSON.parse(event.data);
 				if (data.type === 'packet' && data.packet) {
 					// Add packet to analysis store
 					addPacket(data.packet as NetworkPacket);
 				}
-			};
+			});
 			
-			ws.onerror = (error) => {
-				console.error('WebSocket error:', error);
-			};
-			
-			ws.onclose = () => {
+			eventSource.addEventListener('error', (event) => {
+				console.error('EventSource error:', event);
 				isConnected = false;
+				
 				// Attempt to reconnect after 5 seconds
-				setTimeout(connectWebSocket, 5000);
-			};
+				if (eventSource?.readyState === EventSource.CLOSED) {
+					setTimeout(connectEventStream, 5000);
+				}
+			});
+			
+			eventSource.addEventListener('connected', (event) => {
+				const data = JSON.parse(event.data);
+				console.log('Connected to packet stream:', data);
+			});
+			
 		} catch (error) {
-			console.error('Failed to connect WebSocket:', error);
+			console.error('Failed to connect EventSource:', error);
 		}
 	}
 	

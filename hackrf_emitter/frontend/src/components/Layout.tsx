@@ -8,7 +8,8 @@ import {
   ExclamationTriangleIcon,
   SunIcon,
   MoonIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { SocketProvider, useSocket } from '../contexts/SocketContext';
 
@@ -32,11 +33,41 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
     <div className="main-content">
       {/* Sidebar */}
       <div className="sidebar">
-        <div className="flex h-16 items-center justify-center border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-2">
+        {/* Title Section - Now at Top */}
+        <div className="flex h-16 items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
+          <div className="flex items-center space-x-3">
             <SignalIcon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">HackRF Emitter</h1>
           </div>
+        </div>
+
+        {/* Back to Console Button with Dark Mode - Now Below Title */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          {/* Left spacer */}
+          <div className="w-10"></div>
+          
+          {/* Centered Back to Console Button */}
+          <button
+            onClick={() => window.open('http://100.79.154.94:5173', '_self')}
+            className="btn-secondary flex items-center space-x-2 whitespace-nowrap"
+            title="Back to Argos Console"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span>Back to Console</span>
+          </button>
+          
+          {/* Dark Mode Button - Right side with more spacing */}
+          <button
+            onClick={toggleDarkMode}
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? (
+              <SunIcon className="h-5 w-5" />
+            ) : (
+              <MoonIcon className="h-5 w-5" />
+            )}
+          </button>
         </div>
         
         <nav className="mt-8 px-4">
@@ -60,20 +91,6 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
           </ul>
         </nav>
 
-        {/* Dark Mode Toggle */}
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={toggleDarkMode}
-            className="dark-mode-toggle"
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDarkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
-          </button>
-        </div>
 
         {/* Safety Notice */}
         <div className="absolute bottom-4 left-4 right-4">

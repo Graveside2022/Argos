@@ -6,7 +6,7 @@
 echo "Starting Kismet safely..."
 
 # Ensure Kismet config exists
-sudo test -f /etc/kismet/kismet_site.conf || sudo /home/ubuntu/projects/Argos/scripts/configure-kismet-gps.sh
+sudo test -f /etc/kismet/kismet_site.conf || sudo /workspace/scripts/configure-kismet-gps.sh
 
 # Start Kismet service
 sudo systemctl start kismet-auto-wlan1
@@ -45,7 +45,7 @@ if ip link show | grep -q "wlx"; then
 fi
 
 # Method 2: Try creating virtual monitor
-/home/ubuntu/projects/Argos/scripts/create-virtual-monitor.sh
+/workspace/scripts/create-virtual-monitor.sh 2>/dev/null || true
 
 echo ""
 echo "Kismet startup complete!"

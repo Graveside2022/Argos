@@ -419,15 +419,15 @@ export BROWSER=none
 
 echo -e "${YELLOW}Frontend logs will appear below:${NC}"
 echo "----------------------------------------"
-PORT=3001 npm start &
+PORT=3000 npm start &
 FRONTEND_PID=$!
 
 # Wait for frontend to start
 echo -e "\n${CYAN}Waiting for frontend to initialize...${NC}"
 for i in {1..15}; do
     if kill -0 $FRONTEND_PID 2>/dev/null; then
-        if check_http_endpoint "http://localhost:3001"; then
-            print_success "Frontend server running on http://localhost:3001"
+        if check_http_endpoint "http://localhost:3000"; then
+            print_success "Frontend server running on http://localhost:3000"
             break
         fi
     else
@@ -453,7 +453,7 @@ echo -e "${GREEN}${ROCKET} HackRF Emitter is now running successfully!${NC}\n"
 
 echo -e "${CYAN}Services:${NC}"
 echo -e "  ${CHECK} Backend API: http://localhost:5000"
-echo -e "  ${CHECK} Frontend UI: http://localhost:3001"
+echo -e "  ${CHECK} Frontend UI: http://localhost:3000"
 echo -e "  ${CHECK} WebSocket: ws://localhost:5000"
 
 echo -e "\n${CYAN}Live Logs:${NC}"
@@ -461,7 +461,7 @@ echo -e "  📄 Backend and Frontend logs are displayed in real-time above"
 echo -e "  📊 Any errors or status messages will appear immediately"
 
 echo -e "\n${CYAN}Quick Start Guide:${NC}"
-echo -e "  1. 🌐 Open http://localhost:3001 in your browser"
+echo -e "  1. 🌐 Open http://localhost:3000 in your browser"
 echo -e "  2. 📡 Connect your HackRF device (or use simulation mode)"
 echo -e "  3. 🔧 Select a workflow from the library"
 echo -e "  4. ⚙️  Configure parameters as needed"
@@ -473,7 +473,7 @@ echo -e "  System restrictions have been disabled for advanced users"
 
 # Attempt to open browser after a short delay
 sleep 2
-open_browser "http://localhost:3001"
+open_browser "http://localhost:3000"
 
 echo -e "\n${PURPLE}Press Ctrl+C to stop all services${NC}"
 echo -e "${CYAN}Monitoring services... ${ROCKET}${NC}\n"
