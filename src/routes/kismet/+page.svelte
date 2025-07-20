@@ -8,11 +8,16 @@
 	let errorMessage = '';
 	let kismetStatus: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
 	let statusCheckInterval: ReturnType<typeof setInterval>;
+	let iframeElement: HTMLIFrameElement;
+	let startIframeMonitor: (() => void) | undefined;
+	let iframeKey = 0; // Used to force iframe recreation
+	let lastStartTime = 0; // Track when we last started Kismet
 
 	onMount(() => {
 		// Use window.location to get the correct host
 		const host = window.location.hostname;
-		iframeUrl = `http://${host}:2501`;
+		// Add trailing slash to match what Kismet redirects to
+		iframeUrl = `http://${host}:2501/`;
 
 		// Check initial Kismet status
 		checkKismetStatus().catch((error) => {
@@ -21,10 +26,13 @@
 
 		// Set up periodic status checks
 		statusCheckInterval = setInterval(() => {
-			checkKismetStatus().catch((error) => {
-				console.error('Periodic Kismet status check failed:', error);
-			});
-		}, 5000);
+			// Don't check status while starting or stopping
+			if (kismetStatus !== 'starting' && kismetStatus !== 'stopping') {
+				checkKismetStatus().catch((error) => {
+					console.error('Periodic Kismet status check failed:', error);
+				});
+			}
+		}, 10000); // Check every 10 seconds instead of 5
 
 		// Set a timeout to hide loading after a reasonable time
 		setTimeout(() => {
@@ -38,6 +46,94 @@
 				// Note: Expected postMessage warning suppressed for iframe
 			}
 		});
+
+		// Prevent navigation from iframe
+		window.addEventListener('beforeunload', (event) => {
+			// Check if the navigation is coming from our page (not the iframe)
+			if (event.target === window && kismetStatus === 'running') {
+				console.warn('Navigation detected while Kismet is running');
+			}
+		});
+
+		// Debug any unexpected navigation
+		window.addEventListener('popstate', (event) => {
+			console.warn('Popstate event detected:', event);
+		});
+		
+		// More aggressive debugging
+		const originalLocation = window.location.href;
+		let checkInterval = setInterval(() => {
+			if (window.location.href !== originalLocation) {
+				console.error('LOCATION CHANGED!', {
+					from: originalLocation,
+					to: window.location.href,
+					kismetStatus
+				});
+			}
+		}, 100);
+		
+		// Prevent any form submissions on this page
+		document.addEventListener('submit', (e) => {
+			console.error('Form submission detected!', e);
+			e.preventDefault();
+			return false;
+		}, true);
+		
+		// Also check for any click events that might cause navigation
+		document.addEventListener('click', (e) => {
+			const target = e.target as HTMLElement;
+			if (target.tagName === 'A' || target.closest('a')) {
+				console.warn('Link click detected', target);
+			}
+		}, true);
+		
+		// Add message listener to catch any iframe messages
+		window.addEventListener('message', (e) => {
+			console.log('Message received from iframe:', e.data, 'origin:', e.origin);
+			// Block any navigation requests from iframe
+			if (e.data && (e.data.type === 'navigate' || e.data.action === 'navigate')) {
+				console.error('Iframe trying to navigate parent!', e.data);
+				e.preventDefault();
+				e.stopPropagation();
+				return false;
+			}
+		});
+		
+		// Monitor iframe src changes
+		let iframeMonitor: ReturnType<typeof setInterval>;
+		startIframeMonitor = () => {
+			iframeMonitor = setInterval(() => {
+				if (iframeElement && kismetStatus === 'running') {
+					const currentSrc = iframeElement.src;
+					// Normalize URLs by removing trailing slashes for comparison
+					const normalizedCurrent = currentSrc.replace(/\/$/, '');
+					const normalizedExpected = iframeUrl.replace(/\/$/, '');
+					
+					if (normalizedCurrent !== normalizedExpected) {
+						console.error('IFRAME SRC CHANGED DETECTED!', {
+							expected: iframeUrl,
+							actual: currentSrc,
+							timestamp: new Date().toISOString()
+						});
+						
+						// Check if it's trying to navigate to login or error page
+						if (currentSrc.includes('login') || currentSrc.includes('error') || currentSrc === 'about:blank') {
+							console.log('Iframe navigated to:', currentSrc, '- forcing back to original');
+							iframeElement.src = iframeUrl;
+						} else if (!currentSrc.startsWith(normalizedExpected)) {
+							// Only log if it's actually a different URL, not just trailing slash difference
+							console.log('Iframe URL changed to:', currentSrc);
+						}
+					}
+				}
+			}, 1000);
+		};
+		
+		// Clean up on unmount
+		return () => {
+			clearInterval(checkInterval);
+			if (iframeMonitor) clearInterval(iframeMonitor);
+		};
 	});
 
 	onDestroy(() => {
@@ -45,8 +141,17 @@
 			clearInterval(statusCheckInterval);
 		}
 	});
+	
+	// Start iframe monitoring when Kismet is running
+	$: if (kismetStatus === 'running' && startIframeMonitor) {
+		console.log('Starting iframe monitor for running Kismet');
+		startIframeMonitor();
+	}
 
 	async function checkKismetStatus() {
+		// Add debugging
+		console.log('Checking Kismet status, current status:', kismetStatus);
+		
 		try {
 			// Use our API to check status
 			const response = await fetch('/api/kismet/control', {
@@ -59,12 +164,28 @@
 
 			if (response.ok) {
 				const data = (await response.json()) as { running: boolean };
+				console.log('Status check response:', data);
+				
+				// Store old status for debugging
+				const oldStatus = kismetStatus;
+				
 				if (data.running && kismetStatus === 'stopped') {
 					kismetStatus = 'running';
 					hasError = false;
 					errorMessage = '';
 				} else if (!data.running && kismetStatus === 'running') {
-					kismetStatus = 'stopped';
+					// Don't immediately stop if we just started Kismet (within 60 seconds)
+					const timeSinceStart = Date.now() - lastStartTime;
+					if (timeSinceStart > 60000) {
+						console.log('Kismet appears to have stopped (was running for', timeSinceStart / 1000, 'seconds)');
+						kismetStatus = 'stopped';
+					} else {
+						console.log('Kismet status check shows inactive but was just started', timeSinceStart / 1000, 'seconds ago - ignoring');
+					}
+				}
+				
+				if (oldStatus !== kismetStatus) {
+					console.log('Status changed from', oldStatus, 'to', kismetStatus);
 				}
 			}
 		} catch (error) {
@@ -72,7 +193,7 @@
 		}
 	}
 
-	async function startKismet() {
+	async function startKismet(interfaceName?: string) {
 		console.log('startKismet called, current status:', kismetStatus);
 		if (kismetStatus === 'starting' || kismetStatus === 'stopping') {
 			console.log('Returning early because status is:', kismetStatus);
@@ -80,61 +201,43 @@
 		}
 
 		kismetStatus = 'starting';
+		lastStartTime = Date.now(); // Record when we started
 
 		try {
 			// Use our own API to control Kismet
+			const requestBody: any = { action: 'start' };
+			if (interfaceName) {
+				requestBody.interface = interfaceName;
+			}
+			
 			const response = await fetch('/api/kismet/control', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ action: 'start' })
+				body: JSON.stringify(requestBody)
 			});
 
 			if (response.ok) {
-				// Start checking for Kismet to come online
-				let checkCount = 0;
-				const maxChecks = 60; // 60 seconds max
-
-				const startupInterval = setInterval(() => {
-					(async () => {
-						checkCount++;
-
-						try {
-							await fetch(
-								`http://${window.location.hostname}:2501/system/status.json`,
-								{
-									mode: 'no-cors'
-								}
-							);
-
-							// If we get here, Kismet is responding
-							clearInterval(startupInterval);
-							kismetStatus = 'running';
-
-							// Reload iframe to show Kismet UI
-							const iframe = document.querySelector('iframe');
-							if (iframe) {
-								iframe.src = iframe.src + '?t=' + Date.now();
-							}
-						} catch {
-							if (checkCount >= maxChecks) {
-								clearInterval(startupInterval);
-								kismetStatus = 'stopped';
-								hasError = true;
-							}
-						}
-					})().catch((error) => {
-						console.error('Error in startup check:', error);
-						if (checkCount >= maxChecks) {
-							clearInterval(startupInterval);
-							kismetStatus = 'stopped';
-							hasError = true;
-						}
-					});
-				}, 1000);
+				// Wait a bit for Kismet to start and stabilize
+				setTimeout(() => {
+					kismetStatus = 'running';
+					// Add a small delay before showing iframe to ensure Kismet is fully ready
+					setTimeout(() => {
+						console.log('Kismet should be fully ready now');
+					}, 1000);
+				}, 3000);
 			} else {
-				const errorText = await response.text();
+				let errorText = '';
+				try {
+					const errorData = await response.json();
+					errorText = errorData.error || errorData.message || 'Unknown error';
+					if (errorData.details) {
+						errorText += '\n' + errorData.details;
+					}
+				} catch {
+					errorText = await response.text();
+				}
 				throw new Error(`Failed to start Kismet: ${errorText}`);
 			}
 		} catch (error: unknown) {
@@ -164,16 +267,6 @@
 			if (response.ok) {
 				setTimeout(() => {
 					kismetStatus = 'stopped';
-					// Clear iframe to show stopped state
-					const iframe = document.querySelector('iframe');
-					if (iframe) {
-						iframe.src = 'about:blank';
-						setTimeout(() => {
-							if (iframe) {
-								iframe.src = iframeUrl;
-							}
-						}, 100);
-					}
 				}, 2000);
 			} else {
 				const data = (await response.json()) as { message?: string };
@@ -189,24 +282,36 @@
 
 	function toggleKismet() {
 		console.log('toggleKismet called, current status:', kismetStatus);
+		
 		if (kismetStatus === 'running') {
 			console.log('Kismet is running, calling stopKismet');
-			stopKismet().catch((error) => {
-				console.error('Error stopping Kismet:', error);
-			});
+			stopKismet();
 		} else if (kismetStatus === 'stopped') {
 			console.log('Kismet is stopped, calling startKismet');
-			startKismet().catch((error) => {
-				console.error('Error starting Kismet:', error);
-			});
+			startKismet();
 		} else {
 			console.log('Kismet is in state:', kismetStatus, '- not starting or stopping');
 		}
 	}
+	
 
 	function handleIframeLoad() {
+		console.log('handleIframeLoad called');
 		isLoading = false;
 		hasError = false;
+		
+		// Monitor for any navigation attempts after iframe loads
+		setTimeout(() => {
+			console.log('Checking 5 seconds after iframe load - still on same page');
+		}, 5000);
+		
+		setTimeout(() => {
+			console.log('Checking 10 seconds after iframe load - still on same page');
+		}, 10000);
+		
+		setTimeout(() => {
+			console.log('Checking 30 seconds after iframe load - still on same page');
+		}, 30000);
 	}
 
 	function handleIframeError() {
@@ -258,17 +363,13 @@
 
 				<!-- Right Section - Buttons -->
 				<div class="flex items-center gap-3">
-					<!-- Status Debug Info -->
-					<div class="text-xs font-mono text-gray-400">
-						Status: {kismetStatus}
-					</div>
-					
 					<!-- GPS Status Button -->
 					<GPSStatusButton />
 					
 					<!-- Start/Stop Kismet Button -->
 					<button
-						on:click={toggleKismet}
+						type="button"
+						on:click={() => toggleKismet()}
 						disabled={kismetStatus === 'starting' || kismetStatus === 'stopping'}
 						class="saasfly-btn
 						{kismetStatus === 'stopped' ? 'saasfly-btn-start' : ''}
@@ -467,19 +568,86 @@
 			</div>
 		{/if}
 
-		{#if iframeUrl}
-			<iframe
-				src={iframeUrl}
-				on:load={handleIframeLoad}
-				on:error={handleIframeError}
-				class="w-full h-full border-0"
-				title="Kismet Interface"
-				style="display: {hasError && kismetStatus === 'stopped' ? 'none' : 'block'}"
-				sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-			></iframe>
+		{#if kismetStatus === 'starting'}
+			<div class="absolute inset-0 flex items-center justify-center bg-gray-900">
+				<div class="text-center">
+					<div class="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+					<p class="text-gray-400">Starting Kismet...</p>
+				</div>
+			</div>
+		{/if}
+		
+		{#if iframeUrl && kismetStatus === 'running'}
+			<!-- Add a key to force recreation if needed -->
+			{#key iframeKey}
+				<iframe
+					bind:this={iframeElement}
+					src={iframeUrl}
+					on:load={(e) => {
+						console.log('Kismet iframe loaded', e);
+						handleIframeLoad();
+						
+						// Check if this is causing navigation
+						const iframe = e.target as HTMLIFrameElement;
+						console.log('Iframe current src:', iframe.src);
+						console.log('Expected src:', iframeUrl);
+						
+						// Check if iframe src changed unexpectedly (normalize for trailing slash)
+						const normalizedIframeSrc = iframe.src.replace(/\/$/, '');
+						const normalizedExpectedSrc = iframeUrl.replace(/\/$/, '');
+						
+						if (normalizedIframeSrc !== normalizedExpectedSrc) {
+							console.error('IFRAME SRC ACTUALLY CHANGED ON LOAD!', {
+								expected: iframeUrl,
+								actual: iframe.src
+							});
+							// This is a real change, not just trailing slash
+							iframe.src = iframeUrl;
+						}
+						
+						// Try to prevent navigation from iframe
+						try {
+							if (iframeElement && iframeElement.contentWindow) {
+								// Override navigation methods in iframe
+								iframeElement.contentWindow.addEventListener('beforeunload', (e) => {
+									console.warn('Iframe attempting navigation');
+									e.preventDefault();
+									e.returnValue = '';
+								});
+								
+								// Also try to override location
+								Object.defineProperty(iframeElement.contentWindow, 'location', {
+									get() {
+										console.warn('Iframe trying to access location');
+										return iframeElement.contentWindow.location;
+									},
+									set(value) {
+										console.error('Iframe trying to set location to:', value);
+										// Block it
+										return false;
+									}
+								});
+							}
+						} catch (e) {
+							// Cross-origin restriction, expected
+							console.log('Cannot access iframe content (cross-origin)');
+						}
+					}}
+					on:error={(e) => {
+						console.error('Kismet iframe error:', e);
+						handleIframeError();
+					}}
+					class="w-full h-full border-0"
+					title="Kismet Interface"
+					referrerpolicy="no-referrer"
+					sandbox="allow-same-origin allow-scripts allow-forms"
+					loading="lazy"
+				></iframe>
+			{/key}
 		{/if}
 	</div>
 </div>
+
 
 <style>
 	:global(body) {

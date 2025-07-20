@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# SAFE WiFi Adapter Diagnostic Script
-# This script ONLY checks the USB adapter, NEVER touches wlan0
+# Generic WiFi Adapter Diagnostic Script
+# Supports multiple Alfa adapter models
 
 echo "=== WiFi Adapter Diagnostics (wlan0 is PROTECTED) ==="
 echo "Date: $(date)"
@@ -9,36 +9,43 @@ echo ""
 
 # 1. Verify wlan0 is safe
 echo "1. Checking wlan0 (SSH connection) safety..."
-if ip link show wlan0 | grep -q "UP"; then
-    echo "✓ wlan0 is UP and SAFE (will NOT be touched)"
+if [ -d "/sys/class/net/wlan0" ]; then
+    if [ -f "/sys/class/net/wlan0/operstate" ]; then
+        STATE=$(cat /sys/class/net/wlan0/operstate)
+        if [ "$STATE" = "up" ]; then
+            echo "✓ wlan0 is UP and SAFE (will NOT be touched)"
+        else
+            echo "⚠️  WARNING: wlan0 appears down - be careful!"
+        fi
+    fi
 else
-    echo "⚠️  WARNING: wlan0 appears down - be careful!"
+    echo "ℹ️  wlan0 not present"
 fi
 echo ""
 
-# 2. Check USB adapter presence
-echo "2. USB Adapter Status:"
-if lsusb | grep -q "0e8d:7612"; then
-    USB_INFO=$(lsusb | grep "0e8d:7612")
-    echo "✓ Found: $USB_INFO"
-    BUS=$(echo "$USB_INFO" | awk '{print $2}')
-    DEVICE=$(echo "$USB_INFO" | awk '{print $4}' | tr -d ':')
-    echo "   Bus: $BUS, Device: $DEVICE"
-else
-    echo "❌ MediaTek USB adapter NOT found!"
-    exit 1
-fi
-echo ""
+# 2. Check for Alfa adapters
+echo "2. Checking for Alfa WiFi Adapters..."
 
-# 3. Check interface status
-echo "3. Interface Status:"
-IFACE="wlx00c0caadcedb"
-if ip link show $IFACE 2>/dev/null; then
-    echo "✓ Interface $IFACE exists"
-    STATE=$(ip link show $IFACE | grep -o "state [A-Z]*" | cut -d' ' -f2)
-    echo "   State: $STATE"
+# Run the Alfa detection script
+if [ -f "/workspace/scripts/detect-alfa-adapter.sh" ]; then
+    /workspace/scripts/detect-alfa-adapter.sh
+    ALFA_DETECTED=$?
 else
-    echo "❌ Interface $IFACE NOT found!"
+    echo "❌ Alfa detection script not found!"
+    ALFA_DETECTED=1
+fi
+
+# If Alfa was found, the interface name is in ALFA_INTERFACE
+if [ $ALFA_DETECTED -eq 0 ] && [ -n "$ALFA_INTERFACE" ]; then
+    echo ""
+    echo "3. Interface Status for $ALFA_INTERFACE:"
+    if [ -d "/sys/class/net/$ALFA_INTERFACE" ]; then
+        echo "✓ Interface $ALFA_INTERFACE exists"
+        if [ -f "/sys/class/net/$ALFA_INTERFACE/operstate" ]; then
+            STATE=$(cat /sys/class/net/$ALFA_INTERFACE/operstate)
+            echo "   State: $STATE"
+        fi
+    fi
 fi
 echo ""
 

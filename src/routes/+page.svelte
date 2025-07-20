@@ -26,11 +26,15 @@
 	}
 
 	function navigateToRFEmitter() {
-		window.open('http://100.79.154.94:3001', '_blank');
+		window.open('http://100.79.154.94:3000', '_blank');
 	}
 
 	function navigateToFusion() {
 		void goto('/fusion');
+	}
+
+	function navigateToRTL433() {
+		void goto('/rtl-433');
 	}
 </script>
 
@@ -152,6 +156,20 @@
 			<h2 class="mission-title">GSM Evil</h2>
 			<p class="mission-desc">Cellular Analysis</p>
 		</div>
+		<div
+			class="mission-card mission-rtl433"
+			on:click={navigateToRTL433}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToRTL433()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,12L11,7.5V16.5Z"></path>
+			</svg>
+			<h2 class="mission-title">RTL_433</h2>
+			<p class="mission-desc">Signal Decoder</p>
+		</div>
 
 		<div
 			class="mission-card mission-emitter"
@@ -220,6 +238,7 @@
 		--mission-location: #10b981;
 		--mission-broadcast: #8b5cf6;
 		--mission-gsm: #ff0000;
+		--mission-rtl433: #8b5cf6;
 		--mission-fusion: #68d391;
 
 		/* Text Colors */
@@ -441,6 +460,11 @@
 	.mission-gsm {
 		--mission-color: var(--mission-gsm);
 		--mission-glow: rgba(255, 0, 0, 0.3);
+	}
+
+	.mission-rtl433 {
+		--mission-color: var(--mission-rtl433);
+		--mission-glow: rgba(139, 92, 246, 0.3);
 	}
 
 	.mission-emitter {

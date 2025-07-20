@@ -41,7 +41,7 @@ stop_services() {
     pkill -f "python.*app\.py" 2>/dev/null && success "Backend stopped" || warning "No backend to stop"
     
     # Stop frontend  
-    pkill -f "npm.*start.*3001" 2>/dev/null && success "Frontend stopped" || warning "No frontend to stop"
+    pkill -f "npm.*start.*3000" 2>/dev/null && success "Frontend stopped" || warning "No frontend to stop"
     
     # Wait for processes to fully terminate
     sleep 2
@@ -125,8 +125,8 @@ start_frontend() {
         success "Frontend started (PID: $FRONTEND_PID)"
         
         # Test frontend endpoint
-        if curl -s --connect-timeout 10 http://100.79.154.94:3001 >/dev/null; then
-            success "Frontend responding on http://100.79.154.94:3001"
+        if curl -s --connect-timeout 10 http://100.79.154.94:3000 >/dev/null; then
+            success "Frontend responding on http://100.79.154.94:3000"
         else
             warning "Frontend not yet responding - may still be compiling"
         fi
@@ -149,7 +149,7 @@ health_check() {
     fi
     
     # Frontend accessibility
-    if curl -s http://100.79.154.94:3001 | grep -q "<!DOCTYPE html>"; then
+    if curl -s http://100.79.154.94:3000 | grep -q "<!DOCTYPE html>"; then
         success "Frontend accessibility check passed"
     else
         warning "Frontend accessibility check failed"
@@ -164,7 +164,7 @@ show_status() {
     echo "=================================="
     echo ""
     echo "Backend API:     http://100.79.154.94:5000"
-    echo "Frontend App:    http://100.79.154.94:3001"
+    echo "Frontend App:    http://100.79.154.94:3000"
     echo "Argos Integration: Ready"
     echo ""
     echo "Logs:"
