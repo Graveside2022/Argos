@@ -368,3 +368,8 @@ phase4/backups/
 # Frontend build caches
 hackrf_emitter/frontend/node_modules/.cache/
 hackrf_emitter/frontend/.cache/
+
+# Kismet capture files
+*.kismet
+*.kismet-journal
+*.kismetdb
