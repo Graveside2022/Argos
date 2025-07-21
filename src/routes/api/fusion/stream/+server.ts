@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { wiresharkController } from '$lib/server/wireshark';
-import { getSpectrumAnalyzer } from '$lib/server/gnuradio';
+import { spectrumAnalyzer } from '$lib/server/gnuradio';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const channel = url.searchParams.get('channel') || 'all';
@@ -66,7 +66,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			
 			// Set up GNU Radio listeners if requested
 			if (channel === 'all' || channel === 'gnuradio') {
-				const analyzer = getSpectrumAnalyzer();
+				const analyzer = spectrumAnalyzer;
 				
 				const onSpectrumData = (event: any) => {
 					sendEvent('spectrum_data', { 
@@ -302,10 +302,10 @@ export const GET: RequestHandler = async ({ url }) => {
 	return new Response(stream, {
 		headers: {
 			'Content-Type': 'text/event-stream',
-			'Cache-Control': 'no-cache',
+			'Cache-Control': 'no-cache, no-store, must-revalidate',
 			'Connection': 'keep-alive',
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Headers': 'Cache-Control'
+			'X-Accel-Buffering': 'no',
+			'Access-Control-Allow-Origin': '*'
 		}
 	});
 };

@@ -75,8 +75,32 @@ export const POST: RequestHandler = async ({ request }) => {
       }
     } else if (action === 'stop') {
       try {
-        await execAsync('sudo systemctl stop kismet-auto-wlan1');
-        return json({ success: true, message: 'Kismet stopped successfully' });
+        // First, gracefully stop Kismet process to avoid USB reset
+        console.log('Gracefully stopping Kismet...');
+        
+        // Send SIGTERM to Kismet process directly
+        await execAsync('sudo pkill -TERM kismet');
+        
+        // Wait a moment for graceful shutdown
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Then stop the systemd service (which should already be stopped)
+        try {
+          await execAsync('sudo systemctl stop kismet-auto-wlan1');
+        } catch {
+          // Service might already be stopped, that's ok
+        }
+        
+        // Clean up any stuck monitor interfaces without resetting USB
+        await execAsync(`
+          for iface in wlx*mon kismon*; do
+            if ip link show "$iface" >/dev/null 2>&1; then
+              sudo ip link delete "$iface" 2>/dev/null || true
+            fi
+          done
+        `);
+        
+        return json({ success: true, message: 'Kismet stopped gracefully without network disruption' });
       } catch (error: unknown) {
         return json({ 
           success: false, 

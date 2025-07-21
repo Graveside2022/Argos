@@ -258,43 +258,27 @@ export class KismetProxy {
 	 * Transform raw Kismet device data to our format
 	 */
 	private static transformDevice(raw: KismetDeviceResponse): KismetDevice {
-		const getNestedValue = (obj: KismetDeviceResponse, path: string): unknown => {
-			return path.split('.').reduce((acc: unknown, part: string) => {
-				if (acc && typeof acc === 'object' && part in acc) {
-					return (acc as Record<string, unknown>)[part];
-				}
-				return undefined;
-			}, obj);
-		};
-
-		const type = this.mapDeviceType(getNestedValue(raw, 'kismet.device.base.type') as string);
-		const encryptionBitmask = getNestedValue(raw, 'kismet.device.base.crypt') as number;
-		const manufacturer = getNestedValue(raw, 'kismet.device.base.manuf') as string;
+		// Since the raw data already has the full field names as keys, 
+		// we can access them directly
+		const type = this.mapDeviceType(raw['kismet.device.base.type']);
+		const encryptionString = raw['kismet.device.base.crypt'] as string;
+		const manufacturer = raw['kismet.device.base.manuf'];
+		const signal = raw['kismet.device.base.signal'] as any;
 
 		return {
-			mac: (getNestedValue(raw, 'kismet.device.base.macaddr') as string) || 'Unknown',
-			ssid: getNestedValue(raw, 'kismet.device.base.name') as string,
-			manufacturer:
-				manufacturer ||
-				this.extractManufacturer(
-					(getNestedValue(raw, 'kismet.device.base.macaddr') as string) || ''
-				),
+			mac: raw['kismet.device.base.macaddr'] || 'Unknown',
+			ssid: raw['kismet.device.base.name'] || undefined,
+			manufacturer: manufacturer || 'Unknown',
 			type,
-			channel: getNestedValue(raw, 'kismet.device.base.channel') as number,
-			frequency: getNestedValue(raw, 'kismet.device.base.frequency') as number,
-			signal: getNestedValue(raw, 'kismet.device.base.signal') as number,
-			firstSeen: new Date(
-				(getNestedValue(raw, 'kismet.device.base.first_time') as number) * 1000
-			).toISOString(),
-			lastSeen: new Date(
-				(getNestedValue(raw, 'kismet.device.base.last_time') as number) * 1000
-			).toISOString(),
-			packets: (getNestedValue(raw, 'kismet.device.base.packets.total') as number) || 0,
-			dataPackets: getNestedValue(raw, 'kismet.device.base.packets.data') as number,
-			encryptionType: this.parseEncryption(encryptionBitmask),
-			location: this.extractLocation(
-				getNestedValue(raw, 'kismet.device.base.location') as KismetLocationData
-			)
+			channel: parseInt(raw['kismet.device.base.channel'] as string) || 0,
+			frequency: raw['kismet.device.base.frequency'] || 0,
+			signal: signal?.['kismet.common.signal.last_signal'] || -100,
+			firstSeen: this.convertTimestamp(raw['kismet.device.base.first_time']),
+			lastSeen: this.convertTimestamp(raw['kismet.device.base.last_time']),
+			packets: raw['kismet.device.base.packets.total'] || 0,
+			dataPackets: raw['kismet.device.base.packets.data'] || 0,
+			encryptionType: this.parseEncryptionString(encryptionString),
+			location: this.extractLocationFromRaw(raw)
 		};
 	}
 
@@ -312,20 +296,16 @@ export class KismetProxy {
 	}
 
 	/**
-	 * Parse encryption bitmask to array of encryption types
+	 * Parse encryption string to array of encryption types
 	 */
-	private static parseEncryption(bitmask: number | undefined): string[] {
-		if (!bitmask) return ['Open'];
-
-		const encryption: string[] = [];
-		// Kismet encryption flags (simplified)
-		if (bitmask & 0x00000001) encryption.push('WEP');
-		if (bitmask & 0x00000002) encryption.push('WPA');
-		if (bitmask & 0x00000004) encryption.push('WPA2');
-		if (bitmask & 0x00000008) encryption.push('WPA3');
-		if (bitmask & 0x00000010) encryption.push('WPS');
-
-		return encryption.length > 0 ? encryption : ['Unknown'];
+	private static parseEncryptionString(encryptionStr: string | undefined): string[] {
+		if (!encryptionStr || encryptionStr === 'Open') return ['Open'];
+		
+		// Split the encryption string and clean up
+		const parts = encryptionStr.split(' ').filter(p => p.length > 0);
+		const uniqueParts = [...new Set(parts)];
+		
+		return uniqueParts.length > 0 ? uniqueParts : ['Unknown'];
 	}
 
 	/**
@@ -339,18 +319,44 @@ export class KismetProxy {
 	}
 
 	/**
-	 * Extract location data
+	 * Extract location data from raw device
 	 */
-	private static extractLocation(
-		locationData: KismetLocationData | undefined
+	private static extractLocationFromRaw(
+		raw: KismetDeviceResponse
 	): KismetDevice['location'] | undefined {
-		if (!locationData) return undefined;
+		// Kismet may store location in different ways
+		const location = raw['kismet.device.base.location'] as any;
+		
+		if (!location || location === 0) return undefined;
+		
+		if (typeof location === 'object') {
+			return {
+				lat: location.lat || location['kismet.common.location.lat'],
+				lon: location.lon || location['kismet.common.location.lon'],
+				alt: location.alt || location['kismet.common.location.alt']
+			};
+		}
+		
+		return undefined;
+	}
 
-		return {
-			lat: locationData.lat,
-			lon: locationData.lon,
-			alt: locationData.alt
-		};
+	/**
+	 * Convert Kismet timestamp to ISO string
+	 */
+	private static convertTimestamp(timestamp: number | undefined): string {
+		if (!timestamp || timestamp === 0) {
+			return new Date().toISOString();
+		}
+		
+		// Kismet timestamps are in seconds, not milliseconds
+		const date = new Date(timestamp * 1000);
+		
+		// Check if date is valid
+		if (isNaN(date.getTime())) {
+			return new Date().toISOString();
+		}
+		
+		return date.toISOString();
 	}
 
 	/**

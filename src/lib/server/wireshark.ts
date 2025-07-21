@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { MockPacketGenerator } from './mock_packet_generator';
 
 export interface NetworkPacket {
 	id: string;
@@ -28,8 +27,6 @@ export class WiresharkController extends EventEmitter {
 	private startTime: Date | null = null;
 	private lastPacketTime: Date | null = null;
 	private packetsPerSecond = 0;
-	private mockGenerator: MockPacketGenerator | null = null;
-	private useMockMode = false;
 	
 	constructor(networkInterface: string = 'eth0') {
 		super();
@@ -42,21 +39,13 @@ export class WiresharkController extends EventEmitter {
 		}
 		
 		try {
-			// First try to use real packet capture
-			const canCapture = await this.tryRealCapture();
-			
-			if (!canCapture) {
-				// Fall back to mock mode
-				console.log('⚠️ Real packet capture not available, using mock mode');
-				console.log('ℹ️ To enable real packet capture:');
-				console.log('   1. Run: sudo setcap cap_net_raw,cap_net_admin=eip $(which tshark)');
-				console.log('   2. Or add user to wireshark group: sudo usermod -a -G wireshark $USER');
-				console.log('   3. Or run the server with sudo (not recommended)');
-				
-				this.startMockMode();
-			}
+			console.log('Starting Wireshark capture...');
+			// Try to use real packet capture
+			await this.tryRealCapture();
+			console.log('Wireshark capture started');
 			
 		} catch (error) {
+			console.error('Wireshark start error:', error);
 			this.isRunning = false;
 			throw new Error(`Failed to start Wireshark: ${error.message}`);
 		}
@@ -117,13 +106,12 @@ export class WiresharkController extends EventEmitter {
 			this.startTime = new Date();
 			this.packetCount = 0;
 			this.isRunning = true;
-			this.useMockMode = false;
 			
 			this.setupPacketStream();
 			this.setupProcessHandlers();
 			
-			console.log(`✅ Wireshark started on interface ${this.interface} (real capture mode)`);
-			this.emit('started', { interface: this.interface, mode: 'real' });
+			console.log(`✅ Wireshark started on interface ${this.interface}`);
+			this.emit('started', { interface: this.interface });
 			
 			return true;
 			
@@ -134,42 +122,10 @@ export class WiresharkController extends EventEmitter {
 				this.process = null;
 			}
 			
-			console.log(`Failed to start real capture: ${error.message}`);
-			return false;
+			throw error;
 		}
 	}
 	
-	private startMockMode(): void {
-		this.useMockMode = true;
-		this.isRunning = true;
-		this.startTime = new Date();
-		this.packetCount = 0;
-		
-		// Create mock packet generator
-		this.mockGenerator = new MockPacketGenerator();
-		
-		// Start generating packets
-		this.mockGenerator.start((packet) => {
-			this.packetCount++;
-			this.lastPacketTime = new Date();
-			this.updatePacketRate();
-			this.emit('packet', packet);
-			
-			// Emit stats every 10 packets
-			if (this.packetCount % 10 === 0) {
-				const stats = this.mockGenerator!.getStats();
-				this.emit('stats', {
-					interface: this.interface,
-					packets: stats.packets,
-					rate: stats.rate,
-					uptime: stats.uptime
-				});
-			}
-		}, 5); // 5 packets per second average
-		
-		console.log(`📦 Wireshark started on interface ${this.interface} (mock mode)`);
-		this.emit('started', { interface: this.interface, mode: 'mock' });
-	}
 	
 	async stop(): Promise<void> {
 		if (!this.isRunning) {
@@ -177,11 +133,7 @@ export class WiresharkController extends EventEmitter {
 		}
 		
 		try {
-			if (this.useMockMode && this.mockGenerator) {
-				// Stop mock generator
-				this.mockGenerator.stop();
-				this.mockGenerator = null;
-			} else if (this.process) {
+			if (this.process) {
 				// Stop real process
 				this.process.kill('SIGTERM');
 				this.process = null;
@@ -189,7 +141,6 @@ export class WiresharkController extends EventEmitter {
 			
 			this.isRunning = false;
 			this.startTime = null;
-			this.useMockMode = false;
 			
 			console.log('Wireshark stopped');
 			this.emit('stopped');
@@ -225,6 +176,8 @@ export class WiresharkController extends EventEmitter {
 			let toolFound = false;
 			let currentTool = '';
 			
+			console.log('Checking for packet capture tools...');
+			
 			const checkNext = (index: number) => {
 				if (index >= tools.length) {
 					reject(new Error('No packet capture tool found. Please install tshark, tcpdump, or dumpcap.'));
@@ -232,19 +185,31 @@ export class WiresharkController extends EventEmitter {
 				}
 				
 				currentTool = tools[index];
+				console.log(`Checking for ${currentTool}...`);
 				const checkProcess = spawn('which', [currentTool]);
 				
+				// Add timeout to prevent hanging
+				const timeout = setTimeout(() => {
+					checkProcess.kill();
+					console.log(`Check for ${currentTool} timed out`);
+					checkNext(index + 1);
+				}, 2000);
+				
 				checkProcess.on('close', (code) => {
+					clearTimeout(timeout);
 					if (code === 0) {
 						console.log(`Found packet capture tool: ${currentTool}`);
 						toolFound = true;
 						resolve();
 					} else {
+						console.log(`${currentTool} not found`);
 						checkNext(index + 1);
 					}
 				});
 				
-				checkProcess.on('error', () => {
+				checkProcess.on('error', (err) => {
+					clearTimeout(timeout);
+					console.log(`Error checking ${currentTool}:`, err.message);
 					checkNext(index + 1);
 				});
 			};
@@ -493,7 +458,7 @@ export class WiresharkController extends EventEmitter {
 	}
 	
 	private async restartCapture(): Promise<void> {
-		if (!this.isRunning || this.useMockMode) return;
+		if (!this.isRunning) return;
 		
 		try {
 			// Configure tshark arguments for JSON output with continuous capture

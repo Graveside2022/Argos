@@ -4,7 +4,7 @@ import { KismetAPIClient } from './api_client';
 import { DeviceTracker } from './device_tracker';
 import { SecurityAnalyzer } from './security_analyzer';
 import { DeviceIntelligence } from './device_intelligence';
-import { FusionCorrelationEngine } from '../fusion/correlation_engine';
+// import { FusionCorrelationEngine } from '../fusion/correlation_engine'; // Removed - file doesn't exist
 import { logInfo, logError, logWarn, logDebug } from '$lib/utils/logger';
 import type { WiFiDevice, KismetStatus, KismetConfig, MonitorInterface } from './types';
 
@@ -17,7 +17,7 @@ export class KismetController extends EventEmitter {
     private deviceTracker: DeviceTracker;
     private securityAnalyzer: SecurityAnalyzer;
     private deviceIntelligence: DeviceIntelligence;
-    private correlationEngine: FusionCorrelationEngine;
+    // private correlationEngine: FusionCorrelationEngine; // Removed
     
     private kismetProcess: ChildProcess | null = null;
     private isRunning = false;
@@ -62,7 +62,7 @@ export class KismetController extends EventEmitter {
         this.deviceTracker = new DeviceTracker(this.config);
         this.securityAnalyzer = new SecurityAnalyzer();
         this.deviceIntelligence = new DeviceIntelligence();
-        this.correlationEngine = new FusionCorrelationEngine();
+        // this.correlationEngine = new FusionCorrelationEngine(); // Removed
         
         this.setupEventHandlers();
     }
@@ -211,7 +211,8 @@ export class KismetController extends EventEmitter {
      * Get cross-domain correlations
      */
     async getCorrelations() {
-        return await this.correlationEngine.getActiveCorrelations();
+        // return await this.correlationEngine.getActiveCorrelations(); // Removed
+        return [];
     }
 
     /**
@@ -264,19 +265,31 @@ export class KismetController extends EventEmitter {
         try {
             logInfo(`Disabling monitor mode on ${this.currentInterface}...`);
             
-            // Bring interface down
-            await this.executeCommand(`sudo ip link set ${this.currentInterface} down`);
+            // Skip interface manipulation if it's a USB device to prevent SSH drops
+            const isUSBDevice = this.currentInterface.startsWith('wlx');
             
-            // Set managed mode
-            await this.executeCommand(`sudo iw dev ${this.currentInterface} set type managed`);
-            
-            // Bring interface up
-            await this.executeCommand(`sudo ip link set ${this.currentInterface} up`);
-            
-            this.currentInterface = null;
-            this.monitorInterfaces = [];
-            
-            logInfo('Monitor mode disabled');
+            if (isUSBDevice) {
+                logInfo(`Skipping interface reset for USB device ${this.currentInterface} to prevent network disruption`);
+                // Just clear the tracking variables without touching the interface
+                this.currentInterface = null;
+                this.monitorInterfaces = [];
+                logInfo('Monitor mode tracking cleared (interface left in current state)');
+            } else {
+                // Only manipulate non-USB interfaces
+                // Bring interface down
+                await this.executeCommand(`sudo ip link set ${this.currentInterface} down`);
+                
+                // Set managed mode
+                await this.executeCommand(`sudo iw dev ${this.currentInterface} set type managed`);
+                
+                // Bring interface up
+                await this.executeCommand(`sudo ip link set ${this.currentInterface} up`);
+                
+                this.currentInterface = null;
+                this.monitorInterfaces = [];
+                
+                logInfo('Monitor mode disabled');
+            }
             
         } catch (error) {
             logError('Failed to disable monitor mode', { error: error.message });
@@ -430,10 +443,10 @@ export class KismetController extends EventEmitter {
         });
         
         // Correlation events
-        this.correlationEngine.on('correlation_found', (correlation) => {
-            this.emit('correlation_found', correlation);
-            this.metrics.correlationsFound++;
-        });
+        // this.correlationEngine.on('correlation_found', (correlation) => { // Removed
+        //     this.emit('correlation_found', correlation);
+        //     this.metrics.correlationsFound++;
+        // });
         
         // API client events
         this.apiClient.on('packet_received', (packet) => {
@@ -458,7 +471,7 @@ export class KismetController extends EventEmitter {
             try {
                 await this.deviceTracker.updateDevices();
                 await this.securityAnalyzer.performAnalysis();
-                await this.correlationEngine.analyzeCorrelations();
+                // await this.correlationEngine.analyzeCorrelations(); // Removed
             } catch (error) {
                 logError('Error in periodic device update', { error: error.message });
             }

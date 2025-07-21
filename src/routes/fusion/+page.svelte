@@ -669,6 +669,18 @@
 		<div class="max-w-7xl mx-auto px-6 py-6">
 			<div class="flex items-center justify-between">
 				<div class="flex items-center space-x-4">
+					<!-- Back to Console Button -->
+					<a 
+						href="/" 
+						class="flex items-center space-x-2 px-4 py-2 rounded-lg glass-effect hover:bg-white/10 transition-all duration-200 text-text-secondary hover:text-text-primary"
+						title="Back to Console"
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+						</svg>
+						<span class="font-medium">Console</span>
+					</a>
+					
 					<div class="w-12 h-12 rounded-xl bg-accent-primary flex items-center justify-center">
 						<svg class="w-7 h-7 text-black" fill="currentColor" viewBox="0 0 24 24">
 							<path d="M12 2L2 7v10c0 5.55 3.84 9.739 9 11 5.16-1.261 9-5.45 9-11V7l-10-5z"/>
