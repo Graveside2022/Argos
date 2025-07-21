@@ -358,3 +358,13 @@ SECURITY.md
 # Large data files
 map-data/*.csv
 map-data/cell_towers_*.csv
+data/celltowers/towers.db
+docker-images/openwebrx-hackrf-only-v2.tar
+
+# Signal caches and backups
+hackrf_emitter/backend/signal_cache/
+phase4/backups/
+
+# Frontend build caches
+hackrf_emitter/frontend/node_modules/.cache/
+hackrf_emitter/frontend/.cache/

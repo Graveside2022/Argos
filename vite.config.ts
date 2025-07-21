@@ -23,12 +23,20 @@ export default defineConfig({
 		host: '0.0.0.0',
 		hmr: {
 			timeout: 60000,
-			overlay: false
+			overlay: false,
+			// Disable HMR for specific paths that might be causing issues
+			protocol: 'ws',
+			host: 'localhost'
 		},
 		// Reduce module runner instability
 		middlewareMode: false,
 		fs: {
 			strict: false
+		},
+		// Add watch options to prevent false positive file changes
+		watch: {
+			// Ignore files that might be changing
+			ignored: ['**/node_modules/**', '**/.git/**', '**/logs/**', '**/*.log', '**/*.kismet']
 		}
 	},
 	build: {

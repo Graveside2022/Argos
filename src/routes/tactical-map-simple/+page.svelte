@@ -5,7 +5,9 @@
 	import { SignalAggregator } from './SignalAggregator';
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
-	import SimpleRSSIButton from '$lib/components/map/SimpleRSSIButton.svelte';
+	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
+	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
+	import KismetDashboardOverlay from '$lib/components/map/KismetDashboardOverlay.svelte';
 
 	// Define GPS API response interfaces
 	interface GPSPositionData {
@@ -211,10 +213,6 @@
 	let systemInfo: SystemInfo | null = null;
 	let _systemInfoInterval: NodeJS.Timeout | null = null;
 
-	// RSSI Localization state
-	let rssiEnabled = false;
-	let selectedRSSIDevice: string | null = null;
-
 	// Signal storage
 	const signals = new Map<string, SimplifiedSignal>();
 	const signalMarkers = new Map<string, LeafletCircleMarker>();
@@ -227,6 +225,17 @@
 	let kismetDeviceCount = 0; // Reactive counter for Kismet devices
 	let whitelistedMACs = new Set<string>(); // Store whitelisted MAC addresses
 	let whitelistedDeviceCount = 0; // Reactive counter for whitelisted devices
+	
+	// Kismet Dashboard state
+	let showKismetDashboard = false;
+	
+	// Function to persist dashboard state
+	function setDashboardState(isOpen: boolean) {
+		showKismetDashboard = isOpen;
+		if (browser) {
+			sessionStorage.setItem('kismetDashboardOpen', String(isOpen));
+		}
+	}
 
 	// Signal strength distribution
 	let signalDistribution = {
@@ -1231,9 +1240,9 @@
 							{
 								icon: L.divIcon({
 									html: deviceIconSVG,
-									iconSize: rssiEnabled && selectedRSSIDevice === device.macaddr ? [50, 50] : [40, 40],
-									iconAnchor: rssiEnabled && selectedRSSIDevice === device.macaddr ? [25, 25] : [20, 20],
-									className: rssiEnabled && selectedRSSIDevice === device.macaddr ? 'kismet-marker selected-rssi' : 'kismet-marker'
+									iconSize: [40, 40],
+									iconAnchor: [20, 20],
+									className: 'kismet-marker'
 								})
 							}
 						);
@@ -1296,19 +1305,6 @@
 							if (marker) {
 								marker.openPopup();
 							}
-							
-							// RSSI device selection
-							if (rssiEnabled) {
-								if (selectedRSSIDevice === device.macaddr) {
-									selectedRSSIDevice = null;
-									console.log('RSSI: Deselected device');
-								} else {
-									selectedRSSIDevice = device.macaddr;
-									console.log('RSSI: Selected device', device.macaddr);
-								}
-								// Update visual feedback
-								void fetchKismetDevices();
-							}
 						});
 
 						if (map) {
@@ -1322,13 +1318,12 @@
 						const deviceIconSVG = getDeviceIconSVG(device, iconColor);
 
 						if (marker) {
-							const isSelected = rssiEnabled && selectedRSSIDevice === device.macaddr;
 							marker.setIcon(
 								L.divIcon({
 									html: deviceIconSVG,
-									iconSize: isSelected ? [40, 40] : [30, 30],
-									iconAnchor: isSelected ? [20, 20] : [15, 15],
-									className: isSelected ? 'kismet-marker selected-rssi' : 'kismet-marker'
+									iconSize: [30, 30],
+									iconAnchor: [15, 15],
+									className: 'kismet-marker'
 								})
 							);
 							markersUpdated++;
@@ -1763,6 +1758,12 @@
 		const leafletModule = await import('leaflet');
 		L = leafletModule.default as unknown as LeafletLibrary;
 		await import('leaflet/dist/leaflet.css');
+		
+		// Restore dashboard state from sessionStorage
+		const savedDashboardState = sessionStorage.getItem('kismetDashboardOpen');
+		if (savedDashboardState === 'true') {
+			showKismetDashboard = true;
+		}
 
 		// Start GPS updates (map will initialize after GPS fix)
 		void updateGPSPosition();
@@ -1920,14 +1921,29 @@
 			</span>
 		</div>
 
-		<!-- Simple RSSI Toggle Button -->
-		<SimpleRSSIButton 
-			{rssiEnabled}
+		<!-- AirSignal RF Detection Button -->
+		<AirSignalRFButton 
+			enabled={isSearching}
 			onToggle={(enabled) => {
-				rssiEnabled = enabled;
-				console.log('RSSI Localization:', enabled ? 'Enabled' : 'Disabled');
-				if (!enabled) {
-					selectedRSSIDevice = null;
+				if (enabled) {
+					isSearching = true;
+					// Subscribe to spectrum data if not already
+					if (!spectrumUnsubscribe) {
+						spectrumUnsubscribe = spectrumData.subscribe((data) => {
+							if (data && isSearching) {
+								aggregator.addSpectrumData(data);
+							}
+						});
+					}
+					console.log('AirSignal RF Detection: Enabled');
+				} else {
+					isSearching = false;
+					// Unsubscribe from spectrum data
+					if (spectrumUnsubscribe) {
+						spectrumUnsubscribe();
+						spectrumUnsubscribe = null;
+					}
+					console.log('AirSignal RF Detection: Disabled');
 				}
 			}}
 		/>
@@ -1965,6 +1981,11 @@
 			>
 				Stop
 			</button>
+			<!-- Kismet Dashboard Button -->
+			<KismetDashboardButton 
+				onClick={() => setDashboardState(true)}
+				deviceCount={kismetDeviceCount}
+			/>
 		</div>
 
 		<div class="footer-divider"></div>
@@ -2276,6 +2297,12 @@
 			View Spectrum
 		</button>
 	</div>
+	
+	<!-- Kismet Dashboard Overlay -->
+	<KismetDashboardOverlay 
+		isOpen={showKismetDashboard}
+		onClose={() => setDashboardState(false)}
+	/>
 </div>
 
 <style>
@@ -3098,12 +3125,6 @@
 
 	:global(.kismet-marker svg) {
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-	}
-
-	/* Selected RSSI device */
-	:global(.kismet-marker.selected-rssi svg) {
-		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-		animation: pulse-glow 2s ease-in-out infinite;
 	}
 
 	@keyframes pulse-glow {

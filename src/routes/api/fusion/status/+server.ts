@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { wiresharkController } from '$lib/server/wireshark';
-import { getSpectrumAnalyzer } from '$lib/server/gnuradio/spectrum_analyzer';
+import { spectrumAnalyzer } from '$lib/server/gnuradio';
 import { fusionKismetController } from '$lib/server/kismet/fusion_controller';
 import type { RequestHandler } from './$types';
 
@@ -10,8 +10,7 @@ export const GET: RequestHandler = async () => {
 		const wiresharkStatus = wiresharkController.getStatus();
 		
 		// Get GNU Radio status
-		const gnuRadioAnalyzer = getSpectrumAnalyzer();
-		const gnuradioStatus = gnuRadioAnalyzer.getStatus();
+		const gnuradioStatus = spectrumAnalyzer.getStatus();
 		
 		// Get Kismet status
 		const kismetStatus = fusionKismetController.getStatus();

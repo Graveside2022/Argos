@@ -1,7 +1,28 @@
 import { writable, derived } from 'svelte/store';
-import type { NetworkPacket, AnalyzedPacket, SecurityAlert } from '$lib/shared/packetAnalysis';
-export type { NetworkPacket, AnalyzedPacket, SecurityAlert } from '$lib/shared/packetAnalysis';
-import { analyzePacket as analyzePacketShared } from '$lib/shared/packetAnalysis';
+import type { NetworkPacket } from '$lib/server/wireshark';
+
+// Enhanced packet interface with analysis fields
+export interface AnalyzedPacket extends NetworkPacket {
+	analysis: {
+		isSuspicious: boolean;
+		suspicionReasons: string[];
+		category: 'normal' | 'suspicious' | 'malicious' | 'unknown';
+		tags: string[];
+		severity: number; // 0-10 scale
+	};
+	flaggedForReview?: boolean;
+}
+
+// Security alert interface
+export interface SecurityAlert {
+	id: string;
+	timestamp: Date;
+	severity: 'low' | 'medium' | 'high' | 'critical';
+	type: string;
+	message: string;
+	relatedPackets: string[];
+	resolved: boolean;
+}
 
 // Protocol statistics
 export interface ProtocolStats {
@@ -145,8 +166,75 @@ export const suspiciousActivity = derived(
 	}
 );
 
-// Re-export the shared analyzePacket function
-export const analyzePacket = analyzePacketShared;
+// Function to analyze a packet
+export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
+	const analysis = {
+		isSuspicious: false,
+		suspicionReasons: [] as string[],
+		category: 'normal' as const,
+		tags: [] as string[],
+		severity: 0
+	};
+	
+	// Check for suspicious ports
+	const portMatch = packet.info.match(/port (\d+)/gi);
+	if (portMatch) {
+		portMatch.forEach(match => {
+			const port = parseInt(match.replace(/port /i, ''));
+			if ([135, 139, 445, 1433, 3306, 5432, 6379, 27017].includes(port)) {
+				analysis.isSuspicious = true;
+				analysis.suspicionReasons.push(`Suspicious port ${port} detected`);
+				analysis.severity = Math.max(analysis.severity, 6);
+				analysis.tags.push('suspicious-port');
+			}
+		});
+	}
+	
+	// Check for scanning patterns
+	if (packet.protocol === 'TCP' && packet.info.includes('SYN') && !packet.info.includes('ACK')) {
+		analysis.tags.push('syn-scan');
+		analysis.severity = Math.max(analysis.severity, 3);
+	}
+	
+	// Check for potential malicious IPs (simplified - in production use threat feeds)
+	const suspiciousIPs = ['10.0.0.1', '192.168.1.1']; // Example only
+	if (suspiciousIPs.includes(packet.src_ip)) {
+		analysis.isSuspicious = true;
+		analysis.suspicionReasons.push('Traffic from suspicious IP');
+		analysis.severity = Math.max(analysis.severity, 7);
+	}
+	
+	// Check for unusual protocols
+	const unusualProtocols = ['ICMP', 'GRE', 'ESP'];
+	if (unusualProtocols.includes(packet.protocol)) {
+		analysis.tags.push('unusual-protocol');
+		analysis.severity = Math.max(analysis.severity, 2);
+	}
+	
+	// Check packet size anomalies
+	if (packet.length > 1500) {
+		analysis.tags.push('jumbo-frame');
+		analysis.severity = Math.max(analysis.severity, 1);
+	}
+	if (packet.length < 20) {
+		analysis.tags.push('tiny-packet');
+		analysis.severity = Math.max(analysis.severity, 2);
+	}
+	
+	// Determine category based on severity
+	if (analysis.severity >= 7) {
+		analysis.category = 'malicious';
+	} else if (analysis.severity >= 4 || analysis.isSuspicious) {
+		analysis.category = 'suspicious';
+	} else if (analysis.severity > 0) {
+		analysis.category = 'unknown';
+	}
+	
+	return {
+		...packet,
+		analysis
+	};
+}
 
 // Function to add and analyze a new packet
 export function addPacket(packet: NetworkPacket) {

@@ -51,7 +51,10 @@
 		window.addEventListener('beforeunload', (event) => {
 			// Check if the navigation is coming from our page (not the iframe)
 			if (event.target === window && kismetStatus === 'running') {
-				console.warn('Navigation detected while Kismet is running');
+				console.error('BLOCKING NAVIGATION while Kismet is running');
+				event.preventDefault();
+				event.returnValue = 'Are you sure you want to leave?';
+				return 'Are you sure you want to leave?';
 			}
 		});
 
@@ -61,11 +64,11 @@
 		});
 		
 		// More aggressive debugging
-		const originalLocation = window.location.href;
+		const originalLocationHref = window.location.href;
 		let checkInterval = setInterval(() => {
-			if (window.location.href !== originalLocation) {
+			if (window.location.href !== originalLocationHref) {
 				console.error('LOCATION CHANGED!', {
-					from: originalLocation,
+					from: originalLocationHref,
 					to: window.location.href,
 					kismetStatus
 				});
@@ -98,6 +101,39 @@
 				return false;
 			}
 		});
+		
+		// Override window.location setters to prevent navigation
+		const originalLocationObj = window.location;
+		const originalHref = window.location.href;
+		
+		// Monitor location.href specifically
+		Object.defineProperty(window.location, 'href', {
+			get() {
+				return originalHref;
+			},
+			set(value) {
+				console.error('BLOCKED: Attempt to set window.location.href to:', value);
+				console.trace('Location.href change stack trace');
+				// Don't actually change it
+				return originalHref;
+			}
+		});
+		
+		// Also monitor location.replace and location.assign
+		const originalReplace = window.location.replace;
+		const originalAssign = window.location.assign;
+		
+		window.location.replace = function(url) {
+			console.error('BLOCKED: location.replace() called with:', url);
+			console.trace('Replace stack trace');
+			// Don't actually navigate
+		};
+		
+		window.location.assign = function(url) {
+			console.error('BLOCKED: location.assign() called with:', url);
+			console.trace('Assign stack trace');
+			// Don't actually navigate
+		};
 		
 		// Monitor iframe src changes
 		let iframeMonitor: ReturnType<typeof setInterval>;
@@ -580,10 +616,12 @@
 		{#if iframeUrl && kismetStatus === 'running'}
 			<!-- Add a key to force recreation if needed -->
 			{#key iframeKey}
+				<!-- Wrapper to isolate iframe -->
+				<div class="w-full h-full" style="position: relative; overflow: hidden;">
 				<iframe
 					bind:this={iframeElement}
 					src={iframeUrl}
-					on:load={(e) => {
+					on:load|preventDefault={(e) => {
 						console.log('Kismet iframe loaded', e);
 						handleIframeLoad();
 						
@@ -633,7 +671,7 @@
 							console.log('Cannot access iframe content (cross-origin)');
 						}
 					}}
-					on:error={(e) => {
+					on:error|preventDefault={(e) => {
 						console.error('Kismet iframe error:', e);
 						handleIframeError();
 					}}
@@ -643,6 +681,7 @@
 					sandbox="allow-same-origin allow-scripts allow-forms"
 					loading="lazy"
 				></iframe>
+				</div>
 			{/key}
 		{/if}
 	</div>
