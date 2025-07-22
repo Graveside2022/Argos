@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import { hackrfAPI } from '$lib/services/hackrf/api';
 	import { spectrumData } from '$lib/stores/hackrf';
 	import { SignalAggregator } from './SignalAggregator';
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
 	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
+	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
 	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
 	import KismetDashboardOverlay from '$lib/components/map/KismetDashboardOverlay.svelte';
 
@@ -229,11 +231,22 @@
 	// Kismet Dashboard state
 	let showKismetDashboard = false;
 	
+	// AirSignal Overlay state
+	let showAirSignalOverlay = false;
+	
 	// Function to persist dashboard state
 	function setDashboardState(isOpen: boolean) {
 		showKismetDashboard = isOpen;
 		if (browser) {
 			sessionStorage.setItem('kismetDashboardOpen', String(isOpen));
+		}
+	}
+	
+	// Function to persist AirSignal overlay state
+	function setAirSignalOverlayState(isOpen: boolean) {
+		showAirSignalOverlay = isOpen;
+		if (browser) {
+			sessionStorage.setItem('airSignalOverlayOpen', String(isOpen));
 		}
 	}
 
@@ -1764,6 +1777,12 @@
 		if (savedDashboardState === 'true') {
 			showKismetDashboard = true;
 		}
+		
+		// Restore AirSignal overlay state from sessionStorage
+		const savedAirSignalState = sessionStorage.getItem('airSignalOverlayOpen');
+		if (savedAirSignalState === 'true') {
+			showAirSignalOverlay = true;
+		}
 
 		// Start GPS updates (map will initialize after GPS fix)
 		void updateGPSPosition();
@@ -1856,6 +1875,9 @@
 				</svg>
 				Back to Console
 			</button>
+			<AirSignalRFButton 
+				onClick={() => setAirSignalOverlayState(true)}
+			/>
 		</div>
 		<div class="status">
 			<span class="status-item">
@@ -1921,32 +1943,6 @@
 			</span>
 		</div>
 
-		<!-- AirSignal RF Detection Button -->
-		<AirSignalRFButton 
-			enabled={isSearching}
-			onToggle={(enabled) => {
-				if (enabled) {
-					isSearching = true;
-					// Subscribe to spectrum data if not already
-					if (!spectrumUnsubscribe) {
-						spectrumUnsubscribe = spectrumData.subscribe((data) => {
-							if (data && isSearching) {
-								aggregator.addSpectrumData(data);
-							}
-						});
-					}
-					console.log('AirSignal RF Detection: Enabled');
-				} else {
-					isSearching = false;
-					// Unsubscribe from spectrum data
-					if (spectrumUnsubscribe) {
-						spectrumUnsubscribe();
-						spectrumUnsubscribe = null;
-					}
-					console.log('AirSignal RF Detection: Disabled');
-				}
-			}}
-		/>
 	</div>
 
 	<!-- Signal Info Bar (Now Kismet Data) -->
@@ -2302,6 +2298,12 @@
 	<KismetDashboardOverlay 
 		isOpen={showKismetDashboard}
 		onClose={() => setDashboardState(false)}
+	/>
+	
+	<!-- AirSignal Overlay -->
+	<AirSignalOverlay 
+		isOpen={showAirSignalOverlay}
+		onClose={() => setAirSignalOverlayState(false)}
 	/>
 </div>
 
