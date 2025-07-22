@@ -68,8 +68,12 @@ export class SweepManager extends EventEmitter {
 			});
 		}, 30000); // Check every 30 seconds instead of 5
 
-		// Perform startup validation
-		this._performStartupValidation();
+		// Perform startup validation asynchronously
+		this._performStartupValidation().catch((error) => {
+			logError('Error during startup validation', {
+				error: error instanceof Error ? error.message : String(error)
+			});
+		});
 	}
 
 	/**
@@ -82,14 +86,18 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Perform startup state validation
 	 */
-	private _performStartupValidation(): void {
+	private async _performStartupValidation(): Promise<void> {
 		logInfo('🔍 SweepManager: Performing startup state validation...');
 
 		// Reset all state
 		this.isRunning = false;
+		this.status = { state: SystemStatus.Idle };
+
+		// Clean up any stale processes before resetting services
+		await this._forceCleanupExistingProcesses();
 
 		// Reset modular services
-		this.processManager.cleanup();
+		await this.processManager.cleanup();
 		this.frequencyCycler.resetCycling();
 		this.bufferManager.clearBuffer();
 		this.errorTracker.resetErrorTracking();
@@ -529,13 +537,6 @@ export class SweepManager extends EventEmitter {
 			logInfo(`🚀 Starting hackrf_sweep for ${centerFreqMHz} MHz`);
 			logInfo(`📋 Command: hackrf_sweep ${args.join(' ')}`);
 
-			// Spawn process using ProcessManager
-			const _processState = await this.processManager.spawnSweepProcess(args, {
-				detached: true,
-				stdio: ['ignore', 'pipe', 'pipe'],
-				startupTimeoutMs: 5000
-			});
-
 			// Set up data processing using BufferManager
 			this.bufferManager.clearBuffer(); // Clear any old data
 
@@ -567,7 +568,7 @@ export class SweepManager extends EventEmitter {
 				}
 			};
 
-			// Set up process event handlers
+			// Set up process event handlers BEFORE spawning
 			this.processManager.setEventHandlers({
 				onStdout: handleStdout,
 				onStderr: handleStderr,
@@ -576,6 +577,13 @@ export class SweepManager extends EventEmitter {
 					this._handleProcessExit(code, signal);
 				}
 			});
+
+			// Spawn process using ProcessManager (handlers will be attached automatically)
+			const _processState = await this.processManager.spawnSweepProcess(args, {
+				detached: true,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				startupTimeoutMs: 5000
+			})
 
 			logInfo('✅ HackRF sweep process started successfully', {
 				centerFreq: `${frequency.value} ${frequency.unit}`,

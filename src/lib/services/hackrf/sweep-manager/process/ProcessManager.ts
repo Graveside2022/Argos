@@ -21,6 +21,11 @@ export interface ProcessConfig {
 export class ProcessManager {
 	private processRegistry = new Map<number, ChildProcess>();
 	private processMonitorInterval: ReturnType<typeof setInterval> | null = null;
+	private eventHandlers: {
+		onStdout?: (data: Buffer) => void;
+		onStderr?: (data: Buffer) => void;
+		onExit?: (code: number | null, signal: string | null) => void;
+	} = {};
 
 	/**
 	 * Spawn a new HackRF sweep process
@@ -44,6 +49,22 @@ export class ProcessManager {
 				}
 
 				logInfo(`✅ Process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`);
+
+				// Attach event handlers to the process
+				if (sweepProcess.stdout && this.eventHandlers.onStdout) {
+					sweepProcess.stdout.on('data', this.eventHandlers.onStdout);
+					logInfo('Attached stdout handler to process');
+				}
+
+				if (sweepProcess.stderr && this.eventHandlers.onStderr) {
+					sweepProcess.stderr.on('data', this.eventHandlers.onStderr);
+					logInfo('Attached stderr handler to process');
+				}
+
+				if (this.eventHandlers.onExit) {
+					sweepProcess.on('exit', this.eventHandlers.onExit);
+					logInfo('Attached exit handler to process');
+				}
 
 				const processState: ProcessState = {
 					sweepProcess,
@@ -358,6 +379,14 @@ export class ProcessManager {
 	 * Get current process state
 	 */
 	getProcessState(): ProcessState & { isRunning: boolean } {
+		// Clean up dead processes from registry
+		for (const [pid, childProcess] of this.processRegistry) {
+			if (!this.isProcessAlive(pid)) {
+				logWarn(`Process ${pid} is dead, removing from registry`);
+				this.processRegistry.delete(pid);
+			}
+		}
+		
 		const isRunning = this.processRegistry.size > 0;
 		// Get the first process if any exist
 		const firstProcess = this.processRegistry.values().next().value || null;
@@ -380,12 +409,13 @@ export class ProcessManager {
 	/**
 	 * Set event handlers for process monitoring
 	 */
-	setEventHandlers(_handlers: {
+	setEventHandlers(handlers: {
 		onStdout?: (data: Buffer) => void;
 		onStderr?: (data: Buffer) => void;
 		onExit?: (code: number | null, signal: string | null) => void;
 	}): void {
 		// Store handlers for future spawned processes
+		this.eventHandlers = handlers;
 		logInfo('Process event handlers set');
 	}
 
