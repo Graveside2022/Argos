@@ -25,15 +25,27 @@ export const GET: RequestHandler = async () => {
       }
     };
 
-    // Check gr-gsm_livemon (without --collector flag)
+    // Check gr-gsm_livemon (without --collector flag) - but exclude temporary scan processes
     try {
-      const { stdout: grgsmCheck } = await execAsync('ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | head -1');
+      // Look for grgsm_livemon_headless but exclude ones that are part of scanning (they run briefly)
+      // GSM Evil proper runs with specific long-running parameters
+      const { stdout: grgsmCheck } = await execAsync('ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1');
       if (grgsmCheck.trim()) {
         const parts = grgsmCheck.trim().split(/\s+/);
         const pid = parseInt(parts[1]);
         if (!isNaN(pid)) {
-          status.grgsm.running = true;
-          status.grgsm.pid = pid;
+          // Check if this is a long-running process (not a scan)
+          try {
+            const { stdout: pidTime } = await execAsync(`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`);
+            const runtime = parseInt(pidTime.trim()) || 0;
+            // Only consider it "running" if it's been up for more than 10 seconds
+            if (runtime > 10) {
+              status.grgsm.running = true;
+              status.grgsm.pid = pid;
+            }
+          } catch {
+            // Couldn't check runtime, assume it's a scan
+          }
         }
       }
     } catch {

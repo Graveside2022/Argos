@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 const execAsync = promisify(exec);
 
@@ -78,8 +79,21 @@ export const POST: RequestHandler = async ({ request }) => {
         // First, gracefully stop Kismet process to avoid USB reset
         console.log('Gracefully stopping Kismet...');
         
-        // Send SIGTERM to Kismet process directly
-        await execAsync('sudo pkill -TERM kismet');
+        // Send SIGTERM to Kismet process directly - be specific to avoid killing other processes
+        // Only kill the actual kismet binary, not scripts or other processes with kismet in the name
+        try {
+          // First check if kismet is actually running
+          const { stdout: pgrepOut } = await execAsync('pgrep -f "^/usr/bin/kismet"');
+          if (pgrepOut.trim()) {
+            console.log('Found kismet process(es):', pgrepOut.trim());
+            await execAsync('sudo pkill -TERM -f "^/usr/bin/kismet"');
+          } else {
+            console.log('No kismet process found to kill');
+          }
+        } catch (pgrepError) {
+          // pgrep returns exit code 1 if no processes found, that's ok
+          console.log('No kismet process found (pgrep returned no results)');
+        }
         
         // Wait a moment for graceful shutdown
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -92,13 +106,20 @@ export const POST: RequestHandler = async ({ request }) => {
         }
         
         // Clean up any stuck monitor interfaces without resetting USB
-        await execAsync(`
-          for iface in wlx*mon kismon*; do
-            if ip link show "$iface" >/dev/null 2>&1; then
-              sudo ip link delete "$iface" 2>/dev/null || true
-            fi
-          done
-        `);
+        console.log('Cleaning up monitor interfaces...');
+        try {
+          const { stdout: cleanupOut } = await execAsync(`
+            for iface in wlx*mon kismon*; do
+              if ip link show "$iface" >/dev/null 2>&1; then
+                echo "Removing interface: $iface"
+                sudo ip link delete "$iface" 2>/dev/null || true
+              fi
+            done
+          `);
+          if (cleanupOut) console.log('Cleanup output:', cleanupOut);
+        } catch (cleanupError) {
+          console.log('Monitor interface cleanup had issues (non-critical):', cleanupError);
+        }
         
         return json({ success: true, message: 'Kismet stopped gracefully without network disruption' });
       } catch (error: unknown) {

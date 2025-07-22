@@ -12,19 +12,21 @@ sudo pkill -f GsmEvil 2>/dev/null
 sudo fuser -k 80/tcp 2>/dev/null
 sleep 2
 
-# Start GRGSM monitor
-echo "Starting GRGSM monitor on ${FREQ} MHz..."
-sudo grgsm_livemon_headless -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
+# Start GRGSM monitor with USRP B205 Mini support
+echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
+sudo grgsm_livemon_headless --args="type=b200" -s 2e6 -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
 GRGSM_PID=$!
 echo "GRGSM PID: $GRGSM_PID"
 sleep 3
 
-# Create a modified version of GsmEvil.py with IMSI sniffer auto-enabled
-echo "Creating auto-IMSI version..."
+# Create a modified version of GsmEvil.py with IMSI sniffer auto-enabled and CORS support
+echo "Creating auto-IMSI version with CORS support..."
 cd /usr/src/gsmevil2
 sudo cp GsmEvil.py GsmEvil_auto.py
 sudo sed -i 's/imsi_sniffer = "off"/imsi_sniffer = "on"/' GsmEvil_auto.py
 sudo sed -i 's/gsm_sniffer = "off"/gsm_sniffer = "on"/' GsmEvil_auto.py
+# Add CORS support for iframe compatibility
+sudo sed -i 's/socketio = SocketIO(app)/socketio = SocketIO(app, cors_allowed_origins="*")/' GsmEvil_auto.py
 
 # Start GSM Evil with auto-IMSI enabled
 echo "Starting GSM Evil with IMSI sniffer auto-enabled..."

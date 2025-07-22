@@ -1,0 +1,11 @@
+[Unit]
+Description=GSM Evil Socket.IO Patch Service
+Before=gsmevil.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

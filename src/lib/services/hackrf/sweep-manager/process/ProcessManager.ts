@@ -17,6 +17,7 @@ export interface ProcessConfig {
 
 /**
  * Manages HackRF process lifecycle - spawning, monitoring, and cleanup
+ * NO MOCK FUNCTIONALITY - REAL HARDWARE ONLY
  */
 export class ProcessManager {
 	private processRegistry = new Map<number, ChildProcess>();
@@ -28,7 +29,7 @@ export class ProcessManager {
 	} = {};
 
 	/**
-	 * Spawn a new HackRF sweep process
+	 * Spawn a new HackRF sweep process - REAL HARDWARE ONLY
 	 */
 	async spawnSweepProcess(
 		args: string[],
@@ -36,34 +37,88 @@ export class ProcessManager {
 	): Promise<ProcessState> {
 		return new Promise((resolve, reject) => {
 			try {
-				logInfo(`🚀 Spawning hackrf_sweep with args: ${args.join(' ')}`);
+				// Event handlers are set, proceeding with spawn
+				
+				logInfo(`🚀 Spawning real hackrf_sweep with args: ${args.join(' ')}`);
 
-				const sweepProcess = spawn('hackrf_sweep', args, config);
+				// Use unbuffered output for real-time data
+				const modifiedConfig = {
+					...config,
+					env: { 
+						...process.env, 
+						NODE_NO_READLINE: '1',
+						PYTHONUNBUFFERED: '1',
+						FORCE_USRP: '1'  // Force USRP mode since we want to use USRP
+					}
+				};
+				// Use auto_sweep.sh which detects HackRF or USRP B205 Mini
+				const scriptPath = new URL('./auto_sweep.sh', import.meta.url).pathname;
+				
+				// Spawning process with modified config
+				
+				// Use the config as passed, sweep manager now handles detached setting
+				const sweepProcess = spawn(scriptPath, args, modifiedConfig);
 				const sweepProcessPgid = sweepProcess.pid || null;
 				const actualProcessPid = sweepProcess.pid || null;
 				const processStartTime = Date.now();
+
+				// Process spawned with PID: ${actualProcessPid}
 
 				// Register process
 				if (actualProcessPid) {
 					this.processRegistry.set(actualProcessPid, sweepProcess);
 				}
 
-				logInfo(`✅ Process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`);
+				logInfo(`✅ Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`);
 
 				// Attach event handlers to the process
 				if (sweepProcess.stdout && this.eventHandlers.onStdout) {
-					sweepProcess.stdout.on('data', this.eventHandlers.onStdout);
-					logInfo('Attached stdout handler to process');
+					// Attaching stdout handler to process
+					
+					// Store reference to handler for debugging
+					const stdoutHandler = this.eventHandlers.onStdout;
+					// Handler exists, attaching to stdout
+					
+					sweepProcess.stdout.on('data', (data: Buffer) => {
+						const preview = data.toString().substring(0, 100);
+						// Received stdout data: ${data.length} bytes
+						
+						// Data received, forwarding to handler
+						logInfo('ProcessManager received stdout data', { 
+							size: data.length,
+							preview: preview
+						});
+						
+						// Call the handler
+						if (stdoutHandler) {
+							// Calling stdout handler
+							stdoutHandler(data);
+						} else {
+							logError('Stdout handler disappeared unexpectedly');
+						}
+					});
+					logInfo('Attached stdout handler to real process');
+					// Stdout handler attached successfully
+					// Handler attachment complete
+					
+					// Stream event handlers are set automatically by Node.js
+				} else {
+					const error = {
+						hasStdout: !!sweepProcess.stdout,
+						hasHandler: !!this.eventHandlers.onStdout
+					};
+					// Failed to attach stdout handler
+					logError('Failed to attach stdout handler', error);
 				}
 
 				if (sweepProcess.stderr && this.eventHandlers.onStderr) {
 					sweepProcess.stderr.on('data', this.eventHandlers.onStderr);
-					logInfo('Attached stderr handler to process');
+					logInfo('Attached stderr handler to real process');
 				}
 
 				if (this.eventHandlers.onExit) {
 					sweepProcess.on('exit', this.eventHandlers.onExit);
-					logInfo('Attached exit handler to process');
+					logInfo('Attached exit handler to real process');
 				}
 
 				const processState: ProcessState = {
@@ -201,6 +256,26 @@ export class ProcessManager {
 				exec('pkill -9 -f hackrf_info', () => resolve());
 			});
 
+			// Kill any USRP spectrum scan processes
+			await new Promise<void>((resolve) => {
+				exec('pkill -9 -f usrp_spectrum_scan.py', () => resolve());
+			});
+
+			// Kill any Python processes using UHD/USRP
+			await new Promise<void>((resolve) => {
+				exec('pkill -9 -f "python.*usrp"', () => resolve());
+			});
+
+			// Kill any mock sweep processes
+			await new Promise<void>((resolve) => {
+				exec('pkill -9 -f mock_sweep.sh', () => resolve());
+			});
+
+			// Kill any auto_sweep processes
+			await new Promise<void>((resolve) => {
+				exec('pkill -9 -f auto_sweep.sh', () => resolve());
+			});
+
 			// Clear registry
 			this.processRegistry.clear();
 
@@ -214,39 +289,44 @@ export class ProcessManager {
 	}
 
 	/**
-	 * Emergency kill all processes
+	 * Set event handlers for process monitoring
 	 */
-	async emergencyKillAll(): Promise<void> {
-		logWarn('Emergency process kill initiated');
+	setEventHandlers(handlers: {
+		onStdout?: (data: Buffer) => void;
+		onStderr?: (data: Buffer) => void;
+		onExit?: (code: number | null, signal: string | null) => void;
+	}): void {
+		// Store handlers for future spawned processes
+		this.eventHandlers = handlers;
+		logInfo('Process event handlers set for real hardware');
+	}
 
-		// Kill all registered processes
+	/**
+	 * Get current process state
+	 */
+	getProcessState(): ProcessState & { isRunning: boolean } {
+		// Clean up dead processes from registry
 		for (const [pid, childProcess] of this.processRegistry) {
-			try {
-				if (childProcess && !childProcess.killed) {
-					childProcess.kill('SIGKILL');
-				}
-				// Also kill by PID directly
-				try {
-					process.kill(pid, 'SIGKILL');
-					logInfo(`Emergency killed PID: ${pid}`);
-				} catch {
-					logInfo('Process already dead or kill failed');
-				}
-			} catch (e) {
-				logError('Emergency kill failed', { error: e, pid }, 'emergency-kill');
+			if (!this.isProcessAlive(pid)) {
+				logWarn(`Process ${pid} is dead, removing from registry`);
+				this.processRegistry.delete(pid);
 			}
 		}
-
-		// Clear all monitoring
-		if (this.processMonitorInterval) {
-			clearInterval(this.processMonitorInterval);
-			this.processMonitorInterval = null;
-		}
-
-		// Force cleanup all hackrf processes
-		await this.forceCleanupAll();
-
-		logInfo('✅ Emergency process kill completed');
+		
+		const isRunning = this.processRegistry.size > 0;
+		// Get the first process if any exist
+		const firstProcess = this.processRegistry.values().next().value || null;
+		
+		// Store process start time separately from the process object
+		const processStartTime = firstProcess ? Date.now() : null;
+		
+		return {
+			sweepProcess: firstProcess,
+			sweepProcessPgid: firstProcess?.pid || null,
+			actualProcessPid: firstProcess?.pid || null,
+			processStartTime,
+			isRunning
+		};
 	}
 
 	/**
@@ -258,58 +338,6 @@ export class ProcessManager {
 			return true;
 		} catch {
 			return false;
-		}
-	}
-
-	/**
-	 * Start monitoring a process
-	 */
-	startProcessMonitoring(
-		processState: ProcessState,
-		onProcessDeath?: (exitCode: number | null, signal: string | null) => void
-	): void {
-		if (!processState.actualProcessPid) return;
-
-		// Clear any existing monitoring
-		if (this.processMonitorInterval) {
-			clearInterval(this.processMonitorInterval);
-		}
-
-		// Monitor process every 2 seconds
-		this.processMonitorInterval = setInterval(() => {
-			if (!processState.actualProcessPid) return;
-
-			if (!this.isProcessAlive(processState.actualProcessPid)) {
-				logError(
-					'Process monitor: Process no longer exists',
-					{ pid: processState.actualProcessPid },
-					'process-dead'
-				);
-
-				// Remove from registry
-				this.processRegistry.delete(processState.actualProcessPid);
-
-				// Trigger callback if provided
-				if (onProcessDeath) {
-					onProcessDeath(null, 'UNKNOWN');
-				}
-
-				// Clear monitoring
-				if (this.processMonitorInterval) {
-					clearInterval(this.processMonitorInterval);
-					this.processMonitorInterval = null;
-				}
-			}
-		}, 2000);
-	}
-
-	/**
-	 * Stop process monitoring
-	 */
-	stopProcessMonitoring(): void {
-		if (this.processMonitorInterval) {
-			clearInterval(this.processMonitorInterval);
-			this.processMonitorInterval = null;
 		}
 	}
 
@@ -351,79 +379,42 @@ export class ProcessManager {
 	}
 
 	/**
-	 * Check if error is critical startup error
-	 */
-	isCriticalStartupError(message: string): boolean {
-		const criticalErrors = [
-			'No HackRF boards found',
-			'hackrf_open() failed',
-			'Resource busy',
-			'Permission denied',
-			'libusb_open() failed',
-			'USB error',
-			'hackrf_is_streaming() failed',
-			'hackrf_start_rx() failed'
-		];
-
-		return criticalErrors.some((error) => message.toLowerCase().includes(error.toLowerCase()));
-	}
-
-	/**
-	 * Get all registered process PIDs
-	 */
-	getRegisteredProcesses(): number[] {
-		return Array.from(this.processRegistry.keys());
-	}
-
-	/**
-	 * Get current process state
-	 */
-	getProcessState(): ProcessState & { isRunning: boolean } {
-		// Clean up dead processes from registry
-		for (const [pid, childProcess] of this.processRegistry) {
-			if (!this.isProcessAlive(pid)) {
-				logWarn(`Process ${pid} is dead, removing from registry`);
-				this.processRegistry.delete(pid);
-			}
-		}
-		
-		const isRunning = this.processRegistry.size > 0;
-		// Get the first process if any exist
-		const firstProcess = this.processRegistry.values().next().value || null;
-		return {
-			sweepProcess: firstProcess,
-			sweepProcessPgid: firstProcess?.pid ? -firstProcess.pid : null,
-			actualProcessPid: firstProcess?.pid || null,
-			processStartTime: firstProcess ? Date.now() : null,
-			isRunning
-		};
-	}
-
-	/**
 	 * Force kill process immediately
 	 */
 	async forceKillProcess(): Promise<void> {
-		await this.emergencyKillAll();
-	}
+		const processState = this.getProcessState();
+		
+		// Kill all registered processes
+		for (const [pid, childProcess] of this.processRegistry) {
+			try {
+				if (childProcess && !childProcess.killed) {
+					childProcess.kill('SIGKILL');
+				}
+				// Also kill by PID directly
+				try {
+					process.kill(pid, 'SIGKILL');
+					logInfo(`Force killed PID: ${pid}`);
+				} catch {
+					logInfo('Process already dead or kill failed');
+				}
+			} catch (e) {
+				logError('Force kill failed', { error: e, pid }, 'force-kill');
+			}
+		}
 
-	/**
-	 * Set event handlers for process monitoring
-	 */
-	setEventHandlers(handlers: {
-		onStdout?: (data: Buffer) => void;
-		onStderr?: (data: Buffer) => void;
-		onExit?: (code: number | null, signal: string | null) => void;
-	}): void {
-		// Store handlers for future spawned processes
-		this.eventHandlers = handlers;
-		logInfo('Process event handlers set');
+		// Clear registry
+		this.processRegistry.clear();
+
+		// Force cleanup all hackrf processes
+		await this.forceCleanupAll();
+
+		logInfo('✅ Force process kill completed');
 	}
 
 	/**
 	 * Clean up resources
 	 */
 	async cleanup(): Promise<void> {
-		this.stopProcessMonitoring();
-		await this.emergencyKillAll();
+		await this.forceCleanupAll();
 	}
 }

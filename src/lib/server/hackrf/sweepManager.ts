@@ -238,10 +238,19 @@ export class SweepManager extends EventEmitter {
 		frequencies: Array<{ value: number; unit: string }>,
 		cycleTime: number
 	): Promise<boolean> {
-		// Verify service is initialized
+		// Verify service is initialized - wait up to 10 seconds for initialization
 		if (!this.isInitialized) {
-			logWarn('Service not yet initialized');
-			return false;
+			logWarn('Service not yet initialized, waiting...');
+			let waitTime = 0;
+			while (!this.isInitialized && waitTime < 10000) {
+				await new Promise(resolve => setTimeout(resolve, 500));
+				waitTime += 500;
+			}
+			
+			if (!this.isInitialized) {
+				logError('Service failed to initialize within 10 seconds');
+				return false;
+			}
 		}
 
 		// Force cleanup existing processes using process manager
@@ -250,9 +259,20 @@ export class SweepManager extends EventEmitter {
 		// Additional startup delay
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
+		// Check if we think we're running, but verify with actual process state
 		if (this.isRunning) {
-			this._emitError('Sweep is already running', 'state_check');
-			return false;
+			const processState = this.processManager.getProcessState();
+			if (processState.isRunning && processState.actualProcessPid && 
+				this.processManager.isProcessAlive(processState.actualProcessPid)) {
+				this._emitError('Sweep is already running', 'state_check');
+				return false;
+			} else {
+				// State is inconsistent - processes died but we didn't notice
+				logWarn('Detected stale running state, resetting...');
+				this.isRunning = false;
+				this.status = { state: SystemStatus.Idle };
+				this._emitEvent('status', this.status);
+			}
 		}
 
 		if (!frequencies || frequencies.length === 0) {
@@ -269,13 +289,14 @@ export class SweepManager extends EventEmitter {
 				return false;
 			}
 
-			// Check device availability
-			logInfo('🔍 Checking HackRF device availability...');
-			const deviceCheck = await this._testHackrfAvailability();
-			if (!deviceCheck.available) {
-				this._emitError(`HackRF not available: ${deviceCheck.reason}`, 'device_check');
-				return false;
-			}
+			// Force cleanup existing processes first
+			await this._forceCleanupExistingProcesses();
+			
+			// Additional delay for device to become available
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+
+			// Skip device check - auto_sweep.sh will handle device detection (HackRF or USRP)
+			logInfo('🔍 Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...');
 
 			// Initialize cycling using frequency cycler service
 			this.frequencyCycler.initializeCycling({
@@ -523,17 +544,30 @@ export class SweepManager extends EventEmitter {
 			}
 
 			// Prepare arguments
+			// Adjust gain based on frequency range
+			let vgaGain = '20';
+			let lnaGain = '32';
+			
+			// Higher gain for 5GHz as signals are typically weaker
+			if (centerFreqMHz > 5000) {
+				vgaGain = '30';  // Increase VGA gain for 5GHz
+				lnaGain = '40';  // Max LNA gain for 5GHz
+			}
+			
 			const args = [
 				'-f',
 				`${Math.floor(freqMinMHz)}:${Math.ceil(freqMaxMHz)}`,
 				'-g',
-				'20',
+				vgaGain,
 				'-l',
-				'32',
+				lnaGain,
 				'-w',
 				'20000' // 20kHz bin width
 			];
 
+			// Add -n flag to keep same timestamp within a sweep (helps with buffering)
+			args.push('-n');
+			
 			logInfo(`🚀 Starting hackrf_sweep for ${centerFreqMHz} MHz`);
 			logInfo(`📋 Command: hackrf_sweep ${args.join(' ')}`);
 
@@ -542,11 +576,41 @@ export class SweepManager extends EventEmitter {
 
 			// Handle stdout data
 			const handleStdout = (data: Buffer) => {
+				const dataStr = data.toString();
+				console.log('[SWEEP MANAGER] ===== STDOUT HANDLER CALLED =====');
+				console.log('[SWEEP MANAGER] Data size:', data.length);
+				console.log('[SWEEP MANAGER] Data preview:', dataStr.substring(0, 200));
+				console.log('[SWEEP MANAGER] Has SSE emitter:', !!this.sseEmitter);
+				console.log('[SWEEP MANAGER] ===================================');
+				logInfo('📊 SweepManager received stdout data', { 
+					size: data.length, 
+					preview: dataStr.substring(0, 200),
+					hasCommas: dataStr.includes(','),
+					lineCount: dataStr.split('\n').length
+				});
 				this.bufferManager.processDataChunk(data, (parsedLine) => {
+					console.log('[USRP SWEEP] Processing line:', {
+						isValid: parsedLine.isValid,
+						hasData: !!parsedLine.data,
+						rawLine: parsedLine.rawLine.substring(0, 100)
+					});
+					logInfo('🔍 Processing parsed line', {
+						isValid: parsedLine.isValid,
+						hasData: !!parsedLine.data,
+						parseError: parsedLine.parseError,
+						rawLinePreview: parsedLine.rawLine.substring(0, 150)
+					});
+					
 					if (parsedLine.isValid && parsedLine.data) {
+						console.log('[USRP SWEEP] Valid data! Calling _handleSpectrumData');
+						logInfo('✅ Valid spectrum data parsed', { 
+							frequency: parsedLine.data.frequency,
+							power: parsedLine.data.power 
+						});
 						this._handleSpectrumData(parsedLine.data, frequency);
 					} else if (parsedLine.parseError) {
-						logWarn('Failed to parse line', { 
+						console.warn('[USRP SWEEP] Parse error:', parsedLine.parseError);
+						logWarn('❌ Failed to parse line', { 
 							error: parsedLine.parseError,
 							line: parsedLine.rawLine.substring(0, 100)
 						});
@@ -579,8 +643,9 @@ export class SweepManager extends EventEmitter {
 			});
 
 			// Spawn process using ProcessManager (handlers will be attached automatically)
+			// Note: detached: false is important for USRP to ensure stdio pipes work correctly
 			const _processState = await this.processManager.spawnSweepProcess(args, {
-				detached: true,
+				detached: false,
 				stdio: ['ignore', 'pipe', 'pipe'],
 				startupTimeoutMs: 5000
 			})
@@ -610,16 +675,22 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _handleSpectrumData(data: SpectrumData, frequency: { value: number; unit: string }): void {
 		try {
+			console.log('[USRP SWEEP] _handleSpectrumData called with:', {
+				frequency: data.frequency,
+				power: data.power,
+				hasValues: !!data.powerValues
+			});
+			
 			// Validate data quality
 			const validation = this.bufferManager.validateSpectrumData(data);
 			if (!validation.isValid) {
+				console.warn('[USRP SWEEP] Invalid spectrum data:', validation.issues);
 				logWarn('Invalid spectrum data received', { issues: validation.issues });
 				return;
 			}
 
 			// Update last data received time
 			this.cyclingHealth.lastDataReceived = new Date();
-
 			// Emit spectrum data
 			this._emitEvent('spectrum_data', {
 				frequency: frequency,
@@ -1010,6 +1081,12 @@ export class SweepManager extends EventEmitter {
 	 * Emit event via SSE and EventEmitter
 	 */
 	private _emitEvent(event: string, data: unknown): void {
+		console.log('[USRP SWEEP] _emitEvent called:', {
+			event,
+			hasSseEmitter: !!this.sseEmitter,
+			hasListeners: this.listenerCount(event) > 0
+		});
+		
 		if (this.sseEmitter) {
 			try {
 				this.sseEmitter(event, data);

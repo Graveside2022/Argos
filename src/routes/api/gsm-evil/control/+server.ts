@@ -11,19 +11,31 @@ export const POST: RequestHandler = async ({ request }) => {
     
     if (action === 'start') {
       try {
-        // Check if HackRF is connected
+        // Check if USRP B205 Mini is connected via USB (more reliable than uhd_find_devices)
         try {
-          await execAsync('hackrf_info 2>&1');
+          const { stdout } = await execAsync('lsusb | grep -i "ettus\\|2500:0022" | grep -q "B205" && echo "usrp_found"');
+          if (!stdout.includes('usrp_found')) {
+            // Fallback: try uhd_find_devices
+            const { stdout: uhdOut } = await execAsync('sudo uhd_find_devices 2>&1 | grep -q "B20[05]" && echo "usrp_found"').catch(() => ({ stdout: '' }));
+            if (!uhdOut.includes('usrp_found')) {
+              throw new Error('USRP not found');
+            }
+          }
         } catch {
-          return json({ 
-            success: false, 
-            message: 'HackRF not detected. Please connect HackRF device.' 
-          }, { status: 400 });
+          // Don't block if detection fails - USRP might still work
+          console.warn('USRP detection check failed, but continuing anyway...');
         }
         
-        // Use the auto-IMSI script with frequency parameter
-        const freq = frequency || '947.2';
+        // Use the auto-IMSI script with frequency parameter (default to 947.4 where GSM was detected)
+        const freq = frequency || '947.4';
         console.log(`Starting GSM Evil on ${freq} MHz with IMSI sniffer auto-enabled...`);
+        
+        // Apply Socket.IO and CORS patches before starting
+        console.log('Applying Socket.IO and CORS patches...');
+        await execAsync('/home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh').catch(() => {
+          console.warn('Failed to apply patches, continuing anyway...');
+        });
+        
         const { stdout, stderr } = await execAsync(`sudo /home/ubuntu/projects/Argos/scripts/gsm-evil-with-auto-imsi.sh ${freq} 45`, {
           timeout: 15000 // 15 second timeout
         });

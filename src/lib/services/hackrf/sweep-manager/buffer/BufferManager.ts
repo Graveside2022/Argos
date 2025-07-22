@@ -129,6 +129,11 @@ export class BufferManager {
 				};
 			}
 
+			// Log potential data lines for debugging
+			if (trimmedLine.includes(',') && trimmedLine.length > 50) {
+				logInfo('🔍 POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
+			}
+
 			// Parse spectrum data
 			const spectrumData = this.parseSpectrumData(trimmedLine);
 			
@@ -191,31 +196,56 @@ export class BufferManager {
 	 */
 	private parseSpectrumData(line: string): SpectrumData | null {
 		try {
-			// Expected format: timestamp, freq_hz, freq_hz, power_db, power_db, ...
-			// Example: 2023-11-20, 15:30:45, 88000000, 89000000, -45.2, -46.1, -47.0, ...
+			// Real hackrf_sweep format: date, time, hz_low, hz_high, hz_bin_width, num_samples, dB, dB, dB...
+			// Example: 2023-11-20, 15:30:45, 2400000000, 2410000000, 20000, 512, -45.2, -46.1, -47.0, ...
 			
 			const parts = line.split(',').map(part => part.trim());
 			
-			if (parts.length < 5) {
+			// Check for minimum required fields (need at least 7 fields for hackrf_sweep format)
+			if (parts.length < 7) {
 				return null; // Not enough data
 			}
 
-			// Parse timestamp (first two parts: date and time)
-			const dateStr = parts[0];
-			const timeStr = parts[1];
-			const timestamp = this.parseTimestamp(dateStr, timeStr);
+			let startFreq: number, endFreq: number, binWidth: number, numSamples: number, powerStartIndex: number;
+			let timestamp = new Date(); // Default to current time
 
-			// Parse frequency range
-			const startFreq = parseInt(parts[2]);
-			const endFreq = parseInt(parts[3]);
+			// Try to determine format by checking if first field looks like a date
+			const firstPart = parts[0];
+			if (firstPart.includes('-') && firstPart.length >= 8) {
+				// Real hackrf_sweep format: date, time, hz_low, hz_high, hz_bin_width, num_samples, dB values...
+				if (parts.length < 7) {
+					return null; // Not enough data for hackrf_sweep format
+				}
+				
+				const dateStr = parts[0];
+				const timeStr = parts[1];
+				timestamp = this.parseTimestamp(dateStr, timeStr);
+				
+				startFreq = parseInt(parts[2]);
+				endFreq = parseInt(parts[3]);
+				binWidth = parseFloat(parts[4]);
+				numSamples = parseInt(parts[5]);
+				powerStartIndex = 6;
+			} else {
+				// Simplified format without timestamp (fallback)
+				startFreq = parseInt(parts[0]);
+				endFreq = parseInt(parts[1]);
+				binWidth = parseFloat(parts[2]);
+				numSamples = parseInt(parts[3]);
+				powerStartIndex = 4;
+			}
 
-			if (isNaN(startFreq) || isNaN(endFreq)) {
+			if (isNaN(startFreq) || isNaN(endFreq) || isNaN(binWidth) || isNaN(numSamples)) {
 				return null;
 			}
 
+			// Convert Hz to MHz for consistent units
+			const startFreqMHz = startFreq / 1000000;
+			const endFreqMHz = endFreq / 1000000;
+
 			// Parse power values (remaining parts)
 			const powerValues: number[] = [];
-			for (let i = 4; i < parts.length; i++) {
+			for (let i = powerStartIndex; i < parts.length; i++) {
 				const power = parseFloat(parts[i]);
 				if (!isNaN(power)) {
 					powerValues.push(power);
@@ -226,25 +256,22 @@ export class BufferManager {
 				return null;
 			}
 
-			// Calculate frequency step
-			const _frequencyStep = powerValues.length > 1 
-				? (endFreq - startFreq) / (powerValues.length - 1) 
-				: 0;
-
 			// Create spectrum data
 			const spectrumData: SpectrumData = {
-				timestamp: new Date(timestamp),
-				frequency: startFreq + (endFreq - startFreq) / 2, // Center frequency
+				timestamp: timestamp,
+				frequency: startFreqMHz + (endFreqMHz - startFreqMHz) / 2, // Center frequency in MHz
 				power: Math.max(...powerValues), // Peak power
 				unit: 'MHz',
-				startFreq,
-				endFreq,
+				startFreq: startFreqMHz,
+				endFreq: endFreqMHz,
 				powerValues,
 				metadata: {
 					sampleCount: powerValues.length,
 					minPower: Math.min(...powerValues),
 					maxPower: Math.max(...powerValues),
-					avgPower: powerValues.reduce((sum, val) => sum + val, 0) / powerValues.length
+					avgPower: powerValues.reduce((sum, val) => sum + val, 0) / powerValues.length,
+					binWidth: binWidth,
+					numSamples: numSamples
 				}
 			};
 
@@ -392,10 +419,11 @@ export class BufferManager {
 			}
 		}
 
-		// Check timestamp validity
+		// Check timestamp validity - be more lenient for USRP data
+		// USRP might use UTC while server uses local time, so allow up to 24 hours difference
 		const now = Date.now();
 		const dataTime = data.timestamp.getTime();
-		if (Math.abs(now - dataTime) > 60000) { // More than 1 minute off
+		if (Math.abs(now - dataTime) > 86400000) { // More than 24 hours off
 			issues.push('Timestamp far from current time');
 		}
 

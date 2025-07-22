@@ -3,18 +3,22 @@
 # Auto-start HackRF Emitter services (lightweight version)
 # This script runs in the background and automatically starts HackRF services
 
-HACKRF_BACKEND_DIR="/workspace/hackrf_emitter/backend"
-HACKRF_FRONTEND_DIR="/workspace/hackrf_emitter/frontend"
+HACKRF_BACKEND_DIR="/home/ubuntu/projects/Argos/hackrf_emitter/backend"
+HACKRF_FRONTEND_DIR="/home/ubuntu/projects/Argos/hackrf_emitter/frontend"
 
 # Check if services are already running
 check_and_start_backend() {
-    if ! pgrep -f "python.*app.py" > /dev/null; then
-        echo "Starting HackRF Backend..."
-        cd "$HACKRF_BACKEND_DIR"
-        source venv/bin/activate
-        nohup python app.py > /dev/null 2>&1 &
-        sleep 3
-        echo "HackRF Backend started on port 5000"
+    if [ -d "$HACKRF_BACKEND_DIR" ] && [ -f "$HACKRF_BACKEND_DIR/venv/bin/activate" ]; then
+        if ! pgrep -f "python.*app.py" > /dev/null; then
+            echo "Starting HackRF Backend..."
+            cd "$HACKRF_BACKEND_DIR"
+            source venv/bin/activate
+            nohup python app.py > /dev/null 2>&1 &
+            sleep 3
+            echo "HackRF Backend started on port 5000"
+        fi
+    else
+        echo "HackRF Backend not found - skipping"
     fi
 }
 

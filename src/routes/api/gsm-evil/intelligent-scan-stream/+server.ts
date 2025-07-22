@@ -29,21 +29,23 @@ export const POST: RequestHandler = async ({ request }) => {
       
       try {
         sendUpdate('[SCAN] Initializing GSM frequency scanner...');
-        sendUpdate('[SCAN] Will test 3 strongest GSM900 downlink frequencies');
+        sendUpdate('[SCAN] Focusing on 947.4 MHz - confirmed GSM activity!');
         sendUpdate('[SCAN] ');
         
-        const checkFreqs = [
-          '944.0', '949.0', '947.2'
-        ];
+        // Focus on 947.4 MHz where GSM activity was confirmed
+        const checkFreqs: string[] = ['947.4'];
+        
+        sendUpdate(`[SCAN] Scanning 1 frequency with confirmed GSM traffic`);
+        sendUpdate('[SCAN] This will maximize GSM frame capture rate');
         
         sendUpdate('[SCAN] Frequencies to scan:');
         sendUpdate(`[SCAN] ${checkFreqs.join(', ')} MHz`);
         
         sendUpdate('[SCAN] ');
         sendUpdate('[SCAN] Starting GSM Frame Detection');
-        sendUpdate('[SCAN] Testing each frequency for actual GSM activity...');
-        const estimatedTime = checkFreqs.length * 5.5;
-        sendUpdate(`[SCAN] Estimated time: ${Math.ceil(estimatedTime)} seconds`);
+        sendUpdate('[SCAN] Testing 947.4 MHz for maximum GSM frame collection...');
+        const estimatedTime = checkFreqs.length * 8; // ~8 seconds total (2s init + 6s capture)
+        sendUpdate(`[SCAN] Estimated time: ${estimatedTime} seconds`);
         sendUpdate('[SCAN] ');
         
         // Test each frequency
@@ -54,12 +56,65 @@ export const POST: RequestHandler = async ({ request }) => {
           let pid = '';
           
           try {
-            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Testing ${freq} MHz...`);
-            sendUpdate(`[CMD] $ grgsm_livemon_headless -f ${freq}M -g 40`);
+            // Check if USRP is available
+            let deviceArgs = '';
+            let sampleRateArg = '';
+            let gain = 40;
+            let isUSRP = false;
+            try {
+              const { stdout: uhdCheck } = await execAsync('uhd_find_devices 2>/dev/null | grep -q "B205" && echo "usrp"');
+              if (uhdCheck.trim() === 'usrp') {
+                // USRP B205 Mini detected - use wrapper script with args
+                deviceArgs = '--args="type=b200" ';
+                sampleRateArg = '-s 2e6 '; // 2 MSPS is optimal for B205 Mini
+                gain = 70; // Max gain for B205 Mini is 73
+                isUSRP = true;
+              }
+            } catch (e) {
+              // No USRP found, will use HackRF
+            }
             
-            // Start grgsm_livemon
+            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Testing ${freq} MHz...`);
+            sendUpdate(`[DEVICE] Using ${isUSRP ? 'USRP B205 Mini' : 'HackRF'}`);
+            
+            // CRITICAL: Measure RF power FIRST (before GSM scan) to avoid USRP conflicts
+            let strength = 'No Signal';
+            let power = -100;
+            
+            if (isUSRP) {
+              try {
+                sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Measuring RF power with USRP B205 Mini...`);
+                
+                // Use exact same command that works in Node.js test
+                const { stdout: powerResult, stderr: powerStderr } = await execAsync(
+                  `cd /home/ubuntu/projects/Argos && timeout 20 python3 scripts/usrp_power_measure_real.py -f ${freq} -g ${gain} -d 0.1`,
+                  { timeout: 25000 }
+                );
+                
+                console.log(`USRP stdout: "${powerResult}"`);
+                console.log(`USRP stderr length: ${powerStderr.length}`);
+                
+                const powerMatch = powerResult.match(/([-\d\.]+)\s*dBm/);
+                if (powerMatch) {
+                  power = parseFloat(powerMatch[1]);
+                  sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] ✓ REAL RF Power: ${power.toFixed(1)} dBm (USRP B205 Mini)`);
+                  console.log(`✓ USRP power measurement successful: ${power} dBm`);
+                } else {
+                  console.log(`✗ No power match in stdout: "${powerResult}"`);
+                  throw new Error(`No power value found in output`);
+                }
+              } catch (error) {
+                console.log(`✗ USRP power measurement failed: ${error.message}`);
+                sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] USRP power measurement failed: ${error.message}`);
+                power = -100; // Explicitly set to -100 to indicate failure
+              }
+            }
+            
+            sendUpdate(`[CMD] $ grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain}`);
+            
+            // Start grgsm_livemon_headless directly (bypassing broken wrapper)
             const { stdout: gsmPid } = await execAsync(
-              `sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
+              `sudo grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain} >/dev/null 2>&1 & echo $!`
             );
             
             pid = gsmPid.trim();
@@ -71,17 +126,19 @@ export const POST: RequestHandler = async ({ request }) => {
             
             sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Waiting for demodulator initialization...`);
             
-            // Wait for initialization
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait for initialization - optimized for USRP speed
+            const initDelay = isUSRP ? 2000 : 1500;
+            await new Promise(resolve => setTimeout(resolve, initDelay));
             
             sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
-            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Counting GSMTAP packets for 3 seconds...`);
+            const captureTime = isUSRP ? 6 : 3; // Longer capture for better frame detection
+            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Counting GSMTAP packets for ${captureTime} seconds...`);
             
             // Count GSMTAP packets and analyze channel types
             let frameCount = 0;
             try {
               const { stdout: packetCount } = await execAsync(
-                'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
+                `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | wc -l`
               );
               frameCount = parseInt(packetCount.trim()) || 0;
             } catch (tcpdumpError) {
@@ -89,7 +146,7 @@ export const POST: RequestHandler = async ({ request }) => {
               // Alternative: check for any GSMTAP traffic
               try {
                 const { stdout: altCount } = await execAsync(
-                  'sudo timeout 3 netstat -u | grep -c 4729 || echo 0'
+                  `sudo timeout ${captureTime} netstat -u | grep -c 4729 || echo 0`
                 );
                 frameCount = parseInt(altCount.trim()) || 0;
               } catch (altError) {
@@ -121,33 +178,42 @@ export const POST: RequestHandler = async ({ request }) => {
               }
             }
             
-            // Determine strength category based on frame count
-            let strength = 'No Signal';
-            let power = -100;
-            if (frameCount > 200) {
+            // Determine signal strength based on actual power
+            if (power > -40) {
               strength = 'Excellent';
-              power = -25;
-            } else if (frameCount > 150) {
+            } else if (power > -50) {
               strength = 'Very Strong';
-              power = -30;
-            } else if (frameCount > 100) {
+            } else if (power > -60) {
               strength = 'Strong';
-              power = -35;
-            } else if (frameCount > 50) {
+            } else if (power > -70) {
               strength = 'Good';
-              power = -45;
-            } else if (frameCount > 10) {
+            } else if (power > -80) {
               strength = 'Moderate';
-              power = -55;
-            } else if (frameCount > 0) {
+            } else if (power > -90) {
               strength = 'Weak';
-              power = -65;
+            }
+            
+            // If no power measurement available, fall back to frame count
+            if (power === -100 && frameCount > 0) {
+              if (frameCount > 200) {
+                strength = 'Excellent';
+              } else if (frameCount > 150) {
+                strength = 'Very Strong';
+              } else if (frameCount > 100) {
+                strength = 'Strong';
+              } else if (frameCount > 50) {
+                strength = 'Good';
+              } else if (frameCount > 10) {
+                strength = 'Moderate';
+              } else if (frameCount > 0) {
+                strength = 'Weak';
+              }
             }
             
             const hasActivity = frameCount > 10;
             
             sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Result: ${frameCount} GSM frames detected ${hasActivity ? '✓' : '✗'}`);
-            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Signal: ${power.toFixed(1)} dB (${strength})`);
+            sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Signal: ${frameCount} frames (${strength})`);
             if (channelType) {
               sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Channel: ${channelType}${controlChannel ? ' (Control Channel - Good for IMSI)' : ''}`);
             }
@@ -155,7 +221,7 @@ export const POST: RequestHandler = async ({ request }) => {
             
             const frequencyResult = {
               frequency: freq,
-              power: power,
+              power: power, // Actual RF power measurement
               frameCount: frameCount,
               hasGsmActivity: hasActivity,
               strength: strength,

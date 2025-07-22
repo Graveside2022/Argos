@@ -26,7 +26,9 @@ export default defineConfig({
 			overlay: false,
 			// Disable HMR for specific paths that might be causing issues
 			protocol: 'ws',
-			host: 'localhost'
+			// Use the actual IP address instead of 'true'
+			host: '100.79.154.94',
+			port: 5173
 		},
 		// Reduce module runner instability
 		middlewareMode: false,

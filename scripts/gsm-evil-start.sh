@@ -25,9 +25,19 @@ if ! python3 -c "import flask" 2>/dev/null; then
     sudo pip3 install flask >/dev/null 2>&1 || sudo apt-get install -y python3-flask >/dev/null 2>&1
 fi
 
-# Start GSM Evil using the working method from earlier
-echo "Starting GSM Evil web interface..."
-(cd /usr/src/gsmevil2 && sudo python3 GsmEvil.py >/dev/null 2>&1) &
+# Apply Socket.IO patch for iframe compatibility
+echo "Applying Socket.IO patch..."
+if [ -f /home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh ]; then
+    /home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh
+    sleep 1  # Give time for file writes to complete
+    echo "Patch applied."
+else
+    echo "Warning: Patch script not found!"
+fi
+
+# Start GSM Evil using the wrapper script with CORS
+echo "Starting GSM Evil web interface with CORS support..."
+(/home/ubuntu/projects/Argos/scripts/gsm-evil-start-wrapper.sh >/dev/null 2>&1) &
 GSMEVIL_PID=$!
 
 # Save PIDs
@@ -46,7 +56,7 @@ if sudo lsof -i :80 | grep -q LISTEN; then
     echo "  Click gear → Select IMSI"
 else
     echo "✗ Failed to start GSM Evil"
-    # Try the alternate method that was working earlier
+    # Try the alternate method
     echo "Trying alternate start method..."
-    cd /usr/src/gsmevil2 && sudo python3 GsmEvil.py &
+    /home/ubuntu/projects/Argos/scripts/gsm-evil-start-wrapper.sh &
 fi

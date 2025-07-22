@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { hackrfAPI } from '$lib/services/hackrf/api';
-	import { spectrumData, sweepStatus, cycleStatus, connectionStatus } from '$lib/stores/hackrf';
+	import { goto } from '$app/navigation';
+	
+	// Redirect to the tactical map which supports USRP
+	onMount(() => {
+		alert('This page has been deprecated. Redirecting to the new RF Detection interface that supports USRP B205 mini...');
+		goto('/tactical-map-simple');
+	});
 
 	let frequencies: Array<{ id: number; value: number | string }> = [{ id: 1, value: 2400 }];
 	let cycleTime = 10;
@@ -51,10 +56,9 @@
 					step: 1
 				}));
 
-			// Starting sweep with frequencies
-			const _response = await hackrfAPI.startSweep(validFreqs, cycleTime);
-			// Start sweep response received
-			statusMessage = 'Sweep started successfully';
+			// This page is deprecated - redirecting
+			goto('/tactical-map-simple');
+			return;
 
 			// Store target frequencies for offset calculation
 			const validFreqValues = frequencies.filter((f) => f.value);

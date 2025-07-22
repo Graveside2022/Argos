@@ -218,12 +218,32 @@ class GSMEvilServer extends EventEmitter {
       return;
     }
 
-    // Start grgsm_livemon_headless and capture its output
-    this.grgsm_process = spawn('grgsm_livemon_headless', [
+    // Auto-detect device and start grgsm_livemon_headless
+    let adjustedGain = gain;
+    let adjustedSampleRate = sampleRate;
+    
+    // Check if USRP B205 Mini is available
+    const { execSync } = require('child_process');
+    let deviceArgs = [];
+    try {
+      execSync('uhd_find_devices 2>/dev/null | grep -q "B205"');
+      // USRP found, adjust parameters
+      deviceArgs = ['--args', 'type=b200'];
+      adjustedGain = Math.min(gain + 10, 60); // USRP needs higher gain
+      adjustedSampleRate = 2e6; // B205 Mini works best at 2 MSPS for GSM
+      console.log(`Using USRP B205 Mini for GSM capture (gain: ${adjustedGain}, rate: ${adjustedSampleRate/1e6} MSPS)`);
+    } catch (e) {
+      console.log('Using HackRF for GSM capture');
+    }
+    
+    const args = [
+      ...deviceArgs,
       '-f', frequency.toString(),
-      '-s', sampleRate.toString(),
-      '-g', gain.toString()
-    ]);
+      '-s', adjustedSampleRate.toString(),
+      '-g', adjustedGain.toString()
+    ];
+    
+    this.grgsm_process = spawn('grgsm_livemon_headless', args);
 
     this.grgsm_process.stdout?.on('data', (data) => {
       const output = data.toString();

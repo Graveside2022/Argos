@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>GSM EVIL - Live IMSI Only</title>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="http://100.79.154.94:80/static/./css/bootstrap.css" rel="stylesheet">
+    <link href="http://100.79.154.94:80/static/./css/fresh-bootstrap-table.css" rel="stylesheet">
+    <link href="http://100.79.154.94:80/static/./css/demo.css" rel="stylesheet">
+    <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300' rel='stylesheet' type='text/css'>
+    
+    <style>
+        body {
+            background: radial-gradient(ellipse at center, #323049 0%, #212030 100%);
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 1rem;
+            border-bottom: 2px solid #ff0000;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            font-size: 1.8rem;
+        }
+        
+        .status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .status.connected {
+            color: #00ff00;
+        }
+        
+        .status.disconnected {
+            color: #ff4444;
+        }
+        
+        .table-container {
+            height: calc(100vh - 120px);
+            overflow: auto;
+            padding: 1rem;
+        }
+        
+        .fresh-table {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .table th {
+            background: linear-gradient(135deg, #2d1b69, #1e3c72) !important;
+            color: #fff !important;
+            border-bottom: 2px solid #ff0000 !important;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .table td {
+            border-bottom: 1px solid rgba(255, 0, 0, 0.1) !important;
+            background: rgba(0, 0, 0, 0.2) !important;
+            color: #fff !important;
+        }
+        
+        .table tbody tr:hover {
+            background: rgba(255, 0, 0, 0.1) !important;
+        }
+        
+        .new-record {
+            animation: highlightNew 2s ease-in-out;
+        }
+        
+        @keyframes highlightNew {
+            0% { background-color: rgba(0, 255, 0, 0.3) !important; }
+            100% { background-color: transparent !important; }
+        }
+        
+        .imsi-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #00ff00 !important;
+            letter-spacing: 1px;
+        }
+        
+        .id-cell {
+            color: #ffa500 !important;
+            font-weight: bold;
+        }
+        
+        .country-cell {
+            color: #87ceeb !important;
+        }
+        
+        .time-cell {
+            color: #ffa500 !important;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>📱 GSM EVIL - Live IMSI Capture</h1>
+    </div>
+    
+    <div id="status" class="status disconnected">
+        🔴 Connecting to GSM Evil server...
+    </div>
+
+    <div class="table-container">
+        <div class="fresh-table full-color-orange full-screen-table">
+            <table id="fresh-table" class="table" data-sort-name="id" data-sort-order="desc">
+                <thead>
+                    <tr>
+                        <th data-field="id" data-sortable="true">ID</th>
+                        <th data-field="imsi" data-sortable="true">IMSI</th>
+                        <th data-field="tmsi" data-sortable="true">TMSI</th>
+                        <th data-field="mcc" data-sortable="true">MCC</th>
+                        <th data-field="mnc" data-sortable="true">MNC</th>
+                        <th data-field="lac" data-sortable="true">LAC</th>
+                        <th data-field="ci" data-sortable="true">CI</th>
+                        <th data-field="time">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/jquery-1.11.2.min.js"></script>
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/bootstrap.js"></script>
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/bootstrap-table.js"></script>
+    <script src="http://100.79.154.94:80/static/./js/socket.io.js"></script>
+
+    <script type="text/javascript">
+        var $table = $('#fresh-table');
+        var statusDiv = document.getElementById('status');
+        var recordCount = 0;
+        
+        // Initialize Bootstrap Table
+        $table.bootstrapTable({
+            showRefresh: true,
+            search: true,
+            showToggle: true,
+            showColumns: true,
+            pagination: false,  // Disable pagination for live view
+            striped: true,
+            sortable: true,
+            height: 500,
+            formatShowingRows: function(pageFrom, pageTo, totalRows){
+                return totalRows + " IMSI records captured";
+            }
+        });
+
+        // Connect to Socket.IO - but DON'T request historical data
+        var socket = io('http://100.79.154.94:80', {
+            transports: ['polling', 'websocket'],
+            upgrade: true,
+            rememberUpgrade: false,
+            timeout: 20000,
+            forceNew: true
+        });
+        
+        socket.on('connect', function() {
+            console.log('Socket.IO connected - NOT requesting historical data');
+            statusDiv.textContent = '🟢 Connected - Waiting for live IMSI captures...';
+            statusDiv.className = 'status connected';
+            
+            // DON'T emit 'imsi_data' to avoid database dump
+            // socket.emit('imsi_data', 'get');  // ← REMOVED THIS LINE
+        });
+        
+        socket.on('connect_error', function(error) {
+            console.error('Socket.IO connection error:', error);
+            statusDiv.textContent = '🔴 Connection error - Retrying...';
+            statusDiv.className = 'status disconnected';
+        });
+        
+        socket.on('disconnect', function() {
+            statusDiv.textContent = '🔴 Disconnected from GSM Evil server';
+            statusDiv.className = 'status disconnected';
+        });
+        
+        // Listen for NEW IMSI captures only
+        socket.on('imsi', function(msg) {
+            console.log('NEW IMSI captured:', msg);
+            add_data(msg, true); // true = mark as new
+        });
+        
+        function add_data(msg, isNew = false) {
+            recordCount++;
+            
+            var row = {
+                id: msg[0],
+                imsi: msg[1],
+                tmsi: msg[2] || 'N/A',
+                mcc: msg[3],
+                mnc: msg[4],
+                lac: msg[5],
+                ci: msg[6],
+                time: msg[7]
+            };
+            
+            console.log('Adding LIVE record:', row);
+            
+            // Add to top of table
+            $table.bootstrapTable('prepend', row);
+            
+            // Update status
+            statusDiv.textContent = `🟢 Live - ${recordCount} IMSI records captured`;
+            
+            // Highlight new records
+            if (isNew) {
+                setTimeout(function() {
+                    $table.find('tbody tr:first-child').addClass('new-record');
+                }, 100);
+            }
+            
+            // Keep only last 100 records to prevent memory issues
+            var allRows = $table.bootstrapTable('getData');
+            if (allRows.length > 100) {
+                $table.bootstrapTable('remove', {
+                    field: 'id',
+                    values: allRows.slice(100).map(r => r.id)
+                });
+            }
+        }
+        
+        // Add some styling for IMSI cells
+        $table.on('post-body.bs.table', function() {
+            $table.find('tbody tr').each(function() {
+                $(this).find('td:nth-child(2)').addClass('imsi-cell'); // IMSI column
+                $(this).find('td:nth-child(1)').addClass('id-cell');   // ID column
+                $(this).find('td:nth-child(4)').addClass('country-cell'); // MCC column
+                $(this).find('td:nth-child(8)').addClass('time-cell');  // Time column
+            });
+        });
+
+    </script>
+</body>
+</html>

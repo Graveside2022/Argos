@@ -49,7 +49,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// For non-WebSocket requests, continue with normal handling
-	return resolve(event);
+	const response = await resolve(event);
+	
+	// Add security headers to prevent warnings
+	// Remove browsing-topics from Permissions-Policy as it's not recognized yet
+	response.headers.set(
+		'Permissions-Policy', 
+		'geolocation=(self), microphone=(), camera=(), payment=(), usb=()'
+	);
+	
+	return response;
 };
 
 /**

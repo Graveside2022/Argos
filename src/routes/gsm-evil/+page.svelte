@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { gsmEvilStore } from '$lib/stores/gsmEvilStore';
+	import IMSIDisplay from './IMSIDisplay.svelte';
 	
 	let iframeUrl = '';
 	let isLoading = true;
@@ -968,13 +969,38 @@
 	}
 
 	onMount(() => {
+		console.log('[GSM-DEBUG] Component mounted');
+		
+		// Add navigation debugging
+		window.addEventListener('beforeunload', (e) => {
+			console.log('[GSM-DEBUG] beforeunload event triggered!', e);
+			console.trace('Navigation stack trace');
+		});
+		
 		// GSM Evil runs on port 80 on the same host
 		const host = window.location.hostname;
-		// Default to IMSI sniffer page for better UX
-		iframeUrl = `http://${host}:80/imsi`;
+		// Default to IMSI sniffer page with timestamp to force refresh
+		iframeUrl = `http://${host}:80/imsi/?t=${Date.now()}`;
 		
-		// Check initial GSM Evil status
-		checkGSMStatus().catch((error) => {
+		// Force restart GSM Evil on page load to ensure CORS is enabled
+		console.log('[GSM-DEBUG] Forcing GSM Evil restart to ensure CORS...');
+		fetch('/api/gsm-evil/control', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'stop' })
+		}).then(() => {
+			return new Promise(resolve => setTimeout(resolve, 2000));
+		}).then(() => {
+			return fetch('/api/gsm-evil/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'start' })
+			});
+		}).then(() => {
+			console.log('[GSM-DEBUG] Forced restart completed');
+			// Check initial GSM Evil status
+			return checkGSMStatus();
+		}).catch((error) => {
 			console.error('Initial GSM status check failed:', error);
 		});
 		
@@ -999,6 +1025,12 @@
 	});
 	
 	async function checkGSMStatus() {
+		// Skip status check if we're in a transitional state
+		if (gsmStatus === 'starting' || gsmStatus === 'stopping') {
+			console.log('[GSM-DEBUG] Skipping status check, currently:', gsmStatus);
+			return;
+		}
+		
 		try {
 			// Use the new status endpoint
 			const response = await fetch('/api/gsm-evil/status');
@@ -1014,9 +1046,8 @@
 						// console.log('GSM Evil detected as running');
 						gsmStatus = 'running';
 						hasError = false;
-						// Ensure iframe URL points to IMSI sniffer when GSM Evil is already running
-						const host = window.location.hostname;
-						iframeUrl = `http://${host}:80/imsi`;
+						// Don't update URL - it's already set with timestamp in onMount
+						console.log('[GSM-DEBUG] GSM Evil already running, not updating URL');
 					} else if (!isRunning && gsmStatus === 'running') {
 						// console.log('GSM Evil detected as stopped');
 						gsmStatus = 'stopped';
@@ -1029,13 +1060,14 @@
 	}
 	
 	async function startGSMEvil() {
-		// console.log('Starting GSM Evil...');
+		console.log('[GSM-DEBUG] Starting GSM Evil...');
 		if (gsmStatus === 'starting' || gsmStatus === 'stopping') {
-			// console.log('GSM Evil is already changing state');
+			console.log('[GSM-DEBUG] GSM Evil is already changing state');
 			return;
 		}
 		
 		gsmStatus = 'starting';
+		console.log('[GSM-DEBUG] Set status to starting');
 		
 		try {
 			const response = await fetch('/api/gsm-evil/control', {
@@ -1052,21 +1084,17 @@
 			if (response.ok && data.success) {
 				// Wait a bit for the service to fully start
 				setTimeout(() => {
+					console.log('[GSM-DEBUG] Setting status to running after 3s delay');
 					gsmStatus = 'running';
 					hasError = false;
 					isLoading = true; // Reset loading state for iframe
-					// Update iframe URL to IMSI sniffer page and force reload
+					console.log('[GSM-DEBUG] Setting isLoading=true, iframe will be hidden');
+					// Update iframe URL to use CLEAN version without spam
 					const host = window.location.hostname;
-					iframeUrl = `http://${host}:80/imsi`;
-					// Force reload iframe with a slight delay to ensure GSM Evil is ready
-					setTimeout(() => {
-						const iframe = document.querySelector('iframe');
-						if (iframe) {
-							iframe.src = iframeUrl; // Load IMSI sniffer page
-						}
-					}, 2000);
-					checkGSMStatus();
-				}, 3000);
+					iframeUrl = `/imsi-clean.html?t=${Date.now()}`;
+					console.log('[GSM-DEBUG] Updated iframe URL to CLEAN version:', iframeUrl);
+					console.log('[GSM-DEBUG] Iframe should be hidden now, isLoading:', isLoading);
+				}, 5000);
 			} else {
 				throw new Error(data.message || 'Failed to start GSM Evil');
 			}
@@ -1138,8 +1166,32 @@
 	}
 	
 	function handleIframeLoad() {
+		console.log('[GSM-DEBUG] Iframe loaded, setting isLoading=false');
 		isLoading = false;
 		hasError = false;
+		console.log('[GSM-DEBUG] Iframe should now be visible, isLoading:', isLoading);
+		
+		// Fix the Bootstrap Table height issue in the iframe
+		setTimeout(() => {
+			const iframe = document.querySelector('iframe');
+			if (iframe && iframe.contentWindow) {
+				try {
+					// Force the table to have proper height
+					const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+					const style = iframeDoc.createElement('style');
+					style.textContent = `
+						.fixed-table-container { height: calc(100vh - 200px) !important; }
+						.fixed-table-body { height: calc(100vh - 250px) !important; overflow-y: auto !important; }
+						#fresh-table { display: table !important; }
+						.fresh-table { height: auto !important; }
+					`;
+					iframeDoc.head.appendChild(style);
+					console.log('[GSM-DEBUG] Injected table height fix into iframe');
+				} catch (e) {
+					console.error('[GSM-DEBUG] Could not access iframe content:', e);
+				}
+			}
+		}, 1000);
 	}
 	
 	function handleIframeError() {
@@ -1528,7 +1580,7 @@
 									{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
 										<tr class="{selectedFrequency === result.frequency ? 'selected' : ''}">
 											<td class="freq-cell">{result.frequency} MHz</td>
-											<td class="signal-cell">{result.power.toFixed(1)} dB</td>
+											<td class="signal-cell">{result.power !== undefined && result.power > -100 ? result.power.toFixed(1) + ' dBm' : `N/A (${result.power})`}</td>
 											<td>
 												<span class="quality-badge {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
 											</td>
@@ -1581,8 +1633,8 @@
 		</div>
 	{/if}
 
-	<!-- Status Panel (when running) -->
-	{#if gsmStatus === 'running' && detailedStatus}
+	<!-- Status Panel (when running and not scanning) -->
+	{#if gsmStatus === 'running' && detailedStatus && !isScanning}
 		<div class="status-panel">
 			<div class="status-grid">
 				<!-- IMSI Capture Status (Left) -->
@@ -1793,8 +1845,8 @@
 			</div>
 		{/if}
 
-		<!-- GSM Evil Interface (when running) -->
-		{#if gsmStatus === 'running'}
+		<!-- GSM Evil Interface (when running and not scanning) -->
+		{#if gsmStatus === 'running' && !isScanning}
 			<iframe
 				src={iframeUrl}
 				title="GSM Evil Interface"
@@ -1806,6 +1858,10 @@
 			{#if isLoading}
 				<div class="absolute inset-0 flex items-center justify-center bg-black">
 					<div class="text-center">
+						<div class="mb-4 p-2 bg-red-900 border border-red-500 rounded">
+							<p class="text-red-100 text-sm">DEBUG: isLoading = {isLoading}</p>
+							<p class="text-red-100 text-sm">Iframe URL: {iframeUrl}</p>
+						</div>
 						<div class="inline-flex items-center justify-center w-16 h-16 mb-4">
 							<svg class="animate-spin h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24">
 								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -2347,6 +2403,11 @@
 		font-weight: 600;
 		font-family: 'Courier New', monospace;
 		color: #fff;
+	}
+
+	.frequency-table .signal-cell {
+		color: #9ca3af !important;
+		font-family: 'Courier New', monospace;
 	}
 
 	.signal-bar {
