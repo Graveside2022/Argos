@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>GSM EVIL 2</title>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <link href="http://100.79.154.94:80/static/./css/bootstrap.css" rel="stylesheet">
+    <link href="http://100.79.154.94:80/static/./css/fresh-bootstrap-table.css" rel="stylesheet">
+    <link href="http://100.79.154.94:80/static/./css/demo.css" rel="stylesheet">
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/jquery-1.11.2.min.js"></script>
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/bootstrap.js"></script>
+    <script type="text/javascript" src="http://100.79.154.94:80/static/./js/bootstrap-table.js"></script>
+    <script src="http://100.79.154.94:80/static/./js/socket.io.js"></script>
+</head>
+<body>
+<div class="wrapper">
+    <div class="fresh-table full-color-orange full-screen-table" style="margin: 0%;background: radial-gradient(ellipse at center, #323049 0%, #212030 100%);">
+        <table id="fresh-table" class="table" data-sort-name="id" data-sort-order="desc">
+            <thead>
+                <th data-field="id" data-sortable="true">ID</th>
+                <th data-field="imsi" data-sortable="true">IMSI</th>
+                <th data-field="tmsi" data-sortable="true">TMSI</th>
+                <th data-field="mcc" data-sortable="true">MCC</th>
+                <th data-field="mnc" data-sortable="true">MNC</th>
+                <th data-field="lac" data-sortable="true">LAC</th>
+                <th data-field="ci" data-sortable="true">CI</th>
+                <th data-field="time">Time</th>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var $table = $('#fresh-table');
+    
+    $().ready(function(){
+        window_height = $(window).height();
+        table_height = window_height - 20;
+
+        $table.bootstrapTable({
+            toolbar: ".toolbar",
+            showRefresh: true,
+            search: true,
+            showToggle: true,
+            showColumns: true,
+            pagination: true,
+            striped: true,
+            sortable: true,
+            height: table_height,
+            pageSize: 25,
+            pageList: [25,50,100],
+            formatShowingRows: function(pageFrom, pageTo, totalRows){
+                //do nothing here, we don't want to show the text "showing x of y from..."
+            },
+            formatRecordsPerPage: function(pageNumber){
+                return pageNumber + " rows visible";
+            }
+        });
+    });
+
+    // FIXED VERSION - NO SPAM
+    var socket = io('http://100.79.154.94:80', {
+        transports: ['polling', 'websocket'],
+        upgrade: true,
+        rememberUpgrade: false,
+        timeout: 20000,
+        forceNew: true
+    });
+    
+    socket.on('connect', function() {
+        // Request data ONCE without spam
+        socket.emit('imsi_data', 'get');
+    });
+    
+    // Handle the initial data load WITHOUT CONSOLE SPAM
+    socket.on('imsi_data', function(msg) {
+        if (msg && msg.length > 0) {
+            // Add all records to table WITHOUT console.log spam
+            msg.forEach(function(record) {
+                var row = {
+                    id: record[0],
+                    imsi: record[1],
+                    tmsi: record[2] || '',
+                    mcc: record[3],
+                    mnc: record[4],
+                    lac: record[5],
+                    ci: record[6],
+                    time: record[7]
+                };
+                $('#fresh-table').bootstrapTable('prepend', row);
+            });
+            // Show on first page
+            $('#fresh-table').bootstrapTable('selectPage', 1);
+        }
+    });
+    
+    // Only listen for NEW records
+    socket.on('imsi', function(msg) {
+        var row = {
+            id: msg[0],
+            imsi: msg[1],
+            tmsi: msg[2] || '',
+            mcc: msg[3],
+            mnc: msg[4],
+            lac: msg[5],
+            ci: msg[6],
+            time: msg[7]
+        };
+        $('#fresh-table').bootstrapTable('prepend', row);
+    });
+</script>
+</body>
+</html>

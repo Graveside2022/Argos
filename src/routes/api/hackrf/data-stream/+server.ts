@@ -117,7 +117,23 @@ export const GET: RequestHandler = () => {
       const onSpectrum = (data: SpectrumData) => {
         const now = Date.now();
         if (now - lastSpectrumTime >= SPECTRUM_THROTTLE) {
-          sendEvent('sweep_data', data);
+          // Transform data to frontend format
+          const transformedData = {
+            frequencies: data.powerValues ? 
+              data.powerValues.map((_, index) => {
+                const freqStep = (data.endFreq! - data.startFreq!) / (data.powerValues!.length - 1);
+                return data.startFreq! + (index * freqStep);
+              }) : [],
+            power: data.powerValues || [],
+            power_levels: data.powerValues || [],
+            start_freq: data.startFreq,
+            stop_freq: data.endFreq,
+            center_freq: data.frequency,
+            peak_freq: data.frequency,
+            peak_power: data.power,
+            timestamp: data.timestamp
+          };
+          sendEvent('sweep_data', transformedData);
           lastSpectrumTime = now;
         }
       };
@@ -126,7 +142,16 @@ export const GET: RequestHandler = () => {
       const onCycleConfig = (config: unknown) => sendEvent('cycle_config', config);
       const onStatusChange = (change: unknown) => sendEvent('status_change', change);
       
+      // Listen for both event names for compatibility
       sweepManager.on('spectrum', onSpectrum);
+      sweepManager.on('spectrum_data', (data: any) => {
+        // Extract the actual spectrum data from the wrapper
+        if (data && data.data) {
+          onSpectrum(data.data);
+        } else {
+          onSpectrum(data);
+        }
+      });
       sweepManager.on('status', onStatus);
       sweepManager.on('error', onError);
       sweepManager.on('cycle_config', onCycleConfig);
@@ -157,6 +182,7 @@ export const GET: RequestHandler = () => {
         
         // Unsubscribe from events
         sweepManager.off('spectrum', onSpectrum);
+        sweepManager.off('spectrum_data', onSpectrum);
         sweepManager.off('status', onStatus);
         sweepManager.off('error', onError);
         sweepManager.off('cycle_config', onCycleConfig);

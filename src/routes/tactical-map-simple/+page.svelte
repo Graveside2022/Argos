@@ -1865,7 +1865,7 @@
 		<div class="search-container">
 			<button
 				class="back-console-button"
-				on:click={() => (window.location.href = '/hackrfsweep')}
+				on:click={() => (window.location.href = '/')}
 			>
 				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
@@ -2157,7 +2157,7 @@
 				<path d="M4 20v-2h2v2H4zm4 0v-5h2v5H8zm4 0V10h2v10h-2zm4 0V4h2v16h-2z"></path>
 			</svg>
 			<span style="font-weight: 600; letter-spacing: 0.05em; font-size: 12px;">
-				<span style="color: #fb923c;">HACKRF</span>
+				<span style="color: #fb923c;">USRP</span>
 				<span style="color: #ffffff;">SWEEP</span>
 			</span>
 		</div>

@@ -5,8 +5,8 @@
 		void goto('/viewspectrum');
 	}
 
-	function navigateToHackRFSweep() {
-		void goto('/hackrfsweep');
+	function navigateToUSRPSweep() {
+		void goto('/usrpsweep');
 	}
 
 	function navigateToWigleToTAK() {
@@ -36,14 +36,14 @@
 	function navigateToRTL433() {
 		void goto('/rtl-433');
 	}
+
+	function navigateToDroneID() {
+		void goto('/droneid');
+	}
 </script>
 
 <svelte:head>
 	<meta name="description" content="Tactical Intelligence Platform - Mission Selection Console" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
-		rel="stylesheet"
-	/>
 	<title>Argos Console - Mission Select</title>
 </svelte:head>
 
@@ -96,17 +96,17 @@
 
 		<div
 			class="mission-card mission-spectrum"
-			on:click={navigateToHackRFSweep}
+			on:click={navigateToUSRPSweep}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToHackRFSweep()}
+			on:keydown={(e) => e.key === 'Enter' && navigateToUSRPSweep()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
 				<path d="M4 20v-2h2v2H4zm4 0v-5h2v5H8zm4 0V10h2v10h-2zm4 0V4h2v16h-2z"></path>
 			</svg>
 			<h2 class="mission-title">
-				<span style="color: #fb923c;">HackRF</span>
+				<span style="color: #fb923c;">USRP</span>
 				<span>Sweep</span>
 			</h2>
 			<p class="mission-desc">Spectrum Analysis</p>
@@ -205,6 +205,24 @@
 				<span>Security Center</span>
 			</h2>
 			<p class="mission-desc">Unified Intelligence Platform</p>
+		</div>
+
+		<div
+			class="mission-card mission-droneid"
+			on:click={navigateToDroneID}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToDroneID()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path d="M21 16V14L13 9V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9L2 14V16L10 13.5V19L8 20.5V22L11.5 21L15 22V20.5L13 19V13.5L21 16Z"></path>
+			</svg>
+			<h2 class="mission-title">
+				<span style="color: #06b6d4;">Drone</span>
+				<span>ID</span>
+			</h2>
+			<p class="mission-desc">Remote ID Detection</p>
 		</div>
 
 		<div class="mission-card mission-docs">
@@ -474,6 +492,11 @@
 	.mission-fusion {
 		--mission-color: var(--mission-fusion);
 		--mission-glow: rgba(104, 211, 145, 0.3);
+	}
+
+	.mission-droneid {
+		--mission-color: #06b6d4;
+		--mission-glow: rgba(6, 182, 212, 0.3);
 	}
 
 	/* Mission Icons */

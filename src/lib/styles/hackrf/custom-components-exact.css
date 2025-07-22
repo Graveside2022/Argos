@@ -1,7 +1,6 @@
 /* Saasfly Professional Typography System */
 
-/* Import modern Saasfly-style fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+/* Fonts are loaded in app.html with proper fallback handling */
 
 /* CSS Variables - Saasfly Professional Dark Theme */
 :root {
