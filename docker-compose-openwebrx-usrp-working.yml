@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  openwebrx-usrp:
+    image: luarvique/openwebrx:latest
+    container_name: openwebrx-usrp-working
+    restart: unless-stopped
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    ports:
+      - "8073:8073"
+    volumes:
+      - ./openwebrx-usrp-config:/var/lib/openwebrx
+      - /usr/share/uhd/images:/usr/share/uhd/images:ro
+    environment:
+      - UHD_IMAGES_DIR=/usr/share/uhd/images
+      - UHD_LOG_LEVEL=info
+    tmpfs:
+      - /tmp/openwebrx:rw,noexec,nosuid,size=100m
+    networks:
+      - openwebrx
+
+volumes:
+  openwebrx-settings:
+  openwebrx-config:
+
+networks:
+  openwebrx:
+    driver: bridge

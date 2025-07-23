@@ -1,0 +1,40 @@
+{
+  "version": 6,
+  "sdrs": {
+    "usrp_b205": {
+      "name": "USRP B205 Mini",
+      "type": "soapy_connector", 
+      "device": "driver=uhd,type=b200",
+      "enabled": true,
+      "always_up": true,
+      "gain": {
+        "PGA": 40
+      },
+      "samp_rate": 10000000,
+      "center_freq": 100000000,
+      "rf_gain": 40,
+      "profiles": {
+        "default": {
+          "name": "Wide Spektrum",
+          "center_freq": 100000000,
+          "samp_rate": 10000000,
+          "start_freq": 100300000,
+          "start_mod": "wfm"
+        }
+      }
+    }
+  },
+  "web": {
+    "port": 8073,
+    "receiver_name": "Argos USRP B205 Mini",
+    "receiver_location": "Tactical Operations",
+    "receiver_asl": 0,
+    "receiver_admin": "admin",
+    "receiver_gps": [0.0, 0.0],
+    "photo_title": "Argos Tactical SDR",
+    "photo_desc": "USRP B205 Mini Software Defined Radio"
+  },
+  "start_rtl_tcp": false,
+  "start_freq": 100300000,
+  "start_mod": "wfm"
+}

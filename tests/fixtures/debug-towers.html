@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tower Display Debug</title>
+</head>
+<body>
+    <h1>Tower Display Debug</h1>
+    <button id="fetchTowers">Fetch Towers</button>
+    <pre id="output"></pre>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        document.getElementById('fetchTowers').addEventListener('click', async () => {
+            output.textContent = 'Fetching towers...\n';
+            
+            try {
+                const response = await fetch('http://localhost:5173/api/tactical-map/gsm-evil-towers');
+                const data = await response.json();
+                
+                output.textContent += `Response: ${JSON.stringify(data, null, 2)}\n`;
+                
+                if (data.success && data.towers) {
+                    output.textContent += `\nFound ${data.towers.length} towers\n`;
+                    
+                    // Log each tower
+                    data.towers.forEach((tower, index) => {
+                        output.textContent += `\nTower ${index + 1}:\n`;
+                        output.textContent += `  ID: ${tower.mcc}-${tower.mnc}-${tower.lac}-${tower.ci}\n`;
+                        output.textContent += `  Location: ${tower.lat}, ${tower.lon}\n`;
+                        output.textContent += `  IMSI Count: ${tower.imsi_count}\n`;
+                        output.textContent += `  Last Seen: ${tower.last_seen}\n`;
+                    });
+                }
+            } catch (error) {
+                output.textContent += `Error: ${error.message}\n`;
+            }
+        });
+    </script>
+</body>
+</html>
