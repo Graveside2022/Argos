@@ -1,0 +1,23 @@
+services:
+  openwebrx-usrp-final:
+    image: slechev/openwebrxplus:latest
+    container_name: openwebrx-usrp-final
+    restart: unless-stopped
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    ports:
+      - "8073:8073"
+    volumes:
+      - ./openwebrx-usrp-working:/var/lib/openwebrx
+      - ./openwebrx-startup.py:/usr/local/bin/openwebrx-startup.py
+      - /usr/share/uhd/images:/usr/share/uhd/images:ro
+    environment:
+      - UHD_IMAGES_DIR=/usr/share/uhd/images
+      - UHD_LOG_LEVEL=info
+    entrypoint: ["python3", "/usr/local/bin/openwebrx-startup.py"]
+    networks:
+      - openwebrx
+
+networks:
+  openwebrx:
+    driver: bridge
