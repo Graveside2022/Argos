@@ -982,25 +982,9 @@
 		// Default to IMSI sniffer page with timestamp to force refresh
 		iframeUrl = `http://${host}:80/imsi/?t=${Date.now()}`;
 		
-		// Force restart GSM Evil on page load to ensure CORS is enabled
-		console.log('[GSM-DEBUG] Forcing GSM Evil restart to ensure CORS...');
-		fetch('/api/gsm-evil/control', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ action: 'stop' })
-		}).then(() => {
-			return new Promise(resolve => setTimeout(resolve, 2000));
-		}).then(() => {
-			return fetch('/api/gsm-evil/control', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'start' })
-			});
-		}).then(() => {
-			console.log('[GSM-DEBUG] Forced restart completed');
-			// Check initial GSM Evil status
-			return checkGSMStatus();
-		}).catch((error) => {
+		// Check initial GSM Evil status without forcing restart
+		console.log('[GSM-DEBUG] Checking initial GSM Evil status...');
+		checkGSMStatus().catch((error) => {
 			console.error('Initial GSM status check failed:', error);
 		});
 		

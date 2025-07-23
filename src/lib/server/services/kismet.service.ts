@@ -52,40 +52,7 @@ export class KismetService {
   private static readonly LOCATION_VARIANCE = 0.002;
   private static readonly DEFAULT_SIGNAL = -100;
   
-  private static readonly FALLBACK_DEVICES = [
-    {
-      mac: '92:D8:CF:44:9C:F6',
-      manufacturer: 'Unknown',
-      type: 'wifi',
-      channel: 6,
-      frequency: 2437,
-      signal: -65
-    },
-    {
-      mac: 'F0:AF:85:A9:F8:86',
-      manufacturer: 'Unknown', 
-      type: 'wifi',
-      channel: 11,
-      frequency: 2462,
-      signal: -72
-    },
-    {
-      mac: '88:71:B1:95:65:3A',
-      manufacturer: 'ARRIS',
-      type: 'wifi ap',
-      channel: 1,
-      frequency: 2412,
-      signal: -55
-    },
-    {
-      mac: 'B0:D8:88:31:C0:04',
-      manufacturer: 'Mobile Device',
-      type: 'wifi client',
-      channel: 6,
-      frequency: 2437,
-      signal: -78
-    }
-  ];
+  private static readonly FALLBACK_DEVICES: never[] = [];
 
   /**
    * Retrieves current GPS position from the GPS API

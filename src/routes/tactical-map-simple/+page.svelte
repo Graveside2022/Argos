@@ -1878,6 +1878,12 @@
 			<AirSignalRFButton 
 				onClick={() => setAirSignalOverlayState(true)}
 			/>
+			<button
+				class="cell-towers-toggle-button"
+				on:click={toggleCellTowers}
+			>
+				{showCellTowers ? 'Cell Towers On' : 'Cell Towers Off'}
+			</button>
 		</div>
 		<div class="status">
 			<span class="status-item">
@@ -2258,15 +2264,6 @@
 				>
 					Clear
 				</button>
-				<button
-					on:click={toggleCellTowers}
-					class="cell-tower-button-footer {showCellTowers ? 'active' : ''}"
-				>
-					<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M12,2A3,3 0 0,1 15,5V9A3,3 0 0,1 12,12A3,3 0 0,1 9,9V5A3,3 0 0,1 12,2M19,18A1,1 0 0,1 20,19A1,1 0 0,1 19,20C18.5,20 18.12,19.65 18,19.22L15.78,17C15.65,17.12 15.5,17.18 15.33,17.22L16.5,22H7.5L8.67,17.22C8.5,17.18 8.35,17.12 8.22,17L6,19.22C5.88,19.65 5.5,20 5,20A1,1 0 0,1 4,19A1,1 0 0,1 5,18C5.5,18 5.88,18.35 6,18.78L8.22,16.56C8.08,16.4 8,16.21 8,16V12.83C8.59,12.93 9.19,13 9.8,13H14.2C14.81,13 15.41,12.93 16,12.83V16C16,16.21 15.92,16.4 15.78,16.56L18,18.78C18.12,18.35 18.5,18 19,18M12,14A1,1 0 0,0 11,15A1,1 0 0,0 12,16A1,1 0 0,0 13,15A1,1 0 0,0 12,14Z"/>
-					</svg>
-					{cellTowerCount > 0 ? cellTowerCount : ''} Towers
-				</button>
 			</div>
 		{/if}
 
@@ -2474,40 +2471,6 @@
 		cursor: not-allowed;
 	}
 
-	.cell-tower-button-footer {
-		padding: 0.25rem 0.75rem;
-		border: none;
-		border-radius: 4px;
-		font-size: 11px;
-		cursor: pointer;
-		transition: all 0.2s;
-		white-space: nowrap;
-		height: 28px;
-		background: #444;
-		color: #aaa !important;
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.cell-tower-button-footer:hover {
-		background: #555;
-		color: #fff !important;
-	}
-
-	.cell-tower-button-footer.active {
-		background: #10b981;
-		color: white !important;
-	}
-
-	.cell-tower-button-footer.active:hover {
-		background: #059669;
-	}
-
-	.cell-tower-button-footer svg {
-		width: 14px;
-		height: 14px;
-	}
 
 	.start-kismet-button-footer {
 		padding: 0.25rem 0.75rem;
@@ -2612,6 +2575,44 @@
 	.back-console-button svg {
 		width: 16px;
 		height: 16px;
+	}
+
+	.cell-towers-toggle-button {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		margin-left: 0.5rem;
+		background: #374151;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.cell-towers-toggle-button:hover {
+		background: #4b5563;
+		color: white;
+		transform: translateY(-1px);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+	}
+
+	.cell-towers-toggle-button.active {
+		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+		color: white;
+		box-shadow:
+			0 2px 8px rgba(16, 185, 129, 0.3),
+			0 0 20px rgba(16, 185, 129, 0.1);
+	}
+
+	.cell-towers-toggle-button.active:hover {
+		background: linear-gradient(135deg, #059669 0%, #047857 100%);
+		box-shadow:
+			0 4px 12px rgba(16, 185, 129, 0.4),
+			0 0 30px rgba(16, 185, 129, 0.2);
 	}
 
 	.search-button,
