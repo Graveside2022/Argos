@@ -29,23 +29,23 @@ export const POST: RequestHandler = async ({ request }) => {
       
       try {
         sendUpdate('[SCAN] Initializing GSM frequency scanner...');
-        sendUpdate('[SCAN] Focusing on 947.4 MHz - confirmed GSM activity!');
+        sendUpdate('[SCAN] Targeted frequency scan: 948.2, 945.6 MHz');
         sendUpdate('[SCAN] ');
         
-        // Focus on 947.4 MHz where GSM activity was confirmed
-        const checkFreqs: string[] = ['947.4'];
+        // Specific frequencies for targeted GSM scanning
+        const checkFreqs: string[] = ['948.2', '945.6'];
         
-        sendUpdate(`[SCAN] Scanning 1 frequency with confirmed GSM traffic`);
-        sendUpdate('[SCAN] This will maximize GSM frame capture rate');
+        sendUpdate(`[SCAN] Scanning ${checkFreqs.length} frequencies for GSM activity comparison`);
+        sendUpdate('[SCAN] Each frequency will be tested for 5 seconds to maximize frame detection');
         
         sendUpdate('[SCAN] Frequencies to scan:');
         sendUpdate(`[SCAN] ${checkFreqs.join(', ')} MHz`);
         
         sendUpdate('[SCAN] ');
-        sendUpdate('[SCAN] Starting GSM Frame Detection');
-        sendUpdate('[SCAN] Testing 947.4 MHz for maximum GSM frame collection...');
-        const estimatedTime = checkFreqs.length * 8; // ~8 seconds total (2s init + 6s capture)
-        sendUpdate(`[SCAN] Estimated time: ${estimatedTime} seconds`);
+        sendUpdate('[SCAN] Starting Multi-Frequency GSM Frame Detection');
+        sendUpdate('[SCAN] Testing each frequency for 5 seconds to find highest GSM frame count...');
+        const estimatedTime = checkFreqs.length * 8; // ~8 seconds per freq (2s init + 5s capture + 1s cleanup)
+        sendUpdate(`[SCAN] Estimated time: ${Math.round(estimatedTime/60)} minutes ${estimatedTime%60} seconds`);
         sendUpdate('[SCAN] ');
         
         // Test each frequency
@@ -110,11 +110,14 @@ export const POST: RequestHandler = async ({ request }) => {
               }
             }
             
-            sendUpdate(`[CMD] $ grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain}`);
+            // Use working grgsm command for all devices
+            const grgsm_command = `sudo grgsm_livemon_headless -f ${freq}M -g ${gain}`;
             
-            // Start grgsm_livemon_headless directly (bypassing broken wrapper)
+            sendUpdate(`[CMD] $ ${grgsm_command}`);
+            
+            // Start appropriate grgsm script based on device type
             const { stdout: gsmPid } = await execAsync(
-              `sudo grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain} >/dev/null 2>&1 & echo $!`
+              `${grgsm_command} >/dev/null 2>&1 & echo $!`
             );
             
             pid = gsmPid.trim();
@@ -131,7 +134,7 @@ export const POST: RequestHandler = async ({ request }) => {
             await new Promise(resolve => setTimeout(resolve, initDelay));
             
             sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
-            const captureTime = isUSRP ? 6 : 3; // Longer capture for better frame detection
+            const captureTime = 5; // Fixed 5 seconds as requested for consistent comparison
             sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Counting GSMTAP packets for ${captureTime} seconds...`);
             
             // Count GSMTAP packets and analyze channel types
@@ -294,13 +297,32 @@ export const POST: RequestHandler = async ({ request }) => {
         results.sort((a, b) => b.frameCount - a.frameCount);
         
         // Find best frequency
-        const bestFreq = results.find(r => r.hasGsmActivity) || results[0] || { frequency: '947.2', frameCount: 0, power: -100, strength: 'No Signal' };
+        const bestFreq = results.find(r => r.hasGsmActivity) || results[0] || { 
+          frequency: '947.2', 
+          frameCount: 0, 
+          power: -100, 
+          strength: 'No Signal',
+          hasGsmActivity: false,
+          channelType: '',
+          controlChannel: false
+        };
         
         sendUpdate('[SCAN] ');
         sendUpdate('[SCAN] ========== SCAN COMPLETE ==========');
-        sendUpdate(`[SCAN] Best frequency: ${bestFreq.frequency} MHz`);
+        sendUpdate(`[SCAN] Tested ${results.length} frequencies from 944.0-949.0 MHz`);
+        sendUpdate('[SCAN] ');
+        sendUpdate('[SCAN] TOP 5 FREQUENCIES BY GSM FRAME COUNT:');
+        const top5 = results.slice(0, 5);
+        top5.forEach((result, index) => {
+          sendUpdate(`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength})`);
+        });
+        sendUpdate('[SCAN] ');
+        sendUpdate(`[SCAN] BEST FREQUENCY: ${bestFreq.frequency} MHz`);
         sendUpdate(`[SCAN] GSM frames detected: ${bestFreq.frameCount}`);
-        sendUpdate(`[SCAN] Signal strength: ${bestFreq.power.toFixed(1)} dB (${bestFreq.strength})`);
+        sendUpdate(`[SCAN] Signal strength: ${bestFreq.power.toFixed(1)} dBm (${bestFreq.strength})`);
+        if (bestFreq.channelType) {
+          sendUpdate(`[SCAN] Channel type: ${bestFreq.channelType}${bestFreq.controlChannel ? ' (Control Channel)' : ''}`);
+        }
         sendUpdate('[SCAN] ==================================');
         
         // Send final result
