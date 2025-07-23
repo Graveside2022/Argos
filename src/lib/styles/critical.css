@@ -1,0 +1,278 @@
+/* CRITICAL CSS - Above-the-fold styles to prevent FOUC */
+/* This file contains essential styles loaded immediately to prevent white outlines */
+
+/* Core CSS Variables - Essential for preventing FOUC */
+:root {
+	/* Colors - Essential for immediate theming */
+	--bg-primary: #0a0a0a;
+	--bg-secondary: #141414;
+	--bg-card: #141414;
+	--bg-input: #1a1a1a;
+	--bg-hover: #2d2d2d;
+	--bg-button: #404040;
+
+	/* Text Colors */
+	--text-primary: #ffffff;
+	--text-secondary: #a3a3a3;
+	--text-muted: #525252;
+
+	/* Borders - Essential for preventing white borders */
+	--border-primary: 38 38 38; /* #262626 in RGB format */
+	--border-hover: 255 255 255; /* White in RGB */
+
+	/* Accent Colors */
+	--accent-primary: #68d391;
+	--neon-cyan: #00d2ff;
+
+	/* Fonts */
+	--font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-body: 'Inter', system-ui, -apple-system, sans-serif;
+	--font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/* Critical Base Styles - Prevent white flashes */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html {
+	font-family: var(--font-body);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	font-family: var(--font-body);
+	color: var(--text-primary);
+	background-color: var(--bg-primary);
+	line-height: 1.5;
+}
+
+/* Critical Layout Containers - Prevent layout shifts */
+.min-h-screen {
+	min-height: 100vh;
+}
+
+/* Header Critical Styles - Above the fold */
+header {
+	background-color: var(--bg-primary);
+	border-bottom: 1px solid rgb(var(--border-primary) / 0.5);
+	backdrop-filter: blur(32px);
+}
+
+/* Card Critical Styles - Prevent white boxes */
+.saasfly-feature-card,
+.saasfly-dashboard-card {
+	background: linear-gradient(to bottom right, 
+		color-mix(in srgb, var(--bg-card) 80%, transparent),
+		color-mix(in srgb, var(--bg-card) 60%, transparent),
+		color-mix(in srgb, var(--bg-card) 40%, transparent));
+	border: 1px solid rgb(var(--border-primary) / 0.4);
+	border-radius: 1rem;
+	backdrop-filter: blur(24px);
+}
+
+/* Button Critical Styles - Prevent white buttons */
+button {
+	font-family: var(--font-heading);
+	background: var(--bg-button);
+	color: var(--text-primary);
+	border: 1px solid rgb(var(--border-primary));
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+/* Input Critical Styles - Prevent white inputs */
+input, select, textarea {
+	font-family: var(--font-mono);
+	background: var(--bg-input);
+	color: var(--text-primary);
+	border: 1px solid rgb(var(--border-primary) / 0.6);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+}
+
+input:focus, select:focus, textarea:focus {
+	outline: none;
+	border-color: var(--accent-primary);
+	box-shadow: 0 0 0 3px rgba(104, 211, 145, 0.1);
+}
+
+/* Glass Panel Critical Styles */
+.glass-panel {
+	background: rgba(20, 20, 20, 0.85);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgb(var(--border-primary));
+	border-radius: 0.75rem;
+}
+
+.glass-button {
+	background: var(--bg-button);
+	border: 1px solid rgb(var(--border-primary));
+	color: var(--text-primary);
+	border-radius: 0.5rem;
+	transition: all 0.2s ease;
+}
+
+/* Status Panel Critical Styles */
+.status-panel {
+	background: rgba(20, 20, 20, 0.6);
+	border: 1px solid rgba(38, 38, 38, 0.6);
+}
+
+/* Container Critical Styles */
+.container {
+	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* Grid Critical Styles - Prevent layout shifts */
+.grid {
+	display: grid;
+}
+
+.grid-cols-1 {
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+/* Flex Critical Styles */
+.flex {
+	display: flex;
+}
+
+.items-center {
+	align-items: center;
+}
+
+.justify-between {
+	justify-content: space-between;
+}
+
+/* Critical Text Styles */
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-heading);
+	color: var(--text-primary);
+	font-weight: 600;
+}
+
+/* Critical Color Classes - Override Tailwind defaults immediately */
+.text-white {
+	color: var(--text-primary) !important;
+}
+
+.text-gray-300,
+.text-gray-400 {
+	color: var(--text-secondary) !important;
+}
+
+.text-gray-500,
+.text-gray-600 {
+	color: var(--text-muted) !important;
+}
+
+.bg-black,
+.bg-gray-900 {
+	background-color: var(--bg-primary) !important;
+}
+
+.bg-gray-800 {
+	background-color: var(--bg-card) !important;
+}
+
+.border-gray-300,
+.border-gray-400,
+.border-gray-500 {
+	border-color: rgb(var(--border-primary)) !important;
+}
+
+/* Critical Loading State - Hide content until CSS loads */
+.page-loading {
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.css-loaded .page-loading {
+	opacity: 1;
+}
+
+/* Critical Rounded Classes */
+.rounded-lg {
+	border-radius: 0.5rem;
+}
+
+.rounded-xl {
+	border-radius: 0.75rem;
+}
+
+.rounded-2xl {
+	border-radius: 1rem;
+}
+
+/* Critical Padding Classes */
+.p-4 {
+	padding: 1rem;
+}
+
+.p-6 {
+	padding: 1.5rem;
+}
+
+.p-8 {
+	padding: 2rem;
+}
+
+/* Critical Margin Classes */
+.mb-4 {
+	margin-bottom: 1rem;
+}
+
+.mb-6 {
+	margin-bottom: 1.5rem;
+}
+
+.mb-8 {
+	margin-bottom: 2rem;
+}
+
+/* Critical Gap Classes */
+.gap-4 {
+	gap: 1rem;
+}
+
+.gap-6 {
+	gap: 1.5rem;
+}
+
+.gap-8 {
+	gap: 2rem;
+}
+
+/* Critical Shadow Classes */
+.shadow-lg {
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-xl {
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile Critical Styles */
+@media (max-width: 768px) {
+	.container {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+	
+	header .flex {
+		height: 3rem;
+	}
+	
+	.saasfly-feature-card,
+	.saasfly-dashboard-card {
+		padding: 1rem;
+	}
+}

@@ -1,0 +1,122 @@
+version: "3.8"
+
+services:
+  openwebrx-usrp-simple:
+    image: slechev/openwebrxplus:latest
+    container_name: openwebrx-usrp-simple
+    restart: unless-stopped
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    ports:
+      - "8073:8073"
+    volumes:
+      - ./openwebrx-usrp-working:/var/lib/openwebrx
+      - /usr/share/uhd/images:/usr/share/uhd/images:ro
+    environment:
+      - UHD_IMAGES_DIR=/usr/share/uhd/images
+      - UHD_LOG_LEVEL=info
+    command: >
+      sh -c "
+      # Create Python config from JSON if it exists
+      if [ -f '/var/lib/openwebrx/sdrs.json' ]; then
+        python3 -c \"
+import json
+import os
+
+# Load JSON configs
+try:
+    with open('/var/lib/openwebrx/settings.json', 'r') as f:
+        settings = json.load(f)
+    with open('/var/lib/openwebrx/sdrs.json', 'r') as f:
+        sdr_config = json.load(f)
+    
+    # Generate Python config
+    config_content = '''# Auto-generated from JSON config
+receiver_name = \\\"{receiver_name}\\\"
+receiver_location = \\\"{receiver_location}\\\"
+waterfall_scheme = \\\"{waterfall_scheme}\\\"
+fft_fps = {fft_fps}
+audio_compression = \\\"{audio_compression}\\\"
+web_port = 8073
+
+sdrs = {{'''.format(
+        receiver_name=settings.get('receiver_name', 'OpenWebRX'),
+        receiver_location=settings.get('receiver_location', 'Unknown'),
+        waterfall_scheme=settings.get('waterfall_scheme', 'GoogleTurboWaterfall'),
+        fft_fps=settings.get('fft_fps', 25),
+        audio_compression=settings.get('audio_compression', 'none')
+    )
+    
+    # Add SDR configurations
+    for sdr_id, sdr_data in sdr_config.get('sdrs', {}).items():
+        if sdr_data.get('enabled', False):
+            config_content += '''
+    \\\"{sdr_id}\\\": {{
+        \\\"name\\\": \\\"{name}\\\",
+        \\\"type\\\": \\\"{type}\\\",
+        \\\"enabled\\\": True,'''.format(
+                sdr_id=sdr_id,
+                name=sdr_data.get('name', sdr_id),
+                type=sdr_data.get('type', 'hackrf')
+            )
+            
+            if 'device' in sdr_data:
+                config_content += '''
+        \\\"device\\\": \\\"{}\\\",'''.format(sdr_data['device'])
+            if 'ppm' in sdr_data:
+                config_content += '''
+        \\\"ppm\\\": {},'''.format(sdr_data['ppm'])
+            
+            # Add profiles
+            if 'profiles' in sdr_data:
+                config_content += '''
+        \\\"profiles\\\": {'''
+                for profile_id, profile_data in sdr_data['profiles'].items():
+                    config_content += '''
+            \\\"{}\\\": {{
+                \\\"name\\\": \\\"{}\\\",
+                \\\"center_freq\\\": {},
+                \\\"samp_rate\\\": {},
+                \\\"start_freq\\\": {},
+                \\\"start_mod\\\": \\\"{}\\\",'''.format(
+                        profile_id,
+                        profile_data.get('name', profile_id),
+                        profile_data.get('center_freq', 100000000),
+                        profile_data.get('samp_rate', 2048000),
+                        profile_data.get('start_freq', 100000000),
+                        profile_data.get('start_mod', 'nfm')
+                    )
+                    if 'rf_gain' in profile_data:
+                        config_content += '''
+                \\\"rf_gain\\\": {},'''.format(profile_data['rf_gain'])
+                    config_content += '''
+            }},'''
+                config_content += '''
+        },'''
+            
+            config_content += '''
+    }},'''
+    
+    config_content += '''
+}
+'''
+    
+    # Write config file
+    with open('/etc/openwebrx/config_webrx.py', 'w') as f:
+        f.write(config_content)
+    
+    print('Generated Python config from JSON')
+except Exception as e:
+    print(f'Error generating config: {e}')
+\"
+      fi
+      
+      # Start OpenWebRX
+      exec python3 /usr/bin/openwebrx
+      "
+    networks:
+      - openwebrx
+
+networks:
+  openwebrx:
+    driver: bridge
