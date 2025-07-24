@@ -9,6 +9,30 @@ export const POST: RequestHandler = async () => {
   try {
     console.log('Starting GSM frequency scan...');
     
+    // Check if USRP is already in use by OpenWebRX or other services
+    try {
+      const { stdout: usrpStatus } = await execAsync('/home/ubuntu/projects/Argos/scripts/check-usrp-busy.sh');
+      if (usrpStatus.trim() !== 'FREE') {
+        const busyService = usrpStatus.split(':')[1] || 'Unknown Service';
+        return json({ 
+          success: false, 
+          message: `USRP is currently in use by ${busyService}. Please stop it first before scanning.`,
+          conflictingService: busyService
+        }, { status: 409 });
+      }
+    } catch (busyError) {
+      // If script returns non-zero (BUSY), handle the conflict
+      const errorOutput = (busyError as any).stdout || '';
+      if (errorOutput.includes('BUSY:')) {
+        const busyService = errorOutput.split(':')[1] || 'Unknown Service';
+        return json({ 
+          success: false, 
+          message: `USRP is currently in use by ${busyService}. Please stop it first before scanning.`,
+          conflictingService: busyService
+        }, { status: 409 });
+      }
+    }
+    
     // Focus on 947.4 MHz where GSM activity was confirmed
     const checkFreqs = ['947.4'];
     

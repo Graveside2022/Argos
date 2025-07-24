@@ -11,6 +11,30 @@ export const POST: RequestHandler = async ({ request }) => {
     
     if (action === 'start') {
       try {
+        // Check if USRP is already in use by OpenWebRX or other services
+        try {
+          const { stdout: usrpStatus } = await execAsync('/home/ubuntu/projects/Argos/scripts/check-usrp-busy.sh');
+          if (usrpStatus.trim() !== 'FREE') {
+            const busyService = usrpStatus.split(':')[1] || 'Unknown Service';
+            return json({ 
+              success: false, 
+              message: `USRP is currently in use by ${busyService}. Please stop it first before starting GSM Evil.`,
+              conflictingService: busyService
+            }, { status: 409 });
+          }
+        } catch (busyError) {
+          // If script returns non-zero (BUSY), handle the conflict
+          const errorOutput = (busyError as any).stdout || '';
+          if (errorOutput.includes('BUSY:')) {
+            const busyService = errorOutput.split(':')[1] || 'Unknown Service';
+            return json({ 
+              success: false, 
+              message: `USRP is currently in use by ${busyService}. Please stop it first before starting GSM Evil.`,
+              conflictingService: busyService
+            }, { status: 409 });
+          }
+        }
+        
         // Check if USRP B205 Mini is connected via USB (more reliable than uhd_find_devices)
         try {
           const { stdout } = await execAsync('lsusb | grep -i "ettus\\|2500:0022" | grep -q "B205" && echo "usrp_found"');
