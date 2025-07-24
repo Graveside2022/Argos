@@ -30,17 +30,16 @@
 	// Security and interaction management
 	let commandBarActive = false;
 	let commandInput = '';
-	let performanceMonitorVisible = false;
 	let selectedOperation: string | null = null;
 	let lastActivity = Date.now();
 	const sessionTimeout = 30 * 60 * 1000; // 30 minutes
 
-	// Performance metrics
-	let cpuUsage = '23%';
-	let memUsage = '1.2GB';
-	let netUsage = '847KB/s';
-	let uptime = '72h 14m';
-	let startTime = Date.now();
+	// System information
+	let systemIp = '100.79.154.94';
+	let gridReference = 'JN39JX73QT';  // 10-digit grid for Mainz-Kastel area
+	let location = 'Mainz-Kastel, Germany';
+	let cpuPercentage = '0%';
+	let memoryPercentage = '0%';
 
 	// Operation click handlers
 	const operationHandlers: Record<string, () => void> = {
@@ -74,11 +73,6 @@
 			commandBarActive = false;
 		}
 
-		// Ctrl+Shift+P for performance monitor
-		if (event.ctrlKey && event.shiftKey && event.key === 'P') {
-			event.preventDefault();
-			performanceMonitorVisible = !performanceMonitorVisible;
-		}
 	}
 
 	function toggleCommandBar() {
@@ -95,7 +89,7 @@
 		const command = commandInput.toLowerCase().trim();
 		
 		const commands: Record<string, () => void> = {
-			'status': () => console.log('All systems operational'),
+			'status': () => console.warn('All systems operational'),
 			'refresh': () => location.reload(),
 			'select cellular': () => handleOperationClick('cellular'),
 			'select data': () => handleOperationClick('data'),
@@ -109,7 +103,7 @@
 		if (commands[command]) {
 			commands[command]();
 		} else {
-			console.log(`Unknown command: ${command}`);
+			console.warn(`Unknown command: ${command}`);
 		}
 
 		commandInput = '';
@@ -117,7 +111,7 @@
 	}
 
 	function showHelp() {
-		console.log(`
+		console.warn(`
 Available Commands:
 - status: Show system status
 - refresh: Reload the page
@@ -126,105 +120,106 @@ Available Commands:
 		`);
 	}
 
-	function formatUptime(ms: number): string {
-		const hours = Math.floor(ms / (1000 * 60 * 60));
-		const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-		return `${hours}h ${minutes}m`;
+
+	async function fetchSystemStats() {
+		try {
+			// In a real implementation, this would call an API endpoint
+			// For now, we'll simulate with realistic values
+			const response = await fetch('/api/system/stats').catch(() => null);
+			if (response && response.ok) {
+				const data = await response.json();
+				cpuPercentage = data.cpu + '%';
+				memoryPercentage = data.memory + '%';
+			} else {
+				// Fallback to simulated values
+				cpuPercentage = (Math.floor(Math.random() * 30) + 15) + '%';
+				memoryPercentage = (Math.floor(Math.random() * 40) + 30) + '%';
+			}
+		} catch {
+			// Use simulated values if API fails
+			cpuPercentage = (Math.floor(Math.random() * 30) + 15) + '%';
+			memoryPercentage = (Math.floor(Math.random() * 40) + 30) + '%';
+		}
 	}
 
 	onMount(() => {
-		// Update performance metrics
+		// Initial system stats fetch
+		fetchSystemStats();
+		
+		// Fetch system stats periodically
 		const metricsInterval = setInterval(() => {
-			const cpu = Math.floor(Math.random() * 30) + 15;
-			const mem = (Math.random() * 0.5 + 1.0).toFixed(1);
-			const net = Math.floor(Math.random() * 200) + 700;
-			
-			cpuUsage = cpu + '%';
-			memUsage = mem + 'GB';
-			netUsage = net + 'KB/s';
-			uptime = formatUptime(Date.now() - startTime);
-		}, 2000);
-
-		// Show performance monitor after delay
-		setTimeout(() => {
-			performanceMonitorVisible = true;
-		}, 1000);
+			fetchSystemStats();
+		}, 5000);
 
 		// Session monitoring
 		const sessionInterval = setInterval(() => {
 			if (Date.now() - lastActivity > sessionTimeout) {
-				console.log('Session timeout - Please re-authenticate');
+				console.warn('Session timeout - Please re-authenticate');
 			}
 		}, 60000);
-
-		// Update progress bars
-		const progressInterval = setInterval(() => {
-			const progressBars = document.querySelectorAll('.progress-fill');
-			progressBars.forEach(bar => {
-				if (bar instanceof HTMLElement) {
-					const currentWidth = parseInt(bar.style.width);
-					const variation = (Math.random() - 0.5) * 4;
-					const newWidth = Math.max(10, Math.min(100, currentWidth + variation));
-					bar.style.width = newWidth + '%';
-				}
-			});
-		}, 3000);
 
 		return () => {
 			clearInterval(metricsInterval);
 			clearInterval(sessionInterval);
-			clearInterval(progressInterval);
 		};
 	});
 </script>
 
 <svelte:head>
 	<title>ARGOS - Enhanced Intelligence Platform</title>
-	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://fonts.floriankarsten.com/space-grotesk?styles=regular,medium,bold" rel="stylesheet">
 </svelte:head>
 
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="app-container">
 	<header class="header">
-		<div class="container">
-			<nav class="nav">
-				<div class="logo">
-					<div class="logo-text">ARGOS</div>
+		<nav class="nav">
+			<div class="logo-section">
+				<h1 class="logo-text">
+					<span class="logo-a">A</span>rgos
+				</h1>
+				<div class="logo-subtitle">TACTICAL INTELLIGENCE PLATFORM</div>
+			</div>
+			<div class="system-status">
+				<div class="status-item">
+					<span class="status-label">IP</span>
+					<span class="status-value">{systemIp}</span>
 				</div>
-				<div class="live-indicator">
-					<span class="screen-reader-only">System status: </span>
-					Live
+				<div class="status-divider"></div>
+				<div class="status-item">
+					<span class="status-label">GRID</span>
+					<span class="status-value">{gridReference}</span>
 				</div>
-			</nav>
-		</div>
+				<div class="status-divider"></div>
+				<div class="status-item">
+					<span class="status-label">LOC</span>
+					<span class="status-value" style="white-space: nowrap">{location}</span>
+				</div>
+				<div class="status-divider"></div>
+				<div class="status-item">
+					<span class="status-label">CPU</span>
+					<span class="status-value">{cpuPercentage}</span>
+				</div>
+				<div class="status-divider"></div>
+				<div class="status-item">
+					<span class="status-label">MEM</span>
+					<span class="status-value">{memoryPercentage}</span>
+				</div>
+			</div>
+		</nav>
 	</header>
 
-	<!-- Performance Monitor -->
-	<div class="performance-monitor" class:visible={performanceMonitorVisible} id="performanceMonitor">
-		<div class="perf-metric">
-			<span>CPU</span>
-			<span class="perf-value">{cpuUsage}</span>
-		</div>
-		<div class="perf-metric">
-			<span>Memory</span>
-			<span class="perf-value">{memUsage}</span>
-		</div>
-		<div class="perf-metric">
-			<span>Network</span>
-			<span class="perf-value">{netUsage}</span>
-		</div>
-		<div class="perf-metric">
-			<span>Uptime</span>
-			<span class="perf-value">{uptime}</span>
-		</div>
-	</div>
 
 	<main class="main">
 		<div class="container">
 			<div class="section-header">
-				<h2 class="section-title">Operational Modules</h2>
-				<p class="section-subtitle">Select an operational module to begin intelligence gathering and analysis</p>
+				<h2 class="section-title">
+					<span class="select-text">Select</span> 
+					<span class="mission-text">Mission</span> 
+					<span class="card-text">Card</span>
+				</h2>
+				<p class="section-subtitle">Intelligence gathering and analysis systems</p>
 			</div>
 
 			<div class="operations" role="grid" aria-label="Operational modules">
@@ -237,54 +232,12 @@ Available Commands:
 				>
 					<div class="operation-header">
 						<div class="operation-number">001</div>
-						<div class="operation-status standby" aria-label="Status: Standby"></div>
+						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
 					<h3 class="operation-title"><span class="first-word">Cellular</span> Analysis</h3>
 					<p class="operation-description">
 						Mobile network analysis and device interaction for electronic surveillance operations
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Bands</div>
-							<div class="meta-value">GSM/LTE</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Standby</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Cells</div>
-							<div class="meta-value">23 <span class="metric-trend trend-up"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">System Ready</div>
-							<div class="metric-value">100%</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 100%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								IMSI Count
-								<div class="detail-value">127</div>
-							</div>
-							<div class="detail-item">
-								Last Active
-								<div class="detail-value">2h 14m</div>
-							</div>
-							<div class="detail-item">
-								Frequency
-								<div class="detail-value">900MHz</div>
-							</div>
-						</div>
-					</div>
 				</button>
 
 				<!-- Data Broadcasting -->
@@ -302,48 +255,6 @@ Available Commands:
 					<p class="operation-description">
 						Tactical data distribution and Common Operating Picture integration platform
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Nodes</div>
-							<div class="meta-value">12</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Connected</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Latency</div>
-							<div class="meta-value">18ms <span class="metric-trend trend-down"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">Network Health</div>
-							<div class="metric-value">98.7%</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 98%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline" style="clip-path: polygon(0% 100%, 15% 70%, 30% 85%, 45% 60%, 60% 75%, 75% 50%, 90% 40%, 100% 35%, 100% 100%);"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								Throughput
-								<div class="detail-value">847 Kbps</div>
-							</div>
-							<div class="detail-item">
-								Packets
-								<div class="detail-value">12.4K/s</div>
-							</div>
-							<div class="detail-item">
-								Sync
-								<div class="detail-value">99.1%</div>
-							</div>
-						</div>
-					</div>
 				</button>
 
 				<!-- Geospatial Mapping -->
@@ -361,48 +272,6 @@ Available Commands:
 					<p class="operation-description">
 						Signal source visualization with integrated mapping and tactical overlay systems
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Coverage</div>
-							<div class="meta-value">15km²</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Ready</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Markers</div>
-							<div class="meta-value">89 <span class="metric-trend trend-up"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">Data Quality</div>
-							<div class="metric-value">94.2%</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 94%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline" style="clip-path: polygon(0% 100%, 12% 80%, 25% 75%, 38% 90%, 50% 65%, 63% 70%, 75% 45%, 88% 55%, 100% 30%, 100% 100%);"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								Zoom Level
-								<div class="detail-value">15x</div>
-							</div>
-							<div class="detail-item">
-								Layers
-								<div class="detail-value">12</div>
-							</div>
-							<div class="detail-item">
-								Refresh
-								<div class="detail-value">2.3s</div>
-							</div>
-						</div>
-					</div>
 				</button>
 
 				<!-- Network Discovery -->
@@ -420,48 +289,6 @@ Available Commands:
 					<p class="operation-description">
 						Wireless network enumeration and device tracking with real-time monitoring capabilities
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Protocol</div>
-							<div class="meta-value">802.11/BLE</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Active</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Targets</div>
-							<div class="meta-value">247 <span class="metric-trend trend-up"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">Signal Strength</div>
-							<div class="metric-value">-42 dBm</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 78%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline" style="clip-path: polygon(0% 100%, 14% 65%, 28% 80%, 42% 55%, 56% 70%, 70% 45%, 84% 60%, 100% 40%, 100% 100%);"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								Uptime
-								<div class="detail-value">72h 14m</div>
-							</div>
-							<div class="detail-item">
-								Last Scan
-								<div class="detail-value">00:23</div>
-							</div>
-							<div class="detail-item">
-								Coverage
-								<div class="detail-value">2.4km²</div>
-							</div>
-						</div>
-					</div>
 				</button>
 
 				<!-- Signal Visualization -->
@@ -479,48 +306,6 @@ Available Commands:
 					<p class="operation-description">
 						Real-time spectrum waterfall analysis with advanced signal processing capabilities
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Resolution</div>
-							<div class="meta-value">2048 FFT</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Online</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Bandwidth</div>
-							<div class="meta-value">2.4MHz <span class="metric-trend trend-up"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">Processing Load</div>
-							<div class="metric-value">23%</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 23%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline" style="clip-path: polygon(0% 100%, 16% 85%, 32% 70%, 48% 90%, 64% 60%, 80% 75%, 96% 50%, 100% 45%, 100% 100%);"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								Frame Rate
-								<div class="detail-value">30 FPS</div>
-							</div>
-							<div class="detail-item">
-								SNR
-								<div class="detail-value">23dB</div>
-							</div>
-							<div class="detail-item">
-								Buffer
-								<div class="detail-value">4.2MB</div>
-							</div>
-						</div>
-					</div>
 				</button>
 
 				<!-- Spectrum Analysis -->
@@ -538,48 +323,6 @@ Available Commands:
 					<p class="operation-description">
 						Software-defined radio analysis with configurable frequency sweeping and detection
 					</p>
-					<div class="operation-meta">
-						<div class="meta-item">
-							<div class="meta-label">Range</div>
-							<div class="meta-value">10MHz-6GHz</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Status</div>
-							<div class="meta-value">Scanning</div>
-						</div>
-						<div class="meta-item">
-							<div class="meta-label">Signals</div>
-							<div class="meta-value">1,423 <span class="metric-trend trend-up"><div class="trend-arrow"></div></span></div>
-						</div>
-					</div>
-					<div class="operation-metrics">
-						<div class="metrics-row">
-							<div class="metric-label">Sweep Progress</div>
-							<div class="metric-value">67%</div>
-						</div>
-						<div class="progress-bar">
-							<div class="progress-fill" style="width: 67%"></div>
-						</div>
-						<div class="mini-chart">
-							<div class="sparkline" style="clip-path: polygon(0% 100%, 18% 75%, 36% 60%, 54% 85%, 72% 50%, 90% 65%, 100% 35%, 100% 100%);"></div>
-						</div>
-					</div>
-					<div class="operation-details">
-						<div class="detail-grid">
-							<div class="detail-item">
-								Bandwidth
-								<div class="detail-value">20MHz</div>
-							</div>
-							<div class="detail-item">
-								Gain
-								<div class="detail-value">45dB</div>
-							</div>
-							<div class="detail-item">
-								FFT Size
-								<div class="detail-value">2048</div>
-							</div>
-						</div>
-					</div>
 				</button>
 			</div>
 		</div>
@@ -644,6 +387,10 @@ Available Commands:
 		font-weight: 400;
 		position: relative;
 		container-type: inline-size;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		overflow-x: hidden;
 	}
 
 	/* Technical Grid Overlay */
@@ -667,6 +414,11 @@ Available Commands:
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		overflow-x: hidden;
+		position: relative;
 	}
 
 	.container {
@@ -689,11 +441,15 @@ Available Commands:
 
 	/* Header */
 	.header {
-		border-bottom: 1px solid var(--gray-800);
-		background: rgba(10, 10, 11, 0.9);
-		backdrop-filter: blur(20px);
 		position: sticky;
 		top: 0;
+		left: 0;
+		right: 0;
+		width: 100%;
+		background: rgba(26, 26, 26, 0.95);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--gray-800);
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 		z-index: 100;
 	}
 
@@ -701,29 +457,92 @@ Available Commands:
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		height: 80px;
+		min-height: auto;
+		padding: 1.75rem 3rem;
+		max-width: 100%;
+		margin: 0;
 	}
 
-	.logo {
+	.logo-section {
 		display: flex;
-		align-items: center;
+		flex-direction: column;
+		gap: 4px;
 	}
 
 	.logo-text {
-		font-size: 1.5rem;
-		font-weight: 500;
-		letter-spacing: 0.02em;
-		position: relative;
+		font-size: 2.75rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		color: var(--white);
+		margin: 0;
+		line-height: 1.1;
+		padding-bottom: 4px;
 	}
 
-	.logo-text::after {
+	.logo-a {
+		color: var(--red);
+		position: relative;
+		display: inline-block;
+	}
+
+	.logo-a::after {
 		content: '';
 		position: absolute;
 		bottom: -2px;
 		left: 0;
-		width: 12px;
+		right: 0;
 		height: 2px;
 		background: var(--red);
+	}
+
+	.logo-subtitle {
+		font-size: 0.65rem;
+		font-weight: 600;
+		letter-spacing: 0.4em;
+		color: var(--gray-400);
+		text-transform: uppercase;
+		opacity: 0.8;
+	}
+
+	.system-status {
+		display: flex;
+		align-items: center;
+		gap: 20px;
+		font-family: 'Space Grotesk', monospace;
+		flex-wrap: wrap;
+	}
+
+	.status-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		position: relative;
+	}
+
+
+	.status-label {
+		font-size: 0.65rem;
+		color: var(--red);
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		font-weight: 600;
+		opacity: 0.8;
+	}
+
+	.status-value {
+		font-size: 0.9rem;
+		color: var(--white);
+		font-weight: 500;
+		min-width: fit-content;
+		white-space: nowrap;
+		font-family: 'Space Grotesk', monospace;
+	}
+
+	.status-divider {
+		width: 1px;
+		height: 24px;
+		background: linear-gradient(to bottom, transparent, var(--gray-600), transparent);
+		opacity: 0.5;
 	}
 
 	/* Live indicator */
@@ -744,47 +563,9 @@ Available Commands:
 		height: 4px;
 		background: var(--red);
 		border-radius: 50%;
-		animation: pulse 1.5s infinite;
 	}
 
-	@keyframes pulse {
-		0%, 100% { opacity: 1; transform: scale(1); }
-		50% { opacity: 0.5; transform: scale(1.2); }
-	}
 
-	/* Performance Monitor */
-	.performance-monitor {
-		position: fixed;
-		top: 20px;
-		right: 20px;
-		background: rgba(10, 10, 11, 0.95);
-		backdrop-filter: blur(20px);
-		border: 1px solid var(--gray-800);
-		border-radius: 6px;
-		padding: 12px;
-		font-size: 0.7rem;
-		opacity: 0;
-		transition: opacity 0.3s ease;
-		z-index: 1000;
-		min-width: 120px;
-	}
-
-	.performance-monitor.visible {
-		opacity: 1;
-	}
-
-	.perf-metric {
-		display: flex;
-		justify-content: space-between;
-		margin-bottom: 4px;
-		color: var(--gray-400);
-	}
-
-	.perf-value {
-		font-family: 'Space Grotesk', monospace;
-		color: var(--red);
-		font-weight: 500;
-	}
 
 	/* Main */
 	.main {
@@ -793,45 +574,52 @@ Available Commands:
 	}
 
 	.section-header {
-		margin-bottom: 40px;
-		border-left: 3px solid var(--red);
-		padding-left: 20px;
-		background: rgba(255, 43, 90, 0.02);
-		padding: 20px;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 43, 90, 0.1);
+		margin-bottom: 60px;
 		position: relative;
+		text-align: center;
 	}
-
-	/* Data stream indicator */
-	.section-header::after {
+	
+	.section-header::before {
 		content: '';
 		position: absolute;
-		top: 0;
-		left: -100%;
-		width: 100%;
-		height: 2px;
-		background: linear-gradient(90deg, transparent, var(--red), transparent);
-		animation: data-flow 4s infinite;
+		bottom: -30px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 60px;
+		height: 1px;
+		background: var(--red);
+		opacity: 0.5;
 	}
 
-	@keyframes data-flow {
-		0% { left: -100%; }
-		100% { left: 100%; }
-	}
 
 	.section-title {
-		font-size: 1.25rem;
-		font-weight: 500;
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 16px;
+		letter-spacing: 0.25em;
+		text-transform: uppercase;
+	}
+	
+	.select-text {
+		color: var(--gray-400);
+	}
+	
+	.mission-text {
 		color: var(--white);
-		margin-bottom: 4px;
-		letter-spacing: 0.02em;
+	}
+	
+	.card-text {
+		color: var(--red);
 	}
 
 	.section-subtitle {
-		font-size: 0.875rem;
+		font-size: 1.125rem;
 		color: var(--gray-400);
 		font-weight: 400;
+		letter-spacing: 0.02em;
+		line-height: 1.5;
+		max-width: 600px;
+		margin: 0 auto;
 	}
 
 	/* Operations Grid */
@@ -860,8 +648,6 @@ Available Commands:
 		text-align: left;
 		font-family: inherit;
 		color: inherit;
-		animation: fadeInUp 0.6s ease-out;
-		animation-fill-mode: backwards;
 	}
 
 	.operation::before {
@@ -908,16 +694,17 @@ Available Commands:
 	}
 
 	.operation-number {
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		color: var(--red);
-		font-weight: 500;
+		font-weight: 600;
 		letter-spacing: 0.1em;
 		font-family: 'Space Grotesk', monospace;
 	}
 
 	.operation-number::before {
-		content: 'OP-';
-		opacity: 0.6;
+		content: 'OP ';
+		color: var(--white);
+		opacity: 1;
 	}
 
 	/* Status System */
@@ -939,18 +726,12 @@ Available Commands:
 		border-radius: 50%;
 		border: 1px solid currentColor;
 		opacity: 0;
-		animation: status-ping 2s infinite;
 	}
 
 	.operation-status.active::after {
 		opacity: 0.4;
 	}
 
-	@keyframes status-ping {
-		0% { transform: scale(1); opacity: 0.4; }
-		50% { transform: scale(1.5); opacity: 0.1; }
-		100% { transform: scale(1); opacity: 0.4; }
-	}
 
 	.operation-status.standby {
 		background: var(--gray-600);
@@ -962,9 +743,9 @@ Available Commands:
 	}
 
 	.operation-title {
-		font-size: 1.5rem;
-		font-weight: 500;
-		margin-bottom: 12px;
+		font-size: 1.625rem;
+		font-weight: 600;
+		margin-bottom: 16px;
 		letter-spacing: -0.01em;
 	}
 
@@ -973,7 +754,7 @@ Available Commands:
 		transition: color 0.3s ease;
 	}
 
-	.operation:nth-child(1) .first-word { color: var(--gray-600); }
+	.operation:nth-child(1) .first-word { color: var(--red); }
 	.operation:nth-child(2) .first-word { color: var(--cyan); }
 	.operation:nth-child(3) .first-word { color: var(--green); }
 	.operation:nth-child(4) .first-word { color: var(--blue); }
@@ -982,8 +763,8 @@ Available Commands:
 
 	.operation-description {
 		color: var(--gray-400);
-		font-size: 0.875rem;
-		line-height: 1.6;
+		font-size: 0.9375rem;
+		line-height: 1.65;
 		margin-bottom: 24px;
 	}
 
@@ -995,16 +776,7 @@ Available Commands:
 	}
 
 	.operation:hover .meta-item {
-		animation: fadeInScale 0.4s ease-out;
-		animation-fill-mode: backwards;
-	}
-
-	.operation:hover .meta-item:nth-child(2) { animation-delay: 0.1s; }
-	.operation:hover .meta-item:nth-child(3) { animation-delay: 0.2s; }
-
-	@keyframes fadeInScale {
-		from { opacity: 0.7; transform: scale(0.95); }
-		to { opacity: 1; transform: scale(1); }
+		/* Animation removed */
 	}
 
 	.meta-item {
@@ -1031,35 +803,7 @@ Available Commands:
 		text-shadow: 0 0 8px currentColor;
 	}
 
-	/* Data Visualization */
-	.operation-metrics {
-		margin-top: 20px;
-		padding-top: 20px;
-		border-top: 1px solid var(--gray-800);
-	}
-
-	.metrics-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-
-	.metric-label {
-		font-size: 0.75rem;
-		color: var(--gray-600);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.metric-value {
-		font-size: 0.75rem;
-		color: var(--gray-300);
-		font-family: 'Space Grotesk', monospace;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
+	/* Data Visualization styles removed */
 
 	/* Trend indicators */
 	.metric-trend {
@@ -1084,122 +828,24 @@ Available Commands:
 		border-top: 4px solid #ef4444;
 	}
 
-	.progress-bar {
-		width: 100%;
-		height: 2px;
-		background: var(--gray-800);
-		border-radius: 1px;
-		overflow: hidden;
-		margin-top: 8px;
-		position: relative;
-	}
+	/* Progress bars and mini charts removed - were only used in operation-metrics */
 
-	.progress-fill {
-		height: 100%;
-		background: var(--red);
-		border-radius: 1px;
-		transition: width 0.3s ease;
-		position: relative;
-	}
-
-	.progress-fill::after {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-		animation: shimmer 2s infinite;
-	}
-
-	@keyframes shimmer {
-		0% { transform: translateX(-100%); }
-		100% { transform: translateX(100%); }
-	}
-
-	/* Mini Charts */
-	.mini-chart {
-		width: 100%;
-		height: 32px;
-		margin-top: 8px;
-		position: relative;
-		background: var(--gray-900);
-		border-radius: 4px;
-		overflow: hidden;
-	}
-
-	.sparkline {
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: linear-gradient(180deg, 
-			rgba(255, 43, 90, 0.3) 0%, 
-			rgba(255, 43, 90, 0.1) 50%, 
-			transparent 100%);
-		clip-path: polygon(
-			0% 100%, 
-			10% 85%, 
-			20% 90%, 
-			30% 70%, 
-			40% 80%, 
-			50% 60%, 
-			60% 75%, 
-			70% 55%, 
-			80% 65%, 
-			90% 45%, 
-			100% 50%, 
-			100% 100%
-		);
-		animation: sparkline-animate 3s ease-in-out infinite;
-	}
-
-	@keyframes sparkline-animate {
-		0%, 100% { opacity: 0.8; }
-		50% { opacity: 1; }
-	}
-
-	/* Interactive Elements - Hidden details */
-	.operation-details {
-		opacity: 0;
-		max-height: 0;
-		overflow: hidden;
-		transition: all 0.3s ease;
-		margin-top: 0;
-	}
-
-	.operation:hover .operation-details {
-		opacity: 1;
-		max-height: 120px;
-		margin-top: 16px;
-	}
-
-	.detail-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 12px;
-		font-size: 0.7rem;
-	}
-
-	.detail-item {
-		color: var(--gray-600);
-	}
-
-	.detail-value {
-		color: var(--gray-400);
-		font-family: 'Space Grotesk', monospace;
-		margin-top: 2px;
-	}
 
 	/* Status System - Color Coding */
-	.operation:nth-child(1) .operation-status.standby { background: var(--gray-600); color: var(--gray-600); }
-	.operation:nth-child(2) .operation-status.active { background: var(--cyan); color: var(--cyan); }
-	.operation:nth-child(3) .operation-status.active { background: var(--green); color: var(--green); }
-	.operation:nth-child(4) .operation-status.active { background: var(--blue); color: var(--blue); }
-	.operation:nth-child(5) .operation-status.active { background: var(--purple); color: var(--purple); }
-	.operation:nth-child(6) .operation-status.active { background: var(--amber); color: var(--amber); }
+	.operation:nth-child(1) .operation-status { background: var(--red); color: var(--red); }
+	.operation:nth-child(2) .operation-status { background: var(--cyan); color: var(--cyan); }
+	.operation:nth-child(3) .operation-status { background: var(--green); color: var(--green); }
+	.operation:nth-child(4) .operation-status { background: var(--blue); color: var(--blue); }
+	.operation:nth-child(5) .operation-status { background: var(--purple); color: var(--purple); }
+	.operation:nth-child(6) .operation-status { background: var(--amber); color: var(--amber); }
+	
+	/* Operation Number Color Coding */
+	.operation:nth-child(1) .operation-number { color: var(--red); }
+	.operation:nth-child(2) .operation-number { color: var(--cyan); }
+	.operation:nth-child(3) .operation-number { color: var(--green); }
+	.operation:nth-child(4) .operation-number { color: var(--blue); }
+	.operation:nth-child(5) .operation-number { color: var(--purple); }
+	.operation:nth-child(6) .operation-number { color: var(--amber); }
 
 	/* Command Bar Interface */
 	.command-bar {
@@ -1275,24 +921,7 @@ Available Commands:
 		color: var(--gray-600);
 	}
 
-	/* Animation delays */
-	.operation:nth-child(1) { animation-delay: 0.1s; }
-	.operation:nth-child(2) { animation-delay: 0.15s; }
-	.operation:nth-child(3) { animation-delay: 0.2s; }
-	.operation:nth-child(4) { animation-delay: 0.25s; }
-	.operation:nth-child(5) { animation-delay: 0.3s; }
-	.operation:nth-child(6) { animation-delay: 0.35s; }
-
-	@keyframes fadeInUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+	/* Animation delays removed */
 
 	/* Container Queries for Responsive Design */
 	@container (max-width: 450px) {
@@ -1303,10 +932,6 @@ Available Commands:
 		.operation-meta {
 			flex-direction: column;
 			gap: 8px;
-		}
-		
-		.detail-grid {
-			grid-template-columns: 1fr;
 		}
 	}
 
@@ -1323,6 +948,31 @@ Available Commands:
 	@media (max-width: 768px) {
 		.container {
 			padding: 0 16px;
+		}
+		
+		.header {
+			padding: 1rem 0;
+		}
+		
+		.nav {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 1.5rem;
+		}
+		
+		.logo-text {
+			font-size: 2.5rem;
+		}
+		
+		.system-status {
+			flex-wrap: wrap;
+			gap: 12px;
+			padding: 10px 16px;
+			justify-content: center;
+		}
+		
+		.status-divider {
+			display: none;
 		}
 		
 		.operations {
@@ -1344,12 +994,5 @@ Available Commands:
 			transform: translateY(0);
 		}
 		
-		.performance-monitor {
-			position: relative;
-			top: auto;
-			right: auto;
-			margin: 20px auto;
-			width: fit-content;
-		}
 	}
 </style>
