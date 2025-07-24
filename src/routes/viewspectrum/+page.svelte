@@ -4,17 +4,59 @@
 	let iframeUrl = '';
 	let isLoading = true;
 	let hasError = false;
+	let openwebrxRunning = true;
+	let stoppingOpenWebRX = false;
 
-	onMount(() => {
+	onMount(async () => {
 		// Use window.location to get the correct host
 		const host = window.location.hostname;
 		iframeUrl = `http://${host}:8073`;
+
+		// Check OpenWebRX status
+		await checkOpenWebRXStatus();
 
 		// Set a timeout to hide loading after a reasonable time
 		setTimeout(() => {
 			isLoading = false;
 		}, 3000);
 	});
+
+	async function checkOpenWebRXStatus() {
+		try {
+			const response = await fetch('/api/openwebrx/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'status' })
+			});
+			const result = await response.json();
+			openwebrxRunning = result.running;
+		} catch (error) {
+			console.error('Failed to check OpenWebRX status:', error);
+		}
+	}
+
+	async function stopOpenWebRX() {
+		stoppingOpenWebRX = true;
+		try {
+			const response = await fetch('/api/openwebrx/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'stop' })
+			});
+			const result = await response.json();
+			
+			if (result.success) {
+				openwebrxRunning = false;
+				alert('OpenWebRX stopped successfully! USRP is now available for GSM Evil.');
+			} else {
+				alert(`Failed to stop OpenWebRX: ${result.message}`);
+			}
+		} catch (error) {
+			alert(`Error stopping OpenWebRX: ${error}`);
+		} finally {
+			stoppingOpenWebRX = false;
+		}
+	}
 
 	function handleIframeLoad() {
 		isLoading = false;
@@ -41,14 +83,35 @@
 				</a>
 				<h1 class="text-xl font-bold text-white">OpenWebRX Spectrum Viewer</h1>
 			</div>
-			{#if iframeUrl}
-				<button
-					on:click={openInNewTab}
-					class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
-				>
-					Open in New Tab ↗
-				</button>
-			{/if}
+			<div class="flex items-center gap-3">
+				{#if openwebrxRunning}
+					<div class="flex items-center gap-2">
+						<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+						<span class="text-sm text-green-400">OpenWebRX Running</span>
+					</div>
+					<button
+						on:click={stopOpenWebRX}
+						disabled={stoppingOpenWebRX}
+						class="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white px-4 py-2 rounded transition-colors"
+					>
+						{stoppingOpenWebRX ? 'Stopping...' : 'Stop OpenWebRX'}
+					</button>
+				{:else}
+					<div class="flex items-center gap-2">
+						<div class="w-2 h-2 bg-red-500 rounded-full"></div>
+						<span class="text-sm text-red-400">OpenWebRX Stopped</span>
+					</div>
+				{/if}
+				
+				{#if iframeUrl}
+					<button
+						on:click={openInNewTab}
+						class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
+					>
+						Open in New Tab ↗
+					</button>
+				{/if}
+			</div>
 		</div>
 	</header>
 
