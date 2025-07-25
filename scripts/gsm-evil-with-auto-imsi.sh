@@ -14,7 +14,8 @@ sleep 2
 
 # Start GRGSM monitor with USRP B205 Mini support
 echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
-sudo grgsm_livemon_headless --args="type=b200" -s 2e6 -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
+# CRITICAL: Set UHD_IMAGES_DIR for USRP to work
+sudo UHD_IMAGES_DIR=/usr/share/uhd/images grgsm_livemon_headless --args="type=b200" -s 2e6 -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
 GRGSM_PID=$!
 echo "GRGSM PID: $GRGSM_PID"
 sleep 3

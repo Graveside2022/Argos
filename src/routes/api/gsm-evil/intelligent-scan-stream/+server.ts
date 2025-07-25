@@ -110,12 +110,16 @@ export const POST: RequestHandler = async ({ request }) => {
               }
             }
             
-            // Use working grgsm command for all devices
-            const grgsm_command = `sudo grgsm_livemon_headless -f ${freq}M -g ${gain}`;
+            // Set environment for USRP before running command
+            process.env.UHD_IMAGES_DIR = '/usr/share/uhd/images';
+            
+            // Build grgsm command with proper device args for USRP
+            // CRITICAL: Set UHD_IMAGES_DIR explicitly in the command for USRP to work
+            const grgsm_command = `sudo -E UHD_IMAGES_DIR=/usr/share/uhd/images grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain}`;
             
             sendUpdate(`[CMD] $ ${grgsm_command}`);
             
-            // Start appropriate grgsm script based on device type
+            // Start grgsm with device-specific arguments
             const { stdout: gsmPid } = await execAsync(
               `${grgsm_command} >/dev/null 2>&1 & echo $!`
             );
@@ -133,15 +137,15 @@ export const POST: RequestHandler = async ({ request }) => {
             const initDelay = isUSRP ? 2000 : 1500;
             await new Promise(resolve => setTimeout(resolve, initDelay));
             
-            sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | wc -l`);
+            sendUpdate(`[CMD] $ tcpdump -i lo -nn port 4729 | grep -c "127.0.0.1.4729"`);
             const captureTime = 5; // Fixed 5 seconds as requested for consistent comparison
             sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Counting GSMTAP packets for ${captureTime} seconds...`);
             
-            // Count GSMTAP packets and analyze channel types
+            // Count GSMTAP packets and analyze channel types (excluding tcpdump header)
             let frameCount = 0;
             try {
               const { stdout: packetCount } = await execAsync(
-                `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | wc -l`
+                `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729"`
               );
               frameCount = parseInt(packetCount.trim()) || 0;
             } catch (tcpdumpError) {
