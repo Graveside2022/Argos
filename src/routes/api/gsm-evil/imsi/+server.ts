@@ -27,12 +27,18 @@ import sqlite3
 import json
 
 try:
-    # Connect to both databases
+    # Connect to IMSI database
     imsi_conn = sqlite3.connect('/usr/src/gsmevil2/database/imsi.db')
-    towers_conn = sqlite3.connect('/home/ubuntu/projects/Argos/data/celltowers/towers.db')
+    
+    # Try to connect to towers database (optional)
+    towers_conn = None
+    try:
+        towers_conn = sqlite3.connect('/home/ubuntu/projects/Argos/data/celltowers/towers.db')
+    except:
+        pass  # Towers database is optional
     
     imsi_cursor = imsi_conn.cursor()
-    towers_cursor = towers_conn.cursor()
+    towers_cursor = towers_conn.cursor() if towers_conn else None
     
     # Get total count
     imsi_cursor.execute('SELECT COUNT(*) FROM imsi_data')
@@ -62,8 +68,8 @@ try:
             "lon": None
         }
         
-        # Try to get location from towers database
-        if row[3] and row[4] and row[5] and row[6]:  # If we have MCC, MNC, LAC, CI
+        # Try to get location from towers database if available
+        if towers_cursor and row[3] and row[4] and row[5] and row[6]:  # If we have MCC, MNC, LAC, CI
             towers_cursor.execute('''
                 SELECT lat, lon 
                 FROM towers 
@@ -79,7 +85,8 @@ try:
         imsis.append(imsi_entry)
     
     imsi_conn.close()
-    towers_conn.close()
+    if towers_conn:
+        towers_conn.close()
     
     print(json.dumps({
         "success": True,

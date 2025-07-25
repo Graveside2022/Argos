@@ -66,8 +66,12 @@ export const POST: RequestHandler = async () => {
         }
         
         // Use direct grgsm_livemon_headless command (bypassing broken wrapper)
-        const gsmCommand = `sudo grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain}`;
+        // CRITICAL: Set UHD_IMAGES_DIR explicitly in the command for USRP to work
+        const gsmCommand = `sudo -E UHD_IMAGES_DIR=/usr/share/uhd/images grgsm_livemon_headless ${deviceArgs}${sampleRateArg}-f ${freq}M -g ${gain}`;
         console.log(`Running command: ${gsmCommand}`);
+        
+        // Set environment for USRP before running command
+        process.env.UHD_IMAGES_DIR = '/usr/share/uhd/images';
         
         const { stdout: gsmPid } = await execAsync(
           `${gsmCommand} >/dev/null 2>&1 & echo $!`
@@ -91,7 +95,8 @@ export const POST: RequestHandler = async () => {
         console.log(`Device: ${isUSRP ? 'USRP' : 'HackRF'}, Waiting ${initDelay}ms for init, capturing for ${captureTime}s`);
         
         try {
-          const tcpdumpCommand = `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | wc -l`;
+          // Use grep -c to count actual packet lines, excluding tcpdump header
+          const tcpdumpCommand = `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729"`;
           console.log(`Capture command: ${tcpdumpCommand}`);
           
           const { stdout: packetCount } = await execAsync(tcpdumpCommand);
