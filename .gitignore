@@ -211,6 +211,10 @@ svelte-errors-full.log
 docker-deployment.log
 keepalive.log
 sweep-test-log.txt
+console.debug.txt
+console.debug.*
+install-from-git.log
+*.debug
 
 # Orchestrator directory
 orchestrator/
