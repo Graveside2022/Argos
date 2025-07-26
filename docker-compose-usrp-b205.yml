@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  openwebrx-usrp:
+    image: slechev/openwebrxplus:latest
+    container_name: openwebrx-usrp-b205
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    ports:
+      - "8073:8073"
+    volumes:
+      - ./openwebrx-usrp-config:/var/lib/openwebrx
+      - /usr/share/uhd/images:/usr/share/uhd/images:ro
+    environment:
+      - UHD_IMAGES_DIR=/usr/share/uhd/images
+      - UHD_LOG_LEVEL=info
+      - LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

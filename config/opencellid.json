@@ -1,0 +1,7 @@
+{
+	"apiKey": "pk.d6291c07a2907c915cd8994fb22bc189",
+	"apiUrl": "https://opencellid.org/cell/get",
+	"enabled": true,
+	"cacheTimeout": 3600,
+	"note": "API key configured and active"
+}
