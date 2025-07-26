@@ -61,10 +61,21 @@ if ! pgrep -f "grgsm_livemon" > /dev/null; then
     pkill -f "grgsm_livemon" 2>/dev/null || true
     sleep 1
     
-    # Start with explicit UDP sink to localhost:4729
-    # Note: --collector sets the destination IP, --collectorport sets the UDP port
-    # Using frequency 948.6 MHz (channel 68) - strongest signal from kalibrate scan
-    nohup grgsm_livemon_headless -f 948.6e6 -s 2e6 -g 40 --collector 127.0.0.1 --collectorport 4729 > /tmp/grgsm.log 2>&1 &
+    # CRITICAL: Must use system Python and set UHD images path for USRP B205 mini
+    # Deactivate virtual env temporarily to use system Python with gnuradio
+    deactivate 2>/dev/null || true
+    export UHD_IMAGES_DIR=/usr/share/uhd/images
+    
+    # Check if USRP B205 mini is available
+    if uhd_find_devices 2>/dev/null | grep -q "B205"; then
+        echo "USRP B205 Mini detected - using standard grgsm_livemon_headless with USRP args"
+        # Use standard grgsm_livemon_headless with proper USRP arguments (like scan does)
+        nohup /usr/bin/python3 /usr/local/bin/grgsm_livemon_headless --args="type=b200" -f 948.6e6 -s 2e6 -g 40 --collector 127.0.0.1 --collectorport 4729 > /tmp/grgsm.log 2>&1 &
+    else
+        echo "No USRP detected - using standard grgsm_livemon_headless"
+        # Use standard script for RTL-SDR/HackRF
+        nohup /usr/bin/python3 /usr/local/bin/grgsm_livemon_headless -f 948.6e6 -s 2e6 -g 40 --collector 127.0.0.1 --collectorport 4729 > /tmp/grgsm.log 2>&1 &
+    fi
     GRGSM_PID=$!
     echo $GRGSM_PID > /tmp/grgsm.pid
     
@@ -77,6 +88,9 @@ if ! pgrep -f "grgsm_livemon" > /dev/null; then
     else
         echo -e "${GREEN}✓ grgsm_livemon_headless started (PID: $GRGSM_PID)${NC}"
     fi
+    
+    # Reactivate virtual environment for GSMEvil2
+    source "$VENV_DIR/bin/activate"
 fi
 
 # Apply CPU fix patch if not already applied

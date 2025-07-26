@@ -227,13 +227,13 @@
 	let kismetDeviceCount = 0; // Reactive counter for Kismet devices
 	let whitelistedMACs = new Set<string>(); // Store whitelisted MAC addresses
 	let whitelistedDeviceCount = 0; // Reactive counter for whitelisted devices
-	
+
 	// Kismet Dashboard state
 	let showKismetDashboard = false;
-	
+
 	// AirSignal Overlay state
 	let showAirSignalOverlay = false;
-	
+
 	// Function to persist dashboard state
 	function setDashboardState(isOpen: boolean) {
 		showKismetDashboard = isOpen;
@@ -241,7 +241,7 @@
 			sessionStorage.setItem('kismetDashboardOpen', String(isOpen));
 		}
 	}
-	
+
 	// Function to persist AirSignal overlay state
 	function setAirSignalOverlayState(isOpen: boolean) {
 		showAirSignalOverlay = isOpen;
@@ -269,7 +269,7 @@
 	// Cell tower state
 	const cellTowers = new Map<string, any>();
 	const cellTowerMarkers = new Map<string, LeafletMarker>();
-	let cellTowerCount = 0;
+	let _cellTowerCount = 0;
 	let showCellTowers = false;
 	let cellTowerInterval: NodeJS.Timeout | null = null;
 
@@ -391,41 +391,98 @@
 		// Clear whitelist
 		whitelistedMACs.clear();
 		whitelistedDeviceCount = 0;
-		
+
 		// Clear cell towers
 		cellTowerMarkers.forEach((marker) => {
 			map?.removeLayer(marker);
 		});
 		cellTowerMarkers.clear();
 		cellTowers.clear();
-		cellTowerCount = 0;
+		_cellTowerCount = 0;
 	}
-	
+
+	// Get carrier name from MCC-MNC
+	function getMncCarrier(mccMnc: string): string {
+		const mncToCarrier: { [key: string]: string } = {
+			// USA (310)
+			'310-410': 'AT&T',
+			'310-260': 'T-Mobile',
+			'310-004': 'Verizon',
+			// Germany (262)
+			'262-01': 'T-Mobile',
+			'262-02': 'Vodafone',
+			'262-03': 'O2'
+			// Add more mappings as needed
+		};
+
+		return mncToCarrier[mccMnc] || 'Unknown';
+	}
+
 	// Fetch cell towers from GSM Evil
 	async function fetchCellTowers() {
 		try {
-			const response = await fetch('/api/tactical-map/cell-towers');
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success && data.towers) {
-					// Process each tower
-					for (const tower of data.towers) {
-						await addCellTower(tower);
+			// Import gsmEvilStore to access tower data
+			const { gsmEvilStore } = await import('$lib/stores/gsmEvilStore');
+
+			// Get current store state
+			let storeState: any;
+			const unsubscribe = gsmEvilStore.subscribe((state) => {
+				storeState = state;
+			});
+
+			// Process captured IMSIs and their tower locations
+			if (storeState && storeState.capturedIMSIs) {
+				const processedTowers = new Set<string>();
+
+				for (const imsi of storeState.capturedIMSIs) {
+					if (imsi.mcc && imsi.mnc && imsi.lac && imsi.ci) {
+						const towerId = `${imsi.mcc}-${imsi.mnc}-${imsi.lac}-${imsi.ci}`;
+
+						// Skip if already processed
+						if (processedTowers.has(towerId)) continue;
+						processedTowers.add(towerId);
+
+						// Check if we have location data for this tower
+						const towerLocationKey = `${imsi.mcc}-${imsi.mnc.toString().padStart(2, '0')}-${imsi.lac}-${imsi.ci}`;
+						const location = storeState.towerLocations[towerLocationKey];
+
+						if (location && location.lat && location.lon) {
+							// Get carrier name from MNC mapping
+							const mccMnc = `${imsi.mcc}-${imsi.mnc.toString().padStart(2, '0')}`;
+							const carrier = getMncCarrier(mccMnc) || 'Unknown Carrier';
+
+							const towerData = {
+								mcc: imsi.mcc,
+								mnc: imsi.mnc,
+								lac: imsi.lac,
+								ci: imsi.ci,
+								lat: location.lat,
+								lon: location.lon,
+								carrier: carrier,
+								radio: location.radio || 'GSM',
+								range: location.range,
+								samples: location.samples || 1
+							};
+
+							await addCellTower(towerData);
+						}
 					}
 				}
 			}
+
+			unsubscribe();
 		} catch (error) {
-			console.error('Error fetching cell towers:', error);
+			console.error('Error fetching cell towers from GSM Evil:', error);
 		}
 	}
-	
+
 	// Add cell tower to map
 	async function addCellTower(tower: any) {
 		const towerId = `${tower.mcc}-${tower.mnc}-${tower.lac}-${tower.ci}`;
-		
+
 		// Skip if already displayed
 		if (cellTowers.has(towerId)) return;
-		
+
 		// Check if tower has location data
 		if (tower.lat && tower.lon) {
 			try {
@@ -435,11 +492,11 @@
 					range: tower.range || null,
 					carrier: tower.carrier || 'Unknown Carrier'
 				};
-					
+
 				// Determine tower status
 				let status = 'ok';
 				let iconColor = '#10b981'; // Green
-				
+
 				if (tower.mcc === '000' || tower.mcc === '001' || tower.mcc === '999') {
 					status = 'fake';
 					iconColor = '#dc2626'; // Dark red
@@ -450,34 +507,37 @@
 					status = 'unknown';
 					iconColor = '#f59e0b'; // Orange
 				}
-					
-					// Create tower icon
-					const towerIcon = L.divIcon({
-						className: 'cell-tower-marker',
-						html: `
-							<div style="position: relative; width: 30px; height: 30px;">
-								<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));">
-									<path fill="${iconColor}" d="M12,2A3,3 0 0,1 15,5V9A3,3 0 0,1 12,12A3,3 0 0,1 9,9V5A3,3 0 0,1 12,2M19,18A1,1 0 0,1 20,19A1,1 0 0,1 19,20C18.5,20 18.12,19.65 18,19.22L15.78,17C15.65,17.12 15.5,17.18 15.33,17.22L16.5,22H7.5L8.67,17.22C8.5,17.18 8.35,17.12 8.22,17L6,19.22C5.88,19.65 5.5,20 5,20A1,1 0 0,1 4,19A1,1 0 0,1 5,18C5.5,18 5.88,18.35 6,18.78L8.22,16.56C8.08,16.4 8,16.21 8,16V12.83C8.59,12.93 9.19,13 9.8,13H14.2C14.81,13 15.41,12.93 16,12.83V16C16,16.21 15.92,16.4 15.78,16.56L18,18.78C18.12,18.35 18.5,18 19,18M12,14A1,1 0 0,0 11,15A1,1 0 0,0 12,16A1,1 0 0,0 13,15A1,1 0 0,0 12,14Z"/>
-								</svg>
+
+				// Create tower icon with 🗼 emoji
+				const towerIcon = L.divIcon({
+					className: 'cell-tower-marker',
+					html: `
+							<div style="position: relative; width: 40px; height: 40px; text-align: center;">
+								<div style="font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));">🗼</div>
 								${status === 'fake' ? '<div style="position: absolute; top: -5px; right: -5px; font-size: 16px;">⚠️</div>' : ''}
 							</div>
 						`,
-						iconSize: [30, 30],
-						iconAnchor: [15, 15]
-					});
-					
-					// Create marker
-					const marker = L.marker([location.lat, location.lon], {
-						icon: towerIcon
-					});
-					
-					// Add popup with tower info
-					const popupContent = `
-						<div style="font-family: sans-serif; min-width: 250px;">
+					iconSize: [40, 40],
+					iconAnchor: [20, 20]
+				});
+
+				// Create marker
+				const marker = L.marker([location.lat, location.lon], {
+					icon: towerIcon
+				});
+
+				// Add popup with tower info
+				const gridRef = latLonToMGRS(location.lat, location.lon);
+				const popupContent = `
+						<div style="font-family: sans-serif; min-width: 300px;">
 							<h4 style="margin: 0 0 8px 0; color: ${iconColor}">
-								Cell Tower
+								🗼 Cell Tower
 							</h4>
 							<table style="width: 100%; border-collapse: collapse;">
+								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Carrier:</td>
+									<td style="padding: 4px 0;">${location.carrier || 'Unknown'}</td>
+								</tr>
 								<tr>
 									<td style="padding: 4px 8px 4px 0; font-weight: bold;">MCC-MNC:</td>
 									<td style="padding: 4px 0;">${tower.mcc}-${tower.mnc}</td>
@@ -491,6 +551,10 @@
 									<td style="padding: 4px 0;">${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}</td>
 								</tr>
 								<tr>
+									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Grid Ref:</td>
+									<td style="padding: 4px 0; font-family: monospace;">${gridRef}</td>
+								</tr>
+								<tr>
 									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Radio:</td>
 									<td style="padding: 4px 0;">${tower.radio || 'GSM'}</td>
 								</tr>
@@ -498,44 +562,53 @@
 									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Status:</td>
 									<td style="padding: 4px 0; color: ${iconColor}">${status.toUpperCase()}</td>
 								</tr>
-								${location.range ? `
+								${
+									location.range
+										? `
 								<tr>
 									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Range:</td>
 									<td style="padding: 4px 0;">${location.range}m</td>
 								</tr>
-								` : ''}
-								${tower.samples ? `
+								`
+										: ''
+								}
+								${
+									tower.samples
+										? `
 								<tr>
 									<td style="padding: 4px 8px 4px 0; font-weight: bold;">Samples:</td>
 									<td style="padding: 4px 0;">${tower.samples}</td>
 								</tr>
-								` : ''}
+								`
+										: ''
+								}
 							</table>
 						</div>
 					`;
-					
-					marker.bindPopup(popupContent, {
-						maxWidth: 250,
-						className: status === 'fake' || status === 'suspicious' ? 'signal-popup' : 'pi-popup'
-					});
-					
-					if (map && showCellTowers) {
-						marker.addTo(map);
-					}
-					
+
+				marker.bindPopup(popupContent, {
+					maxWidth: 300,
+					className:
+						status === 'fake' || status === 'suspicious' ? 'signal-popup' : 'pi-popup'
+				});
+
+				if (map && showCellTowers) {
+					marker.addTo(map);
+				}
+
 				cellTowerMarkers.set(towerId, marker);
 				cellTowers.set(towerId, { ...tower, location, status });
-				cellTowerCount = cellTowers.size;
+				_cellTowerCount = cellTowers.size;
 			} catch (error) {
 				console.error('Error adding tower to map:', error);
 			}
 		}
 	}
-	
+
 	// Toggle cell tower display
 	function toggleCellTowers() {
 		showCellTowers = !showCellTowers;
-		
+
 		if (showCellTowers) {
 			// Show all cell tower markers
 			cellTowerMarkers.forEach((marker) => {
@@ -627,27 +700,30 @@
 	async function fetchSystemInfo() {
 		try {
 			console.log('Fetching system info from /api/system/info...');
-			
+
 			// Add timeout to the fetch
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-			
+
 			const response = await fetch('/api/system/info', {
 				signal: controller.signal,
 				headers: {
-					'Accept': 'application/json',
+					Accept: 'application/json',
 					'Content-Type': 'application/json'
 				}
 			});
-			
+
 			clearTimeout(timeoutId);
 			console.log('System info response status:', response.status);
-			console.log('System info response headers:', Object.fromEntries(response.headers.entries()));
-			
+			console.log(
+				'System info response headers:',
+				Object.fromEntries(response.headers.entries())
+			);
+
 			if (response.ok) {
 				const responseText = await response.text();
 				console.log('Raw response text:', responseText);
-				
+
 				try {
 					systemInfo = JSON.parse(responseText) as SystemInfo;
 					console.log('System info parsed successfully:', systemInfo);
@@ -676,7 +752,7 @@
 		}
 
 		console.log('Opening Pi popup...');
-		
+
 		// Show loading message first
 		const loadingPopup = L.popup({
 			maxWidth: 300,
@@ -684,7 +760,7 @@
 			autoClose: false,
 			closeOnClick: false
 		}).setContent('<div style="padding: 10px; color: #fff;">Loading system info...</div>');
-		
+
 		userMarker.bindPopup(loadingPopup).openPopup();
 
 		// Fetch latest system info
@@ -704,7 +780,7 @@
 					<p>API might be unreachable or returning invalid data.</p>
 				</div>
 			`);
-			
+
 			userMarker.bindPopup(errorPopup).openPopup();
 			return;
 		}
@@ -796,12 +872,13 @@
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Temperature:</td>
             <td style="padding: 4px 0;">
-              ${systemInfo.temperature !== null 
-                ? `<span style="color: ${systemInfo.temperature > 70 ? '#ff4444' : systemInfo.temperature > 60 ? '#ffaa00' : '#00ff00'}">
+              ${
+					systemInfo.temperature !== null
+						? `<span style="color: ${systemInfo.temperature > 70 ? '#ff4444' : systemInfo.temperature > 60 ? '#ffaa00' : '#00ff00'}">
                      ${systemInfo.temperature.toFixed(1)}°C
                    </span>`
-                : '<span style="color: #888;">N/A</span>'
-              }
+						: '<span style="color: #888;">N/A</span>'
+				}
             </td>
           </tr>
           <tr>
@@ -836,7 +913,7 @@
 			autoClose: false,
 			closeOnClick: false
 		}).setContent(popupContent);
-		
+
 		userMarker.bindPopup(popup).openPopup();
 	}
 
@@ -844,7 +921,7 @@
 	function getDeviceIconSVG(device: KismetDevice, color: string): string {
 		const type = device.type?.toLowerCase() || '';
 		const manufacturer = device.manufacturer?.toLowerCase() || '';
-		const mac = device.mac?.toLowerCase() || '';
+		const _mac = device.mac?.toLowerCase() || '';
 
 		// Router/Access Point/Infrastructure
 		if (
@@ -871,8 +948,9 @@
 
 		// Smartphone (Apple/Android)
 		if (
-			manufacturer.includes('apple') && (manufacturer.includes('iphone') || type.includes('phone')) ||
-			manufacturer.includes('samsung') && type.includes('phone') ||
+			(manufacturer.includes('apple') &&
+				(manufacturer.includes('iphone') || type.includes('phone'))) ||
+			(manufacturer.includes('samsung') && type.includes('phone')) ||
 			manufacturer.includes('android') ||
 			type.includes('mobile') ||
 			type.includes('phone')
@@ -890,11 +968,13 @@
 		if (
 			manufacturer.includes('intel') ||
 			manufacturer.includes('dell') ||
-			manufacturer.includes('hp') && !type.includes('printer') ||
+			(manufacturer.includes('hp') && !type.includes('printer')) ||
 			manufacturer.includes('lenovo') ||
 			manufacturer.includes('asus') ||
 			manufacturer.includes('acer') ||
-			(manufacturer.includes('apple') && !manufacturer.includes('iphone') && !manufacturer.includes('ipad')) ||
+			(manufacturer.includes('apple') &&
+				!manufacturer.includes('iphone') &&
+				!manufacturer.includes('ipad')) ||
 			type.includes('computer') ||
 			type.includes('laptop')
 		) {
@@ -924,11 +1004,11 @@
 
 		// Smart TV/Media Device
 		if (
-			manufacturer.includes('samsung') && type.includes('tv') ||
+			(manufacturer.includes('samsung') && type.includes('tv')) ||
 			manufacturer.includes('lg') ||
 			manufacturer.includes('roku') ||
 			manufacturer.includes('chromecast') ||
-			manufacturer.includes('apple') && type.includes('tv') ||
+			(manufacturer.includes('apple') && type.includes('tv')) ||
 			type.includes('media') ||
 			type.includes('streaming') ||
 			type.includes('tv')
@@ -944,8 +1024,9 @@
 
 		// Gaming Console
 		if (
-			manufacturer.includes('sony') && (type.includes('playstation') || type.includes('gaming')) ||
-			manufacturer.includes('microsoft') && type.includes('xbox') ||
+			(manufacturer.includes('sony') &&
+				(type.includes('playstation') || type.includes('gaming'))) ||
+			(manufacturer.includes('microsoft') && type.includes('xbox')) ||
 			manufacturer.includes('nintendo') ||
 			type.includes('gaming') ||
 			type.includes('console')
@@ -985,7 +1066,7 @@
 
 		// Printer
 		if (
-			manufacturer.includes('hp') && type.includes('printer') ||
+			(manufacturer.includes('hp') && type.includes('printer')) ||
 			manufacturer.includes('canon') ||
 			manufacturer.includes('epson') ||
 			manufacturer.includes('brother') ||
@@ -1005,7 +1086,7 @@
 		if (
 			manufacturer.includes('ring') ||
 			manufacturer.includes('arlo') ||
-			manufacturer.includes('nest') && type.includes('camera') ||
+			(manufacturer.includes('nest') && type.includes('camera')) ||
 			type.includes('camera') ||
 			type.includes('security')
 		) {
@@ -1020,11 +1101,7 @@
 		}
 
 		// Network Bridge/Switch
-		if (
-			type.includes('bridge') ||
-			type.includes('switch') ||
-			manufacturer.includes('switch')
-		) {
+		if (type.includes('bridge') || type.includes('switch') || manufacturer.includes('switch')) {
 			return `
         <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
           <rect x="7" y="13" width="16" height="6" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
@@ -1037,9 +1114,7 @@
 		}
 
 		// Generic Client Device
-		if (
-			type.includes('client')
-		) {
+		if (type.includes('client')) {
 			return `
         <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
           <rect x="11" y="8" width="8" height="14" rx="1" fill="none" stroke="${color}" stroke-width="2"/>
@@ -1134,7 +1209,7 @@
 						userMarker = L.marker([userPosition.lat, userPosition.lon], {
 							icon: userIcon
 						}).addTo(map);
-						
+
 						console.log('User marker created and added to map:', userMarker);
 
 						// Add click handler to user marker (remove popup binding that might interfere)
@@ -1143,7 +1218,7 @@
 							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
-						
+
 						// Also add double-click for testing
 						userMarker.on('dblclick', (e) => {
 							console.log('American flag double-clicked!', e);
@@ -1208,7 +1283,7 @@
 	// Fetch Kismet devices
 	async function fetchKismetDevices() {
 		if (!map) return;
-		
+
 		// Debug: Always try to fetch devices if map is available
 		// This bypasses the status check since Kismet might be running even if status is wrong
 
@@ -1226,10 +1301,10 @@
 				let devicesWithoutLocation = 0;
 				let markersCreated = 0;
 				let markersUpdated = 0;
-				
+
 				devices.forEach((device: KismetDevice) => {
 					const markerId = `kismet_${device.mac}`;
-					
+
 					// Track location data
 					if (device.location?.lat && device.location?.lon) {
 						devicesWithLocation++;
@@ -1267,12 +1342,16 @@
                   ${device.ssid || 'Kismet Device'}
                 </h4>
                 <table style="width: 100%; border-collapse: collapse;">
-                  ${device.ssid ? `
+                  ${
+						device.ssid
+							? `
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">SSID:</td>
                     <td style="padding: 4px 0; font-weight: bold; color: #00ff88;">${device.ssid}</td>
                   </tr>
-                  ` : ''}
+                  `
+							: ''
+					}
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Type:</td>
                     <td style="padding: 4px 0;">${device.type || 'Unknown'}</td>
@@ -1349,12 +1428,16 @@
                   ${device.ssid || 'Kismet Device'}
                 </h4>
                 <table style="width: 100%; border-collapse: collapse;">
-                  ${device.ssid ? `
+                  ${
+						device.ssid
+							? `
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">SSID:</td>
                     <td style="padding: 4px 0; font-weight: bold; color: #00ff88;">${device.ssid}</td>
                   </tr>
-                  ` : ''}
+                  `
+							: ''
+					}
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Type:</td>
                     <td style="padding: 4px 0;">${device.type || 'Unknown'}</td>
@@ -1399,10 +1482,14 @@
 					// Store device data
 					kismetDevices.set(markerId, device);
 				});
-				
+
 				// Debug: Log processing summary
-				console.log(`Kismet Debug: Devices with location: ${devicesWithLocation}, without location: ${devicesWithoutLocation}`);
-				console.log(`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`);
+				console.log(
+					`Kismet Debug: Devices with location: ${devicesWithLocation}, without location: ${devicesWithoutLocation}`
+				);
+				console.log(
+					`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`
+				);
 
 				// Clean up markers for devices that no longer exist
 				let removedDevices = 0;
@@ -1416,7 +1503,7 @@
 						removedDevices++;
 					}
 				});
-				
+
 				if (removedDevices > 0) {
 					console.log(`Kismet Debug: Removed ${removedDevices} stale device markers`);
 				}
@@ -1771,13 +1858,13 @@
 		const leafletModule = await import('leaflet');
 		L = leafletModule.default as unknown as LeafletLibrary;
 		await import('leaflet/dist/leaflet.css');
-		
+
 		// Restore dashboard state from sessionStorage
 		const savedDashboardState = sessionStorage.getItem('kismetDashboardOpen');
 		if (savedDashboardState === 'true') {
 			showKismetDashboard = true;
 		}
-		
+
 		// Restore AirSignal overlay state from sessionStorage
 		const savedAirSignalState = sessionStorage.getItem('airSignalOverlayOpen');
 		if (savedAirSignalState === 'true') {
@@ -1795,7 +1882,7 @@
 
 		// Set up Kismet device fetching interval (will only fetch when running)
 		kismetInterval = setInterval(() => void fetchKismetDevices(), 10000);
-		
+
 		// Fetch devices immediately since we know Kismet is working
 		setTimeout(() => void fetchKismetDevices(), 1000);
 
@@ -1863,10 +1950,7 @@
 	<!-- Search Bar -->
 	<div class="search-bar">
 		<div class="search-container">
-			<button
-				class="back-console-button"
-				on:click={() => (window.location.href = '/')}
-			>
+			<button class="back-console-button" on:click={() => (window.location.href = '/')}>
 				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
 						fill-rule="evenodd"
@@ -1875,11 +1959,9 @@
 				</svg>
 				Back to Console
 			</button>
-			<AirSignalRFButton 
-				onClick={() => setAirSignalOverlayState(true)}
-			/>
+			<AirSignalRFButton onClick={() => setAirSignalOverlayState(true)} />
 			<button
-				class="cell-towers-toggle-button"
+				class="cell-towers-toggle-button {showCellTowers ? 'active' : ''}"
 				on:click={toggleCellTowers}
 			>
 				{showCellTowers ? 'Cell Towers On' : 'Cell Towers Off'}
@@ -1948,7 +2030,6 @@
 				&lt; -80 dBm (Weak)
 			</span>
 		</div>
-
 	</div>
 
 	<!-- Signal Info Bar (Now Kismet Data) -->
@@ -1984,7 +2065,7 @@
 				Stop
 			</button>
 			<!-- Kismet Dashboard Button -->
-			<KismetDashboardButton 
+			<KismetDashboardButton
 				onClick={() => setDashboardState(true)}
 				deviceCount={kismetDeviceCount}
 			/>
@@ -2290,15 +2371,12 @@
 			View Spectrum
 		</button>
 	</div>
-	
+
 	<!-- Kismet Dashboard Overlay -->
-	<KismetDashboardOverlay 
-		isOpen={showKismetDashboard}
-		onClose={() => setDashboardState(false)}
-	/>
-	
+	<KismetDashboardOverlay isOpen={showKismetDashboard} onClose={() => setDashboardState(false)} />
+
 	<!-- AirSignal Overlay -->
-	<AirSignalOverlay 
+	<AirSignalOverlay
 		isOpen={showAirSignalOverlay}
 		onClose={() => setAirSignalOverlayState(false)}
 	/>
@@ -2470,7 +2548,6 @@
 		color: white !important;
 		cursor: not-allowed;
 	}
-
 
 	.start-kismet-button-footer {
 		padding: 0.25rem 0.75rem;
@@ -3131,8 +3208,15 @@
 	}
 
 	@keyframes pulse-glow {
-		0%, 100% { transform: scale(1); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-		50% { transform: scale(1.05); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+		0%,
+		100% {
+			transform: scale(1);
+			filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+		}
+		50% {
+			transform: scale(1.05);
+			filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+		}
 	}
 
 	/* iPhone Portrait Mode (320px - 428px width) */

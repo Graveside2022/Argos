@@ -79,6 +79,10 @@ class grgsm_livemon_usrp(gr.top_block):
         
         self.blocks_rotator_cc_0 = blocks.rotator_cc(-2*pi*shiftoff/samp_rate)
         
+        # Add signal probe for signal strength measurement
+        self.blocks_probe_signal_vf = blocks.probe_signal_vf(1024)
+        self.blocks_complex_to_mag_squared_0 = blocks.complex_to_mag_squared(1)
+        
         self.gsm_control_channels_decoder_0 = gsm.control_channels_decoder()
         self.gsm_control_channels_decoder_0_0 = gsm.control_channels_decoder()
         self.gsm_bcch_ccch_sdcch4_demapper_0 = gsm.gsm_bcch_ccch_sdcch4_demapper(
@@ -101,6 +105,10 @@ class grgsm_livemon_usrp(gr.top_block):
         self.connect((self.uhd_usrp_source, 0), (self.blocks_rotator_cc_0, 0))
         self.connect((self.blocks_rotator_cc_0, 0), (self.gsm_input_0, 0))
         self.connect((self.gsm_input_0, 0), (self.gsm_receiver_0, 0))
+        
+        # Connect signal strength measurement
+        self.connect((self.gsm_input_0, 0), (self.blocks_complex_to_mag_squared_0, 0))
+        self.connect((self.blocks_complex_to_mag_squared_0, 0), (self.blocks_probe_signal_vf, 0))
         
         self.msg_connect((self.gsm_receiver_0, 'C0'), (self.gsm_bcch_ccch_sdcch4_demapper_0, 'bursts'))
         self.msg_connect((self.gsm_receiver_0, 'C0'), (self.gsm_sdcch8_demapper_0, 'bursts'))
@@ -141,6 +149,9 @@ class grgsm_livemon_usrp(gr.top_block):
         self.gsm_clock_offset_control_0.set_samp_rate(self.samp_rate)
         self.gsm_input_0.set_samp_rate_in(self.samp_rate)
         self.uhd_usrp_source.set_samp_rate(self.samp_rate)
+    
+    def get_signal_level(self):
+        return self.blocks_probe_signal_vf.level()
 
 def argument_parser():
     parser = ArgumentParser()
