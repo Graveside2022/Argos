@@ -291,16 +291,17 @@
 		kismetStatus = 'stopping';
 
 		try {
-			// Use our own API to control Kismet
-			const response = await fetch('/api/kismet/control', {
+			// Use the dedicated stop endpoint with comprehensive stop functionality
+			const response = await fetch('/api/kismet/stop', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ action: 'stop' })
+				}
 			});
 
 			if (response.ok) {
+				const data = await response.json();
+				console.log('Stop response:', data);
 				setTimeout(() => {
 					kismetStatus = 'stopped';
 				}, 2000);
