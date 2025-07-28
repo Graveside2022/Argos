@@ -114,7 +114,7 @@ export class WiFiAdapterDetector {
                 logInfo(`Detected WiFi adapter: ${iface} (${adapter.type}, MAC: ${adapter.macAddress})`);
             }
         } catch (error) {
-            logError('Error detecting WiFi adapters:', error);
+            logError('Error detecting WiFi adapters:', error as Record<string, unknown>);
         }
 
         return adapters;
@@ -152,7 +152,7 @@ export class WiFiAdapterDetector {
             const usbId = `${vendor}:${product}`;
             
             // Check if it's a known good chipset
-            const description = this.MONITOR_MODE_CHIPSETS[usbId];
+            const description = this.MONITOR_MODE_CHIPSETS[usbId as keyof typeof this.MONITOR_MODE_CHIPSETS];
             const monitorModeCapable = !!description;
             
             return { usbId, description, monitorModeCapable };

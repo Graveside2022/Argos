@@ -28,7 +28,7 @@
 		}
 
 		try {
-			await wigleService.addToBlacklist(blacklistSSID || '', blacklistMAC || '', parseInt(blacklistColor));
+			await wigleService.addToBlacklist(blacklistSSID || '', blacklistMAC || '', blacklistColor || '0');
 			logInfo('Added to blacklist successfully', { 
 				ssid: blacklistSSID, 
 				mac: blacklistMAC, 
@@ -41,7 +41,7 @@
 			
 			alert('Added to blacklist');
 		} catch (error) {
-			logError('Failed to add to blacklist:', error);
+			logError('Failed to add to blacklist:', error as any);
 			alert('Failed to add to blacklist');
 		}
 	}

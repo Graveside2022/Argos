@@ -58,15 +58,19 @@ export async function setupLocalizer() {
   */
   
   // Update heat map visualization
+  /* TODO: Implement heatMapService
   heatMapService.updateLayer('rssi-prediction', {
     data: prediction,
     gradient: createGradient(showUncertainty),
   });
+  */
 }
 
 // Performance monitoring
+/* TODO: Implement localizer
 setInterval(() => {
   const stats = localizer.getStats();
   console.log(`Coral TPU usage: ${(stats.coralUsage * 100).toFixed(1)}%`);
   console.log(`Avg processing time: ${stats.avgProcessingTime}ms`);
 }, 5000);
+*/

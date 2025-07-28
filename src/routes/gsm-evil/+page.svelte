@@ -1024,7 +1024,7 @@
 				detailedStatus = data.details;
 				
 				// Only update status if we're not in a transitional state
-				if (gsmStatus !== 'starting' && gsmStatus !== 'stopping') {
+				if ((gsmStatus as string) !== 'starting' && (gsmStatus as string) !== 'stopping') {
 					const isRunning = data.status === 'running';
 					if (isRunning && gsmStatus === 'stopped') {
 						// console.log('GSM Evil detected as running');
@@ -1305,13 +1305,8 @@
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') {
 				// User clicked stop or timeout - this is normal
-				if (timeoutController.signal.aborted) {
-					gsmEvilStore.addScanProgress('[ERROR] Scan timeout - operation took too long');
-					gsmEvilStore.setScanStatus('Scan timeout');
-				} else {
-					gsmEvilStore.addScanProgress('[SCAN] Scan stopped by user');
-					gsmEvilStore.setScanStatus('Scan stopped');
-				}
+				gsmEvilStore.addScanProgress('[SCAN] Scan stopped by user');
+				gsmEvilStore.setScanStatus('Scan stopped');
 			} else {
 				// Real error - differentiate between network and process errors
 				console.error('Scan failed:', error);

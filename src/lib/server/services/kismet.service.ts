@@ -52,7 +52,14 @@ export class KismetService {
   private static readonly LOCATION_VARIANCE = 0.002;
   private static readonly DEFAULT_SIGNAL = -100;
   
-  private static readonly FALLBACK_DEVICES: never[] = [];
+  private static readonly FALLBACK_DEVICES: Array<{
+    mac: string;
+    signal: number;
+    manufacturer: string;
+    type: string;
+    channel: number;
+    frequency: number;
+  }> = [];
 
   /**
    * Retrieves current GPS position from the GPS API

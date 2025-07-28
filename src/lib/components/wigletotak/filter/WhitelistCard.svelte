@@ -27,7 +27,7 @@
 			
 			alert('Added to whitelist');
 		} catch (error) {
-			logError('Failed to add to whitelist:', error);
+			logError('Failed to add to whitelist:', error as any);
 			alert('Failed to add to whitelist');
 		}
 	}

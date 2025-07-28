@@ -6,7 +6,7 @@
 import type { Map as LeafletMap } from 'leaflet';
 import type { KismetDevice } from '$lib/types/kismet';
 import { kismetRSSIService } from '$lib/services/map/kismetRSSIService';
-import { heatMapService } from '$lib/services/map/heatMapService';
+import { getHeatmapService } from '$lib/services/map/heatmapService';
 
 export class RSSIMapIntegration {
   private map: LeafletMap;
@@ -14,6 +14,7 @@ export class RSSIMapIntegration {
   private selectedDevice: string | null = null;
   private updateInterval: number | null = null;
   private enabled = false;
+  private heatmapService = getHeatmapService();
   
   constructor(map: LeafletMap) {
     this.map = map;
@@ -26,11 +27,11 @@ export class RSSIMapIntegration {
     await kismetRSSIService.initialize();
     
     // Initialize heatmap service if not already done
-    if (!heatMapService.isInitialized()) {
+    if (!this.heatmapService['canvas']) {
       const canvas = document.createElement('canvas');
       canvas.style.position = 'absolute';
       canvas.style.pointerEvents = 'none';
-      heatMapService.initialize(canvas, this.map);
+      this.heatmapService.initialize(canvas);
     }
   }
   
@@ -100,28 +101,38 @@ export class RSSIMapIntegration {
         return;
       }
       
-      // Update heatmap layer
-      heatMapService.updateLayer('rssi-localization', {
-        points,
-        config: {
-          resolution: 5, // 5 meter grid
-          interpolationMethod: 'kriging',
-          minOpacity: 0.2,
-          maxOpacity: 0.8,
-          blur: 15,
-          radius: 25,
-          gradient: {
-            0.0: 'rgba(0, 0, 255, 0)',
-            0.2: 'rgba(0, 0, 255, 0.5)',
-            0.4: 'rgba(0, 255, 0, 0.5)',
-            0.6: 'rgba(255, 255, 0, 0.5)',
-            0.8: 'rgba(255, 128, 0, 0.5)',
-            1.0: 'rgba(255, 0, 0, 0.5)'
-          },
-          updateInterval: 5000,
-          performanceMode: 'balanced'
-        }
-      });
+      // Add or update heatmap layer
+      if (!this.heatmapService.getLayers().find(l => l.id === 'rssi-localization')) {
+        this.heatmapService.addLayer({
+          id: 'rssi-localization',
+          name: 'RSSI Localization',
+          altitudeRange: [0, 1000],
+          config: {
+            resolution: 5, // 5 meter grid
+            interpolationMethod: 'kriging',
+            minOpacity: 0.2,
+            maxOpacity: 0.8,
+            blur: 15,
+            radius: 25,
+            gradient: {
+              0.0: 'rgba(0, 0, 255, 0)',
+              0.2: 'rgba(0, 0, 255, 0.5)',
+              0.4: 'rgba(0, 255, 0, 0.5)',
+              0.6: 'rgba(255, 255, 0, 0.5)',
+              0.8: 'rgba(255, 128, 0, 0.5)',
+              1.0: 'rgba(255, 0, 0, 0.5)'
+            },
+            updateInterval: 5000,
+            performanceMode: 'balanced'
+          }
+        });
+      }
+      
+      // Update layer points directly
+      const layer = this.heatmapService.getLayers().find(l => l.id === 'rssi-localization');
+      if (layer) {
+        layer.points = points;
+      }
       
       // Get estimated device location
       const location = await kismetRSSIService.getDeviceLocation(this.selectedDevice);
@@ -143,7 +154,7 @@ export class RSSIMapIntegration {
       this.updateInterval = null;
     }
     
-    heatMapService.removeLayer('rssi-localization');
+    this.heatmapService.setLayerVisibility('rssi-localization', false);
   }
   
   /**
@@ -158,6 +169,20 @@ export class RSSIMapIntegration {
     } else if (this.selectedDevice) {
       this.updateHeatmap();
     }
+  }
+
+  /**
+   * Enable heatmap visualization
+   */
+  enableHeatmap(): void {
+    this.setEnabled(true);
+  }
+
+  /**
+   * Disable heatmap visualization
+   */
+  disableHeatmap(): void {
+    this.setEnabled(false);
   }
   
   /**

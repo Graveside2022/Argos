@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		
 		return json({
 			success: false,
-			error: error.message,
+			error: (error as Error).message,
 			message: 'Failed to start Wireshark packet capture'
 		}, {
 			status: 500

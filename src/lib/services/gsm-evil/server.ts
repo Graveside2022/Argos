@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Request, type Response } from 'express';
 import { WebSocketServer } from 'ws';
 import { spawn, ChildProcess } from 'child_process';
 import { createServer } from 'http';
@@ -39,7 +39,7 @@ class GSMEvilServer extends EventEmitter {
     this.app.use(express.json());
     
     // Serve static HTML for the GSM Evil interface
-    this.app.get('/', (req, res) => {
+    this.app.get('/', (req: Request, res: Response) => {
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -184,7 +184,7 @@ class GSMEvilServer extends EventEmitter {
     });
     
     // API endpoints
-    this.app.get('/api/status', (req, res) => {
+    this.app.get('/api/status', (req: Request, res: Response) => {
       res.json({
         running: this.grgsm_process !== null,
         dataPoints: this.capturedData.length,
@@ -192,7 +192,7 @@ class GSMEvilServer extends EventEmitter {
       });
     });
     
-    this.app.get('/api/data', (req, res) => {
+    this.app.get('/api/data', (req: Request, res: Response) => {
       res.json(this.capturedData.slice(-100)); // Last 100 data points
     });
   }
@@ -224,7 +224,7 @@ class GSMEvilServer extends EventEmitter {
     
     // Check if USRP B205 Mini is available
     const { execSync } = require('child_process');
-    let deviceArgs = [];
+    let deviceArgs: string[] = [];
     try {
       execSync('uhd_find_devices 2>/dev/null | grep -q "B205"');
       // USRP found, adjust parameters

@@ -8,7 +8,7 @@ Your Argos project is now **100% portable** and ready for Dragon OS deployment. 
 
 ```bash
 # Copy entire project folder to new Dragon OS Pi
-scp -r /home/ubuntu/projects/Argos pi@dragon-pi-ip:/home/pi/projects/
+scp -r /path/to/Argos pi@dragon-pi-ip:/home/pi/projects/
 ```
 
 ## 🔧 Step 2: Fix Paths for New User
@@ -18,7 +18,7 @@ scp -r /home/ubuntu/projects/Argos pi@dragon-pi-ip:/home/pi/projects/
 cd /home/pi/projects/Argos
 
 # Fix all hardcoded paths for current user
-bash fix-hardcoded-paths.sh
+bash scripts/deploy/fix-hardcoded-paths.sh
 
 # This automatically detects current user and fixes all references
 ```
@@ -27,7 +27,7 @@ bash fix-hardcoded-paths.sh
 
 ```bash
 # Run the universal deployment script
-bash deploy-dragon-os.sh
+bash scripts/deploy/deploy-dragon-os.sh
 
 # This script automatically:
 # - Detects Dragon OS and current user
@@ -43,7 +43,7 @@ bash deploy-dragon-os.sh
 
 ```bash
 # Run comprehensive verification
-bash verify-deployment.sh
+bash scripts/deploy/verify-deployment.sh
 
 # This tests:
 # - System compatibility
@@ -86,7 +86,7 @@ After successful deployment:
 
 ### If Deployment Fails
 1. Check logs: `tail -f /home/$(whoami)/projects/argos-dragon-deploy.log`
-2. Run verification: `bash verify-deployment.sh`
+2. Run verification: `bash scripts/deploy/verify-deployment.sh`
 3. Check service status: `sudo systemctl status argos`
 
 ### Hardware Issues

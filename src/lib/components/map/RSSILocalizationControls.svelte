@@ -15,10 +15,11 @@
   
   let showDetails = false;
   
-  onMount(async () => {
+  onMount(() => {
     // Initialize the service
-    await kismetRSSIService.initialize();
-    updateStatus();
+    kismetRSSIService.initialize().then(() => {
+      updateStatus();
+    });
     
     // Update status periodically
     const interval = setInterval(updateStatus, 2000);

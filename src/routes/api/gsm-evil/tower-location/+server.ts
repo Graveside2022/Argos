@@ -116,11 +116,11 @@ export const POST: RequestHandler = async ({ request }) => {
       success: true,
       found: true,
       location: {
-        lat: result.lat,
-        lon: result.lon,
-        range: result.range || 1000,
-        samples: result.samples || 1,
-        lastUpdated: result.updated,
+        lat: (result as any).lat,
+        lon: (result as any).lon,
+        range: (result as any).range || 1000,
+        samples: (result as any).samples || 1,
+        lastUpdated: (result as any).updated,
         source: 'database'
       }
     });

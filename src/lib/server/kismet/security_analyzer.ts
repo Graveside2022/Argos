@@ -7,11 +7,11 @@ import type { SecurityAssessment, SecurityThreat, VulnerabilityReport } from './
  * Identifies security risks, rogue access points, and potential attacks
  */
 export class SecurityAnalyzer extends EventEmitter {
-    private knownNetworks: Map<string, any>;
-    private rogueAPThresholds: any;
-    private vulnerabilityRules: any[];
-    private threatPatterns: Map<string, any>;
-    private securityProfiles: Map<string, any>;
+    private knownNetworks: Map<string, any> = new Map();
+    private rogueAPThresholds: any = {};
+    private vulnerabilityRules: any[] = [];
+    private threatPatterns: Map<string, any> = new Map();
+    private securityProfiles: Map<string, any> = new Map();
     private analysisResults: Map<string, SecurityAssessment>;
     private threatHistory: Map<string, SecurityThreat[]>;
     private activeThreats: Set<string>;
@@ -46,7 +46,7 @@ export class SecurityAnalyzer extends EventEmitter {
         } catch (error) {
             logError('Error analyzing device security', { 
                 mac: device.mac, 
-                error: error.message 
+                error: (error as Error).message 
             });
             
             return {
@@ -88,7 +88,7 @@ export class SecurityAnalyzer extends EventEmitter {
             await this.updateThreatCorrelations();
             
         } catch (error) {
-            logError('Error performing security analysis', { error: error.message });
+            logError('Error performing security analysis', { error: (error as Error).message });
         }
     }
 
@@ -130,7 +130,7 @@ export class SecurityAnalyzer extends EventEmitter {
             
             assessment.vulnerabilities.forEach(vuln => {
                 vulnerabilities.push({
-                    ...vuln,
+                    ...(vuln as unknown as object),
                     deviceMac: mac,
                     timestamp: assessment.lastAnalyzed
                 });

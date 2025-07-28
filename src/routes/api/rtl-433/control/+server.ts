@@ -85,35 +85,35 @@ export const POST: RequestHandler = async ({ request }) => {
       // Set up output handlers to write to log file and capture data
       
       if (rtl433Process.stdout) {
-        rtl433Process.stdout.on('data', (data) => {
+        rtl433Process.stdout.on('data', (data: Buffer) => {
           const output = data.toString();
           
           // Write to log file for streaming
           appendFileSync(logFile, output);
           
           // Store output for in-memory access (you could use a more sophisticated approach)
-          global.rtl433Output = global.rtl433Output || [];
-          global.rtl433Output.push({
+          (global as any).rtl433Output = (global as any).rtl433Output || [];
+          (global as any).rtl433Output.push({
             timestamp: new Date().toISOString(),
             data: output
           });
           
           // Keep only last 100 entries to prevent memory issues
-          if (global.rtl433Output.length > 100) {
-            global.rtl433Output.shift();
+          if ((global as any).rtl433Output.length > 100) {
+            (global as any).rtl433Output.shift();
           }
         });
       }
 
       if (rtl433Process.stderr) {
-        rtl433Process.stderr.on('data', (data) => {
+        rtl433Process.stderr.on('data', (data: Buffer) => {
           const output = data.toString();
           
           // Write to log file
           appendFileSync(logFile, output);
           
-          global.rtl433Output = global.rtl433Output || [];
-          global.rtl433Output.push({
+          (global as any).rtl433Output = (global as any).rtl433Output || [];
+          (global as any).rtl433Output.push({
             timestamp: new Date().toISOString(),
             data: output
           });

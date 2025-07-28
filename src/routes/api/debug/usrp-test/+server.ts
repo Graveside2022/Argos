@@ -15,7 +15,7 @@ export const GET: RequestHandler = async () => {
     
     const testProcess = spawn('python3', [
         '-u',
-        '/home/ubuntu/projects/Argos/scripts/usrp_spectrum_scan.py',
+        './scripts/usrp_spectrum_scan.py',
         '--start-freq', '2400000000',
         '--stop-freq', '2410000000',
         '--freq-step', '1000000',
@@ -31,9 +31,9 @@ export const GET: RequestHandler = async () => {
     
     testProcess.stdout.on('data', (data) => {
         dataReceived = true;
-        const lines = data.toString().split('\n').filter(line => line.trim());
+        const lines = data.toString().split('\n').filter((line: string) => line.trim());
         lineCount += lines.length;
-        lines.forEach(line => {
+        lines.forEach((line: string) => {
             if (outputLines.length < 5) {
                 outputLines.push(line.substring(0, 100) + '...');
             }

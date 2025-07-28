@@ -44,7 +44,7 @@ export class SpectrumAnalyzer extends EventEmitter {
 			
 		} catch (error) {
 			this.isRunning = false;
-			throw new Error(`Failed to start spectrum analyzer: ${error.message}`);
+			throw new Error(`Failed to start spectrum analyzer: ${error instanceof Error ? (error as Error).message : String(error)}`);
 		}
 	}
 	
@@ -64,7 +64,7 @@ export class SpectrumAnalyzer extends EventEmitter {
 			this.emit('stopped');
 			
 		} catch (error) {
-			throw new Error(`Failed to stop spectrum analyzer: ${error.message}`);
+			throw new Error(`Failed to stop spectrum analyzer: ${error instanceof Error ? (error as Error).message : String(error)}`);
 		}
 	}
 	

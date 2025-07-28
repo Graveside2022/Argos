@@ -24,7 +24,7 @@ export const POST: RequestHandler = async ({ request }) => {
         }
         
         // Use the same USRP power measurement script as GSM Evil
-        const command = `timeout 10 python3 /home/ubuntu/projects/Argos/scripts/usrp_power_measure_real.py -f ${frequency} -g ${gain} -d ${duration}`;
+        const command = `timeout 10 python3 ./scripts/usrp_power_measure_real.py -f ${frequency} -g ${gain} -d ${duration}`;
         
         console.log(`[USRP Power] Measuring power at ${frequency} MHz with gain ${gain}`);
         

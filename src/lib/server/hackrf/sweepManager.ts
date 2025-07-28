@@ -63,7 +63,7 @@ export class SweepManager extends EventEmitter {
 		this.healthMonitorInterval = setInterval(() => {
 			this._performHealthCheck().catch((error) => {
 				logError('Error performing health check', {
-					error: error instanceof Error ? error.message : String(error)
+					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
 		}, 30000); // Check every 30 seconds instead of 5
@@ -71,7 +71,7 @@ export class SweepManager extends EventEmitter {
 		// Perform startup validation asynchronously
 		this._performStartupValidation().catch((error) => {
 			logError('Error during startup validation', {
-				error: error instanceof Error ? error.message : String(error)
+				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		});
 	}
@@ -337,7 +337,7 @@ export class SweepManager extends EventEmitter {
 				return true;
 			} catch (runError: unknown) {
 				const error = runError as Error;
-				logError('❌ Error in _runNextFrequency:', { error: error.message });
+				logError('❌ Error in _runNextFrequency:', { error: (error as Error).message });
 				if (error.stack) {
 					logError('Stack:', { stack: error.stack });
 				}
@@ -477,7 +477,7 @@ export class SweepManager extends EventEmitter {
 				this.frequencyCycler.startCycleTimer(() => {
 					this._cycleToNextFrequency().catch((error) => {
 						logError('Error cycling to next frequency', {
-							error: error instanceof Error ? error.message : String(error)
+							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					});
 				});
@@ -521,7 +521,7 @@ export class SweepManager extends EventEmitter {
 		this.frequencyCycler.startSwitchTimer(() => {
 			this._runNextFrequency().catch((error) => {
 				logError('Error running next frequency', {
-					error: error instanceof Error ? error.message : String(error)
+					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
 		});
@@ -662,7 +662,7 @@ export class SweepManager extends EventEmitter {
 			});
 			
 			logError('Failed to start sweep process', {
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? (error as Error).message : String(error),
 				analysis
 			});
 			
@@ -706,7 +706,7 @@ export class SweepManager extends EventEmitter {
 
 		} catch (error) {
 			logError('Error handling spectrum data', {
-				error: error instanceof Error ? error.message : String(error)
+				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		}
 	}
@@ -750,7 +750,7 @@ export class SweepManager extends EventEmitter {
 				this._performRecovery(`Process died: ${exitAnalysis.recommendedAction}`).catch(
 					(error) => {
 						logError('Error performing recovery', {
-							error: error instanceof Error ? error.message : String(error)
+							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					}
 				);
@@ -900,7 +900,7 @@ export class SweepManager extends EventEmitter {
 					} else {
 						resolve({
 							available: false,
-							reason: `Device check failed: ${error.message}`
+							reason: `Device check failed: ${(error as Error).message}`
 						});
 					}
 				} else if (stderr.includes('Resource busy')) {
@@ -1053,7 +1053,7 @@ export class SweepManager extends EventEmitter {
 		});
 
 		logError('Sweep error analyzed by ErrorTracker', { 
-			error: error.message, 
+			error: (error as Error).message, 
 			frequency, 
 			analysis: errorAnalysis 
 		});
@@ -1065,7 +1065,7 @@ export class SweepManager extends EventEmitter {
 		}
 
 		// Emit error event
-		this._emitError(error.message, 'sweep_error', error);
+		this._emitError((error as Error).message, 'sweep_error', error);
 
 		// Check if we should stop using ErrorTracker
 		if (this.errorTracker.hasMaxConsecutiveErrors() || this.errorTracker.hasMaxFailuresPerMinute()) {
@@ -1223,7 +1223,7 @@ export class SweepManager extends EventEmitter {
 					'Process monitor error',
 					{ 
 						pid: processState.actualProcessPid,
-						error: error instanceof Error ? error.message : String(error)
+						error: error instanceof Error ? (error as Error).message : String(error)
 					},
 					'process-monitor-error'
 				);
@@ -1261,7 +1261,7 @@ export class SweepManager extends EventEmitter {
 				);
 				this._performRecovery('No data timeout').catch((error) => {
 					logError('Error performing recovery', {
-						error: error instanceof Error ? error.message : String(error)
+						error: error instanceof Error ? (error as Error).message : String(error)
 					});
 				});
 			}

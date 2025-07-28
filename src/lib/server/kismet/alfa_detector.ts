@@ -54,11 +54,12 @@ export class AlfaDetector {
                         const product = (await readFile(productPath, 'utf-8')).trim();
                         const usbId = `${vendor}:${product}`;
                         
-                        if (this.ALFA_USB_IDS[usbId]) {
-                            logInfo(`Detected Alfa adapter via sysfs: ${this.ALFA_USB_IDS[usbId]} (${usbId})`);
+                        const alfaDevice = this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
+                        if (alfaDevice) {
+                            logInfo(`Detected Alfa adapter via sysfs: ${alfaDevice} (${usbId})`);
                             detectedAdapters.push({ 
                                 usbId, 
-                                description: this.ALFA_USB_IDS[usbId] 
+                                description: alfaDevice 
                             });
                         }
                     } catch (readError) {
@@ -76,7 +77,7 @@ export class AlfaDetector {
             }
 
         } catch (error) {
-            logError('Error detecting Alfa adapters:', error);
+            logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
         }
 
         return detectedAdapters;
@@ -114,7 +115,7 @@ export class AlfaDetector {
                 }
             }
         } catch (error) {
-            logError('Error finding network interfaces:', error);
+            logError('Error finding network interfaces:', error as Record<string, unknown>);
         }
 
         return null;

@@ -1,12 +1,14 @@
 export interface KismetDevice {
 	mac: string;
 	last_seen: number;
+	last_time?: number; // Add missing last_time property
 	signal: {
 		last_signal?: number;
 		max_signal?: number;
 		min_signal?: number;
 	};
 	manufacturer?: string;
+	manuf?: string; // Add missing manuf property (alias for manufacturer)
 	type: string;
 	channel: number;
 	frequency: number;

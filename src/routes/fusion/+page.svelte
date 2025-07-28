@@ -28,6 +28,7 @@
 	
 	// RF spectrum data
 	let rfActive = false;
+	let wsGnuradio: WebSocket | null = null;
 	let centerFreq = 2.425e9;
 	let peakPower = -60;
 	let noiseFloor = -95;
@@ -171,8 +172,8 @@
 				if (result.toolStatus) {
 					console.log('Tool availability:', result.toolStatus);
 					const missingTools = Object.entries(result.toolStatus)
-						.filter(([_, status]) => !status.installed)
-						.map(([_, status]) => status.name);
+						.filter(([_, status]) => !(status as any)?.installed)
+						.map(([_, status]) => (status as any)?.name);
 					
 					if (missingTools.length > 0) {
 						lastError = `Missing tools: ${missingTools.join(', ')}. Please install these tools to use Fusion.`;
@@ -182,7 +183,7 @@
 		} catch (error) {
 			console.error('Failed to start Fusion:', error);
 			fusionStatus = 'error';
-			lastError = error.message;
+			lastError = error instanceof Error ? error.message : String(error);
 		}
 	}
 	
@@ -214,7 +215,7 @@
 		} catch (error) {
 			console.error('Failed to stop Fusion:', error);
 			fusionStatus = 'error';
-			lastError = error.message;
+			lastError = error instanceof Error ? error.message : String(error);
 		}
 	}
 	
@@ -238,7 +239,7 @@
 			}
 		} catch (error) {
 			wiresharkStatus = 'error';
-			lastError = `Wireshark start: ${error.message}`;
+			lastError = `Wireshark start: ${error instanceof Error ? error.message : String(error)}`;
 			console.error('Wireshark start error:', error);
 		}
 		
@@ -615,8 +616,9 @@
 			message += '\nTools:\n';
 			
 			for (const [key, tool] of Object.entries(status.tools)) {
-				message += `${tool.installed ? '✓' : '✗'} ${tool.name}`;
-				if (tool.path) message += ` (${tool.path})`;
+				const toolObj = tool as any;
+				message += `${toolObj.installed ? '✓' : '✗'} ${toolObj.name}`;
+				if (toolObj.path) message += ` (${toolObj.path})`;
 				message += '\n';
 			}
 			
@@ -633,7 +635,7 @@
 			
 			if (status.recommendations.length > 0) {
 				message += '\nRecommendations:\n';
-				status.recommendations.forEach(rec => {
+				status.recommendations.forEach((rec: any) => {
 					message += `• ${rec}\n`;
 				});
 			}
@@ -642,7 +644,7 @@
 			
 		} catch (error) {
 			console.error('Failed to check system status:', error);
-			alert('Failed to check system status: ' + error.message);
+			alert('Failed to check system status: ' + (error instanceof Error ? error.message : String(error)));
 		}
 	}
 </script>

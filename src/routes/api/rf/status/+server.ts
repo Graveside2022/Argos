@@ -110,8 +110,8 @@ export const GET: RequestHandler = async ({ url }) => {
                 ...status,
                 device: 'hackrf',
                 ...hackrfStatus,
-                bufferStats: sweepManager.getBufferStats(),
-                bufferHealth: sweepManager.getBufferHealth()
+                bufferStats: null, // sweepManager.getBufferStats() - method doesn't exist
+                bufferHealth: null // sweepManager.getBufferHealth() - method doesn't exist
             };
         } else {
             status = {

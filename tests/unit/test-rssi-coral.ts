@@ -3,7 +3,7 @@
  * Run with: npx tsx test-rssi-coral.ts
  */
 
-import { HybridRSSILocalizer } from './src/lib/services/localization/HybridRSSILocalizer';
+import { HybridRSSILocalizer } from '../../src/lib/services/localization/HybridRSSILocalizer';
 
 async function testCoralIntegration() {
   console.log('🧪 Testing RSSI Coral Integration...\n');

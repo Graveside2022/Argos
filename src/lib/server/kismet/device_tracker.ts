@@ -18,6 +18,12 @@ export class DeviceTracker extends EventEmitter {
     
     // Statistics
     private stats: DeviceStats = {
+        total: 0,
+        byType: {},
+        byEncryption: {},
+        byManufacturer: {},
+        activeInLast5Min: 0,
+        activeInLast15Min: 0,
         totalDevices: 0,
         accessPoints: 0,
         clients: 0,
@@ -66,7 +72,7 @@ export class DeviceTracker extends EventEmitter {
             this.emit('tracking_started');
             
         } catch (error) {
-            logError('Failed to start device tracking', { error: error.message });
+            logError('Failed to start device tracking', { error: (error as Error).message });
             throw error;
         }
     }
@@ -86,12 +92,12 @@ export class DeviceTracker extends EventEmitter {
             
             // Stop intervals
             if (this.updateInterval) {
-                clearInterval(this.updateInterval);
+                clearInterval(this.updateInterval as NodeJS.Timeout);
                 this.updateInterval = null;
             }
             
             if (this.cleanupInterval) {
-                clearInterval(this.cleanupInterval);
+                clearInterval(this.cleanupInterval as NodeJS.Timeout);
                 this.cleanupInterval = null;
             }
             
@@ -99,7 +105,7 @@ export class DeviceTracker extends EventEmitter {
             this.emit('tracking_stopped');
             
         } catch (error) {
-            logError('Error stopping device tracking', { error: error.message });
+            logError('Error stopping device tracking', { error: (error as Error).message });
         }
     }
 
@@ -117,7 +123,7 @@ export class DeviceTracker extends EventEmitter {
             this.updateStatistics();
             
         } catch (error) {
-            logError('Error updating devices', { error: error.message });
+            logError('Error updating devices', { error: (error as Error).message });
         }
     }
 
@@ -181,7 +187,7 @@ export class DeviceTracker extends EventEmitter {
         } catch (error) {
             logError('Error processing device', { 
                 mac: deviceData.mac, 
-                error: error.message 
+                error: (error as Error).message 
             });
         }
     }

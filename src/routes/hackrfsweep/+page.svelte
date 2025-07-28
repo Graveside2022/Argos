@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { cycleStatus, spectrumData, sweepStatus, connectionStatus } from '$lib/stores/hackrf';
+	import { hackrfAPI } from '$lib/services/hackrf/api';
 	
 	// Redirect to the tactical map which supports USRP
 	onMount(() => {

@@ -14,7 +14,7 @@
 	const _mapService = new MapService();
 	
 	let processingInterval: NodeJS.Timeout | null = null;
-	let L: unknown = null; // Leaflet library
+	let L: any = null; // Leaflet library
 
 	$: hackrfState = $hackrfStore;
 	$: mapState = $mapStore;

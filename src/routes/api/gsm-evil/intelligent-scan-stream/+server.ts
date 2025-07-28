@@ -104,8 +104,9 @@ export const POST: RequestHandler = async ({ request }) => {
                   throw new Error(`No power value found in output`);
                 }
               } catch (error) {
-                console.log(`✗ USRP power measurement failed: ${error.message}`);
-                sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] USRP power measurement failed: ${error.message}`);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.log(`✗ USRP power measurement failed: ${errorMessage}`);
+                sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] USRP power measurement failed: ${errorMessage}`);
                 power = -100; // Explicitly set to -100 to indicate failure
               }
             }

@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 export const POST: RequestHandler = async () => {
   try {
     // First ensure GPS config is in place
-    await execAsync('sudo test -f /etc/kismet/kismet_site.conf || sudo cp /home/ubuntu/projects/Argos/scripts/kismet-site-simple.conf /etc/kismet/kismet_site.conf');
+    await execAsync('sudo test -f /etc/kismet/kismet_site.conf || sudo cp ./scripts/kismet-site-simple.conf /etc/kismet/kismet_site.conf');
     
     // Start Kismet
     await execAsync('sudo systemctl start kismet');
@@ -18,7 +18,7 @@ export const POST: RequestHandler = async () => {
     
     // Try to setup adapter
     try {
-      const { stdout } = await execAsync('sudo /home/ubuntu/projects/Argos/scripts/setup-kismet-adapter.sh');
+      const { stdout } = await execAsync('sudo ./scripts/setup-kismet-adapter.sh');
       console.log('Adapter setup:', stdout);
       
       return json({ 

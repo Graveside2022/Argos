@@ -90,7 +90,7 @@
 		
 		const commands: Record<string, () => void> = {
 			'status': () => console.warn('All systems operational'),
-			'refresh': () => location.reload(),
+			'refresh': () => window.location.reload(),
 			'select cellular': () => handleOperationClick('cellular'),
 			'select data': () => handleOperationClick('data'),
 			'select geo': () => handleOperationClick('geo'),

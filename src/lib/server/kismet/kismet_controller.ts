@@ -25,8 +25,8 @@ export class KismetController extends EventEmitter {
     private monitorInterfaces: MonitorInterface[] = [];
     private config: KismetConfig;
     private startTime: Date | null = null;
-    private deviceUpdateInterval: NodeJS.Timer | null = null;
-    private healthCheckInterval: NodeJS.Timer | null = null;
+    private deviceUpdateInterval: NodeJS.Timeout | null = null;
+    private healthCheckInterval: NodeJS.Timeout | null = null;
     
     // Performance metrics
     private metrics = {
@@ -108,7 +108,7 @@ export class KismetController extends EventEmitter {
             });
             
         } catch (error) {
-            logError('Failed to start Kismet monitoring', { error: error.message });
+            logError('Failed to start Kismet monitoring', { error: (error as Error).message });
             this.emit('error', error);
             throw error;
         }
@@ -148,7 +148,7 @@ export class KismetController extends EventEmitter {
             this.emit('stopped');
             
         } catch (error) {
-            logError('Failed to stop Kismet monitoring', { error: error.message });
+            logError('Failed to stop Kismet monitoring', { error: (error as Error).message });
             this.emit('error', error);
             throw error;
         }
@@ -188,7 +188,7 @@ export class KismetController extends EventEmitter {
             return enrichedDevices;
             
         } catch (error) {
-            logError('Failed to get devices', { error: error.message });
+            logError('Failed to get devices', { error: (error as Error).message });
             throw error;
         }
     }
@@ -248,7 +248,7 @@ export class KismetController extends EventEmitter {
         } catch (error) {
             logError('Failed to enable monitor mode', { 
                 interface: this.config.interface,
-                error: error.message 
+                error: (error as Error).message 
             });
             throw error;
         }
@@ -292,7 +292,7 @@ export class KismetController extends EventEmitter {
             }
             
         } catch (error) {
-            logError('Failed to disable monitor mode', { error: error.message });
+            logError('Failed to disable monitor mode', { error: (error as Error).message });
             // Don't throw here - this is cleanup
         }
     }
@@ -350,7 +350,7 @@ export class KismetController extends EventEmitter {
             logInfo('Kismet server started successfully');
             
         } catch (error) {
-            logError('Failed to start Kismet server', { error: error.message });
+            logError('Failed to start Kismet server', { error: (error as Error).message });
             throw error;
         }
     }
@@ -387,7 +387,7 @@ export class KismetController extends EventEmitter {
             logInfo('Kismet server stopped');
             
         } catch (error) {
-            logError('Failed to stop Kismet server', { error: error.message });
+            logError('Failed to stop Kismet server', { error: (error as Error).message });
             throw error;
         }
     }
@@ -467,22 +467,22 @@ export class KismetController extends EventEmitter {
      */
     private startPeriodicTasks(): void {
         // Device update interval
-        this.deviceUpdateInterval = setInterval(async () => {
+        this.deviceUpdateInterval = setTimeout(async () => {
             try {
                 await this.deviceTracker.updateDevices();
                 await this.securityAnalyzer.performAnalysis();
                 // await this.correlationEngine.analyzeCorrelations(); // Removed
             } catch (error) {
-                logError('Error in periodic device update', { error: error.message });
+                logError('Error in periodic device update', { error: (error as Error).message });
             }
         }, 5000); // Every 5 seconds
         
         // Health check interval
-        this.healthCheckInterval = setInterval(async () => {
+        this.healthCheckInterval = setTimeout(async () => {
             try {
                 await this.performHealthCheck();
             } catch (error) {
-                logError('Error in health check', { error: error.message });
+                logError('Error in health check', { error: (error as Error).message });
             }
         }, 30000); // Every 30 seconds
     }
@@ -492,12 +492,12 @@ export class KismetController extends EventEmitter {
      */
     private stopPeriodicTasks(): void {
         if (this.deviceUpdateInterval) {
-            clearInterval(this.deviceUpdateInterval);
+            clearTimeout(this.deviceUpdateInterval);
             this.deviceUpdateInterval = null;
         }
         
         if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
+            clearTimeout(this.healthCheckInterval);
             this.healthCheckInterval = null;
         }
     }
@@ -526,10 +526,10 @@ export class KismetController extends EventEmitter {
             });
             
         } catch (error) {
-            logError('Health check failed', { error: error.message });
+            logError('Health check failed', { error: (error as Error).message });
             this.emit('health_check', {
                 status: 'unhealthy',
-                error: error.message,
+                error: (error as Error).message,
                 timestamp: new Date()
             });
         }
@@ -555,7 +555,7 @@ export class KismetController extends EventEmitter {
             return {
                 mac: device.mac,
                 ssid: device.ssid,
-                deviceType: classification.type,
+                deviceType: classification.type as 'access_point' | 'client' | 'bridge' | 'unknown',
                 manufacturer,
                 firstSeen: new Date(device.firstSeen * 1000),
                 lastSeen: new Date(device.lastSeen * 1000),
@@ -581,7 +581,7 @@ export class KismetController extends EventEmitter {
         } catch (error) {
             logError('Failed to enrich device data', { 
                 mac: device.mac,
-                error: error.message 
+                error: (error as Error).message 
             });
             
             // Return minimal device data on error

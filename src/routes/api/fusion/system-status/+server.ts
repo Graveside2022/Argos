@@ -83,7 +83,7 @@ export const GET: RequestHandler = async () => {
 	} catch (error) {
 		return json({
 			error: 'Failed to get system status',
-			message: error.message
+			message: (error as Error).message
 		}, { status: 500 });
 	}
 };
@@ -103,7 +103,7 @@ function getRecommendations(tools: any, hardware: any, isDragonOS: boolean): str
 		recommendations.push('Install Kismet for WiFi monitoring: sudo apt-get install kismet');
 	}
 	
-	if (!isDragonOS && Object.values(tools).every(t => !t.installed)) {
+	if (!isDragonOS && Object.values(tools).every((t: any) => !(t as any)?.installed)) {
 		recommendations.push('Consider using DragonOS which comes with all RF tools pre-installed');
 	}
 	

@@ -95,6 +95,7 @@
 			options?: Record<string, unknown>
 		) => LeafletCircleMarker;
 		divIcon: (options: Record<string, unknown>) => unknown;
+		popup: (options?: Record<string, unknown>) => LeafletPopup;
 		Icon: LeafletIcon;
 	}
 
@@ -121,10 +122,10 @@
 		addTo: (map: LeafletMap) => LeafletMarker;
 		setLatLng: (latlng: [number, number]) => LeafletMarker;
 		remove: () => void;
-		bindPopup: (content: string, options?: Record<string, unknown>) => LeafletMarker;
+		bindPopup: (content: string | LeafletPopup, options?: Record<string, unknown>) => LeafletMarker;
 		openPopup: () => LeafletMarker;
 		setPopupContent: (content: string) => LeafletMarker;
-		on: (event: string, handler: () => void) => LeafletMarker;
+		on: (event: string, handler: (e: LeafletEvent) => void) => LeafletMarker;
 		setIcon: (icon: unknown) => LeafletMarker;
 		isPopupOpen: () => boolean;
 		getPopup: () => LeafletPopup;
@@ -143,7 +144,7 @@
 		setRadius: (radius: number) => LeafletCircleMarker;
 		bindPopup: (content: string, options?: Record<string, unknown>) => LeafletCircleMarker;
 		openPopup: () => LeafletCircleMarker;
-		on: (event: string, handler: () => void) => LeafletCircleMarker;
+		on: (event: string, handler: (e: LeafletEvent) => void) => LeafletCircleMarker;
 		remove: () => void;
 		setStyle: (style: Record<string, unknown>) => LeafletCircleMarker;
 		getPopup: () => LeafletPopup | null;
@@ -161,10 +162,13 @@
 			lat: number;
 			lng: number;
 		};
+		originalEvent?: Event;
 	}
 
 	interface LeafletPopup {
 		setContent: (content: string) => LeafletPopup;
+		setLatLng: (latlng: [number, number]) => LeafletPopup;
+		openOn: (map: LeafletMap) => LeafletPopup;
 	}
 
 	let L: LeafletLibrary;

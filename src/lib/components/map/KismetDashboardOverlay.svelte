@@ -29,7 +29,7 @@
 	};
 	
 	// Update interval
-	let updateInterval: ReturnType<typeof setInterval>;
+	let updateInterval: ReturnType<typeof setInterval> | undefined;
 	
 	async function fetchKismetData() {
 		try {
@@ -209,8 +209,8 @@
 	function isThreadDevice(device: KismetDevice): boolean {
 		// Check for suspicious patterns
 		if (device.ssid?.includes('deauth')) return true;
-		const signal = device.signal?.last_signal || device.signal;
-		if (device.type === 'Unknown' && signal && signal < -30) return true;
+		const signal = typeof device.signal === 'object' ? device.signal?.last_signal : device.signal;
+		if (device.type === 'Unknown' && signal && typeof signal === 'number' && signal < -30) return true;
 		// Add more threat detection logic here
 		return false;
 	}
@@ -414,7 +414,7 @@
 			<h3>
 				{selectedCategory ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Devices` : 'Active Detections'}
 				{#if selectedCategory}
-					<button class="clear-filter" on:click={() => filterByCategory(selectedCategory)}>
+					<button class="clear-filter" on:click={() => filterByCategory(selectedCategory || '')}>
 						Clear Filter ×
 					</button>
 				{/if}
@@ -444,8 +444,8 @@
 								</div>
 								<div>{getDeviceType(device)}</div>
 								<div>
-									<span class="signal-badge" style="color: {getSignalColor(device.signal?.last_signal || device.signal || -80)}">
-										{device.signal?.last_signal || device.signal || 'N/A'} dBm
+									<span class="signal-badge" style="color: {getSignalColor(typeof device.signal === 'object' ? device.signal?.last_signal || -80 : device.signal || -80)}">
+										{typeof device.signal === 'object' ? device.signal?.last_signal || 'N/A' : device.signal || 'N/A'} dBm
 									</span>
 								</div>
 								<div>{device.channel || 'N/A'}</div>
@@ -467,8 +467,8 @@
 							</div>
 							<div>{getDeviceType(device)}</div>
 							<div>
-								<span class="signal-badge" style="color: {getSignalColor(device.signal?.last_signal || device.signal || -80)}">
-									{device.signal?.last_signal || device.signal || 'N/A'} dBm
+								<span class="signal-badge" style="color: {getSignalColor(typeof device.signal === 'object' ? device.signal?.last_signal || -80 : device.signal || -80)}">
+									{typeof device.signal === 'object' ? device.signal?.last_signal || 'N/A' : device.signal || 'N/A'} dBm
 								</span>
 							</div>
 							<div>{device.channel || 'N/A'}</div>

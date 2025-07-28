@@ -65,7 +65,7 @@ class FusionKismetController {
             logInfo('Fusion Kismet controller initialized');
             
         } catch (error) {
-            logError('Failed to initialize Fusion Kismet controller', { error: error.message });
+            logError('Failed to initialize Fusion Kismet controller', { error: (error as Error).message });
             throw error;
         }
     }

@@ -42,7 +42,7 @@ export class DeviceIntelligence {
         } catch (error) {
             logError('Error classifying device', { 
                 mac: device.mac, 
-                error: error.message 
+                error: (error as Error).message 
             });
             
             return {
@@ -90,7 +90,7 @@ export class DeviceIntelligence {
             return 'Unknown';
             
         } catch (error) {
-            logError('Error looking up manufacturer', { mac, error: error.message });
+            logError('Error looking up manufacturer', { mac, error: (error as Error).message });
             return 'Unknown';
         }
     }
@@ -113,7 +113,7 @@ export class DeviceIntelligence {
             return behavior;
             
         } catch (error) {
-            logError('Error analyzing behavior', { mac, error: error.message });
+            logError('Error analyzing behavior', { mac, error: (error as Error).message });
             return null;
         }
     }
@@ -136,7 +136,7 @@ export class DeviceIntelligence {
         } catch (error) {
             logError('Error generating fingerprint', { 
                 mac: device.mac, 
-                error: error.message 
+                error: (error as Error).message 
             });
             return {
                 macOUI: device.mac.substring(0, 8),

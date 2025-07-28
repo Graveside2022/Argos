@@ -7,7 +7,7 @@ import type { KismetDevice } from '$lib/types/kismet';
 import { HybridRSSILocalizer } from '../localization/HybridRSSILocalizer';
 import type { HeatmapPoint } from './heatmapService';
 import { get } from 'svelte/store';
-import { gpsStore } from '$lib/stores/gps';
+import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
 export interface RSSILocalizationConfig {
   enabled: boolean;
@@ -56,7 +56,7 @@ export class KismetRSSIService {
     if (!this.config.enabled || !this.localizer) return;
     
     const gps = get(gpsStore);
-    if (!gps.position || gps.position.accuracy > 20) {
+    if (!gps.position || gps.status.accuracy > 20) {
       // Need accurate GPS position for measurements
       return;
     }
@@ -68,31 +68,31 @@ export class KismetRSSIService {
       
       // Add measurement to localizer
       this.localizer?.addMeasurement({
-        id: `${currentTime}-${device.macaddr}`,
+        id: `${currentTime}-${device.mac}`,
         timestamp: currentTime,
         position: {
           lat: gps.position.lat,
           lon: gps.position.lon,
-          altitude: gps.position.altitude || 0,
-          accuracy: gps.position.accuracy
+          altitude: 0, // GPS position doesn't include altitude
+          accuracy: gps.status.accuracy
         },
-        deviceId: device.macaddr,
+        deviceId: device.mac,
         rssi: device.signal.last_signal,
         frequency: device.frequency || 2437
       });
       
       // Store in history for visualization
-      if (!this.measurementHistory.has(device.macaddr)) {
-        this.measurementHistory.set(device.macaddr, []);
+      if (!this.measurementHistory.has(device.mac)) {
+        this.measurementHistory.set(device.mac, []);
       }
       
-      const history = this.measurementHistory.get(device.macaddr)!;
+      const history = this.measurementHistory.get(device.mac)!;
       history.push({
         timestamp: currentTime,
         position: {
           lat: gps.position.lat,
           lon: gps.position.lon,
-          altitude: gps.position.altitude || 0
+          altitude: 0 // GPS position doesn't include altitude
         },
         rssi: device.signal.last_signal
       });
@@ -100,7 +100,7 @@ export class KismetRSSIService {
       // Keep only recent measurements (last 5 minutes)
       const cutoffTime = currentTime - 5 * 60 * 1000;
       const filtered = history.filter(m => m.timestamp > cutoffTime);
-      this.measurementHistory.set(device.macaddr, filtered);
+      this.measurementHistory.set(device.mac, filtered);
     });
   }
   

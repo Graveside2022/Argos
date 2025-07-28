@@ -4,7 +4,8 @@ import { sweepManager } from '$lib/server/hackrf/sweepManager';
 
 export const GET: RequestHandler = async () => {
     const status = sweepManager.getStatus();
-    const processInfo = sweepManager.getProcessInfo();
+    // const processInfo = sweepManager.getProcessInfo(); // Method doesn't exist
+    const processInfo = null;
     
     // Get last spectrum data if available
     let lastSpectrumData = null;

@@ -45,7 +45,7 @@ export class KismetAPIClient extends EventEmitter {
             this.emit('connected');
             
         } catch (error) {
-            logError('Failed to connect to Kismet API', { error: error.message });
+            logError('Failed to connect to Kismet API', { error: error instanceof Error ? (error as Error).message : String(error) });
             this.emit('error', error);
             throw error;
         }
@@ -76,7 +76,7 @@ export class KismetAPIClient extends EventEmitter {
             this.emit('disconnected');
             
         } catch (error) {
-            logError('Error during disconnect', { error: error.message });
+            logError('Error during disconnect', { error: error instanceof Error ? (error as Error).message : String(error) });
         }
     }
 
@@ -150,7 +150,7 @@ export class KismetAPIClient extends EventEmitter {
             return [];
             
         } catch (error) {
-            logError('Failed to get devices', { error: error.message });
+            logError('Failed to get devices', { error: error instanceof Error ? (error as Error).message : String(error) });
             return [];
         }
     }
@@ -164,7 +164,7 @@ export class KismetAPIClient extends EventEmitter {
             const response = await this.makeRequest('GET', `/devices/by-mac/${deviceKey}/device.json`);
             return response;
         } catch (error) {
-            logError('Failed to get device details', { mac, error: error.message });
+            logError('Failed to get device details', { mac, error: (error as Error).message });
             return null;
         }
     }
@@ -177,7 +177,7 @@ export class KismetAPIClient extends EventEmitter {
             const response = await this.makeRequest('GET', '/system/status.json');
             return response;
         } catch (error) {
-            logError('Failed to get system status', { error: error.message });
+            logError('Failed to get system status', { error: (error as Error).message });
             return null;
         }
     }
@@ -190,7 +190,7 @@ export class KismetAPIClient extends EventEmitter {
             const response = await this.makeRequest('GET', '/channels/channels.json');
             return response;
         } catch (error) {
-            logError('Failed to get channel usage', { error: error.message });
+            logError('Failed to get channel usage', { error: (error as Error).message });
             return null;
         }
     }
@@ -203,7 +203,7 @@ export class KismetAPIClient extends EventEmitter {
             const response = await this.makeRequest('GET', '/alerts/all_alerts.json');
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            logError('Failed to get alerts', { error: error.message });
+            logError('Failed to get alerts', { error: (error as Error).message });
             return [];
         }
     }
@@ -216,7 +216,7 @@ export class KismetAPIClient extends EventEmitter {
             const response = await this.makeRequest('GET', '/gps/location.json');
             return response;
         } catch (error) {
-            logError('Failed to get GPS location', { error: error.message });
+            logError('Failed to get GPS location', { error: (error as Error).message });
             return null;
         }
     }
@@ -239,7 +239,7 @@ export class KismetAPIClient extends EventEmitter {
             }
             
         } catch (error) {
-            logError('Kismet authentication failed', { error: error.message });
+            logError('Kismet authentication failed', { error: (error as Error).message });
             throw error;
         }
     }
@@ -262,7 +262,7 @@ export class KismetAPIClient extends EventEmitter {
                     const data = JSON.parse(event.data);
                     this.handleEventStreamMessage(data);
                 } catch (error) {
-                    logWarn('Failed to parse event stream message', { error: error.message });
+                    logWarn('Failed to parse event stream message', { error: (error as Error).message });
                 }
             };
             
@@ -310,7 +310,7 @@ export class KismetAPIClient extends EventEmitter {
             }
             
         } catch (error) {
-            logError('Error handling event stream message', { error: error.message });
+            logError('Error handling event stream message', { error: (error as Error).message });
         }
     }
 
@@ -333,7 +333,7 @@ export class KismetAPIClient extends EventEmitter {
                 }
                 
             } catch (error) {
-                logError('Polling error', { error: error.message });
+                logError('Polling error', { error: (error as Error).message });
             }
         }, 5000); // Poll every 5 seconds
     }
@@ -370,7 +370,7 @@ export class KismetAPIClient extends EventEmitter {
             await this.connect();
             this.emit('connection_restored');
         } catch (error) {
-            logWarn('Reconnection failed', { error: error.message });
+            logWarn('Reconnection failed', { error: (error as Error).message });
             this.attemptReconnection();
         }
     }
@@ -391,7 +391,7 @@ export class KismetAPIClient extends EventEmitter {
             
             // Add authentication if available
             if (this.authToken) {
-                options.headers!['Authorization'] = `Bearer ${this.authToken}`;
+                (options.headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
             }
             
             // Add body for POST/PUT requests
@@ -412,7 +412,7 @@ export class KismetAPIClient extends EventEmitter {
             logError('API request failed', { 
                 method, 
                 endpoint, 
-                error: error.message 
+                error: (error as Error).message 
             });
             throw error;
         }

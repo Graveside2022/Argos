@@ -47,7 +47,7 @@ export class WiresharkController extends EventEmitter {
 		} catch (error) {
 			console.error('Wireshark start error:', error);
 			this.isRunning = false;
-			throw new Error(`Failed to start Wireshark: ${error.message}`);
+			throw new Error(`Failed to start Wireshark: ${error instanceof Error ? (error as Error).message : String(error)}`);
 		}
 	}
 	
@@ -146,7 +146,7 @@ export class WiresharkController extends EventEmitter {
 			this.emit('stopped');
 			
 		} catch (error) {
-			throw new Error(`Failed to stop Wireshark: ${error.message}`);
+			throw new Error(`Failed to stop Wireshark: ${error instanceof Error ? (error as Error).message : String(error)}`);
 		}
 	}
 	
@@ -260,12 +260,14 @@ export class WiresharkController extends EventEmitter {
 							}
 						}
 						// Remove processed array from buffer
-						buffer = buffer.substring(arrayMatch.index + arrayMatch[0].length);
+						if (arrayMatch.index !== undefined) {
+							buffer = buffer.substring(arrayMatch.index + arrayMatch[0].length);
+						}
 						expectingArray = false;
 					} catch (error) {
 						// JSON array not complete yet, keep accumulating
 						if (buffer.includes(']')) {
-							console.log('⚠️ Array parse error:', error.message.substring(0, 50));
+							console.log('⚠️ Array parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
 							console.log('🔤 Buffer content:', buffer.substring(0, 200));
 							buffer = ''; // Reset on error
 							expectingArray = false;
@@ -305,8 +307,8 @@ export class WiresharkController extends EventEmitter {
 							}
 						} catch (error) {
 							// Skip logging minor JSON errors - focus on successful packets
-							if (trimmed.length > 100 && !error.message.includes('Unexpected end of JSON input')) {
-								console.log('⚠️ JSON parse error:', error.message.substring(0, 50));
+							if (trimmed.length > 100 && !(error instanceof Error && (error as Error).message.includes('Unexpected end of JSON input'))) {
+								console.log('⚠️ JSON parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
 							}
 						}
 					}
