@@ -43,7 +43,7 @@ export class KismetController extends EventEmitter {
         super();
         
         this.config = {
-            interface: 'wlan0',
+            interface: 'wlx00c0cab684ad', // MediaTek USB wireless device
             monitorMode: true,
             channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
             hopRate: 5,
@@ -356,39 +356,125 @@ export class KismetController extends EventEmitter {
     }
 
     /**
-     * Stop Kismet server process
+     * Stop Kismet server process - Enhanced with external process detection
      */
     private async stopKismetServer(): Promise<void> {
-        if (!this.kismetProcess) {
-            return;
-        }
-
         try {
             logInfo('Stopping Kismet server process...');
             
-            this.kismetProcess.kill('SIGTERM');
-            
-            // Wait for graceful shutdown
-            await new Promise<void>((resolve) => {
-                const timeout = setTimeout(() => {
-                    if (this.kismetProcess) {
-                        this.kismetProcess.kill('SIGKILL');
-                    }
-                    resolve();
-                }, 5000);
+            // Handle internal process if it exists
+            if (this.kismetProcess) {
+                logInfo('Stopping internal Kismet process...');
                 
-                this.kismetProcess!.on('exit', () => {
-                    clearTimeout(timeout);
-                    resolve();
+                // Verify this is actually our process before killing it
+                if (this.kismetProcess.pid) {
+                    // Double-check the process is actually kismet
+                    try {
+                        const processInfo = await this.executeCommand(`ps -p ${this.kismetProcess.pid} -o comm= 2>/dev/null`);
+                        if (!processInfo.trim().includes('kismet')) {
+                            logWarn(`Process ${this.kismetProcess.pid} is not kismet, skipping kill`);
+                            this.kismetProcess = null;
+                            return;
+                        }
+                    } catch (error) {
+                        logWarn('Could not verify process identity, proceeding with caution');
+                    }
+                }
+                
+                this.kismetProcess.kill('SIGTERM');
+                
+                // Wait for graceful shutdown
+                await new Promise<void>((resolve) => {
+                    const timeout = setTimeout(() => {
+                        if (this.kismetProcess && this.kismetProcess.pid) {
+                            logWarn('Kismet process did not exit gracefully, using SIGKILL');
+                            this.kismetProcess.kill('SIGKILL');
+                        }
+                        resolve();
+                    }, 5000);
+                    
+                    this.kismetProcess!.on('exit', () => {
+                        clearTimeout(timeout);
+                        logInfo('Internal Kismet process stopped');
+                        resolve();
+                    });
                 });
-            });
+                
+                this.kismetProcess = null;
+            }
             
-            this.kismetProcess = null;
-            logInfo('Kismet server stopped');
+            // Always check for external Kismet processes and handle them safely
+            await this.stopExternalKismetProcesses();
             
         } catch (error) {
             logError('Failed to stop Kismet server', { error: (error as Error).message });
             throw error;
+        }
+    }
+
+    /**
+     * Stop any external Kismet processes safely without affecting SSH
+     */
+    private async stopExternalKismetProcesses(): Promise<void> {
+        try {
+            logInfo('Checking for external Kismet processes...');
+            
+            // Get all kismet processes excluding our current shell/SSH sessions
+            const pgrepOutput = await this.executeCommand('pgrep -af kismet || true');
+            
+            if (!pgrepOutput.trim()) {
+                logInfo('No external Kismet processes found');
+                return;
+            }
+            
+            const lines = pgrepOutput.trim().split('\n');
+            let foundKismetProcess = false;
+            
+            for (const line of lines) {
+                // Skip if this is our current shell or contains SSH-related processes
+                if (line.includes('pgrep') || line.includes('ssh') || line.includes('/bin/sh') || line.includes('/bin/bash') || line.includes('/usr/bin/zsh')) {
+                    continue;
+                }
+                
+                // Check if this is actually a kismet executable
+                if (line.includes('/usr/bin/kismet') || line.includes('kismet_server') || 
+                    (line.includes('kismet') && (line.includes('-t ') || line.includes('-c ')))) {
+                    foundKismetProcess = true;
+                    const pidMatch = line.match(/^(\d+)/);
+                    if (pidMatch) {
+                        const pid = pidMatch[1];
+                        logInfo(`Found external Kismet process: PID ${pid}`);
+                    }
+                }
+            }
+            
+            if (foundKismetProcess) {
+                logInfo('External Kismet processes detected, using safe stop method...');
+                
+                // Use SIGTERM first for graceful shutdown
+                await this.executeCommand('sudo pkill -TERM -f "^/usr/bin/kismet" 2>/dev/null || true');
+                
+                // Wait a moment for graceful shutdown
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Check if any are still running and force kill if necessary
+                const stillRunning = await this.executeCommand('pgrep -f "^/usr/bin/kismet" 2>/dev/null || true');
+                if (stillRunning.trim()) {
+                    logWarn('Some Kismet processes did not stop gracefully, using SIGKILL...');
+                    await this.executeCommand('sudo pkill -KILL -f "^/usr/bin/kismet" 2>/dev/null || true');
+                }
+                
+                // Also stop any systemd services
+                await this.executeCommand('sudo systemctl stop kismet-auto-wlan1 2>/dev/null || true');
+                
+                logInfo('External Kismet processes stopped');
+            } else {
+                logInfo('No external Kismet processes found to stop');
+            }
+            
+        } catch (error) {
+            logWarn('Error handling external Kismet processes', { error: (error as Error).message });
+            // Don't throw - this is cleanup
         }
     }
 
