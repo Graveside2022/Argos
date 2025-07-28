@@ -81,7 +81,7 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 export const GET: RequestHandler = async () => {
   try {
     // Try to get GPS data from gpspipe (more reliable than parsing cgps)
-    const { stdout } = await execAsync('timeout 2 gpspipe -w -n 5 | grep -m 1 TPV');
+    const { stdout } = await execAsync('timeout 5 gpspipe -w -n 10 | grep -m 1 TPV');
     
     // Parse the JSON output from gpspipe
     let tpvData: TPVData | null = null;

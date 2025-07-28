@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
           // If service fails, try to run kismet directly
           try {
             // Start kismet in background
-            const { stdout, stderr } = await execAsync('sudo kismet -t waldzell -c wlan1 > /dev/null 2>&1 &');
+            const { stdout, stderr } = await execAsync('sudo kismet -t waldzell -c wlan1 --no-ncurses-wrapper > /dev/null 2>&1 &');
             console.log('Direct kismet output:', stdout);
             if (stderr) console.error('Direct kismet stderr:', stderr);
             
