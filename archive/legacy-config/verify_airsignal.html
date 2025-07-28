@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AirSignal Data Flow Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #0f0; }
+        .data { color: #ff0; }
+        .error { color: #f00; }
+        button { background: #0f0; color: #000; border: none; padding: 10px; margin: 5px; cursor: pointer; }
+        button:hover { background: #0ff; }
+    </style>
+</head>
+<body>
+    <h1>AirSignal RF Detection Data Flow Test</h1>
+    
+    <div class="section">
+        <h2>1. Control Panel</h2>
+        <button onclick="startSweep()">Start USRP Sweep (2.4GHz)</button>
+        <button onclick="stopSweep()">Stop Sweep</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="section">
+        <h2>2. Data Stream Monitor</h2>
+        <div id="streamStatus">Not Connected</div>
+        <div id="dataCount">Data Events: 0</div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Data Analysis</h2>
+        <div id="analysis"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. Event Log</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        let eventSource = null;
+        let dataCount = 0;
+        
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            dataCount = 0;
+            document.getElementById('dataCount').textContent = 'Data Events: 0';
+        }
+        
+        async function startSweep() {
+            log('Starting USRP sweep...');
+            
+            // Connect to SSE first
+            connectToStream();
+            
+            // Start sweep
+            try {
+                const response = await fetch('/api/rf/start-sweep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        deviceType: 'usrp',
+                        frequencies: [{ start: 2400, stop: 2500, step: 5 }],
+                        cycleTime: 10,
+                        gain: 40,
+                        sampleRate: 20e6
+                    })
+                });
+                
+                const result = await response.json();
+                log(`Sweep start response: ${JSON.stringify(result)}`, 'data');
+            } catch (error) {
+                log(`Error starting sweep: ${error}`, 'error');
+            }
+        }
+        
+        async function stopSweep() {
+            log('Stopping sweep...');
+            
+            try {
+                const response = await fetch('/api/rf/stop-sweep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceType: 'usrp' })
+                });
+                
+                const result = await response.json();
+                log(`Stop response: ${JSON.stringify(result)}`, 'data');
+            } catch (error) {
+                log(`Error stopping sweep: ${error}`, 'error');
+            }
+            
+            disconnectStream();
+        }
+        
+        function connectToStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            log('Connecting to SSE data stream...');
+            eventSource = new EventSource('/api/hackrf/data-stream');
+            document.getElementById('streamStatus').textContent = 'Connecting...';
+            
+            eventSource.addEventListener('connected', (event) => {
+                log('Connected to data stream', 'data');
+                document.getElementById('streamStatus').textContent = 'Connected';
+            });
+            
+            eventSource.addEventListener('sweep_data', (event) => {
+                dataCount++;
+                document.getElementById('dataCount').textContent = `Data Events: ${dataCount}`;
+                
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Analyze data structure
+                    const analysis = {
+                        hasFrequencies: !!data.frequencies,
+                        hasPowerLevels: !!data.power_levels,
+                        powerLevelsLength: data.power_levels?.length || 0,
+                        maxPower: data.power_levels ? Math.max(...data.power_levels) : 'N/A',
+                        minPower: data.power_levels ? Math.min(...data.power_levels) : 'N/A',
+                        peakPower: data.peak_power,
+                        startFreq: data.start_freq,
+                        stopFreq: data.stop_freq,
+                        wouldPassThreshold: data.power_levels ? Math.max(...data.power_levels) > -100 : false
+                    };
+                    
+                    document.getElementById('analysis').innerHTML = `
+                        <pre>${JSON.stringify(analysis, null, 2)}</pre>
+                    `;
+                    
+                    log(`Sweep data received: ${data.power_levels?.length || 0} power values, peak: ${data.peak_power} dBm`);
+                    
+                    // Log if it would trigger detection
+                    if (analysis.wouldPassThreshold) {
+                        log(`Signal detected! Max power ${analysis.maxPower} dBm exceeds -100 dBm threshold`, 'data');
+                    }
+                    
+                } catch (error) {
+                    log(`Error parsing sweep data: ${error}`, 'error');
+                }
+            });
+            
+            eventSource.addEventListener('error', (event) => {
+                log('SSE connection error', 'error');
+                document.getElementById('streamStatus').textContent = 'Error';
+            });
+            
+            eventSource.onerror = () => {
+                log('SSE connection lost', 'error');
+                document.getElementById('streamStatus').textContent = 'Disconnected';
+            };
+        }
+        
+        function disconnectStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                document.getElementById('streamStatus').textContent = 'Disconnected';
+                log('Disconnected from stream');
+            }
+        }
+        
+        // Auto-connect on load
+        window.addEventListener('load', () => {
+            log('Test page loaded. Click "Start USRP Sweep" to begin.');
+        });
+    </script>
+</body>
+</html>

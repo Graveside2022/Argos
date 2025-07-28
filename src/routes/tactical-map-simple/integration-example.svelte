@@ -5,13 +5,23 @@ Add these changes to your +page.svelte file
 
 <script lang="ts">
   // Add to imports section
+  import { onMount, onDestroy } from 'svelte';
+  import type { KismetDevice } from '$lib/server/kismet/types';
   import RSSILocalizationControls from '$lib/components/map/RSSILocalizationControls.svelte';
   import { RSSIMapIntegration, addRSSIClickHandler } from './rssi-integration';
+  import L from 'leaflet';
   
   // Add to variables section
   let rssiIntegration: RSSIMapIntegration | null = null;
   let selectedRSSIDevice: string | null = null;
   let rssiEnabled = false;
+  let map: any = null;
+  let kismetStatus = 'stopped';
+  let devices: KismetDevice[] = [];
+  let marker: any = null;
+  
+  // Mock device icon SVG
+  const deviceIconSVG = '<div class="device-icon">📱</div>';
   
   // Add to onMount, after map initialization
   onMount(async () => {
@@ -74,7 +84,11 @@ Add these changes to your +page.svelte file
   function handleRSSIToggle(enabled: boolean) {
     rssiEnabled = enabled;
     if (rssiIntegration) {
-      rssiIntegration.setEnabled(enabled);
+      if (enabled) {
+        rssiIntegration.enableHeatmap();
+      } else {
+        rssiIntegration.disableHeatmap();
+      }
     }
   }
   
@@ -94,7 +108,7 @@ Add these changes to your +page.svelte file
   
   <!-- Add RSSI Localization Controls -->
   <RSSILocalizationControls 
-    {selectedRSSIDevice}
+    selectedDevice={selectedRSSIDevice}
     onHeatmapToggle={handleRSSIToggle}
   />
 </div>

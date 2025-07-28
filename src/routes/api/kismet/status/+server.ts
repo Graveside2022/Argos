@@ -27,7 +27,7 @@ export const GET: RequestHandler = async () => {
 		return json({
 			success: false,
 			status: 'error',
-			error: error.message,
+			error: (error as Error).message,
 			data: {
 				running: false,
 				interface: null,

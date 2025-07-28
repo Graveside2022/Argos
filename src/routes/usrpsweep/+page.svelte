@@ -286,6 +286,8 @@
 						peak_power: data.power,
 						peak_freq: frequencyMHz,
 						centerFreq: frequencyMHz,
+						sampleRate: 1000000, // 1 MHz default sample rate
+						binSize: 1024, // Default bin size
 						timestamp: Date.now(),
 						processed: true
 					});
@@ -497,34 +499,39 @@
 	}
 
 	// Connect to data stream on mount
-	onMount(async () => {
-		console.debug('[USRP Sweep] Page mounting...');
+	onMount(() => {
+		let healthCheckInterval: NodeJS.Timeout;
 		
-		// First, get the actual backend state
-		try {
-			const status = await usrpAPI.getStatus();
-			console.debug('[USRP Sweep] Backend status:', status);
+		// Initialize async operations
+		(async () => {
+			console.debug('[USRP Sweep] Page mounting...');
 			
-			// Update store with real backend state
-			if (status && typeof status.sweeping === 'boolean') {
-				isStarted = status.sweeping;
-				updateSweepStatus({ active: status.sweeping });
-				console.debug(`[USRP Sweep] Synced with backend: isStarted=${isStarted}`);
-			} else {
+			// First, get the actual backend state
+			try {
+				const status = await usrpAPI.getStatus();
+				console.debug('[USRP Sweep] Backend status:', status);
+				
+				// Update store with real backend state
+				if (status && typeof status.sweeping === 'boolean') {
+					isStarted = status.sweeping;
+					updateSweepStatus({ active: status.sweeping });
+					console.debug(`[USRP Sweep] Synced with backend: isStarted=${isStarted}`);
+				} else {
+					isStarted = false;
+					console.debug('[USRP Sweep] No backend status, defaulting to stopped');
+				}
+			} catch (error) {
+				console.warn('[USRP Sweep] Failed to get backend status:', error);
 				isStarted = false;
-				console.debug('[USRP Sweep] No backend status, defaulting to stopped');
 			}
-		} catch (error) {
-			console.warn('[USRP Sweep] Failed to get backend status:', error);
-			isStarted = false;
-		}
-		
-		// Connect to data stream
-		console.debug('[USRP Sweep] Connecting to data stream...');
-		void usrpAPI.connectToDataStream();
+			
+			// Connect to data stream
+			console.debug('[USRP Sweep] Connecting to data stream...');
+			void usrpAPI.connectToDataStream();
+		})();
 
 		// Set up connection health check
-		const healthCheckInterval = setInterval(() => {
+		healthCheckInterval = setInterval(() => {
 			if (
 				typeof $connectionStatus === 'object' &&
 				$connectionStatus !== null &&

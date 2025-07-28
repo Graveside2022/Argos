@@ -171,6 +171,14 @@ export interface MonitorInterface {
  * Device statistics
  */
 export interface DeviceStats {
+    // Compatible with existing usage in kismetProxy.ts
+    total: number;
+    byType: Record<string, number>;
+    byEncryption: Record<string, number>;
+    byManufacturer: Record<string, number>;
+    activeInLast5Min: number;
+    activeInLast15Min: number;
+    // Extended properties for comprehensive stats
     totalDevices: number;
     accessPoints: number;
     clients: number;
@@ -220,6 +228,7 @@ export interface NetworkPacket {
     length: number;
     hostname?: string;
     suspicious?: boolean;
+    data?: string; // Raw packet data
 }
 
 /**
@@ -289,7 +298,7 @@ export interface KismetAPIResponse<T> {
  * WebSocket message types
  */
 export interface WebSocketMessage {
-    type: 'device_discovered' | 'device_updated' | 'device_lost' | 'security_threat' | 'correlation_found' | 'status_update';
+    type: 'device_discovered' | 'device_updated' | 'device_lost' | 'security_threat' | 'correlation_found' | 'status_update' | 'device_update' | 'status_change' | 'error';
     data: any;
     timestamp: string;
 }
@@ -450,4 +459,110 @@ export interface EntityLink {
     linkType: 'device' | 'location' | 'timing' | 'frequency' | 'behavior';
     evidence: string[];
     timestamp: Date;
+}
+
+/**
+ * Kismet service status
+ */
+export interface KismetServiceStatus {
+    running: boolean;
+    pid?: number;
+    cpu?: number;
+    memory?: number;
+    uptime?: number;
+    error?: string;
+    restApiRunning?: boolean;
+    webUIRunning?: boolean;
+    gpsStatus?: boolean;
+    interfaceStatus?: string;
+    errors?: string[];
+    startTime?: Date;
+    version?: string;
+    configValid?: boolean;
+}
+
+/**
+ * Compatible KismetDevice interface
+ */
+export interface KismetDevice {
+    mac: string;
+    ssid?: string;
+    type: string;
+    manufacturer?: string;
+    firstSeen: number;
+    lastSeen: number;
+    signal?: number; // Alias for signalStrength for backward compatibility
+    signalStrength: number;
+    channel: number;
+    frequency: number;
+    encryptionType?: string[];
+    encryption?: string[];
+    location?: {
+        latitude: number;
+        longitude: number;
+        accuracy?: number;
+    };
+    packets: number;
+    dataSize: number;
+    dataPackets?: number;
+    clients?: string[];
+    probeRequests?: string[];
+    macaddr: string; // Alias for mac
+}
+
+/**
+ * Device filter for queries
+ */
+export interface DeviceFilter {
+    type?: string;
+    manufacturer?: string;
+    encryption?: string;
+    ssid?: string;
+    minSignal?: number;
+    maxSignal?: number;
+    seenWithin?: number; // minutes
+    signalStrength?: {
+        min?: number;
+        max?: number;
+    };
+    lastSeen?: {
+        after?: Date;
+        before?: Date;
+    };
+    location?: {
+        latitude: number;
+        longitude: number;
+        radius: number;
+    };
+}
+
+
+/**
+ * Kismet script configuration
+ */
+export interface KismetScript {
+    name: string;
+    path: string;
+    description: string;
+    arguments?: string[];
+    timeout?: number;
+    enabled?: boolean;
+    executable?: boolean;
+    running?: boolean;
+    pid?: number;
+}
+
+/**
+ * Script execution result
+ */
+export interface ScriptExecutionResult {
+    success: boolean;
+    stdout?: string;
+    stderr?: string;
+    exitCode?: number;
+    executionTime?: number;
+    timestamp?: Date;
+    error?: string;
+    pid?: number;
+    output?: string;
 }

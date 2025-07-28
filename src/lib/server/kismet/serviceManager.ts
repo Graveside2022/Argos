@@ -40,7 +40,7 @@ export class KismetServiceManager {
     } catch (error) {
       return {
         running: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? (error as Error).message : 'Unknown error'
       };
     }
   }
@@ -71,7 +71,7 @@ export class KismetServiceManager {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to start Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to start Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
       };
     }
   }
@@ -163,7 +163,7 @@ export class KismetServiceManager {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to stop Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to stop Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
       };
     }
   }
@@ -183,7 +183,7 @@ export class KismetServiceManager {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to restart Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to restart Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
       };
     }
   }
@@ -196,7 +196,7 @@ export class KismetServiceManager {
       const { stdout } = await execAsync(`tail -n ${lines} ${this.LOG_FILE}`);
       return stdout.trim().split('\n').filter(Boolean);
     } catch (error) {
-      return [`Error reading logs: ${error instanceof Error ? error.message : 'Unknown error'}`];
+      return [`Error reading logs: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`];
     }
   }
 }

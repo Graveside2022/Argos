@@ -30,9 +30,9 @@ export const GET: RequestHandler = async ({ url }) => {
                 const usrpStatus = usrpManager.getStatus();
                 const hackrfStatus = sweepManager.getStatus();
                 
-                if (usrpStatus.isRunning) {
+                if ((usrpStatus as any).isRunning) {
                     activeDevice = 'usrp';
-                } else if (hackrfStatus.isRunning) {
+                } else if (hackrfStatus.state === 'running' || hackrfStatus.state === 'sweeping') {
                     activeDevice = 'hackrf';
                 }
             }

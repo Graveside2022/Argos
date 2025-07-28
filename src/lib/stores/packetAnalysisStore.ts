@@ -1,5 +1,10 @@
 import { writable, derived } from 'svelte/store';
-import type { NetworkPacket } from '$lib/server/wireshark';
+import type { NetworkPacket as BaseNetworkPacket } from '$lib/server/wireshark';
+
+// Extended NetworkPacket with data property for analysis
+export interface NetworkPacket extends BaseNetworkPacket {
+	data?: string;
+}
 
 // Enhanced packet interface with analysis fields
 export interface AnalyzedPacket extends NetworkPacket {
@@ -171,7 +176,7 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 	const analysis = {
 		isSuspicious: false,
 		suspicionReasons: [] as string[],
-		category: 'normal' as const,
+		category: 'normal' as 'normal' | 'suspicious' | 'malicious' | 'unknown',
 		tags: [] as string[],
 		severity: 0
 	};

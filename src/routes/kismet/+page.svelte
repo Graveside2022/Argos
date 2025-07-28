@@ -657,7 +657,7 @@
 								Object.defineProperty(iframeElement.contentWindow, 'location', {
 									get() {
 										console.warn('Iframe trying to access location');
-										return iframeElement.contentWindow.location;
+										return iframeElement.contentWindow?.location;
 									},
 									set(value) {
 										console.error('Iframe trying to set location to:', value);

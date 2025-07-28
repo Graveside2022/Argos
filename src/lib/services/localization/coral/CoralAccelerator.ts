@@ -36,7 +36,7 @@ export class CoralAccelerator extends EventEmitter {
       ]);
       
       this.coralProcess.stdout?.on('data', (data) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
+        const lines = data.toString().split('\n').filter((line: string) => line.trim());
         
         for (const line of lines) {
           try {

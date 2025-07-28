@@ -1,0 +1,41 @@
+{
+    "version": 2,
+    "sdrs": {
+        "usrp": {
+            "name": "USRP B205 Mini",
+            "type": "uhd",
+            "enabled": true,
+            "device": "serial=32B0765",
+            "ppm": 0,
+            "profiles": {
+                "fm": {
+                    "name": "FM Broadcast",
+                    "center_freq": 100000000,
+                    "rf_gain": 40,
+                    "samp_rate": 2000000,
+                    "start_freq": 100300000,
+                    "start_mod": "wfm",
+                    "waterfall_min_level": -78
+                },
+                "2m": {
+                    "name": "2 Meter Band",
+                    "center_freq": 145000000,
+                    "rf_gain": 40,
+                    "samp_rate": 2048000,
+                    "start_freq": 145500000,
+                    "start_mod": "nfm",
+                    "waterfall_min_level": -78
+                },
+                "70cm": {
+                    "name": "70cm Band", 
+                    "center_freq": 433000000,
+                    "rf_gain": 40,
+                    "samp_rate": 2048000,
+                    "start_freq": 433500000,
+                    "start_mod": "nfm",
+                    "waterfall_min_level": -78
+                }
+            }
+        }
+    }
+}

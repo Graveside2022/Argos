@@ -80,8 +80,34 @@ declare module 'leaflet.markercluster' {
   export function markerClusterGroup(options?: MarkerClusterGroupOptions): MarkerClusterGroup;
 }
 
-// Extend Leaflet namespace
+// Extend Leaflet namespace 
 declare module 'leaflet' {
+  // Ensure Map class is available for import
+  export class Map {
+    constructor(element: string | HTMLElement, options?: any);
+    addLayer(layer: any): this;
+    removeLayer(layer: any): this;
+    remove(): this;
+    getBounds(): any;
+    setView(center: [number, number], zoom: number): this;
+    getZoom(): number;
+    on(type: string, fn: Function): this;
+    off(type: string, fn?: Function): this;
+  }
+  
+  // Add missing factory functions
+  export function map(element: string | HTMLElement, options?: any): Map;
+  export function tileLayer(urlTemplate: string, options?: any): any;
+  export function marker(latlng: [number, number], options?: any): any;
+  export function polyline(latlngs: [number, number][], options?: any): any;
+  export function circleMarker(latlng: [number, number], options?: any): any;
+  
+  // Add control namespace
+  export namespace control {
+    export function layers(baseLayers?: any, overlays?: any, options?: any): any;
+    export function scale(options?: any): any;
+  }
+  
   export interface Icon {
     options: IconOptions;
   }
@@ -98,5 +124,44 @@ declare module 'leaflet' {
     shadowSize?: [number, number];
     shadowAnchor?: [number, number];
     className?: string;
+  }
+
+  export interface DivIconOptions {
+    html?: string | HTMLElement;
+    bgPos?: [number, number];
+    iconSize?: [number, number];
+    iconAnchor?: [number, number];
+    popupAnchor?: [number, number];
+    className?: string;
+  }
+
+  export interface DivIcon extends Icon {
+    options: DivIconOptions;
+  }
+
+  export function divIcon(options?: DivIconOptions): DivIcon;
+
+  // Extend event handling types
+  export interface LeafletMouseEvent extends Event {
+    latlng: LatLng;
+    layerPoint: Point;
+    containerPoint: Point;
+    originalEvent: MouseEvent;
+    target: any;
+    sourceTarget: any;
+    propagatedFrom: any;
+  }
+
+  export interface LeafletEvent extends Event {
+    target: any;
+    sourceTarget: any;
+    propagatedFrom: any;
+    layer?: Layer;
+  }
+
+  // Extend Marker interface with proper event handling
+  export interface Marker {
+    on(type: 'click' | 'dblclick', fn: (e: LeafletMouseEvent) => void, context?: any): this;
+    on(type: string, fn: (e: LeafletEvent) => void, context?: any): this;
   }
 }

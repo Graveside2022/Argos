@@ -52,7 +52,7 @@ class USRPAPI {
 
 			this.eventSource.addEventListener('error', (event) => {
 				try {
-					const data = JSON.parse(event.data);
+					const data = JSON.parse((event as MessageEvent).data);
 					console.error('USRP error:', data);
 					this.lastError.set(data.message || 'Unknown error');
 				} catch (error) {

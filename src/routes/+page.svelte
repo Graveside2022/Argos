@@ -26,7 +26,7 @@
 	}
 
 	function navigateToRFEmitter() {
-		window.open('http://100.79.154.94:3000', '_blank');
+		window.open('http://100.76.103.118:3000', '_blank');
 	}
 
 	function navigateToFusion() {

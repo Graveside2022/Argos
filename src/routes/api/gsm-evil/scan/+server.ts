@@ -11,7 +11,7 @@ export const POST: RequestHandler = async () => {
     
     // Check if USRP is already in use by OpenWebRX or other services
     try {
-      const { stdout: usrpStatus } = await execAsync('/home/ubuntu/projects/Argos/scripts/check-usrp-busy.sh');
+      const { stdout: usrpStatus } = await execAsync('./scripts/check-usrp-busy.sh');
       if (usrpStatus.trim() !== 'FREE') {
         const busyService = usrpStatus.split(':')[1] || 'Unknown Service';
         return json({ 

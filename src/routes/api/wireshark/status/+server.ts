@@ -17,7 +17,7 @@ export const GET: RequestHandler = async () => {
 		
 		return json({
 			success: false,
-			error: error.message,
+			error: (error as Error).message,
 			message: 'Failed to retrieve Wireshark status'
 		}, {
 			status: 500

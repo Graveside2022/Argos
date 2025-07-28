@@ -25,7 +25,7 @@ Perfect for fresh Dragon OS installations or when you want the latest version:
 # Clone and install in one process
 git clone https://github.com/Graveside2022/Argos.git
 cd Argos
-bash install-from-git.sh
+bash scripts/install/install-from-git.sh
 ```
 
 **✅ Best for:**
@@ -34,7 +34,7 @@ bash install-from-git.sh
 - Systems with internet connectivity
 - First-time installations
 
-[📖 **Detailed Git Installation Guide**](README-GIT-INSTALLATION.md)
+[📖 **Detailed Git Installation Guide**](docs/guides/README-GIT-INSTALLATION.md)
 
 ### **Option B: Direct Copy Deployment** (For offline/field operations)
 
@@ -43,9 +43,9 @@ Perfect for offline deployments or when copying to multiple systems:
 ```bash
 # 1. Copy entire project folder via SCP/CyberDuck to target system
 # 2. Then run on target system:
-cd /home/pi/projects/Argos
-bash fix-hardcoded-paths.sh
-bash deploy-dragon-os.sh
+cd /path/to/Argos
+bash scripts/deploy/fix-hardcoded-paths.sh
+bash scripts/deploy/deploy-dragon-os.sh
 ```
 
 **✅ Best for:**
@@ -54,7 +54,7 @@ bash deploy-dragon-os.sh
 - Multiple system deployments
 - When you have customized configurations
 
-[📖 **Detailed Copy Deployment Guide**](README-DRAGON-OS-DEPLOYMENT.md)
+[📖 **Detailed Copy Deployment Guide**](docs/guides/README-DRAGON-OS-DEPLOYMENT.md)
 
 ---
 

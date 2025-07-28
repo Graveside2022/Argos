@@ -58,7 +58,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    const newSocket = io('http://100.79.154.94:5000', {
+    const newSocket = io(`http://${window.location.hostname}:5000`, {
       transports: ['polling', 'websocket'], // Start with polling for stability
       timeout: 20000, // Increase timeout to 20 seconds
       reconnection: true,

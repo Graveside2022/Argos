@@ -10,7 +10,7 @@ export async function POST() {
         await execAsync('sudo systemctl stop kismet').catch(() => {});
         
         // Use the no-auto-source configuration
-        await execAsync('sudo cp /home/ubuntu/projects/Argos/scripts/kismet-no-auto-source.conf /etc/kismet/kismet_site.conf');
+        await execAsync('sudo cp ./scripts/kismet-no-auto-source.conf /etc/kismet/kismet_site.conf');
         
         // Reset the wireless adapter
         const adapterCheck = await execAsync("ip link show | grep -E 'wlx[0-9a-f]{10}' | cut -d: -f2 | tr -d ' ' | head -1");

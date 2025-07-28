@@ -15,7 +15,7 @@
 	let eventSource: EventSource | null = null;
 	
 	// Port scanning detection interval
-	let portScanInterval: number;
+	let portScanInterval: ReturnType<typeof setInterval>;
 	
 	onMount(() => {
 		// Connect to Event Stream for real-time packet data

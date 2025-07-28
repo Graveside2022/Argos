@@ -12,7 +12,7 @@ git clone https://github.com/Graveside2022/Argos.git
 cd Argos
 
 # Install everything
-bash install-from-git.sh
+bash scripts/install/install-from-git.sh
 
 # System will prompt for OpenCellID API key during installation
 ```
@@ -104,7 +104,7 @@ The installation includes an interactive setup wizard for OpenCellID API key:
 
 1. **Get API Key**: Visit https://opencellid.org/register
 2. **During Installation**: Enter your API key when prompted
-3. **Later Setup**: Run `bash setup-opencellid.sh` anytime
+3. **Later Setup**: Run `bash scripts/install/setup-opencellid.sh` anytime
 
 ### Features Enabled:
 - Cell tower location lookup
@@ -166,7 +166,7 @@ sudo systemctl restart argos
 
 ### Update OpenCellID Config:
 ```bash
-bash setup-opencellid.sh
+bash scripts/install/setup-opencellid.sh
 ```
 
 ### System Updates:
@@ -181,7 +181,7 @@ For development work:
 
 ```bash
 # Install in development mode
-NODE_ENV=development bash install-from-git.sh
+NODE_ENV=development bash scripts/install/install-from-git.sh
 
 # Start development server
 npm run dev

@@ -20,7 +20,7 @@
 	let loading = false;
 	let error = '';
 	let total = 0;
-	let refreshInterval: number;
+	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 	
 	async function fetchIMSIData() {
 		if (!isVisible) return;
@@ -79,7 +79,7 @@
 	}
 	
 	function getCountryName(mcc: number) {
-		const countries = {
+		const countries: { [key: number]: string } = {
 			262: '🇩🇪 Germany',
 			302: '🇨🇦 Canada', 
 			310: '🇺🇸 USA',

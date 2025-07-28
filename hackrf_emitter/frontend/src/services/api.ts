@@ -1,6 +1,6 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_BASE_URL = 'http://100.79.154.94:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Extend axios config to include metadata
 interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {

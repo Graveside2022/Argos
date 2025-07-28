@@ -20,6 +20,7 @@ interface KismetRawDevice {
 	'kismet.device.base.first_time'?: number;
 	'kismet.device.base.packets.total'?: number;
 	'kismet.device.base.packets.data'?: number;
+	'kismet.device.base.datasize'?: number;
 	'kismet.device.base.crypt'?: Record<string, boolean>;
 	'kismet.device.base.location'?: {
 		'kismet.common.location.lat'?: number;
@@ -174,24 +175,25 @@ export class WebSocketManager extends EventEmitter {
 		if (!deviceKey || !macAddr) return;
 
 		// Transform to our device format
+		const signalStrength = kismetDevice['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] || 0;
 		const device: KismetDevice = {
 			mac: macAddr,
 			ssid: kismetDevice['kismet.device.base.name'] || '',
 			manufacturer: kismetDevice['kismet.device.base.manuf'] || 'Unknown',
 			type: this.getDeviceType(kismetDevice),
-			channel: kismetDevice['kismet.device.base.channel'],
-			frequency: kismetDevice['kismet.device.base.frequency'],
-			signal: kismetDevice['kismet.device.base.signal']?.['kismet.common.signal.last_signal'],
-			lastSeen: kismetDevice['kismet.device.base.last_time']
-				? new Date(kismetDevice['kismet.device.base.last_time'] * 1000).toISOString()
-				: new Date().toISOString(),
-			firstSeen: kismetDevice['kismet.device.base.first_time']
-				? new Date(kismetDevice['kismet.device.base.first_time'] * 1000).toISOString()
-				: new Date().toISOString(),
+			channel: kismetDevice['kismet.device.base.channel'] || 0,
+			frequency: kismetDevice['kismet.device.base.frequency'] || 0,
+			signal: signalStrength,
+			signalStrength: signalStrength,
+			lastSeen: kismetDevice['kismet.device.base.last_time'] || Date.now() / 1000,
+			firstSeen: kismetDevice['kismet.device.base.first_time'] || Date.now() / 1000,
 			packets: kismetDevice['kismet.device.base.packets.total'] || 0,
+			dataSize: kismetDevice['kismet.device.base.datasize'] || 0,
 			dataPackets: kismetDevice['kismet.device.base.packets.data'] || 0,
 			encryptionType: this.getEncryptionTypes(kismetDevice),
-			location: this.getDeviceLocation(kismetDevice)
+			encryption: this.getEncryptionTypes(kismetDevice),
+			location: this.getDeviceLocation(kismetDevice),
+			macaddr: macAddr // Alias for mac
 		};
 
 		// Check if device has changed
@@ -250,10 +252,17 @@ export class WebSocketManager extends EventEmitter {
 		const location = device['kismet.device.base.location'];
 		if (!location) return undefined;
 
+		const lat = location['kismet.common.location.lat'];
+		const lon = location['kismet.common.location.lon'];
+		
+		if (typeof lat !== 'number' || typeof lon !== 'number') {
+			return undefined;
+		}
+		
 		return {
-			lat: location['kismet.common.location.lat'],
-			lon: location['kismet.common.location.lon'],
-			alt: location['kismet.common.location.alt']
+			latitude: lat,
+			longitude: lon,
+			accuracy: location['kismet.common.location.alt'] || 0
 		};
 	}
 

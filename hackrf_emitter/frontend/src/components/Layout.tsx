@@ -48,7 +48,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
           
           {/* Centered Back to Console Button */}
           <button
-            onClick={() => window.open('http://100.79.154.94:5173', '_self')}
+            onClick={() => window.open(`http://${window.location.hostname}:5173`, '_self')}
             className="btn-secondary flex items-center space-x-2 whitespace-nowrap"
             title="Back to Argos Console"
           >

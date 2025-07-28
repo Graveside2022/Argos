@@ -55,8 +55,8 @@ export const GET: RequestHandler = async () => {
         const tailProcess = spawn('tail', ['-f', activeLogFile]);
         
         tailProcess.stdout?.on('data', (data) => {
-          const lines = data.toString().split('\n').filter(line => line.trim());
-          lines.forEach(line => {
+          const lines = data.toString().split('\n').filter((line: string) => line.trim());
+          lines.forEach((line: string) => {
             const message = {
               type: 'console',
               message: line,

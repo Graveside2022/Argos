@@ -85,7 +85,7 @@ export class KismetProxy {
 
 			return (await response.json()) as T;
 		} catch (error) {
-			if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+			if (error instanceof Error && (error as Error).message.includes('ECONNREFUSED')) {
 				throw new Error('Cannot connect to Kismet. Is it running?');
 			}
 			throw error;
@@ -217,7 +217,21 @@ export class KismetProxy {
 				byEncryption: {},
 				byManufacturer: {},
 				activeInLast5Min: 0,
-				activeInLast15Min: 0
+				activeInLast15Min: 0,
+				// Extended properties for comprehensive stats
+				totalDevices: devices.length,
+				accessPoints: 0,
+				clients: 0,
+				unknownDevices: 0,
+				newDevicesLastHour: 0,
+				activeDevicesLast5Min: 0,
+				securityThreats: 0,
+				rogueAPs: 0,
+				encryptionTypes: new Map<string, number>(),
+				manufacturers: new Map<string, number>(),
+				channelUsage: new Map<number, number>(),
+				signalStrengthDistribution: new Map<string, number>(),
+				lastUpdate: new Date()
 			};
 
 			devices.forEach((device) => {
@@ -261,23 +275,26 @@ export class KismetProxy {
 		// Since the raw data already has the full field names as keys, 
 		// we can access them directly
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
-		const encryptionString = raw['kismet.device.base.crypt'] as string;
-		const manufacturer = raw['kismet.device.base.manuf'];
+		const encryptionNumber = raw['kismet.device.base.crypt'];
+		const manufacturer = raw['kismet.device.base.manuf'] || 'Unknown';
 		const signal = raw['kismet.device.base.signal'] as any;
 
 		return {
 			mac: raw['kismet.device.base.macaddr'] || 'Unknown',
+			macaddr: raw['kismet.device.base.macaddr'] || 'Unknown', // Alias for mac
 			ssid: raw['kismet.device.base.name'] || undefined,
-			manufacturer: manufacturer || 'Unknown',
+			manufacturer: manufacturer,
 			type,
-			channel: parseInt(raw['kismet.device.base.channel'] as string) || 0,
+			channel: (raw['kismet.device.base.channel'] as unknown as number) || 0,
 			frequency: raw['kismet.device.base.frequency'] || 0,
 			signal: signal?.['kismet.common.signal.last_signal'] || -100,
+			signalStrength: signal?.['kismet.common.signal.last_signal'] || -100,
 			firstSeen: this.convertTimestamp(raw['kismet.device.base.first_time']),
 			lastSeen: this.convertTimestamp(raw['kismet.device.base.last_time']),
 			packets: raw['kismet.device.base.packets.total'] || 0,
-			dataPackets: raw['kismet.device.base.packets.data'] || 0,
-			encryptionType: this.parseEncryptionString(encryptionString),
+			dataSize: raw['kismet.device.base.packets.data'] || 0,
+			encryptionType: this.parseEncryptionNumber(encryptionNumber),
+			encryption: this.parseEncryptionNumber(encryptionNumber), // Alias for encryptionType
 			location: this.extractLocationFromRaw(raw)
 		};
 	}
@@ -303,9 +320,28 @@ export class KismetProxy {
 		
 		// Split the encryption string and clean up
 		const parts = encryptionStr.split(' ').filter(p => p.length > 0);
-		const uniqueParts = [...new Set(parts)];
+		const uniqueParts = Array.from(new Set(parts));
 		
 		return uniqueParts.length > 0 ? uniqueParts : ['Unknown'];
+	}
+
+	/**
+	 * Parse encryption number to array of encryption types
+	 */
+	private static parseEncryptionNumber(encryptionNum: number | undefined): string[] {
+		if (!encryptionNum || encryptionNum === 0) return ['Open'];
+		
+		// Map Kismet encryption bit flags to encryption types
+		const encryptionTypes: string[] = [];
+		
+		// Common Kismet encryption flags (bit field)
+		if (encryptionNum & 1) encryptionTypes.push('WEP');
+		if (encryptionNum & 2) encryptionTypes.push('WPA');
+		if (encryptionNum & 4) encryptionTypes.push('WPA2');
+		if (encryptionNum & 8) encryptionTypes.push('WPA3');
+		if (encryptionNum & 16) encryptionTypes.push('WPS');
+		
+		return encryptionTypes.length > 0 ? encryptionTypes : ['Open'];
 	}
 
 	/**
@@ -331,9 +367,9 @@ export class KismetProxy {
 		
 		if (typeof location === 'object') {
 			return {
-				lat: location.lat || location['kismet.common.location.lat'],
-				lon: location.lon || location['kismet.common.location.lon'],
-				alt: location.alt || location['kismet.common.location.alt']
+				latitude: location.lat || location['kismet.common.location.lat'] || 0,
+				longitude: location.lon || location['kismet.common.location.lon'] || 0,
+				accuracy: location.accuracy || 0
 			};
 		}
 		
@@ -341,22 +377,15 @@ export class KismetProxy {
 	}
 
 	/**
-	 * Convert Kismet timestamp to ISO string
+	 * Convert Kismet timestamp to milliseconds
 	 */
-	private static convertTimestamp(timestamp: number | undefined): string {
+	private static convertTimestamp(timestamp: number | undefined): number {
 		if (!timestamp || timestamp === 0) {
-			return new Date().toISOString();
+			return Date.now();
 		}
 		
 		// Kismet timestamps are in seconds, not milliseconds
-		const date = new Date(timestamp * 1000);
-		
-		// Check if date is valid
-		if (isNaN(date.getTime())) {
-			return new Date().toISOString();
-		}
-		
-		return date.toISOString();
+		return timestamp * 1000;
 	}
 
 	/**

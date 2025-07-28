@@ -9,9 +9,9 @@ export const POST: RequestHandler = async () => {
 		console.log('Fusion Security Center start requested');
 		
 		const results = {
-			wireshark: { success: false, error: null },
-			gnuradio: { success: false, error: null },
-			kismet: { success: false, error: null }
+			wireshark: { success: false, error: null as string | null },
+			gnuradio: { success: false, error: null as string | null },
+			kismet: { success: false, error: null as string | null }
 		};
 		
 		// For now, just mark tools as started without actually spawning processes
@@ -27,7 +27,7 @@ export const POST: RequestHandler = async () => {
 			// Emit started event
 			wiresharkController.emit('started', { interface: 'eth0' });
 		} catch (error) {
-			results.wireshark.error = error.message;
+			results.wireshark.error = (error as Error).message;
 			console.error('Failed to start Wireshark:', error);
 		}
 		
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async () => {
 			await spectrumAnalyzer.start();
 			results.gnuradio.success = true;
 		} catch (error) {
-			results.gnuradio.error = error.message;
+			results.gnuradio.error = (error as Error).message;
 			console.error('Failed to start GNU Radio:', error);
 		}
 		
@@ -53,7 +53,7 @@ export const POST: RequestHandler = async () => {
 			});
 			results.kismet.success = true;
 		} catch (error) {
-			results.kismet.error = error.message;
+			results.kismet.error = (error as Error).message;
 			console.error('Failed to start Kismet:', error);
 		}
 		
@@ -76,7 +76,7 @@ export const POST: RequestHandler = async () => {
 		console.error('Error in Fusion start endpoint:', error);
 		return json({
 			success: false,
-			error: error.message || 'Failed to start Fusion Security Center',
+			error: (error as Error).message || 'Failed to start Fusion Security Center',
 			timestamp: new Date().toISOString()
 		}, { status: 500 });
 	}

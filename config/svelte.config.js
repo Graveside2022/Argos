@@ -1,1 +1,1 @@
-../svelte.config.js
+build/svelte.config.js

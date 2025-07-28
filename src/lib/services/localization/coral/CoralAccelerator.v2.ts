@@ -30,13 +30,13 @@ export class CoralAccelerator extends EventEmitter {
   }
   
   private async startProcess(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       // Check if Python 3.9 environment exists
       const pythonPath = '/home/ubuntu/projects/Argos/.coral_env/bin/python';
       const fallbackPython = 'python3'; // Use system Python as fallback
       
       // Try Coral environment first, fall back to system Python
-      const fs = await import('fs');
+      const fs = (await import('fs')).default;
       const pythonExe = fs.existsSync(pythonPath) ? pythonPath : fallbackPython;
       
       console.log(`Starting Coral worker with ${pythonExe}`);

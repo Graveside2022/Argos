@@ -1,0 +1,11 @@
+{
+	"receiver_name": "USRP B205 mini",
+	"receiver_location": "Argos SDR Station",
+	"receiver_admin": "admin@localhost",
+	"receiver_gps": { "lat": 0.0, "lon": 0.0 },
+	"photo_title": "USRP B205 mini Receiver",
+	"photo_desc": "Software Defined Radio",
+	"waterfall_scheme": "GoogleTurboWaterfall",
+	"fft_fps": 20,
+	"waterfall_levels": { "min": -90, "max": -50 }
+}

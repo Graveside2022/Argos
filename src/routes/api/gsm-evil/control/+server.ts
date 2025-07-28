@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
       try {
         // Check if USRP is already in use by OpenWebRX or other services
         try {
-          const { stdout: usrpStatus } = await execAsync('/home/ubuntu/projects/Argos/scripts/check-usrp-busy.sh');
+          const { stdout: usrpStatus } = await execAsync('./scripts/check-usrp-busy.sh');
           if (usrpStatus.trim() !== 'FREE') {
             const busyService = usrpStatus.split(':')[1] || 'Unknown Service';
             return json({ 
@@ -56,11 +56,11 @@ export const POST: RequestHandler = async ({ request }) => {
         
         // Apply Socket.IO and CORS patches before starting
         console.log('Applying Socket.IO and CORS patches...');
-        await execAsync('/home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh').catch(() => {
+        await execAsync('./scripts/patch-gsmevil-socketio.sh').catch(() => {
           console.warn('Failed to apply patches, continuing anyway...');
         });
         
-        const { stdout, stderr } = await execAsync(`sudo /home/ubuntu/projects/Argos/scripts/gsm-evil-with-auto-imsi.sh ${freq} 45`, {
+        const { stdout, stderr } = await execAsync(`sudo ./scripts/gsm-evil-with-auto-imsi.sh ${freq} 45`, {
           timeout: 15000 // 15 second timeout
         });
         
@@ -96,7 +96,7 @@ export const POST: RequestHandler = async ({ request }) => {
         console.log('Stopping GSM Evil...');
         
         // Use the stop script
-        await execAsync('sudo /home/ubuntu/projects/Argos/scripts/gsm-evil-stop.sh');
+        await execAsync('sudo ./scripts/gsm-evil-stop.sh');
         
         return json({ 
           success: true, 

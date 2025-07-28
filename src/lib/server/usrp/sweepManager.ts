@@ -295,7 +295,7 @@ export class UsrpSweepManager extends EventEmitter {
 	 */
 	private _buildSweepArgs(settings: SweepSettings): string[] {
 		// Create a Python script path - we'll write this script
-		const scriptPath = '/home/ubuntu/projects/Argos/scripts/usrp_spectrum_scan.py';
+		const scriptPath = './scripts/usrp_spectrum_scan.py';
 		
 		const args = [
 			scriptPath,
