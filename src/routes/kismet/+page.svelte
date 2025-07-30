@@ -15,8 +15,8 @@
 	onMount(() => {
 		// Use window.location to get the correct host
 		const host = window.location.hostname;
-		// Add trailing slash to match what Kismet redirects to
-		iframeUrl = `http://${host}:2501/`;
+		// Add basic auth credentials for empty username/password and trailing slash
+		iframeUrl = `http://:@${host}:2501/`;
 
 		// Check initial Kismet status
 		checkKismetStatus().catch((error) => {
@@ -167,10 +167,33 @@
 			});
 
 			if (response.ok) {
-				// Wait briefly then check actual status instead of assuming it's running
+				const data = await response.json();
+				console.warn('Start response:', data);
+
+				// Enhanced verification with multiple checks
 				setTimeout(async () => {
-					await checkKismetStatus();
-				}, 2000);
+					// Check status multiple times to ensure consistent state
+					let verificationAttempts = 0;
+					const maxAttempts = 3;
+
+					const verifyStart = async (): Promise<void> => {
+						verificationAttempts++;
+						await checkKismetStatus();
+
+						if (kismetStatus === 'starting' && verificationAttempts < maxAttempts) {
+							// Still starting, wait a bit more
+							setTimeout(verifyStart, 2000);
+						} else if (kismetStatus === 'starting') {
+							// Failed to start after max attempts
+							console.warn('Kismet start verification failed after maximum attempts');
+							kismetStatus = 'stopped';
+							_hasError = true;
+							errorMessage = 'Kismet failed to start properly - check system logs';
+						}
+					};
+
+					await verifyStart();
+				}, 3000); // Initial wait increased to match backend verification timing
 			} else {
 				let errorText = '';
 				try {
@@ -199,23 +222,38 @@
 		kismetStatus = 'stopping';
 
 		try {
-			// Use the dedicated stop endpoint with comprehensive stop functionality
-			const response = await fetch('/api/kismet/stop', {
+			// Use the unified control endpoint with robust stop functionality
+			const response = await fetch('/api/kismet/control', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
-				}
+				},
+				body: JSON.stringify({ action: 'stop' })
 			});
 
 			if (response.ok) {
 				const data = await response.json();
 				console.warn('Stop response:', data);
-				setTimeout(() => {
-					kismetStatus = 'stopped';
-				}, 2000);
+
+				// Wait a bit then verify the stop was successful
+				setTimeout(async () => {
+					await checkKismetStatus();
+					if (!kismetStatus || kismetStatus === 'stopping') {
+						kismetStatus = 'stopped';
+					}
+				}, 3000); // Longer wait to account for robust cleanup
 			} else {
-				const data = (await response.json()) as { message?: string };
-				throw new Error(data.message || 'Failed to stop Kismet');
+				let errorText = '';
+				try {
+					const errorData = await response.json();
+					errorText = errorData.error || errorData.message || 'Unknown error';
+					if (errorData.details) {
+						errorText += '\n' + errorData.details;
+					}
+				} catch {
+					errorText = await response.text();
+				}
+				throw new Error(`Failed to stop Kismet: ${errorText}`);
 			}
 		} catch (error: unknown) {
 			console.error('Error stopping Kismet:', error);
