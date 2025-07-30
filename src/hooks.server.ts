@@ -50,14 +50,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// For non-WebSocket requests, continue with normal handling
 	const response = await resolve(event);
-	
-	// Add security headers to prevent warnings
-	// Remove browsing-topics from Permissions-Policy as it's not recognized yet
+
+	// Add security headers with cache busting for development
 	response.headers.set(
-		'Permissions-Policy', 
+		'Permissions-Policy',
 		'geolocation=(self), microphone=(), camera=(), payment=(), usb=()'
 	);
-	
+
+	// Force cache refresh in development to prevent stale error messages
+	if (dev) {
+		response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+		response.headers.set('Pragma', 'no-cache');
+		response.headers.set('Expires', '0');
+	}
+
 	return response;
 };
 
