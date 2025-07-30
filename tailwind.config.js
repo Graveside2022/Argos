@@ -21,6 +21,7 @@ export default {
 				'border-primary': '#374151',
 				// Text colors
 				'text-primary': '#f8fafc',
+				'text-secondary': '#94a3b8',
 				'text-muted': '#64748b',
 				// Background colors
 				'bg-secondary': '#1e293b',
