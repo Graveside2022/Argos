@@ -977,10 +977,11 @@
 			console.trace('Navigation stack trace');
 		});
 		
-		// GSM Evil runs on port 80 on the same host
-		const host = window.location.hostname;
+		// GSM Evil runs on port 8080 on localhost
+		// Force localhost since GSM Evil only binds to 127.0.0.1
+		const host = 'localhost';
 		// Default to IMSI sniffer page with timestamp to force refresh
-		iframeUrl = `http://${host}:80/imsi/?t=${Date.now()}`;
+		iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
 		
 		// Check initial GSM Evil status without forcing restart
 		console.log('[GSM-DEBUG] Checking initial GSM Evil status...');
@@ -1066,19 +1067,56 @@
 			// console.log('Start response:', data);
 			
 			if (response.ok && data.success) {
-				// Wait a bit for the service to fully start
-				setTimeout(() => {
-					console.log('[GSM-DEBUG] Setting status to running after 3s delay');
-					gsmStatus = 'running';
-					hasError = false;
-					isLoading = true; // Reset loading state for iframe
-					console.log('[GSM-DEBUG] Setting isLoading=true, iframe will be hidden');
-					// Update iframe URL to use CLEAN version without spam
-					const host = window.location.hostname;
-					iframeUrl = `/imsi-clean.html?t=${Date.now()}`;
-					console.log('[GSM-DEBUG] Updated iframe URL to CLEAN version:', iframeUrl);
-					console.log('[GSM-DEBUG] Iframe should be hidden now, isLoading:', isLoading);
-				}, 5000);
+				// IMPROVED: Verify service is actually ready instead of fixed delay
+				console.log('[GSM-DEBUG] Verifying GSM Evil service accessibility...');
+				
+				// Poll service until accessible, max 30 seconds
+				let attempts = 0;
+				const maxAttempts = 30;
+				
+				const verifyService = async () => {
+					try {
+						const response = await fetch('/api/gsm-evil/status');
+						const status = await response.json();
+						
+						if (status.details?.gsmevil?.webInterface) {
+							console.log('[GSM-DEBUG] Service verified accessible, showing iframe');
+							gsmStatus = 'running';
+							hasError = false;
+							isLoading = false;
+							iframeUrl = `http://${window.location.hostname}:8080/imsi/?t=${Date.now()}`;
+							
+							// Ensure scanning flag is cleared when GSM Evil is already running
+							if ($gsmEvilStore.isScanning) {
+								console.log('[GSM-DEBUG] Clearing stuck scanning flag');
+								gsmEvilStore.completeScan();
+							}
+							return;
+						}
+					} catch (e) {
+						console.log('[GSM-DEBUG] Service verification failed, retrying...', e);
+					}
+					
+					attempts++;
+					if (attempts < maxAttempts) {
+						setTimeout(verifyService, 1000);
+					} else {
+						console.log('[GSM-DEBUG] Service verification timeout, showing iframe anyway');
+						gsmStatus = 'running';
+						hasError = false;  
+						isLoading = false;
+						iframeUrl = `http://${window.location.hostname}:8080/imsi/?t=${Date.now()}`;
+						
+						// Ensure scanning flag is cleared when GSM Evil is already running
+						if ($gsmEvilStore.isScanning) {
+							console.log('[GSM-DEBUG] Clearing stuck scanning flag (timeout fallback)');
+							gsmEvilStore.completeScan();
+						}
+					}
+				};
+				
+				// Start verification after brief initial delay
+				setTimeout(verifyService, 2000);
 			} else {
 				throw new Error(data.message || 'Failed to start GSM Evil');
 			}
@@ -1087,6 +1125,7 @@
 			gsmStatus = 'stopped';
 			hasError = true;
 			errorMessage = error instanceof Error ? error.message : 'Failed to start GSM Evil';
+			isLoading = false;
 		}
 	}
 	
@@ -1155,27 +1194,8 @@
 		hasError = false;
 		console.log('[GSM-DEBUG] Iframe should now be visible, isLoading:', isLoading);
 		
-		// Fix the Bootstrap Table height issue in the iframe
-		setTimeout(() => {
-			const iframe = document.querySelector('iframe');
-			if (iframe && iframe.contentWindow) {
-				try {
-					// Force the table to have proper height
-					const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-					const style = iframeDoc.createElement('style');
-					style.textContent = `
-						.fixed-table-container { height: calc(100vh - 200px) !important; }
-						.fixed-table-body { height: calc(100vh - 250px) !important; overflow-y: auto !important; }
-						#fresh-table { display: table !important; }
-						.fresh-table { height: auto !important; }
-					`;
-					iframeDoc.head.appendChild(style);
-					console.log('[GSM-DEBUG] Injected table height fix into iframe');
-				} catch (e) {
-					console.error('[GSM-DEBUG] Could not access iframe content:', e);
-				}
-			}
-		}, 1000);
+		// Note: Iframe CSS injection removed due to cross-origin security restrictions
+		// The GSM Evil service iframe will use its own styling
 	}
 	
 	function handleIframeError() {

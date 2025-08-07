@@ -17,43 +17,47 @@ export const GET: RequestHandler = async () => {
       });
     }
 
-    // Use tshark to get GSM burst data directly
-    const { stdout: burstData } = await execAsync(
-      'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e data.data 2>/dev/null | head -10',
+    // Read GSM frames from the log file where grgsm_livemon outputs them
+    const logPath = '/home/ubuntu/projects/Argos/grgsm.log';
+    const { stdout: recentFrames } = await execAsync(
+      `tail -10 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s"`,
       { timeout: 2000 }
     ).catch(() => ({ stdout: '' }));
 
     let frames: string[] = [];
     
-    if (burstData) {
-      // Each line contains hex data from a packet
-      const lines = burstData.split('\n').filter(line => line.trim().length > 0);
+    if (recentFrames) {
+      // Each line contains GSM frame hex data
+      const lines = recentFrames.split('\n').filter(line => line.trim().length > 0);
       
-      frames = lines.slice(0, 5).map(line => {
-        // Parse the data - tshark might not give us gsmtap.type, so we'll analyze the data
+      frames = lines.slice(-5).map(line => {
+        // Clean up the line and format it nicely
         const hexData = line.trim();
         
-        if (hexData.length >= 16) { // At least 8 bytes
-          // Show up to 32 hex chars (16 bytes) for better visibility
-          const formatted = hexData.substring(0, 32).match(/.{2}/g)?.join(' ') || '';
-          
-          // Try to identify burst type by pattern
-          let burstType = '';
-          if (hexData.startsWith('2b2b2b2b2b2b2b2b2b')) {
-            burstType = ' [IDLE]';
-          } else if (hexData.length === 16) { // 8 bytes
-            burstType = ' [ACCESS]';
-          } else if (formatted.includes('00 00 00 00 00 00')) {
-            burstType = ' [FCH]'; // Frequency Correction
-          } else if (formatted.includes('25 ') || formatted.includes('2d ')) {
-            burstType = ' [SCH]'; // Synchronization
-          } else if (hexData.length >= 230) { // ~115 bytes
-            burstType = ' [NORMAL]';
+        if (hexData.length >= 10) {
+          // Try to identify frame type by pattern
+          let frameType = '';
+          if (hexData.includes('2b 2b 2b 2b 2b 2b 2b 2b 2b')) {
+            frameType = ' [FILLER]'; // These are actually filler frames, not idle
+          } else if (hexData.startsWith('15 06')) {
+            frameType = ' [FILLER]';
+          } else if (hexData.startsWith('41 06')) {
+            frameType = ' [BCCH]'; // System Information
+          } else if (hexData.startsWith('01 06')) {
+            frameType = ' [PAGING]';
+          } else if (hexData.startsWith('25 06') || hexData.startsWith('2d 06')) {
+            frameType = ' [SDCCH]';
+          } else if (hexData.startsWith('59 06') || hexData.startsWith('55 06')) {
+            frameType = ' [SYS_INFO]';
+          } else if (hexData.startsWith('05 06')) {
+            frameType = ' [IMM_ASSIGN]';
           } else {
-            burstType = ' [DATA]';
+            frameType = ' [DATA]';
           }
           
-          return formatted + burstType;
+          // Limit display to first 48 characters for readability
+          const displayData = hexData.length > 48 ? hexData.substring(0, 48) + '...' : hexData;
+          return displayData + frameType;
         }
         return '';
       }).filter(f => f.length > 0);
