@@ -18,7 +18,7 @@ export const GET: RequestHandler = async () => {
 			return json({
 				success: false,
 				message: 'IMSI database not found',
-				imsis: []
+				data: []
 			});
 		}
 
@@ -32,13 +32,27 @@ try:
     cursor = conn.cursor()
     
     # Get all IMSI data, ordered by ID descending (newest first)
-    cursor.execute('SELECT * FROM imsi_data ORDER BY id DESC LIMIT 1000')
+    cursor.execute('SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000')
     rows = cursor.fetchall()
     
     conn.close()
     
+    # Convert rows to objects with proper field names
+    data = []
+    for row in rows:
+        data.append({
+            'id': row[0],
+            'imsi': row[1] if row[1] else '',
+            'tmsi': row[2] if row[2] else '',
+            'mcc': str(row[3]) if row[3] else '',
+            'mnc': str(row[4]) if row[4] else '',
+            'lac': str(row[5]) if row[5] else '',
+            'ci': str(row[6]) if row[6] else '',
+            'datetime': row[7] if row[7] else ''
+        })
+    
     # Convert to JSON
-    print(json.dumps(rows))
+    print(json.dumps(data))
 except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
@@ -51,14 +65,14 @@ except Exception as e:
 				success: false,
 				message: 'Failed to read database',
 				error: result.error,
-				imsis: []
+				data: []
 			});
 		}
 
 		return json({
 			success: true,
 			count: result.length,
-			imsis: result
+			data: result // Changed from 'imsis' to 'data' to match what IMSIDisplay expects
 		});
 	} catch (error) {
 		console.error('Failed to fetch IMSI data:', error);
@@ -66,7 +80,7 @@ except Exception as e:
 			success: false,
 			message: 'Failed to fetch IMSI data',
 			error: error instanceof Error ? error.message : String(error),
-			imsis: []
+			data: []
 		});
 	}
 };
