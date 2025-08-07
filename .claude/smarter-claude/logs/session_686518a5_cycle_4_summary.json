@@ -1,0 +1,55 @@
+{
+  "cycle_metadata": {
+    "session_id": "686518a5-6707-4a6c-adf1-9d624af6756c",
+    "cycle_id": 4,
+    "generated_at": "2025-08-07T10:35:40.070694",
+    "data_source": "hook_timeline",
+    "parser_version": "1.0"
+  },
+  "user_intent": "are you getting anything via gpsd right now or cgps?",
+  "execution_summary": {
+    "total_edits": 0,
+    "files_modified": 0,
+    "subagents_used": 0,
+    "primary_activity": "general_assistance",
+    "agents_involved": {
+      "main_agent": true,
+      "subagents": false,
+      "subagent_count": 0
+    }
+  },
+  "project_context": {
+    "phase_number": null,
+    "task_number": null,
+    "phase_task_pair": null,
+    "context_confidence": "none"
+  },
+  "file_activities": {},
+  "subagent_tasks": {},
+  "timeline_metadata": {
+    "total_hook_events": 12,
+    "start_time": "2025-08-07T10:34:39.297489",
+    "end_time": "2025-08-07T10:35:40.062236",
+    "data_source": "hook_timeline"
+  },
+  "workflow_insights": {
+    "file_change_patterns": {
+      "multi_agent_files": [],
+      "main_agent_only": [],
+      "subagent_only": [],
+      "heavy_edit_files": [],
+      "operation_types": {}
+    },
+    "agent_collaboration": {
+      "collaboration_type": "none",
+      "handoff_files": [],
+      "parallel_work": false,
+      "delegation_effectiveness": "unknown"
+    },
+    "task_complexity": {
+      "level": "simple",
+      "factors": [],
+      "score": 0
+    }
+  }
+}
