@@ -1084,7 +1084,15 @@
 							gsmStatus = 'running';
 							hasError = false;
 							isLoading = false;
-							iframeUrl = `http://${window.location.hostname}:8080/imsi/?t=${Date.now()}`;
+							
+							// Only update iframe URL if not already set
+							if (!iframeUrl || iframeUrl === '') {
+								const host = window.location.hostname || 'localhost';
+								iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
+								console.log('[GSM-DEBUG] Setting iframe URL:', iframeUrl);
+							} else {
+								console.log('[GSM-DEBUG] Iframe URL already set, not updating');
+							}
 							
 							// Ensure scanning flag is cleared when GSM Evil is already running
 							if ($gsmEvilStore.isScanning) {
@@ -1105,7 +1113,15 @@
 						gsmStatus = 'running';
 						hasError = false;  
 						isLoading = false;
-						iframeUrl = `http://${window.location.hostname}:8080/imsi/?t=${Date.now()}`;
+						
+						// Only update iframe URL if not already set
+						if (!iframeUrl || iframeUrl === '') {
+							const host = window.location.hostname || 'localhost';
+							iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
+							console.log('[GSM-DEBUG] Setting iframe URL (timeout):', iframeUrl);
+						} else {
+							console.log('[GSM-DEBUG] Iframe URL already set (timeout), not updating');
+						}
 						
 						// Ensure scanning flag is cleared when GSM Evil is already running
 						if ($gsmEvilStore.isScanning) {
