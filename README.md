@@ -7,7 +7,8 @@ Argos is a comprehensive web-based control center for Software Defined Radio (SD
 ## 🚀 Key Features
 
 - **Real-time Spectrum Analysis** - Live RF monitoring with HackRF integration
-- **WiFi Network Intelligence** - Kismet-based wireless reconnaissance  
+- **WiFi Network Intelligence** - Kismet-based wireless reconnaissance
+- **GSM Signal Analysis** - IMSI capture and GSM monitoring with USRP B205
 - **GPS Tracking & TAK Integration** - Tactical awareness and mapping
 - **WebSocket Real-time Streaming** - Live data feeds
 - **Responsive Professional Interface** - Desktop and mobile ready
@@ -29,6 +30,7 @@ bash scripts/install/install-from-git.sh
 ```
 
 **✅ Best for:**
+
 - Fresh Dragon OS installations
 - Users who want latest updates
 - Systems with internet connectivity
@@ -49,6 +51,7 @@ bash scripts/deploy/deploy-dragon-os.sh
 ```
 
 **✅ Best for:**
+
 - Offline field operations
 - Air-gapped systems
 - Multiple system deployments
@@ -73,7 +76,7 @@ bash scripts/deploy/deploy-dragon-os.sh
 ✅ **Service Management**: Systemd auto-start services  
 ✅ **Security**: Firewall configuration and access controls  
 ✅ **Interactive Setup**: OpenCellID API key configuration  
-✅ **Verification**: Comprehensive post-installation testing  
+✅ **Verification**: Comprehensive post-installation testing
 
 ## 🔧 Legacy Installation (curl command)
 
@@ -86,6 +89,7 @@ cd && curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/quick
 ## 💻 Access
 
 After installation, access Argos at:
+
 - **Main Console**: http://localhost:5173
 - **Spectrum Analyzer**: http://localhost:8073 (admin/hackrf)
 - **API Documentation**: http://localhost:5173/api/docs
@@ -100,6 +104,7 @@ curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/scripts/ins
 ```
 
 **Management Features:**
+
 - Automatic process monitoring and restart
 - CPU protection (kills runaway processes >140%)
 - Network reconnection for wireless systems
@@ -136,8 +141,9 @@ npm run test:all
 ## 🔌 API Integration
 
 **Core Services:**
+
 - Spectrum Analysis API (port 8092)
-- HackRF Control API (port 3002)  
+- HackRF Control API (port 3002)
 - Kismet Integration (port 2501)
 - TAK Server Bridge (port 8000)
 
