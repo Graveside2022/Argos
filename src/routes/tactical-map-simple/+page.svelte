@@ -122,7 +122,10 @@
 		addTo: (map: LeafletMap) => LeafletMarker;
 		setLatLng: (latlng: [number, number]) => LeafletMarker;
 		remove: () => void;
-		bindPopup: (content: string | LeafletPopup, options?: Record<string, unknown>) => LeafletMarker;
+		bindPopup: (
+			content: string | LeafletPopup,
+			options?: Record<string, unknown>
+		) => LeafletMarker;
 		openPopup: () => LeafletMarker;
 		setPopupContent: (content: string) => LeafletMarker;
 		on: (event: string, handler: (e: LeafletEvent) => void) => LeafletMarker;
@@ -1248,7 +1251,25 @@
 					}
 				}
 			} else {
-				gpsStatus = 'GPS: No Fix';
+				// Handle no GPS fix case with detailed information
+				if (result.data) {
+					const fix = result.data.fix || 0;
+					const sats = result.data.satellites || 0;
+					fixType = fix === 3 ? '3D' : fix === 2 ? '2D' : 'No';
+					satellites = sats;
+					accuracy = 0;
+
+					if (sats > 0) {
+						gpsStatus = `GPS: No Fix (${sats} sats visible)`;
+					} else {
+						gpsStatus = 'GPS: No Fix (searching satellites)';
+					}
+				} else {
+					gpsStatus = 'GPS: No Fix';
+				}
+
+				// Clear GPS fix flag
+				hasGPSFix = false;
 			}
 		} catch (error) {
 			console.error('GPS fetch error:', error);

@@ -84,18 +84,17 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 }
 
 export const GET: RequestHandler = async ({ url }) => {
-	// Check if we're in development mode or if mock parameter is provided
-	const isDevelopment = process.env.NODE_ENV === 'development';
+	// Check if mock parameter is explicitly requested
 	const useMock = url.searchParams.get('mock') === 'true';
 
-	if (isDevelopment || useMock) {
-		// Return mock GPS data for development
+	if (useMock) {
+		// Return mock GPS data only when explicitly requested
 		return new Response(
 			JSON.stringify({
 				success: true,
 				data: {
-					latitude: 40.7589, // New York City coordinates for demo
-					longitude: -73.9851,
+					latitude: 50.0833, // Mainz Kastel, Germany coordinates for demo
+					longitude: 8.2833,
 					altitude: 10.0,
 					speed: 0.0,
 					heading: 0.0,
@@ -112,8 +111,42 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
-		// Try to get GPS data from gpspipe (more reliable than parsing cgps)
-		const { stdout } = await execAsync('timeout 5 gpspipe -w -n 10 | grep -m 1 TPV');
+		// Try to get GPS data from gpspipe first (try both ports)
+		let stdout = '';
+		try {
+			// Try port 2950 first (our custom gpsd instance with correct permissions)
+			const result = await execAsync(
+				'echo "?WATCH={\\"enable\\":true,\\"json\\":true}" | timeout 5 nc localhost 2950 | grep -m 1 TPV'
+			);
+			stdout = result.stdout;
+		} catch {
+			// Try port 2948 as fallback
+			try {
+				const result = await execAsync(
+					'timeout 5 gpspipe -w -n 10 -p 2948 | grep -m 1 TPV'
+				);
+				stdout = result.stdout;
+			} catch {
+				// Fallback to default port
+				try {
+					const result = await execAsync('timeout 5 gpspipe -w -n 10 | grep -m 1 TPV');
+					stdout = result.stdout;
+				} catch {
+					// gpspipe failed, try direct device reading
+					try {
+						const directResult = await execAsync(
+							'timeout 10 stty -F /dev/ttyUSB0 raw 4800 cs8 clocal -cstopb && timeout 10 cat /dev/ttyUSB0 | head -20 | grep -E "\\$GP(GGA|RMC)" | head -1'
+						);
+						if (directResult.stdout.trim()) {
+							// NMEA direct parsing would require additional implementation
+							// For now, skip direct parsing and let it fall through to error
+						}
+					} catch {
+						// Direct reading failed too
+					}
+				}
+			}
+		}
 
 		// Parse the JSON output from gpspipe
 		let tpvData: TPVData | null = null;
@@ -185,15 +218,26 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 			);
 		} else {
-			// No valid fix yet
+			// No valid fix yet - this is a normal GPS state, not a service error
 			return new Response(
 				JSON.stringify({
 					success: false,
 					error: 'No GPS fix available',
+					data: {
+						latitude: null,
+						longitude: null,
+						altitude: null,
+						speed: null,
+						heading: null,
+						accuracy: null,
+						satellites: satelliteCount,
+						fix: tpvData.mode, // 0=no fix, 1=no fix, 2=2D fix, 3=3D fix
+						time: tpvData.time ?? null
+					},
 					mode: tpvData.mode
 				}),
 				{
-					status: 503,
+					status: 200, // Changed from 503 - no GPS fix is normal operational state
 					headers: { 'Content-Type': 'application/json' }
 				}
 			);
@@ -236,7 +280,18 @@ export const GET: RequestHandler = async ({ url }) => {
 			JSON.stringify({
 				success: false,
 				error: 'GPS service not available. Make sure gpsd is running.',
-				details: error instanceof Error ? error.message : 'Unknown error'
+				details: error instanceof Error ? error.message : 'Unknown error',
+				data: {
+					latitude: null,
+					longitude: null,
+					altitude: null,
+					speed: null,
+					heading: null,
+					accuracy: null,
+					satellites: null,
+					fix: 0, // No fix available
+					time: null
+				}
 			}),
 			{
 				status: 500,
