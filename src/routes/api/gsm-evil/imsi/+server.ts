@@ -7,28 +7,42 @@ import fs from 'fs/promises';
 const execAsync = promisify(exec);
 
 export const GET: RequestHandler = async () => {
-  try {
-    // First check if database exists
-    const dbPath = '/usr/src/gsmevil2/database/imsi.db';
-    try {
-      await fs.access(dbPath);
-    } catch {
-      return json({
-        success: false,
-        imsis: [],
-        total: 0,
-        message: 'IMSI database not found'
-      });
-    }
+	try {
+		// First check if database exists - try multiple possible locations
+		const dbPaths = [
+			'/home/ubuntu/gsmevil-user/database/imsi.db',
+			'/usr/src/gsmevil2/database/imsi.db',
+			'/home/ubuntu/projects/gsmevil2/database/imsi.db'
+		];
 
-    // Create a Python script file temporarily
-    const scriptContent = `#!/usr/bin/env python3
+		let dbPath = '';
+		for (const path of dbPaths) {
+			try {
+				await fs.access(path);
+				dbPath = path;
+				break;
+			} catch {
+				// Try next path
+			}
+		}
+
+		if (!dbPath) {
+			return json({
+				success: false,
+				imsis: [],
+				total: 0,
+				message: 'IMSI database not found in any known location'
+			});
+		}
+
+		// Create a Python script file temporarily
+		const scriptContent = `#!/usr/bin/env python3
 import sqlite3
 import json
 
 try:
     # Connect to IMSI database
-    imsi_conn = sqlite3.connect('/usr/src/gsmevil2/database/imsi.db')
+    imsi_conn = sqlite3.connect('${dbPath}')
     
     # Try to connect to towers database (optional)
     towers_conn = None
@@ -104,29 +118,28 @@ except Exception as e:
     }))
 `;
 
-    // Write script to temp file
-    const tmpScript = '/tmp/fetch_imsis.py';
-    await fs.writeFile(tmpScript, scriptContent);
-    await fs.chmod(tmpScript, '755');
+		// Write script to temp file
+		const tmpScript = '/tmp/fetch_imsis.py';
+		await fs.writeFile(tmpScript, scriptContent);
+		await fs.chmod(tmpScript, '755');
 
-    // Execute the script
-    const { stdout } = await execAsync(`python3 ${tmpScript}`);
-    
-    // Clean up
-    await fs.unlink(tmpScript).catch(() => {});
-    
-    // Parse and return the result
-    const result = JSON.parse(stdout);
-    return json(result);
+		// Execute the script
+		const { stdout } = await execAsync(`python3 ${tmpScript}`);
 
-  } catch (error: unknown) {
-    console.error('IMSI fetch error:', error);
-    return json({
-      success: false,
-      imsis: [],
-      total: 0,
-      message: 'Failed to fetch IMSI data',
-      error: (error as Error).message
-    });
-  }
+		// Clean up
+		await fs.unlink(tmpScript).catch(() => {});
+
+		// Parse and return the result
+		const result = JSON.parse(stdout);
+		return json(result);
+	} catch (error: unknown) {
+		console.error('IMSI fetch error:', error);
+		return json({
+			success: false,
+			imsis: [],
+			total: 0,
+			message: 'Failed to fetch IMSI data',
+			error: (error as Error).message
+		});
+	}
 };

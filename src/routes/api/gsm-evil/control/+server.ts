@@ -65,22 +65,22 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				// Use the auto-IMSI script with frequency parameter (default to 947.4 where GSM was detected)
 				const freq = frequency || '947.4';
-				console.log(`Starting GSM Evil on ${freq} MHz with IMSI sniffer auto-enabled...`);
+				console.warn(`Starting GSM Evil on ${freq} MHz with IMSI sniffer auto-enabled...`);
 
 				// Apply Socket.IO and CORS patches before starting
-				console.log('Applying Socket.IO and CORS patches...');
+				console.warn('Applying Socket.IO and CORS patches...');
 				await execAsync('./scripts/patch-gsmevil-socketio.sh').catch(() => {
 					console.warn('Failed to apply patches, continuing anyway...');
 				});
 
 				const { stdout, stderr } = await execAsync(
-					`sudo ./scripts/gsm-evil-with-auto-imsi.sh ${freq} 45`,
+					`./scripts/gsm-evil-start-no-sudo.sh ${freq} 45`,
 					{
 						timeout: 15000 // 15 second timeout
 					}
 				);
 
-				console.log('Start output:', stdout);
+				console.warn('Start output:', stdout);
 				if (stderr) console.error('Start stderr:', stderr);
 
 				// Verify it started - check for GsmEvil.py or GsmEvil_auto.py (capital G)
@@ -88,13 +88,13 @@ export const POST: RequestHandler = async ({ request }) => {
 					() => ({ stdout: '' })
 				);
 				if (!checkResult.stdout.trim()) {
-					// Also check if port 80 is listening
-					const portCheck = await execAsync('sudo lsof -i :80 | grep LISTEN').catch(
-						() => ({ stdout: '' })
-					);
+					// Also check if port 8080 is listening (changed from 80)
+					const portCheck = await execAsync('lsof -i :8080 | grep LISTEN').catch(() => ({
+						stdout: ''
+					}));
 					if (!portCheck.stdout.trim()) {
 						throw new Error(
-							'GSM Evil failed to start - no process or port 80 listener found'
+							'GSM Evil failed to start - no process or port 8080 listener found'
 						);
 					}
 				}
@@ -116,14 +116,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		} else if (action === 'stop') {
 			try {
-				console.log('Stopping GSM Evil with bulletproof termination...');
+				console.warn('Stopping GSM Evil with bulletproof termination...');
 
 				// Use the enhanced stop script with longer timeout for comprehensive cleanup
 				const { stdout, stderr } = await execAsync('./scripts/gsm-evil-stop.sh', {
 					timeout: 30000 // 30 second timeout for comprehensive cleanup
 				});
 
-				console.log('Stop script output:', stdout);
+				console.warn('Stop script output:', stdout);
 				if (stderr) console.error('Stop script stderr:', stderr);
 
 				// Verify all processes are actually stopped
@@ -186,7 +186,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				// Check if it's a timeout error
 				if (
-					(error as any).signal === 'SIGTERM' ||
+					(error as { signal?: string }).signal === 'SIGTERM' ||
 					(error as Error).message.includes('timeout')
 				) {
 					return json(
