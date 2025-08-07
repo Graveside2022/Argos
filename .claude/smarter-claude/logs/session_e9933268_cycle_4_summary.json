@@ -1,0 +1,55 @@
+{
+  "cycle_metadata": {
+    "session_id": "e9933268-d36e-43cf-bc34-5c08cf6eae85",
+    "cycle_id": 4,
+    "generated_at": "2025-08-07T10:11:05.758450",
+    "data_source": "hook_timeline",
+    "parser_version": "1.0"
+  },
+  "user_intent": "you wer able to fix the GSM capture box it is now properly showing GSM capture frames, thats real data Correct? that isnt mock data in the GSM capture box correct? because I am seeing the IMSI traffic now in the IMSI capture box and the IMSI data in the GSM evil iframe. but in the GSM capture box I need to know if thats real data or simulated",
+  "execution_summary": {
+    "total_edits": 0,
+    "files_modified": 0,
+    "subagents_used": 0,
+    "primary_activity": "general_assistance",
+    "agents_involved": {
+      "main_agent": true,
+      "subagents": false,
+      "subagent_count": 0
+    }
+  },
+  "project_context": {
+    "phase_number": null,
+    "task_number": null,
+    "phase_task_pair": null,
+    "context_confidence": "none"
+  },
+  "file_activities": {},
+  "subagent_tasks": {},
+  "timeline_metadata": {
+    "total_hook_events": 5,
+    "start_time": "2025-08-07T10:10:50.836929",
+    "end_time": "2025-08-07T10:11:05.738720",
+    "data_source": "hook_timeline"
+  },
+  "workflow_insights": {
+    "file_change_patterns": {
+      "multi_agent_files": [],
+      "main_agent_only": [],
+      "subagent_only": [],
+      "heavy_edit_files": [],
+      "operation_types": {}
+    },
+    "agent_collaboration": {
+      "collaboration_type": "none",
+      "handoff_files": [],
+      "parallel_work": false,
+      "delegation_effectiveness": "unknown"
+    },
+    "task_complexity": {
+      "level": "simple",
+      "factors": [],
+      "score": 0
+    }
+  }
+}
