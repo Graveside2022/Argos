@@ -977,9 +977,9 @@
 			console.trace('Navigation stack trace');
 		});
 		
-		// GSM Evil runs on port 8080 on localhost
-		// Force localhost since GSM Evil only binds to 127.0.0.1
-		const host = 'localhost';
+		// GSM Evil runs on port 8080 and is accessible from any IP (--host 0.0.0.0)
+		// Use window.location.hostname to ensure it works when accessed remotely
+		const host = window.location.hostname || 'localhost';
 		// Default to IMSI sniffer page with timestamp to force refresh
 		iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
 		
