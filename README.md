@@ -86,11 +86,42 @@ For compatibility with older documentation:
 cd && curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/quick-install.sh | bash
 ```
 
+## 🚀 Quick Start
+
+### Starting the Full System (Recommended)
+
+```bash
+# Start Argos with automatic Alfa adapter detection and Kismet
+npm run start:full
+```
+
+This command will:
+
+- Auto-detect your Alfa WiFi adapter (supports MT7921U and others)
+- Start Kismet on port 2501 with the detected adapter
+- Start Argos web interface on port 5173
+- Show all access URLs
+
+### Other Startup Options
+
+```bash
+# Start only the web interface
+npm run dev
+
+# Start only Kismet with Alfa adapter
+npm run kismet:start
+
+# Stop everything
+npm run stop:full
+```
+
 ## 💻 Access
 
-After installation, access Argos at:
+After starting, access Argos at:
 
 - **Main Console**: http://localhost:5173
+- **Kismet Integration**: http://localhost:5173/kismet
+- **Kismet Direct**: http://localhost:2501
 - **Spectrum Analyzer**: http://localhost:8073 (admin/hackrf)
 - **API Documentation**: http://localhost:5173/api/docs
 

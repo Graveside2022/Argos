@@ -12,6 +12,7 @@
 	let startIframeMonitor: (() => void) | undefined;
 	let iframeKey = 0; // Used to force iframe recreation
 	let lastStartTime = 0; // Track when we last started Kismet
+	let _isStarting = false; // Prevent status checks from interfering during start
 	onMount(() => {
 		// Use window.location to get the correct host
 		const host = window.location.hostname;
@@ -25,8 +26,13 @@
 
 		// Set up periodic status checks
 		statusCheckInterval = setInterval(() => {
-			// Don't check status while starting or stopping
-			if (kismetStatus !== 'starting' && kismetStatus !== 'stopping') {
+			// Don't check status while starting or stopping or within 30 seconds of starting
+			const timeSinceStart = Date.now() - lastStartTime;
+			if (
+				kismetStatus !== 'starting' &&
+				kismetStatus !== 'stopping' &&
+				timeSinceStart > 30000
+			) {
 				checkKismetStatus().catch((error) => {
 					console.error('Periodic Kismet status check failed:', error);
 				});
@@ -126,7 +132,7 @@
 			if (response.ok) {
 				const data = (await response.json()) as { running: boolean };
 
-				if (data.running && kismetStatus === 'stopped') {
+				if (data.running && (kismetStatus === 'stopped' || kismetStatus === 'starting')) {
 					kismetStatus = 'running';
 					_hasError = false;
 					errorMessage = '';
@@ -149,6 +155,7 @@
 		}
 
 		kismetStatus = 'starting';
+		_isStarting = true; // Prevent status checks from interfering
 		lastStartTime = Date.now(); // Record when we started
 
 		try {
@@ -174,10 +181,12 @@
 				setTimeout(async () => {
 					// Check status multiple times to ensure consistent state
 					let verificationAttempts = 0;
-					const maxAttempts = 3;
+					const maxAttempts = 8; // Increased from 3 to 8 for more time
 
 					const verifyStart = async (): Promise<void> => {
 						verificationAttempts++;
+
+						// Check status directly
 						await checkKismetStatus();
 
 						if (kismetStatus === 'starting' && verificationAttempts < maxAttempts) {
@@ -187,13 +196,23 @@
 							// Failed to start after max attempts
 							console.warn('Kismet start verification failed after maximum attempts');
 							kismetStatus = 'stopped';
+							_isStarting = false;
 							_hasError = true;
-							errorMessage = 'Kismet failed to start properly - check system logs';
+							errorMessage =
+								'Kismet is taking longer than expected to start - please wait and refresh';
+						} else {
+							// Successfully started
+							_isStarting = false;
+							console.warn(
+								'Kismet started successfully after',
+								verificationAttempts,
+								'attempts'
+							);
 						}
 					};
 
 					await verifyStart();
-				}, 3000); // Initial wait increased to match backend verification timing
+				}, 5000); // Increased initial wait from 3s to 5s
 			} else {
 				let errorText = '';
 				try {
@@ -201,6 +220,9 @@
 					errorText = errorData.error || errorData.message || 'Unknown error';
 					if (errorData.details) {
 						errorText += '\n' + errorData.details;
+					}
+					if (errorData.debug) {
+						console.error('Debug info:', errorData.debug);
 					}
 				} catch {
 					errorText = await response.text();
@@ -210,6 +232,7 @@
 		} catch (error: unknown) {
 			console.error('Error starting Kismet:', error);
 			kismetStatus = 'stopped';
+			_isStarting = false; // Clear the flag on error
 			_hasError = true;
 			errorMessage =
 				error instanceof Error ? error.message : 'Failed to start Kismet service';
