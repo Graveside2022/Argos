@@ -9,6 +9,7 @@ echo ""
 
 # Common Alfa adapter USB IDs
 declare -A ALFA_ADAPTERS=(
+    ["0e8d:7961"]="Alfa AWUS036AXML (MediaTek MT7921U)"
     ["0bda:8187"]="Alfa AWUS036H (RTL8187)"
     ["148f:3070"]="Alfa AWUS036NH (RT3070)"
     ["148f:5370"]="Alfa AWUS036NEH (RT5370)"
