@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  app-dev:
+  argos-dev:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       target: builder
-    image: argos-final:dev
-    container_name: argos-final-dev
+    image: argos:dev
+    container_name: argos-dev
     ports:
       - "5173:5173"
       - "24678:24678"  # Vite HMR port
@@ -27,7 +27,8 @@ services:
       - PUBLIC_ENABLE_DEBUG=${PUBLIC_ENABLE_DEBUG:-true}
       - PUBLIC_ENABLE_MOCK_DATA=${PUBLIC_ENABLE_MOCK_DATA:-false}
     volumes:
-      - .:/app:rw
+      # Mount source code for hot reload - edit locally, see changes instantly
+      - ..:/app:rw
       - /app/node_modules
       - /app/.svelte-kit
     command: npm run dev -- --host 0.0.0.0

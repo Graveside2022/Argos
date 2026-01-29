@@ -51,6 +51,22 @@ echo ""
 echo "Note: Kismet will configure $ALFA_INTERFACE automatically"
 echo "(Monitor mode will be set up by Kismet if needed)"
 
+# Ensure Kismet GPS configuration exists (for gpsd integration)
+# This handles both root and non-root execution
+KISMET_CONF_DIR="/etc/kismet"
+KISMET_SITE_CONF="$KISMET_CONF_DIR/kismet_site.conf"
+
+if [ ! -f "$KISMET_SITE_CONF" ] || ! grep -q "gps=gpsd" "$KISMET_SITE_CONF" 2>/dev/null; then
+    echo "Configuring Kismet GPS integration..."
+    if [ -w "$KISMET_CONF_DIR" ] || [ "$(id -u)" = "0" ]; then
+        echo "gps=gpsd:host=localhost,port=2947" >> "$KISMET_SITE_CONF"
+        echo "✓ GPS configuration added to $KISMET_SITE_CONF"
+    else
+        echo "⚠️  Cannot write to $KISMET_SITE_CONF (need root)"
+        echo "   GPS may show 'Unknown' - run with sudo or add config manually"
+    fi
+fi
+
 # Prepare Kismet command arguments
 KISMET_ARGS=""
 KISMET_ARGS="$KISMET_ARGS -c $ALFA_INTERFACE:type=linuxwifi"

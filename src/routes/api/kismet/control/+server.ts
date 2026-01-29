@@ -2,8 +2,12 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { join } from 'path';
 
 const execAsync = promisify(exec);
+
+// Get project root dynamically for portable script paths
+const PROJECT_ROOT = process.cwd();
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
@@ -57,7 +61,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 				// Step 2: Use our working startup script
 				console.warn('Starting Kismet using startup script...');
-				const scriptPath = '/home/ubuntu/projects/Argos/scripts/start-kismet-with-alfa.sh';
+				const scriptPath = join(PROJECT_ROOT, 'scripts', 'start-kismet-with-alfa.sh');
 
 				// Execute the script which handles background startup properly
 				const { stdout, stderr } = await execAsync(scriptPath);

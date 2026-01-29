@@ -1,0 +1,77 @@
+# Argos Development Stack
+# Focused on development workflow with volume mounts for hot reload
+#
+# Usage:
+#   docker compose -f docker/docker-compose.dev-full.yml up
+#
+# Edit code locally, changes appear instantly in containers!
+
+version: '3.8'
+
+services:
+  # ============================================
+  # ARGOS SVELTEKIT APP - DEV MODE
+  # ============================================
+  argos:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+    image: argos:dev
+    container_name: argos-dev
+    ports:
+      - "5173:5173"
+      - "24678:24678"  # Vite HMR
+    environment:
+      - NODE_ENV=development
+      - PORT=5173
+      - PUBLIC_BASE_URL=http://localhost:5173
+      - PUBLIC_HACKRF_API_URL=http://hackrf-backend:8092
+      - PUBLIC_KISMET_API_URL=http://localhost:2501
+      - PUBLIC_OPENWEBRX_URL=http://localhost:8073
+      - PUBLIC_SPECTRUM_ANALYZER_URL=http://hackrf-backend:8092
+      - PUBLIC_HACKRF_WS_URL=ws://hackrf-backend:8092
+      - PUBLIC_ENABLE_DEBUG=true
+    volumes:
+      # YOUR CODE IS MOUNTED HERE - edit normally!
+      - ..:/app:rw
+      - /app/node_modules
+      - /app/.svelte-kit
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - hackrf-backend
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+
+  # ============================================
+  # HACKRF BACKEND - DEV MODE
+  # ============================================
+  hackrf-backend:
+    build:
+      context: ../hackrf_emitter/backend
+      dockerfile: Dockerfile
+    image: argos-hackrf-backend:dev
+    container_name: hackrf-backend-dev
+    ports:
+      - "8092:8092"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    volumes:
+      # Mount backend code for development
+      - ../hackrf_emitter/backend:/app:rw
+    privileged: true
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    # Override CMD for development with auto-reload
+    command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8092", "--reload"]
+
+networks:
+  argos-dev-network:
+    driver: bridge
+    name: argos-dev-network
