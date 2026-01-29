@@ -22,7 +22,7 @@ interface KismetDeviceResponse {
 	'kismet.device.base.manuf'?: string;
 }
 
-interface KismetLocationData {
+interface _KismetLocationData {
 	lat?: number;
 	lon?: number;
 	alt?: number;
@@ -47,7 +47,7 @@ export class KismetProxy {
 	private static readonly KISMET_PORT = process.env.KISMET_PORT || '2501';
 	private static readonly API_KEY = process.env.KISMET_API_KEY || '';
 	private static readonly KISMET_USER = process.env.KISMET_USER || 'admin';
-	private static readonly KISMET_PASSWORD = process.env.KISMET_PASSWORD || 'admin';
+	private static readonly KISMET_PASSWORD = process.env.KISMET_PASSWORD || 'password';
 	private static readonly BASE_URL = `http://${KismetProxy.KISMET_HOST}:${KismetProxy.KISMET_PORT}`;
 
 	/**
@@ -272,7 +272,7 @@ export class KismetProxy {
 	 * Transform raw Kismet device data to our format
 	 */
 	private static transformDevice(raw: KismetDeviceResponse): KismetDevice {
-		// Since the raw data already has the full field names as keys, 
+		// Since the raw data already has the full field names as keys,
 		// we can access them directly
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
 		const encryptionNumber = raw['kismet.device.base.crypt'];
@@ -317,11 +317,11 @@ export class KismetProxy {
 	 */
 	private static parseEncryptionString(encryptionStr: string | undefined): string[] {
 		if (!encryptionStr || encryptionStr === 'Open') return ['Open'];
-		
+
 		// Split the encryption string and clean up
-		const parts = encryptionStr.split(' ').filter(p => p.length > 0);
+		const parts = encryptionStr.split(' ').filter((p) => p.length > 0);
 		const uniqueParts = Array.from(new Set(parts));
-		
+
 		return uniqueParts.length > 0 ? uniqueParts : ['Unknown'];
 	}
 
@@ -330,17 +330,17 @@ export class KismetProxy {
 	 */
 	private static parseEncryptionNumber(encryptionNum: number | undefined): string[] {
 		if (!encryptionNum || encryptionNum === 0) return ['Open'];
-		
+
 		// Map Kismet encryption bit flags to encryption types
 		const encryptionTypes: string[] = [];
-		
+
 		// Common Kismet encryption flags (bit field)
 		if (encryptionNum & 1) encryptionTypes.push('WEP');
 		if (encryptionNum & 2) encryptionTypes.push('WPA');
 		if (encryptionNum & 4) encryptionTypes.push('WPA2');
 		if (encryptionNum & 8) encryptionTypes.push('WPA3');
 		if (encryptionNum & 16) encryptionTypes.push('WPS');
-		
+
 		return encryptionTypes.length > 0 ? encryptionTypes : ['Open'];
 	}
 
@@ -362,9 +362,9 @@ export class KismetProxy {
 	): KismetDevice['location'] | undefined {
 		// Kismet may store location in different ways
 		const location = raw['kismet.device.base.location'] as any;
-		
+
 		if (!location || location === 0) return undefined;
-		
+
 		if (typeof location === 'object') {
 			return {
 				latitude: location.lat || location['kismet.common.location.lat'] || 0,
@@ -372,7 +372,7 @@ export class KismetProxy {
 				accuracy: location.accuracy || 0
 			};
 		}
-		
+
 		return undefined;
 	}
 
@@ -383,7 +383,7 @@ export class KismetProxy {
 		if (!timestamp || timestamp === 0) {
 			return Date.now();
 		}
-		
+
 		// Kismet timestamps are in seconds, not milliseconds
 		return timestamp * 1000;
 	}

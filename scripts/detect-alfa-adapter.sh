@@ -1,14 +1,22 @@
 #!/bin/bash
 
-# Generic Alfa WiFi Adapter Detection Script
-# Supports multiple Alfa adapter models dynamically
+# External WiFi Adapter Detection Script
+# Detects USB WiFi adapters (Alfa, etc.) for Kismet
+#
+# SAFETY: wlan0 is the Pi's built-in Broadcom WiFi (brcmfmac).
+# Kismet must NEVER run on wlan0 — putting it in monitor mode kills
+# network connectivity and can crash the system.
+# Only external USB adapters (wlan1, wlan2, etc.) are valid targets.
 
-echo "=== Alfa WiFi Adapter Detection ==="
+echo "=== External WiFi Adapter Detection ==="
 echo "Date: $(date)"
 echo ""
 
-# Common Alfa adapter USB IDs
-declare -A ALFA_ADAPTERS=(
+# Built-in interface that must NEVER be used for Kismet
+BUILTIN_INTERFACE="wlan0"
+
+# Known external WiFi adapter USB IDs
+declare -A KNOWN_ADAPTERS=(
     ["0e8d:7961"]="Alfa AWUS036AXML (MediaTek MT7921U)"
     ["0bda:8187"]="Alfa AWUS036H (RTL8187)"
     ["148f:3070"]="Alfa AWUS036NH (RT3070)"
@@ -22,113 +30,97 @@ declare -A ALFA_ADAPTERS=(
     ["0cf3:9271"]="Alfa AWUS036NHA (AR9271)"
 )
 
-# Function to check for USB devices
+# Function to check for known USB WiFi adapters
 check_usb_devices() {
     if ! command -v lsusb &> /dev/null; then
-        echo "❌ lsusb command not found. Using alternative method..."
-        # Try to read from sysfs
-        for device in /sys/bus/usb/devices/*/idVendor; do
-            if [ -f "$device" ]; then
-                vendor=$(cat "$device" 2>/dev/null)
-                product=$(cat "${device%idVendor}idProduct" 2>/dev/null)
-                if [ -n "$vendor" ] && [ -n "$product" ]; then
-                    usb_id="${vendor}:${product}"
-                    for alfa_id in "${!ALFA_ADAPTERS[@]}"; do
-                        if [ "$usb_id" = "$alfa_id" ]; then
-                            echo "✓ Found: ${ALFA_ADAPTERS[$alfa_id]} (USB ID: $usb_id)"
-                            return 0
-                        fi
-                    done
-                fi
-            fi
-        done
-        return 1
-    else
-        # Use lsusb to check for Alfa adapters
-        for usb_id in "${!ALFA_ADAPTERS[@]}"; do
-            if lsusb | grep -q "$usb_id"; then
-                echo "✓ Found: ${ALFA_ADAPTERS[$usb_id]} (USB ID: $usb_id)"
-                USB_INFO=$(lsusb | grep "$usb_id")
-                echo "   Full info: $USB_INFO"
-                return 0
-            fi
-        done
+        echo "lsusb not available, skipping USB check"
         return 1
     fi
+
+    for usb_id in "${!KNOWN_ADAPTERS[@]}"; do
+        if lsusb | grep -q "$usb_id"; then
+            echo "Found USB adapter: ${KNOWN_ADAPTERS[$usb_id]} ($usb_id)"
+            return 0
+        fi
+    done
+    return 1
 }
 
-# Function to find wireless interfaces (excluding wlan0)
-find_wireless_interfaces() {
+# Function to find EXTERNAL wireless interfaces (never wlan0)
+find_external_wifi() {
     echo ""
-    echo "Checking for wireless interfaces (excluding wlan0)..."
-    
+    echo "Scanning for external wireless interfaces..."
+    echo "(wlan0 = Pi built-in WiFi, always skipped)"
+
     found_interfaces=()
-    
-    # Check all network interfaces
+
     for iface in /sys/class/net/*; do
         iface_name=$(basename "$iface")
-        
-        # Skip non-wireless interfaces and wlan0
-        if [ "$iface_name" = "lo" ] || [ "$iface_name" = "eth0" ] || [ "$iface_name" = "wlan0" ]; then
+
+        # Skip everything that isn't a wireless interface
+        [ -d "$iface/wireless" ] || [ -d "$iface/phy80211" ] || continue
+
+        # SAFETY: Never use the built-in WiFi or its monitor interface
+        if [ "$iface_name" = "$BUILTIN_INTERFACE" ] || [ "$iface_name" = "${BUILTIN_INTERFACE}mon" ]; then
+            echo "   Skipping $iface_name (built-in WiFi - protected)"
             continue
         fi
-        
-        # Check if it's a wireless interface
-        if [ -d "$iface/wireless" ] || [ -d "$iface/phy80211" ]; then
-            echo "✓ Found wireless interface: $iface_name"
-            
-            # Get MAC address
-            if [ -f "$iface/address" ]; then
-                mac=$(cat "$iface/address")
-                echo "   MAC: $mac"
-            fi
-            
-            # Get state
-            if [ -f "$iface/operstate" ]; then
-                state=$(cat "$iface/operstate")
-                echo "   State: $state"
-            fi
-            
-            found_interfaces+=("$iface_name")
-        fi
+
+        # Skip other monitor mode interfaces (e.g. wlan1mon)
+        echo "$iface_name" | grep -q "mon$" && continue
+
+        driver=$(readlink "/sys/class/net/$iface_name/device/driver" 2>/dev/null | xargs basename 2>/dev/null)
+        mac=$(cat "$iface/address" 2>/dev/null)
+        state=$(cat "$iface/operstate" 2>/dev/null)
+        echo "   Found: $iface_name (driver: $driver, MAC: $mac, state: $state)"
+        found_interfaces+=("$iface_name")
     done
-    
-    if [ ${#found_interfaces[@]} -eq 0 ]; then
-        echo "❌ No external wireless interfaces found"
-        return 1
-    else
-        echo ""
-        echo "Available interfaces for Kismet: ${found_interfaces[*]}"
-        export ALFA_INTERFACE="${found_interfaces[0]}"
-        echo "Primary interface selected: $ALFA_INTERFACE"
-        return 0
+
+    # If KISMET_INTERFACE is set, validate it's not the built-in
+    if [ -n "$KISMET_INTERFACE" ]; then
+        if [ "$KISMET_INTERFACE" = "$BUILTIN_INTERFACE" ]; then
+            echo ""
+            echo "BLOCKED: KISMET_INTERFACE=$KISMET_INTERFACE is the built-in WiFi."
+            echo "   Refusing to use it. Set KISMET_INTERFACE to an external adapter."
+            return 1
+        fi
+        if printf '%s\n' "${found_interfaces[@]}" | grep -qx "$KISMET_INTERFACE"; then
+            export ALFA_INTERFACE="$KISMET_INTERFACE"
+            echo ""
+            echo "Primary interface selected: $ALFA_INTERFACE (from KISMET_INTERFACE env)"
+            return 0
+        fi
     fi
+
+    if [ ${#found_interfaces[@]} -eq 0 ]; then
+        return 1
+    fi
+
+    export ALFA_INTERFACE="${found_interfaces[0]}"
+    echo ""
+    echo "Primary interface selected: $ALFA_INTERFACE"
+    return 0
 }
 
-# Main detection logic
-echo "1. Checking for Alfa USB adapters..."
-if check_usb_devices; then
+# --- Main ---
+echo "1. Checking for USB WiFi adapters..."
+check_usb_devices || echo "   No known USB WiFi adapter detected"
+
+echo ""
+echo "2. Looking for external wireless interface..."
+if find_external_wifi; then
     echo ""
-    echo "2. Looking for corresponding network interfaces..."
-    if find_wireless_interfaces; then
-        echo ""
-        echo "✅ Alfa adapter ready for use!"
-        echo ""
-        echo "To use with Kismet, add this source:"
-        echo "   source=$ALFA_INTERFACE:type=linuxwifi"
-        exit 0
-    else
-        echo ""
-        echo "⚠️  Alfa adapter found but no interface detected."
-        echo "   The driver might not be loaded or the device needs to be reset."
-        exit 1
-    fi
+    echo "Adapter ready: source=$ALFA_INTERFACE:type=linuxwifi"
+    exit 0
 else
-    echo "❌ No Alfa adapters detected"
     echo ""
-    echo "Supported Alfa models:"
-    for usb_id in "${!ALFA_ADAPTERS[@]}"; do
-        echo "   - ${ALFA_ADAPTERS[$usb_id]}"
-    done
+    echo "ERROR: No external WiFi adapter found."
+    echo ""
+    echo "   The Alfa card is not plugged in or not recognized."
+    echo "   - Check USB connections"
+    echo "   - Run 'lsusb' to see connected devices"
+    echo "   - The adapter should appear as wlan1"
+    echo ""
+    echo "   wlan0 is the Pi's built-in WiFi and will NOT be used."
     exit 1
 fi

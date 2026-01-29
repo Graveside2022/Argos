@@ -1,0 +1,82 @@
+# Argos Development Stack - Portainer Compatible
+# With In-Container Kismet Support
+#
+# Deploy this in Portainer as a Stack
+#
+# PREREQUISITE: Build images first with:
+#   cd /home/kali/Documents/Argos/Argos
+#   docker build -t argos:dev -f docker/Dockerfile --target builder .
+#   docker build -t argos-hackrf-backend:dev -f hackrf_emitter/backend/Dockerfile hackrf_emitter/backend/
+
+version: '3.8'
+
+services:
+  # ============================================
+  # ARGOS SVELTEKIT APP - DEV MODE WITH KISMET
+  # ============================================
+  argos:
+    image: argos:dev
+    container_name: argos-dev
+    # Use host network to access WiFi interfaces (wlan1)
+    network_mode: host
+    # Use host PID namespace to manage Kismet processes
+    pid: host
+    environment:
+      - NODE_ENV=development
+      - PORT=5173
+      - PUBLIC_BASE_URL=http://localhost:5173
+      - PUBLIC_HACKRF_API_URL=http://localhost:8092
+      - PUBLIC_KISMET_API_URL=http://localhost:2501
+      - PUBLIC_OPENWEBRX_URL=http://localhost:8073
+      - PUBLIC_SPECTRUM_ANALYZER_URL=http://localhost:8092
+      - PUBLIC_HACKRF_WS_URL=ws://localhost:8092
+      - PUBLIC_ENABLE_DEBUG=true
+      # Kismet interface - MUST be external adapter (wlan1+), never wlan0 (Pi built-in)
+      - KISMET_INTERFACE=wlan1
+      # Kismet API credentials
+      - KISMET_USER=admin
+      - KISMET_PASSWORD=password
+    # USB device access for ALFA WiFi adapter
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    # Required for wireless hardware access and monitor mode
+    privileged: true
+    volumes:
+      # Mount source code for hot reload
+      - /home/kali/Documents/Argos/Argos:/app:rw
+      - argos-node-modules:/app/node_modules
+      - argos-svelte-kit:/app/.svelte-kit
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
+
+  # ============================================
+  # HACKRF BACKEND - DEV MODE
+  # ============================================
+  hackrf-backend:
+    image: argos-hackrf-backend:dev
+    container_name: hackrf-backend-dev
+    ports:
+      - "8092:8092"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    volumes:
+      # Mount backend code for hot reload
+      - /home/kali/Documents/Argos/Argos/hackrf_emitter/backend:/app:rw
+    privileged: true
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8092", "--reload"]
+
+networks:
+  argos-dev-network:
+    driver: bridge
+    name: argos-dev-network
+
+volumes:
+  argos-node-modules:
+  argos-svelte-kit:

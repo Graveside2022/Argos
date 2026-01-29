@@ -3,8 +3,8 @@ version: '3.8'
 services:
   argos:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       target: runner
     image: argos:latest
     container_name: argos

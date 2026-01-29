@@ -111,44 +111,27 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
-		// Try to get GPS data from gpspipe first (try both ports)
+		// Query gpsd via its JSON protocol on the default port (2947).
+		// This returns in ~0.4s instead of the 10+ seconds the old cascading
+		// timeout chain took when ports 2950/2948 didn't exist.
 		let stdout = '';
 		try {
-			// Try port 2950 first (our custom gpsd instance with correct permissions)
 			const result = await execAsync(
-				'echo "?WATCH={\\"enable\\":true,\\"json\\":true}" | timeout 5 nc localhost 2950 | grep -m 1 TPV'
+				'echo \'?WATCH={"enable":true,"json":true}\' | nc -w 2 localhost 2947 | grep -m 1 TPV',
+				{ timeout: 3000 }
 			);
 			stdout = result.stdout;
 		} catch {
-			// Try port 2948 as fallback
+			// Default port failed, try gpspipe as fallback
 			try {
-				const result = await execAsync(
-					'timeout 5 gpspipe -w -n 10 -p 2948 | grep -m 1 TPV'
-				);
+				const result = await execAsync('timeout 2 gpspipe -w -n 5 | grep -m 1 TPV');
 				stdout = result.stdout;
 			} catch {
-				// Fallback to default port
-				try {
-					const result = await execAsync('timeout 5 gpspipe -w -n 10 | grep -m 1 TPV');
-					stdout = result.stdout;
-				} catch {
-					// gpspipe failed, try direct device reading
-					try {
-						const directResult = await execAsync(
-							'timeout 10 stty -F /dev/ttyUSB0 raw 4800 cs8 clocal -cstopb && timeout 10 cat /dev/ttyUSB0 | head -20 | grep -E "\\$GP(GGA|RMC)" | head -1'
-						);
-						if (directResult.stdout.trim()) {
-							// NMEA direct parsing would require additional implementation
-							// For now, skip direct parsing and let it fall through to error
-						}
-					} catch {
-						// Direct reading failed too
-					}
-				}
+				// gpspipe also failed
 			}
 		}
 
-		// Parse the JSON output from gpspipe
+		// Parse the JSON output
 		let tpvData: TPVData | null = null;
 		try {
 			const parsed = JSON.parse(stdout.trim()) as unknown;
@@ -161,24 +144,21 @@ export const GET: RequestHandler = async ({ url }) => {
 			throw new Error('Failed to parse TPV data');
 		}
 
-		// Try to get satellite info from gpspipe with JSON output
+		// Get satellite info — single fast query, same connection approach
 		let satelliteCount = 0;
 		try {
-			// Get more messages to try to catch a SKY message
 			const { stdout: allMessages } = await execAsync(
-				'timeout 1 gpspipe -w -n 50 2>/dev/null || echo ""'
+				'echo \'?WATCH={"enable":true,"json":true}\' | nc -w 1 localhost 2947 | head -20',
+				{ timeout: 2000 }
 			);
 			const lines = allMessages.trim().split('\n');
 
 			for (const line of lines) {
 				if (line.trim() === '') continue;
-
 				try {
 					const parsed = JSON.parse(line) as unknown;
 					const msg = parseSkyMessage(parsed);
-
 					if (msg && msg.satellites) {
-						// Count satellites that are used for the fix
 						satelliteCount = msg.satellites.filter((sat) => sat.used === true).length;
 						break;
 					}
@@ -187,13 +167,11 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 			}
 
-			// If still no satellite count, estimate from fix quality
 			if (satelliteCount === 0 && tpvData.mode === 3) {
-				// 3D fix typically uses at least 4 satellites
-				satelliteCount = 4; // Conservative estimate
+				satelliteCount = 4;
 			}
 		} catch {
-			// If we can't get satellite data, that's ok
+			// Satellite data is optional
 		}
 
 		if (tpvData.class === 'TPV' && tpvData.mode >= 2) {
@@ -243,39 +221,6 @@ export const GET: RequestHandler = async ({ url }) => {
 			);
 		}
 	} catch (error: unknown) {
-		// Fallback: try to get last known position from gpsd
-		try {
-			const { stdout: cgpsOutput } = await execAsync('timeout 1 cgps -s -x 2>&1 | head -20');
-
-			// Parse cgps output (crude but works)
-			const latMatch = cgpsOutput.match(/Latitude:\s+([-\d.]+)\s+[NS]/);
-			const lonMatch = cgpsOutput.match(/Longitude:\s+([-\d.]+)\s+[EW]/);
-
-			if (latMatch?.[1] && lonMatch?.[1]) {
-				return new Response(
-					JSON.stringify({
-						success: true,
-						data: {
-							latitude: parseFloat(latMatch[1]),
-							longitude: parseFloat(lonMatch[1]),
-							altitude: null,
-							speed: null,
-							heading: null,
-							accuracy: 50, // Assume 50m accuracy
-							satellites: null,
-							fix: 2,
-							time: new Date().toISOString()
-						}
-					}),
-					{
-						headers: { 'Content-Type': 'application/json' }
-					}
-				);
-			}
-		} catch {
-			// Ignore fallback error
-		}
-
 		return new Response(
 			JSON.stringify({
 				success: false,

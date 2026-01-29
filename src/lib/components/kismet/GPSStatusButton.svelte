@@ -17,10 +17,10 @@
 	});
 
 	$: ({ status } = $gpsStore);
-	
-	// Debug logging - commented out for production
-	// $: console.log('[GPS Button Debug] Status:', status);
-	// $: console.log('[GPS Button Debug] hasGPSFix:', status.hasGPSFix, 'fixType:', status.fixType, 'satellites:', status.satellites);
+
+	// Debug logging - uncomment for troubleshooting
+	// $: console.warn('[GPS Button Debug] Status:', status);
+	// $: console.warn('[GPS Button Debug] hasGPSFix:', status.hasGPSFix, 'fixType:', status.fixType, 'satellites:', status.satellites);
 
 	function toggleDetails() {
 		showDetails = !showDetails;
@@ -39,8 +39,10 @@
 	}
 
 	function getButtonClass() {
-		const buttonClass = status.hasGPSFix 
-			? (status.fixType === '3D' ? 'saasfly-btn-add' : 'saasfly-btn-spectrum')
+		const buttonClass = status.hasGPSFix
+			? status.fixType === '3D'
+				? 'saasfly-btn-add'
+				: 'saasfly-btn-spectrum'
 			: 'saasfly-btn-stop';
 		// console.log('[GPS Button Debug] Button class:', buttonClass);
 		return buttonClass;
@@ -55,11 +57,17 @@
 	>
 		{#if getStatusIcon() === 'fix'}
 			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+				<path
+					fill-rule="evenodd"
+					d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+					clip-rule="evenodd"
+				/>
 			</svg>
 		{:else}
 			<svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-				<path d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.88.869a7 7 0 1011.2 8.42c.067-.435.098-.892.09-1.347a1 1 0 00-1.7-.71 5 5 0 01-7.26-6.847zm-3.89 3.89a2.5 2.5 0 003.5 2.056A4.002 4.002 0 018 10a4 4 0 01-.505-7.554zM10 13a1 1 0 100 2 1 1 0 000-2z" />
+				<path
+					d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.88.869a7 7 0 1011.2 8.42c.067-.435.098-.892.09-1.347a1 1 0 00-1.7-.71 5 5 0 01-7.26-6.847zm-3.89 3.89a2.5 2.5 0 003.5 2.056A4.002 4.002 0 018 10a4 4 0 01-.505-7.554zM10 13a1 1 0 100 2 1 1 0 000-2z"
+				/>
 			</svg>
 		{/if}
 		{status.fixType} ({status.satellites})
@@ -71,34 +79,36 @@
 				<span class="popup-title">GPS Status</span>
 				<button class="close-btn" on:click={toggleDetails}>×</button>
 			</div>
-			
+
 			<div class="popup-content">
 				<div class="status-row">
 					<span class="label">Status:</span>
 					<span class="value" style="color: {getStatusColor()};">{status.gpsStatus}</span>
 				</div>
-				
+
 				<div class="status-row">
 					<span class="label">Fix Type:</span>
 					<span class="value" style="color: {getStatusColor()};">{status.fixType}</span>
 				</div>
-				
+
 				<div class="status-row">
 					<span class="label">Satellites:</span>
 					<span class="value">{status.satellites}</span>
 				</div>
-				
+
 				{#if status.hasGPSFix}
 					<div class="status-row">
 						<span class="label">Accuracy:</span>
 						<span class="value">{status.accuracy.toFixed(1)}m</span>
 					</div>
-					
+
 					<div class="status-row">
 						<span class="label">Coordinates:</span>
-						<span class="value">{status.formattedCoords.lat}, {status.formattedCoords.lon}</span>
+						<span class="value"
+							>{status.formattedCoords.lat}, {status.formattedCoords.lon}</span
+						>
 					</div>
-					
+
 					<div class="status-row">
 						<span class="label">MGRS:</span>
 						<span class="value">{status.mgrsCoord}</span>
