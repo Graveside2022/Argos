@@ -46,7 +46,12 @@ services:
       - /home/kali/Documents/Argos/Argos:/app:rw
       - argos-node-modules:/app/node_modules
       - argos-svelte-kit:/app/.svelte-kit
+      # Docker access for container management (OpenWebRX, Bettercap, etc.)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
     command: npm run dev -- --host 0.0.0.0
+    mem_limit: 1024m
+    memswap_limit: 1536m
     restart: unless-stopped
 
   # ============================================
@@ -55,6 +60,8 @@ services:
   hackrf-backend:
     image: argos-hackrf-backend:dev
     container_name: hackrf-backend-dev
+    mem_limit: 256m
+    memswap_limit: 384m
     ports:
       - "8092:8092"
     environment:
@@ -72,6 +79,50 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8092", "--reload"]
 
+  # ============================================
+  # OPENWEBRX - SDR Web Interface (HackRF)
+  # ============================================
+  openwebrx:
+    image: slechev/openwebrxplus:latest
+    container_name: openwebrx-hackrf
+    mem_limit: 512m
+    memswap_limit: 768m
+    ports:
+      - "8073:8073"
+    environment:
+      - OPENWEBRX_ADMIN_USER=admin
+      - OPENWEBRX_ADMIN_PASSWORD=${OPENWEBRX_PASSWORD:-hackrf}
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    privileged: true
+    volumes:
+      - openwebrx-hackrf-settings:/var/lib/openwebrx
+    tmpfs:
+      - /tmp/openwebrx:rw,noexec,nosuid,size=100m
+    networks:
+      - argos-dev-network
+    restart: "no"
+
+  # ============================================
+  # BETTERCAP - WiFi/BLE/Network Recon
+  # ============================================
+  bettercap:
+    image: bettercap/bettercap:latest
+    container_name: bettercap
+    mem_limit: 256m
+    memswap_limit: 384m
+    network_mode: host
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - BETTERCAP_API_USER=${BETTERCAP_USER:-admin}
+      - BETTERCAP_API_PASSWORD=${BETTERCAP_PASSWORD:-argos}
+    command: bettercap -api-rest-address 0.0.0.0 -api-rest-port 8081
+    restart: "no"
+
 networks:
   argos-dev-network:
     driver: bridge
@@ -80,3 +131,4 @@ networks:
 volumes:
   argos-node-modules:
   argos-svelte-kit:
+  openwebrx-hackrf-settings:
