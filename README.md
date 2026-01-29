@@ -1,195 +1,92 @@
-# Argos - Professional SDR & Network Analysis Console
+# Argos — SDR & Network Analysis Console
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
+Real-time spectrum analysis, WiFi network intelligence, GPS tracking, and tactical mapping. Runs entirely in Docker containers on a Raspberry Pi.
 
-Argos is a comprehensive web-based control center for Software Defined Radio (SDR) operations, WiFi network scanning, and GPS tracking with Team Awareness Kit (TAK) integration. Built for professional defense and research applications.
+## Requirements
 
-## 🚀 Key Features
+- Raspberry Pi 5 (4GB+ RAM)
+- Ethernet connection or WiFi (for initial setup)
+- HackRF One (SDR operations)
+- External USB WiFi adapter (Kismet scanning — Alfa AWUS036AXML or similar)
+- GPS module on USB serial (optional, for positioning)
 
-- **Real-time Spectrum Analysis** - Live RF monitoring with HackRF integration
-- **WiFi Network Intelligence** - Kismet-based wireless reconnaissance
-- **GSM Signal Analysis** - IMSI capture and GSM monitoring with USRP B205
-- **GPS Tracking & TAK Integration** - Tactical awareness and mapping
-- **WebSocket Real-time Streaming** - Live data feeds
-- **Responsive Professional Interface** - Desktop and mobile ready
-- **Full TypeScript Implementation** - Enterprise-grade reliability
-
-## 🚀 Installation Options
-
-Choose the installation method that best fits your needs:
-
-### **Option A: Git Clone Installation** (Recommended for most users)
-
-Perfect for fresh Dragon OS installations or when you want the latest version:
+## Install
 
 ```bash
-# Clone and install in one process
 git clone https://github.com/Graveside2022/Argos.git
 cd Argos
-bash scripts/install/install-from-git.sh
+sudo bash scripts/setup-host.sh
 ```
 
-**✅ Best for:**
+This installs Docker, Portainer, builds the container images, configures gpsd, and sets up boot services. Run it once.
 
-- Fresh Dragon OS installations
-- Users who want latest updates
-- Systems with internet connectivity
-- First-time installations
+## Deploy the Stack
 
-[📖 **Detailed Git Installation Guide**](docs/guides/README-GIT-INSTALLATION.md)
+1. Open Portainer at `https://<your-pi-ip>:9443`
+2. Create an admin account on first login
+3. Go to **Stacks** > **Add Stack**
+4. Name it `argos`
+5. Paste the contents of `docker/docker-compose.portainer-dev.yml` into the web editor
+6. Click **Deploy the stack**
 
-### **Option B: Direct Copy Deployment** (For offline/field operations)
+Both containers (Argos + HackRF backend) will start with hot reload enabled. Edit code locally — changes appear instantly in the containers.
 
-Perfect for offline deployments or when copying to multiple systems:
+## Access
 
-```bash
-# 1. Copy entire project folder via SCP/CyberDuck to target system
-# 2. Then run on target system:
-cd /path/to/Argos
-bash scripts/deploy/fix-hardcoded-paths.sh
-bash scripts/deploy/deploy-dragon-os.sh
-```
+| Service               | URL                         |
+| --------------------- | --------------------------- |
+| Argos Console         | `http://<your-pi-ip>:5173`  |
+| Portainer             | `https://<your-pi-ip>:9443` |
+| Kismet (when running) | `http://<your-pi-ip>:2501`  |
+| HackRF API            | `http://<your-pi-ip>:8092`  |
 
-**✅ Best for:**
+## What Runs Where
 
-- Offline field operations
-- Air-gapped systems
-- Multiple system deployments
-- When you have customized configurations
+**In containers (Docker):**
 
-[📖 **Detailed Copy Deployment Guide**](docs/guides/README-DRAGON-OS-DEPLOYMENT.md)
+- Argos SvelteKit app (port 5173)
+- HackRF Flask backend (port 8092)
+- Kismet (started from within the Argos container via the web UI)
 
----
+**On the host:**
 
-## 📋 System Requirements
+- Docker + Portainer
+- gpsd (GPS daemon)
+- Tailscale or other networking (your choice)
 
-- **Dragon OS** (recommended) or **Debian/Ubuntu** system
-- **3GB+ free disk space**
-- **2GB+ RAM** (4GB+ recommended)
-- **sudo privileges**
-- **HackRF One** hardware (for SDR operations)
+The Argos container runs with `network_mode: host` and `privileged: true` so it can access WiFi hardware directly.
 
-**Both installation methods provide:**
+## After a Reboot
 
-✅ **Complete System Setup**: Node.js, Docker, SDR tools, dependencies  
-✅ **Hardware Configuration**: HackRF, GPS, WiFi adapter permissions  
-✅ **Service Management**: Systemd auto-start services  
-✅ **Security**: Firewall configuration and access controls  
-✅ **Interactive Setup**: OpenCellID API key configuration  
-✅ **Verification**: Comprehensive post-installation testing
+Everything starts automatically:
 
-## 🔧 Legacy Installation (curl command)
+- Docker and Portainer are systemd services
+- Containers have `restart: unless-stopped`
+- `scripts/startup-check.sh` runs at boot to verify all services and start gpsd
 
-For compatibility with older documentation:
+Run it manually anytime: `sudo bash scripts/startup-check.sh`
 
-```bash
-cd && curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/quick-install.sh | bash
-```
+## Safety
 
-## 🚀 Quick Start
+- Kismet will **never** run on `wlan0` (the Pi's built-in WiFi). Only external USB adapters (`wlan1`+) are used.
+- Bluetooth is disabled at the firmware level to free USB power budget.
+- All SDR/WiFi operations happen inside containers.
 
-### Starting the Full System (Recommended)
+## Development
 
-```bash
-# Start Argos with automatic Alfa adapter detection and Kismet
-npm run start:full
-```
-
-This command will:
-
-- Auto-detect your Alfa WiFi adapter (supports MT7921U and others)
-- Start Kismet on port 2501 with the detected adapter
-- Start Argos web interface on port 5173
-- Show all access URLs
-
-### Other Startup Options
-
-```bash
-# Start only the web interface
-npm run dev
-
-# Start only Kismet with Alfa adapter
-npm run kismet:start
-
-# Stop everything
-npm run stop:full
-```
-
-## 💻 Access
-
-After starting, access Argos at:
-
-- **Main Console**: http://localhost:5173
-- **Kismet Integration**: http://localhost:5173/kismet
-- **Kismet Direct**: http://localhost:2501
-- **Spectrum Analyzer**: http://localhost:8073 (admin/hackrf)
-- **API Documentation**: http://localhost:5173/api/docs
-
-## 🛠️ System Management (Optional)
-
-Argos includes professional system management tools:
-
-```bash
-# Install system management scripts
-curl -sSL https://raw.githubusercontent.com/Graveside2022/Argos/main/scripts/install-management.sh | bash
-```
-
-**Management Features:**
-
-- Automatic process monitoring and restart
-- CPU protection (kills runaway processes >140%)
-- Network reconnection for wireless systems
-- Memory optimization and cleanup
-- Comprehensive logging and alerts
-
-## 🧪 Testing
-
-Verify your installation:
-
-```bash
-# Run system tests
-npm run test:system
-
-# Test all management scripts
-npm run test:management
-
-# Full integration test
-npm run test:all
-```
-
-## 📁 Architecture
+Code is mounted into the container via volume. Edit files normally on the host — Vite hot reload picks up changes instantly.
 
 ```
-/projects/
-└── Argos/
-    ├── src/           # Core application
-    ├── scripts/       # System management
-    ├── docker/        # Container configs
-    ├── tests/         # Test suites
-    └── docs/          # Documentation
+src/routes/          # Pages and API endpoints
+src/lib/components/  # UI components by feature
+src/lib/stores/      # Svelte state management
+src/lib/server/      # Server-side services
+src/lib/services/    # Business logic
+scripts/             # Host management scripts
+docker/              # Dockerfiles and compose configs
+hackrf_emitter/      # HackRF Python backend
 ```
 
-## 🔌 API Integration
+## License
 
-**Core Services:**
-
-- Spectrum Analysis API (port 8092)
-- HackRF Control API (port 3002)
-- Kismet Integration (port 2501)
-- TAK Server Bridge (port 8000)
-
-## 🤝 Contributing
-
-Professional contributions welcome. See [CONTRIBUTING.md](docs/project/CONTRIBUTING.md) for enterprise development standards.
-
-## 📄 License
-
-MIT License - see [LICENSE.md](docs/project/LICENSE.md) for details.
-
-## 📞 Support
-
-For technical support, open an issue on GitHub or contact the maintainers.
-
----
-
-**Built for professional SDR and network analysis applications**
+MIT
