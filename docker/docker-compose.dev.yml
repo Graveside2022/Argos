@@ -32,6 +32,8 @@ services:
       - /app/node_modules
       - /app/.svelte-kit
     command: npm run dev -- --host 0.0.0.0
+    mem_limit: 1024m
+    memswap_limit: 1536m
     networks:
       - argos-network
     logging:

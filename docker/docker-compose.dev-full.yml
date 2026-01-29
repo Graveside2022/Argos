@@ -38,6 +38,8 @@ services:
       - /app/node_modules
       - /app/.svelte-kit
     command: npm run dev -- --host 0.0.0.0
+    mem_limit: 1024m
+    memswap_limit: 1536m
     depends_on:
       - hackrf-backend
     networks:
@@ -53,6 +55,8 @@ services:
       dockerfile: Dockerfile
     image: argos-hackrf-backend:dev
     container_name: hackrf-backend-dev
+    mem_limit: 256m
+    memswap_limit: 384m
     ports:
       - "8092:8092"
     environment:

@@ -27,6 +27,8 @@ services:
     container_name: argos-dev
     profiles:
       - dev
+    mem_limit: 1024m
+    memswap_limit: 1536m
     ports:
       - "5173:5173"
       - "24678:24678"  # Vite HMR port
@@ -74,6 +76,8 @@ services:
     container_name: argos-prod
     profiles:
       - prod
+    mem_limit: 512m
+    memswap_limit: 768m
     ports:
       - "5173:5173"
     environment:
@@ -118,6 +122,8 @@ services:
       dockerfile: Dockerfile
     image: argos-hackrf-backend:latest
     container_name: hackrf-backend
+    mem_limit: 256m
+    memswap_limit: 384m
     ports:
       - "8092:8092"
     environment:
@@ -151,6 +157,8 @@ services:
   kismet:
     image: kismetwireless/kismet:latest
     container_name: kismet
+    mem_limit: 512m
+    memswap_limit: 768m
     ports:
       - "2501:2501"    # Kismet API
       - "3501:3501"    # Kismet Web UI
@@ -178,15 +186,18 @@ services:
   # ============================================
   openwebrx:
     image: slechev/openwebrxplus:latest
-    container_name: openwebrx
+    container_name: openwebrx-hackrf
+    mem_limit: 512m
+    memswap_limit: 768m
     ports:
       - "8073:8073"
     environment:
       - OPENWEBRX_ADMIN_USER=admin
-      - OPENWEBRX_ADMIN_PASSWORD=${OPENWEBRX_PASSWORD:-admin}
-    # Mount USB for SDR devices
+      - OPENWEBRX_ADMIN_PASSWORD=${OPENWEBRX_PASSWORD:-hackrf}
+    # Mount USB for HackRF device access
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
+    privileged: true
     volumes:
       - openwebrx-settings:/var/lib/openwebrx
       - openwebrx-config:/etc/openwebrx
@@ -194,7 +205,7 @@ services:
       - /tmp/openwebrx:rw,noexec,nosuid,size=100m
     networks:
       - argos-network
-    restart: unless-stopped
+    restart: "no"
     logging:
       driver: "json-file"
       options:
@@ -207,6 +218,8 @@ services:
   gpsd:
     image: knowhowlab/gpsd:latest
     container_name: gpsd
+    mem_limit: 64m
+    memswap_limit: 96m
     ports:
       - "2947:2947"
     # Mount GPS device (adjust device path as needed)
