@@ -1,31 +1,15 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs/promises';
-
-const execAsync = promisify(exec);
+import { hostExec } from '$lib/server/hostExec';
 
 export const GET: RequestHandler = async () => {
 	try {
-		// First check if database exists - try multiple possible locations
-		const dbPaths = [
-			'/home/ubuntu/gsmevil-user/database/imsi.db',
-			'/usr/src/gsmevil2/database/imsi.db',
-			'/home/ubuntu/projects/gsmevil2/database/imsi.db'
-		];
+		// Find the IMSI database on the host filesystem
+		const { stdout: dbFound } = await hostExec(
+			'for p in /usr/src/gsmevil2/database/imsi.db /home/kali/gsmevil-user/database/imsi.db; do [ -f "$p" ] && echo "$p" && break; done'
+		).catch(() => ({ stdout: '' }));
 
-		let dbPath = '';
-		for (const path of dbPaths) {
-			try {
-				await fs.access(path);
-				dbPath = path;
-				break;
-			} catch {
-				// Try next path
-			}
-		}
-
+		const dbPath = dbFound.trim();
 		if (!dbPath) {
 			return json({
 				success: false,
@@ -35,99 +19,24 @@ export const GET: RequestHandler = async () => {
 			});
 		}
 
-		// Create a Python script file temporarily
-		const scriptContent = `#!/usr/bin/env python3
-import sqlite3
-import json
-
+		// Run the python query on the host where the DB lives
+		const pythonScript = `
+import sqlite3, json
 try:
-    # Connect to IMSI database
-    imsi_conn = sqlite3.connect('${dbPath}')
-    
-    # Try to connect to towers database (optional)
-    towers_conn = None
-    try:
-        towers_conn = sqlite3.connect('/home/ubuntu/projects/Argos/data/celltowers/towers.db')
-    except:
-        pass  # Towers database is optional
-    
-    imsi_cursor = imsi_conn.cursor()
-    towers_cursor = towers_conn.cursor() if towers_conn else None
-    
-    # Get total count
-    imsi_cursor.execute('SELECT COUNT(*) FROM imsi_data')
-    total = imsi_cursor.fetchone()[0]
-    
-    # Get all IMSIs
-    imsi_cursor.execute('''
-        SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time 
-        FROM imsi_data 
-        ORDER BY id DESC
-    ''')
-    
-    rows = imsi_cursor.fetchall()
-    imsis = []
-    
-    for row in rows:
-        imsi_entry = {
-            "id": row[0],
-            "imsi": row[1],
-            "tmsi": row[2] or "N/A",
-            "mcc": row[3],
-            "mnc": row[4],
-            "lac": row[5],
-            "ci": row[6],
-            "timestamp": row[7],
-            "lat": None,
-            "lon": None
-        }
-        
-        # Try to get location from towers database if available
-        if towers_cursor and row[3] and row[4] and row[5] and row[6]:  # If we have MCC, MNC, LAC, CI
-            towers_cursor.execute('''
-                SELECT lat, lon 
-                FROM towers 
-                WHERE mcc = ? AND net = ? AND area = ? AND cell = ?
-                LIMIT 1
-            ''', (row[3], row[4], row[5], row[6]))
-            
-            location = towers_cursor.fetchone()
-            if location:
-                imsi_entry["lat"] = location[0]
-                imsi_entry["lon"] = location[1]
-        
-        imsis.append(imsi_entry)
-    
-    imsi_conn.close()
-    if towers_conn:
-        towers_conn.close()
-    
-    print(json.dumps({
-        "success": True,
-        "total": total,
-        "imsis": imsis,
-        "message": f"Found {total} IMSIs"
-    }))
-    
+    conn = sqlite3.connect('${dbPath}')
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM imsi_data')
+    total = c.fetchone()[0]
+    c.execute('SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC')
+    rows = c.fetchall()
+    imsis = [{"id":r[0],"imsi":r[1],"tmsi":r[2] or "N/A","mcc":r[3],"mnc":r[4],"lac":r[5],"ci":r[6],"timestamp":r[7],"lat":None,"lon":None} for r in rows]
+    conn.close()
+    print(json.dumps({"success":True,"total":total,"imsis":imsis,"message":f"Found {total} IMSIs"}))
 except Exception as e:
-    print(json.dumps({
-        "success": False,
-        "message": str(e),
-        "imsis": [],
-        "total": 0
-    }))
+    print(json.dumps({"success":False,"message":str(e),"imsis":[],"total":0}))
 `;
 
-		// Write script to temp file
-		const tmpScript = '/tmp/fetch_imsis.py';
-		await fs.writeFile(tmpScript, scriptContent);
-		await fs.chmod(tmpScript, '755');
-
-		// Execute the script
-		const { stdout } = await execAsync(`python3 ${tmpScript}`);
-
-		// Clean up
-		await fs.unlink(tmpScript).catch(() => {});
+		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
 
 		// Parse and return the result
 		const result = JSON.parse(stdout);

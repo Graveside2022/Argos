@@ -1,20 +1,16 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs/promises';
-
-const execAsync = promisify(exec);
+import { hostExec } from '$lib/server/hostExec';
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Path to GSM Evil IMSI database
-		const dbPath = '/home/ubuntu/gsmevil-user/database/imsi.db';
+		// Find the IMSI database on the host
+		const { stdout: dbFound } = await hostExec(
+			'for p in /usr/src/gsmevil2/database/imsi.db /home/kali/gsmevil-user/database/imsi.db; do [ -f "$p" ] && echo "$p" && break; done'
+		).catch(() => ({ stdout: '' }));
 
-		// Check if database exists
-		try {
-			await fs.access(dbPath);
-		} catch {
+		const dbPath = dbFound.trim();
+		if (!dbPath) {
 			return json({
 				success: false,
 				message: 'IMSI database not found',
@@ -22,42 +18,22 @@ export const GET: RequestHandler = async () => {
 			});
 		}
 
-		// Query the database using Python (since sqlite3 might not be installed)
+		// Run python on the host where the DB lives
 		const pythonScript = `
-import sqlite3
-import json
-
+import sqlite3, json
 try:
     conn = sqlite3.connect('${dbPath}')
     cursor = conn.cursor()
-    
-    # Get all IMSI data, ordered by ID descending (newest first)
     cursor.execute('SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000')
     rows = cursor.fetchall()
-    
     conn.close()
-    
-    # Convert rows to objects with proper field names
-    data = []
-    for row in rows:
-        data.append({
-            'id': row[0],
-            'imsi': row[1] if row[1] else '',
-            'tmsi': row[2] if row[2] else '',
-            'mcc': str(row[3]) if row[3] else '',
-            'mnc': str(row[4]) if row[4] else '',
-            'lac': str(row[5]) if row[5] else '',
-            'ci': str(row[6]) if row[6] else '',
-            'datetime': row[7] if row[7] else ''
-        })
-    
-    # Convert to JSON
+    data = [{'id':r[0],'imsi':r[1] or '','tmsi':r[2] or '','mcc':str(r[3]) if r[3] else '','mnc':str(r[4]) if r[4] else '','lac':str(r[5]) if r[5] else '','ci':str(r[6]) if r[6] else '','datetime':r[7] or ''} for r in rows]
     print(json.dumps(data))
 except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
 
-		const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
 		const result = JSON.parse(stdout);
 
 		if (result.error) {

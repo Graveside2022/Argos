@@ -1,13 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { join } from 'path';
-
-const execAsync = promisify(exec);
-
-// Get project root dynamically for portable script paths
-const PROJECT_ROOT = process.cwd();
+import { hostExec } from '$lib/server/hostExec';
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
@@ -19,7 +12,6 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		const useMock = url.searchParams.get('mock') === 'true';
 
 		if (useMock) {
-			// Return mock responses only when explicitly requested
 			if (action === 'start') {
 				return json({
 					success: true,
@@ -42,207 +34,174 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 		if (action === 'start') {
 			try {
-				console.warn('Starting Kismet with Alfa adapter...');
+				console.warn('[kismet] Starting Kismet...');
 
-				// Step 1: Check if Kismet is already running
-				try {
-					const { stdout: existingPids } = await execAsync('pgrep -x kismet || echo ""');
-					if (existingPids.trim()) {
-						console.warn('Kismet is already running with PID:', existingPids.trim());
-						return json({
-							success: true,
-							message: 'Kismet is already running',
-							details: `Process ID: ${existingPids.trim()}`
-						});
-					}
-				} catch (error) {
-					console.warn('Process check had issues (continuing):', error);
-				}
-
-				// Step 2: Use our working startup script
-				console.warn('Starting Kismet using startup script...');
-				const scriptPath = join(PROJECT_ROOT, 'scripts', 'start-kismet-with-alfa.sh');
-
-				// Execute the script which handles background startup properly
-				const { stdout, stderr } = await execAsync(scriptPath);
-				console.warn('Script output:', stdout);
-				if (stderr && !stderr.includes('nohup')) console.warn('Script stderr:', stderr);
-
-				// Extract PID from script output if available (for debugging)
-				const pidMatch = stdout.match(/PID:\s*(\d+)/);
-				const _scriptPid = pidMatch ? pidMatch[1] : '';
-
-				// Step 3: Wait for startup and verify
-				await new Promise((resolve) => setTimeout(resolve, 3000));
-
-				let verificationPassed = false;
-				let kismetPid = '';
-
-				try {
-					// Check for process - try multiple times
-					for (let attempt = 0; attempt < 3; attempt++) {
-						const { stdout: newPids } = await execAsync('pgrep -x kismet || echo ""');
-						if (newPids.trim()) {
-							kismetPid = newPids.trim();
-							console.warn(
-								`Kismet process found on attempt ${attempt + 1}:`,
-								kismetPid
-							);
-
-							// Verify the process is actually alive
-							const { stdout: psCheck } = await execAsync(
-								`ps -p ${kismetPid} -o comm= 2>/dev/null || echo ""`
-							);
-							if (psCheck.includes('kismet')) {
-								console.warn('Process verified as kismet');
-								verificationPassed = true;
-								break;
-							}
-						}
-						if (!verificationPassed && attempt < 2) {
-							console.warn(`Process not found on attempt ${attempt + 1}, waiting...`);
-							await new Promise((resolve) => setTimeout(resolve, 1000));
-						}
-					}
-
-					// Additional API verification (Kismet may require auth)
-					if (!verificationPassed) {
-						try {
-							const { stdout: apiTest } = await execAsync(
-								'curl -s -m 5 http://localhost:2501/ 2>/dev/null | head -5 || echo ""'
-							);
-							if (apiTest.includes('Kismet') || apiTest.includes('<!DOCTYPE')) {
-								console.warn(
-									'Kismet web interface responding (no process found though)'
-								);
-								// Don't set verificationPassed here if no process found
-							}
-						} catch {
-							// API not responding
-						}
-					}
-				} catch (error) {
-					console.warn('Verification error:', error);
-				}
-
-				if (verificationPassed) {
+				// Check if Kismet is already running
+				const { stdout: existingPids } = await hostExec(
+					'pgrep -x kismet 2>/dev/null || true'
+				);
+				if (existingPids.trim()) {
+					console.warn('[kismet] Already running, PID:', existingPids.trim());
 					return json({
 						success: true,
-						message: 'Kismet started successfully',
-						details: `Process running (PID: ${kismetPid})`,
-						pid: kismetPid
+						message: 'Kismet is already running',
+						details: `Process ID: ${existingPids.trim()}`
 					});
-				} else {
-					// Log why verification failed for debugging
-					console.error('Kismet verification failed - PID check:', kismetPid || 'none');
+				}
+
+				// Detect ALFA WiFi adapter interface (skip wlan0 = built-in Pi WiFi)
+				const { stdout: ifaceList } = await hostExec(
+					'ls /sys/class/net/ 2>/dev/null || true'
+				);
+				let alfaInterface = '';
+				for (const iface of ifaceList.trim().split(/\s+/)) {
+					if (iface === 'lo' || iface === 'eth0' || iface === 'wlan0' || !iface) continue;
+					// Check if it's a wireless interface
+					const { stdout: isWireless } = await hostExec(
+						`test -d /sys/class/net/${iface}/wireless && echo yes || true`
+					);
+					if (isWireless.trim() === 'yes') {
+						alfaInterface = iface;
+						break;
+					}
+				}
+
+				if (!alfaInterface) {
+					console.warn('[kismet] No external WiFi adapter found');
 					return json(
 						{
 							success: false,
-							message: 'Kismet start command executed but verification failed',
-							error: 'Process may not be running properly',
-							debug: `PID: ${kismetPid || 'none found'}`
+							message:
+								'No external WiFi adapter detected. Connect an ALFA adapter and try again.',
+							error: 'No wlan1+ interface found'
+						},
+						{ status: 400 }
+					);
+				}
+
+				console.warn(`[kismet] Using interface: ${alfaInterface}`);
+
+				// Clean up stale monitor interfaces
+				await hostExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
+					() => {}
+				);
+
+				// Start Kismet as kali user (NOT root) — capture helpers are suid
+				// Uses --daemonize so Kismet forks into background properly via nsenter
+				// cd to /home/kali so Kismet can write its log database
+				await hostExec(
+					`sudo -u kali bash -c 'cd /home/kali && kismet -c ${alfaInterface}:type=linuxwifi --no-ncurses --no-line-wrap --daemonize --silent'`,
+					{ timeout: 15000 }
+				);
+				console.warn('[kismet] Start command issued as kali user');
+
+				// Wait for Kismet to initialize (needs time to bind port and set up capture)
+				await new Promise((resolve) => setTimeout(resolve, 5000));
+
+				// Verify running — retry a few times
+				let verifyPid = '';
+				for (let attempt = 0; attempt < 3; attempt++) {
+					const { stdout: pidCheck } = await hostExec(
+						'pgrep -x kismet 2>/dev/null || true'
+					);
+					if (pidCheck.trim()) {
+						verifyPid = pidCheck.trim();
+						break;
+					}
+					await new Promise((resolve) => setTimeout(resolve, 2000));
+				}
+
+				if (!verifyPid) {
+					return json(
+						{
+							success: false,
+							message: 'Kismet failed to start',
+							error: 'Process not found after startup. Check if the WiFi adapter is available.'
 						},
 						{ status: 500 }
 					);
 				}
+
+				// Verify running as non-root
+				const { stdout: userCheck } = await hostExec(
+					`ps -p ${verifyPid} -o user= 2>/dev/null || true`
+				);
+				console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${verifyPid}`);
+
+				// Set up auth credentials if this is a first-time start
+				try {
+					const { stdout: authCheck } = await hostExec(
+						'curl -s -m 3 -X POST -d "username=admin&password=password" http://localhost:2501/session/set_password 2>/dev/null || true'
+					);
+					if (authCheck.includes('Login configured')) {
+						console.warn('[kismet] Initial credentials set (admin/password)');
+					}
+				} catch {
+					// Already configured or not yet ready — either is fine
+				}
+
+				return json({
+					success: true,
+					message: 'Kismet started successfully',
+					details: `Running as ${userCheck.trim() || 'kali'} (PID: ${verifyPid}) on ${alfaInterface}`,
+					pid: verifyPid
+				});
 			} catch (error: unknown) {
-				console.error('Failed to start Kismet:', error);
-				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.error('[kismet] Start error:', error);
 				return json(
 					{
 						success: false,
 						message: 'Failed to start Kismet',
-						error: errorMessage
+						error: (error as Error).message
 					},
 					{ status: 500 }
 				);
 			}
 		} else if (action === 'stop') {
 			try {
-				console.warn('Stopping Kismet with robust cleanup...');
+				console.warn('[kismet] Stopping Kismet...');
 
-				// Step 1: Get all Kismet processes with detailed info
-				let foundProcesses = false;
-				try {
-					const { stdout: pids } = await execAsync('pgrep -x kismet || echo ""');
-					if (pids.trim()) {
-						foundProcesses = true;
-						console.warn('Found Kismet processes to terminate:', pids.trim());
-
-						// Step 2: Graceful termination first
-						await execAsync('pkill -x -TERM kismet');
-						console.warn('Sent SIGTERM to Kismet processes');
-
-						// Step 3: Wait for graceful shutdown
-						await new Promise((resolve) => setTimeout(resolve, 3000));
-
-						// Step 4: Force kill any remaining processes
-						const { stdout: remainingPids } = await execAsync(
-							'pgrep -x kismet || echo ""'
-						);
-						if (remainingPids.trim()) {
-							console.warn(
-								'Force killing remaining processes:',
-								remainingPids.trim()
-							);
-							await execAsync('pkill -x -9 kismet');
-							await new Promise((resolve) => setTimeout(resolve, 1000));
-						}
-					} else {
-						console.warn('No Kismet processes found');
-					}
-				} catch (error) {
-					console.warn('Process termination had issues:', error);
-				}
-
-				// Step 5: Verify processes are actually gone
-				let verificationPassed = true;
-				try {
-					const { stdout: finalCheck } = await execAsync('pgrep -x kismet || echo ""');
-					if (finalCheck.trim()) {
-						console.warn(
-							'Warning: Some Kismet processes may still be running:',
-							finalCheck.trim()
-						);
-						verificationPassed = false;
-					} else {
-						console.warn('Verification passed: No Kismet processes found');
-					}
-				} catch {
-					// Assume success if verification fails
-				}
-
-				// Step 6: Additional cleanup - check API is no longer responding
-				try {
-					const { stdout: apiCheck } = await execAsync(
-						'curl -s -m 2 http://localhost:2501/system/timestamp.json 2>/dev/null || echo "not_responding"'
-					);
-					if (apiCheck.includes('timestamp') || apiCheck.includes('{')) {
-						console.warn('Warning: Kismet API still responding after stop attempt');
-						verificationPassed = false;
-					}
-				} catch {
-					// Expected when API is down
-				}
-
-				if (verificationPassed || !foundProcesses) {
+				const { stdout: pids } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+				if (!pids.trim()) {
 					return json({
 						success: true,
 						message: 'Kismet stopped successfully',
-						details: foundProcesses
-							? 'Processes terminated and verified'
-							: 'No processes were running'
+						details: 'No processes were running'
 					});
-				} else {
+				}
+
+				// Graceful termination
+				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+
+				// Force kill if still running
+				const { stdout: remaining } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+				if (remaining.trim()) {
+					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(() => {});
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+				}
+
+				// Verify stopped
+				const { stdout: finalCheck } = await hostExec(
+					'pgrep -x kismet 2>/dev/null || true'
+				);
+				if (finalCheck.trim()) {
 					return json(
 						{
 							success: false,
-							message: 'Kismet stop attempted but verification failed',
-							error: 'Some processes or services may still be running'
+							message: 'Kismet stop attempted but processes remain',
+							error: `PIDs still running: ${finalCheck.trim()}`
 						},
 						{ status: 500 }
 					);
 				}
+
+				console.warn('[kismet] Stopped successfully');
+				return json({
+					success: true,
+					message: 'Kismet stopped successfully',
+					details: 'Processes terminated and verified'
+				});
 			} catch (error: unknown) {
 				return json(
 					{
@@ -255,56 +214,27 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			}
 		} else if (action === 'status') {
 			try {
-				// Check for actual Kismet processes instead of systemd service
-				// This handles both systemd-managed and manually-started Kismet instances
-				try {
-					const { stdout: serviceOut } = await execAsync(
-						'systemctl is-active kismet-auto-wlan1'
-					);
-					if (serviceOut.trim() === 'active') {
-						return json({
-							success: true,
-							running: true,
-							status: 'active (systemd)'
-						});
-					}
-				} catch {
-					// Service doesn't exist or isn't active, check for manual processes
-				}
+				const { stdout: processOut } = await hostExec(
+					'pgrep -x kismet 2>/dev/null || true'
+				);
+				const hasProcess = !!processOut.trim();
 
-				// Check for manually started Kismet processes with validation
-				let hasKismetProcess = false;
-				try {
-					// Use exact match for kismet process
-					const { stdout: processOut } = await execAsync('pgrep -x kismet || echo ""');
-					const pids = processOut.trim();
-					if (pids) {
-						// Validate that the PID actually exists and is kismet
-						const { stdout: psOut } = await execAsync(
-							`ps -p ${pids} -o comm= 2>/dev/null || echo ""`
-						);
-						hasKismetProcess = psOut.includes('kismet');
-					}
-				} catch {
-					hasKismetProcess = false;
-				}
-
-				// Double-check by testing if Kismet API is responding
+				// Double-check via API
 				let apiResponding = false;
 				try {
-					const { stdout: curlOut } = await execAsync(
-						'curl -s -m 2 http://localhost:2501/system/timestamp.json 2>/dev/null || echo ""'
+					const { stdout: apiOut } = await hostExec(
+						'curl -s -m 2 http://localhost:2501/system/timestamp.json 2>/dev/null || true'
 					);
-					apiResponding = curlOut.includes('timestamp') || curlOut.includes('{');
+					apiResponding = apiOut.includes('timestamp') || apiOut.includes('{');
 				} catch {
-					// API not responding
+					// Not responding
 				}
 
-				const isRunning = hasKismetProcess || apiResponding;
+				const isRunning = hasProcess || apiResponding;
 				return json({
 					success: true,
 					running: isRunning,
-					status: isRunning ? 'active (manual)' : 'inactive'
+					status: isRunning ? 'active' : 'inactive'
 				});
 			} catch {
 				return json({

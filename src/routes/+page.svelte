@@ -29,16 +29,36 @@
 		window.open('http://100.76.103.118:3000', '_blank');
 	}
 
-	function navigateToFusion() {
-		void goto('/fusion');
-	}
-
 	function navigateToRTL433() {
 		void goto('/rtl-433');
 	}
 
 	function navigateToDroneID() {
 		void goto('/droneid');
+	}
+
+	function navigateToBettercap() {
+		void goto('/bettercap');
+	}
+
+	function navigateToPagermon() {
+		void goto('/pagermon');
+	}
+
+	function navigateToBTLE() {
+		void goto('/btle');
+	}
+
+	function navigateToWifite() {
+		void goto('/wifite');
+	}
+
+	function navigateToURH() {
+		void goto('/urh');
+	}
+
+	function navigateToTempestSDR() {
+		void goto('/tempestsdr');
 	}
 </script>
 
@@ -151,7 +171,9 @@
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"></path>
+				<path
+					d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"
+				></path>
 			</svg>
 			<h2 class="mission-title">GSM Evil</h2>
 			<p class="mission-desc">Cellular Analysis</p>
@@ -165,7 +187,9 @@
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,12L11,7.5V16.5Z"></path>
+				<path
+					d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,12L11,7.5V16.5Z"
+				></path>
 			</svg>
 			<h2 class="mission-title">RTL_433</h2>
 			<p class="mission-desc">Signal Decoder</p>
@@ -180,31 +204,13 @@
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M13 2L8.5 13H12L11 22L15.5 11H12L13 2Z"/>
+				<path d="M13 2L8.5 13H12L11 22L15.5 11H12L13 2Z" />
 			</svg>
 			<h2 class="mission-title">
 				<span style="color: #fb923c;">RF</span>
 				<span>Emitter</span>
 			</h2>
 			<p class="mission-desc">Signal Generation</p>
-		</div>
-
-		<div
-			class="mission-card mission-fusion"
-			on:click={navigateToFusion}
-			role="button"
-			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToFusion()}
-		>
-			<div class="mission-status-badge"></div>
-			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M12 2L2 7v10c0 5.55 3.84 9.739 9 11 5.16-1.261 9-5.45 9-11V7l-10-5z"/>
-			</svg>
-			<h2 class="mission-title">
-				<span style="color: #68d391;">Fusion</span>
-				<span>Security Center</span>
-			</h2>
-			<p class="mission-desc">Unified Intelligence Platform</p>
 		</div>
 
 		<div
@@ -216,13 +222,120 @@
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M21 16V14L13 9V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9L2 14V16L10 13.5V19L8 20.5V22L11.5 21L15 22V20.5L13 19V13.5L21 16Z"></path>
+				<path
+					d="M21 16V14L13 9V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9L2 14V16L10 13.5V19L8 20.5V22L11.5 21L15 22V20.5L13 19V13.5L21 16Z"
+				></path>
 			</svg>
 			<h2 class="mission-title">
 				<span style="color: #06b6d4;">Drone</span>
 				<span>ID</span>
 			</h2>
 			<p class="mission-desc">Remote ID Detection</p>
+		</div>
+
+		<div
+			class="mission-card mission-bettercap"
+			on:click={navigateToBettercap}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToBettercap()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M12,1C7,1 3,5 3,10V17A3,3 0 0,0 6,20H9V12H5V10A7,7 0 0,1 12,3A7,7 0 0,1 19,10V12H15V20H18A3,3 0 0,0 21,17V10C21,5 16.97,1 12,1Z"
+				></path>
+			</svg>
+			<h2 class="mission-title">Bettercap</h2>
+			<p class="mission-desc">WiFi/BLE Recon</p>
+		</div>
+
+		<div
+			class="mission-card mission-pagermon"
+			on:click={navigateToPagermon}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToPagermon()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16M11,12H13V14H11V12M11,6H13V10H11V6Z"
+				></path>
+			</svg>
+			<h2 class="mission-title">Pagermon</h2>
+			<p class="mission-desc">Pager Decoder</p>
+		</div>
+
+		<div
+			class="mission-card mission-btle"
+			on:click={navigateToBTLE}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToBTLE()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M14.88,16.29L13,18.17V14.41M13,5.83L14.88,7.71L13,9.58M17.71,7.71L12,2H11V9.58L6.41,5L5,6.41L10.59,12L5,17.58L6.41,19L11,14.41V22H12L17.71,16.29L13.41,12L17.71,7.71Z"
+				></path>
+			</svg>
+			<h2 class="mission-title">BTLE</h2>
+			<p class="mission-desc">BLE Sniffer</p>
+		</div>
+
+		<div
+			class="mission-card mission-wifite"
+			on:click={navigateToWifite}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToWifite()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M12,3C7.46,3 3.34,4.78 0.29,7.67C0.11,7.85 0,8.1 0,8.37C0,8.64 0.11,8.9 0.29,9.08L1.77,10.56C1.95,10.74 2.2,10.86 2.48,10.86C2.76,10.86 3,10.75 3.18,10.57C5.56,8.35 8.64,7 12,7C15.36,7 18.44,8.35 20.82,10.57C21,10.75 21.24,10.86 21.52,10.86C21.8,10.86 22.05,10.74 22.23,10.56L23.71,9.08C23.89,8.9 24,8.64 24,8.37C24,8.1 23.89,7.85 23.71,7.67C20.66,4.78 16.54,3 12,3M12,11C9.58,11 7.34,11.89 5.61,13.34L8.59,16.32C9.53,15.5 10.71,15 12,15C13.29,15 14.47,15.5 15.41,16.32L18.39,13.34C16.66,11.89 14.42,11 12,11M12,19A2,2 0 0,0 10,21A2,2 0 0,0 12,23A2,2 0 0,0 14,21A2,2 0 0,0 12,19"
+				></path>
+			</svg>
+			<h2 class="mission-title">Wifite2</h2>
+			<p class="mission-desc">WiFi Attacks</p>
+		</div>
+
+		<div
+			class="mission-card mission-urh"
+			on:click={navigateToURH}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToURH()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M7,2V4H8V18A4,4 0 0,0 12,22A4,4 0 0,0 16,18V4H17V2H7M11,16C10.4,16 10,15.6 10,15C10,14.4 10.4,14 11,14C11.6,14 12,14.4 12,15C12,15.6 11.6,16 11,16M13,12C12.4,12 12,11.6 12,11C12,10.4 12.4,10 13,10C13.6,10 14,10.4 14,11C14,11.6 13.6,12 13,12M14,7H10V4H14V7Z"
+				></path>
+			</svg>
+			<h2 class="mission-title">
+				<span style="color: #a855f7;">Radio</span>
+				<span>Hacker</span>
+			</h2>
+			<p class="mission-desc">URH Signal Analysis</p>
+		</div>
+
+		<div
+			class="mission-card mission-tempestsdr"
+			on:click={navigateToTempestSDR}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => e.key === 'Enter' && navigateToTempestSDR()}
+		>
+			<div class="mission-status-badge"></div>
+			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
+				<path
+					d="M21,16V4H3V16H21M21,2A2,2 0 0,1 23,4V16A2,2 0 0,1 21,18H14V20H16V22H8V20H10V18H3C1.89,18 1,17.1 1,16V4C1,2.89 1.89,2 3,2H21M5,6H14V11H5V6M15,6H19V8H15V6M19,9V14H15V9H19M5,12H9V14H5V12M10,12H14V14H10V12Z"
+				></path>
+			</svg>
+			<h2 class="mission-title">TempestSDR</h2>
+			<p class="mission-desc">RF Eavesdropping</p>
 		</div>
 
 		<div class="mission-card mission-docs">
@@ -257,7 +370,6 @@
 		--mission-broadcast: #8b5cf6;
 		--mission-gsm: #ff0000;
 		--mission-rtl433: #8b5cf6;
-		--mission-fusion: #68d391;
 
 		/* Text Colors */
 		--text-primary: #ffffff;
@@ -489,14 +601,39 @@
 		--mission-color: var(--mission-spectrum);
 		--mission-glow: rgba(251, 146, 60, 0.3);
 	}
-	.mission-fusion {
-		--mission-color: var(--mission-fusion);
-		--mission-glow: rgba(104, 211, 145, 0.3);
-	}
-
 	.mission-droneid {
 		--mission-color: #06b6d4;
 		--mission-glow: rgba(6, 182, 212, 0.3);
+	}
+
+	.mission-bettercap {
+		--mission-color: #10b981;
+		--mission-glow: rgba(16, 185, 129, 0.3);
+	}
+
+	.mission-pagermon {
+		--mission-color: #fbbf24;
+		--mission-glow: rgba(251, 191, 36, 0.3);
+	}
+
+	.mission-btle {
+		--mission-color: #3b82f6;
+		--mission-glow: rgba(59, 130, 246, 0.3);
+	}
+
+	.mission-wifite {
+		--mission-color: #ef4444;
+		--mission-glow: rgba(239, 68, 68, 0.3);
+	}
+
+	.mission-urh {
+		--mission-color: #a855f7;
+		--mission-glow: rgba(168, 85, 247, 0.3);
+	}
+
+	.mission-tempestsdr {
+		--mission-color: #f97316;
+		--mission-glow: rgba(249, 115, 22, 0.3);
 	}
 
 	/* Mission Icons */

@@ -83,33 +83,7 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 	};
 }
 
-export const GET: RequestHandler = async ({ url }) => {
-	// Check if mock parameter is explicitly requested
-	const useMock = url.searchParams.get('mock') === 'true';
-
-	if (useMock) {
-		// Return mock GPS data only when explicitly requested
-		return new Response(
-			JSON.stringify({
-				success: true,
-				data: {
-					latitude: 50.0833, // Mainz Kastel, Germany coordinates for demo
-					longitude: 8.2833,
-					altitude: 10.0,
-					speed: 0.0,
-					heading: 0.0,
-					accuracy: 5.0,
-					satellites: 8,
-					fix: 3, // 3D fix
-					time: new Date().toISOString()
-				}
-			}),
-			{
-				headers: { 'Content-Type': 'application/json' }
-			}
-		);
-	}
-
+export const GET: RequestHandler = async () => {
 	try {
 		// Query gpsd via its JSON protocol on the default port (2947).
 		// This returns in ~0.4s instead of the 10+ seconds the old cascading

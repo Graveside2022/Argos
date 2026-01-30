@@ -3,6 +3,8 @@ import { EventEmitter } from 'events';
 import { exec } from 'child_process';
 import { logInfo, logError, logWarn } from '$lib/utils/logger';
 import { SystemStatus } from '$lib/types/enums';
+import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { HardwareDevice } from '$lib/server/hardware/types';
 
 // Import modular services
 import { ProcessManager } from '$lib/services/hackrf/sweep-manager/process/ProcessManager';
@@ -243,10 +245,10 @@ export class SweepManager extends EventEmitter {
 			logWarn('Service not yet initialized, waiting...');
 			let waitTime = 0;
 			while (!this.isInitialized && waitTime < 10000) {
-				await new Promise(resolve => setTimeout(resolve, 500));
+				await new Promise((resolve) => setTimeout(resolve, 500));
 				waitTime += 500;
 			}
-			
+
 			if (!this.isInitialized) {
 				logError('Service failed to initialize within 10 seconds');
 				return false;
@@ -262,8 +264,11 @@ export class SweepManager extends EventEmitter {
 		// Check if we think we're running, but verify with actual process state
 		if (this.isRunning) {
 			const processState = this.processManager.getProcessState();
-			if (processState.isRunning && processState.actualProcessPid && 
-				this.processManager.isProcessAlive(processState.actualProcessPid)) {
+			if (
+				processState.isRunning &&
+				processState.actualProcessPid &&
+				this.processManager.isProcessAlive(processState.actualProcessPid)
+			) {
 				this._emitError('Sweep is already running', 'state_check');
 				return false;
 			} else {
@@ -280,6 +285,16 @@ export class SweepManager extends EventEmitter {
 			return false;
 		}
 
+		// Acquire HackRF via Resource Manager
+		const acquireResult = await resourceManager.acquire('hackrf-sweep', HardwareDevice.HACKRF);
+		if (!acquireResult.success) {
+			this._emitError(
+				`HackRF is in use by ${acquireResult.owner}. Stop it first.`,
+				'resource_conflict'
+			);
+			return false;
+		}
+
 		try {
 			// Normalize frequencies using frequency cycler
 			const validatedFreqs = this.frequencyCycler.normalizeFrequencies(frequencies);
@@ -291,12 +306,14 @@ export class SweepManager extends EventEmitter {
 
 			// Force cleanup existing processes first
 			await this._forceCleanupExistingProcesses();
-			
+
 			// Additional delay for device to become available
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Skip device check - auto_sweep.sh will handle device detection (HackRF or USRP)
-			logInfo('🔍 Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...');
+			logInfo(
+				'🔍 Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...'
+			);
 
 			// Initialize cycling using frequency cycler service
 			this.frequencyCycler.initializeCycling({
@@ -387,6 +404,9 @@ export class SweepManager extends EventEmitter {
 		this.status = { state: SystemStatus.Idle };
 		this._emitEvent('status', this.status);
 		this._emitEvent('status_change', { status: 'stopped' });
+
+		// Release HackRF via Resource Manager
+		await resourceManager.release('hackrf-sweep', HardwareDevice.HACKRF);
 
 		// Force emit idle status to ensure UI updates
 		setTimeout(() => {
@@ -487,7 +507,7 @@ export class SweepManager extends EventEmitter {
 				frequency: cycleState.currentFrequency?.value,
 				operation: 'start_sweep'
 			});
-			logError('❌ Error starting sweep process:', { 
+			logError('❌ Error starting sweep process:', {
 				error: (error as Error).message,
 				analysis: errorAnalysis
 			});
@@ -547,13 +567,13 @@ export class SweepManager extends EventEmitter {
 			// Adjust gain based on frequency range
 			let vgaGain = '20';
 			let lnaGain = '32';
-			
+
 			// Higher gain for 5GHz as signals are typically weaker
 			if (centerFreqMHz > 5000) {
-				vgaGain = '30';  // Increase VGA gain for 5GHz
-				lnaGain = '40';  // Max LNA gain for 5GHz
+				vgaGain = '30'; // Increase VGA gain for 5GHz
+				lnaGain = '40'; // Max LNA gain for 5GHz
 			}
-			
+
 			const args = [
 				'-f',
 				`${Math.floor(freqMinMHz)}:${Math.ceil(freqMaxMHz)}`,
@@ -567,7 +587,7 @@ export class SweepManager extends EventEmitter {
 
 			// Add -n flag to keep same timestamp within a sweep (helps with buffering)
 			args.push('-n');
-			
+
 			logInfo(`🚀 Starting hackrf_sweep for ${centerFreqMHz} MHz`);
 			logInfo(`📋 Command: hackrf_sweep ${args.join(' ')}`);
 
@@ -582,8 +602,8 @@ export class SweepManager extends EventEmitter {
 				console.log('[SWEEP MANAGER] Data preview:', dataStr.substring(0, 200));
 				console.log('[SWEEP MANAGER] Has SSE emitter:', !!this.sseEmitter);
 				console.log('[SWEEP MANAGER] ===================================');
-				logInfo('📊 SweepManager received stdout data', { 
-					size: data.length, 
+				logInfo('📊 SweepManager received stdout data', {
+					size: data.length,
 					preview: dataStr.substring(0, 200),
 					hasCommas: dataStr.includes(','),
 					lineCount: dataStr.split('\n').length
@@ -600,17 +620,17 @@ export class SweepManager extends EventEmitter {
 						parseError: parsedLine.parseError,
 						rawLinePreview: parsedLine.rawLine.substring(0, 150)
 					});
-					
+
 					if (parsedLine.isValid && parsedLine.data) {
 						console.log('[USRP SWEEP] Valid data! Calling _handleSpectrumData');
-						logInfo('✅ Valid spectrum data parsed', { 
+						logInfo('✅ Valid spectrum data parsed', {
 							frequency: parsedLine.data.frequency,
-							power: parsedLine.data.power 
+							power: parsedLine.data.power
 						});
 						this._handleSpectrumData(parsedLine.data, frequency);
 					} else if (parsedLine.parseError) {
 						console.warn('[USRP SWEEP] Parse error:', parsedLine.parseError);
-						logWarn('❌ Failed to parse line', { 
+						logWarn('❌ Failed to parse line', {
 							error: parsedLine.parseError,
 							line: parsedLine.rawLine.substring(0, 100)
 						});
@@ -648,24 +668,23 @@ export class SweepManager extends EventEmitter {
 				detached: false,
 				stdio: ['ignore', 'pipe', 'pipe'],
 				startupTimeoutMs: 5000
-			})
+			});
 
 			logInfo('✅ HackRF sweep process started successfully', {
 				centerFreq: `${frequency.value} ${frequency.unit}`,
 				range: `${freqMinMHz} - ${freqMaxMHz} MHz`
 			});
-
 		} catch (error) {
 			const analysis = this.errorTracker.recordError(error as Error, {
 				frequency: frequency.value,
 				operation: 'start_process'
 			});
-			
+
 			logError('Failed to start sweep process', {
 				error: error instanceof Error ? (error as Error).message : String(error),
 				analysis
 			});
-			
+
 			throw error;
 		}
 	}
@@ -673,14 +692,17 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Handle spectrum data from parsed line
 	 */
-	private _handleSpectrumData(data: SpectrumData, frequency: { value: number; unit: string }): void {
+	private _handleSpectrumData(
+		data: SpectrumData,
+		frequency: { value: number; unit: string }
+	): void {
 		try {
 			console.log('[USRP SWEEP] _handleSpectrumData called with:', {
 				frequency: data.frequency,
 				power: data.power,
 				hasValues: !!data.powerValues
 			});
-			
+
 			// Validate data quality
 			const validation = this.bufferManager.validateSpectrumData(data);
 			if (!validation.isValid) {
@@ -703,7 +725,6 @@ export class SweepManager extends EventEmitter {
 				this.cyclingHealth.processHealth = 'running';
 				this._emitEvent('status_change', { status: 'running' });
 			}
-
 		} catch (error) {
 			logError('Error handling spectrum data', {
 				error: error instanceof Error ? (error as Error).message : String(error)
@@ -776,10 +797,10 @@ export class SweepManager extends EventEmitter {
 		// Use ProcessManager for all process operations
 		const currentProcessState = this.processManager.getProcessState();
 		await this.processManager.stopProcess(currentProcessState);
-		
+
 		// Clear monitoring timers
 		this._clearMonitoring();
-		
+
 		logInfo('Sweep process stopped via ProcessManager');
 	}
 
@@ -929,7 +950,7 @@ export class SweepManager extends EventEmitter {
 
 		try {
 			const processState = this.processManager.getProcessState();
-			
+
 			// Only kill hackrf_sweep processes that aren't ours
 			if (processState.isRunning && processState.sweepProcessPgid) {
 				// Kill all hackrf_sweep processes except our current process group
@@ -1045,17 +1066,20 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Handle sweep errors using ErrorTracker and FrequencyCycler
 	 */
-	private async _handleSweepError(error: Error, frequency: { value: number; unit: string }): Promise<void> {
+	private async _handleSweepError(
+		error: Error,
+		frequency: { value: number; unit: string }
+	): Promise<void> {
 		// Record error using ErrorTracker
 		const errorAnalysis = this.errorTracker.recordError(error, {
 			frequency: frequency.value,
 			operation: 'sweep_error'
 		});
 
-		logError('Sweep error analyzed by ErrorTracker', { 
-			error: (error as Error).message, 
-			frequency, 
-			analysis: errorAnalysis 
+		logError('Sweep error analyzed by ErrorTracker', {
+			error: (error as Error).message,
+			frequency,
+			analysis: errorAnalysis
 		});
 
 		// Check if frequency should be blacklisted using ErrorTracker
@@ -1068,7 +1092,10 @@ export class SweepManager extends EventEmitter {
 		this._emitError((error as Error).message, 'sweep_error', error);
 
 		// Check if we should stop using ErrorTracker
-		if (this.errorTracker.hasMaxConsecutiveErrors() || this.errorTracker.hasMaxFailuresPerMinute()) {
+		if (
+			this.errorTracker.hasMaxConsecutiveErrors() ||
+			this.errorTracker.hasMaxFailuresPerMinute()
+		) {
 			logError('ErrorTracker recommends stopping sweep', {
 				analysis: errorAnalysis,
 				recommendedAction: errorAnalysis.recommendedAction
@@ -1086,7 +1113,7 @@ export class SweepManager extends EventEmitter {
 			hasSseEmitter: !!this.sseEmitter,
 			hasListeners: this.listenerCount(event) > 0
 		});
-		
+
 		if (this.sseEmitter) {
 			try {
 				this.sseEmitter(event, data);
@@ -1123,7 +1150,7 @@ export class SweepManager extends EventEmitter {
 	private async _performRecovery(reason: string): Promise<void> {
 		// Use ErrorTracker to manage recovery attempts
 		const recoveryStatus = this.errorTracker.getRecoveryStatus();
-		
+
 		logInfo('Recovery triggered via ErrorTracker', {
 			reason,
 			recoveryStatus
@@ -1164,16 +1191,16 @@ export class SweepManager extends EventEmitter {
 
 				// Record successful recovery
 				this.errorTracker.recordSuccess();
-				
+
 				logInfo('Recovery completed via services');
 				this._emitEvent('recovery_complete', { reason });
 			}
 		} catch (error: unknown) {
 			const err = error as Error;
-			
+
 			// Record recovery failure
 			this.errorTracker.recordError(err, { operation: 'recovery' });
-			
+
 			logError('Recovery failed', { error: err, reason });
 			this._emitError(`Recovery failed: ${err.message}`, 'recovery_error');
 			await this.stopSweep();
@@ -1221,7 +1248,7 @@ export class SweepManager extends EventEmitter {
 			} catch (error) {
 				logError(
 					'Process monitor error',
-					{ 
+					{
 						pid: processState.actualProcessPid,
 						error: error instanceof Error ? (error as Error).message : String(error)
 					},
@@ -1246,7 +1273,7 @@ export class SweepManager extends EventEmitter {
 		this.dataTimeoutTimer = setTimeout(() => {
 			const cycleState = this.frequencyCycler.getCycleState();
 			const processState = this.processManager.getProcessState();
-			
+
 			if (this.isRunning && !cycleState.inFrequencyTransition) {
 				logWarn(
 					'No data received for 120 seconds',
@@ -1314,7 +1341,7 @@ export class SweepManager extends EventEmitter {
 			/fatal error/i
 		];
 
-		return criticalPatterns.some(pattern => pattern.test(message));
+		return criticalPatterns.some((pattern) => pattern.test(message));
 	}
 
 	/**
