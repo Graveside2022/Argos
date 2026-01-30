@@ -15,13 +15,22 @@ fuser -k 80/tcp 2>/dev/null || true
 fuser -k 8080/tcp 2>/dev/null || true
 
 # Start GRGSM monitor
-echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
-UHD_IMAGES_DIR=/usr/share/uhd/images grgsm_livemon_headless --args="type=b200" -s 2e6 -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
+# Detect SDR hardware: USRP B205 Mini or HackRF One
+DEVICE_ARGS=""
+SAMPLE_RATE=""
+if uhd_find_devices 2>/dev/null | grep -q "B205"; then
+    echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
+    DEVICE_ARGS='--args="type=b200"'
+    SAMPLE_RATE="-s 2e6"
+else
+    echo "Starting GRGSM monitor on ${FREQ} MHz with HackRF One..."
+fi
+grgsm_livemon_headless ${DEVICE_ARGS} ${SAMPLE_RATE} -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
 GRGSM_PID=$!
 echo "GRGSM PID: $GRGSM_PID"
 
-# Navigate to GSM Evil directory 
-cd /home/ubuntu/gsmevil-user
+# Navigate to GSM Evil directory
+cd /home/kali/gsmevil-user
 
 # Create auto-IMSI version if needed
 if [ ! -f GsmEvil_auto.py ]; then

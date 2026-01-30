@@ -328,18 +328,34 @@ export class KismetProxy {
 	/**
 	 * Parse encryption number to array of encryption types
 	 */
-	private static parseEncryptionNumber(encryptionNum: number | undefined): string[] {
-		if (!encryptionNum || encryptionNum === 0) return ['Open'];
+	private static parseEncryptionNumber(encryptionValue: number | string | undefined): string[] {
+		if (!encryptionValue) return ['Open'];
 
-		// Map Kismet encryption bit flags to encryption types
+		// Kismet can return crypt as a string like "WPA2 WPA2-PSK AES-CCMP"
+		if (typeof encryptionValue === 'string') {
+			const parts = encryptionValue.split(/\s+/).filter((p) => p.length > 0);
+			if (parts.length === 0) return ['Open'];
+			// Extract the primary encryption types (WEP, WPA, WPA2, WPA3)
+			const primary = new Set<string>();
+			for (const p of parts) {
+				if (/wpa3|sae/i.test(p)) primary.add('WPA3');
+				else if (/wpa2/i.test(p)) primary.add('WPA2');
+				else if (/wpa/i.test(p)) primary.add('WPA');
+				else if (/wep/i.test(p)) primary.add('WEP');
+				else if (/owe/i.test(p)) primary.add('OWE');
+			}
+			return primary.size > 0 ? Array.from(primary) : parts;
+		}
+
+		if (encryptionValue === 0) return ['Open'];
+
+		// Fallback: treat as bit flags
 		const encryptionTypes: string[] = [];
-
-		// Common Kismet encryption flags (bit field)
-		if (encryptionNum & 1) encryptionTypes.push('WEP');
-		if (encryptionNum & 2) encryptionTypes.push('WPA');
-		if (encryptionNum & 4) encryptionTypes.push('WPA2');
-		if (encryptionNum & 8) encryptionTypes.push('WPA3');
-		if (encryptionNum & 16) encryptionTypes.push('WPS');
+		if (encryptionValue & 1) encryptionTypes.push('WEP');
+		if (encryptionValue & 2) encryptionTypes.push('WPA');
+		if (encryptionValue & 4) encryptionTypes.push('WPA2');
+		if (encryptionValue & 8) encryptionTypes.push('WPA3');
+		if (encryptionValue & 16) encryptionTypes.push('WPS');
 
 		return encryptionTypes.length > 0 ? encryptionTypes : ['Open'];
 	}

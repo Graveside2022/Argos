@@ -12,17 +12,24 @@ sudo pkill -f GsmEvil 2>/dev/null
 sudo fuser -k 80/tcp 2>/dev/null
 sleep 2
 
-# Start GRGSM monitor with USRP B205 Mini support
-echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
-# CRITICAL: Set UHD_IMAGES_DIR for USRP to work
-sudo UHD_IMAGES_DIR=/usr/share/uhd/images grgsm_livemon_headless --args="type=b200" -s 2e6 -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
+# Start GRGSM monitor - detect SDR hardware
+DEVICE_ARGS=""
+SAMPLE_RATE=""
+if uhd_find_devices 2>/dev/null | grep -q "B205"; then
+    echo "Starting GRGSM monitor on ${FREQ} MHz with USRP B205 Mini..."
+    DEVICE_ARGS='--args="type=b200"'
+    SAMPLE_RATE="-s 2e6"
+else
+    echo "Starting GRGSM monitor on ${FREQ} MHz with HackRF One..."
+fi
+sudo grgsm_livemon_headless ${DEVICE_ARGS} ${SAMPLE_RATE} -f ${FREQ}M -g ${GAIN} >/dev/null 2>&1 &
 GRGSM_PID=$!
 echo "GRGSM PID: $GRGSM_PID"
 sleep 3
 
 # Create a modified version of GsmEvil.py with IMSI sniffer auto-enabled and CORS support
 echo "Creating auto-IMSI version with CORS support..."
-cd /usr/src/gsmevil2
+cd /home/kali/gsmevil-user
 sudo cp GsmEvil.py GsmEvil_auto.py
 sudo sed -i 's/imsi_sniffer = "off"/imsi_sniffer = "on"/' GsmEvil_auto.py
 sudo sed -i 's/gsm_sniffer = "off"/gsm_sniffer = "on"/' GsmEvil_auto.py

@@ -6,10 +6,13 @@
 	import { SignalAggregator } from './SignalAggregator';
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
+	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
 	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
 	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
 	import KismetDashboardOverlay from '$lib/components/map/KismetDashboardOverlay.svelte';
+	import BettercapOverlay from '$lib/components/map/BettercapOverlay.svelte';
+	import BTLEOverlay from '$lib/components/map/BTLEOverlay.svelte';
 
 	// Define GPS API response interfaces
 	interface GPSPositionData {
@@ -127,9 +130,11 @@
 			options?: Record<string, unknown>
 		) => LeafletMarker;
 		openPopup: () => LeafletMarker;
+		closePopup: () => LeafletMarker;
 		setPopupContent: (content: string) => LeafletMarker;
 		on: (event: string, handler: (e: LeafletEvent) => void) => LeafletMarker;
 		setIcon: (icon: unknown) => LeafletMarker;
+		setOpacity: (opacity: number) => LeafletMarker;
 		isPopupOpen: () => boolean;
 		getPopup: () => LeafletPopup;
 	}
@@ -235,11 +240,75 @@
 	let whitelistedMACs = new Set<string>(); // Store whitelisted MAC addresses
 	let whitelistedDeviceCount = 0; // Reactive counter for whitelisted devices
 
+	// Signal legend filter state
+	let hiddenSignalBands = new Set<string>();
+
+	const signalBands = [
+		{ key: 'red', color: '#ff0000', label: '> -50 dBm (Very Strong)', min: -50 },
+		{ key: 'orange', color: '#ff8800', label: '-50 to -60 dBm (Strong)', min: -60 },
+		{ key: 'yellow', color: '#ffff00', label: '-60 to -70 dBm (Good)', min: -70 },
+		{ key: 'green', color: '#00ff00', label: '-70 to -80 dBm (Fair)', min: -80 },
+		{ key: 'blue', color: '#0088ff', label: '< -80 dBm (Weak)', min: -Infinity }
+	];
+
+	function getSignalBandKey(rssi: number): string {
+		if (rssi > -50) return 'red';
+		if (rssi > -60) return 'orange';
+		if (rssi > -70) return 'yellow';
+		if (rssi > -80) return 'green';
+		return 'blue';
+	}
+
+	function formatDeviceLastSeen(device: KismetDevice): string {
+		const ts = device.last_seen || device.last_time || 0;
+		const msTs = ts > 1e12 ? ts : ts * 1000;
+		const secs = Math.floor((Date.now() - msTs) / 1000);
+		if (secs < 5) return 'Just now';
+		if (secs < 60) return `${secs}s ago`;
+		if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+		return `${Math.floor(secs / 3600)}h ago`;
+	}
+
+	function toggleSignalBand(key: string): void {
+		if (hiddenSignalBands.has(key)) {
+			hiddenSignalBands.delete(key);
+		} else {
+			hiddenSignalBands.add(key);
+		}
+		hiddenSignalBands = new Set(hiddenSignalBands); // trigger reactivity
+		applySignalBandFilter();
+	}
+
+	function applySignalBandFilter(): void {
+		kismetMarkers.forEach((marker, markerId) => {
+			const device = kismetDevices.get(markerId);
+			if (!device) return;
+			const band = getSignalBandKey(device.signal?.last_signal || -100);
+			if (hiddenSignalBands.has(band)) {
+				marker.setOpacity(0);
+				if (marker.getPopup && marker.isPopupOpen()) {
+					marker.closePopup();
+				}
+			} else {
+				const lastSeenTs = device.last_seen || device.last_time || 0;
+				const lastSeenMs = lastSeenTs > 1e12 ? lastSeenTs : lastSeenTs * 1000;
+				const ageSecs = (Date.now() - lastSeenMs) / 1000;
+				marker.setOpacity(ageSecs < 60 ? 1.0 : Math.max(0.3, 1.0 - (ageSecs - 60) / 300));
+			}
+		});
+	}
+
 	// Kismet Dashboard state
 	let showKismetDashboard = false;
 
 	// AirSignal Overlay state
 	let showAirSignalOverlay = false;
+
+	// Bettercap Overlay state
+	let showBettercapOverlay = false;
+
+	// BTLE Overlay state
+	let showBtleOverlay = false;
 
 	// Function to persist dashboard state
 	function setDashboardState(isOpen: boolean) {
@@ -254,6 +323,22 @@
 		showAirSignalOverlay = isOpen;
 		if (browser) {
 			sessionStorage.setItem('airSignalOverlayOpen', String(isOpen));
+		}
+	}
+
+	// Function to persist Bettercap overlay state
+	function setBettercapOverlayState(isOpen: boolean) {
+		showBettercapOverlay = isOpen;
+		if (browser) {
+			sessionStorage.setItem('bettercapOverlayOpen', String(isOpen));
+		}
+	}
+
+	// Function to persist BTLE overlay state
+	function setBtleOverlayState(isOpen: boolean) {
+		showBtleOverlay = isOpen;
+		if (browser) {
+			sessionStorage.setItem('btleOverlayOpen', String(isOpen));
 		}
 	}
 
@@ -1392,6 +1477,12 @@
                     </td>
                   </tr>
                   <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">Est. Distance:</td>
+                    <td style="padding: 4px 0; color: ${getSignalColor(device.signal?.last_signal || -100)}">
+                      ${formatDistanceEstimate(estimateDistanceFromRSSI(device.signal?.last_signal || -100, device.frequency))}
+                    </td>
+                  </tr>
+                  <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Channel:</td>
                     <td style="padding: 4px 0;">${device.channel || 'Unknown'}</td>
                   </tr>
@@ -1402,6 +1493,10 @@
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Manufacturer:</td>
                     <td style="padding: 4px 0;">${device.manufacturer || 'Unknown'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">Last Seen:</td>
+                    <td style="padding: 4px 0; color: #aaa;">${formatDeviceLastSeen(device)}</td>
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
@@ -1478,6 +1573,12 @@
                     </td>
                   </tr>
                   <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">Est. Distance:</td>
+                    <td style="padding: 4px 0; color: ${getSignalColor(device.signal?.last_signal || -100)}">
+                      ${formatDistanceEstimate(estimateDistanceFromRSSI(device.signal?.last_signal || -100, device.frequency))}
+                    </td>
+                  </tr>
+                  <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Channel:</td>
                     <td style="padding: 4px 0;">${device.channel || 'Unknown'}</td>
                   </tr>
@@ -1488,6 +1589,10 @@
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">Manufacturer:</td>
                     <td style="padding: 4px 0;">${device.manufacturer || 'Unknown'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 8px 4px 0; font-weight: bold;">Last Seen:</td>
+                    <td style="padding: 4px 0; color: #aaa;">${formatDeviceLastSeen(device)}</td>
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
@@ -1506,6 +1611,20 @@
 
 					// Store device data
 					kismetDevices.set(markerId, device);
+
+					// Apply signal band filter + age-based opacity
+					const band = getSignalBandKey(device.signal?.last_signal || -100);
+					const lastSeenTs = device.last_seen || device.last_time || 0;
+					const lastSeenMs = lastSeenTs > 1e12 ? lastSeenTs : lastSeenTs * 1000;
+					const ageSecs = (Date.now() - lastSeenMs) / 1000;
+					const ageOpacity =
+						ageSecs < 60 ? 1.0 : Math.max(0.3, 1.0 - (ageSecs - 60) / 300);
+
+					if (hiddenSignalBands.has(band)) {
+						marker.setOpacity(0);
+					} else {
+						marker.setOpacity(ageOpacity);
+					}
 				});
 
 				// Debug: Log processing summary
@@ -1896,6 +2015,18 @@
 			showAirSignalOverlay = true;
 		}
 
+		// Restore Bettercap overlay state from sessionStorage
+		const savedBettercapState = sessionStorage.getItem('bettercapOverlayOpen');
+		if (savedBettercapState === 'true') {
+			showBettercapOverlay = true;
+		}
+
+		// Restore BTLE overlay state from sessionStorage
+		const savedBtleState = sessionStorage.getItem('btleOverlayOpen');
+		if (savedBtleState === 'true') {
+			showBtleOverlay = true;
+		}
+
 		// Start GPS updates (map will initialize after GPS fix)
 		void updateGPSPosition();
 		positionInterval = setInterval(() => void updateGPSPosition(), 5000); // Update every 5 seconds
@@ -2031,29 +2162,20 @@
 			</div>
 		{/if}
 
-		<!-- Signal Strength Legend - moved inside map container -->
+		<!-- Signal Strength Legend - interactive filter -->
 		<div class="signal-legend">
-			<span class="legend-title">Signal Strength Legend:</span>
-			<span class="legend-item">
-				<span class="legend-color" style="background: #ff0000"></span>
-				&gt; -50 dBm (Very Strong)
-			</span>
-			<span class="legend-item">
-				<span class="legend-color" style="background: #ff8800"></span>
-				-50 to -60 dBm (Strong)
-			</span>
-			<span class="legend-item">
-				<span class="legend-color" style="background: #ffff00"></span>
-				-60 to -70 dBm (Good)
-			</span>
-			<span class="legend-item">
-				<span class="legend-color" style="background: #00ff00"></span>
-				-70 to -80 dBm (Fair)
-			</span>
-			<span class="legend-item">
-				<span class="legend-color" style="background: #0088ff"></span>
-				&lt; -80 dBm (Weak)
-			</span>
+			<span class="legend-title">Signal Filter (click to toggle):</span>
+			{#each signalBands as band}
+				<button
+					class="legend-item-btn {hiddenSignalBands.has(band.key)
+						? 'legend-disabled'
+						: ''}"
+					on:click={() => toggleSignalBand(band.key)}
+				>
+					<span class="legend-color" style="background: {band.color}"></span>
+					<span class="legend-label">{band.label}</span>
+				</button>
+			{/each}
 		</div>
 	</div>
 
@@ -2395,6 +2517,36 @@
 			</svg>
 			View Spectrum
 		</button>
+
+		<div class="footer-divider"></div>
+
+		<button
+			class="saasfly-btn"
+			style="color: #10b981;"
+			on:click={() => setBettercapOverlayState(!showBettercapOverlay)}
+		>
+			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+				<path
+					d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+				/>
+			</svg>
+			Bettercap
+		</button>
+
+		<button
+			class="saasfly-btn"
+			style="color: #3b82f6;"
+			on:click={() => setBtleOverlayState(!showBtleOverlay)}
+		>
+			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+				<path
+					fill-rule="evenodd"
+					d="M10 2L14 6l-4 4 4 4-4 4V2zm0 2.828L12.172 7 10 9.172V4.828zM10 10.828L12.172 13 10 15.172v-4.344z"
+					clip-rule="evenodd"
+				/>
+			</svg>
+			BTLE
+		</button>
 	</div>
 
 	<!-- Kismet Dashboard Overlay -->
@@ -2405,6 +2557,15 @@
 		isOpen={showAirSignalOverlay}
 		onClose={() => setAirSignalOverlayState(false)}
 	/>
+
+	<!-- Bettercap Overlay -->
+	<BettercapOverlay
+		isOpen={showBettercapOverlay}
+		onClose={() => setBettercapOverlayState(false)}
+	/>
+
+	<!-- BTLE Overlay -->
+	<BTLEOverlay isOpen={showBtleOverlay} onClose={() => setBtleOverlayState(false)} />
 </div>
 
 <style>
@@ -2819,11 +2980,42 @@
 		gap: 0.5rem;
 	}
 
+	.legend-item-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: none;
+		border: none;
+		color: #ddd;
+		font-size: 12px;
+		padding: 2px 4px;
+		cursor: pointer;
+		border-radius: 3px;
+		transition:
+			opacity 0.2s,
+			background 0.2s;
+		width: 100%;
+		text-align: left;
+	}
+
+	.legend-item-btn:hover {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.legend-item-btn.legend-disabled {
+		opacity: 0.3;
+	}
+
+	.legend-item-btn.legend-disabled .legend-label {
+		text-decoration: line-through;
+	}
+
 	.legend-color {
 		width: 12px;
 		height: 12px;
 		border-radius: 2px;
 		display: inline-block;
+		flex-shrink: 0;
 	}
 
 	/* Signal Info Bar */
@@ -3349,9 +3541,10 @@
 			margin-bottom: 4px;
 		}
 
-		.legend-item {
+		.legend-item,
+		.legend-item-btn {
 			font-size: 10px;
-			display: inline-block;
+			display: inline-flex;
 			margin-right: 8px;
 			margin-bottom: 4px;
 		}
@@ -3589,9 +3782,10 @@
 			margin-bottom: 2px;
 		}
 
-		.legend-item {
+		.legend-item,
+		.legend-item-btn {
 			font-size: 8px;
-			display: block;
+			display: flex;
 			margin-bottom: 1px;
 		}
 

@@ -12,7 +12,7 @@
 	}
 
 	function navigateToGeospatialMapping() {
-		void goto('/fusion');
+		void goto('/tactical-map-simple');
 	}
 
 	function navigateToNetworkDiscovery() {
@@ -36,7 +36,7 @@
 
 	// System information
 	let systemIp = '100.79.154.94';
-	let gridReference = 'JN39JX73QT';  // 10-digit grid for Mainz-Kastel area
+	let gridReference = 'JN39JX73QT'; // 10-digit grid for Mainz-Kastel area
 	let location = 'Mainz-Kastel, Germany';
 	let cpuPercentage = '0%';
 	let memoryPercentage = '0%';
@@ -72,7 +72,6 @@
 		if (event.key === 'Escape') {
 			commandBarActive = false;
 		}
-
 	}
 
 	function toggleCommandBar() {
@@ -87,17 +86,17 @@
 
 	function executeCommand() {
 		const command = commandInput.toLowerCase().trim();
-		
+
 		const commands: Record<string, () => void> = {
-			'status': () => console.warn('All systems operational'),
-			'refresh': () => window.location.reload(),
+			status: () => console.warn('All systems operational'),
+			refresh: () => window.location.reload(),
 			'select cellular': () => handleOperationClick('cellular'),
 			'select data': () => handleOperationClick('data'),
 			'select geo': () => handleOperationClick('geo'),
 			'select network': () => handleOperationClick('network'),
 			'select signal': () => handleOperationClick('signal'),
 			'select spectrum': () => handleOperationClick('spectrum'),
-			'help': () => showHelp()
+			help: () => showHelp()
 		};
 
 		if (commands[command]) {
@@ -120,7 +119,6 @@ Available Commands:
 		`);
 	}
 
-
 	async function fetchSystemStats() {
 		try {
 			// In a real implementation, this would call an API endpoint
@@ -132,20 +130,20 @@ Available Commands:
 				memoryPercentage = data.memory + '%';
 			} else {
 				// Fallback to simulated values
-				cpuPercentage = (Math.floor(Math.random() * 30) + 15) + '%';
-				memoryPercentage = (Math.floor(Math.random() * 40) + 30) + '%';
+				cpuPercentage = Math.floor(Math.random() * 30) + 15 + '%';
+				memoryPercentage = Math.floor(Math.random() * 40) + 30 + '%';
 			}
 		} catch {
 			// Use simulated values if API fails
-			cpuPercentage = (Math.floor(Math.random() * 30) + 15) + '%';
-			memoryPercentage = (Math.floor(Math.random() * 40) + 30) + '%';
+			cpuPercentage = Math.floor(Math.random() * 30) + 15 + '%';
+			memoryPercentage = Math.floor(Math.random() * 40) + 30 + '%';
 		}
 	}
 
 	onMount(() => {
 		// Initial system stats fetch
 		fetchSystemStats();
-		
+
 		// Fetch system stats periodically
 		const metricsInterval = setInterval(() => {
 			fetchSystemStats();
@@ -167,7 +165,10 @@ Available Commands:
 
 <svelte:head>
 	<title>ARGOS - Enhanced Intelligence Platform</title>
-	<link href="https://fonts.floriankarsten.com/space-grotesk?styles=regular,medium,bold" rel="stylesheet">
+	<link
+		href="https://fonts.floriankarsten.com/space-grotesk?styles=regular,medium,bold"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -210,13 +211,12 @@ Available Commands:
 		</nav>
 	</header>
 
-
 	<main class="main">
 		<div class="container">
 			<div class="section-header">
 				<h2 class="section-title">
-					<span class="select-text">Select</span> 
-					<span class="mission-text">Mission</span> 
+					<span class="select-text">Select</span>
+					<span class="mission-text">Mission</span>
 					<span class="card-text">Card</span>
 				</h2>
 				<p class="section-subtitle">Intelligence gathering and analysis systems</p>
@@ -224,8 +224,8 @@ Available Commands:
 
 			<div class="operations" role="grid" aria-label="Operational modules">
 				<!-- Cellular Analysis -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('cellular')}
 					aria-selected={selectedOperation === 'cellular'}
 					data-operation="cellular"
@@ -234,15 +234,18 @@ Available Commands:
 						<div class="operation-number">001</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Cellular</span> Analysis</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Cellular</span> Analysis
+					</h3>
 					<p class="operation-description">
-						Mobile network analysis and device interaction for electronic surveillance operations
+						Mobile network analysis and device interaction for electronic surveillance
+						operations
 					</p>
 				</button>
 
 				<!-- Data Broadcasting -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('data')}
 					aria-selected={selectedOperation === 'data'}
 					data-operation="data"
@@ -251,15 +254,17 @@ Available Commands:
 						<div class="operation-number">002</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Data</span> Broadcasting</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Data</span> Broadcasting
+					</h3>
 					<p class="operation-description">
 						Tactical data distribution and Common Operating Picture integration platform
 					</p>
 				</button>
 
 				<!-- Geospatial Mapping -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('geo')}
 					aria-selected={selectedOperation === 'geo'}
 					data-operation="geo"
@@ -268,15 +273,18 @@ Available Commands:
 						<div class="operation-number">003</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Geospatial</span> Mapping</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Geospatial</span> Mapping
+					</h3>
 					<p class="operation-description">
-						Signal source visualization with integrated mapping and tactical overlay systems
+						Signal source visualization with integrated mapping and tactical overlay
+						systems
 					</p>
 				</button>
 
 				<!-- Network Discovery -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('network')}
 					aria-selected={selectedOperation === 'network'}
 					data-operation="network"
@@ -285,15 +293,18 @@ Available Commands:
 						<div class="operation-number">004</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Network</span> Discovery</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Network</span> Discovery
+					</h3>
 					<p class="operation-description">
-						Wireless network enumeration and device tracking with real-time monitoring capabilities
+						Wireless network enumeration and device tracking with real-time monitoring
+						capabilities
 					</p>
 				</button>
 
 				<!-- Signal Visualization -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('signal')}
 					aria-selected={selectedOperation === 'signal'}
 					data-operation="signal"
@@ -302,15 +313,18 @@ Available Commands:
 						<div class="operation-number">005</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Signal</span> Visualization</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Signal</span> Visualization
+					</h3>
 					<p class="operation-description">
-						Real-time spectrum waterfall analysis with advanced signal processing capabilities
+						Real-time spectrum waterfall analysis with advanced signal processing
+						capabilities
 					</p>
 				</button>
 
 				<!-- Spectrum Analysis -->
-				<button 
-					class="operation" 
+				<button
+					class="operation"
 					on:click={() => handleOperationClick('spectrum')}
 					aria-selected={selectedOperation === 'spectrum'}
 					data-operation="spectrum"
@@ -319,9 +333,12 @@ Available Commands:
 						<div class="operation-number">006</div>
 						<div class="operation-status active" aria-label="Status: Active"></div>
 					</div>
-					<h3 class="operation-title"><span class="first-word">Spectrum</span> Analysis</h3>
+					<h3 class="operation-title">
+						<span class="first-word">Spectrum</span> Analysis
+					</h3>
 					<p class="operation-description">
-						Software-defined radio analysis with configurable frequency sweeping and detection
+						Software-defined radio analysis with configurable frequency sweeping and
+						detection
 					</p>
 				</button>
 			</div>
@@ -329,17 +346,22 @@ Available Commands:
 	</main>
 
 	<!-- Command Bar Interface -->
-	<div class="command-bar" class:active={commandBarActive} role="dialog" aria-label="Command interface">
+	<div
+		class="command-bar"
+		class:active={commandBarActive}
+		role="dialog"
+		aria-label="Command interface"
+	>
 		<span class="command-prompt">></span>
-		<input 
-			type="text" 
-			class="command-input" 
-			placeholder="Enter command..." 
-			aria-label="Command input" 
+		<input
+			type="text"
+			class="command-input"
+			placeholder="Enter command..."
+			aria-label="Command input"
 			id="commandInput"
 			bind:value={commandInput}
 			on:keydown={(e) => e.key === 'Enter' && executeCommand()}
-		>
+		/>
 		<div class="command-shortcuts">
 			<span class="command-shortcut">ESC</span>
 			<span class="command-shortcut">ENTER</span>
@@ -401,7 +423,7 @@ Available Commands:
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background-image: 
+		background-image:
 			linear-gradient(rgba(255, 43, 90, 0.02) 1px, transparent 1px),
 			linear-gradient(90deg, rgba(255, 43, 90, 0.02) 1px, transparent 1px);
 		background-size: 60px 60px;
@@ -519,7 +541,6 @@ Available Commands:
 		position: relative;
 	}
 
-
 	.status-label {
 		font-size: 0.65rem;
 		color: var(--red);
@@ -565,8 +586,6 @@ Available Commands:
 		border-radius: 50%;
 	}
 
-
-
 	/* Main */
 	.main {
 		padding: 60px 0;
@@ -578,7 +597,7 @@ Available Commands:
 		position: relative;
 		text-align: center;
 	}
-	
+
 	.section-header::before {
 		content: '';
 		position: absolute;
@@ -591,7 +610,6 @@ Available Commands:
 		opacity: 0.5;
 	}
 
-
 	.section-title {
 		font-size: 0.875rem;
 		font-weight: 600;
@@ -599,15 +617,15 @@ Available Commands:
 		letter-spacing: 0.25em;
 		text-transform: uppercase;
 	}
-	
+
 	.select-text {
 		color: var(--gray-400);
 	}
-	
+
 	.mission-text {
 		color: var(--white);
 	}
-	
+
 	.card-text {
 		color: var(--red);
 	}
@@ -667,7 +685,7 @@ Available Commands:
 		outline-offset: 2px;
 	}
 
-	.operation[aria-selected="true"] {
+	.operation[aria-selected='true'] {
 		background: var(--gray-900);
 		border-color: var(--red);
 	}
@@ -680,7 +698,7 @@ Available Commands:
 		--hover-intensity: 1;
 		background: var(--gray-900);
 		transform: translateY(-2px) scale(1.01);
-		box-shadow: 
+		box-shadow:
 			0 8px 25px rgba(255, 43, 90, 0.15),
 			0 0 0 1px rgba(255, 43, 90, 0.1),
 			inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -732,7 +750,6 @@ Available Commands:
 		opacity: 0.4;
 	}
 
-
 	.operation-status.standby {
 		background: var(--gray-600);
 		color: var(--gray-600);
@@ -754,12 +771,24 @@ Available Commands:
 		transition: color 0.3s ease;
 	}
 
-	.operation:nth-child(1) .first-word { color: var(--red); }
-	.operation:nth-child(2) .first-word { color: var(--cyan); }
-	.operation:nth-child(3) .first-word { color: var(--green); }
-	.operation:nth-child(4) .first-word { color: var(--blue); }
-	.operation:nth-child(5) .first-word { color: var(--purple); }
-	.operation:nth-child(6) .first-word { color: var(--amber); }
+	.operation:nth-child(1) .first-word {
+		color: var(--red);
+	}
+	.operation:nth-child(2) .first-word {
+		color: var(--cyan);
+	}
+	.operation:nth-child(3) .first-word {
+		color: var(--green);
+	}
+	.operation:nth-child(4) .first-word {
+		color: var(--blue);
+	}
+	.operation:nth-child(5) .first-word {
+		color: var(--purple);
+	}
+	.operation:nth-child(6) .first-word {
+		color: var(--amber);
+	}
 
 	.operation-description {
 		color: var(--gray-400);
@@ -830,22 +859,51 @@ Available Commands:
 
 	/* Progress bars and mini charts removed - were only used in operation-metrics */
 
-
 	/* Status System - Color Coding */
-	.operation:nth-child(1) .operation-status { background: var(--red); color: var(--red); }
-	.operation:nth-child(2) .operation-status { background: var(--cyan); color: var(--cyan); }
-	.operation:nth-child(3) .operation-status { background: var(--green); color: var(--green); }
-	.operation:nth-child(4) .operation-status { background: var(--blue); color: var(--blue); }
-	.operation:nth-child(5) .operation-status { background: var(--purple); color: var(--purple); }
-	.operation:nth-child(6) .operation-status { background: var(--amber); color: var(--amber); }
-	
+	.operation:nth-child(1) .operation-status {
+		background: var(--red);
+		color: var(--red);
+	}
+	.operation:nth-child(2) .operation-status {
+		background: var(--cyan);
+		color: var(--cyan);
+	}
+	.operation:nth-child(3) .operation-status {
+		background: var(--green);
+		color: var(--green);
+	}
+	.operation:nth-child(4) .operation-status {
+		background: var(--blue);
+		color: var(--blue);
+	}
+	.operation:nth-child(5) .operation-status {
+		background: var(--purple);
+		color: var(--purple);
+	}
+	.operation:nth-child(6) .operation-status {
+		background: var(--amber);
+		color: var(--amber);
+	}
+
 	/* Operation Number Color Coding */
-	.operation:nth-child(1) .operation-number { color: var(--red); }
-	.operation:nth-child(2) .operation-number { color: var(--cyan); }
-	.operation:nth-child(3) .operation-number { color: var(--green); }
-	.operation:nth-child(4) .operation-number { color: var(--blue); }
-	.operation:nth-child(5) .operation-number { color: var(--purple); }
-	.operation:nth-child(6) .operation-number { color: var(--amber); }
+	.operation:nth-child(1) .operation-number {
+		color: var(--red);
+	}
+	.operation:nth-child(2) .operation-number {
+		color: var(--cyan);
+	}
+	.operation:nth-child(3) .operation-number {
+		color: var(--green);
+	}
+	.operation:nth-child(4) .operation-number {
+		color: var(--blue);
+	}
+	.operation:nth-child(5) .operation-number {
+		color: var(--purple);
+	}
+	.operation:nth-child(6) .operation-number {
+		color: var(--amber);
+	}
 
 	/* Command Bar Interface */
 	.command-bar {
@@ -928,7 +986,7 @@ Available Commands:
 		.operation {
 			padding: 32px 24px;
 		}
-		
+
 		.operation-meta {
 			flex-direction: column;
 			gap: 8px;
@@ -949,50 +1007,49 @@ Available Commands:
 		.container {
 			padding: 0 16px;
 		}
-		
+
 		.header {
 			padding: 1rem 0;
 		}
-		
+
 		.nav {
 			flex-direction: column;
 			align-items: stretch;
 			gap: 1.5rem;
 		}
-		
+
 		.logo-text {
 			font-size: 2.5rem;
 		}
-		
+
 		.system-status {
 			flex-wrap: wrap;
 			gap: 12px;
 			padding: 10px 16px;
 			justify-content: center;
 		}
-		
+
 		.status-divider {
 			display: none;
 		}
-		
+
 		.operations {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.operation {
 			padding: 32px 24px;
 		}
-		
+
 		.command-bar {
 			min-width: 320px;
 			left: 16px;
 			right: 16px;
 			transform: none;
 		}
-		
+
 		.command-bar.active {
 			transform: translateY(0);
 		}
-		
 	}
 </style>

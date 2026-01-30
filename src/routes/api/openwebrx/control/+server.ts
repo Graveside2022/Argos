@@ -2,88 +2,192 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { HardwareDevice } from '$lib/server/hardware/types';
 
 const execAsync = promisify(exec);
+const CONTAINER_NAME = 'openwebrx-hackrf';
+
+async function isContainerRunning(): Promise<boolean> {
+	try {
+		const { stdout } = await execAsync(
+			`docker ps --filter "name=${CONTAINER_NAME}" --format "{{.Names}}" 2>/dev/null`
+		);
+		return stdout.trim().length > 0;
+	} catch {
+		return false;
+	}
+}
+
+async function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
+	const start = Date.now();
+	while (Date.now() - start < timeoutMs) {
+		try {
+			const { stdout } = await execAsync(
+				`curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/ 2>/dev/null`
+			);
+			if (stdout.trim() === '200' || stdout.trim() === '301' || stdout.trim() === '302') {
+				return true;
+			}
+		} catch {
+			// Not ready yet
+		}
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+	}
+	return false;
+}
 
 export const POST: RequestHandler = async ({ request }) => {
-  try {
-    const { action } = await request.json() as { action: string };
-    
-    if (action === 'stop') {
-      try {
-        console.log('Stopping OpenWebRX Docker container and releasing USRP...');
-        
-        // Stop the Docker container (this prevents auto-restart)
-        await execAsync('docker stop openwebrx-usrp-final').catch(() => {});
-        
-        // Also kill any remaining processes
-        await execAsync('sudo pkill -f openwebrx').catch(() => {});
-        await execAsync('sudo pkill -f soapy_connector').catch(() => {});
-        
-        // Wait for cleanup
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Verify Docker container is stopped
-        const containerCheck = await execAsync('docker ps --filter "name=openwebrx-usrp-final" --format "{{.Names}}"').catch(() => ({ stdout: '' }));
-        const processCheck = await execAsync('pgrep -f openwebrx').catch(() => ({ stdout: '' }));
-        
-        if (containerCheck.stdout.trim() || processCheck.stdout.trim()) {
-          console.log('Force stopping...');
-          await execAsync('docker kill openwebrx-usrp-final').catch(() => {});
-          await execAsync('sudo pkill -9 -f openwebrx').catch(() => {});
-          await execAsync('sudo pkill -9 -f soapy_connector').catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        return json({ 
-          success: true, 
-          message: 'OpenWebRX stopped successfully. USRP is now available for GSM Evil.'
-        });
-      } catch (error: unknown) {
-        console.error('Stop error:', error);
-        return json({ 
-          success: false, 
-          message: 'Failed to stop OpenWebRX', 
-          error: (error as Error).message 
-        }, { status: 500 });
-      }
-    }
-    
-    else if (action === 'status') {
-      try {
-        // Check if OpenWebRX Docker container is running
-        const containerCheck = await execAsync('docker ps --filter "name=openwebrx-usrp-final" --format "{{.Names}}"').catch(() => ({ stdout: '' }));
-        const processCheck = await execAsync('pgrep -f openwebrx').catch(() => ({ stdout: '' }));
-        
-        const isRunning = !!(containerCheck.stdout.trim() || processCheck.stdout.trim());
-        
-        return json({
-          success: true,
-          running: isRunning,
-          message: isRunning ? 'OpenWebRX is running' : 'OpenWebRX is stopped'
-        });
-      } catch (error: unknown) {
-        console.error('Status error:', error);
-        return json({ 
-          success: false, 
-          message: 'Failed to check OpenWebRX status', 
-          error: (error as Error).message 
-        }, { status: 500 });
-      }
-    }
-    
-    else {
-      return json({ 
-        success: false, 
-        message: 'Invalid action. Use "stop" or "status".' 
-      }, { status: 400 });
-    }
-  } catch (error: unknown) {
-    console.error('OpenWebRX control API error:', error);
-    return json({ 
-      success: false, 
-      message: 'API error', 
-      error: (error as Error).message 
-    }, { status: 500 });
-  }
+	try {
+		const { action } = (await request.json()) as { action: string };
+
+		if (action === 'start') {
+			try {
+				// Acquire HackRF via Resource Manager
+				const acquireResult = await resourceManager.acquire(
+					'openwebrx',
+					HardwareDevice.HACKRF
+				);
+				if (!acquireResult.success) {
+					return json(
+						{
+							success: false,
+							message: `HackRF is in use by ${acquireResult.owner}. Stop it first.`,
+							owner: acquireResult.owner
+						},
+						{ status: 409 }
+					);
+				}
+
+				// Stop hackrf-backend container to free USB device
+				await execAsync('docker stop hackrf-backend-dev 2>/dev/null').catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+
+				// Start OpenWebRX container
+				// First try to start existing container, then create new one
+				try {
+					await execAsync(`docker start ${CONTAINER_NAME} 2>&1`);
+				} catch {
+					// Container doesn't exist - remove stale if any, then create fresh
+					await execAsync(`docker rm -f ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
+					await execAsync(
+						`docker run -d --name ${CONTAINER_NAME} ` +
+							`--privileged ` +
+							`-p 8073:8073 ` +
+							`-v /dev/bus/usb:/dev/bus/usb ` +
+							`-e OPENWEBRX_ADMIN_USER=admin ` +
+							`-e OPENWEBRX_ADMIN_PASSWORD=admin ` +
+							`--restart no ` +
+							`slechev/openwebrxplus:latest 2>&1`
+					);
+				}
+
+				// Wait for port 8073 to be ready
+				const ready = await waitForPort(8073, 45000);
+
+				if (!ready) {
+					// Check if container actually started
+					const containerRunning = await isContainerRunning();
+					// Release on failure
+					await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+					// Restart hackrf-backend
+					await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+
+					const hint = containerRunning
+						? 'Container is running but port 8073 not responding. Check docker logs openwebrx-hackrf'
+						: 'Container failed to start. The Docker image may need to be pulled first: docker pull slechev/openwebrxplus:latest';
+					return json(
+						{
+							success: false,
+							message: `OpenWebRX failed to start within timeout. ${hint}`
+						},
+						{ status: 500 }
+					);
+				}
+
+				return json({
+					success: true,
+					running: true,
+					message: 'OpenWebRX started successfully'
+				});
+			} catch (error: unknown) {
+				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+				// Restart hackrf-backend on failure
+				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+				const errMsg = (error as { stderr?: string })?.stderr || (error as Error).message;
+				return json(
+					{ success: false, message: `Failed to start OpenWebRX: ${errMsg}` },
+					{ status: 500 }
+				);
+			}
+		} else if (action === 'stop') {
+			try {
+				// Stop the container
+				await execAsync(`docker stop ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
+				await execAsync('pkill -f soapy_connector 2>/dev/null').catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+
+				// Verify stopped
+				const stillRunning = await isContainerRunning();
+				if (stillRunning) {
+					await execAsync(`docker kill ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
+					await new Promise((resolve) => setTimeout(resolve, 2000));
+				}
+
+				// Restart hackrf-backend
+				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+
+				// Release HackRF
+				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+
+				return json({
+					success: true,
+					running: false,
+					message: 'OpenWebRX stopped. HackRF released.'
+				});
+			} catch (error: unknown) {
+				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+				return json(
+					{
+						success: false,
+						message: 'Failed to stop OpenWebRX',
+						error: (error as Error).message
+					},
+					{ status: 500 }
+				);
+			}
+		} else if (action === 'status') {
+			try {
+				const running = await isContainerRunning();
+				const hwStatus = resourceManager.getStatus();
+
+				return json({
+					success: true,
+					running,
+					hackrfOwner: hwStatus.hackrf.owner,
+					hackrfAvailable: hwStatus.hackrf.available,
+					message: running ? 'OpenWebRX is running' : 'OpenWebRX is stopped'
+				});
+			} catch (error: unknown) {
+				return json(
+					{
+						success: false,
+						message: 'Failed to check status',
+						error: (error as Error).message
+					},
+					{ status: 500 }
+				);
+			}
+		} else {
+			return json(
+				{ success: false, message: 'Invalid action. Use "start", "stop", or "status".' },
+				{ status: 400 }
+			);
+		}
+	} catch (error: unknown) {
+		return json(
+			{ success: false, message: 'API error', error: (error as Error).message },
+			{ status: 500 }
+		);
+	}
 };

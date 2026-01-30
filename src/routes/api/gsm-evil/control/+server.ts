@@ -1,9 +1,8 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { HardwareDevice } from '$lib/server/hardware/types';
+import { hostExec } from '$lib/server/hostExec';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -14,90 +13,119 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (action === 'start') {
 			try {
-				// Check if USRP is already in use by OpenWebRX or other services
-				try {
-					const { stdout: usrpStatus } = await execAsync('./scripts/check-usrp-busy.sh');
-					if (usrpStatus.trim() !== 'FREE') {
-						const busyService = usrpStatus.split(':')[1] || 'Unknown Service';
-						return json(
-							{
-								success: false,
-								message: `USRP is currently in use by ${busyService}. Please stop it first before starting GSM Evil.`,
-								conflictingService: busyService
-							},
-							{ status: 409 }
-						);
-					}
-				} catch (busyError) {
-					// If script returns non-zero (BUSY), handle the conflict
-					const errorOutput = (busyError as { stdout?: string }).stdout || '';
-					if (errorOutput.includes('BUSY:')) {
-						const busyService = errorOutput.split(':')[1] || 'Unknown Service';
-						return json(
-							{
-								success: false,
-								message: `USRP is currently in use by ${busyService}. Please stop it first before starting GSM Evil.`,
-								conflictingService: busyService
-							},
-							{ status: 409 }
-						);
-					}
-				}
-
-				// Check if USRP B205 Mini is connected via USB (more reliable than uhd_find_devices)
-				try {
-					const { stdout } = await execAsync(
-						'lsusb | grep -i "ettus\\|2500:0022" | grep -q "B205" && echo "usrp_found"'
+				// Acquire HackRF via Resource Manager
+				let acquireResult = await resourceManager.acquire(
+					'gsm-evil',
+					HardwareDevice.HACKRF
+				);
+				if (!acquireResult.success) {
+					// Check if the owning process is actually running — if not, force-release stale lock
+					const owner = acquireResult.owner || 'unknown';
+					console.warn(
+						`[gsm-evil] HackRF held by "${owner}" — checking if still active...`
 					);
-					if (!stdout.includes('usrp_found')) {
-						// Fallback: try uhd_find_devices
-						const { stdout: uhdOut } = await execAsync(
-							'sudo uhd_find_devices 2>&1 | grep -q "B20[05]" && echo "usrp_found"'
-						).catch(() => ({ stdout: '' }));
-						if (!uhdOut.includes('usrp_found')) {
-							throw new Error('USRP not found');
+					try {
+						const { stdout: gsmProc } = await hostExec(
+							'pgrep -f "grgsm_livemon|GsmEvil" 2>/dev/null || true'
+						);
+						if (!gsmProc.trim()) {
+							console.warn(
+								`[gsm-evil] No active GSM process found — releasing stale "${owner}" lock`
+							);
+							await resourceManager.forceRelease(HardwareDevice.HACKRF);
+							acquireResult = await resourceManager.acquire(
+								'gsm-evil',
+								HardwareDevice.HACKRF
+							);
+						} else {
+							// Active processes — kill them first
+							console.warn(
+								'[gsm-evil] Found running GSM processes — killing them to free HackRF...'
+							);
+							await hostExec(
+								'sudo pkill -f grgsm_livemon_headless 2>/dev/null || true'
+							);
+							await hostExec('sudo pkill -f "GsmEvil" 2>/dev/null || true');
+							await new Promise((resolve) => setTimeout(resolve, 1000));
+							await resourceManager.forceRelease(HardwareDevice.HACKRF);
+							acquireResult = await resourceManager.acquire(
+								'gsm-evil',
+								HardwareDevice.HACKRF
+							);
 						}
+					} catch {
+						console.warn('[gsm-evil] Process check failed — forcing resource release');
+						await resourceManager.forceRelease(HardwareDevice.HACKRF);
+						acquireResult = await resourceManager.acquire(
+							'gsm-evil',
+							HardwareDevice.HACKRF
+						);
 					}
-				} catch {
-					// Don't block if detection fails - USRP might still work
-					console.warn('USRP detection check failed, but continuing anyway...');
-				}
 
-				// Use the auto-IMSI script with frequency parameter (default to 947.4 where GSM was detected)
-				const freq = frequency || '947.4';
-				console.warn(`Starting GSM Evil on ${freq} MHz with IMSI sniffer auto-enabled...`);
-
-				// Apply Socket.IO and CORS patches before starting
-				console.warn('Applying Socket.IO and CORS patches...');
-				await execAsync('./scripts/patch-gsmevil-socketio.sh').catch(() => {
-					console.warn('Failed to apply patches, continuing anyway...');
-				});
-
-				const { stdout, stderr } = await execAsync(
-					`./scripts/gsm-evil-start-no-sudo.sh ${freq} 45`,
-					{
-						timeout: 15000 // 15 second timeout
-					}
-				);
-
-				console.warn('Start output:', stdout);
-				if (stderr) console.error('Start stderr:', stderr);
-
-				// Verify it started - check for GsmEvil.py or GsmEvil_auto.py (capital G)
-				const checkResult = await execAsync('pgrep -f "GsmEvil(_auto)?\\.py"').catch(
-					() => ({ stdout: '' })
-				);
-				if (!checkResult.stdout.trim()) {
-					// Also check if port 8080 is listening (changed from 80)
-					const portCheck = await execAsync('lsof -i :8080 | grep LISTEN').catch(() => ({
-						stdout: ''
-					}));
-					if (!portCheck.stdout.trim()) {
-						throw new Error(
-							'GSM Evil failed to start - no process or port 8080 listener found'
+					if (!acquireResult.success) {
+						return json(
+							{
+								success: false,
+								message: `HackRF is currently in use by ${acquireResult.owner}. Please stop it first before starting GSM Evil.`,
+								conflictingService: acquireResult.owner
+							},
+							{ status: 409 }
 						);
 					}
 				}
+
+				const freq = frequency || '947.2';
+				const gain = '40';
+				const gsmDir = '/home/kali/gsmevil-user';
+				console.warn(`[gsm-evil] Starting on ${freq} MHz...`);
+
+				// 1. Kill existing processes (ignore errors - may not be running)
+				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
+					() => {}
+				);
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+
+				// 2. Start grgsm_livemon_headless (same pattern as working scan endpoint)
+				const { stdout: grgsmPid } = await hostExec(
+					`sudo grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729 >/dev/null 2>&1 & echo $!`,
+					{ timeout: 5000 }
+				);
+				console.warn(`[gsm-evil] grgsm started, PID: ${grgsmPid.trim()}`);
+
+				// 3. Ensure GsmEvil_auto.py exists with sniffers enabled
+				await hostExec(
+					`test -f ${gsmDir}/GsmEvil_auto.py || (cp ${gsmDir}/GsmEvil.py ${gsmDir}/GsmEvil_auto.py && sed -i 's/imsi_sniffer = "off"/imsi_sniffer = "on"/' ${gsmDir}/GsmEvil_auto.py && sed -i 's/gsm_sniffer = "off"/gsm_sniffer = "on"/' ${gsmDir}/GsmEvil_auto.py)`
+				).catch(() => console.warn('[gsm-evil] GsmEvil_auto.py setup note'));
+
+				// 4. Start GsmEvil2 (needs root for pyshark/tshark capture permissions)
+				const { stdout: evilPid } = await hostExec(
+					`cd ${gsmDir} && sudo python3 GsmEvil_auto.py --host 0.0.0.0 --port 8080 >/tmp/gsmevil2.log 2>&1 & echo $!`,
+					{ timeout: 5000 }
+				);
+				console.warn(`[gsm-evil] GsmEvil2 started, PID: ${evilPid.trim()}`);
+
+				// 5. Wait for processes to initialize
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+
+				// 6. Verify both are running
+				const { stdout: grgsmCheck } = await hostExec(
+					'pgrep -f grgsm_livemon_headless 2>/dev/null; true'
+				);
+				const { stdout: evilCheck } = await hostExec(
+					'pgrep -f "GsmEvil(_auto)?.py" 2>/dev/null; true'
+				);
+
+				if (!grgsmCheck.trim()) {
+					throw new Error('grgsm_livemon_headless failed to start');
+				}
+				if (!evilCheck.trim()) {
+					const { stdout: logOut } = await hostExec(
+						'tail -5 /tmp/gsmevil2.log 2>/dev/null; true'
+					);
+					throw new Error(`GsmEvil2 failed to start. Log: ${logOut}`);
+				}
+				console.warn('[gsm-evil] Both processes verified running');
 
 				return json({
 					success: true,
@@ -115,81 +143,47 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 			}
 		} else if (action === 'stop') {
+			// ALWAYS release the HackRF resource when stopping, regardless of cleanup outcome.
+			// Previous bug: resource was only released in the perfect happy path, causing deadlocks.
+			let stopResult: Response | null = null;
 			try {
-				console.warn('Stopping GSM Evil with bulletproof termination...');
+				console.warn('[gsm-evil] Stopping GSM Evil...');
 
-				// Use the enhanced stop script with longer timeout for comprehensive cleanup
-				const { stdout, stderr } = await execAsync('./scripts/gsm-evil-stop.sh', {
-					timeout: 30000 // 30 second timeout for comprehensive cleanup
-				});
+				// Kill processes directly (same pattern as working scan endpoint)
+				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
+					() => {}
+				);
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
+				await hostExec('sudo fuser -k 8080/tcp 2>/dev/null; true').catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 1000));
 
-				console.warn('Stop script output:', stdout);
-				if (stderr) console.error('Stop script stderr:', stderr);
+				// Verify processes are stopped
+				const { stdout: remaining } = await hostExec(
+					'pgrep -f "grgsm_livemon_headless|GsmEvil" 2>/dev/null; true'
+				);
 
-				// Verify all processes are actually stopped
-				const verifyResult = await execAsync(
-					'ps aux | grep -E "(grgsm_livemon|GsmEvil)" | grep -v grep | wc -l'
-				).catch(() => ({ stdout: '0' }));
-				const remainingProcesses = parseInt(verifyResult.stdout.trim());
-
-				if (remainingProcesses > 0) {
-					// Get details of remaining processes
-					const processDetails = await execAsync(
-						'ps aux | grep -E "(grgsm_livemon|GsmEvil)" | grep -v grep'
-					).catch(() => ({ stdout: 'Unable to get process details' }));
-					console.error(
-						`Warning: ${remainingProcesses} processes still running:`,
-						processDetails.stdout
-					);
-
-					return json(
-						{
-							success: false,
-							message: `GSM Evil stop incomplete - ${remainingProcesses} processes still running`,
-							warning:
-								'Some processes may still be active. Consider manual intervention or system restart.',
-							remainingProcesses: processDetails.stdout
-						},
-						{ status: 206 }
-					); // Partial content - partially successful
+				if (remaining.trim()) {
+					// Force kill
+					await hostExec(
+						'sudo pkill -9 -f grgsm_livemon_headless 2>/dev/null; true'
+					).catch(() => {});
+					await hostExec('sudo pkill -9 -f GsmEvil 2>/dev/null; true').catch(() => {});
+					await new Promise((resolve) => setTimeout(resolve, 500));
 				}
 
-				// Verify critical ports are freed
-				const portChecks = await Promise.all([
-					execAsync('lsof -i :80 | grep LISTEN').catch(() => ({ stdout: '' })),
-					execAsync('lsof -i :8080 | grep LISTEN').catch(() => ({ stdout: '' })),
-					execAsync('lsof -i :4729 | grep LISTEN').catch(() => ({ stdout: '' }))
-				]);
-
-				const portsStillInUse = [];
-				if (portChecks[0].stdout.trim()) portsStillInUse.push('80');
-				if (portChecks[1].stdout.trim()) portsStillInUse.push('8080');
-				if (portChecks[2].stdout.trim()) portsStillInUse.push('4729');
-
-				if (portsStillInUse.length > 0) {
-					console.warn(`Ports still in use: ${portsStillInUse.join(', ')}`);
-					return json({
-						success: true,
-						message: 'GSM Evil stopped but some ports still in use',
-						warning: `Ports ${portsStillInUse.join(', ')} are still occupied`,
-						portsInUse: portsStillInUse
-					});
-				}
-
-				return json({
+				console.warn('[gsm-evil] Processes stopped');
+				stopResult = json({
 					success: true,
-					message:
-						'GSM Evil stopped successfully - all processes terminated and ports freed'
+					message: 'GSM Evil stopped successfully'
 				});
 			} catch (error: unknown) {
 				console.error('Stop error:', error);
 
-				// Check if it's a timeout error
 				if (
 					(error as { signal?: string }).signal === 'SIGTERM' ||
 					(error as Error).message.includes('timeout')
 				) {
-					return json(
+					stopResult = json(
 						{
 							success: false,
 							message:
@@ -198,19 +192,27 @@ export const POST: RequestHandler = async ({ request }) => {
 							suggestion: 'Consider using nuclear stop option or manual intervention'
 						},
 						{ status: 408 }
-					); // Request timeout
+					);
+				} else {
+					stopResult = json(
+						{
+							success: false,
+							message: 'Failed to stop GSM Evil',
+							error: (error as Error).message,
+							suggestion: 'Check system logs or try nuclear stop option'
+						},
+						{ status: 500 }
+					);
 				}
-
-				return json(
-					{
-						success: false,
-						message: 'Failed to stop GSM Evil',
-						error: (error as Error).message,
-						suggestion: 'Check system logs or try nuclear stop option'
-					},
-					{ status: 500 }
-				);
+			} finally {
+				// ALWAYS release HackRF — the stop was requested, so release the lock
+				// even if cleanup was partial. This prevents deadlocks.
+				await resourceManager.release('gsm-evil', HardwareDevice.HACKRF).catch(() => {
+					// If release fails (e.g., not owner), force-release as last resort
+					return resourceManager.forceRelease(HardwareDevice.HACKRF);
+				});
 			}
+			return stopResult!;
 		} else {
 			return json(
 				{

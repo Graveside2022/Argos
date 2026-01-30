@@ -1,9 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { hostExec } from '$lib/server/hostExec';
 
 // Comprehensive health check for GSM Evil pipeline
 const performHealthCheck = async () => {
@@ -38,7 +35,7 @@ const performHealthCheck = async () => {
 
 	try {
 		// Check GRGSM process
-		const { stdout: grgsmCheck } = await execAsync(
+		const { stdout: grgsmCheck } = await hostExec(
 			'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
 		).catch(() => ({ stdout: '' }));
 		if (grgsmCheck.trim()) {
@@ -46,7 +43,7 @@ const performHealthCheck = async () => {
 			const pid = parseInt(parts[1]);
 			if (!isNaN(pid)) {
 				// Check runtime to distinguish from scans
-				const { stdout: pidTime } = await execAsync(
+				const { stdout: pidTime } = await hostExec(
 					`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
 				).catch(() => ({ stdout: '0' }));
 				const runtime = parseInt(pidTime.trim()) || 0;
@@ -65,7 +62,7 @@ const performHealthCheck = async () => {
 		}
 
 		// Check GSM Evil process and web interface
-		const { stdout: gsmevilCheck } = await execAsync(
+		const { stdout: gsmevilCheck } = await hostExec(
 			'ps aux | grep -E "python3? GsmEvil[_a-zA-Z0-9]*\\.py" | grep -v grep | head -1'
 		).catch(() => ({ stdout: '' }));
 		if (gsmevilCheck.trim()) {
@@ -77,14 +74,14 @@ const performHealthCheck = async () => {
 				health.gsmevil.status = 'running';
 
 				// Check port 8080 listener
-				const { stdout: portCheck } = await execAsync('lsof -i :8080 | grep LISTEN').catch(
-					() => ({ stdout: '' })
-				);
+				const { stdout: portCheck } = await hostExec(
+					'sudo lsof -i :8080 | grep LISTEN'
+				).catch(() => ({ stdout: '' }));
 				health.gsmevil.port8080 = portCheck.trim().length > 0;
 
 				// Check HTTP response
 				if (health.gsmevil.port8080) {
-					const { stdout: httpCheck } = await execAsync(
+					const { stdout: httpCheck } = await hostExec(
 						'timeout 3 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
 					).catch(() => ({ stdout: '000' }));
 					health.gsmevil.webInterface = httpCheck.trim() === '200';
@@ -96,7 +93,7 @@ const performHealthCheck = async () => {
 
 		// Check data flow components
 		// GSMTAP port 4729
-		const { stdout: gsmtapPort } = await execAsync(
+		const { stdout: gsmtapPort } = await hostExec(
 			'ss -u -n | grep -c ":4729" || echo "0"'
 		).catch(() => ({ stdout: '0' }));
 		health.dataFlow.port4729Active = parseInt(gsmtapPort.trim()) > 0;
@@ -109,14 +106,14 @@ const performHealthCheck = async () => {
 
 			if (dbPath) {
 				// Quick database connectivity test
-				const { stdout: dbCheck } = await execAsync(
+				const { stdout: dbCheck } = await hostExec(
 					`python3 -c "import sqlite3; conn = sqlite3.connect('${dbPath}'); conn.close(); print('ok')" 2>/dev/null || echo "error"`
 				).catch(() => ({ stdout: 'error' }));
 				health.dataFlow.databaseAccessible = dbCheck.trim() === 'ok';
 
 				// Check for recent data (last 10 minutes)
 				if (health.dataFlow.databaseAccessible) {
-					const { stdout: recentData } = await execAsync(
+					const { stdout: recentData } = await hostExec(
 						`python3 -c "import sqlite3; from datetime import datetime, timedelta; conn = sqlite3.connect('${dbPath}'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM imsi_data WHERE datetime(date_time) > datetime(\\'now\\', \\'-10 minutes\\')'); print(cursor.fetchone()[0]); conn.close()" 2>/dev/null || echo "0"`
 					).catch(() => ({ stdout: '0' }));
 					health.dataFlow.recentData = parseInt(recentData.trim()) > 0;

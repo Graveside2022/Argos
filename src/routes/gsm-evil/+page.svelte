@@ -1,31 +1,28 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { gsmEvilStore } from '$lib/stores/gsmEvilStore';
-	import IMSIDisplay from './IMSIDisplay.svelte';
-	
-	let iframeUrl = '';
-	let isLoading = true;
-	let hasError = false;
-	let errorMessage = '';
-	let gsmStatus: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
-	let statusCheckInterval: ReturnType<typeof setInterval>;
-	let detailedStatus: any = null;
+
+	let imsiCaptureActive = false;
+	let imsiPollInterval: ReturnType<typeof setInterval>;
 	// Store-managed state via reactive statements
 	$: selectedFrequency = $gsmEvilStore.selectedFrequency;
 	$: isScanning = $gsmEvilStore.isScanning;
 	$: scanResults = $gsmEvilStore.scanResults;
 	$: capturedIMSIs = $gsmEvilStore.capturedIMSIs;
-	$: totalIMSIs = $gsmEvilStore.totalIMSIs;
-	$: scanStatus = $gsmEvilStore.scanStatus;
+	$: _totalIMSIs = $gsmEvilStore.totalIMSIs;
+	$: _scanStatus = $gsmEvilStore.scanStatus;
 	$: scanProgress = $gsmEvilStore.scanProgress;
-	$: showScanProgress = $gsmEvilStore.showScanProgress;
+	$: _showScanProgress = $gsmEvilStore.showScanProgress;
 	$: towerLocations = $gsmEvilStore.towerLocations;
 	$: towerLookupAttempted = $gsmEvilStore.towerLookupAttempted;
 	$: scanButtonText = $gsmEvilStore.scanButtonText;
-	
+
+	// Button shows "Stop Scan" (red) when scanning OR when IMSI capture is running
+	$: isActive = isScanning || imsiCaptureActive;
+	$: buttonText = isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan';
+
 	// Non-store managed state
 	let gsmFrames: string[] = [];
-	let frameUpdateInterval: ReturnType<typeof setInterval>;
 	let activityStatus = {
 		hasActivity: false,
 		packetCount: 0,
@@ -35,17 +32,46 @@
 	};
 
 	// Real-time frequency parsing state
-	let currentFrequencyData: any = {};
-	
+	let _currentFrequencyData: any = {};
+
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
-	$: groupedTowers = capturedIMSIs && towerLocations && towerLookupAttempted && groupIMSIsByTower();
-	
+	$: groupedTowers =
+		capturedIMSIs && towerLocations && towerLookupAttempted && groupIMSIsByTower();
+
+	// Derive detected towers from scan results that have cell info (MCC/MNC/LAC/CI)
+	$: scanDetectedTowers = scanResults
+		.filter((r) => r.mcc && r.lac && r.ci)
+		.map((r) => {
+			const mcc = r.mcc || '';
+			const mnc = r.mnc || '';
+			const lac = r.lac || '';
+			const ci = r.ci || '';
+			const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
+			const towerId = `${mccMnc}-${lac}-${ci}`;
+			const country = mccToCountry[mcc] || { name: 'Unknown', flag: '', code: '??' };
+			const carrier = mncToCarrier[mccMnc] || 'Unknown';
+			return {
+				frequency: r.frequency,
+				mcc,
+				mnc,
+				mccMnc,
+				lac,
+				ci,
+				towerId,
+				country,
+				carrier,
+				frameCount: r.frameCount || 0,
+				strength: r.strength,
+				location: towerLocations[towerId] || null
+			};
+		});
+
 	// MNC to Carrier mapping (MCC-MNC format)
 	const mncToCarrier: { [key: string]: string } = {
 		// USA (310)
 		'310-410': 'AT&T',
 		'310-150': 'AT&T',
-		'310-170': 'AT&T', 
+		'310-170': 'AT&T',
 		'310-280': 'AT&T',
 		'310-380': 'AT&T',
 		'310-950': 'AT&T',
@@ -827,54 +853,67 @@
 		'748': { name: 'Uruguay', flag: '🇺🇾', code: 'UY' },
 		'750': { name: 'Falkland Islands', flag: '🇫🇰', code: 'FK' }
 	};
-	
+
 	// Debug reactive statement
 	$: if (scanResults.length > 0) {
 		// console.log('scanResults updated:', scanResults.length, 'items');
 	}
-	
+
 	// Fetch tower locations when new IMSIs are captured
 	$: if (capturedIMSIs.length > 0) {
 		const towers = groupIMSIsByTower();
 		towers.forEach(async (tower) => {
 			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
 			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
-				// console.log('Fetching location for tower:', towerId);
 				gsmEvilStore.markTowerLookupAttempted(towerId);
-				
+
 				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
 				if (result && result.found) {
-					// console.log('Location found for tower:', towerId, result.location);
 					gsmEvilStore.updateTowerLocation(towerId, result.location);
-				} else {
-					// console.log('No location found for tower:', towerId);
 				}
 			}
 		});
 	}
-	
+
+	// Auto-fetch tower locations for scan-detected towers (post-scan cell identity)
+	$: if (scanDetectedTowers.length > 0) {
+		scanDetectedTowers.forEach(async (tower) => {
+			if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
+				gsmEvilStore.markTowerLookupAttempted(tower.towerId);
+				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
+				if (result && result.found) {
+					gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
+				}
+			}
+		});
+	}
+
 	// Function to group IMSIs by tower (LAC+CI)
 	function groupIMSIsByTower() {
 		const towerGroups: { [key: string]: any } = {};
-		
-		capturedIMSIs.forEach(imsi => {
+
+		capturedIMSIs.forEach((imsi) => {
 			const mcc = imsi.mcc?.toString() || '';
 			const mnc = imsi.mnc?.toString() || '';
 			const lac = imsi.lac?.toString() || '';
 			const ci = imsi.ci?.toString() || '';
-			
+
 			if (mcc && lac && ci) {
 				const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
 				const towerId = `${mccMnc}-${lac}-${ci}`;
-				
+
 				if (!towerGroups[towerId]) {
-					const country = mccToCountry[mcc] || { name: 'Unknown', flag: '🏳️', code: '??' };
+					const country = mccToCountry[mcc] || {
+						name: 'Unknown',
+						flag: '🏳️',
+						code: '??'
+					};
 					const carrier = mncToCarrier[mccMnc] || 'Unknown';
-					
+
 					// Determine status based on carrier and MCC
 					let status = 'ok';
 					let statusSymbol = '✓';
-					
+
 					if (mcc === '000' || mcc === '001' || mcc === '999') {
 						// Fake/Test MCCs
 						status = 'fake';
@@ -888,10 +927,12 @@
 						status = 'unknown';
 						statusSymbol = '⚠️';
 					}
-					
+
 					// Always check towerLocations for the latest location data
-					const location = towerLocations[towerId] || ((imsi.lat && imsi.lon) ? { lat: imsi.lat, lon: imsi.lon } : null);
-					
+					const location =
+						towerLocations[towerId] ||
+						(imsi.lat && imsi.lon ? { lat: imsi.lat, lon: imsi.lon } : null);
+
 					towerGroups[towerId] = {
 						mcc: mcc,
 						mnc: mnc,
@@ -910,17 +951,17 @@
 						location: location
 					};
 				}
-				
+
 				towerGroups[towerId].devices.push(imsi.imsi);
 				towerGroups[towerId].count++;
 				towerGroups[towerId].lastSeen = new Date();
 			}
 		});
-		
+
 		// Sort by count descending
 		return Object.values(towerGroups).sort((a, b) => b.count - a.count);
 	}
-	
+
 	// Fetch tower location
 	async function fetchTowerLocation(mcc: string, mnc: string, lac: string, ci: string) {
 		try {
@@ -931,7 +972,7 @@
 				},
 				body: JSON.stringify({ mcc, mnc, lac, ci })
 			});
-			
+
 			if (response.ok) {
 				const data = await response.json();
 				return data;
@@ -941,341 +982,143 @@
 		}
 		return null;
 	}
-	
+
 	// Lookup tower location and update display
 	// async function lookupTowerLocation(tower: any) {
 	// 	const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
 	// 	const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-	// 	
+	//
 	// 	if (result && result.found) {
 	// 		towerLocations[towerId] = result.location;
 	// 		// Force re-render
 	// 		towerLocations = { ...towerLocations };
 	// 	}
 	// }
-	
-	function handleScanButton() {
-		if (isScanning) {
-			// Stop the scan
-			gsmEvilStore.stopScan();
+
+	async function handleScanButton() {
+		if (isScanning || imsiCaptureActive) {
+			// Stop everything - abort client-side fetch, kill server processes, stop IMSI polling
+			if (isScanning) {
+				gsmEvilStore.stopScan();
+			}
+
+			// Stop IMSI polling
+			if (imsiPollInterval) {
+				clearInterval(imsiPollInterval);
+			}
+			imsiCaptureActive = false;
+
+			// Kill server-side grgsm_livemon_headless and GsmEvil processes
+			try {
+				await fetch('/api/gsm-evil/control', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ action: 'stop' })
+				});
+			} catch {
+				// Best effort - server process cleanup
+			}
+
+			gsmEvilStore.clearResults();
 		} else {
 			// Start the scan
 			scanFrequencies();
 		}
 	}
 
-	function clearResults() {
-		gsmEvilStore.clearResults();
+	onMount(() => {
+		console.log('[GSM] Component mounted');
+	});
+
+	onDestroy(() => {
+		if (imsiPollInterval) {
+			clearInterval(imsiPollInterval);
+		}
+	});
+
+	async function startIMSICapture(frequency: string) {
+		if (imsiCaptureActive) return;
+
+		try {
+			console.log('[GSM] Starting IMSI capture on', frequency, 'MHz');
+			const response = await fetch('/api/gsm-evil/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'start', frequency })
+			});
+
+			const data = (await response.json()) as { success: boolean; message: string };
+			if (response.ok && data.success) {
+				imsiCaptureActive = true;
+				// Start polling for IMSIs
+				if (imsiPollInterval) clearInterval(imsiPollInterval);
+				imsiPollInterval = setInterval(() => {
+					fetchIMSIs();
+					checkActivity();
+					fetchRealFrames();
+				}, 2000);
+				// Initial fetch
+				fetchIMSIs();
+				checkActivity();
+				fetchRealFrames();
+				console.log('[GSM] IMSI capture started successfully');
+			} else {
+				console.error('[GSM] Failed to start IMSI capture:', data.message);
+			}
+		} catch (error) {
+			console.error('[GSM] Error starting IMSI capture:', error);
+		}
 	}
 
-	onMount(() => {
-		console.log('[GSM-DEBUG] Component mounted');
-		
-		// Add navigation debugging
-		window.addEventListener('beforeunload', (e) => {
-			console.log('[GSM-DEBUG] beforeunload event triggered!', e);
-			console.trace('Navigation stack trace');
-		});
-		
-		// GSM Evil runs on port 8080 and is accessible from any IP (--host 0.0.0.0)
-		// Use window.location.hostname to ensure it works when accessed remotely
-		const host = window.location.hostname || 'localhost';
-		// Default to IMSI sniffer page with timestamp to force refresh
-		iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
-		
-		// Check initial GSM Evil status without forcing restart
-		console.log('[GSM-DEBUG] Checking initial GSM Evil status...');
-		checkGSMStatus().catch((error) => {
-			console.error('Initial GSM status check failed:', error);
-		});
-		
-		// Set up periodic status checks
-		statusCheckInterval = setInterval(() => {
-			checkGSMStatus().catch((error) => {
-				console.error('Periodic GSM status check failed:', error);
-			});
-		}, 5000);
-		
-		// Start frame update interval
-		startFrameUpdates();
-	});
-	
-	onDestroy(() => {
-		if (statusCheckInterval) {
-			clearInterval(statusCheckInterval);
-		}
-		if (frameUpdateInterval) {
-			clearInterval(frameUpdateInterval);
-		}
-	});
-	
-	async function checkGSMStatus() {
-		// Skip status check if we're in a transitional state
-		if (gsmStatus === 'starting' || gsmStatus === 'stopping') {
-			console.log('[GSM-DEBUG] Skipping status check, currently:', gsmStatus);
-			return;
-		}
-		
-		try {
-			// Use the new status endpoint
-			const response = await fetch('/api/gsm-evil/status');
-			
-			if (response.ok) {
-				const data = await response.json();
-				detailedStatus = data.details;
-				
-				// Only update status if we're not in a transitional state
-				if ((gsmStatus as string) !== 'starting' && (gsmStatus as string) !== 'stopping') {
-					const isRunning = data.status === 'running';
-					if (isRunning && gsmStatus === 'stopped') {
-						// console.log('GSM Evil detected as running');
-						gsmStatus = 'running';
-						hasError = false;
-						// Don't update URL - it's already set with timestamp in onMount
-						console.log('[GSM-DEBUG] GSM Evil already running, not updating URL');
-					} else if (!isRunning && gsmStatus === 'running') {
-						// console.log('GSM Evil detected as stopped');
-						gsmStatus = 'stopped';
-					}
-				}
-			}
-		} catch (error) {
-			console.error('Error checking GSM Evil status:', error);
-		}
-	}
-	
-	async function startGSMEvil() {
-		console.log('[GSM-DEBUG] Starting GSM Evil...');
-		if (gsmStatus === 'starting' || gsmStatus === 'stopping') {
-			console.log('[GSM-DEBUG] GSM Evil is already changing state');
-			return;
-		}
-		
-		gsmStatus = 'starting';
-		console.log('[GSM-DEBUG] Set status to starting');
-		
-		try {
-			const response = await fetch('/api/gsm-evil/control', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ action: 'start', frequency: selectedFrequency })
-			});
-			
-			const data = await response.json() as { success: boolean; message: string };
-			// console.log('Start response:', data);
-			
-			if (response.ok && data.success) {
-				// IMPROVED: Verify service is actually ready instead of fixed delay
-				console.log('[GSM-DEBUG] Verifying GSM Evil service accessibility...');
-				
-				// Poll service until accessible, max 30 seconds
-				let attempts = 0;
-				const maxAttempts = 30;
-				
-				const verifyService = async () => {
-					try {
-						const response = await fetch('/api/gsm-evil/status');
-						const status = await response.json();
-						
-						if (status.details?.gsmevil?.webInterface) {
-							console.log('[GSM-DEBUG] Service verified accessible, showing iframe');
-							gsmStatus = 'running';
-							hasError = false;
-							isLoading = false;
-							
-							// Only update iframe URL if not already set
-							if (!iframeUrl || iframeUrl === '') {
-								const host = window.location.hostname || 'localhost';
-								iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
-								console.log('[GSM-DEBUG] Setting iframe URL:', iframeUrl);
-							} else {
-								console.log('[GSM-DEBUG] Iframe URL already set, not updating');
-							}
-							
-							// Ensure scanning flag is cleared when GSM Evil is already running
-							if ($gsmEvilStore.isScanning) {
-								console.log('[GSM-DEBUG] Clearing stuck scanning flag');
-								gsmEvilStore.completeScan();
-							}
-							return;
-						}
-					} catch (e) {
-						console.log('[GSM-DEBUG] Service verification failed, retrying...', e);
-					}
-					
-					attempts++;
-					if (attempts < maxAttempts) {
-						setTimeout(verifyService, 1000);
-					} else {
-						console.log('[GSM-DEBUG] Service verification timeout, showing iframe anyway');
-						gsmStatus = 'running';
-						hasError = false;  
-						isLoading = false;
-						
-						// Only update iframe URL if not already set
-						if (!iframeUrl || iframeUrl === '') {
-							const host = window.location.hostname || 'localhost';
-							iframeUrl = `http://${host}:8080/imsi/?t=${Date.now()}`;
-							console.log('[GSM-DEBUG] Setting iframe URL (timeout):', iframeUrl);
-						} else {
-							console.log('[GSM-DEBUG] Iframe URL already set (timeout), not updating');
-						}
-						
-						// Ensure scanning flag is cleared when GSM Evil is already running
-						if ($gsmEvilStore.isScanning) {
-							console.log('[GSM-DEBUG] Clearing stuck scanning flag (timeout fallback)');
-							gsmEvilStore.completeScan();
-						}
-					}
-				};
-				
-				// Start verification after brief initial delay
-				setTimeout(verifyService, 2000);
-			} else {
-				throw new Error(data.message || 'Failed to start GSM Evil');
-			}
-		} catch (error) {
-			console.error('Failed to start GSM Evil:', error);
-			gsmStatus = 'stopped';
-			hasError = true;
-			errorMessage = error instanceof Error ? error.message : 'Failed to start GSM Evil';
-			isLoading = false;
-		}
-	}
-	
-	async function stopGSMEvil() {
-		if (gsmStatus === 'starting' || gsmStatus === 'stopping') return;
-		
-		// console.log('Stopping GSM Evil...');
-		gsmStatus = 'stopping';
-		
-		try {
-			const response = await fetch('/api/gsm-evil/control', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ action: 'stop' })
-			});
-			
-			const data = await response.json() as { success: boolean; message: string };
-			// console.log('Stop response:', data);
-			
-			if (response.ok && data.success) {
-				gsmStatus = 'stopped';
-				hasError = false;
-				// console.log('GSM Evil stopped successfully');
-			} else {
-				throw new Error(data.message || 'Failed to stop GSM Evil');
-			}
-		} catch (error) {
-			console.error('Failed to stop GSM Evil:', error);
-			// Set to stopped anyway to show the scan interface
-			gsmStatus = 'stopped';
-			hasError = true;
-			errorMessage = error instanceof Error ? error.message : 'Failed to stop GSM Evil';
-			
-			// Clear the status check interval to prevent it from resetting
-			if (statusCheckInterval) {
-				clearInterval(statusCheckInterval);
-			}
-			
-			// Alert user about the issue
-			alert('Failed to stop GSM Evil due to permissions. Showing scan interface anyway.');
-		}
-	}
-	
-	function toggleGSMEvil() {
-		// console.log('Toggle GSM Evil, current status:', gsmStatus);
-		if (gsmStatus === 'running') {
-			// console.log('GSM Evil is running, stopping...');
-			stopGSMEvil().catch((error) => {
-				console.error('Error stopping GSM Evil:', error);
-			});
-		} else if (gsmStatus === 'stopped') {
-			// console.log('GSM Evil is stopped, starting...');
-			startGSMEvil().catch((error) => {
-				console.error('Error starting GSM Evil:', error);
-			});
-		} else {
-			// console.log('GSM Evil is in state:', gsmStatus, '- not starting or stopping');
-		}
-	}
-	
-	function handleIframeLoad() {
-		console.log('[GSM-DEBUG] Iframe loaded, setting isLoading=false');
-		isLoading = false;
-		hasError = false;
-		console.log('[GSM-DEBUG] Iframe should now be visible, isLoading:', isLoading);
-		
-		// Note: Iframe CSS injection removed due to cross-origin security restrictions
-		// The GSM Evil service iframe will use its own styling
-	}
-	
-	function handleIframeError() {
-		isLoading = false;
-		if (gsmStatus === 'stopped') {
-			hasError = true;
-			errorMessage = 'GSM Evil interface not available. Click "Start GSM Evil" to begin.';
-		}
-	}
-	
 	async function scanFrequencies() {
-		if (gsmStatus !== 'stopped') {
-			alert('Please stop GSM Evil before scanning frequencies');
-			return;
-		}
-		
 		// Start the scan in store - this changes button to "Stop Scan"
 		gsmEvilStore.startScan();
-		
+
 		try {
 			// Get abort controller for stop functionality
 			const abortController = gsmEvilStore.getAbortController();
-			
+
 			// Add client-side timeout (6 minutes) slightly longer than server timeout
 			const timeoutController = new AbortController();
 			const timeoutId = setTimeout(() => {
 				timeoutController.abort();
 			}, 360000); // 6 minutes
-			
+
 			// Use the streaming endpoint to show progress
 			const response = await fetch('/api/gsm-evil/intelligent-scan-stream', {
 				method: 'POST',
 				signal: abortController?.signal || timeoutController.signal // This enables the stop button
 			});
-			
+
 			if (!response.ok) {
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
-			
+
 			// Clear client timeout since we got a response
 			clearTimeout(timeoutId);
-			
+
 			if (!response.body) {
 				throw new Error('No response body');
 			}
-			
+
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = '';
-			
+
 			while (true) {
 				// Check if user clicked stop
 				if (abortController?.signal.aborted) {
 					reader.cancel();
 					return;
 				}
-				
+
 				const { done, value } = await reader.read();
 				if (done) break;
-				
+
 				buffer += decoder.decode(value, { stream: true });
 				const lines = buffer.split('\n');
 				buffer = lines.pop() || '';
-				
+
 				for (const line of lines) {
 					if (line.startsWith('data: ')) {
 						try {
@@ -1283,7 +1126,7 @@
 							if (json.message) {
 								// REAL-TIME PROGRESS - Results populate while scanning
 								gsmEvilStore.addScanProgress(json.message);
-								
+
 								// Auto-scroll to bottom
 								await tick();
 								const progressEl = document.querySelector('.scan-progress-body');
@@ -1293,42 +1136,89 @@
 							}
 							if (json.result) {
 								const data = json.result;
-								// console.log('Scan response:', data);
-								
+								console.log('Scan response:', data);
+
 								if (data.type === 'frequency_result') {
 									// REAL-TIME RESULTS - Add individual frequency results as they complete
+									console.log('Adding frequency result:', data.result);
 									gsmEvilStore.addScanResult(data.result);
-									
+
 									// Update progress status
-									gsmEvilStore.setScanStatus(`Testing frequencies... ${data.progress.completed}/${data.progress.total} complete`);
-									
+									gsmEvilStore.setScanStatus(
+										`Testing frequencies... ${data.progress.completed}/${data.progress.total} complete`
+									);
+
 									// Automatically select the best frequency so far (highest frame count)
 									if (data.result.frameCount > 0) {
 										// Check if this is better than current selection
 										const currentResults = $gsmEvilStore.scanResults;
-										const currentSelected = currentResults.find(r => r.frequency === $gsmEvilStore.selectedFrequency);
-										
-										if (!currentSelected || data.result.frameCount > (currentSelected.frameCount || 0)) {
-											gsmEvilStore.setSelectedFrequency(data.result.frequency);
+										const currentSelected = currentResults.find(
+											(r) => r.frequency === $gsmEvilStore.selectedFrequency
+										);
+
+										if (
+											!currentSelected ||
+											data.result.frameCount >
+												(currentSelected.frameCount || 0)
+										) {
+											gsmEvilStore.setSelectedFrequency(
+												data.result.frequency
+											);
 										}
 									}
-									
-									// console.log('Real-time result:', data.result);
 								} else if (data.type === 'scan_complete' || data.bestFrequency) {
 									// SCAN COMPLETE - Final results processing
 									if (data.bestFrequency) {
+										console.log(
+											'Scan complete! Setting results:',
+											data.scanResults
+										);
+										console.log(
+											'Results with cell data:',
+											data.scanResults?.filter((r: any) => r.mcc)
+										);
 										gsmEvilStore.setSelectedFrequency(data.bestFrequency);
 										gsmEvilStore.setScanResults(data.scanResults || []);
-										gsmEvilStore.setScanStatus(`Found ${data.scanResults?.length || 0} active frequencies. Best: ${data.bestFrequency} MHz`);
+										gsmEvilStore.setScanStatus(
+											`Found ${data.scanResults?.length || 0} active frequencies. Best: ${data.bestFrequency} MHz`
+										);
 										gsmEvilStore.addScanProgress('[SCAN] Scan complete!');
-										gsmEvilStore.addScanProgress(`[SCAN] Found ${data.scanResults?.length || 0} active frequencies`);
-										
-										// console.log('Scan complete. Results:', data.scanResults?.length || 0, 'frequencies');
-										// console.log('scanResults:', data.scanResults);
+										gsmEvilStore.addScanProgress(
+											`[SCAN] Found ${data.scanResults?.length || 0} active frequencies`
+										);
+
+										// Log cell identity capture status
+										const withCellData =
+											data.scanResults?.filter(
+												(r: any) => r.mcc && r.lac && r.ci
+											).length || 0;
+										console.log(
+											`Cell identity captured for ${withCellData}/${data.scanResults?.length || 0} frequencies`
+										);
+										if (withCellData > 0) {
+											gsmEvilStore.addScanProgress(
+												`[SCAN] ✓ Cell identity captured for ${withCellData} frequency(ies) - tower data will display below`
+											);
+										} else {
+											gsmEvilStore.addScanProgress(
+												'[SCAN] ⚠ No cell identity captured - tower table will not display'
+											);
+											gsmEvilStore.addScanProgress(
+												'[SCAN] 💡 Cell identity requires BCCH channels with System Information messages'
+											);
+										}
+
+										// Auto-start IMSI capture on the best frequency
+										gsmEvilStore.addScanProgress(
+											`[SCAN] Starting IMSI capture on ${data.bestFrequency} MHz...`
+										);
+										startIMSICapture(data.bestFrequency);
 									} else {
 										gsmEvilStore.setScanStatus('No active frequencies found');
 										gsmEvilStore.setScanResults([]);
-										gsmEvilStore.addScanProgress('[SCAN] No active frequencies detected');
+										gsmEvilStore.addScanProgress(
+											'[SCAN] No active frequencies detected'
+										);
 									}
 								}
 							}
@@ -1347,15 +1237,21 @@
 				// Real error - differentiate between network and process errors
 				console.error('Scan failed:', error);
 				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-				
-				if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('HTTP')) {
-					gsmEvilStore.addScanProgress('[ERROR] Network connection lost - check server status');
+
+				if (
+					errorMessage.includes('fetch') ||
+					errorMessage.includes('network') ||
+					errorMessage.includes('HTTP')
+				) {
+					gsmEvilStore.addScanProgress(
+						'[ERROR] Network connection lost - check server status'
+					);
 					gsmEvilStore.setScanStatus('Network error');
 				} else {
 					gsmEvilStore.addScanProgress(`[ERROR] Scan failed: ${errorMessage}`);
 					gsmEvilStore.setScanStatus('Scan failed');
 				}
-				
+
 				gsmEvilStore.setScanResults([]);
 			}
 		} finally {
@@ -1363,25 +1259,24 @@
 			gsmEvilStore.completeScan();
 		}
 	}
-	
-	
+
 	async function fetchRealFrames() {
 		try {
 			const response = await fetch('/api/gsm-evil/frames');
 			if (response.ok) {
 				const data = await response.json();
-				
+
 				if (data.frames && data.frames.length > 0) {
 					// Append new frames to existing ones (console-like behavior)
 					gsmFrames = [...gsmFrames, ...data.frames];
-					
+
 					// Keep only the last 25 frames to prevent memory issues
 					if (gsmFrames.length > 25) {
 						gsmFrames = gsmFrames.slice(-25);
 					}
-					
+
 					// Force Svelte to update - no longer needed with proper array handling
-					
+
 					// Auto-scroll to bottom after adding new frames
 					await tick();
 					const frameDisplay = document.querySelector('.gsm-capture-card .frame-display');
@@ -1394,7 +1289,7 @@
 			console.error('Failed to fetch GSM frames:', error);
 		}
 	}
-	
+
 	async function checkActivity() {
 		try {
 			const response = await fetch('/api/gsm-evil/activity');
@@ -1412,7 +1307,7 @@
 			console.error('Failed to check activity:', error);
 		}
 	}
-	
+
 	async function fetchIMSIs() {
 		try {
 			const response = await fetch('/api/gsm-evil/imsi');
@@ -1426,27 +1321,6 @@
 			console.error('Failed to fetch IMSIs:', error);
 		}
 	}
-	
-	function startFrameUpdates() {
-		// Clear frames when starting
-		gsmFrames = [];
-		
-		// Fetch real frames and activity every 2 seconds when GSM Evil is running
-		frameUpdateInterval = setInterval(() => {
-			if (gsmStatus === 'running') {
-				fetchRealFrames();
-				checkActivity();
-				fetchIMSIs();
-			}
-		}, 2000);
-		
-		// Initial fetch if already running
-		if (gsmStatus === 'running') {
-			fetchRealFrames();
-			checkActivity();
-			fetchIMSIs();
-		}
-	}
 </script>
 
 <div class="gsm-evil-container">
@@ -1457,439 +1331,291 @@
 				<!-- Left Section - Logo and Title -->
 				<div class="header-left">
 					<!-- Back to Console Button -->
-					<a
-						href="/"
-						class="control-btn back-btn-style"
-					>
+					<a href="/" class="control-btn back-btn-style">
 						<span class="font-bold">Back to Console</span>
 					</a>
 					<div class="title-section">
 						<div class="title-wrapper">
 							<div class="icon-wrapper">
 								<svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"></path>
+									<path
+										d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"
+									></path>
 								</svg>
 							</div>
 							<div class="flex flex-col">
-								<h1 class="font-heading text-h4 font-semibold tracking-tight leading-tight">
+								<h1
+									class="font-heading text-h4 font-semibold tracking-tight leading-tight"
+								>
 									<span class="gsm-brand">GSM</span>
 									<span class="evil-brand">Evil</span>
 								</h1>
-								<span class="subtitle font-bold">
-									Cellular Network Analysis
-								</span>
+								<span class="subtitle font-bold"> Cellular Network Analysis </span>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Right Section - Status Indicators and Buttons -->
+				<!-- Right Section - Buttons -->
 				<div class="flex items-center gap-3">
-					<!-- System Status Indicators (only show when running) -->
-					{#if gsmStatus === 'running' && detailedStatus}
-						<div class="flex items-center gap-4 text-xs mr-4">
-							<div class="flex items-center gap-2">
-								<div class="status-indicator-small {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-								<span class="text-gray-300">GSM Demodulator</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<div class="status-indicator-small {detailedStatus.gsmevil.webInterface ? 'active' : 'inactive'}"></div>
-								<span class="text-gray-300">Web Interface</span>
-							</div>
-							<div class="flex items-center gap-2">
-								<div class="status-indicator-small {detailedStatus.grgsm.running ? 'active' : 'inactive'}"></div>
-								<span class="text-gray-300">HackRF One</span>
-							</div>
+					{#if imsiCaptureActive}
+						<div class="flex items-center gap-2 text-xs mr-2">
+							<div class="status-indicator-small active"></div>
+							<span class="text-green-400 font-semibold">IMSI Capture Active</span>
 						</div>
 					{/if}
-					
-					<!-- Start/Stop GSM Evil Button -->
+
 					<button
-						on:click={toggleGSMEvil}
-						disabled={gsmStatus === 'starting' || gsmStatus === 'stopping'}
-						class="control-btn
-						{gsmStatus === 'stopped' ? 'btn-start' : ''}
-						{gsmStatus === 'running' ? 'btn-stop' : ''}
-						{gsmStatus === 'starting' || gsmStatus === 'stopping' ? 'btn-loading' : ''}"
+						class="control-btn {isActive ? 'scan-btn-red' : 'scan-btn-green'}"
+						on:click={handleScanButton}
 					>
-						{#if gsmStatus === 'stopped'}
-							<span class="font-bold">Start GSM Evil</span>
-						{:else if gsmStatus === 'running'}
-							<span class="font-bold">Stop GSM Evil</span>
-						{:else if gsmStatus === 'starting'}
-							<span class="font-bold">Starting...</span>
-						{:else}
-							<span class="font-bold">Stopping...</span>
-						{/if}
+						<span class="font-bold">{buttonText}</span>
 					</button>
-					
-					<!-- Start Scan and Clear Results Buttons (only show when stopped) -->
-					{#if gsmStatus === 'stopped'}
-						<button
-							class="control-btn {isScanning ? 'scan-btn-purple' : 'scan-btn-yellow'}"
-							on:click={handleScanButton}
-						>
-							<span class="font-bold">{scanButtonText}</span>
-						</button>
-						
-						<button
-							class="control-btn clear-btn-blue"
-							on:click={clearResults}
-						>
-							<span class="font-bold">Clear Results</span>
-						</button>
-					{/if}
 				</div>
 			</div>
 		</div>
 	</header>
 
+	<!-- IMSI Capture Panel (shows after scan starts IMSI capture) — displayed first -->
+	{#if imsiCaptureActive}
+		<div class="scan-results-table" style="margin: 0 1rem; margin-top: 0.5rem;">
+			<h4 class="table-title">
+				<span style="color: #ff0000;">IMSI</span> Capture
+			</h4>
+			<div class="tower-groups" style="padding: 0.75rem;">
+				{#if capturedIMSIs.length > 0}
+					<div class="tower-header">
+						<span class="header-carrier">Carrier</span>
+						<span class="tower-separator">|</span>
+						<span class="header-country">Country</span>
+						<span class="tower-separator">|</span>
+						<span class="header-location">Cell Tower Location</span>
+						<span class="tower-separator">|</span>
+						<span class="header-lac">LAC/CI</span>
+						<span class="tower-separator">|</span>
+						<span class="header-mcc">MCC-MNC</span>
+						<span class="tower-separator">|</span>
+						<span class="header-devices">Devices</span>
+					</div>
+					{#each groupedTowers as tower}
+						<div class="tower-line">
+							<span
+								class="tower-carrier {tower.carrier === 'Unknown'
+									? 'text-yellow-500'
+									: ''}">{tower.carrier}</span
+							>
+							<span class="tower-separator">|</span>
+							<span class="tower-country"
+								>{tower.country.flag} {tower.country.code}</span
+							>
+							<span class="tower-separator">|</span>
+							<span class="tower-location">
+								{#if tower.location}
+									<span class="text-green-400"
+										>{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(
+											4
+										)}</span
+									>
+								{:else if !towerLookupAttempted[`${tower.mccMnc}-${tower.lac}-${tower.ci}`]}
+									<span class="text-xs text-yellow-500">Looking up...</span>
+								{:else}
+									<span class="text-xs" style="color: #94a3b8;">Roaming</span>
+								{/if}
+							</span>
+							<span class="tower-separator">|</span>
+							<span
+								class="tower-lac {tower.carrier === 'Unknown'
+									? 'text-yellow-500'
+									: ''}">{tower.lac}/{tower.ci}</span
+							>
+							<span class="tower-separator">|</span>
+							<span
+								class="tower-mcc {tower.carrier === 'Unknown'
+									? 'text-yellow-500'
+									: ''}">{tower.mccMnc}</span
+							>
+							<span class="tower-separator">|</span>
+							<span class="tower-devices">{tower.count}</span>
+						</div>
+					{/each}
+				{:else}
+					<div class="frame-line text-gray-500">No IMSIs captured yet...</div>
+					<div class="frame-line text-gray-600">
+						Listening for mobile devices on {selectedFrequency} MHz
+					</div>
+					<div class="frame-line text-gray-600">
+						IMSI sniffer is active - devices will appear here
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Frequency Selector Panel (Compact) -->
-	{#if gsmStatus === 'stopped'}
-		<div class="frequency-panel-compact">
-			<div class="frequency-container">
-				<!-- Scan Progress Console (Always visible) -->
-				<div class="scan-progress-console">
-					<div class="console-header">
-						<span class="console-title">CONSOLE</span>
-						{#if isScanning}
-							<span class="console-status">SCANNING...</span>
-						{:else if scanProgress.length > 0}
-							<span class="console-status">COMPLETE</span>
-						{/if}
-					</div>
-					<div class="console-body">
-						{#if scanProgress.length > 0}
-							{#each scanProgress as line}
-								<div class="console-line {line.startsWith('[ERROR]') ? 'error' : line.startsWith('[CMD]') ? 'command' : line.startsWith('[TEST') ? 'test' : line.includes('=====') ? 'header' : ''}">
-									{line}
-								</div>
-							{/each}
-							{#if isScanning}
-								<div class="console-cursor">█</div>
-							{/if}
-						{:else}
-							<div class="console-line text-gray-500">Click 'Start Scan' to begin</div>
-						{/if}
-					</div>
-				</div>
-				
-				<!-- Scan Results Table (Always visible) -->
-				<div class="scan-results-table">
-					<h4 class="table-title"><span style="color: #ff0000;">Scan</span> Results</h4>
-					<div class="table-container">
-						{#if scanResults.length > 0}
-							<table class="frequency-table">
-								<thead>
-									<tr>
-										<th>Frequency</th>
-										<th>Signal</th>
-										<th>Quality</th>
-										<th>Channel Type</th>
-										<th>GSM Frames</th>
-										<th>Activity</th>
-										<th>Action</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
-										<tr class="{selectedFrequency === result.frequency ? 'selected' : ''}">
-											<td class="freq-cell">{result.frequency} MHz</td>
-											<td class="signal-cell">{result.power !== undefined && result.power > -100 ? result.power.toFixed(1) + ' dBm' : `N/A (${result.power})`}</td>
-											<td>
-												<span class="quality-badge {result.strength.toLowerCase().replace(' ', '-')}">{result.strength}</span>
-											</td>
-											<td>
-												{#if result.channelType}
-													<span class="channel-type {result.controlChannel ? 'control' : ''}">{result.channelType}</span>
-												{:else}
-													<span class="channel-type unknown">-</span>
-												{/if}
-											</td>
-											<td class="frames-cell">
-												{#if result.frameCount !== undefined}
-													<span class="frame-count">{result.frameCount}</span>
-												{:else}
-													<span class="no-data">-</span>
-												{/if}
-											</td>
-											<td class="activity-cell">
-												{#if result.hasGsmActivity}
-													<span class="activity-yes">✓</span>
-												{:else}
-													<span class="activity-no">✗</span>
-												{/if}
-											</td>
-											<td>
-												<button 
-													class="select-btn {selectedFrequency === result.frequency ? 'selected' : ''}"
-													on:click={() => gsmEvilStore.setSelectedFrequency(result.frequency)}
-												>
-													{selectedFrequency === result.frequency ? 'Selected' : 'Select'}
-												</button>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{:else}
-							<div class="empty-table">
-								<p class="text-gray-500">No results available</p>
-							</div>
-						{/if}
-					</div>
+	<div class="frequency-panel-compact">
+		<div class="frequency-container">
+			<!-- Scan Results Table -->
+			<div class="scan-results-table">
+				<h4 class="table-title"><span style="color: #ff0000;">Scan</span> Results</h4>
+				<div class="table-container">
 					{#if scanResults.length > 0}
-						<p class="table-footer">
-							Found {scanResults.length} active frequencies • Sorted by GSM frame count
-						</p>
+						<table class="frequency-table">
+							<thead>
+								<tr>
+									<th>Frequency</th>
+									<th>Signal</th>
+									<th>Quality</th>
+									<th>Channel Type</th>
+									<th>GSM Frames</th>
+									<th>Activity</th>
+									<th>Action</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
+									<tr
+										class={selectedFrequency === result.frequency
+											? 'selected'
+											: ''}
+									>
+										<td class="freq-cell">{result.frequency} MHz</td>
+										<td class="signal-cell"
+											>{result.power !== undefined && result.power > -100
+												? result.power.toFixed(1) + ' dBm'
+												: result.strength || 'N/A'}</td
+										>
+										<td>
+											<span
+												class="quality-badge {result.strength
+													.toLowerCase()
+													.replace(' ', '-')}">{result.strength}</span
+											>
+										</td>
+										<td>
+											{#if result.channelType}
+												<span
+													class="channel-type {result.controlChannel
+														? 'control'
+														: ''}">{result.channelType}</span
+												>
+											{:else}
+												<span class="channel-type unknown">-</span>
+											{/if}
+										</td>
+										<td class="frames-cell">
+											{#if result.frameCount !== undefined}
+												<span class="frame-count">{result.frameCount}</span>
+											{:else}
+												<span class="no-data">-</span>
+											{/if}
+										</td>
+										<td class="activity-cell">
+											{#if result.hasGsmActivity}
+												<span class="activity-yes">✓</span>
+											{:else}
+												<span class="activity-no">✗</span>
+											{/if}
+										</td>
+										<td>
+											<button
+												class="select-btn {selectedFrequency ===
+												result.frequency
+													? 'selected'
+													: ''}"
+												on:click={() =>
+													gsmEvilStore.setSelectedFrequency(
+														result.frequency
+													)}
+											>
+												{selectedFrequency === result.frequency
+													? 'Selected'
+													: 'Select'}
+											</button>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{:else}
+						<div class="empty-table">
+							<p class="text-gray-500">No results available</p>
+						</div>
+					{/if}
+				</div>
+				{#if scanResults.length > 0}
+					<p class="table-footer">
+						Found {scanResults.length} active frequencies • Sorted by GSM frame count
+					</p>
+				{/if}
+			</div>
+
+			<!-- Scan Progress Console -->
+			<div class="scan-progress-console">
+				<div class="console-header">
+					<span class="console-title">CONSOLE</span>
+					{#if isScanning}
+						<span class="console-status">SCANNING...</span>
+					{:else if scanProgress.length > 0}
+						<span class="console-status">COMPLETE</span>
+					{/if}
+				</div>
+				<div class="console-body">
+					{#if scanProgress.length > 0}
+						{#each scanProgress as line}
+							<div
+								class="console-line {line.startsWith('[ERROR]')
+									? 'error'
+									: line.startsWith('[CMD]')
+										? 'command'
+										: line.startsWith('[TEST')
+											? 'test'
+											: line.includes('=====')
+												? 'header'
+												: ''}"
+							>
+								{line}
+							</div>
+						{/each}
+						{#if isScanning}
+							<div class="console-cursor">█</div>
+						{/if}
+					{:else}
+						<div class="console-line text-gray-500">Click 'Start Scan' to begin</div>
 					{/if}
 				</div>
 			</div>
 		</div>
-	{/if}
+	</div>
 
-	<!-- Status Panel (when running and not scanning) -->
-	{#if gsmStatus === 'running' && detailedStatus && !isScanning}
-		<div class="status-panel">
-			<div class="status-grid">
-				<!-- IMSI Capture Status (Left) -->
-				<div class="status-card">
-					<div class="status-card-header">
-						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
-						</svg>
-						<span class="font-semibold">IMSI Capture</span>
-						<span class="text-xs text-gray-400 ml-2">(Live Data) • {detailedStatus.dataCollection.active ? 'Receiving' : 'No Data'}</span>
-					</div>
-					<div class="frame-monitor">
-						<div class="frame-header">
-							{#if totalIMSIs > 0}
-								<span class="text-xs text-green-400 blink">● {totalIMSIs} IMSIs captured</span>
-							{:else}
-								<span class="text-xs text-yellow-400">● Waiting for IMSIs</span>
-							{/if}
+	<!-- Live GSM Frames (shows after scan starts IMSI capture) -->
+	{#if imsiCaptureActive}
+		<div class="scan-results-table" style="margin: 0 1rem; margin-top: 0.5rem;">
+			<h4 class="table-title">
+				<span style="color: #ff0000;">Live</span> GSM Frames
+				<span class="text-xs text-gray-400 ml-2" style="font-weight: normal;">
+					<span style="color: white;">Listening on</span>
+					<span style="color: #ff0000; font-weight: 600;"
+						>{activityStatus.currentFrequency} MHz</span
+					>
+				</span>
+			</h4>
+			<div
+				style="padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.75rem;"
+			>
+				{#if gsmFrames.length > 0}
+					{#each gsmFrames as frame, i}
+						<div
+							class="frame-line {i === gsmFrames.length - 1 ? 'text-green-400' : ''}"
+						>
+							{frame}
 						</div>
-						<div class="frame-display">
-							{#if capturedIMSIs.length > 0}
-								<div class="tower-groups">
-									<div class="tower-header">
-										<span class="header-carrier">Carrier</span>
-										<span class="tower-separator">|</span>
-										<span class="header-country">🌍 Country</span>
-										<span class="tower-separator">|</span>
-										<span class="header-location">Cell tower location</span>
-										<span class="tower-separator">|</span>
-										<span class="header-lac">LAC/CI</span>
-										<span class="tower-separator">|</span>
-										<span class="header-mcc">MCC-MNC</span>
-										<span class="tower-separator">|</span>
-										<span class="header-devices">Devices</span>
-									</div>
-									{#each groupedTowers as tower}
-										<div class="tower-line">
-											<span class="tower-carrier {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.carrier}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-country">{tower.country.flag} {tower.country.code}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-location">
-												{#if tower.location}
-													<span class="text-green-400">{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(4)}</span>
-												{:else if !towerLookupAttempted[`${tower.mccMnc}-${tower.lac}-${tower.ci}`]}
-													<span class="text-xs text-yellow-500">Loading...</span>
-												{:else}
-													<span class="text-xs" style="color: #94a3b8;">Roaming</span>
-												{/if}
-											</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-lac {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.lac}/{tower.ci}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-mcc {tower.carrier === 'Unknown' ? 'text-yellow-500' : ''}">{tower.mccMnc}</span>
-											<span class="tower-separator">|</span>
-											<span class="tower-devices">{tower.count}</span>
-										</div>
-									{/each}
-								</div>
-							{:else}
-								<div class="frame-line text-gray-500">No IMSIs captured yet...</div>
-								<div class="frame-line text-gray-600">Waiting for mobile devices...</div>
-								<div class="frame-line text-gray-600">IMSI sniffer is active</div>
-								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-							{/if}
-						</div>
-					</div>
-				</div>
-
-				<!-- GSM Capture Status (Right) -->
-				<div class="status-card gsm-capture-card">
-					<div class="status-card-header">
-						<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-						</svg>
-						<span class="font-semibold">GSM Capture</span>
-					</div>
-					<div class="frame-monitor">
-						<div class="frame-header">
-							<span class="text-xs">
-								<span style="color: white;">Listening on</span>
-								<span style="color: #ff0000; font-weight: 600;">{activityStatus.currentFrequency}MHz</span>
-							</span>
-						</div>
-						<div class="frame-display">
-							{#if gsmFrames.length > 0}
-								{#each gsmFrames as frame, i}
-									<div class="frame-line {i === gsmFrames.length - 1 ? 'text-green-400' : ''}">{frame}</div>
-								{/each}
-							{:else}
-								<div class="frame-line text-gray-500">No GSM frames captured yet...</div>
-								<div class="frame-line text-gray-600">Waiting for GSM data...</div>
-								{#if !activityStatus.hasActivity}
-									<div class="frame-line text-yellow-500">No GSM data detected - try different frequencies</div>
-								{/if}
-								<div class="frame-line text-gray-600">-- -- -- -- -- -- -- --</div>
-							{/if}
-						</div>
-					</div>
-				</div>
+					{/each}
+				{:else}
+					<div class="frame-line text-gray-500">Waiting for GSM frames...</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
-
-	<!-- Main Content -->
-	<div class="relative" style="height: calc(100vh - {gsmStatus === 'running' && detailedStatus ? '144px' : gsmStatus === 'stopped' ? '120px' : '64px'});">
-		{#if gsmStatus === 'starting'}
-			<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 z-50">
-				<div class="text-center max-w-md">
-					<div class="inline-flex items-center justify-center w-20 h-20 mb-4">
-						<svg class="animate-spin h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-						</svg>
-					</div>
-					<h3 class="text-xl font-bold text-white mb-2">Starting GSM Evil</h3>
-					<p class="text-gray-400 mb-4">Frequency: <span class="text-green-500 font-mono">{selectedFrequency} MHz</span></p>
-					<div class="space-y-2 text-sm text-gray-500">
-						<p>1. Initializing radio hardware...</p>
-						<p>2. Tuning to frequency...</p>
-						<p>3. Starting web interface...</p>
-						<p>4. Enabling IMSI sniffer...</p>
-						<p class="text-xs mt-4">This takes 10-15 seconds</p>
-					</div>
-				</div>
-			</div>
-		{/if}
-		
-
-		{#if gsmStatus === 'stopped' && !isLoading}
-			<div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800">
-				<div class="text-center max-w-2xl mx-auto p-8">
-					<!-- Phone Icon -->
-					<div class="relative mb-8">
-						<svg class="w-32 h-32 text-red-500 mx-auto opacity-80" fill="currentColor" viewBox="0 0 24 24">
-							<path d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1M12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18M8,8H16V10H8V8M8,11H13V13H8V11Z"></path>
-						</svg>
-					</div>
-					
-					<!-- Main Content -->
-					<div class="space-y-6">
-						<div>
-							<h1 class="text-4xl font-bold text-white mb-2">
-								<span class="text-red-400">GSM EVIL 2</span> IMSI Catcher
-							</h1>
-							<div class="h-1 w-32 bg-gradient-to-r from-red-500 to-red-800 mx-auto rounded-full"></div>
-						</div>
-						
-						<p class="text-xl text-gray-300 leading-relaxed">
-							Advanced cellular network interception and analysis platform
-						</p>
-						
-						<!-- Feature Grid -->
-						<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 mb-12">
-							<div class="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-								<svg class="w-8 h-8 text-red-400 mb-3" fill="currentColor" viewBox="0 0 20 20">
-									<path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
-									<path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
-								</svg>
-								<h3 class="text-white font-semibold mb-2">IMSI Capture</h3>
-								<p class="text-gray-400 text-sm">
-									Intercept and log subscriber identity numbers
-								</p>
-							</div>
-							
-							<div class="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-								<svg class="w-8 h-8 text-red-400 mb-3" fill="currentColor" viewBox="0 0 20 20">
-									<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-									<path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-								</svg>
-								<h3 class="text-white font-semibold mb-2">SMS Interception</h3>
-								<p class="text-gray-400 text-sm">
-									Capture and decode text messages in real-time
-								</p>
-							</div>
-							
-							<div class="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-								<svg class="w-8 h-8 text-red-400 mb-3" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l3.707 3.707A1 1 0 0018 17.414V6a1 1 0 00-.293-.707z" clip-rule="evenodd"/>
-								</svg>
-								<h3 class="text-white font-semibold mb-2">GSM Analysis</h3>
-								<p class="text-gray-400 text-sm">
-									Monitor GSM900/1800 bands with HackRF SDR
-								</p>
-							</div>
-						</div>
-						
-						<!-- Start Button -->
-						<button
-							on:click={startGSMEvil}
-							class="inline-flex items-center px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-red-600 to-red-700 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-4 focus:ring-red-900 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-						>
-							<svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-							</svg>
-							Start GSM Evil 2
-						</button>
-						
-						<!-- Status Message -->
-						<p class="text-gray-400 text-sm mt-6">
-							Ensure HackRF is connected and gr-gsm is properly configured
-						</p>
-						<p class="text-gray-400 text-sm mt-2">
-							IMSI sniffer interface will open automatically after starting
-						</p>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		<!-- GSM Evil Interface (when running and not scanning) -->
-		{#if gsmStatus === 'running' && !isScanning}
-			<iframe
-				src={iframeUrl}
-				title="GSM Evil Interface"
-				class="w-full h-full border-0"
-				style="display: {isLoading ? 'none' : 'block'}"
-				on:load={handleIframeLoad}
-				on:error={handleIframeError}
-			></iframe>
-			{#if isLoading}
-				<div class="absolute inset-0 flex items-center justify-center bg-black">
-					<div class="text-center">
-						<div class="mb-4 p-2 bg-red-900 border border-red-500 rounded">
-							<p class="text-red-100 text-sm">DEBUG: isLoading = {isLoading}</p>
-							<p class="text-red-100 text-sm">Iframe URL: {iframeUrl}</p>
-						</div>
-						<div class="inline-flex items-center justify-center w-16 h-16 mb-4">
-							<svg class="animate-spin h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24">
-								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-							</svg>
-						</div>
-						<p class="text-gray-400 font-mono">Loading IMSI Sniffer interface...</p>
-						<p class="text-xs text-gray-500 mt-2">IMSI capture will start automatically</p>
-					</div>
-				</div>
-			{/if}
-		{/if}
-	</div>
 </div>
 
 <style>
@@ -1927,8 +1653,6 @@
 		gap: 1rem;
 	}
 
-
-
 	.title-section {
 		display: flex;
 		align-items: center;
@@ -1945,7 +1669,9 @@
 		border-radius: 0.75rem;
 		background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(139, 0, 0, 0.1) 100%);
 		border: 1px solid rgba(255, 0, 0, 0.2);
-		box-shadow: 0 8px 25px rgba(255, 0, 0, 0.2), 0 0 15px rgba(255, 0, 0, 0.15);
+		box-shadow:
+			0 8px 25px rgba(255, 0, 0, 0.2),
+			0 0 15px rgba(255, 0, 0, 0.15);
 	}
 
 	.icon {
@@ -1969,7 +1695,7 @@
 		font-size: 0.625rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
-		color: #9CA3AF;
+		color: #9ca3af;
 	}
 
 	/* Control Buttons */
@@ -1993,39 +1719,6 @@
 	.control-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	.btn-start {
-		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-		border: 1px solid rgba(16, 185, 129, 0.3);
-		color: white;
-		box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-	}
-
-	.btn-start:hover:not(:disabled) {
-		background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-		box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-		transform: translateY(-1px);
-	}
-
-	.btn-stop {
-		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-		border: 1px solid rgba(239, 68, 68, 0.3);
-		color: white;
-		box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-	}
-
-	.btn-stop:hover:not(:disabled) {
-		background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-		box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-		transform: translateY(-1px);
-	}
-
-	.btn-loading {
-		background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
-		border: 1px solid rgba(251, 146, 60, 0.3);
-		color: white;
-		box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
 	.btn-settings {
@@ -2164,48 +1857,60 @@
 		z-index: 50;
 	}
 
-	/* Yellow Scan Button */
-	.scan-btn-yellow {
-		background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
-		border: 1px solid rgba(251, 191, 36, 0.3) !important;
+	/* Green Start Scan Button */
+	.scan-btn-green {
+		background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+		border: 1px solid rgba(34, 197, 94, 0.3) !important;
 		color: white !important;
-		box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 4px 15px rgba(34, 197, 94, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
-	.scan-btn-yellow:hover:not(:disabled) {
-		background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%) !important;
-		box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	.scan-btn-green:hover:not(:disabled) {
+		background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
+		box-shadow:
+			0 6px 20px rgba(34, 197, 94, 0.4),
+			inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
 	}
 
-	/* Purple Stop Scan Button */
-	.scan-btn-purple {
-		background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
-		border: 1px solid rgba(139, 92, 246, 0.3) !important;
+	/* Red Stop Scan Button */
+	.scan-btn-red {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+		border: 1px solid rgba(239, 68, 68, 0.3) !important;
 		color: white !important;
-		box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 4px 15px rgba(239, 68, 68, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
-	.scan-btn-purple:hover:not(:disabled) {
-		background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%) !important;
-		box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	.scan-btn-red:hover:not(:disabled) {
+		background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
+		box-shadow:
+			0 6px 20px rgba(239, 68, 68, 0.4),
+			inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
 	}
 
-	/* Blue Clear Button */
-	.clear-btn-blue {
-		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-		border: 1px solid rgba(37, 99, 235, 0.3) !important;
+	/* Red Clear Button */
+	.clear-btn-red {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+		border: 1px solid rgba(239, 68, 68, 0.3) !important;
 		color: white !important;
-		box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+		box-shadow:
+			0 4px 15px rgba(239, 68, 68, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	}
 
-	.clear-btn-blue:hover:not(:disabled) {
-		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-		box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+	.clear-btn-red:hover:not(:disabled) {
+		background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
+		box-shadow:
+			0 6px 20px rgba(239, 68, 68, 0.4),
+			inset 0 1px 0 rgba(255, 255, 255, 0.2);
 		transform: translateY(-1px);
 	}
-	
+
 	/* Back to Console Button - muted gray style */
 	.back-btn-style {
 		background: rgba(55, 65, 81, 0.3);
@@ -2214,7 +1919,7 @@
 		text-decoration: none;
 		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 	}
-	
+
 	.back-btn-style:hover {
 		background: rgba(55, 65, 81, 0.4);
 		border-color: rgba(55, 65, 81, 0.5);
@@ -2228,7 +1933,6 @@
 		border-bottom: 1px solid #333;
 		padding: 0.75rem 1rem;
 	}
-
 
 	.freq-selection {
 		display: flex;
@@ -2493,7 +2197,7 @@
 		color: #ef4444;
 		border: 1px solid rgba(239, 68, 68, 0.3);
 	}
-	
+
 	.channel-type {
 		display: inline-block;
 		padding: 0.25rem 0.5rem;
@@ -2502,17 +2206,17 @@
 		font-weight: 600;
 		font-family: monospace;
 	}
-	
+
 	.channel-type.control {
 		background: rgba(59, 130, 246, 0.2);
 		color: #3b82f6;
 		border: 1px solid rgba(59, 130, 246, 0.3);
 	}
-	
+
 	.channel-type.unknown {
 		color: #6b7280;
 	}
-	
+
 	.channel-type:not(.control):not(.unknown) {
 		background: rgba(107, 114, 128, 0.2);
 		color: #9ca3af;
@@ -2596,111 +2300,26 @@
 		margin: 0;
 	}
 
-
 	@keyframes blink {
-		0%, 50% { opacity: 1; }
-		51%, 100% { opacity: 0; }
+		0%,
+		50% {
+			opacity: 1;
+		}
+		51%,
+		100% {
+			opacity: 0;
+		}
 	}
 
-	/* Status Panel */
-	.status-panel {
-		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-bottom: 1px solid #333;
-		padding: 1rem;
-	}
-
-	.status-grid {
-		display: grid;
-		grid-template-columns: minmax(600px, 2fr) minmax(350px, 1fr);
-		gap: 1rem;
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-
-	.status-card {
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border: 1px solid #444;
-		border-radius: 0.375rem;
-		padding: 1rem;
-		transition: all 0.3s ease;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-	}
-
-	.status-card:hover {
-		background: linear-gradient(135deg, #333 0%, #222 100%);
-		border-color: #555;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
-	}
-
-	.status-card-header {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #fff;
-		margin-bottom: 0.75rem;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	}
-
-	.status-card-content {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.875rem;
-	}
-
-	.status-indicator {
-		width: 0.75rem;
-		height: 0.75rem;
-		border-radius: 50%;
-		transition: all 0.3s ease;
-	}
-
-	.status-indicator.active {
-		background: #10b981;
-		box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-	}
-
-	.status-card-header svg {
-		color: #ff0000;
-		opacity: 0.9;
-	}
-	
 	.text-red-500 {
 		color: #ff0000;
 	}
 
-
-	.frame-monitor {
-		margin-top: 0.75rem;
-	}
-	
-
-	.frame-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.5rem;
-	}
-
-	.frame-display {
-		background: rgba(0, 0, 0, 0.5);
-		border: 1px solid #333;
-		border-radius: 0.25rem;
-		padding: 0.5rem;
-		font-family: 'Courier New', monospace;
-		font-size: 0.75rem;
-		height: 420px;
-		overflow-y: auto;
-	}
-	
 	.tower-groups {
 		margin: 0;
 		padding: 0;
 	}
-	
+
 	.tower-line {
 		display: flex;
 		align-items: center;
@@ -2710,18 +2329,18 @@
 		font-family: monospace;
 		white-space: nowrap;
 	}
-	
+
 	.tower-line:hover {
 		background: rgba(255, 255, 255, 0.05);
 	}
-	
+
 	.tower-mcc {
 		color: #94a3b8;
 		font-size: 0.75rem;
 		min-width: 70px;
 		text-align: center;
 	}
-	
+
 	.tower-carrier {
 		color: #f1f5f9;
 		font-weight: 500;
@@ -2730,11 +2349,11 @@
 		text-overflow: ellipsis;
 		text-align: center;
 	}
-	
+
 	.tower-flag {
 		font-size: 1rem;
 	}
-	
+
 	.tower-country {
 		min-width: 120px;
 		font-size: 0.75rem;
@@ -2744,20 +2363,20 @@
 		white-space: nowrap;
 		text-align: center;
 	}
-	
+
 	.tower-separator {
 		color: #475569;
 		font-size: 0.7rem;
 		padding: 0 0.25rem;
 	}
-	
+
 	.tower-devices {
 		color: #3b82f6;
 		font-weight: 600;
 		min-width: 90px;
 		text-align: center;
 	}
-	
+
 	.tower-lac {
 		color: #94a3b8;
 		font-family: monospace;
@@ -2765,14 +2384,14 @@
 		min-width: 80px;
 		text-align: center;
 	}
-	
+
 	.tower-new {
 		color: #ef4444;
 		font-weight: bold;
 		margin-left: 0.5rem;
 		animation: blink 1s linear infinite;
 	}
-	
+
 	.tower-header {
 		display: flex;
 		align-items: center;
@@ -2785,43 +2404,43 @@
 		border-bottom: 1px solid #333;
 		margin-bottom: 0.4rem;
 	}
-	
+
 	.header-mcc {
 		min-width: 70px;
 		text-align: center;
 	}
-	
+
 	.header-carrier {
 		min-width: 140px;
 		text-align: center;
 	}
-	
+
 	.header-country {
 		min-width: 120px;
 		text-align: center;
 		font-size: 0.7rem;
 	}
-	
+
 	.header-devices {
 		min-width: 90px;
 		text-align: center;
 	}
-	
+
 	.header-lac {
 		min-width: 80px;
 		text-align: center;
 	}
-	
+
 	.header-status {
 		min-width: 50px;
 		text-align: center;
 	}
-	
+
 	.header-location {
 		min-width: 160px;
 		text-align: center;
 	}
-	
+
 	.tower-location {
 		min-width: 160px;
 		font-family: monospace;
@@ -2829,32 +2448,32 @@
 		color: #9ca3af;
 		text-align: center;
 	}
-	
+
 	.tower-status {
 		min-width: 45px;
 		text-align: center;
 		font-weight: bold;
 	}
-	
+
 	.tower-status {
 		min-width: 50px;
 		text-align: center;
 		font-weight: bold;
 	}
-	
+
 	.status-ok {
 		color: #10b981;
 	}
-	
+
 	.status-unknown {
 		color: #f59e0b;
 	}
-	
+
 	.status-suspicious {
 		color: #ef4444;
 		animation: blink 1s linear infinite;
 	}
-	
+
 	.status-fake {
 		color: #dc2626;
 		font-weight: bold;
@@ -2875,11 +2494,11 @@
 	.text-green-400 {
 		color: #4ade80;
 	}
-	
+
 	.text-yellow-500 {
 		color: #eab308;
 	}
-	
+
 	.text-orange-400 {
 		color: #fb923c;
 	}
@@ -2889,8 +2508,13 @@
 	}
 
 	@keyframes blink {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.3; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.3;
+		}
 	}
 
 	.status-indicator.inactive {
@@ -2900,19 +2524,19 @@
 	.status-indicator.pulse {
 		animation: pulse 2s infinite;
 	}
-	
+
 	.status-indicator-small {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
 		transition: all 0.3s ease;
 	}
-	
+
 	.status-indicator-small.active {
 		background: #10b981;
 		box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 	}
-	
+
 	.status-indicator-small.inactive {
 		background: #6b7280;
 	}
@@ -2928,9 +2552,15 @@
 	}
 
 	@keyframes pulse {
-		0% { opacity: 1; }
-		50% { opacity: 0.5; }
-		100% { opacity: 1; }
+		0% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
+		100% {
+			opacity: 1;
+		}
 	}
 
 	.status-text {
@@ -2948,8 +2578,14 @@
 
 	/* Splash Screen Styles */
 	@keyframes pulse-wave {
-		0%, 100% { transform: scale(1); opacity: 0.3; }
-		50% { transform: scale(1.1); opacity: 0.1; }
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 0.3;
+		}
+		50% {
+			transform: scale(1.1);
+			opacity: 0.1;
+		}
 	}
-
 </style>
