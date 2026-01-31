@@ -244,11 +244,36 @@
 	let hiddenSignalBands = new Set<string>();
 
 	const signalBands = [
-		{ key: 'red', color: '#ff0000', label: '> -50 dBm (Very Strong)', min: -50 },
-		{ key: 'orange', color: '#ff8800', label: '-50 to -60 dBm (Strong)', min: -60 },
-		{ key: 'yellow', color: '#ffff00', label: '-60 to -70 dBm (Good)', min: -70 },
-		{ key: 'green', color: '#00ff00', label: '-70 to -80 dBm (Fair)', min: -80 },
-		{ key: 'blue', color: '#0088ff', label: '< -80 dBm (Weak)', min: -Infinity }
+		{
+			key: 'red',
+			color: 'var(--palantir-signal-critical)',
+			label: '> -50 dBm (Very Strong)',
+			min: -50
+		},
+		{
+			key: 'orange',
+			color: 'var(--palantir-signal-strong)',
+			label: '-50 to -60 dBm (Strong)',
+			min: -60
+		},
+		{
+			key: 'yellow',
+			color: 'var(--palantir-signal-good)',
+			label: '-60 to -70 dBm (Good)',
+			min: -70
+		},
+		{
+			key: 'green',
+			color: 'var(--palantir-signal-fair)',
+			label: '-70 to -80 dBm (Fair)',
+			min: -80
+		},
+		{
+			key: 'blue',
+			color: 'var(--palantir-signal-weak)',
+			label: '< -80 dBm (Weak)',
+			min: -Infinity
+		}
 	];
 
 	function getSignalBandKey(rssi: number): string {
@@ -587,17 +612,17 @@
 
 				// Determine tower status
 				let status = 'ok';
-				let iconColor = '#10b981'; // Green
+				let iconColor = 'var(--palantir-signal-fair)'; // Green
 
 				if (tower.mcc === '000' || tower.mcc === '001' || tower.mcc === '999') {
 					status = 'fake';
 					iconColor = '#dc2626'; // Dark red
 				} else if (tower.radio === 'UMTS' || tower.radio === 'LTE') {
 					status = 'modern';
-					iconColor = '#3b82f6'; // Blue
+					iconColor = 'var(--palantir-info)'; // Blue
 				} else if (!location.carrier || location.carrier === 'Unknown Carrier') {
 					status = 'unknown';
-					iconColor = '#f59e0b'; // Orange
+					iconColor = 'var(--palantir-signal-strong)'; // Orange
 				}
 
 				// Create tower icon with 🗼 emoji
@@ -727,11 +752,11 @@
 	// Get signal color based on power
 	function getSignalColor(power: number): string {
 		// Note: Higher dBm (closer to 0) = stronger signal
-		if (power > -50) return '#ff0000'; // Red (very strong)
-		if (power > -60) return '#ff8800'; // Orange (strong)
-		if (power > -70) return '#ffff00'; // Yellow (good)
-		if (power > -80) return '#00ff00'; // Green (fair)
-		return '#0088ff'; // Blue (weak)
+		if (power > -50) return 'var(--palantir-signal-critical)'; // Red (very strong)
+		if (power > -60) return 'var(--palantir-signal-strong)'; // Orange (strong)
+		if (power > -70) return 'var(--palantir-signal-good)'; // Yellow (good)
+		if (power > -80) return 'var(--palantir-signal-fair)'; // Green (fair)
+		return 'var(--palantir-signal-weak)'; // Blue (weak)
 	}
 
 	// Update signal and device type distributions
@@ -866,7 +891,7 @@
 				autoClose: false,
 				closeOnClick: false
 			}).setContent(`
-				<div style="padding: 10px; color: #ff4444;">
+				<div style="padding: 10px; color: #f87171;">
 					<h4>Failed to load system info</h4>
 					<p>Check the browser console for error details.</p>
 					<p>API might be unreachable or returning invalid data.</p>
@@ -918,7 +943,7 @@
           </tr>
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
-            <td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">${mgrsCoord}</td>
+            <td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">${mgrsCoord}</td>
           </tr>
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Hostname:</td>
@@ -930,14 +955,14 @@
           </tr>
           ${wifiInterfacesHtml}
           <tr>
-            <td colspan="2" style="padding: 8px 0 4px 0; border-top: 1px solid #333;">
+            <td colspan="2" style="padding: 8px 0 4px 0; border-top: 1px solid #2c2f36;">
               <strong>System Resources:</strong>
             </td>
           </tr>
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">CPU:</td>
             <td style="padding: 4px 0;">
-              <span style="color: ${systemInfo.cpu.usage > 80 ? '#ff4444' : systemInfo.cpu.usage > 60 ? '#ffaa00' : '#00ff00'}">
+              <span style="color: ${systemInfo.cpu.usage > 80 ? '#f87171' : systemInfo.cpu.usage > 60 ? '#fbbf24' : '#4ade80'}">
                 ${systemInfo.cpu.usage.toFixed(1)}%
               </span>
               (${systemInfo.cpu.cores} cores)
@@ -946,7 +971,7 @@
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Memory:</td>
             <td style="padding: 4px 0;">
-              <span style="color: ${systemInfo.memory.percentage > 80 ? '#ff4444' : systemInfo.memory.percentage > 60 ? '#ffaa00' : '#00ff00'}">
+              <span style="color: ${systemInfo.memory.percentage > 80 ? '#f87171' : systemInfo.memory.percentage > 60 ? '#fbbf24' : '#4ade80'}">
                 ${systemInfo.memory.percentage.toFixed(1)}%
               </span>
               (${formatBytes(systemInfo.memory.used)} / ${formatBytes(systemInfo.memory.total)})
@@ -955,7 +980,7 @@
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Storage:</td>
             <td style="padding: 4px 0;">
-              <span style="color: ${systemInfo.storage.percentage > 80 ? '#ff4444' : systemInfo.storage.percentage > 60 ? '#ffaa00' : '#00ff00'}">
+              <span style="color: ${systemInfo.storage.percentage > 80 ? '#f87171' : systemInfo.storage.percentage > 60 ? '#fbbf24' : '#4ade80'}">
                 ${systemInfo.storage.percentage}%
               </span>
               (${formatBytes(systemInfo.storage.used)} / ${formatBytes(systemInfo.storage.total)})
@@ -966,10 +991,10 @@
             <td style="padding: 4px 0;">
               ${
 					systemInfo.temperature !== null
-						? `<span style="color: ${systemInfo.temperature > 70 ? '#ff4444' : systemInfo.temperature > 60 ? '#ffaa00' : '#00ff00'}">
+						? `<span style="color: ${systemInfo.temperature > 70 ? '#f87171' : systemInfo.temperature > 60 ? '#fbbf24' : '#4ade80'}">
                      ${systemInfo.temperature.toFixed(1)}°C
                    </span>`
-						: '<span style="color: #888;">N/A</span>'
+						: '<span class="text-tertiary" style="">N/A</span>'
 				}
             </td>
           </tr>
@@ -983,7 +1008,7 @@
           <tr>
             <td style="padding: 4px 8px 4px 0; font-weight: bold;">Battery:</td>
             <td style="padding: 4px 0;">
-              <span style="color: ${systemInfo.battery.level < 20 ? '#ff4444' : systemInfo.battery.level < 50 ? '#ffaa00' : '#00ff00'}">
+              <span style="color: ${systemInfo.battery.level < 20 ? '#f87171' : systemInfo.battery.level < 50 ? '#fbbf24' : '#4ade80'}">
                 ${systemInfo.battery.level}%
               </span>
               ${systemInfo.battery.charging ? '(Charging)' : ''}
@@ -1197,10 +1222,10 @@
 			return `
         <svg width="40" height="40" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
           <rect x="7" y="13" width="16" height="6" rx="1" fill="${color}" stroke="#fff" stroke-width="1"/>
-          <circle cx="10" cy="16" r="1" fill="#00ff00"/>
-          <circle cx="13" cy="16" r="1" fill="#00ff00"/>
-          <circle cx="16" cy="16" r="1" fill="#ffff00"/>
-          <circle cx="19" cy="16" r="1" fill="#ff0000"/>
+          <circle cx="10" cy="16" r="1" fill="#4ade80"/>
+          <circle cx="13" cy="16" r="1" fill="#4ade80"/>
+          <circle cx="16" cy="16" r="1" fill="#fbbf24"/>
+          <circle cx="19" cy="16" r="1" fill="#dc2626"/>
           <rect x="22" y="15" width="2" height="2" fill="#fff"/>
         </svg>`;
 		}
@@ -1224,8 +1249,8 @@
         <circle cx="12" cy="12" r="2.5" fill="#000"/>
         <circle cx="18" cy="12" r="2.5" fill="#000"/>
         <!-- Glowing eyes -->
-        <circle cx="12" cy="12" r="1" fill="#ff0000" opacity="0.8"/>
-        <circle cx="18" cy="12" r="1" fill="#ff0000" opacity="0.8"/>
+        <circle cx="12" cy="12" r="1" fill="#dc2626" opacity="0.8"/>
+        <circle cx="18" cy="12" r="1" fill="#dc2626" opacity="0.8"/>
         <!-- Nasal cavity -->
         <path d="M15 14 L13 18 L17 18 Z" fill="#000"/>
         <!-- Teeth -->
@@ -1233,7 +1258,7 @@
         <rect x="15" y="19" width="1" height="3" fill="#fff"/>
         <rect x="17" y="20" width="1" height="2" fill="#fff"/>
         <!-- Warning triangle -->
-        <path d="M15 25 L12 29 L18 29 Z" fill="#ff0000" opacity="0.6"/>
+        <path d="M15 25 L12 29 L18 29 Z" fill="#dc2626" opacity="0.6"/>
         <text x="15" y="28" text-anchor="middle" font-family="Arial" font-size="6" font-weight="bold" fill="#fff">!</text>
       </svg>`;
 	}
@@ -1500,7 +1525,7 @@
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
-                    <td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">${latLonToMGRS(device.location?.lat || userPosition.lat, device.location?.lon || userPosition.lon)}</td>
+                    <td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">${latLonToMGRS(device.location?.lat || userPosition.lat, device.location?.lon || userPosition.lon)}</td>
                   </tr>
                 </table>
               </div>
@@ -1596,7 +1621,7 @@
                   </tr>
                   <tr>
                     <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
-                    <td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">${latLonToMGRS(device.location?.lat || userPosition.lat, device.location?.lon || userPosition.lon)}</td>
+                    <td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">${latLonToMGRS(device.location?.lat || userPosition.lat, device.location?.lon || userPosition.lon)}</td>
                   </tr>
                 </table>
               </div>
@@ -1741,7 +1766,7 @@
               </tr>
               <tr>
                 <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
-                <td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">
+                <td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">
                   ${latLonToMGRS(position.lat, position.lon)}
                 </td>
               </tr>
@@ -1828,7 +1853,7 @@
                 </tr>
                 <tr>
                   <td style="padding: 4px 8px 4px 0; font-weight: bold;">MGRS:</td>
-                  <td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">
+                  <td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">
                     ${latLonToMGRS(signal.position.lat, signal.position.lon)}
                   </td>
                 </tr>
@@ -2125,22 +2150,24 @@
 		</div>
 		<div class="status">
 			<span class="status-item">
-				<span style="color: #ffffff;">GPS:</span>
+				<span class="text-primary">GPS:</span>
 				{#if fixType !== 'No'}
-					<span style="color: #00ff00; margin-left: 0.25rem;">{fixType} Fix</span>
-					<span style="color: #888; margin-left: 0.25rem;">({satellites} sats)</span>
-					<span style="color: #ffffff; margin-left: 0.5rem;">|</span>
-					<span style="color: #88ccff; margin-left: 0.5rem;"
+					<span class="text-success" style=" margin-left: 0.25rem;">{fixType} Fix</span>
+					<span class="text-tertiary" style=" margin-left: 0.25rem;"
+						>({satellites} sats)</span
+					>
+					<span style="color: #e8eaed; margin-left: 0.5rem;">|</span>
+					<span class="text-info" style=" margin-left: 0.5rem;"
 						>{formattedCoords.lat}, {formattedCoords.lon}</span
 					>
-					<span style="color: #ffffff; margin-left: 0.5rem;">|</span>
-					<span style="color: #ffaa00; margin-left: 0.5rem; font-family: monospace;"
+					<span style="color: #e8eaed; margin-left: 0.5rem;">|</span>
+					<span class="text-warning" style=" margin-left: 0.5rem; font-family: monospace;"
 						>{mgrsCoord}</span
 					>
 					<span style="font-size: 1.2em; margin-left: 0.5rem;">{currentCountry.flag}</span
 					>
 				{:else}
-					<span style="color: #ff4444; margin-left: 0.25rem;">No Fix</span>
+					<span class="text-error" style=" margin-left: 0.25rem;">No Fix</span>
 				{/if}
 			</span>
 		</div>
@@ -2243,31 +2270,31 @@
 				<span class="footer-label">Signal Distribution:</span>
 				{#if signalDistribution.veryStrong > 0}
 					<span class="signal-stat">
-						<span class="signal-indicator" style="background: #ff0000"></span>
+						<span class="signal-indicator signal-critical"></span>
 						{signalDistribution.veryStrong}
 					</span>
 				{/if}
 				{#if signalDistribution.strong > 0}
 					<span class="signal-stat">
-						<span class="signal-indicator" style="background: #ff8800"></span>
+						<span class="signal-indicator signal-strong"></span>
 						{signalDistribution.strong}
 					</span>
 				{/if}
 				{#if signalDistribution.good > 0}
 					<span class="signal-stat">
-						<span class="signal-indicator" style="background: #ffff00"></span>
+						<span class="signal-indicator signal-good"></span>
 						{signalDistribution.good}
 					</span>
 				{/if}
 				{#if signalDistribution.fair > 0}
 					<span class="signal-stat">
-						<span class="signal-indicator" style="background: #00ff00"></span>
+						<span class="signal-indicator signal-fair"></span>
 						{signalDistribution.fair}
 					</span>
 				{/if}
 				{#if signalDistribution.weak > 0}
 					<span class="signal-stat">
-						<span class="signal-indicator" style="background: #0088ff"></span>
+						<span class="signal-indicator signal-weak"></span>
 						{signalDistribution.weak}
 					</span>
 				{/if}
@@ -2391,8 +2418,8 @@
 				<path d="M4 20v-2h2v2H4zm4 0v-5h2v5H8zm4 0V10h2v10h-2zm4 0V4h2v16h-2z"></path>
 			</svg>
 			<span style="font-weight: 600; letter-spacing: 0.05em; font-size: 12px;">
-				<span style="color: #fb923c;">USRP</span>
-				<span style="color: #ffffff;">SWEEP</span>
+				<span class="text-brand">USRP</span>
+				<span class="text-primary">SWEEP</span>
 			</span>
 		</div>
 
@@ -2431,18 +2458,18 @@
 				style="flex-direction: column; align-items: flex-start; gap: 0.25rem;"
 			>
 				<div>
-					<span style="color: #ffffff;">Device:</span>
+					<span class="text-primary">Device:</span>
 					<span
 						style="color: {connectionStatus === 'Connected'
-							? '#00ff00'
-							: '#ff4444'}; margin-left: 0.25rem;"
+							? '#4ade80'
+							: '#f87171'}; margin-left: 0.25rem;"
 					>
 						{connectionStatus}
 					</span>
 				</div>
 				<div>
-					<span style="color: #ffffff;">Broadcast:</span>
-					<span style="color: #ff4444; margin-left: 0.25rem;">Offline</span>
+					<span class="text-primary">Broadcast:</span>
+					<span class="text-error" style=" margin-left: 0.25rem;">Offline</span>
 				</div>
 			</div>
 
@@ -2453,11 +2480,11 @@
 				style="flex-direction: column; align-items: flex-start; gap: 0.25rem;"
 			>
 				<div>
-					<span style="color: #fb923c;">Frequencies</span>
+					<span class="text-brand">Frequencies</span>
 				</div>
 				<div>
-					<span style="color: #ffffff;">Detected:</span>
-					<span style="color: #888; font-weight: 600; margin-left: 0.25rem;"
+					<span class="text-primary">Detected:</span>
+					<span class="text-tertiary" style=" font-weight: 600; margin-left: 0.25rem;"
 						>{signalCount}</span
 					>
 				</div>
@@ -2591,15 +2618,15 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
-		background: #1a1a1a;
-		color: #ffffff;
+		background: #1a1d23;
+		color: #e8eaed;
 		position: relative;
 	}
 
 	/* Search Bar */
 	.search-bar {
-		background: #2a2a2a;
-		border-bottom: 1px solid #444;
+		background: #25282f;
+		border-bottom: 1px solid #35383f;
 		padding: 1rem;
 		display: flex;
 		justify-content: space-between;
@@ -2624,31 +2651,31 @@
 	.frequency-input {
 		flex: 1;
 		padding: 0.5rem 1rem;
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 4px;
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 16px;
 	}
 
 	.frequency-input:focus {
 		outline: none;
-		border-color: #0088ff;
+		border-color: #4a90e2;
 	}
 
 	.frequency-input-small {
 		width: 100px;
 		padding: 0.5rem 0.75rem;
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 4px;
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 14px;
 	}
 
 	.frequency-input-small:focus {
 		outline: none;
-		border-color: #0088ff;
+		border-color: #4a90e2;
 	}
 
 	.frequency-input-small::placeholder {
@@ -2672,10 +2699,10 @@
 	.frequency-input-footer {
 		width: 80px;
 		padding: 0.25rem 0.375rem;
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 4px;
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 11px;
 		height: 28px;
 		text-align: center;
@@ -2683,7 +2710,7 @@
 
 	.frequency-input-footer:focus {
 		outline: none;
-		border-color: #0088ff;
+		border-color: #4a90e2;
 	}
 
 	.frequency-input-footer::placeholder {
@@ -2716,12 +2743,12 @@
 	}
 
 	.search-button-footer:disabled {
-		background: #444;
+		background: #35383f;
 		cursor: not-allowed;
 	}
 
 	.clear-button-footer {
-		background: #ff4444;
+		background: #f87171;
 		color: white !important;
 	}
 
@@ -2730,7 +2757,7 @@
 	}
 
 	.clear-button-footer:disabled {
-		background: #333;
+		background: #2c2f36;
 		color: white !important;
 		cursor: not-allowed;
 	}
@@ -2756,23 +2783,23 @@
 	}
 
 	.start-kismet-button-footer:disabled {
-		background: #444;
+		background: #35383f;
 		cursor: not-allowed;
 	}
 
 	.mac-input {
 		width: 200px;
 		padding: 0.5rem 0.75rem;
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 4px;
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 14px;
 	}
 
 	.mac-input:focus {
 		outline: none;
-		border-color: #00d2ff;
+		border-color: #4a9eff;
 	}
 
 	.mac-input::placeholder {
@@ -2790,10 +2817,10 @@
 	.mac-input-footer {
 		width: 140px;
 		padding: 0.25rem 0.375rem;
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 3px;
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 11px;
 		height: 28px;
 		text-align: center;
@@ -2801,7 +2828,7 @@
 
 	.mac-input-footer:focus {
 		outline: none;
-		border-color: #00d2ff;
+		border-color: #4a9eff;
 	}
 
 	.mac-input-footer::placeholder {
@@ -2889,7 +2916,7 @@
 	}
 
 	.search-button {
-		background: #0088ff;
+		background: #4a90e2;
 		color: white;
 	}
 
@@ -2898,12 +2925,12 @@
 	}
 
 	.search-button:disabled {
-		background: #444;
+		background: #35383f;
 		cursor: not-allowed;
 	}
 
 	.clear-button {
-		background: #ff4444 !important;
+		background: #f87171 !important;
 		color: white !important;
 	}
 
@@ -2931,7 +2958,7 @@
 	}
 
 	.status-label {
-		color: #888;
+		color: #5f6368;
 	}
 
 	.status-value {
@@ -2939,11 +2966,11 @@
 	}
 
 	.status-value.connected {
-		color: #00ff00;
+		color: #4ade80;
 	}
 
 	.status-value.disconnected {
-		color: #ff4444;
+		color: #f87171;
 	}
 
 	/* Map Container */
@@ -2958,7 +2985,7 @@
 		bottom: 10px;
 		right: 10px;
 		background: rgba(42, 42, 42, 0.9);
-		border: 1px solid #444;
+		border: 1px solid #35383f;
 		border-radius: 4px;
 		padding: 0.5rem;
 		font-size: 12px;
@@ -3020,8 +3047,8 @@
 
 	/* Signal Info Bar */
 	.signal-info {
-		background: #2a2a2a;
-		border-top: 1px solid #444;
+		background: #25282f;
+		border-top: 1px solid #35383f;
 		padding: 0.5rem 1rem;
 		display: flex;
 		align-items: center;
@@ -3033,8 +3060,8 @@
 
 	/* Data Footer */
 	.data-footer {
-		background: #2a2a2a;
-		border-top: 1px solid #444;
+		background: #25282f;
+		border-top: 1px solid #35383f;
 		padding: 0.5rem 1rem;
 		display: flex;
 		align-items: center;
@@ -3047,7 +3074,7 @@
 
 	.kismet-label {
 		padding-right: 2rem;
-		border-right: 1px solid #444;
+		border-right: 1px solid #35383f;
 	}
 
 	.kismet-controls {
@@ -3071,7 +3098,7 @@
 	}
 
 	.kismet-control-btn.btn-start {
-		background: #0088ff;
+		background: #4a90e2;
 		color: white;
 	}
 
@@ -3080,7 +3107,7 @@
 	}
 
 	.kismet-control-btn.btn-stop {
-		background: #ff4444;
+		background: #f87171;
 		color: white;
 	}
 
@@ -3100,25 +3127,25 @@
 
 	.kismet-title {
 		font-weight: 600;
-		color: #00d2ff;
+		color: #4a9eff;
 		letter-spacing: 0.05em;
 		font-size: 12px;
 	}
 
 	.hackrf-label {
 		padding-right: 1.5rem;
-		border-right: 1px solid #444;
+		border-right: 1px solid #35383f;
 	}
 
 	.hackrf-title {
 		font-weight: 600;
-		color: #fb923c;
+		color: #f97316;
 		letter-spacing: 0.05em;
 		font-size: 12px;
 	}
 
 	.frequency-value {
-		color: #fb923c;
+		color: #f97316;
 		font-weight: 500;
 	}
 
@@ -3127,32 +3154,32 @@
 	}
 
 	.signal-count {
-		color: #00ff00;
+		color: #4ade80;
 		font-weight: 600;
 	}
 
 	.device-count {
-		color: #00d2ff;
+		color: #4a9eff;
 		font-weight: 600;
 	}
 
 	.frequency-count {
-		color: #fb923c;
+		color: #f97316;
 		font-weight: 600;
 	}
 
 	.offline-status {
-		color: #ff4444;
+		color: #f87171;
 	}
 
 	.loading-status {
-		color: #888;
+		color: #5f6368;
 		font-style: italic;
 	}
 
 	.footer-button {
-		background: #333;
-		border: 1px solid #555;
+		background: #2c2f36;
+		border: 1px solid #3e4149;
 		color: #ccc;
 		padding: 0.25rem 0.5rem;
 		border-radius: 4px;
@@ -3164,7 +3191,7 @@
 	}
 
 	.footer-button:hover {
-		background: #444;
+		background: #35383f;
 		border-color: #666;
 		color: #fff;
 	}
@@ -3202,15 +3229,15 @@
 		background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
 		color: white;
 		box-shadow:
-			0 2px 8px rgba(168, 85, 247, 0.3),
-			0 0 20px rgba(168, 85, 247, 0.1);
+			0 2px 8px rgba(139, 92, 246, 0.3),
+			0 0 20px rgba(139, 92, 246, 0.1);
 	}
 
 	.saasfly-btn-load:hover {
 		background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
 		box-shadow:
-			0 4px 12px rgba(168, 85, 247, 0.4),
-			0 0 30px rgba(168, 85, 247, 0.2);
+			0 4px 12px rgba(139, 92, 246, 0.4),
+			0 0 30px rgba(139, 92, 246, 0.2);
 		transform: translateY(-1px);
 	}
 
@@ -3246,7 +3273,7 @@
 	}
 
 	.footer-label {
-		color: #888;
+		color: #5f6368;
 		font-weight: 500;
 		margin-right: 0.375rem;
 		font-size: 11px;
@@ -3275,7 +3302,7 @@
 	.footer-divider {
 		width: 1px;
 		height: 16px;
-		background: #444;
+		background: #35383f;
 	}
 
 	.info-content {
@@ -3285,7 +3312,7 @@
 	}
 
 	.info-label {
-		color: #888;
+		color: #5f6368;
 		font-size: 14px;
 	}
 
@@ -3304,12 +3331,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #1a1a1a;
+		background: #1a1d23;
 	}
 
 	.gps-waiting-content {
 		text-align: center;
-		color: #888;
+		color: #5f6368;
 	}
 
 	.gps-icon {
@@ -3356,17 +3383,17 @@
 
 	/* Leaflet Popup Styling */
 	:global(.signal-popup .leaflet-popup-content-wrapper) {
-		background: #2a2a2a;
-		color: #ffffff;
-		border: 1px solid #444;
+		background: #25282f;
+		color: #e8eaed;
+		border: 1px solid #35383f;
 		border-radius: 6px;
 		box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
 	}
 
 	:global(.signal-popup .leaflet-popup-tip) {
-		background: #2a2a2a;
-		border-bottom: 1px solid #444;
-		border-right: 1px solid #444;
+		background: #25282f;
+		border-bottom: 1px solid #35383f;
+		border-right: 1px solid #35383f;
 	}
 
 	:global(.signal-popup .leaflet-popup-content) {
@@ -3375,7 +3402,7 @@
 	}
 
 	:global(.signal-popup .leaflet-popup-close-button) {
-		color: #888;
+		color: #5f6368;
 		font-size: 20px;
 		font-weight: normal;
 		padding: 4px 4px 0 0;
@@ -3387,17 +3414,17 @@
 
 	/* Pi System Info Popup - styled like Kismet device boxes */
 	:global(.pi-popup .leaflet-popup-content-wrapper) {
-		background: #2a2a2a;
-		border: 1px solid #444;
+		background: #25282f;
+		border: 1px solid #35383f;
 		border-radius: 6px;
 		box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
 		color: #fff;
 	}
 
 	:global(.pi-popup .leaflet-popup-tip) {
-		background: #2a2a2a;
-		border-bottom: 1px solid #444;
-		border-right: 1px solid #444;
+		background: #25282f;
+		border-bottom: 1px solid #35383f;
+		border-right: 1px solid #35383f;
 	}
 
 	:global(.pi-popup .leaflet-popup-content) {
@@ -3405,7 +3432,7 @@
 	}
 
 	:global(.pi-popup .leaflet-popup-close-button) {
-		color: #888;
+		color: #5f6368;
 		font-size: 20px;
 		font-weight: normal;
 	}
@@ -4077,7 +4104,7 @@
 
 		.footer-section {
 			border-right: none !important;
-			border-bottom: 1px solid rgba(0, 220, 255, 0.2);
+			border-bottom: 1px solid rgba(74, 158, 255, 0.2);
 			padding-right: 0;
 			padding-bottom: 15px;
 		}

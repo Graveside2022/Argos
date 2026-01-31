@@ -73,8 +73,8 @@
 
 	<header class="console-header">
 		<h1 class="console-title">
-			<span style="color: #fb923c;">Argos</span>
-			<span style="color: var(--text-primary);">Console</span>
+			<span class="text-brand">Argos</span>
+			<span class="text-primary">Console</span>
 		</h1>
 		<p class="console-subtitle">Tactical Intelligence Platform</p>
 	</header>
@@ -126,7 +126,7 @@
 				<path d="M4 20v-2h2v2H4zm4 0v-5h2v5H8zm4 0V10h2v10h-2zm4 0V4h2v16h-2z"></path>
 			</svg>
 			<h2 class="mission-title">
-				<span style="color: #fb923c;">USRP</span>
+				<span class="text-feature-rf">USRP</span>
 				<span>Sweep</span>
 			</h2>
 			<p class="mission-desc">Spectrum Analysis</p>
@@ -207,7 +207,7 @@
 				<path d="M13 2L8.5 13H12L11 22L15.5 11H12L13 2Z" />
 			</svg>
 			<h2 class="mission-title">
-				<span style="color: #fb923c;">RF</span>
+				<span class="text-feature-rf">RF</span>
 				<span>Emitter</span>
 			</h2>
 			<p class="mission-desc">Signal Generation</p>
@@ -227,7 +227,7 @@
 				></path>
 			</svg>
 			<h2 class="mission-title">
-				<span style="color: #06b6d4;">Drone</span>
+				<span class="text-feature-drone">Drone</span>
 				<span>ID</span>
 			</h2>
 			<p class="mission-desc">Remote ID Detection</p>
@@ -315,7 +315,7 @@
 				></path>
 			</svg>
 			<h2 class="mission-title">
-				<span style="color: #a855f7;">Radio</span>
+				<span class="text-feature-radio">Radio</span>
 				<span>Hacker</span>
 			</h2>
 			<p class="mission-desc">URH Signal Analysis</p>
@@ -357,28 +357,28 @@
 
 <style>
 	:root {
-		/* Backgrounds */
-		--bg-primary: #0a0a0a;
-		--bg-secondary: #141414;
-		--bg-card: #141414;
-		--bg-hover: #2d2d2d;
+		/* Backgrounds - Palantir */
+		--bg-primary: #0e1116;
+		--bg-secondary: #16181d;
+		--bg-card: #1c1f26;
+		--bg-hover: #25282f;
 
-		/* Mission Colors */
-		--mission-wifi: #00d2ff;
-		--mission-spectrum: #fb923c;
-		--mission-location: #10b981;
+		/* Mission Colors - Palantir */
+		--mission-wifi: #4a9eff;
+		--mission-spectrum: #f97316;
+		--mission-location: #4ade80;
 		--mission-broadcast: #8b5cf6;
-		--mission-gsm: #ff0000;
+		--mission-gsm: #dc2626;
 		--mission-rtl433: #8b5cf6;
 
-		/* Text Colors */
-		--text-primary: #ffffff;
-		--text-secondary: #a3a3a3;
-		--text-tertiary: #737373;
+		/* Text Colors - Palantir */
+		--text-primary: #e8eaed;
+		--text-secondary: #9aa0a6;
+		--text-tertiary: #5f6368;
 
-		/* Borders */
-		--border-primary: #262626;
-		--border-hover: #404040;
+		/* Borders - Palantir */
+		--border-primary: rgba(255, 255, 255, 0.1);
+		--border-hover: rgba(255, 255, 255, 0.15);
 
 		/* Typography */
 		--font-heading: Inter, system-ui, -apple-system, sans-serif;
@@ -425,10 +425,10 @@
 		height: 100%;
 		z-index: -1;
 		background:
-			radial-gradient(circle at 20% 80%, rgba(0, 210, 255, 0.05) 0%, transparent 50%),
+			radial-gradient(circle at 20% 80%, rgba(74, 158, 255, 0.05) 0%, transparent 50%),
 			radial-gradient(circle at 80% 20%, rgba(251, 146, 60, 0.05) 0%, transparent 50%),
 			radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
-			linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 20, 20, 0.98) 100%);
+			linear-gradient(135deg, rgba(14, 17, 22, 0.95) 0%, rgba(28, 31, 38, 0.98) 100%);
 		animation: background-pulse 8s ease-in-out infinite;
 	}
 
@@ -470,7 +470,7 @@
 	.console-header {
 		text-align: center;
 		padding: 3rem 2rem 2rem;
-		background: rgba(20, 20, 20, 0.6);
+		background: rgba(28, 31, 38, 0.6);
 		backdrop-filter: blur(20px);
 		border-bottom: 1px solid var(--border-primary);
 	}
@@ -518,7 +518,7 @@
 	/* Mission Cards */
 	.mission-card {
 		position: relative;
-		background: rgba(20, 20, 20, 0.8);
+		background: rgba(28, 31, 38, 0.8);
 		backdrop-filter: blur(12px);
 		border: 2px solid var(--border-primary);
 		border-radius: 16px;
@@ -559,7 +559,7 @@
 	/* Mission Card Variants */
 	.mission-wifi {
 		--mission-color: var(--mission-wifi);
-		--mission-glow: rgba(0, 210, 255, 0.3);
+		--mission-glow: rgba(74, 158, 255, 0.3);
 	}
 
 	.mission-spectrum {
@@ -628,7 +628,7 @@
 
 	.mission-urh {
 		--mission-color: #a855f7;
-		--mission-glow: rgba(168, 85, 247, 0.3);
+		--mission-glow: rgba(139, 92, 246, 0.3);
 	}
 
 	.mission-tempestsdr {
@@ -700,7 +700,7 @@
 	.console-footer {
 		padding: 1.5rem;
 		text-align: center;
-		background: rgba(10, 10, 10, 0.8);
+		background: rgba(14, 17, 22, 0.8);
 		backdrop-filter: blur(10px);
 		border-top: 1px solid var(--border-primary);
 		margin-top: auto;
