@@ -245,6 +245,16 @@
 	let sortDirection: 'asc' | 'desc' = 'desc';
 	let selectedDeviceKey: string | null = null;
 
+	// Sidebar collapse state (Plan 7)
+	let sidebarCollapsed = false;
+
+	// Auto-collapse sidebar on small screens (Plan 7)
+	$: if (browser && typeof window !== 'undefined') {
+		if (window.innerWidth < 1200 && !sidebarCollapsed) {
+			sidebarCollapsed = true;
+		}
+	}
+
 	// Signal legend filter state
 	let hiddenSignalBands = new Set<string>();
 
@@ -472,14 +482,12 @@
 		// Clear existing signals but preserve targetFrequency display
 		clearSignals();
 
-		console.warn(`Searching for signals near ${targetFrequency} MHz`);
 	}
 
 	// Add MAC to whitelist
 	function addToWhitelist() {
 		if (kismetWhitelistMAC.trim()) {
 			const mac = kismetWhitelistMAC.trim().toUpperCase();
-			console.warn('Adding MAC to whitelist:', mac);
 			whitelistedMACs.add(mac);
 			whitelistedDeviceCount = whitelistedMACs.size;
 			kismetWhitelistMAC = '';
@@ -517,11 +525,29 @@
 		}
 	}
 
+	// Handle keyboard navigation in device table (Plan 7)
+	function handleTableKeydown(event: KeyboardEvent) {
+		if (sortedVisibleDevices.length === 0) return;
+
+		const currentIndex = sortedVisibleDevices.findIndex((d) => d.mac === selectedDeviceKey);
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			const nextIndex = (currentIndex + 1) % sortedVisibleDevices.length;
+			handleDeviceRowClick(sortedVisibleDevices[nextIndex]);
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			const prevIndex = currentIndex <= 0 ? sortedVisibleDevices.length - 1 : currentIndex - 1;
+			handleDeviceRowClick(sortedVisibleDevices[prevIndex]);
+		} else if (event.key === 'Escape') {
+			selectedDeviceKey = null;
+		}
+	}
+
 	// Open spectrum analyzer
 	async function openSpectrumAnalyzer() {
 		// Stop the HackRF sweep if it's running
 		if (isSearching) {
-			console.warn('Stopping HackRF sweep before opening spectrum analyzer...');
 			// Stop HackRF sweep through API
 			try {
 				await fetch('/api/hackrf/stop-sweep', { method: 'POST' });
@@ -879,8 +905,6 @@
 	// Fetch system information
 	async function fetchSystemInfo() {
 		try {
-			console.log('Fetching system info from /api/system/info...');
-
 			// Add timeout to the fetch
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -894,19 +918,12 @@
 			});
 
 			clearTimeout(timeoutId);
-			console.log('System info response status:', response.status);
-			console.log(
-				'System info response headers:',
-				Object.fromEntries(response.headers.entries())
-			);
 
 			if (response.ok) {
 				const responseText = await response.text();
-				console.log('Raw response text:', responseText);
 
 				try {
 					systemInfo = JSON.parse(responseText) as SystemInfo;
-					console.log('System info parsed successfully:', systemInfo);
 				} catch (parseError) {
 					console.error('Failed to parse JSON response:', parseError);
 					console.error('Response text was:', responseText);
@@ -931,7 +948,6 @@
 			return;
 		}
 
-		console.log('Opening Pi popup...');
 
 		// Show loading message first
 		const loadingPopup = L.popup({
@@ -964,8 +980,6 @@
 			userMarker.bindPopup(errorPopup).openPopup();
 			return;
 		}
-
-		console.log('Building popup content with system info:', systemInfo);
 
 		// Format uptime
 		const hours = Math.floor(systemInfo.uptime / 3600);
@@ -1083,8 +1097,6 @@
         </table>
       </div>
     `;
-
-		console.log('Popup content built successfully, length:', popupContent.length);
 
 		// Create and bind popup on demand
 		const popup = L.popup({
@@ -1379,7 +1391,6 @@
 						userMarker.setLatLng([userPosition.lat, userPosition.lon]);
 					} else {
 						// Create user marker with American flag emoji
-						console.log('Creating user marker (American flag)...');
 						const userIcon = L.divIcon({
 							className: 'user-marker',
 							html: '<div style="font-size: 36px; text-align: center; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); cursor: pointer; z-index: 1000;">🇺🇸</div>',
@@ -1390,18 +1401,14 @@
 							icon: userIcon
 						}).addTo(map);
 
-						console.log('User marker created and added to map:', userMarker);
 
 						// Add click handler to user marker (remove popup binding that might interfere)
 						userMarker.on('click', (e) => {
-							console.log('American flag clicked!', e);
 							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
 
-						// Also add double-click for testing
-						userMarker.on('dblclick', (e) => {
-							console.log('American flag double-clicked!', e);
+					userMarker.on('dblclick', (e) => {
 							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
@@ -1491,7 +1498,6 @@
 				const data = (await response.json()) as KismetDevicesResponse;
 
 				// Debug: Log device count
-				console.log(`Kismet: Fetched ${data.devices?.length || 0} devices`);
 
 				// Update or create markers for each device
 				const devices = data.devices;
@@ -1716,10 +1722,7 @@
 				});
 
 				// Debug: Log processing summary
-				console.log(
-					`Kismet Debug: Devices with location: ${devicesWithLocation}, without location: ${devicesWithoutLocation}`
 				);
-				console.log(
 					`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`
 				);
 
@@ -1737,7 +1740,6 @@
 				});
 
 				if (removedDevices > 0) {
-					console.log(`Kismet Debug: Removed ${removedDevices} stale device markers`);
 				}
 
 				// Update the reactive counter and distributions
@@ -2134,7 +2136,6 @@
 		checkKismetStatus().catch((error) => {
 			console.error('Initial Kismet status check failed:', error);
 			// If status check fails, assume running since devices endpoint works
-			console.log('Assuming Kismet is running due to status check failure');
 			kismetStatus = 'running';
 		});
 
@@ -2203,6 +2204,32 @@
 			Back to Console
 		</button>
 
+		<button
+			class="sidebar-toggle-btn"
+			on:click={() => (sidebarCollapsed = !sidebarCollapsed)}
+			aria-label="Toggle sidebar"
+			aria-expanded={!sidebarCollapsed}
+			title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+		>
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				{#if sidebarCollapsed}
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M13 5l7 7-7 7M5 5l7 7-7 7"
+					/>
+				{:else}
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+					/>
+				{/if}
+			</svg>
+		</button>
+
 		<div class="status">
 			<span class="status-item">
 				<span class="text-primary">GPS:</span>
@@ -2231,7 +2258,7 @@
 	<!-- Main Content: Sidebar + Map -->
 	<div class="tactical-main-content">
 		<!-- Sidebar (empty for now - will be filled in Plans 3-6) -->
-		<aside class="tactical-sidebar">
+		<aside class="tactical-sidebar" class:collapsed={sidebarCollapsed}>
 			<!-- Section 1: Kismet Control -->
 			<div class="tactical-sidebar-section">
 				<h3 class="section-header">KISMET CONTROL</h3>
@@ -2367,6 +2394,8 @@
 				<!-- Signal Filter Badges -->
 				<div
 					style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-bottom: var(--space-2);"
+					role="group"
+					aria-label="Signal strength filters"
 				>
 					<span class="metric-label" style="width: 100%;">Filter by Signal:</span>
 					{#each signalBands as band}
@@ -2383,6 +2412,9 @@
 								cursor: pointer;
 								opacity: {hiddenSignalBands.has(band.key) ? '0.5' : '1'};
 							"
+							role="switch"
+							aria-checked={!hiddenSignalBands.has(band.key)}
+							aria-label="Toggle {band.label} signal visibility"
 							on:click={() => toggleSignalBand(band.key)}
 						>
 							{band.label.split(' ')[0]}
@@ -2417,31 +2449,76 @@
 						</p>
 					</div>
 				{:else}
-					<table class="data-table data-table-compact">
+					<table
+						class="data-table data-table-compact"
+						role="grid"
+						aria-label="Detected WiFi devices"
+						tabindex="0"
+						on:keydown={handleTableKeydown}
+					>
 						<thead>
 							<tr>
-								<th on:click={() => handleSort('mac')} style="cursor: pointer;">
+								<th
+									scope="col"
+									role="button"
+									tabindex="0"
+									aria-sort={sortColumn === 'mac'
+										? sortDirection === 'asc'
+											? 'ascending'
+											: 'descending'
+										: 'none'}
+									aria-label="Sort by MAC address"
+									on:click={() => handleSort('mac')}
+									on:keydown={(e) => e.key === 'Enter' && handleSort('mac')}
+									style="cursor: pointer;"
+								>
 									MAC {sortColumn === 'mac'
 										? sortDirection === 'asc'
 											? '▲'
 											: '▼'
 										: ''}
 								</th>
-								<th on:click={() => handleSort('rssi')} style="cursor: pointer;">
+								<th
+									scope="col"
+									role="button"
+									tabindex="0"
+									aria-sort={sortColumn === 'rssi'
+										? sortDirection === 'asc'
+											? 'ascending'
+											: 'descending'
+										: 'none'}
+									aria-label="Sort by signal strength"
+									on:click={() => handleSort('rssi')}
+									on:keydown={(e) => e.key === 'Enter' && handleSort('rssi')}
+									style="cursor: pointer;"
+								>
 									RSSI {sortColumn === 'rssi'
 										? sortDirection === 'asc'
 											? '▲'
 											: '▼'
 										: ''}
 								</th>
-								<th on:click={() => handleSort('type')} style="cursor: pointer;">
+								<th
+									scope="col"
+									role="button"
+									tabindex="0"
+									aria-sort={sortColumn === 'type'
+										? sortDirection === 'asc'
+											? 'ascending'
+											: 'descending'
+										: 'none'}
+									aria-label="Sort by device type"
+									on:click={() => handleSort('type')}
+									on:keydown={(e) => e.key === 'Enter' && handleSort('type')}
+									style="cursor: pointer;"
+								>
 									Type {sortColumn === 'type'
 										? sortDirection === 'asc'
 											? '▲'
 											: '▼'
 										: ''}
 								</th>
-								<th></th>
+								<th scope="col" aria-label="Signal indicator"></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -2454,6 +2531,7 @@
 									data-device-key={device.mac}
 									class:selected={selectedDeviceKey === device.mac}
 									on:click={() => handleDeviceRowClick(device)}
+									style="cursor: pointer;"
 								>
 									<td title={device.mac}>{macDisplay}</td>
 									<td style="color: {getSignalColor(rssi)};">{rssi} dBm</td>
@@ -2462,6 +2540,7 @@
 										<span
 											class="signal-indicator"
 											style="background-color: {getSignalColor(rssi)};"
+											aria-label="Signal strength indicator"
 										></span>
 									</td>
 								</tr>
@@ -2490,19 +2569,24 @@
 			<div class="tactical-sidebar-section">
 				<h3 class="section-header">MAC WHITELIST</h3>
 
-				<label class="metric-label">Add MAC Address</label>
+				<label for="whitelist-mac-input" class="metric-label">Add MAC Address</label>
 				<input
+					id="whitelist-mac-input"
 					type="text"
 					class="input-field"
 					bind:value={kismetWhitelistMAC}
 					placeholder="FF:FF:FF:FF:FF:FF"
 					pattern="[0-9A-Fa-f:]{17}"
+					aria-label="MAC address to whitelist"
+					aria-describedby="whitelist-count"
 					on:keydown={(e) => e.key === 'Enter' && addToWhitelist()}
 				/>
 
 				<div class="metric-row" style="margin-top: var(--space-2);">
 					<span class="metric-label">Whitelisted Devices</span>
-					<span class="badge badge-info">{whitelistedDeviceCount}</span>
+					<span id="whitelist-count" class="badge badge-info" aria-live="polite"
+						>{whitelistedDeviceCount}</span
+					>
 				</div>
 			</div>
 		</aside>
@@ -3858,5 +3942,65 @@
 			font-size: 12px;
 			padding: 6px 12px;
 		}
+	}
+
+	/* Sidebar collapse (Plan 7) */
+	.tactical-sidebar.collapsed {
+		width: 0;
+		min-width: 0;
+		overflow: hidden;
+		padding: 0;
+		border-right: none;
+		transition: all 0.3s ease-in-out;
+	}
+
+	.sidebar-toggle-btn {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem;
+		background: var(--palantir-bg-secondary);
+		border: 1px solid var(--palantir-border);
+		border-radius: 4px;
+		color: var(--palantir-text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.sidebar-toggle-btn:hover {
+		background: var(--palantir-bg-hover);
+		border-color: var(--palantir-accent);
+	}
+
+	@media (max-width: 1200px) {
+		.sidebar-toggle-btn {
+			display: flex;
+		}
+	}
+
+	/* Accessibility: Focus indicators */
+	*:focus-visible {
+		outline: 2px solid var(--palantir-accent);
+		outline-offset: 2px;
+	}
+
+	.data-table:focus-visible {
+		outline: 2px solid var(--palantir-accent);
+		outline-offset: -2px;
+	}
+
+	.data-table th:focus-visible {
+		outline: 2px solid var(--palantir-accent);
+		outline-offset: -2px;
+	}
+
+	.badge:focus-visible {
+		outline: 2px solid var(--palantir-accent);
+		outline-offset: 2px;
+	}
+
+	.input-field:focus-visible {
+		outline: 2px solid var(--palantir-accent);
+		outline-offset: -1px;
 	}
 </style>
