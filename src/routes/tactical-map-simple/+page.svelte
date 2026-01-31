@@ -7,8 +7,7 @@
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
 	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be used in Plan 5 (Quick Actions)
-	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
+	// AirSignalRFButton component replaced with design system button in sidebar Quick Actions (Plan 5)
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Replaced with design system button in Plan 3
 	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
@@ -450,12 +449,6 @@
 		}
 	}
 
-	// Load frequencies function (placeholder for now)
-	function loadFrequencies() {
-		console.warn('Load frequencies clicked - implementation pending');
-		// TODO: Implement frequency loading
-	}
-
 	// Open spectrum analyzer
 	async function openSpectrumAnalyzer() {
 		// Stop the HackRF sweep if it's running
@@ -725,7 +718,6 @@
 	}
 
 	// Toggle cell tower display
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be used in Plan 5 (Quick Actions)
 	function toggleCellTowers() {
 		showCellTowers = !showCellTowers;
 
@@ -2265,6 +2257,40 @@
 					Clear All Signals
 				</button>
 			</div>
+
+			<!-- Section 3: Quick Actions -->
+			<div class="tactical-sidebar-section">
+				<h3 class="section-header">QUICK ACTIONS</h3>
+
+				<button class="btn btn-ghost btn-full" on:click={openSpectrumAnalyzer}>
+					📊 View Spectrum Analyzer
+				</button>
+
+				<button
+					class="btn btn-ghost btn-full"
+					on:click={() => setAirSignalOverlayState(true)}
+				>
+					📡 AirSignal RF Tools
+				</button>
+
+				<button
+					class="btn btn-ghost btn-full"
+					on:click={() => setBettercapOverlayState(!showBettercapOverlay)}
+				>
+					🔧 Bettercap Controls
+				</button>
+
+				<button
+					class="btn btn-ghost btn-full"
+					on:click={() => setBtleOverlayState(!showBtleOverlay)}
+				>
+					📘 BTLE Scanner
+				</button>
+
+				<button class="btn btn-ghost btn-full" on:click={toggleCellTowers}>
+					📍 {showCellTowers ? 'Hide' : 'Show'} Cell Towers
+				</button>
+			</div>
 		</aside>
 
 		<!-- Map Container -->
@@ -2477,60 +2503,7 @@
 				<span class="frequency-value">{targetFrequency} MHz</span>
 			</div>
 		{/if}
-		<!-- RF controls moved to sidebar in Plan 4 -->
-
-		<div class="footer-divider"></div>
-
-		<button class="saasfly-btn saasfly-btn-load" on:click={loadFrequencies}>
-			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					fill-rule="evenodd"
-					d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-				/>
-			</svg>
-			Load Frequencies
-		</button>
-
-		<div class="footer-divider"></div>
-
-		<button class="saasfly-btn saasfly-btn-spectrum" on:click={openSpectrumAnalyzer}>
-			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
-				/>
-			</svg>
-			View Spectrum
-		</button>
-
-		<div class="footer-divider"></div>
-
-		<button
-			class="saasfly-btn"
-			style="color: #10b981;"
-			on:click={() => setBettercapOverlayState(!showBettercapOverlay)}
-		>
-			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-				/>
-			</svg>
-			Bettercap
-		</button>
-
-		<button
-			class="saasfly-btn"
-			style="color: #3b82f6;"
-			on:click={() => setBtleOverlayState(!showBtleOverlay)}
-		>
-			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					fill-rule="evenodd"
-					d="M10 2L14 6l-4 4 4 4-4 4V2zm0 2.828L12.172 7 10 9.172V4.828zM10 10.828L12.172 13 10 15.172v-4.344z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			BTLE
-		</button>
+		<!-- All utility buttons moved to sidebar Quick Actions in Plan 5 -->
 	</div>
 
 	<!-- Kismet Dashboard Overlay -->
@@ -3116,67 +3089,7 @@
 		color: #fff;
 	}
 
-	/* Saasfly button styles */
-	.saasfly-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.375rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: 0.375rem;
-		font-weight: 500;
-		font-size: 11px;
-		transition-property: all;
-		transition-duration: 200ms;
-		border: none;
-		cursor: pointer;
-		height: 28px;
-	}
-
-	.saasfly-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-		transform: none !important;
-	}
-
-	.saasfly-btn svg {
-		width: 12px;
-		height: 12px;
-	}
-
-	/* Load button - Purple gradient */
-	.saasfly-btn-load {
-		background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
-		color: white;
-		box-shadow:
-			0 2px 8px rgba(139, 92, 246, 0.3),
-			0 0 20px rgba(139, 92, 246, 0.1);
-	}
-
-	.saasfly-btn-load:hover {
-		background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
-		box-shadow:
-			0 4px 12px rgba(139, 92, 246, 0.4),
-			0 0 30px rgba(139, 92, 246, 0.2);
-		transform: translateY(-1px);
-	}
-
-	/* Spectrum analyzer button - Blue gradient */
-	.saasfly-btn-spectrum {
-		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-		color: white;
-		box-shadow:
-			0 2px 8px rgba(59, 130, 246, 0.3),
-			0 0 20px rgba(59, 130, 246, 0.1);
-	}
-
-	.saasfly-btn-spectrum:hover {
-		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-		box-shadow:
-			0 4px 12px rgba(59, 130, 246, 0.4),
-			0 0 30px rgba(59, 130, 246, 0.2);
-		transform: translateY(-1px);
-	}
+	/* Saasfly button styles removed - replaced with Palantir design system buttons in sidebar (Plan 5) */
 
 	.w-4 {
 		width: 1rem;
@@ -3544,23 +3457,7 @@
 			margin: 0 6px !important;
 		}
 
-		/* HackRF buttons - properly sized for 40px container in portrait */
-		.data-footer .saasfly-btn {
-			height: 28px !important;
-			padding: 3px 8px !important;
-			font-size: 10px !important;
-			gap: 4px !important;
-			display: flex !important;
-			align-items: center !important;
-			justify-content: center !important;
-			white-space: nowrap !important;
-		}
-
-		.data-footer .saasfly-btn svg {
-			width: 14px !important;
-			height: 14px !important;
-			flex-shrink: 0 !important;
-		}
+		/* HackRF buttons removed - replaced with sidebar controls (Plan 5) */
 
 		/* Ensure proper vertical centering in 50px container */
 		.data-footer {
@@ -3780,23 +3677,7 @@
 			margin: 0 4px !important;
 		}
 
-		/* HackRF buttons - properly sized for 40px container */
-		.data-footer .saasfly-btn {
-			height: 24px !important;
-			padding: 2px 6px !important;
-			font-size: 9px !important;
-			gap: 4px !important;
-			display: flex !important;
-			align-items: center !important;
-			justify-content: center !important;
-			white-space: nowrap !important;
-		}
-
-		.data-footer .saasfly-btn svg {
-			width: 12px !important;
-			height: 12px !important;
-			flex-shrink: 0 !important;
-		}
+		/* HackRF buttons removed - replaced with sidebar controls (Plan 5) */
 
 		/* Ensure proper vertical centering in 50px container */
 		.data-footer {
