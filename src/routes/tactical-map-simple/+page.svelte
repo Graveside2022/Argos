@@ -241,6 +241,11 @@
 	let whitelistedMACs = new Set<string>(); // Store whitelisted MAC addresses
 	let whitelistedDeviceCount = 0; // Reactive counter for whitelisted devices
 
+	// Device table sorting state (Plan 6)
+	let sortColumn: 'mac' | 'rssi' | 'type' = 'rssi';
+	let sortDirection: 'asc' | 'desc' = 'desc';
+	let selectedDeviceKey: string | null = null;
+
 	// Signal legend filter state
 	let hiddenSignalBands = new Set<string>();
 
@@ -304,6 +309,39 @@
 		hiddenSignalBands = new Set(hiddenSignalBands); // trigger reactivity
 		applySignalBandFilter();
 	}
+
+	// Computed sorted and filtered device list (Plan 6)
+	$: sortedVisibleDevices = Array.from(kismetDevices.values())
+		.filter((device) => {
+			// Filter out devices whose signal band is hidden
+			const rssi = device.signal?.last_signal || -100;
+			const band = getSignalBandKey(rssi);
+			return !hiddenSignalBands.has(band);
+		})
+		.sort((a, b) => {
+			let comparison = 0;
+
+			if (sortColumn === 'mac') {
+				// Sort by MAC address alphabetically
+				const macA = a.mac || '';
+				const macB = b.mac || '';
+				comparison = macA.localeCompare(macB);
+			} else if (sortColumn === 'rssi') {
+				// Sort by signal strength
+				const rssiA = a.signal?.last_signal || -100;
+				const rssiB = b.signal?.last_signal || -100;
+				comparison = rssiB - rssiA; // Stronger signals first (less negative)
+			} else if (sortColumn === 'type') {
+				// Sort by device type
+				const typeA = a.type || 'unknown';
+				const typeB = b.type || 'unknown';
+				// Priority: ap > client > unknown
+				const typeOrder: Record<string, number> = { ap: 0, client: 1, unknown: 2 };
+				comparison = (typeOrder[typeA] || 2) - (typeOrder[typeB] || 2);
+			}
+
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
 
 	function applySignalBandFilter(): void {
 		kismetMarkers.forEach((marker, markerId) => {
@@ -446,6 +484,37 @@
 			whitelistedMACs.add(mac);
 			whitelistedDeviceCount = whitelistedMACs.size;
 			kismetWhitelistMAC = '';
+		}
+	}
+
+	// Handle device table sorting (Plan 6)
+	function handleSort(column: 'mac' | 'rssi' | 'type') {
+		if (sortColumn === column) {
+			// Toggle direction if same column
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			// New column, default to descending
+			sortColumn = column;
+			sortDirection = 'desc';
+		}
+	}
+
+	// Handle device table row click (Plan 6)
+	function handleDeviceRowClick(device: KismetDevice) {
+		// Set selected device
+		selectedDeviceKey = device.mac || null;
+
+		// Get the marker for this device
+		const marker = kismetMarkers.get(device.mac || '');
+		if (marker && map) {
+			// Center map on marker
+			const lat = device.location?.lat || 0;
+			const lon = device.location?.lon || 0;
+
+			if (lat !== 0 && lon !== 0) {
+				map.flyTo([lat, lon], 18);
+				marker.openPopup();
+			}
 		}
 	}
 
@@ -2291,6 +2360,152 @@
 					📍 {showCellTowers ? 'Hide' : 'Show'} Cell Towers
 				</button>
 			</div>
+
+			<!-- Section 4: Device Data Table (Scrollable) -->
+			<div class="tactical-sidebar-section tactical-sidebar-section-scrollable">
+				<h3 class="section-header">DETECTED DEVICES ({kismetDeviceCount})</h3>
+
+				<!-- Signal Filter Badges -->
+				<div
+					style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-bottom: var(--space-2);"
+				>
+					<span class="metric-label" style="width: 100%;">Filter by Signal:</span>
+					{#each signalBands as band}
+						<button
+							class="badge {hiddenSignalBands.has(band.key) ? 'badge-neutral' : ''}"
+							style="
+								{hiddenSignalBands.has(band.key)
+								? ''
+								: `
+									background-color: ${band.color}20;
+									color: ${band.color};
+									border-color: ${band.color}40;
+								`}
+								cursor: pointer;
+								opacity: {hiddenSignalBands.has(band.key) ? '0.5' : '1'};
+							"
+							on:click={() => toggleSignalBand(band.key)}
+						>
+							{band.label.split(' ')[0]}
+							{band.label.split(' ')[1]}
+						</button>
+					{/each}
+				</div>
+
+				<!-- Device Table -->
+				{#if kismetStatus === 'starting'}
+					<div
+						style="padding: var(--space-4); text-align: center; color: var(--palantir-text-secondary);"
+					>
+						<p>Starting Kismet service...</p>
+					</div>
+				{:else if kismetDeviceCount === 0}
+					<div
+						style="padding: var(--space-4); text-align: center; color: var(--palantir-text-secondary);"
+					>
+						<p>No devices detected yet</p>
+						<p style="font-size: var(--text-xs); margin-top: var(--space-2);">
+							Ensure Kismet is monitoring the correct interface
+						</p>
+					</div>
+				{:else if sortedVisibleDevices.length === 0}
+					<div
+						style="padding: var(--space-4); text-align: center; color: var(--palantir-text-secondary);"
+					>
+						<p>All devices hidden by signal filters</p>
+						<p style="font-size: var(--text-xs); margin-top: var(--space-2);">
+							Click filter badges to show devices
+						</p>
+					</div>
+				{:else}
+					<table class="data-table data-table-compact">
+						<thead>
+							<tr>
+								<th on:click={() => handleSort('mac')} style="cursor: pointer;">
+									MAC {sortColumn === 'mac'
+										? sortDirection === 'asc'
+											? '▲'
+											: '▼'
+										: ''}
+								</th>
+								<th on:click={() => handleSort('rssi')} style="cursor: pointer;">
+									RSSI {sortColumn === 'rssi'
+										? sortDirection === 'asc'
+											? '▲'
+											: '▼'
+										: ''}
+								</th>
+								<th on:click={() => handleSort('type')} style="cursor: pointer;">
+									Type {sortColumn === 'type'
+										? sortDirection === 'asc'
+											? '▲'
+											: '▼'
+										: ''}
+								</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each sortedVisibleDevices as device (device.mac)}
+								{@const rssi = device.signal?.last_signal || -100}
+								{@const deviceType = device.type || 'unknown'}
+								{@const macDisplay = (device.mac || '').slice(-8)}
+
+								<tr
+									data-device-key={device.mac}
+									class:selected={selectedDeviceKey === device.mac}
+									on:click={() => handleDeviceRowClick(device)}
+								>
+									<td title={device.mac}>{macDisplay}</td>
+									<td style="color: {getSignalColor(rssi)};">{rssi} dBm</td>
+									<td>{deviceType}</td>
+									<td>
+										<span
+											class="signal-indicator"
+											style="background-color: {getSignalColor(rssi)};"
+										></span>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+
+					<!-- Summary Stats -->
+					<div
+						style="padding: var(--space-2); border-top: 1px solid var(--palantir-border-subtle); font-size: var(--text-xs); color: var(--palantir-text-secondary);"
+					>
+						{#if deviceTypeDistribution.ap > 0}
+							🛜 {deviceTypeDistribution.ap} APs •
+						{/if}
+						{#if deviceTypeDistribution.client > 0}
+							📱 {deviceTypeDistribution.client} Clients •
+						{/if}
+						{#if deviceTypeDistribution.unknown > 0}
+							❓ {deviceTypeDistribution.unknown} Unknown
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Section 5: MAC Whitelist -->
+			<div class="tactical-sidebar-section">
+				<h3 class="section-header">MAC WHITELIST</h3>
+
+				<label class="metric-label">Add MAC Address</label>
+				<input
+					type="text"
+					class="input-field"
+					bind:value={kismetWhitelistMAC}
+					placeholder="FF:FF:FF:FF:FF:FF"
+					pattern="[0-9A-Fa-f:]{17}"
+					on:keydown={(e) => e.key === 'Enter' && addToWhitelist()}
+				/>
+
+				<div class="metric-row" style="margin-top: var(--space-2);">
+					<span class="metric-label">Whitelisted Devices</span>
+					<span class="badge badge-info">{whitelistedDeviceCount}</span>
+				</div>
+			</div>
 		</aside>
 
 		<!-- Map Container -->
@@ -2328,132 +2543,7 @@
 	</div>
 	<!-- End of tactical-main-content -->
 
-	<!-- TEMPORARY: Keep old footers until Plans 3-6 migrate controls -->
-	<!-- Signal Info Bar (Now Kismet Data) -->
-	<div class="signal-info">
-		<!-- Kismet controls moved to sidebar in Plan 3 -->
-
-		<div class="footer-section kismet-whitelist-footer">
-			<span class="footer-label">MAC Whitelist</span>
-			<input
-				type="text"
-				bind:value={kismetWhitelistMAC}
-				placeholder="FF:FF:FF:FF:FF:FF"
-				class="mac-input-footer"
-				on:keydown={(e) => e.key === 'Enter' && addToWhitelist()}
-			/>
-		</div>
-
-		<div class="footer-divider"></div>
-
-		<div class="footer-section">
-			<span class="footer-label">Total Devices Whitelisted:</span>
-			<span class="device-count">{whitelistedDeviceCount}</span>
-		</div>
-
-		{#if kismetDeviceCount > 0}
-			<div class="footer-section">
-				<span class="footer-label">Device Types:</span>
-				{#if deviceTypeDistribution.ap > 0}
-					<span class="device-stat">
-						<svg
-							width="16"
-							height="16"
-							viewBox="0 0 30 30"
-							style="vertical-align: middle;"
-						>
-							<rect
-								x="10"
-								y="20"
-								width="10"
-								height="6"
-								fill="#888"
-								stroke="#fff"
-								stroke-width="0.5"
-							/>
-							<line x1="15" y1="20" x2="15" y2="10" stroke="#888" stroke-width="2" />
-							<path
-								d="M 10 15 Q 15 13 20 15"
-								fill="none"
-								stroke="#888"
-								stroke-width="1.5"
-								opacity="0.8"
-							/>
-							<path
-								d="M 7 12 Q 15 9 23 12"
-								fill="none"
-								stroke="#888"
-								stroke-width="1.5"
-								opacity="0.6"
-							/>
-						</svg>
-						{deviceTypeDistribution.ap} APs
-					</span>
-				{/if}
-				{#if deviceTypeDistribution.client > 0}
-					<span class="device-stat">
-						<svg
-							width="16"
-							height="16"
-							viewBox="0 0 30 30"
-							style="vertical-align: middle;"
-						>
-							<rect
-								x="11"
-								y="8"
-								width="8"
-								height="14"
-								rx="1"
-								fill="none"
-								stroke="#888"
-								stroke-width="2"
-							/>
-							<rect x="12.5" y="10" width="5" height="9" fill="#888" opacity="0.3" />
-							<circle cx="15" cy="20.5" r="0.8" fill="#888" />
-						</svg>
-						{deviceTypeDistribution.client} Clients
-					</span>
-				{/if}
-				{#if deviceTypeDistribution.unknown > 0}
-					<span class="device-stat">
-						<svg
-							width="16"
-							height="16"
-							viewBox="0 0 30 30"
-							style="vertical-align: middle;"
-						>
-							<circle
-								cx="15"
-								cy="15"
-								r="8"
-								fill="none"
-								stroke="#888"
-								stroke-width="2"
-							/>
-							<text
-								x="15"
-								y="19"
-								text-anchor="middle"
-								font-size="10"
-								font-weight="bold"
-								fill="#888">?</text
-							>
-						</svg>
-						{deviceTypeDistribution.unknown} Unknown
-					</span>
-				{/if}
-			</div>
-
-			<div class="footer-section">
-				<span class="footer-label">Total Devices:</span>
-				<span class="device-count">{kismetDeviceCount}</span>
-			</div>
-		{:else}
-			<div class="footer-section">
-				<span class="loading-status">Pulling data...</span>
-			</div>
-		{/if}
-	</div>
+	<!-- signal-info footer removed - all controls migrated to sidebar in Plan 6 -->
 
 	<!-- Data Footer (Now HackRF Data) -->
 	<div class="data-footer">
@@ -2708,34 +2798,7 @@
 		font-size: 12px;
 	}
 
-	/* Footer MAC input styles */
-	.kismet-whitelist-footer {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.mac-input-footer {
-		width: 140px;
-		padding: 0.25rem 0.375rem;
-		background: #1a1d23;
-		border: 1px solid #35383f;
-		border-radius: 3px;
-		color: #e8eaed;
-		font-size: 11px;
-		height: 28px;
-		text-align: center;
-	}
-
-	.mac-input-footer:focus {
-		outline: none;
-		border-color: #4a9eff;
-	}
-
-	.mac-input-footer::placeholder {
-		color: #666;
-		font-size: 11px;
-	}
+	/* Footer MAC input styles removed - whitelist moved to sidebar in Plan 6 */
 
 	.tactical-top-nav .back-console-button {
 		display: flex;
@@ -2938,18 +3001,7 @@
 		flex-shrink: 0;
 	}
 
-	/* Signal Info Bar */
-	.signal-info {
-		background: #25282f;
-		border-top: 1px solid #35383f;
-		padding: 0.5rem 1rem;
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		height: 55px;
-		font-size: 12px;
-		line-height: 1.2;
-	}
+	/* Signal Info Bar removed - migrated to sidebar in Plan 6 */
 
 	/* Data Footer */
 	.data-footer {
@@ -2965,65 +3017,7 @@
 		line-height: 1.2;
 	}
 
-	.kismet-label {
-		padding-right: 2rem;
-		border-right: 1px solid #35383f;
-	}
-
-	.kismet-controls {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.kismet-control-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0.75rem;
-		font-size: 11px;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		transition: all 0.2s;
-		height: 28px;
-		white-space: nowrap;
-	}
-
-	.kismet-control-btn.btn-start {
-		background: #4a90e2;
-		color: white;
-	}
-
-	.kismet-control-btn.btn-start:hover {
-		background: #0066cc;
-	}
-
-	.kismet-control-btn.btn-stop {
-		background: #f87171;
-		color: white;
-	}
-
-	.kismet-control-btn.btn-stop:hover {
-		background: #ff6666;
-	}
-
-	.kismet-control-btn.btn-disabled {
-		background: #6b7280;
-		color: #9ca3af;
-		cursor: not-allowed;
-	}
-
-	.kismet-control-btn svg {
-		flex-shrink: 0;
-	}
-
-	.kismet-title {
-		font-weight: 600;
-		color: #4a9eff;
-		letter-spacing: 0.05em;
-		font-size: 12px;
-	}
+	/* Kismet footer styles removed - controls moved to sidebar in Plans 3 & 6 */
 
 	.hackrf-label {
 		padding-right: 1.5rem;
@@ -3065,10 +3059,7 @@
 		color: #f87171;
 	}
 
-	.loading-status {
-		color: #5f6368;
-		font-style: italic;
-	}
+	/* loading-status removed - Plan 6 */
 
 	.footer-button {
 		background: #2c2f36;
@@ -3125,12 +3116,7 @@
 		display: inline-block;
 	}
 
-	.device-stat {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		color: #bbb;
-	}
+	/* device-stat removed - stats moved to sidebar in Plan 6 */
 
 	.footer-divider {
 		width: 1px;
@@ -3327,17 +3313,7 @@
 			padding: 6px 12px;
 		}
 
-		/* Footer MAC input - portrait styles */
-		.kismet-whitelist-footer {
-			gap: 6px;
-		}
-
-		.mac-input-footer {
-			width: 110px !important;
-			font-size: 11px;
-			padding: 4px 6px;
-			height: 26px;
-		}
+		/* Footer MAC input removed - Plan 6 */
 
 		/* Frequency inputs - horizontal scroll if needed */
 		.frequency-inputs {
@@ -3429,12 +3405,7 @@
 			height: 48px;
 		}
 
-		/* Reduce footer heights for more map space on portrait */
-		.signal-info {
-			height: 40px !important;
-			padding: 8px !important;
-			font-size: 11px;
-		}
+		/* signal-info removed - Plan 6 */
 
 		.data-footer {
 			height: 40px !important;
@@ -3472,16 +3443,7 @@
 			font-size: 10px !important;
 		}
 
-		/* Kismet label compact styling */
-		.kismet-label {
-			font-size: 10px !important;
-			gap: 4px !important;
-		}
-
-		.kismet-label svg {
-			width: 16px !important;
-			height: 16px !important;
-		}
+		/* Kismet label removed - Plan 6 */
 
 		/* Kismet controls compact styling for portrait */
 		.kismet-control-btn {
@@ -3538,17 +3500,7 @@
 			height: 12px;
 		}
 
-		/* Footer MAC input - mobile styles */
-		.kismet-whitelist-footer {
-			gap: 3px;
-		}
-
-		.mac-input-footer {
-			width: 100px !important;
-			font-size: 10px;
-			padding: 2px 4px;
-			height: 22px;
-		}
+		/* Footer MAC input removed - Plan 6 */
 
 		/* Frequency inputs - more compact */
 		.frequency-inputs {
@@ -3637,9 +3589,7 @@
 		}
 
 		/* Signal info popup - compact */
-		.signal-info {
-			font-size: 9px;
-		}
+		/* signal-info removed - Plan 6 */
 
 		/* Status items - prevent overlap */
 		.status-item {
@@ -3650,11 +3600,7 @@
 			font-size: 9px;
 		}
 
-		/* Reduce footer heights for more map space */
-		.signal-info {
-			height: 40px !important;
-			padding: 2px 12px !important;
-		}
+		/* signal-info footer removed - Plan 6 */
 
 		.data-footer {
 			height: 40px !important;
@@ -3692,17 +3638,7 @@
 			font-size: 9px !important;
 		}
 
-		/* Kismet label compact styling */
-		.kismet-label {
-			font-size: 9px !important;
-			gap: 3px !important;
-			padding-right: 10px !important; /* Reduced padding */
-		}
-
-		.kismet-label svg {
-			width: 14px !important;
-			height: 14px !important;
-		}
+		/* Kismet label removed - Plan 6 */
 
 		/* Kismet controls compact styling for landscape */
 		.kismet-control-btn {
@@ -3720,56 +3656,9 @@
 			font-size: 9px !important;
 		}
 
-		/* Kismet footer specific adjustments for landscape */
-		.signal-info .footer-section {
-			font-size: 8px !important;
-			gap: 4px !important;
-			flex-wrap: nowrap !important;
-			white-space: nowrap !important;
-		}
+		/* signal-info footer removed - Plan 6 */
 
-		.signal-info .footer-label {
-			font-size: 8px !important;
-			margin-right: 2px !important;
-			white-space: nowrap !important;
-		}
-
-		.signal-info .footer-divider {
-			height: 14px !important;
-			margin: 0 4px !important;
-		}
-
-		/* Fix text cutoff for "Total Devices Whitelisted" in landscape */
-		.signal-info .footer-section:last-child {
-			min-width: 0;
-			flex: 0 1 auto;
-		}
-
-		.signal-info .footer-section:last-child .footer-label {
-			font-size: 7px !important; /* Smaller font for the long text */
-		}
-
-		/* Ensure signal distribution icons don't overflow */
-		.signal-info .signal-stat,
-		.signal-info .device-stat {
-			font-size: 7px !important;
-			gap: 2px !important;
-		}
-
-		.signal-info .signal-indicator {
-			width: 8px !important;
-			height: 8px !important;
-		}
-
-		.signal-info svg {
-			width: 12px !important;
-			height: 12px !important;
-		}
-
-		/* Reduce gap between footer sections */
-		.signal-info {
-			gap: 8px !important;
-		}
+		/* signal-info footer CSS removed - Plan 6 */
 
 		/* Footer frequency controls - landscape mobile */
 		/* Frequency controls CSS removed - controls moved to sidebar in Plan 4 */
@@ -3855,11 +3744,7 @@
 			min-width: 100px;
 		}
 
-		/* Signal info */
-		.signal-info {
-			padding: 0.75rem;
-			font-size: 12px;
-		}
+		/* signal-info removed - Plan 6 */
 
 		/* Footer - stack all sections vertically */
 		.footer {
