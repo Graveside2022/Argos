@@ -10,6 +10,7 @@
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be used in Plan 5 (Quick Actions)
 	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Replaced with design system button in Plan 3
 	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
 	import KismetDashboardOverlay from '$lib/components/map/KismetDashboardOverlay.svelte';
 	import BettercapOverlay from '$lib/components/map/BettercapOverlay.svelte';
@@ -2171,10 +2172,34 @@
 	<div class="tactical-main-content">
 		<!-- Sidebar (empty for now - will be filled in Plans 3-6) -->
 		<aside class="tactical-sidebar">
+			<!-- Section 1: Kismet Control -->
 			<div class="tactical-sidebar-section">
-				<p style="color: var(--palantir-text-secondary); padding: var(--space-4);">
-					Sidebar sections will be added in next plans
-				</p>
+				<h3 class="section-header">KISMET CONTROL</h3>
+
+				<div class="metric-row">
+					<span class="metric-label">Status</span>
+					{#if kismetStatus === 'running'}
+						<span class="badge badge-success">Running</span>
+					{:else if kismetStatus === 'stopped'}
+						<span class="badge badge-neutral">Stopped</span>
+					{:else if kismetStatus === 'starting'}
+						<span class="badge badge-info">Starting...</span>
+					{:else if kismetStatus === 'stopping'}
+						<span class="badge badge-info">Stopping...</span>
+					{/if}
+				</div>
+
+				<button
+					class="btn btn-danger btn-full"
+					on:click={stopKismet}
+					disabled={kismetStatus === 'stopping' || kismetStatus === 'stopped'}
+				>
+					Stop Kismet Service
+				</button>
+
+				<button class="btn btn-secondary btn-full" on:click={() => setDashboardState(true)}>
+					View Dashboard ({kismetDeviceCount})
+				</button>
 			</div>
 		</aside>
 
@@ -2216,44 +2241,7 @@
 	<!-- TEMPORARY: Keep old footers until Plans 3-6 migrate controls -->
 	<!-- Signal Info Bar (Now Kismet Data) -->
 	<div class="signal-info">
-		<div class="footer-section kismet-label">
-			<svg
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="currentColor"
-				style="vertical-align: middle;"
-			>
-				<path
-					d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"
-				></path>
-			</svg>
-			<span class="kismet-title">KISMET</span>
-		</div>
-
-		<div class="footer-section kismet-controls">
-			<button
-				on:click={startKismet}
-				disabled={kismetStatus === 'starting' || kismetStatus === 'running'}
-				class="start-kismet-button-footer"
-			>
-				Start
-			</button>
-			<button
-				on:click={stopKismet}
-				disabled={kismetStatus === 'stopping' || kismetStatus === 'stopped'}
-				class="clear-button-footer"
-			>
-				Stop
-			</button>
-			<!-- Kismet Dashboard Button -->
-			<KismetDashboardButton
-				onClick={() => setDashboardState(true)}
-				deviceCount={kismetDeviceCount}
-			/>
-		</div>
-
-		<div class="footer-divider"></div>
+		<!-- Kismet controls moved to sidebar in Plan 3 -->
 
 		<div class="footer-section kismet-whitelist-footer">
 			<span class="footer-label">MAC Whitelist</span>
