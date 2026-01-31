@@ -1702,10 +1702,6 @@
 					}
 				});
 
-				// Debug: Log processing summary
-				);
-					`Kismet Debug: Markers created: ${markersCreated}, updated: ${markersUpdated}, total markers: ${kismetMarkers.size}`
-				);
 
 				// Clean up markers for devices that no longer exist
 				let removedDevices = 0;
