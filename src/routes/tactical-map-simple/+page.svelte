@@ -7,6 +7,7 @@
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
 	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be used in Plan 5 (Quick Actions)
 	import AirSignalRFButton from '$lib/components/map/AirSignalRFButton.svelte';
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
 	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
@@ -723,6 +724,7 @@
 	}
 
 	// Toggle cell tower display
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be used in Plan 5 (Quick Actions)
 	function toggleCellTowers() {
 		showCellTowers = !showCellTowers;
 
@@ -2128,84 +2130,90 @@
 </script>
 
 <div class="tactical-map-simple">
-	<!-- Search Bar -->
-	<div class="search-bar">
-		<div class="search-container">
-			<button class="back-console-button" on:click={() => (window.location.href = '/')}>
-				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-					<path
-						fill-rule="evenodd"
-						d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z"
-					/>
-				</svg>
-				Back to Console
-			</button>
-			<AirSignalRFButton onClick={() => setAirSignalOverlayState(true)} />
-			<button
-				class="cell-towers-toggle-button {showCellTowers ? 'active' : ''}"
-				on:click={toggleCellTowers}
-			>
-				{showCellTowers ? 'Cell Towers On' : 'Cell Towers Off'}
-			</button>
-		</div>
+	<!-- Top Navigation Bar -->
+	<header class="tactical-top-nav">
+		<button class="back-console-button" on:click={() => (window.location.href = '/')}>
+			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+				<path
+					fill-rule="evenodd"
+					d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z"
+				/>
+			</svg>
+			Back to Console
+		</button>
+
 		<div class="status">
 			<span class="status-item">
 				<span class="text-primary">GPS:</span>
 				{#if fixType !== 'No'}
-					<span class="text-success" style=" margin-left: 0.25rem;">{fixType} Fix</span>
-					<span class="text-tertiary" style=" margin-left: 0.25rem;"
+					<span class="text-success" style="margin-left: 0.25rem;">{fixType} Fix</span>
+					<span class="text-tertiary" style="margin-left: 0.25rem;"
 						>({satellites} sats)</span
 					>
 					<span style="color: #e8eaed; margin-left: 0.5rem;">|</span>
-					<span class="text-info" style=" margin-left: 0.5rem;"
+					<span class="text-info" style="margin-left: 0.5rem;"
 						>{formattedCoords.lat}, {formattedCoords.lon}</span
 					>
 					<span style="color: #e8eaed; margin-left: 0.5rem;">|</span>
-					<span class="text-warning" style=" margin-left: 0.5rem; font-family: monospace;"
+					<span class="text-warning" style="margin-left: 0.5rem; font-family: monospace;"
 						>{mgrsCoord}</span
 					>
 					<span style="font-size: 1.2em; margin-left: 0.5rem;">{currentCountry.flag}</span
 					>
 				{:else}
-					<span class="text-error" style=" margin-left: 0.25rem;">No Fix</span>
+					<span class="text-error" style="margin-left: 0.25rem;">No Fix</span>
 				{/if}
 			</span>
 		</div>
-	</div>
+	</header>
 
-	<!-- Map Container -->
-	<div class="map-container" bind:this={mapContainer}>
-		{#if !hasGPSFix}
-			<div class="gps-waiting">
-				<div class="gps-waiting-content">
-					<svg class="gps-icon" viewBox="0 0 24 24" fill="currentColor">
-						<path
-							d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-						/>
-					</svg>
-					<h3>Waiting for GPS Fix</h3>
-					<p>{gpsStatus}</p>
-				</div>
+	<!-- Main Content: Sidebar + Map -->
+	<div class="tactical-main-content">
+		<!-- Sidebar (empty for now - will be filled in Plans 3-6) -->
+		<aside class="tactical-sidebar">
+			<div class="tactical-sidebar-section">
+				<p style="color: var(--palantir-text-secondary); padding: var(--space-4);">
+					Sidebar sections will be added in next plans
+				</p>
 			</div>
-		{/if}
+		</aside>
 
-		<!-- Signal Strength Legend - interactive filter -->
-		<div class="signal-legend">
-			<span class="legend-title">Signal Filter (click to toggle):</span>
-			{#each signalBands as band}
-				<button
-					class="legend-item-btn {hiddenSignalBands.has(band.key)
-						? 'legend-disabled'
-						: ''}"
-					on:click={() => toggleSignalBand(band.key)}
-				>
-					<span class="legend-color" style="background: {band.color}"></span>
-					<span class="legend-label">{band.label}</span>
-				</button>
-			{/each}
-		</div>
+		<!-- Map Container -->
+		<main class="tactical-map-container" bind:this={mapContainer}>
+			{#if !hasGPSFix}
+				<div class="gps-waiting">
+					<div class="gps-waiting-content">
+						<svg class="gps-icon" viewBox="0 0 24 24" fill="currentColor">
+							<path
+								d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+							/>
+						</svg>
+						<h3>Waiting for GPS Fix</h3>
+						<p>{gpsStatus}</p>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Signal Strength Legend - interactive filter -->
+			<div class="signal-legend">
+				<span class="legend-title">Signal Filter (click to toggle):</span>
+				{#each signalBands as band}
+					<button
+						class="legend-item-btn {hiddenSignalBands.has(band.key)
+							? 'legend-disabled'
+							: ''}"
+						on:click={() => toggleSignalBand(band.key)}
+					>
+						<span class="legend-color" style="background: {band.color}"></span>
+						<span class="legend-label">{band.label}</span>
+					</button>
+				{/each}
+			</div>
+		</main>
 	</div>
+	<!-- End of tactical-main-content -->
 
+	<!-- TEMPORARY: Keep old footers until Plans 3-6 migrate controls -->
 	<!-- Signal Info Bar (Now Kismet Data) -->
 	<div class="signal-info">
 		<div class="footer-section kismet-label">
@@ -2587,24 +2595,28 @@
 		position: relative;
 	}
 
-	/* Search Bar */
-	.search-bar {
-		background: #25282f;
-		border-bottom: 1px solid #35383f;
-		padding: 1rem;
+	/* Top Navigation Bar */
+	.tactical-top-nav {
+		height: 50px;
+		background: var(--palantir-bg-elevated);
+		border-bottom: 1px solid var(--palantir-border-default);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		flex-wrap: wrap;
-		gap: 1rem;
+		padding: 0 var(--space-4);
 	}
 
-	.search-container {
+	.tactical-top-nav .status {
 		display: flex;
-		gap: 0.5rem;
+		gap: var(--space-2);
+	}
+
+	/* Main Content Container */
+	.tactical-main-content {
+		display: flex;
+		flex-direction: row;
 		flex: 1;
-		min-width: 300px;
-		align-items: center;
+		overflow: hidden;
 	}
 
 	.frequency-inputs {
@@ -2800,30 +2812,22 @@
 		font-size: 11px;
 	}
 
-	.back-console-button {
-		display: inline-flex;
+	.tactical-top-nav .back-console-button {
+		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-		color: white;
-		border: none;
-		border-radius: 4px;
-		font-size: 14px;
-		font-weight: 500;
+		gap: var(--space-2);
+		background: var(--palantir-bg-input);
+		color: var(--palantir-text-primary);
+		border: 1px solid var(--palantir-border-default);
+		border-radius: var(--radius-md);
+		padding: var(--space-2) var(--space-3);
 		cursor: pointer;
-		transition: all 0.2s;
-		box-shadow:
-			0 2px 8px rgba(16, 185, 129, 0.3),
-			0 0 20px rgba(16, 185, 129, 0.1);
+		transition: all 0.15s ease;
 	}
 
-	.back-console-button:hover {
-		background: linear-gradient(135deg, #059669 0%, #047857 100%);
-		box-shadow:
-			0 4px 12px rgba(16, 185, 129, 0.4),
-			0 0 30px rgba(16, 185, 129, 0.2);
-		transform: translateY(-1px);
+	.tactical-top-nav .back-console-button:hover {
+		background: var(--palantir-bg-hover);
+		border-color: var(--palantir-accent);
 	}
 
 	.back-console-button svg {
@@ -2938,7 +2942,7 @@
 	}
 
 	/* Map Container */
-	.map-container {
+	.tactical-map-container {
 		flex: 1;
 		position: relative;
 	}
