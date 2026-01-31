@@ -2201,6 +2201,70 @@
 					View Dashboard ({kismetDeviceCount})
 				</button>
 			</div>
+
+			<!-- Section 2: RF Scan Control -->
+			<div class="tactical-sidebar-section">
+				<h3 class="section-header">RF SCAN CONTROL</h3>
+
+				<div class="metric-row">
+					<span class="metric-label">Device</span>
+					<div style="display: flex; align-items: center; gap: var(--space-2);">
+						{#if connectionStatus === 'Connected'}
+							<span class="badge badge-success">Connected</span>
+						{:else}
+							<span class="badge badge-error">Disconnected</span>
+						{/if}
+						<span class="text-tertiary" style="font-size: var(--text-xs);">USRP</span>
+					</div>
+				</div>
+
+				<label class="metric-label" style="margin-top: var(--space-2);">
+					Target Frequencies (MHz)
+				</label>
+
+				<input
+					type="number"
+					class="input-field input-field-sm"
+					bind:value={searchFrequencies[0]}
+					placeholder="e.g., 2450.0"
+					step="0.01"
+					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+				/>
+
+				<input
+					type="number"
+					class="input-field input-field-sm"
+					bind:value={searchFrequencies[1]}
+					placeholder="e.g., 433.92"
+					step="0.01"
+					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+				/>
+
+				<input
+					type="number"
+					class="input-field input-field-sm"
+					bind:value={searchFrequencies[2]}
+					placeholder="e.g., 915.0"
+					step="0.01"
+					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+				/>
+
+				<button
+					class="btn btn-primary btn-full"
+					on:click={handleSearch}
+					disabled={!searchFrequencies.some((f) => f)}
+				>
+					Search Frequencies
+				</button>
+
+				<button
+					class="btn btn-secondary btn-full"
+					on:click={clearSignals}
+					disabled={signalCount === 0 && kismetDeviceCount === 0}
+				>
+					Clear All Signals
+				</button>
+			</div>
 		</aside>
 
 		<!-- Map Container -->
@@ -2412,75 +2476,8 @@
 				<span class="footer-label">Searching:</span>
 				<span class="frequency-value">{targetFrequency} MHz</span>
 			</div>
-		{:else}
-			<div
-				class="footer-section"
-				style="flex-direction: column; align-items: flex-start; gap: 0.25rem;"
-			>
-				<div>
-					<span class="text-primary">Device:</span>
-					<span
-						style="color: {connectionStatus === 'Connected'
-							? '#4ade80'
-							: '#f87171'}; margin-left: 0.25rem;"
-					>
-						{connectionStatus}
-					</span>
-				</div>
-				<div>
-					<span class="text-primary">Broadcast:</span>
-					<span class="text-error" style=" margin-left: 0.25rem;">Offline</span>
-				</div>
-			</div>
-
-			<div class="footer-divider"></div>
-
-			<div
-				class="footer-section"
-				style="flex-direction: column; align-items: flex-start; gap: 0.25rem;"
-			>
-				<div>
-					<span class="text-brand">Frequencies</span>
-				</div>
-				<div>
-					<span class="text-primary">Detected:</span>
-					<span class="text-tertiary" style=" font-weight: 600; margin-left: 0.25rem;"
-						>{signalCount}</span
-					>
-				</div>
-			</div>
-
-			<div class="footer-divider"></div>
-
-			<!-- Frequency Controls Section -->
-			<div class="footer-section frequency-controls-section">
-				<div class="frequency-inputs-footer">
-					{#each searchFrequencies as _freq, idx}
-						<input
-							type="number"
-							bind:value={searchFrequencies[idx]}
-							placeholder="Freq {idx + 1}"
-							on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-							class="frequency-input-footer"
-						/>
-					{/each}
-				</div>
-				<button
-					on:click={handleSearch}
-					class="search-button-footer"
-					disabled={!searchFrequencies.some((f) => f)}
-				>
-					Search
-				</button>
-				<button
-					on:click={clearSignals}
-					class="clear-button-footer"
-					disabled={signalCount === 0 && kismetDeviceCount === 0}
-				>
-					Clear
-				</button>
-			</div>
 		{/if}
+		<!-- RF controls moved to sidebar in Plan 4 -->
 
 		<div class="footer-divider"></div>
 
@@ -2647,40 +2644,7 @@
 	}
 
 	/* Footer Frequency Controls */
-	.frequency-controls-section {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.frequency-inputs-footer {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.frequency-input-footer {
-		width: 80px;
-		padding: 0.25rem 0.375rem;
-		background: #1a1d23;
-		border: 1px solid #35383f;
-		border-radius: 4px;
-		color: #e8eaed;
-		font-size: 11px;
-		height: 28px;
-		text-align: center;
-	}
-
-	.frequency-input-footer:focus {
-		outline: none;
-		border-color: #4a90e2;
-	}
-
-	.frequency-input-footer::placeholder {
-		color: #666;
-		font-size: 11px;
-	}
+	/* Frequency controls CSS removed - controls moved to sidebar in Plan 4 */
 
 	.search-button-footer,
 	.clear-button-footer {
@@ -3639,28 +3603,7 @@
 		}
 
 		/* Footer frequency controls - portrait mobile */
-		.frequency-controls-section {
-			gap: 0.5rem;
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.frequency-inputs-footer {
-			gap: 4px;
-			justify-content: center;
-		}
-
-		.frequency-input-footer {
-			width: 70px;
-			font-size: 11px;
-			padding: 6px 4px;
-		}
-
-		.search-button-footer,
-		.clear-button-footer {
-			font-size: 11px;
-			padding: 6px 12px;
-		}
+		/* Frequency controls CSS removed - controls moved to sidebar in Plan 4 */
 	}
 
 	/* iPhone Landscape Mode (568px - 926px width) */
@@ -3948,21 +3891,7 @@
 		}
 
 		/* Footer frequency controls - landscape mobile */
-		.frequency-controls-section {
-			gap: 0.3rem;
-			flex-direction: row;
-			flex-wrap: nowrap;
-		}
-
-		.frequency-inputs-footer {
-			gap: 2px;
-		}
-
-		.frequency-input-footer {
-			width: 55px;
-			font-size: 10px;
-			padding: 4px 2px;
-		}
+		/* Frequency controls CSS removed - controls moved to sidebar in Plan 4 */
 
 		.search-button-footer,
 		.clear-button-footer {
