@@ -246,31 +246,31 @@
 	const signalBands = [
 		{
 			key: 'red',
-			color: 'var(--palantir-signal-critical)',
+			color: '#dc2626',
 			label: '> -50 dBm (Very Strong)',
 			min: -50
 		},
 		{
 			key: 'orange',
-			color: 'var(--palantir-signal-strong)',
+			color: '#f97316',
 			label: '-50 to -60 dBm (Strong)',
 			min: -60
 		},
 		{
 			key: 'yellow',
-			color: 'var(--palantir-signal-good)',
+			color: '#fbbf24',
 			label: '-60 to -70 dBm (Good)',
 			min: -70
 		},
 		{
 			key: 'green',
-			color: 'var(--palantir-signal-fair)',
+			color: '#4ade80',
 			label: '-70 to -80 dBm (Fair)',
 			min: -80
 		},
 		{
 			key: 'blue',
-			color: 'var(--palantir-signal-weak)',
+			color: '#4a90e2',
 			label: '< -80 dBm (Weak)',
 			min: -Infinity
 		}
@@ -612,17 +612,17 @@
 
 				// Determine tower status
 				let status = 'ok';
-				let iconColor = 'var(--palantir-signal-fair)'; // Green
+				let iconColor = '#10b981'; // Green
 
 				if (tower.mcc === '000' || tower.mcc === '001' || tower.mcc === '999') {
 					status = 'fake';
 					iconColor = '#dc2626'; // Dark red
 				} else if (tower.radio === 'UMTS' || tower.radio === 'LTE') {
 					status = 'modern';
-					iconColor = 'var(--palantir-info)'; // Blue
+					iconColor = '#3b82f6'; // Blue
 				} else if (!location.carrier || location.carrier === 'Unknown Carrier') {
 					status = 'unknown';
-					iconColor = 'var(--palantir-signal-strong)'; // Orange
+					iconColor = '#f59e0b'; // Orange
 				}
 
 				// Create tower icon with 🗼 emoji
@@ -752,11 +752,11 @@
 	// Get signal color based on power
 	function getSignalColor(power: number): string {
 		// Note: Higher dBm (closer to 0) = stronger signal
-		if (power > -50) return 'var(--palantir-signal-critical)'; // Red (very strong)
-		if (power > -60) return 'var(--palantir-signal-strong)'; // Orange (strong)
-		if (power > -70) return 'var(--palantir-signal-good)'; // Yellow (good)
-		if (power > -80) return 'var(--palantir-signal-fair)'; // Green (fair)
-		return 'var(--palantir-signal-weak)'; // Blue (weak)
+		if (power > -50) return '#dc2626'; // Red (very strong)
+		if (power > -60) return '#f97316'; // Orange (strong)
+		if (power > -70) return '#fbbf24'; // Yellow (good)
+		if (power > -80) return '#4ade80'; // Green (fair)
+		return '#4a90e2'; // Blue (weak)
 	}
 
 	// Update signal and device type distributions
@@ -2266,42 +2266,6 @@
 		</div>
 
 		{#if kismetDeviceCount > 0}
-			<div class="footer-section">
-				<span class="footer-label">Signal Distribution:</span>
-				{#if signalDistribution.veryStrong > 0}
-					<span class="signal-stat">
-						<span class="signal-indicator signal-critical"></span>
-						{signalDistribution.veryStrong}
-					</span>
-				{/if}
-				{#if signalDistribution.strong > 0}
-					<span class="signal-stat">
-						<span class="signal-indicator signal-strong"></span>
-						{signalDistribution.strong}
-					</span>
-				{/if}
-				{#if signalDistribution.good > 0}
-					<span class="signal-stat">
-						<span class="signal-indicator signal-good"></span>
-						{signalDistribution.good}
-					</span>
-				{/if}
-				{#if signalDistribution.fair > 0}
-					<span class="signal-stat">
-						<span class="signal-indicator signal-fair"></span>
-						{signalDistribution.fair}
-					</span>
-				{/if}
-				{#if signalDistribution.weak > 0}
-					<span class="signal-stat">
-						<span class="signal-indicator signal-weak"></span>
-						{signalDistribution.weak}
-					</span>
-				{/if}
-			</div>
-
-			<div class="footer-divider"></div>
-
 			<div class="footer-section">
 				<span class="footer-label">Device Types:</span>
 				{#if deviceTypeDistribution.ap > 0}
