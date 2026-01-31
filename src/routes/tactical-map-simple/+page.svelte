@@ -9,8 +9,7 @@
 	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
 	// AirSignalRFButton component replaced with design system button in sidebar Quick Actions (Plan 5)
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Replaced with design system button in Plan 3
-	import KismetDashboardButton from '$lib/components/map/KismetDashboardButton.svelte';
+	// KismetDashboardButton replaced with design system button in sidebar (Plan 3)
 	import KismetDashboardOverlay from '$lib/components/map/KismetDashboardOverlay.svelte';
 	import BettercapOverlay from '$lib/components/map/BettercapOverlay.svelte';
 	import BTLEOverlay from '$lib/components/map/BTLEOverlay.svelte';
