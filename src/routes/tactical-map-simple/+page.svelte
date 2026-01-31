@@ -525,25 +525,6 @@
 		}
 	}
 
-	// Handle keyboard navigation in device table (Plan 7)
-	function handleTableKeydown(event: KeyboardEvent) {
-		if (sortedVisibleDevices.length === 0) return;
-
-		const currentIndex = sortedVisibleDevices.findIndex((d) => d.mac === selectedDeviceKey);
-
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			const nextIndex = (currentIndex + 1) % sortedVisibleDevices.length;
-			handleDeviceRowClick(sortedVisibleDevices[nextIndex]);
-		} else if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			const prevIndex = currentIndex <= 0 ? sortedVisibleDevices.length - 1 : currentIndex - 1;
-			handleDeviceRowClick(sortedVisibleDevices[prevIndex]);
-		} else if (event.key === 'Escape') {
-			selectedDeviceKey = null;
-		}
-	}
-
 	// Open spectrum analyzer
 	async function openSpectrumAnalyzer() {
 		// Stop the HackRF sweep if it's running
@@ -2453,8 +2434,6 @@
 						class="data-table data-table-compact"
 						role="grid"
 						aria-label="Detected WiFi devices"
-						tabindex="0"
-						on:keydown={handleTableKeydown}
 					>
 						<thead>
 							<tr>
