@@ -16,6 +16,10 @@ echo "Project: $ARGOS_DIR"
 echo "User:    $USER_NAME"
 echo ""
 
+# --- Write .env for Docker Compose (Portainer needs absolute paths) ---
+echo "ARGOS_DIR=$ARGOS_DIR" > "$ARGOS_DIR/docker/.env"
+chown "$USER_NAME" "$ARGOS_DIR/docker/.env"
+
 # --- Docker ---
 echo "[1/5] Installing Docker..."
 if command -v docker &>/dev/null; then

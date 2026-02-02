@@ -1,14 +1,15 @@
-# Argos — SDR & Network Analysis Console
+# Argos -- SDR & Network Analysis Console
 
-Real-time spectrum analysis, WiFi network intelligence, GPS tracking, and tactical mapping. Runs entirely in Docker containers on a Raspberry Pi.
+Real-time spectrum analysis, WiFi intelligence, GPS tracking, and tactical mapping on a Raspberry Pi.
 
-## Requirements
+## Hardware
 
-- Raspberry Pi 5 (4GB+ RAM)
-- Ethernet connection or WiFi (for initial setup)
-- HackRF One (SDR operations)
-- External USB WiFi adapter (Kismet scanning — Alfa AWUS036AXML or similar)
-- GPS module on USB serial (optional, for positioning)
+- Raspberry Pi 5 (8GB RAM recommended, 64GB+ SD card)
+- **USB 3.0 powered hub** (required -- the Pi cannot power all devices alone)
+- HackRF One
+- Alfa AWUS036AXML WiFi adapter
+- USB GPS dongle (BU-353S4 or similar)
+- Kali Linux installed on the Pi
 
 ## Install
 
@@ -18,74 +19,41 @@ cd Argos
 sudo bash scripts/setup-host.sh
 ```
 
-This installs Docker, Portainer, builds the container images, configures gpsd, and sets up boot services. Run it once.
+This installs Docker, Portainer, builds container images, configures GPS, and sets up auto-start on boot. Run it once.
 
-## Deploy the Stack
+## Deploy
 
-1. Open Portainer at `https://<your-pi-ip>:9443`
+1. Open **https://\<your-pi-ip\>:9443** in a browser (Portainer)
 2. Create an admin account on first login
-3. Go to **Stacks** > **Add Stack**
-4. Name it `argos`
-5. Paste the contents of `docker/docker-compose.portainer-dev.yml` into the web editor
-6. Click **Deploy the stack**
+3. Go to **Stacks** > **Add Stack**, name it `argos`
+4. Paste the contents of `docker/docker-compose.portainer-dev.yml`
+5. Click **Deploy the stack**
 
-Both containers (Argos + HackRF backend) will start with hot reload enabled. Edit code locally — changes appear instantly in the containers.
+## Open Argos
 
-## Access
+Go to **http://\<your-pi-ip\>:5173**
 
-| Service               | URL                         |
-| --------------------- | --------------------------- |
-| Argos Console         | `http://<your-pi-ip>:5173`  |
-| Portainer             | `https://<your-pi-ip>:9443` |
-| Kismet (when running) | `http://<your-pi-ip>:2501`  |
-| HackRF API            | `http://<your-pi-ip>:8092`  |
+## Hardware Setup
 
-## What Runs Where
+Plug the Alfa adapter, HackRF, and GPS dongle into the powered USB hub, then connect the hub to the Pi. Argos detects hardware automatically. GPS needs 1--2 minutes for a first fix outdoors.
 
-**In containers (Docker):**
+## After Reboot
 
-- Argos SvelteKit app (port 5173)
-- HackRF Flask backend (port 8092)
-- Kismet (started from within the Argos container via the web UI)
+Everything starts automatically. Just open http://\<your-pi-ip\>:5173.
 
-**On the host:**
+## Troubleshooting
 
-- Docker + Portainer
-- gpsd (GPS daemon)
-- Tailscale or other networking (your choice)
-
-The Argos container runs with `network_mode: host` and `privileged: true` so it can access WiFi hardware directly.
-
-## After a Reboot
-
-Everything starts automatically:
-
-- Docker and Portainer are systemd services
-- Containers have `restart: unless-stopped`
-- `scripts/startup-check.sh` runs at boot to verify all services and start gpsd
-
-Run it manually anytime: `sudo bash scripts/startup-check.sh`
-
-## Safety
-
-- Kismet will **never** run on `wlan0` (the Pi's built-in WiFi). Only external USB adapters (`wlan1`+) are used.
-- Bluetooth is disabled at the firmware level to free USB power budget.
-- All SDR/WiFi operations happen inside containers.
+| Problem             | Fix                                              |
+| ------------------- | ------------------------------------------------ |
+| No GPS fix          | Go outside, wait 2 minutes                       |
+| Page is blank       | Check Portainer -- are containers running?       |
+| Alfa not detected   | Unplug and replug the USB hub                    |
+| HackRF not detected | Run `hackrf_info` on the Pi terminal             |
+| Port conflict       | Run `sudo lsof -i :5173` to find what's using it |
 
 ## Development
 
-Code is mounted into the container via volume. Edit files normally on the host — Vite hot reload picks up changes instantly.
-
-```
-src/routes/          # Pages and API endpoints
-src/lib/components/  # UI components by feature
-src/lib/stores/      # Svelte state management
-src/lib/server/      # Server-side services
-src/lib/services/    # Business logic
-scripts/             # Host management scripts
-docker/              # Dockerfiles and compose configs
-hackrf_emitter/      # HackRF Python backend
-```
+See [SETUP.md](SETUP.md) for development environment, commands, and project structure.
 
 ## License
 

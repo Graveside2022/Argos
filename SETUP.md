@@ -98,14 +98,39 @@ npm run db:migrate    # Run migrations
 npm run db:rollback   # Rollback migration
 ```
 
+## Architecture
+
+### What Runs Where
+
+Argos runs as a Docker container with `privileged` access and `host` networking. The container holds the SvelteKit web app, Kismet, and basic networking tools. RF tools like `grgsm_livemon_headless`, `aircrack-ng`, and `tcpdump` run on the **host** (the Raspberry Pi itself), not inside the container.
+
+The bridge between container and host is `src/lib/server/hostExec.ts`, which uses `nsenter -t 1 -m` to execute commands on the host filesystem from inside Docker. This is why the Dockerfile does not install GNURadio or gr-gsm — those tools must exist on the host OS.
+
+### Service URLs
+
+| Service        | Port | Description                  |
+| -------------- | ---- | ---------------------------- |
+| Argos Web UI   | 5173 | Main application             |
+| Portainer      | 9443 | Container management (HTTPS) |
+| Kismet         | 2501 | WiFi/network scanning        |
+| HackRF Backend | 8092 | Spectrum analyzer API        |
+| GSM Evil       | 3001 | GSM monitoring API           |
+| OpenWebRX      | 8073 | Spectrum viewer web UI       |
+
+### Docker Compose
+
+Only one compose file matters for deployment: `docker/docker-compose.portainer-dev.yml`. It defines four services: `argos` (main app), `hackrf-backend`, `openwebrx`, and `bettercap`. All other compose files in `docker/` and `config/docker/` are legacy variants kept in `archive/docker-variants/`.
+
+The compose file uses `${ARGOS_DIR}` for volume mounts. This variable is set in `docker/.env`, which `setup-host.sh` generates automatically.
+
 ## Hardware Integration
 
 ### Supported Hardware
 
 - **HackRF One** - SDR for spectrum analysis
-- **USRP B205** - Alternative SDR platform
-- **GPS Modules** - Location tracking
-- **WiFi Adapters** - Network scanning via Kismet
+- **Alfa AWUS036AXML** - WiFi adapter for Kismet scanning
+- **USB GPS dongle** - Location tracking (BU-353S4 or similar)
+- **USRP B205** - Alternative SDR platform (optional)
 
 ### Hardware Services
 

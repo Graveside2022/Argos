@@ -3,8 +3,8 @@
 #
 # Deploy this in Portainer as a Stack
 #
-# PREREQUISITE: Build images first with:
-#   cd /home/kali/Documents/Argos/Argos
+# PREREQUISITE: Run setup-host.sh first — it builds images and generates docker/.env
+# Or build manually:
 #   docker build -t argos:dev -f docker/Dockerfile --target builder .
 #   docker build -t argos-hackrf-backend:dev -f hackrf_emitter/backend/Dockerfile hackrf_emitter/backend/
 
@@ -43,7 +43,7 @@ services:
     privileged: true
     volumes:
       # Mount source code for hot reload
-      - /home/kali/Documents/Argos/Argos:/app:rw
+      - ${ARGOS_DIR:?Run setup-host.sh first}:/app:rw
       - argos-node-modules:/app/node_modules
       - argos-svelte-kit:/app/.svelte-kit
       # Docker access for container management (OpenWebRX, Bettercap, etc.)
@@ -72,7 +72,7 @@ services:
       - "/dev/bus/usb:/dev/bus/usb"
     volumes:
       # Mount backend code for hot reload
-      - /home/kali/Documents/Argos/Argos/hackrf_emitter/backend:/app:rw
+      - ${ARGOS_DIR:?Run setup-host.sh first}/hackrf_emitter/backend:/app:rw
     privileged: true
     networks:
       - argos-dev-network
