@@ -2,14 +2,18 @@
 # Argos Startup Check - ensures all services are running after boot
 # Usage: sudo ./scripts/startup-check.sh
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 ok()   { echo -e "  ${GREEN}[OK]${NC} $1"; }
 fail() { echo -e "  ${RED}[FAIL]${NC} $1"; }
 warn() { echo -e "  ${YELLOW}[WARN]${NC} $1"; }
+info() { echo -e "  ${BLUE}[INFO]${NC} $1"; }
 
 echo "=== Argos Startup Check ==="
 echo ""
@@ -55,18 +59,46 @@ fi
 echo ""
 echo "Checking Argos containers..."
 
+MISSING_CONTAINERS=()
 for CONTAINER in argos-dev hackrf-backend-dev openwebrx-hackrf; do
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
         ok "$CONTAINER is running"
     else
-        warn "$CONTAINER not running - attempting to start..."
-        if docker start "$CONTAINER" 2>/dev/null; then
-            ok "$CONTAINER started"
+        # Check if container exists but is stopped
+        if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
+            warn "$CONTAINER not running - attempting to start..."
+            if docker start "$CONTAINER" 2>/dev/null; then
+                ok "$CONTAINER started"
+            else
+                fail "could not start $CONTAINER"
+            fi
         else
-            fail "could not start $CONTAINER (container may not exist - deploy via Portainer first)"
+            warn "$CONTAINER does not exist"
+            MISSING_CONTAINERS+=("$CONTAINER")
         fi
     fi
 done
+
+# Offer to deploy missing containers
+if [ ${#MISSING_CONTAINERS[@]} -gt 0 ]; then
+    echo ""
+    warn "Missing containers: ${MISSING_CONTAINERS[*]}"
+    DEPLOY_SCRIPT="${SCRIPT_DIR}/deploy-containers.sh"
+    if [ -f "$DEPLOY_SCRIPT" ]; then
+        echo "Would you like to deploy the missing containers now? (y/N)"
+        read -r -n 1 response
+        echo
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            info "Running deployment script..."
+            bash "$DEPLOY_SCRIPT"
+        else
+            info "Skipping deployment. Run manually: $DEPLOY_SCRIPT"
+        fi
+    else
+        fail "Deployment script not found: $DEPLOY_SCRIPT"
+        info "Deploy containers manually via Portainer or run: scripts/deploy-containers.sh"
+    fi
+fi
 
 # --- gpsd ---
 echo ""
