@@ -19,16 +19,16 @@
 		}
 	];
 
-	const layersIcon = {
-		id: 'layers',
-		label: 'Layers',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
-	};
-
 	const terminalIcon = {
 		id: 'terminal',
 		label: 'Terminal',
 		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`
+	};
+
+	const layersIcon = {
+		id: 'layers',
+		label: 'Layers',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
 	};
 
 	const bottomIcon = {
@@ -67,16 +67,6 @@
 	<div class="rail-bottom">
 		<button
 			class="rail-btn"
-			class:active={$activePanel === layersIcon.id}
-			title={layersIcon.label}
-			aria-label={layersIcon.label}
-			aria-pressed={$activePanel === layersIcon.id}
-			on:click={() => handleClick(layersIcon.id)}
-		>
-			{@html layersIcon.svg}
-		</button>
-		<button
-			class="rail-btn"
 			class:active={$activeView === 'terminal'}
 			title={terminalIcon.label}
 			aria-label={terminalIcon.label}
@@ -84,6 +74,16 @@
 			on:click={() => handleClick(terminalIcon.id)}
 		>
 			{@html terminalIcon.svg}
+		</button>
+		<button
+			class="rail-btn"
+			class:active={$activePanel === layersIcon.id}
+			title={layersIcon.label}
+			aria-label={layersIcon.label}
+			aria-pressed={$activePanel === layersIcon.id}
+			on:click={() => handleClick(layersIcon.id)}
+		>
+			{@html layersIcon.svg}
 		</button>
 		<button
 			class="rail-btn"
@@ -102,12 +102,14 @@
 	.icon-rail {
 		width: var(--icon-rail-width);
 		min-width: var(--icon-rail-width);
+		flex-shrink: 0;
 		background: var(--palantir-bg-surface);
 		border-right: 1px solid var(--palantir-border-subtle);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		padding: var(--space-2) 0;
+		position: relative;
 		z-index: 10;
 	}
 
@@ -141,27 +143,44 @@
 		cursor: pointer;
 		border-radius: var(--radius-md);
 		position: relative;
-		transition: all 0.15s ease;
+		padding: 0;
+		margin: 0;
+		outline: none;
+		transition:
+			color 0.15s ease,
+			background-color 0.15s ease;
 	}
 
 	.rail-btn:hover {
-		background: var(--palantir-bg-hover);
+		background-color: var(--palantir-bg-hover);
 		color: var(--palantir-text-secondary);
 	}
 
 	.rail-btn.active {
 		color: var(--palantir-accent);
-		background: transparent;
+		background-color: rgba(74, 158, 255, 0.12);
 	}
 
 	.rail-btn.active::before {
 		content: '';
 		position: absolute;
-		left: -4px;
-		top: 8px;
-		bottom: 8px;
-		width: 2px;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		width: 3px;
 		background: var(--palantir-accent);
-		border-radius: 1px;
+		border-radius: 0 1px 1px 0;
+	}
+
+	.rail-btn.active::after {
+		content: '';
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 1px;
+		height: 24px;
+		background: linear-gradient(to bottom, transparent, rgba(74, 158, 255, 0.5), transparent);
+		opacity: 0.6;
 	}
 </style>

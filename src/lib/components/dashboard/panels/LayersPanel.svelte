@@ -1,30 +1,11 @@
 <script lang="ts">
 	import { signalBands } from '$lib/utils/signalUtils';
-
-	// Layer visibility state
-	let layers = {
-		deviceDots: true,
-		cellTowers: false,
-		signalMarkers: true,
-		accuracyCircle: true
-	};
-
-	// Signal band filter state
-	let activeBands = new Set(signalBands.map((b) => b.key));
-
-	function toggleLayer(key: keyof typeof layers) {
-		layers[key] = !layers[key];
-		layers = { ...layers };
-	}
-
-	function toggleBand(key: string) {
-		if (activeBands.has(key)) {
-			activeBands.delete(key);
-		} else {
-			activeBands.add(key);
-		}
-		activeBands = new Set(activeBands);
-	}
+	import {
+		layerVisibility,
+		toggleLayerVisibility,
+		activeBands,
+		toggleBand
+	} from '$lib/stores/dashboard/dashboardStore';
 </script>
 
 <div class="layers-panel">
@@ -40,10 +21,10 @@
 			<span class="toggle-label">Device Dots</span>
 			<button
 				class="toggle-switch"
-				class:on={layers.deviceDots}
-				on:click={() => toggleLayer('deviceDots')}
+				class:on={$layerVisibility.deviceDots}
+				on:click={() => toggleLayerVisibility('deviceDots')}
 				role="switch"
-				aria-checked={layers.deviceDots}
+				aria-checked={$layerVisibility.deviceDots}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -53,10 +34,10 @@
 			<span class="toggle-label">Cell Towers</span>
 			<button
 				class="toggle-switch"
-				class:on={layers.cellTowers}
-				on:click={() => toggleLayer('cellTowers')}
+				class:on={$layerVisibility.cellTowers}
+				on:click={() => toggleLayerVisibility('cellTowers')}
 				role="switch"
-				aria-checked={layers.cellTowers}
+				aria-checked={$layerVisibility.cellTowers}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -66,10 +47,10 @@
 			<span class="toggle-label">Signal Markers</span>
 			<button
 				class="toggle-switch"
-				class:on={layers.signalMarkers}
-				on:click={() => toggleLayer('signalMarkers')}
+				class:on={$layerVisibility.signalMarkers}
+				on:click={() => toggleLayerVisibility('signalMarkers')}
 				role="switch"
-				aria-checked={layers.signalMarkers}
+				aria-checked={$layerVisibility.signalMarkers}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -79,10 +60,10 @@
 			<span class="toggle-label">GPS Accuracy</span>
 			<button
 				class="toggle-switch"
-				class:on={layers.accuracyCircle}
-				on:click={() => toggleLayer('accuracyCircle')}
+				class:on={$layerVisibility.accuracyCircle}
+				on:click={() => toggleLayerVisibility('accuracyCircle')}
 				role="switch"
-				aria-checked={layers.accuracyCircle}
+				aria-checked={$layerVisibility.accuracyCircle}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -101,10 +82,10 @@
 				</div>
 				<button
 					class="toggle-switch"
-					class:on={activeBands.has(band.key)}
+					class:on={$activeBands.has(band.key)}
 					on:click={() => toggleBand(band.key)}
 					role="switch"
-					aria-checked={activeBands.has(band.key)}
+					aria-checked={$activeBands.has(band.key)}
 				>
 					<span class="toggle-knob"></span>
 				</button>

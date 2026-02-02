@@ -84,6 +84,7 @@
 	color: inherit;
 	border: none;
 	border-radius: 0;
+	transition: none;
 }
 
 .dashboard-shell input,
@@ -104,4 +105,10 @@
 	padding: 0;
 	border: none;
 	border-radius: 0;
+}
+
+/* ---- Panel header ---- */
+.dashboard-shell .panel-header {
+	background: rgba(26, 29, 35, 0.6);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }

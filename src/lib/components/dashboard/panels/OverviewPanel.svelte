@@ -4,14 +4,26 @@
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
 
 	interface SystemInfo {
-		cpu: { usage: number; cores: number };
-		memory: { total: number; used: number; percentage: number };
+		hostname: string;
+		ip: string;
+		wifiInterfaces: Array<{ name: string; ip: string; mac: string }>;
+		cpu: { usage: number; model: string; cores: number };
+		memory: { total: number; used: number; free: number; percentage: number };
+		storage: { total: number; used: number; free: number; percentage: number };
 		temperature: number | null;
 		uptime: number;
 	}
 
 	let systemInfo: SystemInfo | null = null;
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+	function formatBytes(bytes: number): string {
+		if (bytes === 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+	}
 
 	function formatUptime(seconds: number): string {
 		const h = Math.floor(seconds / 3600);
@@ -46,6 +58,82 @@
 	<header class="panel-header">
 		<span class="panel-title">OVERVIEW</span>
 	</header>
+
+	<!-- System Info -->
+	<section class="panel-section">
+		<div class="section-label">SYSTEM</div>
+		{#if systemInfo}
+			<div class="info-grid">
+				<div class="info-item">
+					<span class="info-label">HOST</span>
+					<span class="info-value">{systemInfo.hostname}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">IP</span>
+					<span class="info-value mono">{systemInfo.ip}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">UPTIME</span>
+					<span class="info-value">{formatUptime(systemInfo.uptime)}</span>
+				</div>
+				{#if systemInfo.temperature != null}
+					<div class="info-item">
+						<span class="info-label">TEMP</span>
+						<span class="info-value">{systemInfo.temperature.toFixed(1)}C</span>
+					</div>
+				{/if}
+			</div>
+
+			<!-- CPU -->
+			<div class="meter-row">
+				<span class="meter-label">CPU ({systemInfo.cpu.cores} cores)</span>
+				<div class="meter-bar">
+					<div
+						class="meter-fill"
+						style="width: {systemInfo.cpu.usage}%; background: {systemInfo.cpu.usage >
+						80
+							? 'var(--palantir-error)'
+							: systemInfo.cpu.usage > 50
+								? 'var(--palantir-warning)'
+								: 'var(--palantir-accent)'}"
+					></div>
+				</div>
+				<span class="meter-value">{systemInfo.cpu.usage.toFixed(0)}%</span>
+			</div>
+
+			<!-- Memory -->
+			<div class="meter-row">
+				<span class="meter-label">RAM</span>
+				<div class="meter-bar">
+					<div
+						class="meter-fill"
+						style="width: {systemInfo.memory.percentage}%; background: {systemInfo
+							.memory.percentage > 85
+							? 'var(--palantir-error)'
+							: 'var(--palantir-accent)'}"
+					></div>
+				</div>
+				<span class="meter-value">{formatBytes(systemInfo.memory.used)}</span>
+			</div>
+
+			<!-- Storage -->
+			<div class="meter-row">
+				<span class="meter-label">DISK</span>
+				<div class="meter-bar">
+					<div
+						class="meter-fill"
+						style="width: {systemInfo.storage.percentage}%; background: {systemInfo
+							.storage.percentage > 90
+							? 'var(--palantir-error)'
+							: 'var(--palantir-accent)'}"
+					></div>
+				</div>
+				<span class="meter-value">{systemInfo.storage.percentage}%</span>
+			</div>
+		{:else}
+			<div class="no-data">Loading system info...</div>
+		{/if}
+	</section>
 
 	<!-- GPS Card -->
 	<section class="panel-section">
@@ -96,68 +184,18 @@
 		{/if}
 	</section>
 
-	<!-- System Health -->
-	<section class="panel-section">
-		<div class="section-label">SYSTEM</div>
-		{#if systemInfo}
-			<div class="meter-row">
-				<span class="meter-label">CPU</span>
-				<div class="meter-bar">
-					<div
-						class="meter-fill"
-						style="width: {systemInfo.cpu.usage}%; background: {systemInfo.cpu.usage >
-						80
-							? 'var(--palantir-error)'
-							: systemInfo.cpu.usage > 50
-								? 'var(--palantir-warning)'
-								: 'var(--palantir-accent)'}"
-					></div>
+	<!-- WiFi Interfaces -->
+	{#if systemInfo && systemInfo.wifiInterfaces.length > 0}
+		<section class="panel-section">
+			<div class="section-label">WIFI INTERFACES</div>
+			{#each systemInfo.wifiInterfaces as iface (iface.name)}
+				<div class="iface-row">
+					<span class="iface-name">{iface.name}</span>
+					<span class="iface-mac mono">{iface.mac}</span>
 				</div>
-				<span class="meter-value">{systemInfo.cpu.usage.toFixed(0)}%</span>
-			</div>
-
-			<div class="meter-row">
-				<span class="meter-label">RAM</span>
-				<div class="meter-bar">
-					<div
-						class="meter-fill"
-						style="width: {systemInfo.memory.percentage}%; background: {systemInfo
-							.memory.percentage > 85
-							? 'var(--palantir-error)'
-							: 'var(--palantir-accent)'}"
-					></div>
-				</div>
-				<span class="meter-value">{systemInfo.memory.percentage}%</span>
-			</div>
-
-			{#if systemInfo.temperature != null}
-				<div class="meter-row">
-					<span class="meter-label">TEMP</span>
-					<div class="meter-bar">
-						<div
-							class="meter-fill"
-							style="width: {Math.min(
-								(systemInfo.temperature / 85) * 100,
-								100
-							)}%; background: {systemInfo.temperature > 75
-								? 'var(--palantir-error)'
-								: systemInfo.temperature > 60
-									? 'var(--palantir-warning)'
-									: 'var(--palantir-accent)'}"
-						></div>
-					</div>
-					<span class="meter-value">{systemInfo.temperature.toFixed(0)}C</span>
-				</div>
-			{/if}
-
-			<div class="info-row">
-				<span class="info-label">UPTIME</span>
-				<span class="info-value mono">{formatUptime(systemInfo.uptime)}</span>
-			</div>
-		{:else}
-			<div class="no-data">Loading system info...</div>
-		{/if}
-	</section>
+			{/each}
+		</section>
+	{/if}
 </div>
 
 <style>
@@ -217,15 +255,10 @@
 		color: var(--palantir-text-primary);
 	}
 
-	.info-value.mono {
+	.info-value.mono,
+	.mono {
 		font-family: var(--font-mono);
 		font-variant-numeric: tabular-nums;
-	}
-
-	.info-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
 	}
 
 	/* Meter bars */
@@ -238,7 +271,7 @@
 	.meter-label {
 		font-size: var(--text-xs);
 		color: var(--palantir-text-tertiary);
-		min-width: 36px;
+		min-width: 42px;
 		letter-spacing: var(--letter-spacing-wide);
 	}
 
@@ -260,9 +293,30 @@
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
 		color: var(--palantir-text-secondary);
-		min-width: 36px;
+		min-width: 48px;
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+	}
+
+	/* Interface rows */
+	.iface-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--space-1) var(--space-2);
+		background: var(--palantir-bg-elevated);
+		border-radius: var(--radius-sm);
+	}
+
+	.iface-name {
+		font-size: var(--text-sm);
+		color: var(--palantir-text-primary);
+	}
+
+	.iface-mac {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--palantir-text-tertiary);
 	}
 
 	.scan-row {
