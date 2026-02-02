@@ -12,6 +12,7 @@
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
 	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
+	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import TerminalView from '$lib/components/dashboard/views/TerminalView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
 
@@ -60,6 +61,8 @@
 			<TerminalView />
 		{:else if $activeView === 'kismet'}
 			<KismetView />
+		{:else if $activeView === 'openwebrx'}
+			<OpenWebRXView />
 		{:else if $activeView === 'hackrf'}
 			<ToolViewWrapper title="HackRF Spectrum Analyzer" onBack={goBackToMap}>
 				<iframe src="/hackrfsweep" title="HackRF Sweep" class="tool-iframe" />
@@ -95,10 +98,6 @@
 		{:else if $activeView === 'usrpsweep'}
 			<ToolViewWrapper title="USRP Sweep" onBack={goBackToMap}>
 				<iframe src="/usrpsweep" title="USRP Sweep" class="tool-iframe" />
-			</ToolViewWrapper>
-		{:else if $activeView === 'viewspectrum'}
-			<ToolViewWrapper title="View Spectrum" onBack={goBackToMap}>
-				<iframe src="/viewspectrum" title="View Spectrum" class="tool-iframe" />
 			</ToolViewWrapper>
 		{:else if $activeView === 'wifite'}
 			<ToolViewWrapper title="Wifite2" onBack={goBackToMap}>

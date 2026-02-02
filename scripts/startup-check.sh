@@ -51,17 +51,20 @@ else
     ok "Portainer started"
 fi
 
-# --- Argos containers (argos-dev + hackrf-backend-dev) ---
+# --- Argos containers (argos-dev + hackrf-backend-dev + openwebrx-hackrf) ---
 echo ""
 echo "Checking Argos containers..."
-COMPOSE_FILE="/home/kali/Documents/Argos/Argos/docker/docker-compose.dev-full.yml"
 
-for CONTAINER in argos-dev hackrf-backend-dev; do
+for CONTAINER in argos-dev hackrf-backend-dev openwebrx-hackrf; do
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
         ok "$CONTAINER is running"
     else
-        warn "$CONTAINER not running - starting via compose..."
-        docker compose -f "$COMPOSE_FILE" up -d 2>/dev/null && ok "$CONTAINER started" || fail "could not start $CONTAINER"
+        warn "$CONTAINER not running - attempting to start..."
+        if docker start "$CONTAINER" 2>/dev/null; then
+            ok "$CONTAINER started"
+        else
+            fail "could not start $CONTAINER (container may not exist - deploy via Portainer first)"
+        fi
     fi
 done
 
@@ -88,6 +91,7 @@ echo "  Docker:     $(systemctl is-active docker 2>/dev/null)"
 echo "  Portainer:  $(docker ps --format '{{.Status}}' --filter name=portainer 2>/dev/null || echo 'not running')"
 echo "  Argos:      $(docker ps --format '{{.Status}}' --filter name=argos-dev 2>/dev/null || echo 'not running')"
 echo "  HackRF:     $(docker ps --format '{{.Status}}' --filter name=hackrf-backend-dev 2>/dev/null || echo 'not running')"
+echo "  OpenWebRX:  $(docker ps --format '{{.Status}}' --filter name=openwebrx-hackrf 2>/dev/null || echo 'not running')"
 echo "  gpsd:       $(pgrep -x gpsd > /dev/null && echo 'running' || echo 'not running')"
 echo ""
 echo "Done."

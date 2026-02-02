@@ -1,0 +1,138 @@
+{
+	"version": 2,
+	"receiver_name": "Argos HackRF One",
+	"receiver_location": "Tactical Platform",
+	"receiver_admin": "admin",
+	"receiver_gps": {
+		"lat": 0,
+		"lon": 0
+	},
+	"max_clients": 20,
+	"sdrs": {
+		"hackrf": {
+			"name": "HackRF One",
+			"type": "hackrf",
+			"profiles": {
+				"fm_broadcast": {
+					"name": "FM Broadcast (88-108 MHz)",
+					"center_freq": 98000000,
+					"samp_rate": 24000000,
+					"start_freq": 98000000,
+					"start_mod": "wfm",
+					"tuning_step": 100000,
+					"antenna": "Omni"
+				},
+				"am_broadcast": {
+					"name": "AM Radio (530-1710 kHz)",
+					"center_freq": 1200000,
+					"samp_rate": 2400000,
+					"start_freq": 1000000,
+					"start_mod": "am",
+					"tuning_step": 10000,
+					"antenna": "Omni"
+				},
+				"aviation": {
+					"name": "Aviation Band (118-137 MHz)",
+					"center_freq": 127500000,
+					"samp_rate": 20000000,
+					"start_freq": 121500000,
+					"start_mod": "am",
+					"tuning_step": 25000,
+					"antenna": "Omni"
+				},
+				"weather": {
+					"name": "NOAA Weather Radio (162 MHz)",
+					"center_freq": 162500000,
+					"samp_rate": 2400000,
+					"start_freq": 162550000,
+					"start_mod": "nfm",
+					"tuning_step": 10000,
+					"antenna": "Omni"
+				},
+				"marine_vhf": {
+					"name": "Marine VHF (156-162 MHz)",
+					"center_freq": 159000000,
+					"samp_rate": 8000000,
+					"start_freq": 156800000,
+					"start_mod": "nfm",
+					"tuning_step": 25000,
+					"antenna": "Omni"
+				},
+				"2m_ham": {
+					"name": "2m Ham Band (144-148 MHz)",
+					"center_freq": 146000000,
+					"samp_rate": 4000000,
+					"start_freq": 146520000,
+					"start_mod": "nfm",
+					"tuning_step": 5000,
+					"antenna": "Omni"
+				},
+				"70cm_ham": {
+					"name": "70cm Ham Band (420-450 MHz)",
+					"center_freq": 435000000,
+					"samp_rate": 20000000,
+					"start_freq": 435000000,
+					"start_mod": "nfm",
+					"tuning_step": 5000,
+					"antenna": "Omni"
+				},
+				"shortwave": {
+					"name": "Shortwave Bands (3-30 MHz)",
+					"center_freq": 15000000,
+					"samp_rate": 2400000,
+					"start_freq": 15000000,
+					"start_mod": "am",
+					"tuning_step": 5000,
+					"antenna": "Omni"
+				},
+				"ism_433": {
+					"name": "ISM 433 MHz (IoT/RC)",
+					"center_freq": 433920000,
+					"samp_rate": 2400000,
+					"start_freq": 433920000,
+					"start_mod": "nfm",
+					"tuning_step": 10000,
+					"antenna": "Omni"
+				},
+				"pmr446": {
+					"name": "PMR446 (Personal Mobile Radio)",
+					"center_freq": 446100000,
+					"samp_rate": 2400000,
+					"start_freq": 446100000,
+					"start_mod": "nfm",
+					"tuning_step": 12500,
+					"antenna": "Omni"
+				},
+				"gmrs_frs": {
+					"name": "GMRS/FRS (462-467 MHz)",
+					"center_freq": 464500000,
+					"samp_rate": 6000000,
+					"start_freq": 462562500,
+					"start_mod": "nfm",
+					"tuning_step": 12500,
+					"antenna": "Omni"
+				},
+				"police_fire": {
+					"name": "Public Safety (150-174 MHz)",
+					"center_freq": 162000000,
+					"samp_rate": 20000000,
+					"start_freq": 155000000,
+					"start_mod": "nfm",
+					"tuning_step": 5000,
+					"antenna": "Omni"
+				},
+				"wideband": {
+					"name": "Wideband Scan",
+					"center_freq": 100000000,
+					"samp_rate": 20000000,
+					"start_freq": 100000000,
+					"start_mod": "nfm",
+					"tuning_step": 100000,
+					"antenna": "Omni"
+				}
+			},
+			"always-on": false,
+			"remote": false
+		}
+	}
+}

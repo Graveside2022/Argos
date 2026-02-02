@@ -218,21 +218,21 @@
 				showControls={false}
 				on:open={() => openTool('usrpsweep')}
 			/>
-
-			<ToolCard
-				name="View Spectrum"
-				description="Spectrum visualization and analysis viewer"
-				icon={icons.viewspectrum}
-				status="stopped"
-				canOpen={true}
-				showControls={false}
-				on:open={() => openTool('viewspectrum')}
-			/>
 		</div>
 
 		<!-- Section: External Tools (alphabetized) -->
 		<div class="tools-section">
 			<span class="tools-section-label">EXTERNAL</span>
+
+			<ToolCard
+				name="OpenWebRX"
+				description="SDR web interface for HackRF spectrum analysis"
+				icon={icons.external}
+				status="stopped"
+				canOpen={true}
+				showControls={false}
+				on:open={() => openTool('openwebrx')}
+			/>
 
 			<ToolCard
 				name="TempestSDR"
