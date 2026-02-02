@@ -65,7 +65,7 @@
 		left: 0;
 		right: 0;
 		height: 2px;
-		background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.4), transparent);
+		background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.4), transparent);
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}

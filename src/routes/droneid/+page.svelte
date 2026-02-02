@@ -20,7 +20,7 @@
 	let reconnectAttempts = 0;
 	const maxReconnectAttempts = 10;
 	const reconnectDelay = 5000; // 5 seconds
-	
+
 	// Service control
 	let isServiceRunning = false;
 	let isStartingStopping = false;
@@ -65,7 +65,10 @@
 
 		// Don't reconnect if service is not running or we've exceeded max attempts
 		if (!isServiceRunning || reconnectAttempts >= maxReconnectAttempts) {
-			console.log('WebSocket connection aborted:', !isServiceRunning ? 'service not running' : 'max reconnect attempts reached');
+			console.log(
+				'WebSocket connection aborted:',
+				!isServiceRunning ? 'service not running' : 'max reconnect attempts reached'
+			);
 			return;
 		}
 
@@ -73,7 +76,9 @@
 			// RemoteIDReceiver runs on port 8081 to avoid conflict with GSM Evil
 			// Since we're accessing from browser at 100.79.154.94, use that IP with port 8081
 			const wsUrl = `ws://${window.location.hostname}:8081/ws`;
-			console.log(`Connecting to: ${wsUrl} (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+			console.log(
+				`Connecting to: ${wsUrl} (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`
+			);
 			ws = new WebSocket(wsUrl);
 
 			ws.onopen = () => {
@@ -97,8 +102,13 @@
 				if (isServiceRunning) {
 					reconnectAttempts++;
 					if (reconnectAttempts < maxReconnectAttempts) {
-						console.log(`WebSocket closed, retrying in ${reconnectDelay/1000} seconds...`);
-						reconnectTimer = setTimeout(connectWebSocket, reconnectDelay) as unknown as number;
+						console.log(
+							`WebSocket closed, retrying in ${reconnectDelay / 1000} seconds...`
+						);
+						reconnectTimer = setTimeout(
+							connectWebSocket,
+							reconnectDelay
+						) as unknown as number;
 					} else {
 						console.error('Max reconnection attempts reached');
 					}
@@ -123,7 +133,7 @@
 		if (!map || !L) return;
 
 		const { sender_id, position, spoofed } = data;
-		
+
 		if (!position || !position.lat || !position.lng) return;
 
 		const droneData = {
@@ -196,7 +206,7 @@
 
 		const pathData = dronePaths.get(id);
 		pathData.points.push([lat, lon]);
-		
+
 		// Keep only last 100 points
 		if (pathData.points.length > 100) {
 			pathData.points.shift();
@@ -244,7 +254,7 @@
 			const response = await fetch('/api/droneid');
 			const data = await response.json();
 			isServiceRunning = data.running;
-			
+
 			// If service claims to be running but we're not connected, double-check
 			if (isServiceRunning && !isConnected) {
 				// Try to connect if not already trying
@@ -261,26 +271,28 @@
 	// Start/stop service
 	async function toggleService() {
 		if (isStartingStopping) return;
-		
+
 		isStartingStopping = true;
 		const action = isServiceRunning ? 'stop' : 'start';
-		
+
 		try {
 			const response = await fetch('/api/droneid', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ action })
 			});
-			
+
 			const result = await response.json();
-			
+
 			if (result.success) {
 				// Wait a bit for service to start/stop
-				await new Promise(resolve => setTimeout(resolve, action === 'start' ? 3000 : 1000));
-				
+				await new Promise((resolve) =>
+					setTimeout(resolve, action === 'start' ? 3000 : 1000)
+				);
+
 				// Update status
 				await checkServiceStatus();
-				
+
 				// Try to connect if we just started
 				if (action === 'start') {
 					reconnectAttempts = 0; // Reset reconnection attempts
@@ -316,7 +328,7 @@
 		initializeMap();
 		checkServiceStatus();
 		// Don't auto-connect on mount - wait for user to start service
-		
+
 		const cleanupInterval = setInterval(cleanupOldDrones, 10000);
 		const statusInterval = setInterval(checkServiceStatus, 5000);
 
@@ -343,9 +355,7 @@
 <div class="droneid-container">
 	<header class="droneid-header">
 		<div class="header-left">
-			<a href="/" class="back-to-console-btn">
-				← Back to Console
-			</a>
+			<a href="/" class="back-to-console-btn"> ← Back to Console </a>
 			<h1>
 				<span class="title-drone">Drone</span>
 				<span class="title-id">ID</span>
@@ -353,8 +363,8 @@
 			</h1>
 		</div>
 		<div class="header-controls">
-			<button 
-				class="service-control-btn" 
+			<button
+				class="service-control-btn"
 				class:running={isServiceRunning}
 				on:click={toggleService}
 				disabled={isStartingStopping}
@@ -366,7 +376,7 @@
 					{isServiceRunning ? 'Stop' : 'Start'}
 				{/if}
 			</button>
-			
+
 			<div class="connection-status" class:connected={isConnected}>
 				<span class="status-dot"></span>
 				<span>{isConnected ? 'Connected' : 'Disconnected'}</span>
@@ -376,7 +386,7 @@
 
 	<div class="main-content">
 		<div class="map-container" bind:this={mapContainer}></div>
-		
+
 		<aside class="info-panel">
 			<h2>Active Drones</h2>
 			<div class="drone-list">
@@ -448,7 +458,10 @@
 	}
 
 	:global(.drone-popup) {
-		font-family: system-ui, -apple-system, sans-serif;
+		font-family:
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
 
 	:global(.drone-popup h3) {
@@ -479,8 +492,8 @@
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
-		background: #0a0a0a;
-		color: #ffffff;
+		background: #0e1116;
+		color: #e8eaed;
 	}
 
 	.droneid-header {
@@ -488,7 +501,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1rem 2rem;
-		background: rgba(20, 20, 20, 0.8);
+		background: rgba(28, 31, 38, 0.8);
 		backdrop-filter: blur(10px);
 		border-bottom: 1px solid #262626;
 	}
@@ -516,7 +529,7 @@
 
 	.back-to-console-btn:hover {
 		background: rgba(75, 85, 99, 0.7);
-		color: #ffffff;
+		color: #e8eaed;
 		border-color: rgba(107, 114, 128, 0.5);
 		transform: translateX(-2px);
 	}
@@ -535,12 +548,12 @@
 	}
 
 	.title-id {
-		color: #ffffff;
+		color: #e8eaed;
 	}
 
 	.title-subtitle {
 		font-size: 0.875rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		font-weight: 400;
 		margin-left: 1rem;
 	}
@@ -556,7 +569,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 1.5rem;
-		background: rgba(16, 185, 129, 0.1);  /* Green for Start */
+		background: rgba(16, 185, 129, 0.1); /* Green for Start */
 		border: 1px solid rgba(16, 185, 129, 0.3);
 		border-radius: 20px;
 		color: #10b981;
@@ -583,7 +596,7 @@
 	}
 
 	.service-control-btn.running {
-		background: rgba(239, 68, 68, 0.1);  /* Red for Stop */
+		background: rgba(239, 68, 68, 0.1); /* Red for Stop */
 		border-color: rgba(239, 68, 68, 0.3);
 		color: #ef4444;
 	}
@@ -604,8 +617,12 @@
 	}
 
 	@keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 
 	.connection-status {
@@ -638,8 +655,13 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.5; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
 	}
 
 	.main-content {
@@ -655,7 +677,7 @@
 
 	.info-panel {
 		width: 320px;
-		background: rgba(20, 20, 20, 0.8);
+		background: rgba(28, 31, 38, 0.8);
 		backdrop-filter: blur(10px);
 		border-left: 1px solid #262626;
 		padding: 1.5rem;
@@ -716,7 +738,7 @@
 		display: flex;
 		gap: 1rem;
 		font-size: 0.75rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 	}
 
 	.spoofed-badge {
@@ -744,7 +766,7 @@
 		margin: 0 0 0.75rem 0;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #ffffff;
+		color: #e8eaed;
 	}
 
 	.legend-item {
@@ -753,7 +775,7 @@
 		gap: 0.75rem;
 		margin-bottom: 0.5rem;
 		font-size: 0.75rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 	}
 
 	.legend-color {
@@ -773,7 +795,7 @@
 		margin: 0 0 0.5rem 0;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.backend-info p {

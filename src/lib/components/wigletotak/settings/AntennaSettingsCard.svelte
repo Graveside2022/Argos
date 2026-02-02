@@ -23,10 +23,12 @@
 	onMount(async () => {
 		if (browser) {
 			// Dynamic imports to prevent SSR issues
-			const { wigleStore: ws, wigleActions: wa } = await import('$lib/stores/wigletotak/wigleStore');
+			const { wigleStore: ws, wigleActions: wa } = await import(
+				'$lib/stores/wigletotak/wigleStore'
+			);
 			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigleService');
 			const { logInfo: li, logError: le } = await import('$lib/utils/logger');
-			
+
 			wigleStore = ws;
 			_wigleActions = wa;
 			wigleService = wserv;
@@ -84,12 +86,12 @@
 	{#if antennaType === 'Custom'}
 		<div class="form-group">
 			<label for="customSensitivity">Custom Factor</label>
-			<input 
-				id="customSensitivity" 
-				type="number" 
-				bind:value={customSensitivity} 
-				step="0.1" 
-				placeholder="1.0" 
+			<input
+				id="customSensitivity"
+				type="number"
+				bind:value={customSensitivity}
+				step="0.1"
+				placeholder="1.0"
 			/>
 		</div>
 	{/if}
@@ -100,7 +102,7 @@
 
 <style>
 	.settings-card {
-		background: #141414;
+		background: #1c1f26;
 		border: 1px solid #262626;
 		border-radius: 0.5rem;
 		padding: 1.5rem;
@@ -110,7 +112,7 @@
 		font-size: 1.25rem;
 		font-weight: 600;
 		margin-bottom: 1rem;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.form-group {
@@ -120,14 +122,14 @@
 	.form-group label {
 		display: block;
 		font-size: 0.875rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		margin-bottom: 0.25rem;
 	}
 
-	.form-group input[type="number"],
+	.form-group input[type='number'],
 	.form-group select {
 		width: 100%;
-		background: #0a0a0a;
+		background: #0e1116;
 		border: 1px solid #262626;
 		border-radius: 0.25rem;
 		padding: 0.5rem;
@@ -138,7 +140,7 @@
 	.form-group input:focus,
 	.form-group select:focus {
 		outline: none;
-		border-color: #fb923c;
+		border-color: #f97316;
 	}
 
 	.btn {
@@ -154,12 +156,12 @@
 	}
 
 	.btn:hover {
-		background: #2d2d2d;
+		background: #2a2d35;
 	}
 
 	.btn-primary {
-		background: #fb923c;
-		border-color: #fb923c;
+		background: #f97316;
+		border-color: #f97316;
 		color: #000;
 	}
 

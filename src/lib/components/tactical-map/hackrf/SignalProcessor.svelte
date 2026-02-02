@@ -2,7 +2,12 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { HackRFService } from '$lib/services/tactical-map/hackrfService';
 	import { MapService } from '$lib/services/tactical-map/mapService';
-	import { hackrfStore, addSignal, updateSignal, addSignalMarker } from '$lib/stores/tactical-map/hackrfStore';
+	import {
+		hackrfStore,
+		addSignal,
+		updateSignal,
+		addSignalMarker
+	} from '$lib/stores/tactical-map/hackrfStore';
 	import { mapStore } from '$lib/stores/tactical-map/mapStore';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import type { SimplifiedSignal } from '$lib/stores/tactical-map/hackrfStore';
@@ -12,7 +17,7 @@
 
 	const hackrfService = new HackRFService();
 	const _mapService = new MapService();
-	
+
 	let processingInterval: NodeJS.Timeout | null = null;
 	let L: any = null; // Leaflet library
 
@@ -45,19 +50,22 @@
 		if (!hackrfState.isSearching || !mapState.map || !L) return;
 
 		// Get aggregated signals matching target frequency
-		const aggregatedSignals = hackrfService.getAggregatedSignals(hackrfState.targetFrequency, tolerance);
+		const aggregatedSignals = hackrfService.getAggregatedSignals(
+			hackrfState.targetFrequency,
+			tolerance
+		);
 
 		if (aggregatedSignals.length === 0) return;
 
 		// Get current user position
-		const userPosition = { 
-			lat: gpsState.position.lat, 
-			lon: gpsState.position.lon 
+		const userPosition = {
+			lat: gpsState.position.lat,
+			lon: gpsState.position.lon
 		};
 
 		aggregatedSignals.forEach((signal) => {
 			const signalId = `signal_${signal.frequency.toFixed(1)}_${signal.lat.toFixed(6)}_${signal.lon.toFixed(6)}`;
-			
+
 			// Update or add signal to store
 			if (hackrfState.signals.has(signalId)) {
 				updateSignal(signalId, signal);
@@ -70,7 +78,11 @@
 		});
 	}
 
-	function updateSignalMarker(signalId: string, signal: SimplifiedSignal, userPosition: { lat: number; lon: number }) {
+	function updateSignalMarker(
+		signalId: string,
+		signal: SimplifiedSignal,
+		userPosition: { lat: number; lon: number }
+	) {
 		if (!L || !mapState.map) return;
 
 		const existingMarker = hackrfState.signalMarkers.get(signalId);
@@ -78,7 +90,7 @@
 		if (existingMarker) {
 			// Update existing marker
 			existingMarker.setLatLng([signal.lat, signal.lon]);
-			
+
 			// Update popup content
 			const popupContent = createSignalPopupContent(signal, userPosition);
 			if (existingMarker.isPopupOpen()) {
@@ -113,17 +125,22 @@
 
 			// Add to map
 			marker.addTo(mapState.map);
-			
+
 			// Store marker
 			addSignalMarker(signalId, marker);
 		}
 	}
 
-	function createSignalPopupContent(signal: SimplifiedSignal, userPosition: { lat: number; lon: number }): string {
+	function createSignalPopupContent(
+		signal: SimplifiedSignal,
+		userPosition: { lat: number; lon: number }
+	): string {
 		// Calculate distance from user
 		const distance = calculateDistance(
-			userPosition.lat, userPosition.lon,
-			signal.lat, signal.lon
+			userPosition.lat,
+			userPosition.lon,
+			signal.lat,
+			signal.lon
 		);
 
 		const timestamp = new Date(signal.timestamp).toLocaleTimeString();
@@ -136,7 +153,7 @@
 				<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
 					<tr>
 						<td style="padding: 2px 8px 2px 0; font-weight: bold; color: #88ff88;">Frequency:</td>
-						<td style="padding: 2px 0; color: #ffff00; font-weight: bold;">${signal.frequency.toFixed(1)} MHz</td>
+						<td style="padding: 2px 0; color: #fbbf24; font-weight: bold;">${signal.frequency.toFixed(1)} MHz</td>
 					</tr>
 					<tr>
 						<td style="padding: 2px 8px 2px 0; font-weight: bold; color: #88ff88;">Power:</td>
@@ -164,21 +181,21 @@
 	}
 
 	function getSignalColor(power: number): string {
-		if (power > -60) return '#ff0000'; // Red - strong signal
-		if (power > -80) return '#ffaa00'; // Orange - medium signal
-		return '#00ff00'; // Green - weak signal
+		if (power > -60) return '#dc2626'; // Red - strong signal
+		if (power > -80) return '#fbbf24'; // Orange - medium signal
+		return '#4ade80'; // Green - weak signal
 	}
 
 	function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
 		const R = 6371000; // Earth's radius in meters
-		const φ1 = lat1 * Math.PI / 180;
-		const φ2 = lat2 * Math.PI / 180;
-		const Δφ = (lat2 - lat1) * Math.PI / 180;
-		const Δλ = (lon2 - lon1) * Math.PI / 180;
+		const φ1 = (lat1 * Math.PI) / 180;
+		const φ2 = (lat2 * Math.PI) / 180;
+		const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+		const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-		const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-				Math.cos(φ1) * Math.cos(φ2) *
-				Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+		const a =
+			Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+			Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
 		const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
 		return R * c;

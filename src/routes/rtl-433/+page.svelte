@@ -5,16 +5,16 @@
 
 	// Store subscriptions
 	let rtl433Status = 'stopped';
-	let isLoading = false;
-	let hasError = false;
-	let errorMessage = '';
-	let capturedSignals: any[] = [];
+	let isLoading = false; // eslint-disable-line @typescript-eslint/no-unused-vars
+	let hasError = false; // eslint-disable-line @typescript-eslint/no-unused-vars
+	let errorMessage = ''; // eslint-disable-line @typescript-eslint/no-unused-vars
+	let capturedSignals: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
 	let totalSignals = 0;
 	let selectedFrequency = '433.92';
 	let selectedSampleRate = '250000';
 	let selectedFormat = 'json';
 	let enabledProtocols: string[] = [];
-	let availableProtocols: string[] = [];
+	let availableProtocols: string[] = []; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 	// Console output state
 	let consoleOutput: string[] = [];
@@ -35,10 +35,10 @@
 	onMount(() => {
 		checkRTL433Status();
 		const statusInterval = setInterval(checkRTL433Status, 5000);
-		
+
 		// Load available protocols
 		loadAvailableProtocols();
-		
+
 		return () => {
 			clearInterval(statusInterval);
 			unsubscribe();
@@ -50,7 +50,7 @@
 			const response = await fetch('/api/rtl-433/status');
 			if (response.ok) {
 				const data = await response.json();
-				
+
 				// Update status from API but don't auto-start monitoring
 				const isRunning = data.status === 'running';
 				if (isRunning && rtl433Status !== 'running') {
@@ -82,32 +82,32 @@
 		if (rtl433Status === 'starting' || rtl433Status === 'stopping') {
 			return;
 		}
-		
+
 		rtl433Status = 'starting';
 		rtl433Store.clearConsoleOutput();
 		rtl433Store.setShowConsole(true);
-		
+
 		try {
 			const response = await fetch('/api/rtl-433/control', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ 
-					action: 'start', 
+				body: JSON.stringify({
+					action: 'start',
 					frequency: selectedFrequency,
 					sampleRate: selectedSampleRate,
 					format: selectedFormat,
 					protocols: enabledProtocols
 				})
 			});
-			
+
 			const data = await response.json();
-			
+
 			if (response.ok && data.success) {
 				// Start monitoring console output
 				startConsoleMonitoring();
-				
+
 				// Wait a bit for the service to fully start
 				setTimeout(() => {
 					rtl433Status = 'running';
@@ -135,9 +135,9 @@
 
 	async function stopRTL433() {
 		if (rtl433Status === 'starting' || rtl433Status === 'stopping') return;
-		
+
 		rtl433Status = 'stopping';
-		
+
 		try {
 			const response = await fetch('/api/rtl-433/control', {
 				method: 'POST',
@@ -146,9 +146,9 @@
 				},
 				body: JSON.stringify({ action: 'stop' })
 			});
-			
+
 			const data = await response.json();
-			
+
 			if (response.ok && data.success) {
 				rtl433Status = 'stopped';
 				hasError = false;
@@ -187,19 +187,19 @@
 		try {
 			const response = await fetch('/api/rtl-433/stream');
 			if (!response.ok) return;
-			
+
 			const reader = response.body?.getReader();
 			if (!reader) return;
-			
+
 			const decoder = new TextDecoder();
-			
+
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-				
+
 				const chunk = decoder.decode(value);
 				const lines = chunk.split('\n');
-				
+
 				for (const line of lines) {
 					if (line.trim()) {
 						try {
@@ -209,7 +209,7 @@
 							} else if (data.type === 'signal') {
 								rtl433Store.addCapturedSignal(data.signal);
 							}
-						} catch (e) {
+						} catch {
 							// Regular console output
 							rtl433Store.addConsoleOutput(line);
 						}
@@ -229,7 +229,7 @@
 		rtl433Store.clearCapturedSignals();
 	}
 
-	function updateFrequency(event: Event) {
+	function _updateFrequency(event: Event) {
 		const target = event.target as HTMLInputElement;
 		selectedFrequency = target.value;
 		rtl433Store.setSelectedFrequency(selectedFrequency);
@@ -252,9 +252,9 @@
 		rtl433Store.setSelectedFormat(selectedFormat);
 	}
 
-	function toggleProtocol(protocol: string) {
+	function _toggleProtocol(protocol: string) {
 		if (enabledProtocols.includes(protocol)) {
-			enabledProtocols = enabledProtocols.filter(p => p !== protocol);
+			enabledProtocols = enabledProtocols.filter((p) => p !== protocol);
 		} else {
 			enabledProtocols = [...enabledProtocols, protocol];
 		}
@@ -267,21 +267,31 @@
 
 	function getStatusColor(status: string) {
 		switch (status) {
-			case 'running': return '#10b981';
-			case 'starting': return '#f59e0b';
-			case 'stopping': return '#f59e0b';
-			case 'stopped': return '#ef4444';
-			default: return '#6b7280';
+			case 'running':
+				return '#10b981';
+			case 'starting':
+				return '#f59e0b';
+			case 'stopping':
+				return '#f59e0b';
+			case 'stopped':
+				return '#ef4444';
+			default:
+				return '#6b7280';
 		}
 	}
 
 	function getStatusText(status: string) {
 		switch (status) {
-			case 'running': return 'RTL_433 Running';
-			case 'starting': return 'Starting RTL_433...';
-			case 'stopping': return 'Stopping RTL_433...';
-			case 'stopped': return 'RTL_433 Stopped';
-			default: return 'Unknown Status';
+			case 'running':
+				return 'RTL_433 Running';
+			case 'starting':
+				return 'Starting RTL_433...';
+			case 'stopping':
+				return 'Stopping RTL_433...';
+			case 'stopped':
+				return 'RTL_433 Stopped';
+			default:
+				return 'Unknown Status';
 		}
 	}
 
@@ -289,15 +299,19 @@
 		return new Date(timestamp).toLocaleTimeString();
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function formatSignalData(signal: any) {
-		const { time, ...data } = signal;
+		const { time: _time, ...data } = signal;
 		return JSON.stringify(data, null, 2);
 	}
 </script>
 
 <svelte:head>
 	<title>RTL_433 - Argos Console</title>
-	<meta name="description" content="RTL_433 Signal Decoder - Decode radio transmissions from various devices" />
+	<meta
+		name="description"
+		content="RTL_433 Signal Decoder - Decode radio transmissions from various devices"
+	/>
 </svelte:head>
 
 <div class="rtl433-container">
@@ -309,21 +323,24 @@
 		<div class="header-content">
 			<button class="back-button" on:click={goBack}>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-					<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+					<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
 				</svg>
 				Back
 			</button>
-			
+
 			<div class="title-section">
 				<h1 class="page-title">
-					<span style="color: #fb923c;">RTL_433</span>
+					<span style="color: #f97316;">RTL_433</span>
 					<span style="color: var(--text-primary);">Signal Decoder</span>
 				</h1>
 				<p class="page-subtitle">Decode radio transmissions from various devices</p>
 			</div>
 
 			<div class="status-section">
-				<div class="status-indicator" style="background-color: {getStatusColor(rtl433Status)}"></div>
+				<div
+					class="status-indicator"
+					style="background-color: {getStatusColor(rtl433Status)}"
+				></div>
 				<span class="status-text">{getStatusText(rtl433Status)}</span>
 			</div>
 		</div>
@@ -336,7 +353,9 @@
 			<div class="control-card">
 				<div class="control-header">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+						<path
+							d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+						/>
 					</svg>
 					<span>Configuration</span>
 				</div>
@@ -344,8 +363,8 @@
 					<div class="form-group">
 						<label>Frequency (MHz):</label>
 						<div class="frequency-buttons">
-							<button 
-								class="freq-btn" 
+							<button
+								class="freq-btn"
 								class:active={selectedFrequency === '315'}
 								on:click={() => setFrequency('315')}
 								disabled={rtl433Status === 'running'}
@@ -353,8 +372,8 @@
 								315 MHz
 								<span class="freq-label">Americas</span>
 							</button>
-							<button 
-								class="freq-btn" 
+							<button
+								class="freq-btn"
 								class:active={selectedFrequency === '433.92'}
 								on:click={() => setFrequency('433.92')}
 								disabled={rtl433Status === 'running'}
@@ -362,8 +381,8 @@
 								433.92 MHz
 								<span class="freq-label">Global ISM</span>
 							</button>
-							<button 
-								class="freq-btn" 
+							<button
+								class="freq-btn"
 								class:active={selectedFrequency === '868'}
 								on:click={() => setFrequency('868')}
 								disabled={rtl433Status === 'running'}
@@ -371,8 +390,8 @@
 								868 MHz
 								<span class="freq-label">Europe SRD</span>
 							</button>
-							<button 
-								class="freq-btn" 
+							<button
+								class="freq-btn"
 								class:active={selectedFrequency === '915'}
 								on:click={() => setFrequency('915')}
 								disabled={rtl433Status === 'running'}
@@ -415,7 +434,9 @@
 			<div class="control-card">
 				<div class="control-header">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,12L11,7.5V16.5Z"/>
+						<path
+							d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,12L11,7.5V16.5Z"
+						/>
 					</svg>
 					<span>Control</span>
 				</div>
@@ -425,7 +446,11 @@
 						on:click={toggleRTL433}
 						disabled={rtl433Status === 'starting' || rtl433Status === 'stopping'}
 					>
-{rtl433Status === 'running' ? (showConsole ? 'Stop RTL_433' : 'Start Monitoring') : 'Start RTL_433'}
+						{rtl433Status === 'running'
+							? showConsole
+								? 'Stop RTL_433'
+								: 'Start Monitoring'
+							: 'Start RTL_433'}
 					</button>
 					<button
 						class="control-button secondary"
@@ -434,10 +459,7 @@
 					>
 						Clear Signals
 					</button>
-					<button
-						class="control-button secondary"
-						on:click={clearConsole}
-					>
+					<button class="control-button secondary" on:click={clearConsole}>
 						Clear Console
 					</button>
 				</div>
@@ -447,7 +469,7 @@
 			<div class="control-card">
 				<div class="control-header">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M22,21H2V3H4V19H6V17H10V19H12V16H16V19H18V17H22V21Z"/>
+						<path d="M22,21H2V3H4V19H6V17H10V19H12V16H16V19H18V17H22V21Z" />
 					</svg>
 					<span>Statistics</span>
 				</div>
@@ -476,7 +498,10 @@
 			<div class="content-panel">
 				<div class="panel-header">
 					<h3>Console Output</h3>
-					<button class="toggle-button" on:click={() => rtl433Store.setShowConsole(!showConsole)}>
+					<button
+						class="toggle-button"
+						on:click={() => rtl433Store.setShowConsole(!showConsole)}
+					>
 						{showConsole ? 'Hide' : 'Show'} Console
 					</button>
 				</div>
@@ -487,7 +512,9 @@
 								<div class="console-line">{line}</div>
 							{/each}
 							{#if consoleOutput.length === 0}
-								<div class="console-empty">No console output yet. Start RTL_433 to see output.</div>
+								<div class="console-empty">
+									No console output yet. Start RTL_433 to see output.
+								</div>
 							{/if}
 						</div>
 					</div>
@@ -510,7 +537,9 @@
 							<div class="signal-card">
 								<div class="signal-header">
 									<div class="signal-time">{formatSignalTime(signal.time)}</div>
-									<div class="signal-type">{signal.model || 'Unknown Device'}</div>
+									<div class="signal-type">
+										{signal.model || 'Unknown Device'}
+									</div>
 								</div>
 								<div class="signal-data">
 									<pre>{formatSignalData(signal)}</pre>
@@ -528,9 +557,12 @@
 	.rtl433-container {
 		position: relative;
 		min-height: 100vh;
-		background: #0a0a0a;
-		color: #ffffff;
-		font-family: 'Inter', -apple-system, sans-serif;
+		background: #0e1116;
+		color: #e8eaed;
+		font-family:
+			'Inter',
+			-apple-system,
+			sans-serif;
 		overflow-x: hidden;
 	}
 
@@ -540,9 +572,10 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: radial-gradient(circle at 20% 80%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
-					radial-gradient(circle at 80% 20%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
-					radial-gradient(circle at 40% 40%, rgba(251, 146, 60, 0.05) 0%, transparent 50%);
+		background:
+			radial-gradient(circle at 20% 80%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
+			radial-gradient(circle at 80% 20%, rgba(251, 146, 60, 0.1) 0%, transparent 50%),
+			radial-gradient(circle at 40% 40%, rgba(251, 146, 60, 0.05) 0%, transparent 50%);
 		z-index: -2;
 	}
 
@@ -552,7 +585,7 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background-image: 
+		background-image:
 			linear-gradient(rgba(251, 146, 60, 0.1) 1px, transparent 1px),
 			linear-gradient(90deg, rgba(251, 146, 60, 0.1) 1px, transparent 1px);
 		background-size: 20px 20px;
@@ -561,13 +594,17 @@
 	}
 
 	@keyframes grid-move {
-		0% { transform: translate(0, 0); }
-		100% { transform: translate(20px, 20px); }
+		0% {
+			transform: translate(0, 0);
+		}
+		100% {
+			transform: translate(20px, 20px);
+		}
 	}
 
 	.rtl433-header {
-		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-bottom: 1px solid #333;
+		background: linear-gradient(135deg, #1a1d23 0%, #0e1116 100%);
+		border-bottom: 1px solid #2c2f36;
 		padding: 1rem;
 		backdrop-filter: blur(10px);
 		position: sticky;
@@ -589,7 +626,7 @@
 		gap: 0.5rem;
 		background: rgba(251, 146, 60, 0.1);
 		border: 1px solid rgba(251, 146, 60, 0.3);
-		color: #fb923c;
+		color: #f97316;
 		padding: 0.5rem 1rem;
 		border-radius: 0.375rem;
 		font-size: 0.875rem;
@@ -641,8 +678,8 @@
 	}
 
 	.control-panel {
-		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-bottom: 1px solid #333;
+		background: linear-gradient(135deg, #1a1d23 0%, #0e1116 100%);
+		border-bottom: 1px solid #2c2f36;
 		padding: 1rem;
 	}
 
@@ -655,8 +692,8 @@
 	}
 
 	.control-card {
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border: 1px solid #444;
+		background: linear-gradient(135deg, #25282f 0%, #1a1d23 100%);
+		border: 1px solid #35383f;
 		border-radius: 0.5rem;
 		padding: 1rem;
 		transition: all 0.3s ease;
@@ -664,7 +701,7 @@
 
 	.control-card:hover {
 		background: linear-gradient(135deg, #333 0%, #222 100%);
-		border-color: #555;
+		border-color: #3e4149;
 	}
 
 	.control-header {
@@ -673,7 +710,7 @@
 		gap: 0.5rem;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #fb923c;
+		color: #f97316;
 		margin-bottom: 0.75rem;
 		padding-bottom: 0.5rem;
 		border-bottom: 1px solid rgba(251, 146, 60, 0.2);
@@ -699,8 +736,8 @@
 
 	.form-group input,
 	.form-group select {
-		background: #1a1a1a;
-		border: 1px solid #444;
+		background: #1a1d23;
+		border: 1px solid #35383f;
 		border-radius: 0.375rem;
 		padding: 0.5rem;
 		color: #fff;
@@ -710,7 +747,7 @@
 	.form-group input:focus,
 	.form-group select:focus {
 		outline: none;
-		border-color: #fb923c;
+		border-color: #f97316;
 		box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2);
 	}
 
@@ -725,8 +762,8 @@
 	}
 
 	.control-button.primary {
-		background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-		border-color: #fb923c;
+		background: linear-gradient(135deg, #f97316 0%, #f97316 100%);
+		border-color: #f97316;
 		color: #fff;
 	}
 
@@ -736,13 +773,13 @@
 
 	.control-button.secondary {
 		background: transparent;
-		border-color: #444;
+		border-color: #35383f;
 		color: #d1d5db;
 	}
 
 	.control-button.secondary:hover {
-		background: #2a2a2a;
-		border-color: #555;
+		background: #25282f;
+		border-color: #3e4149;
 	}
 
 	.control-button:disabled {
@@ -762,7 +799,7 @@
 	}
 
 	.stat-value {
-		color: #fb923c;
+		color: #f97316;
 		font-weight: 600;
 	}
 
@@ -779,8 +816,8 @@
 	}
 
 	.content-panel {
-		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-		border: 1px solid #333;
+		background: linear-gradient(135deg, #1a1d23 0%, #0e1116 100%);
+		border: 1px solid #2c2f36;
 		border-radius: 0.5rem;
 		overflow: hidden;
 	}
@@ -790,20 +827,20 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 1rem;
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border-bottom: 1px solid #333;
+		background: linear-gradient(135deg, #25282f 0%, #1a1d23 100%);
+		border-bottom: 1px solid #2c2f36;
 	}
 
 	.panel-header h3 {
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.toggle-button {
 		background: transparent;
-		border: 1px solid #444;
+		border: 1px solid #35383f;
 		color: #d1d5db;
 		padding: 0.25rem 0.75rem;
 		border-radius: 0.25rem;
@@ -813,8 +850,8 @@
 	}
 
 	.toggle-button:hover {
-		background: #2a2a2a;
-		border-color: #555;
+		background: #25282f;
+		border-color: #3e4149;
 	}
 
 	.console-container {
@@ -831,7 +868,7 @@
 	}
 
 	.console-line {
-		color: #00ff00;
+		color: #4ade80;
 		margin-bottom: 0.25rem;
 		word-wrap: break-word;
 	}
@@ -856,8 +893,8 @@
 	}
 
 	.signal-card {
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border: 1px solid #444;
+		background: linear-gradient(135deg, #25282f 0%, #1a1d23 100%);
+		border: 1px solid #35383f;
 		border-radius: 0.375rem;
 		margin-bottom: 1rem;
 		overflow: hidden;
@@ -869,7 +906,7 @@
 		justify-content: space-between;
 		padding: 0.75rem 1rem;
 		background: linear-gradient(135deg, #333 0%, #222 100%);
-		border-bottom: 1px solid #444;
+		border-bottom: 1px solid #35383f;
 	}
 
 	.signal-time {
@@ -881,7 +918,7 @@
 	.signal-type {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.signal-data {
@@ -955,11 +992,11 @@
 		.content-grid {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.control-grid {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.header-content {
 			flex-direction: column;
 			gap: 1rem;

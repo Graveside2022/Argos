@@ -32,7 +32,7 @@
 		if (onFrequencySelected) {
 			onFrequencySelected(frequency);
 		}
-		
+
 		// If currently searching, switch to new frequency
 		if (hackrfState.isSearching) {
 			hackrfService.startSearch(frequency);
@@ -59,8 +59,8 @@
 		<div class="frequency-category">
 			<h4>📶 WiFi & IoT</h4>
 			<div class="preset-grid">
-				{#each frequencyPresets.filter(p => p.frequency >= 2400 && p.frequency <= 5200) as preset}
-					<button 
+				{#each frequencyPresets.filter((p) => p.frequency >= 2400 && p.frequency <= 5200) as preset}
+					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
 						on:click={() => selectFrequency(preset.frequency)}
@@ -77,8 +77,8 @@
 		<div class="frequency-category">
 			<h4>🏭 ISM Bands</h4>
 			<div class="preset-grid">
-				{#each frequencyPresets.filter(p => [433.92, 868, 915].includes(p.frequency)) as preset}
-					<button 
+				{#each frequencyPresets.filter( (p) => [433.92, 868, 915].includes(p.frequency) ) as preset}
+					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
 						on:click={() => selectFrequency(preset.frequency)}
@@ -95,8 +95,8 @@
 		<div class="frequency-category">
 			<h4>📡 VHF/UHF</h4>
 			<div class="preset-grid">
-				{#each frequencyPresets.filter(p => p.frequency >= 100 && p.frequency <= 500 && ![433.92].includes(p.frequency)) as preset}
-					<button 
+				{#each frequencyPresets.filter((p) => p.frequency >= 100 && p.frequency <= 500 && ![433.92].includes(p.frequency)) as preset}
+					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
 						on:click={() => selectFrequency(preset.frequency)}
@@ -113,8 +113,8 @@
 		<div class="frequency-category">
 			<h4>📱 Cellular</h4>
 			<div class="preset-grid">
-				{#each frequencyPresets.filter(p => p.frequency >= 800 && p.frequency <= 900) as preset}
-					<button 
+				{#each frequencyPresets.filter((p) => p.frequency >= 800 && p.frequency <= 900) as preset}
+					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
 						on:click={() => selectFrequency(preset.frequency)}
@@ -132,21 +132,21 @@
 	<div class="quick-actions">
 		<h4>⚡ Quick Actions</h4>
 		<div class="action-buttons">
-			<button 
+			<button
 				class="quick-search-btn wifi"
 				on:click={() => quickSearch(2437)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
 			>
 				🔍 Search WiFi
 			</button>
-			<button 
+			<button
 				class="quick-search-btn bluetooth"
 				on:click={() => quickSearch(2440)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
 			>
 				🔍 Search Bluetooth
 			</button>
-			<button 
+			<button
 				class="quick-search-btn ism"
 				on:click={() => quickSearch(433.92)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
@@ -160,11 +160,11 @@
 <style>
 	.frequency-search {
 		background: rgba(0, 20, 0, 0.9);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 		border-radius: 6px;
 		padding: 16px;
 		font-family: 'Courier New', monospace;
-		color: #00ff00;
+		color: #4ade80;
 		max-width: 400px;
 	}
 
@@ -223,15 +223,15 @@
 	}
 
 	.frequency-preset:hover {
-		border-color: #00ff00;
+		border-color: #4ade80;
 		background: rgba(0, 255, 0, 0.1);
 		box-shadow: 0 0 6px rgba(0, 255, 0, 0.3);
 	}
 
 	.frequency-preset.active {
-		border-color: #ffff00;
+		border-color: #fbbf24;
 		background: rgba(255, 255, 0, 0.1);
-		color: #ffff00;
+		color: #fbbf24;
 		box-shadow: 0 0 8px rgba(255, 255, 0, 0.4);
 	}
 
@@ -242,7 +242,7 @@
 	}
 
 	.frequency-preset.active .preset-name {
-		color: #ffff00;
+		color: #fbbf24;
 	}
 
 	.preset-freq {
@@ -301,7 +301,7 @@
 	}
 
 	.quick-search-btn.ism {
-		background: #ff8800;
+		background: #f97316;
 		border: 1px solid #cc6600;
 	}
 

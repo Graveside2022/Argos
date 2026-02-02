@@ -14,7 +14,7 @@
 	<div class="legend-header">
 		<h3>Tactical Map Legend</h3>
 	</div>
-	
+
 	<div class="legend-sections">
 		<!-- GPS Section -->
 		<div class="legend-section">
@@ -74,7 +74,11 @@
 			<h4>🔍 Search Status</h4>
 			<div class="legend-items">
 				<div class="legend-item">
-					<span class="status-indicator" class:active={isSearching} class:inactive={!isSearching}></span>
+					<span
+						class="status-indicator"
+						class:active={isSearching}
+						class:inactive={!isSearching}
+					></span>
 					<span class="legend-text">
 						{isSearching ? 'Searching' : 'Stopped'}
 						{#if isSearching}
@@ -111,11 +115,11 @@
 <style>
 	.map-legend {
 		background: rgba(0, 20, 0, 0.95);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 		border-radius: 6px;
 		padding: 16px;
 		font-family: 'Courier New', monospace;
-		color: #00ff00;
+		color: #4ade80;
 		font-size: 12px;
 		max-width: 300px;
 		min-width: 250px;
@@ -185,7 +189,7 @@
 	}
 
 	.wifi-sample {
-		color: #00ff00;
+		color: #4ade80;
 	}
 
 	.bluetooth-sample {
@@ -193,7 +197,7 @@
 	}
 
 	.unknown-sample {
-		color: #ffaa00;
+		color: #fbbf24;
 	}
 
 	.signal-sample {
@@ -202,24 +206,24 @@
 	}
 
 	.high-signal {
-		color: #ff0000;
+		color: #dc2626;
 	}
 
 	.medium-signal {
-		color: #ffaa00;
+		color: #fbbf24;
 	}
 
 	.weak-signal {
-		color: #00ff00;
+		color: #4ade80;
 	}
 
 	.legend-text {
-		color: #ffffff;
+		color: #e8eaed;
 		font-size: 11px;
 	}
 
 	.frequency-info {
-		color: #ffff00;
+		color: #fbbf24;
 		font-weight: bold;
 		margin-left: 4px;
 	}
@@ -232,19 +236,24 @@
 	}
 
 	.status-indicator.active {
-		background: #00ff00;
-		box-shadow: 0 0 8px #00ff00;
+		background: #4ade80;
+		box-shadow: 0 0 8px #4ade80;
 		animation: pulse 2s infinite;
 	}
 
 	.status-indicator.inactive {
-		background: #444444;
+		background: #35383f;
 		border: 1px solid #666666;
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.5; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
 	}
 
 	.coordinates-section {
@@ -271,7 +280,7 @@
 	}
 
 	.coord-value {
-		color: #ffffff;
+		color: #e8eaed;
 		font-family: 'Courier New', monospace;
 	}
 
@@ -282,7 +291,7 @@
 	}
 
 	.mgrs-value {
-		color: #ffff00;
+		color: #fbbf24;
 		font-weight: bold;
 	}
 </style>

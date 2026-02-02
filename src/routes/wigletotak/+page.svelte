@@ -5,7 +5,7 @@
 	// Services and stores - loaded dynamically to prevent SSR issues
 	let wigleStore: any;
 	let wigleService: any;
-	
+
 	// Import modular wigletotak components
 	import TAKSettingsCard from '$lib/components/wigletotak/settings/TAKSettingsCard.svelte';
 	import AnalysisModeCard from '$lib/components/wigletotak/settings/AnalysisModeCard.svelte';
@@ -30,7 +30,7 @@
 			// Dynamic imports to prevent SSR issues
 			const { wigleStore: ws } = await import('$lib/stores/wigletotak/wigleStore');
 			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigleService');
-			
+
 			wigleStore = ws;
 			wigleService = wserv;
 
@@ -58,57 +58,59 @@
 				</span>
 			</div>
 		</div>
-		
+
 		<h1 class="page-title">
 			<span class="highlight">Wigle</span>ToTAK
 		</h1>
 		<p class="page-subtitle">WiFi Device Tracker & TAK Broadcaster</p>
-		
+
 		<!-- Status Row -->
 		<div class="flex justify-center gap-6 mt-6">
 			<div class="status-item">
 				<span class="status-label">TAK:</span>
-				<span class="{isBroadcasting ? 'text-green-500' : 'text-gray-500'}">
+				<span class={isBroadcasting ? 'text-green-500' : 'text-gray-500'}>
 					{isBroadcasting ? 'Broadcasting' : 'Inactive'}
 				</span>
 			</div>
 			<div class="status-item">
 				<span class="status-label">Mode:</span>
-				<span class="text-blue-500">{analysisMode === 'realtime' ? 'Real-time' : 'Post-collection'}</span>
+				<span class="text-blue-500"
+					>{analysisMode === 'realtime' ? 'Real-time' : 'Post-collection'}</span
+				>
 			</div>
 		</div>
 	</div>
-	
+
 	<!-- Main Content -->
 	<div class="main-content">
 		<!-- Tab Navigation -->
 		<div class="tab-navigation">
-			<button 
+			<button
 				class="tab-button {activeTab === 'settings' ? 'active' : ''}"
-				on:click={() => activeTab = 'settings'}
+				on:click={() => (activeTab = 'settings')}
 			>
 				⚙️ Settings
 			</button>
-			<button 
+			<button
 				class="tab-button {activeTab === 'devices' ? 'active' : ''}"
-				on:click={() => activeTab = 'devices'}
+				on:click={() => (activeTab = 'devices')}
 			>
 				📱 Devices
 			</button>
-			<button 
+			<button
 				class="tab-button {activeTab === 'filters' ? 'active' : ''}"
-				on:click={() => activeTab = 'filters'}
+				on:click={() => (activeTab = 'filters')}
 			>
 				🔧 Filters
 			</button>
-			<button 
+			<button
 				class="tab-button {activeTab === 'messages' ? 'active' : ''}"
-				on:click={() => activeTab = 'messages'}
+				on:click={() => (activeTab = 'messages')}
 			>
 				💬 Messages
 			</button>
 		</div>
-		
+
 		<!-- Tab Content -->
 		<div class="tab-content">
 			{#if activeTab === 'settings'}
@@ -135,7 +137,7 @@
 				</div>
 			{/if}
 		</div>
-		
+
 		<!-- Instructions Panel -->
 		<div class="instructions-panel">
 			<h4>Configuration Instructions</h4>
@@ -154,44 +156,48 @@
 		margin: 0;
 		padding: 0;
 	}
-	
+
 	.wigletotak-container {
 		min-height: 100vh;
-		background: #0a0a0a;
+		background: #0e1116;
 		color: #fff;
-		font-family: Inter, system-ui, -apple-system, sans-serif;
+		font-family:
+			Inter,
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
-	
+
 	.wigletotak-header {
-		background: rgba(20, 20, 20, 0.8);
+		background: rgba(28, 31, 38, 0.8);
 		backdrop-filter: blur(20px);
 		border-bottom: 1px solid #262626;
 		padding: 2rem;
 		position: relative;
 		text-align: center;
 	}
-	
+
 	.page-title {
 		font-size: 2.5rem;
 		font-weight: 800;
 		text-align: center;
 		margin-bottom: 0.5rem;
 	}
-	
+
 	.highlight {
-		color: #fb923c;
+		color: #f97316;
 	}
-	
+
 	.page-subtitle {
 		text-align: center;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		font-family: 'JetBrains Mono', 'Fira Code', monospace;
 		font-size: 0.875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		margin: 0;
 	}
-	
+
 	.status-item {
 		display: flex;
 		align-items: center;
@@ -199,17 +205,17 @@
 		font-family: 'JetBrains Mono', monospace;
 		font-size: 0.875rem;
 	}
-	
+
 	.status-label {
 		color: #737373;
 	}
-	
+
 	.main-content {
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 2rem;
 	}
-	
+
 	.tab-navigation {
 		display: flex;
 		gap: 1rem;
@@ -217,7 +223,7 @@
 		border-bottom: 1px solid #262626;
 		padding-bottom: 1rem;
 	}
-	
+
 	.tab-button {
 		background: none;
 		border: none;
@@ -229,50 +235,51 @@
 		transition: color 0.2s;
 		font-family: inherit;
 	}
-	
+
 	.tab-button:hover {
-		color: #a3a3a3;
+		color: #9aa0a6;
 	}
-	
+
 	.tab-button.active {
-		color: #fb923c;
-		border-bottom: 2px solid #fb923c;
+		color: #f97316;
+		border-bottom: 2px solid #f97316;
 	}
-	
+
 	.tab-content {
 		margin-bottom: 2rem;
 	}
-	
-	.settings-grid, .filters-grid {
+
+	.settings-grid,
+	.filters-grid {
 		display: grid;
 		gap: 2rem;
 		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 	}
-	
+
 	.empty-state {
 		text-align: center;
 		padding: 4rem 2rem;
 		color: #737373;
 	}
-	
+
 	.instructions-panel {
-		background: #141414;
+		background: #1c1f26;
 		border: 1px solid #262626;
 		border-radius: 0.5rem;
 		padding: 1.5rem;
 		margin-top: 2rem;
 	}
-	
+
 	.instructions-panel h4 {
-		color: #fb923c;
+		color: #f97316;
 		margin-bottom: 1rem;
 	}
-	
+
 	.instructions-panel ul {
 		list-style: none;
 		padding: 0;
 		margin: 0;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		font-size: 0.875rem;
 		line-height: 1.75;
 	}

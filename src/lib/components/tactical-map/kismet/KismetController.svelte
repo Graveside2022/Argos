@@ -40,9 +40,17 @@
 <div class="kismet-controller">
 	<div class="controller-header">
 		<h3>📡 Kismet Device Scanner</h3>
-		<div class="service-status" class:running={kismetState.status === 'running'} class:stopped={kismetState.status === 'stopped'} class:transitioning={kismetState.status === 'starting' || kismetState.status === 'stopping'}>
+		<div
+			class="service-status"
+			class:running={kismetState.status === 'running'}
+			class:stopped={kismetState.status === 'stopped'}
+			class:transitioning={kismetState.status === 'starting' ||
+				kismetState.status === 'stopping'}
+		>
 			<span class="status-indicator"></span>
-			<span class="status-text">{kismetState.status.charAt(0).toUpperCase() + kismetState.status.slice(1)}</span>
+			<span class="status-text"
+				>{kismetState.status.charAt(0).toUpperCase() + kismetState.status.slice(1)}</span
+			>
 		</div>
 	</div>
 
@@ -91,7 +99,7 @@
 		<div class="stats-header">
 			<h4>Device Statistics</h4>
 		</div>
-		
+
 		<div class="stat-item">
 			<span class="stat-label">Total Devices:</span>
 			<span class="stat-value">{kismetState.deviceCount}</span>
@@ -115,7 +123,9 @@
 			<div class="distribution-section">
 				<h5>Top Manufacturers:</h5>
 				<div class="distribution-list">
-					{#each Array.from(kismetState.distributions.byManufacturer.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5) as [manufacturer, count]}
+					{#each Array.from(kismetState.distributions.byManufacturer.entries())
+						.sort((a, b) => b[1] - a[1])
+						.slice(0, 5) as [manufacturer, count]}
 						<div class="distribution-item">
 							<span class="dist-manufacturer">{manufacturer}:</span>
 							<span class="dist-count">{count}</span>
@@ -144,11 +154,11 @@
 <style>
 	.kismet-controller {
 		background: rgba(0, 20, 0, 0.9);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 		border-radius: 6px;
 		padding: 16px;
 		font-family: 'Courier New', monospace;
-		color: #00ff00;
+		color: #4ade80;
 		min-width: 300px;
 	}
 
@@ -182,8 +192,8 @@
 	}
 
 	.service-status.running .status-indicator {
-		background: #00ff00;
-		box-shadow: 0 0 6px #00ff00;
+		background: #4ade80;
+		box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
 	}
 
 	.service-status.stopped .status-indicator {
@@ -192,14 +202,19 @@
 	}
 
 	.service-status.transitioning .status-indicator {
-		background: #ffaa00;
-		box-shadow: 0 0 6px #ffaa00;
+		background: #fbbf24;
+		box-shadow: 0 0 6px #fbbf24;
 		animation: pulse 1s infinite;
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.5; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
 	}
 
 	.status-text {
@@ -231,7 +246,7 @@
 
 	.whitelist-input:focus {
 		outline: none;
-		border-color: #00ff00;
+		border-color: #4ade80;
 		box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 	}
 
@@ -371,7 +386,7 @@
 	}
 
 	.dist-count {
-		color: #ffff00;
+		color: #fbbf24;
 		font-weight: bold;
 	}
 </style>

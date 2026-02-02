@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	
+
 	export let isVisible = false;
-	
+
 	interface IMSIRecord {
 		id: number;
 		imsi: string;
@@ -15,23 +15,23 @@
 		lat?: number;
 		lon?: number;
 	}
-	
+
 	let imsiRecords: IMSIRecord[] = [];
 	let loading = false;
 	let error = '';
 	let total = 0;
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
-	
+
 	async function fetchIMSIData() {
 		if (!isVisible) return;
-		
+
 		loading = true;
 		error = '';
-		
+
 		try {
 			const response = await fetch('/api/gsm-evil/imsi');
 			const data = await response.json();
-			
+
 			if (data.success) {
 				imsiRecords = data.imsis;
 				total = data.total;
@@ -46,7 +46,7 @@
 			loading = false;
 		}
 	}
-	
+
 	onMount(() => {
 		if (isVisible) {
 			fetchIMSIData();
@@ -54,13 +54,13 @@
 			refreshInterval = setInterval(fetchIMSIData, 2000);
 		}
 	});
-	
+
 	onDestroy(() => {
 		if (refreshInterval) {
 			clearInterval(refreshInterval);
 		}
 	});
-	
+
 	// Watch for visibility changes
 	$: if (isVisible && !refreshInterval) {
 		fetchIMSIData();
@@ -69,7 +69,7 @@
 		clearInterval(refreshInterval);
 		refreshInterval = null;
 	}
-	
+
 	function formatTimestamp(timestamp: string) {
 		try {
 			return new Date(timestamp).toLocaleString();
@@ -77,11 +77,11 @@
 			return timestamp;
 		}
 	}
-	
+
 	function getCountryName(mcc: number) {
 		const countries: { [key: number]: string } = {
 			262: '🇩🇪 Germany',
-			302: '🇨🇦 Canada', 
+			302: '🇨🇦 Canada',
 			310: '🇺🇸 USA',
 			232: '🇦🇹 Austria',
 			260: '🇵🇱 Poland',
@@ -118,7 +118,9 @@
 		{:else if imsiRecords.length === 0 && !loading}
 			<div class="empty">
 				<p>📭 No IMSI records captured yet</p>
-				<p class="hint">Start GSM Evil to begin capturing IMSI numbers from nearby devices</p>
+				<p class="hint">
+					Start GSM Evil to begin capturing IMSI numbers from nearby devices
+				</p>
 			</div>
 		{:else}
 			<!-- IMSI Table -->
@@ -150,7 +152,11 @@
 								<td class="timestamp">{formatTimestamp(record.timestamp)}</td>
 								<td class="location">
 									{#if record.lat && record.lon}
-										<span class="coords">📍 {record.lat.toFixed(4)}, {record.lon.toFixed(4)}</span>
+										<span class="coords"
+											>📍 {record.lat.toFixed(4)}, {record.lon.toFixed(
+												4
+											)}</span
+										>
 									{:else}
 										<span class="no-location">❓ Unknown</span>
 									{/if}
@@ -159,7 +165,7 @@
 						{/each}
 					</tbody>
 				</table>
-				
+
 				{#if imsiRecords.length > 50}
 					<div class="pagination-info">
 						Showing first 50 of {imsiRecords.length} records
@@ -173,7 +179,7 @@
 <style>
 	.local-imsi-display {
 		height: 100%;
-		background: #0a0a0a;
+		background: #0e1116;
 		color: #fff;
 		font-family: 'Courier New', monospace;
 		overflow: hidden;
@@ -184,14 +190,14 @@
 	.header {
 		background: linear-gradient(135deg, #1a1a2e, #16213e);
 		padding: 1rem;
-		border-bottom: 2px solid #ff0000;
+		border-bottom: 2px solid #dc2626;
 	}
 
 	.title h2 {
 		margin: 0 0 0.5rem 0;
-		color: #ff0000;
+		color: #dc2626;
 		font-size: 1.5rem;
-		text-shadow: 0 0 10px #ff0000;
+		text-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
 	}
 
 	.stats {
@@ -216,17 +222,17 @@
 	.stat-item.success {
 		background: rgba(0, 255, 0, 0.1);
 		border-color: rgba(0, 255, 0, 0.3);
-		color: #00ff00;
+		color: #4ade80;
 	}
 
 	.error {
 		padding: 2rem;
 		text-align: center;
-		color: #ff4444;
+		color: #f87171;
 	}
 
 	.retry-btn {
-		background: #ff0000;
+		background: #dc2626;
 		color: white;
 		border: none;
 		padding: 0.5rem 1rem;
@@ -268,7 +274,7 @@
 		color: #fff;
 		padding: 0.75rem 0.5rem;
 		text-align: left;
-		border-bottom: 2px solid #ff0000;
+		border-bottom: 2px solid #dc2626;
 		position: sticky;
 		top: 0;
 		font-weight: bold;
@@ -298,7 +304,7 @@
 	}
 
 	.imsi {
-		color: #00ff00;
+		color: #4ade80;
 		font-family: 'Courier New', monospace;
 		font-weight: bold;
 		letter-spacing: 1px;
@@ -314,7 +320,9 @@
 		min-width: 100px;
 	}
 
-	.mnc, .lac, .ci {
+	.mnc,
+	.lac,
+	.ci {
 		color: #ddd;
 		text-align: center;
 		font-family: monospace;

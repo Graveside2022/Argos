@@ -28,17 +28,21 @@
 		}
 
 		try {
-			await wigleService.addToBlacklist(blacklistSSID || '', blacklistMAC || '', blacklistColor || '0');
-			logInfo('Added to blacklist successfully', { 
-				ssid: blacklistSSID, 
-				mac: blacklistMAC, 
-				color: blacklistColor 
+			await wigleService.addToBlacklist(
+				blacklistSSID || '',
+				blacklistMAC || '',
+				blacklistColor || '0'
+			);
+			logInfo('Added to blacklist successfully', {
+				ssid: blacklistSSID,
+				mac: blacklistMAC,
+				color: blacklistColor
 			});
-			
+
 			// Clear form
 			blacklistSSID = '';
 			blacklistMAC = '';
-			
+
 			alert('Added to blacklist');
 		} catch (error) {
 			logError('Failed to add to blacklist:', error as any);
@@ -52,20 +56,20 @@
 	<h3 class="card-title">Blacklist</h3>
 	<div class="form-group">
 		<label for="blacklistSSID">SSID</label>
-		<input 
-			id="blacklistSSID" 
-			type="text" 
-			bind:value={blacklistSSID} 
-			placeholder="Network name" 
+		<input
+			id="blacklistSSID"
+			type="text"
+			bind:value={blacklistSSID}
+			placeholder="Network name"
 		/>
 	</div>
 	<div class="form-group">
 		<label for="blacklistMAC">MAC Address</label>
-		<input 
-			id="blacklistMAC" 
-			type="text" 
-			bind:value={blacklistMAC} 
-			placeholder="00:00:00:00:00:00" 
+		<input
+			id="blacklistMAC"
+			type="text"
+			bind:value={blacklistMAC}
+			placeholder="00:00:00:00:00:00"
 		/>
 	</div>
 	<div class="form-group">
@@ -83,7 +87,7 @@
 
 <style>
 	.filter-card {
-		background: #141414;
+		background: #1c1f26;
 		border: 1px solid #262626;
 		border-radius: 0.5rem;
 		padding: 1.5rem;
@@ -93,7 +97,7 @@
 		font-size: 1.25rem;
 		font-weight: 600;
 		margin-bottom: 1rem;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.form-group {
@@ -103,14 +107,14 @@
 	.form-group label {
 		display: block;
 		font-size: 0.875rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		margin-bottom: 0.25rem;
 	}
 
-	.form-group input[type="text"],
+	.form-group input[type='text'],
 	.form-group select {
 		width: 100%;
-		background: #0a0a0a;
+		background: #0e1116;
 		border: 1px solid #262626;
 		border-radius: 0.25rem;
 		padding: 0.5rem;
@@ -121,7 +125,7 @@
 	.form-group input:focus,
 	.form-group select:focus {
 		outline: none;
-		border-color: #fb923c;
+		border-color: #f97316;
 	}
 
 	.btn {
@@ -137,12 +141,12 @@
 	}
 
 	.btn:hover {
-		background: #2d2d2d;
+		background: #2a2d35;
 	}
 
 	.btn-primary {
-		background: #fb923c;
-		border-color: #fb923c;
+		background: #f97316;
+		border-color: #f97316;
 		color: #000;
 	}
 

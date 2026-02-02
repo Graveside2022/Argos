@@ -2,29 +2,29 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 	import type { KismetAlert } from '$lib/types/kismet';
-	
+
 	export let maxAlerts = 50;
 	export let autoScroll = true;
-	
+
 	let alerts: KismetAlert[] = [];
 	let alertsContainer: HTMLDivElement;
 	let unsubscribe: () => void;
-	
+
 	// Alert types with their styling
 	const alertTypes = {
-		new_device: { icon: '🆕', color: '#00d2ff', label: 'New Device' },
-		security: { icon: '⚠️', color: '#ff4444', label: 'Security Alert' },
-		deauth: { icon: '🚫', color: '#ff4444', label: 'Deauth Attack' },
+		new_device: { icon: '🆕', color: '#4a9eff', label: 'New Device' },
+		security: { icon: '⚠️', color: '#f87171', label: 'Security Alert' },
+		deauth: { icon: '🚫', color: '#f87171', label: 'Deauth Attack' },
 		probe: { icon: '🔍', color: '#f59e0b', label: 'Probe Request' },
 		handshake: { icon: '🤝', color: '#44ff44', label: 'Handshake' },
-		suspicious: { icon: '🔴', color: '#ff4444', label: 'Suspicious' },
+		suspicious: { icon: '🔴', color: '#f87171', label: 'Suspicious' },
 		info: { icon: 'ℹ️', color: '#737373', label: 'Information' }
 	};
-	
+
 	onMount(() => {
-		unsubscribe = kismetStore.subscribe($store => {
+		unsubscribe = kismetStore.subscribe(($store) => {
 			alerts = $store.alerts.slice(-maxAlerts);
-			
+
 			// Auto-scroll to bottom when new alerts arrive
 			if (autoScroll && alertsContainer) {
 				setTimeout(() => {
@@ -33,25 +33,25 @@
 			}
 		});
 	});
-	
+
 	onDestroy(() => {
 		if (unsubscribe) unsubscribe();
 	});
-	
+
 	function formatTime(timestamp: number): string {
 		const date = new Date(timestamp * 1000);
-		return date.toLocaleTimeString('en-US', { 
+		return date.toLocaleTimeString('en-US', {
 			hour12: false,
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit'
 		});
 	}
-	
+
 	function clearAlerts() {
 		kismetStore.clearAlerts();
 	}
-	
+
 	function getAlertType(alert: KismetAlert) {
 		return alertTypes[alert.type] || alertTypes.info;
 	}
@@ -62,7 +62,7 @@
 		<h3>Security Alerts</h3>
 		<div class="header-controls">
 			<span class="alert-count">{alerts.length}</span>
-			<button 
+			<button
 				class="clear-button"
 				on:click={clearAlerts}
 				disabled={alerts.length === 0}
@@ -72,7 +72,7 @@
 			</button>
 		</div>
 	</div>
-	
+
 	<div class="alerts-container" bind:this={alertsContainer}>
 		{#if alerts.length === 0}
 			<div class="empty-alerts">
@@ -82,7 +82,7 @@
 			</div>
 		{:else}
 			{#each alerts as alert (alert.id)}
-				<div 
+				<div
 					class="alert-item alert-{alert.severity}"
 					class:new-alert={Date.now() / 1000 - alert.timestamp < 5}
 				>
@@ -93,10 +93,10 @@
 						<span class="alert-type">{getAlertType(alert).label}</span>
 						<span class="alert-time">{formatTime(alert.timestamp)}</span>
 					</div>
-					
+
 					<div class="alert-content">
 						<p class="alert-message">{alert.message}</p>
-						
+
 						{#if alert.details}
 							<div class="alert-details">
 								{#if alert.details.mac}
@@ -149,8 +149,8 @@
 		align-items: center;
 		padding: 12px 16px;
 		background: rgba(12, 22, 48, 0.85);
-		border-bottom: 2px solid #00d2ff;
-		box-shadow: 0 0 20px rgba(0, 220, 255, 0.5);
+		border-bottom: 2px solid #4a9eff;
+		box-shadow: 0 0 20px rgba(74, 158, 255, 0.5);
 	}
 
 	.alerts-header h3 {
@@ -171,7 +171,7 @@
 
 	.alert-count {
 		background: rgba(255, 68, 68, 0.2);
-		color: #ff4444;
+		color: #f87171;
 		padding: 4px 8px;
 		border-radius: 12px;
 		font-size: 0.85em;
@@ -183,9 +183,9 @@
 
 	.clear-button {
 		background: rgba(0, 0, 0, 0.5);
-		border: 1px solid #00d2ff;
+		border: 1px solid #4a9eff;
 		border-radius: 4px;
-		color: #00d2ff;
+		color: #4a9eff;
 		cursor: pointer;
 		padding: 4px 12px;
 		font-size: 0.85em;
@@ -194,7 +194,7 @@
 	}
 
 	.clear-button:hover:not(:disabled) {
-		background: rgba(0, 210, 255, 0.2);
+		background: rgba(74, 158, 255, 0.2);
 		transform: translateY(-1px);
 	}
 
@@ -265,7 +265,7 @@
 	}
 
 	.alert-item.alert-high {
-		border-left-color: #ff4444;
+		border-left-color: #f87171;
 		background-color: rgba(80, 0, 0, 0.3);
 	}
 
@@ -275,7 +275,7 @@
 	}
 
 	.alert-item.alert-low {
-		border-left-color: #00d2ff;
+		border-left-color: #4a9eff;
 	}
 
 	.alert-item.new-alert {
@@ -283,8 +283,13 @@
 	}
 
 	@keyframes alert-flash {
-		0%, 100% { background-color: inherit; }
-		50% { background-color: rgba(255, 255, 255, 0.1); }
+		0%,
+		100% {
+			background-color: inherit;
+		}
+		50% {
+			background-color: rgba(255, 255, 255, 0.1);
+		}
 	}
 
 	.alert-item:hover {
@@ -350,7 +355,7 @@
 	}
 
 	.detail-value {
-		color: #00d2ff;
+		color: #4a9eff;
 		font-family: 'Courier New', monospace;
 	}
 

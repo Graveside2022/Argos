@@ -4,25 +4,25 @@
 /* Core CSS Variables - Essential for preventing FOUC */
 :root {
 	/* Colors - Essential for immediate theming */
-	--bg-primary: #0a0a0a;
-	--bg-secondary: #141414;
-	--bg-card: #141414;
-	--bg-input: #1a1a1a;
-	--bg-hover: #2d2d2d;
-	--bg-button: #404040;
+	--bg-primary: #0e1116;
+	--bg-secondary: #16181d;
+	--bg-card: #1c1f26;
+	--bg-input: #1a1d23;
+	--bg-hover: #2a2d35;
+	--bg-button: #2a2d35;
 
 	/* Text Colors */
-	--text-primary: #ffffff;
-	--text-secondary: #a3a3a3;
-	--text-muted: #525252;
+	--text-primary: #e8eaed;
+	--text-secondary: #9aa0a6;
+	--text-muted: #5f6368;
 
 	/* Borders - Essential for preventing white borders */
-	--border-primary: 38 38 38; /* #262626 in RGB format */
-	--border-hover: 255 255 255; /* White in RGB */
+	--border-primary: 44 47 54; /* Palantir border in RGB format */
+	--border-hover: 74 158 255; /* Accent blue in RGB */
 
 	/* Accent Colors */
-	--accent-primary: #68d391;
-	--neon-cyan: #00d2ff;
+	--accent-primary: #4a9eff;
+	--neon-cyan: #4a9eff;
 
 	/* Fonts */
 	--font-heading: 'Inter', system-ui, -apple-system, sans-serif;
@@ -65,10 +65,12 @@ header {
 /* Card Critical Styles - Prevent white boxes */
 .saasfly-feature-card,
 .saasfly-dashboard-card {
-	background: linear-gradient(to bottom right, 
+	background: linear-gradient(
+		to bottom right,
 		color-mix(in srgb, var(--bg-card) 80%, transparent),
 		color-mix(in srgb, var(--bg-card) 60%, transparent),
-		color-mix(in srgb, var(--bg-card) 40%, transparent));
+		color-mix(in srgb, var(--bg-card) 40%, transparent)
+	);
 	border: 1px solid rgb(var(--border-primary) / 0.4);
 	border-radius: 1rem;
 	backdrop-filter: blur(24px);
@@ -86,7 +88,9 @@ button {
 }
 
 /* Input Critical Styles - Prevent white inputs */
-input, select, textarea {
+input,
+select,
+textarea {
 	font-family: var(--font-mono);
 	background: var(--bg-input);
 	color: var(--text-primary);
@@ -95,15 +99,17 @@ input, select, textarea {
 	padding: 0.75rem 1rem;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
 	outline: none;
 	border-color: var(--accent-primary);
-	box-shadow: 0 0 0 3px rgba(104, 211, 145, 0.1);
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
 }
 
 /* Glass Panel Critical Styles */
 .glass-panel {
-	background: rgba(20, 20, 20, 0.85);
+	background: rgba(28, 31, 38, 0.92);
 	backdrop-filter: blur(10px);
 	border: 1px solid rgb(var(--border-primary));
 	border-radius: 0.75rem;
@@ -119,8 +125,8 @@ input:focus, select:focus, textarea:focus {
 
 /* Status Panel Critical Styles */
 .status-panel {
-	background: rgba(20, 20, 20, 0.6);
-	border: 1px solid rgba(38, 38, 38, 0.6);
+	background: rgba(28, 31, 38, 0.7);
+	border: 1px solid rgba(44, 47, 54, 0.6);
 }
 
 /* Container Critical Styles */
@@ -153,7 +159,12 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Critical Text Styles */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	font-family: var(--font-heading);
 	color: var(--text-primary);
 	font-weight: 600;
@@ -266,11 +277,11 @@ h1, h2, h3, h4, h5, h6 {
 		padding-left: 1rem;
 		padding-right: 1rem;
 	}
-	
+
 	header .flex {
 		height: 3rem;
 	}
-	
+
 	.saasfly-feature-card,
 	.saasfly-dashboard-card {
 		padding: 1rem;

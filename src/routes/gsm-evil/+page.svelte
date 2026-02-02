@@ -1380,7 +1380,7 @@
 	{#if imsiCaptureActive}
 		<div class="scan-results-table" style="margin: 0 1rem; margin-top: 0.5rem;">
 			<h4 class="table-title">
-				<span style="color: #ff0000;">IMSI</span> Capture
+				<span style="color: #dc2626;">IMSI</span> Capture
 			</h4>
 			<div class="tower-groups" style="padding: 0.75rem;">
 				{#if capturedIMSIs.length > 0}
@@ -1456,7 +1456,7 @@
 		<div class="frequency-container">
 			<!-- Scan Results Table -->
 			<div class="scan-results-table">
-				<h4 class="table-title"><span style="color: #ff0000;">Scan</span> Results</h4>
+				<h4 class="table-title"><span style="color: #dc2626;">Scan</span> Results</h4>
 				<div class="table-container">
 					{#if scanResults.length > 0}
 						<table class="frequency-table">
@@ -1591,10 +1591,10 @@
 	{#if imsiCaptureActive}
 		<div class="scan-results-table" style="margin: 0 1rem; margin-top: 0.5rem;">
 			<h4 class="table-title">
-				<span style="color: #ff0000;">Live</span> GSM Frames
+				<span style="color: #dc2626;">Live</span> GSM Frames
 				<span class="text-xs text-gray-400 ml-2" style="font-weight: normal;">
 					<span style="color: white;">Listening on</span>
-					<span style="color: #ff0000; font-weight: 600;"
+					<span style="color: #dc2626; font-weight: 600;"
 						>{activityStatus.currentFrequency} MHz</span
 					>
 				</span>
@@ -1677,16 +1677,16 @@
 	.icon {
 		width: 24px;
 		height: 24px;
-		color: #ff0000;
+		color: #dc2626;
 	}
 
 	.gsm-brand {
-		color: #ff0000;
+		color: #dc2626;
 		/* text-shadow: 0 0 20px rgba(255, 0, 0, 0.5); */
 	}
 
 	.evil-brand {
-		color: #ffffff;
+		color: #e8eaed;
 		font-weight: bold;
 	}
 
@@ -1790,7 +1790,7 @@
 	}
 
 	.text-white {
-		color: #ffffff;
+		color: #e8eaed;
 	}
 
 	.text-green-500 {
@@ -1859,7 +1859,7 @@
 
 	/* Green Start Scan Button */
 	.scan-btn-green {
-		background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+		background: linear-gradient(135deg, #4ade80 0%, #38a56d 100%) !important;
 		border: 1px solid rgba(34, 197, 94, 0.3) !important;
 		color: white !important;
 		box-shadow:
@@ -1868,7 +1868,7 @@
 	}
 
 	.scan-btn-green:hover:not(:disabled) {
-		background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
+		background: linear-gradient(135deg, #4ade80 0%, #4ade80 100%) !important;
 		box-shadow:
 			0 6px 20px rgba(34, 197, 94, 0.4),
 			inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -1929,8 +1929,8 @@
 
 	/* Compact Frequency Panel */
 	.frequency-panel-compact {
-		background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-bottom: 1px solid #333;
+		background: linear-gradient(135deg, #1a1d23 0%, #0e1116 100%);
+		border-bottom: 1px solid #2c2f36;
 		padding: 0.75rem 1rem;
 	}
 
@@ -1955,25 +1955,25 @@
 	.scan-progress-console {
 		margin: 1rem 0;
 		background: #000;
-		border: 2px solid #333;
+		border: 2px solid #2c2f36;
 		border-radius: 0.5rem;
 		overflow: hidden;
 		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 	}
 
 	.console-header {
-		background: linear-gradient(to right, #1a1a1a, #2a2a2a);
+		background: linear-gradient(to right, #1a1d23, #25282f);
 		padding: 0.75rem 1rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		border-bottom: 1px solid #444;
+		border-bottom: 1px solid #35383f;
 	}
 
 	.console-title {
 		font-size: 1rem;
 		font-weight: 600;
-		color: #ffffff;
+		color: #e8eaed;
 		letter-spacing: 0.05em;
 		text-transform: uppercase;
 	}
@@ -2008,7 +2008,7 @@
 	}
 
 	.console-line.command {
-		color: #22c55e;
+		color: #4ade80;
 	}
 
 	.console-line.test {
@@ -2025,7 +2025,7 @@
 	.console-cursor {
 		display: inline-block;
 		animation: blink 1s infinite;
-		color: #22c55e;
+		color: #4ade80;
 		font-weight: bold;
 	}
 
@@ -2035,25 +2035,25 @@
 	}
 
 	.console-body::-webkit-scrollbar-track {
-		background: #1a1a1a;
+		background: #1a1d23;
 		border-radius: 5px;
 	}
 
 	.console-body::-webkit-scrollbar-thumb {
-		background: #444;
+		background: #35383f;
 		border-radius: 5px;
-		border: 1px solid #333;
+		border: 1px solid #2c2f36;
 	}
 
 	.console-body::-webkit-scrollbar-thumb:hover {
-		background: #555;
+		background: #3e4149;
 	}
 
 	/* Scan Results Table */
 	.scan-results-table {
 		margin-top: 1rem;
 		background: rgba(0, 0, 0, 0.3);
-		border: 1px solid #333;
+		border: 1px solid #2c2f36;
 		border-radius: 0.5rem;
 		padding: 1rem;
 	}
@@ -2071,7 +2071,7 @@
 	.table-container {
 		overflow-x: auto;
 		border-radius: 0.375rem;
-		border: 1px solid #333;
+		border: 1px solid #2c2f36;
 		min-height: 300px;
 		max-height: 400px;
 		overflow-y: auto;
@@ -2084,7 +2084,7 @@
 	}
 
 	.frequency-table thead {
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+		background: linear-gradient(135deg, #25282f 0%, #1a1d23 100%);
 	}
 
 	.frequency-table th {
@@ -2092,7 +2092,7 @@
 		text-align: left;
 		font-weight: 600;
 		color: #fff;
-		border-bottom: 2px solid #444;
+		border-bottom: 2px solid #35383f;
 		text-transform: uppercase;
 		font-size: 0.75rem;
 		letter-spacing: 0.05em;
@@ -2110,7 +2110,7 @@
 
 	.frequency-table tbody tr.selected {
 		background: rgba(34, 197, 94, 0.1);
-		border-left: 3px solid #22c55e;
+		border-left: 3px solid #4ade80;
 	}
 
 	.frequency-table td {
@@ -2150,7 +2150,7 @@
 
 	.signal-fill {
 		height: 100%;
-		background: linear-gradient(to right, #ef4444, #fbbf24, #22c55e);
+		background: linear-gradient(to right, #ef4444, #fbbf24, #4ade80);
 		transition: width 0.3s ease;
 	}
 
@@ -2175,9 +2175,9 @@
 	}
 
 	.quality-badge.strong {
-		background: rgba(52, 211, 153, 0.2);
-		color: #34d399;
-		border: 1px solid rgba(52, 211, 153, 0.3);
+		background: rgba(74, 222, 128, 0.2);
+		color: #4ade80;
+		border: 1px solid rgba(74, 222, 128, 0.3);
 	}
 
 	.quality-badge.good {
@@ -2243,7 +2243,7 @@
 	}
 
 	.activity-yes {
-		color: #22c55e;
+		color: #4ade80;
 		font-size: 1.25rem;
 		font-weight: bold;
 	}
@@ -2256,8 +2256,8 @@
 
 	.select-btn {
 		padding: 0.375rem 0.75rem;
-		background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-		border: 1px solid #444;
+		background: linear-gradient(135deg, #25282f 0%, #1a1d23 100%);
+		border: 1px solid #35383f;
 		border-radius: 0.25rem;
 		color: #fff;
 		font-size: 0.75rem;
@@ -2268,12 +2268,12 @@
 	}
 
 	.select-btn:hover {
-		background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-		border-color: #555;
+		background: linear-gradient(135deg, #35383f 0%, #25282f 100%);
+		border-color: #3e4149;
 	}
 
 	.select-btn.selected {
-		background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+		background: linear-gradient(135deg, #4ade80 0%, #38a56d 100%);
 		border-color: rgba(34, 197, 94, 0.5);
 		color: #fff;
 		cursor: default;
@@ -2312,7 +2312,7 @@
 	}
 
 	.text-red-500 {
-		color: #ff0000;
+		color: #dc2626;
 	}
 
 	.tower-groups {
@@ -2401,7 +2401,7 @@
 		font-family: monospace;
 		font-weight: bold;
 		color: #64748b;
-		border-bottom: 1px solid #333;
+		border-bottom: 1px solid #2c2f36;
 		margin-bottom: 0.4rem;
 	}
 
@@ -2500,7 +2500,7 @@
 	}
 
 	.text-orange-400 {
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.blink {

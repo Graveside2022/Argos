@@ -4,6 +4,10 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// Cache last known satellite count from full SKY messages (accurate per-satellite data).
+// Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
+let cachedSatelliteCount = 0;
+
 interface TPVData {
 	class: string;
 	mode: number;
@@ -22,6 +26,8 @@ interface SkyMessage {
 	satellites?: Array<{
 		used?: boolean;
 	}>;
+	uSat?: number; // Used satellites count (GPSD 3.20+)
+	nSat?: number; // Total visible satellites
 }
 
 interface SatelliteData {
@@ -79,73 +85,61 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 
 	return {
 		class: obj.class,
-		satellites: isSatelliteArray(obj.satellites) ? obj.satellites : undefined
+		satellites: isSatelliteArray(obj.satellites) ? obj.satellites : undefined,
+		uSat: typeof obj.uSat === 'number' ? obj.uSat : undefined,
+		nSat: typeof obj.nSat === 'number' ? obj.nSat : undefined
 	};
 }
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Query gpsd via its JSON protocol on the default port (2947).
-		// This returns in ~0.4s instead of the 10+ seconds the old cascading
-		// timeout chain took when ports 2950/2948 didn't exist.
-		let stdout = '';
+		// Single GPSD connection — capture both TPV and SKY in one query.
+		// Use timeout to let nc run for 2s then collect all output (avoids SIGPIPE from head).
+		let allLines = '';
 		try {
 			const result = await execAsync(
-				'echo \'?WATCH={"enable":true,"json":true}\' | nc -w 2 localhost 2947 | grep -m 1 TPV',
-				{ timeout: 3000 }
+				'timeout 2 bash -c \'echo \\\'?WATCH={"enable":true,"json":true}\\\' | nc localhost 2947\' 2>/dev/null || true',
+				{ timeout: 5000 }
 			);
-			stdout = result.stdout;
+			allLines = result.stdout;
 		} catch {
-			// Default port failed, try gpspipe as fallback
+			// nc failed, try gpspipe as fallback
 			try {
-				const result = await execAsync('timeout 2 gpspipe -w -n 5 | grep -m 1 TPV');
-				stdout = result.stdout;
+				const result = await execAsync('timeout 3 gpspipe -w -n 10 2>/dev/null || true');
+				allLines = result.stdout;
 			} catch {
 				// gpspipe also failed
 			}
 		}
 
-		// Parse the JSON output
+		// Parse both TPV and SKY from the single output.
+		// GPSD sends two SKY formats: compact (uSat only — inflated aggregate) and
+		// full (includes satellites array with per-sat used flag — accurate count).
+		// Full SKY only arrives every ~4-5s, so we cache the last accurate count.
 		let tpvData: TPVData | null = null;
-		try {
-			const parsed = JSON.parse(stdout.trim()) as unknown;
-			tpvData = parseTPVData(parsed);
-		} catch {
-			// JSON parsing failed
+		const lines = allLines.trim().split('\n');
+
+		for (const line of lines) {
+			if (line.trim() === '') continue;
+			try {
+				const parsed = JSON.parse(line) as unknown;
+
+				if (!tpvData) {
+					tpvData = parseTPVData(parsed);
+				}
+
+				const msg = parseSkyMessage(parsed);
+				if (msg && msg.satellites && msg.satellites.length > 0) {
+					// Full SKY message — update cache with accurate used-satellite count
+					cachedSatelliteCount = msg.satellites.filter((sat) => sat.used === true).length;
+				}
+			} catch {
+				// Skip non-JSON lines
+			}
 		}
 
 		if (!tpvData) {
 			throw new Error('Failed to parse TPV data');
-		}
-
-		// Get satellite info — single fast query, same connection approach
-		let satelliteCount = 0;
-		try {
-			const { stdout: allMessages } = await execAsync(
-				'echo \'?WATCH={"enable":true,"json":true}\' | nc -w 1 localhost 2947 | head -20',
-				{ timeout: 2000 }
-			);
-			const lines = allMessages.trim().split('\n');
-
-			for (const line of lines) {
-				if (line.trim() === '') continue;
-				try {
-					const parsed = JSON.parse(line) as unknown;
-					const msg = parseSkyMessage(parsed);
-					if (msg && msg.satellites) {
-						satelliteCount = msg.satellites.filter((sat) => sat.used === true).length;
-						break;
-					}
-				} catch {
-					// Skip non-JSON lines
-				}
-			}
-
-			if (satelliteCount === 0 && tpvData.mode === 3) {
-				satelliteCount = 4;
-			}
-		} catch {
-			// Satellite data is optional
 		}
 
 		if (tpvData.class === 'TPV' && tpvData.mode >= 2) {
@@ -160,7 +154,7 @@ export const GET: RequestHandler = async () => {
 						speed: tpvData.speed ?? null,
 						heading: tpvData.track ?? null,
 						accuracy: tpvData.epx ?? tpvData.epy ?? 10, // Horizontal error in meters
-						satellites: satelliteCount,
+						satellites: cachedSatelliteCount,
 						fix: tpvData.mode, // 0=no fix, 1=no fix, 2=2D fix, 3=3D fix
 						time: tpvData.time ?? null
 					}
@@ -182,7 +176,7 @@ export const GET: RequestHandler = async () => {
 						speed: null,
 						heading: null,
 						accuracy: null,
-						satellites: satelliteCount,
+						satellites: cachedSatelliteCount,
 						fix: tpvData.mode, // 0=no fix, 1=no fix, 2=2D fix, 3=3D fix
 						time: tpvData.time ?? null
 					},

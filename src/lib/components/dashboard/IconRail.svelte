@@ -1,0 +1,167 @@
+<script lang="ts">
+	import { activePanel, togglePanel, activeView } from '$lib/stores/dashboard/dashboardStore';
+
+	const topIcons = [
+		{
+			id: 'overview',
+			label: 'Overview',
+			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+		},
+		{
+			id: 'devices',
+			label: 'Devices',
+			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>`
+		},
+		{
+			id: 'tools',
+			label: 'Tools',
+			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
+		}
+	];
+
+	const layersIcon = {
+		id: 'layers',
+		label: 'Layers',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
+	};
+
+	const terminalIcon = {
+		id: 'terminal',
+		label: 'Terminal',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`
+	};
+
+	const bottomIcon = {
+		id: 'settings',
+		label: 'Settings',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
+	};
+
+	function handleClick(id: string) {
+		if (id === 'terminal') {
+			activeView.update((v) => (v === 'terminal' ? 'map' : 'terminal'));
+		} else {
+			togglePanel(id);
+		}
+	}
+</script>
+
+<nav class="icon-rail" aria-label="Dashboard navigation">
+	<div class="rail-top">
+		{#each topIcons as icon (icon.id)}
+			<button
+				class="rail-btn"
+				class:active={$activePanel === icon.id}
+				title={icon.label}
+				aria-label={icon.label}
+				aria-pressed={$activePanel === icon.id}
+				on:click={() => handleClick(icon.id)}
+			>
+				{@html icon.svg}
+			</button>
+		{/each}
+	</div>
+
+	<div class="rail-spacer"></div>
+
+	<div class="rail-bottom">
+		<button
+			class="rail-btn"
+			class:active={$activePanel === layersIcon.id}
+			title={layersIcon.label}
+			aria-label={layersIcon.label}
+			aria-pressed={$activePanel === layersIcon.id}
+			on:click={() => handleClick(layersIcon.id)}
+		>
+			{@html layersIcon.svg}
+		</button>
+		<button
+			class="rail-btn"
+			class:active={$activeView === 'terminal'}
+			title={terminalIcon.label}
+			aria-label={terminalIcon.label}
+			aria-pressed={$activeView === 'terminal'}
+			on:click={() => handleClick(terminalIcon.id)}
+		>
+			{@html terminalIcon.svg}
+		</button>
+		<button
+			class="rail-btn"
+			class:active={$activePanel === bottomIcon.id}
+			title={bottomIcon.label}
+			aria-label={bottomIcon.label}
+			aria-pressed={$activePanel === bottomIcon.id}
+			on:click={() => handleClick(bottomIcon.id)}
+		>
+			{@html bottomIcon.svg}
+		</button>
+	</div>
+</nav>
+
+<style>
+	.icon-rail {
+		width: var(--icon-rail-width);
+		min-width: var(--icon-rail-width);
+		background: var(--palantir-bg-surface);
+		border-right: 1px solid var(--palantir-border-subtle);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: var(--space-2) 0;
+		z-index: 10;
+	}
+
+	.rail-top {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+	}
+
+	.rail-spacer {
+		flex: 1;
+	}
+
+	.rail-bottom {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+	}
+
+	.rail-btn {
+		width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		color: var(--palantir-text-tertiary);
+		cursor: pointer;
+		border-radius: var(--radius-md);
+		position: relative;
+		transition: all 0.15s ease;
+	}
+
+	.rail-btn:hover {
+		background: var(--palantir-bg-hover);
+		color: var(--palantir-text-secondary);
+	}
+
+	.rail-btn.active {
+		color: var(--palantir-accent);
+		background: transparent;
+	}
+
+	.rail-btn.active::before {
+		content: '';
+		position: absolute;
+		left: -4px;
+		top: 8px;
+		bottom: 8px;
+		width: 2px;
+		background: var(--palantir-accent);
+		border-radius: 1px;
+	}
+</style>
