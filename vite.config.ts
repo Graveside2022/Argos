@@ -1,8 +1,9 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import { terminalPlugin } from './vite-plugin-terminal';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [sveltekit(), terminalPlugin()],
 	server: {
 		host: '0.0.0.0',
 		port: 5173
