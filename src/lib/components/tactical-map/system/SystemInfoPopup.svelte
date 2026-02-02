@@ -74,7 +74,7 @@
 
 	function createLoadingContent(): string {
 		return `
-			<div style="padding: 16px; font-family: 'Courier New', monospace; color: #00ff00; text-align: center;">
+			<div style="padding: 16px; font-family: 'Courier New', monospace; color: #4ade80; text-align: center;">
 				<div style="margin-bottom: 8px;">⚡ Loading system info...</div>
 				<div style="font-size: 10px; color: #88ff88;">Please wait...</div>
 			</div>
@@ -111,12 +111,14 @@
 
 		// Get GPS coordinate information
 		const mgrsCoord = gpsState.status.mgrsCoord || 'Invalid';
-		const formattedLat = gpsState.position.lat !== 0 
-			? `${Math.abs(gpsState.position.lat).toFixed(6)}°${gpsState.position.lat >= 0 ? 'N' : 'S'}`
-			: '0.000000°N';
-		const formattedLon = gpsState.position.lon !== 0
-			? `${Math.abs(gpsState.position.lon).toFixed(6)}°${gpsState.position.lon >= 0 ? 'E' : 'W'}`
-			: '0.000000°E';
+		const formattedLat =
+			gpsState.position.lat !== 0
+				? `${Math.abs(gpsState.position.lat).toFixed(6)}°${gpsState.position.lat >= 0 ? 'N' : 'S'}`
+				: '0.000000°N';
+		const formattedLon =
+			gpsState.position.lon !== 0
+				? `${Math.abs(gpsState.position.lon).toFixed(6)}°${gpsState.position.lon >= 0 ? 'E' : 'W'}`
+				: '0.000000°E';
 
 		return `
 			<div style="font-family: 'Courier New', monospace; min-width: 300px; color: #ffffff; background: rgba(0, 0, 0, 0.95);">
@@ -131,11 +133,11 @@
 					</tr>
 					<tr>
 						<td style="padding: 4px 8px 4px 0; font-weight: bold; color: #88ff88;">GPS:</td>
-						<td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">${formattedLat}, ${formattedLon}</td>
+						<td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">${formattedLat}, ${formattedLon}</td>
 					</tr>
 					<tr>
 						<td style="padding: 4px 8px 4px 0; font-weight: bold; color: #88ff88;">MGRS:</td>
-						<td style="padding: 4px 0; font-family: monospace; color: #ffaa00;">${mgrsCoord}</td>
+						<td style="padding: 4px 0; font-family: monospace; color: #fbbf24;">${mgrsCoord}</td>
 					</tr>
 					<tr>
 						<td colspan="2" style="padding: 8px 0 4px 0; border-top: 1px solid #004400;">
@@ -202,33 +204,34 @@
 	}
 
 	function getCpuColor(usage: number): string {
-		if (usage > 80) return '#ff4444'; // Red - high usage
-		if (usage > 60) return '#ffaa00'; // Orange - medium usage
-		return '#00ff00'; // Green - low usage
+		if (usage > 80) return '#f87171'; // Red - high usage
+		if (usage > 60) return '#fbbf24'; // Orange - medium usage
+		return '#4ade80'; // Green - low usage
 	}
 
 	function getMemoryColor(percentage: number): string {
-		if (percentage > 80) return '#ff4444'; // Red - high usage
-		if (percentage > 60) return '#ffaa00'; // Orange - medium usage
-		return '#00ff00'; // Green - low usage
+		if (percentage > 80) return '#f87171'; // Red - high usage
+		if (percentage > 60) return '#fbbf24'; // Orange - medium usage
+		return '#4ade80'; // Green - low usage
 	}
 
 	function getStorageColor(percentage: number): string {
-		if (percentage > 80) return '#ff4444'; // Red - high usage
-		if (percentage > 60) return '#ffaa00'; // Orange - medium usage
-		return '#00ff00'; // Green - low usage
+		if (percentage > 80) return '#f87171'; // Red - high usage
+		if (percentage > 60) return '#fbbf24'; // Orange - medium usage
+		return '#4ade80'; // Green - low usage
 	}
 
 	function getTemperatureColor(temp: number): string {
-		if (temp > 70) return '#ff4444'; // Red - too hot
-		if (temp > 60) return '#ffaa00'; // Orange - warm
-		return '#00ff00'; // Green - normal
+		if (temp > 70) return '#f87171'; // Red - too hot
+		if (temp > 60) return '#fbbf24'; // Orange - warm
+		return '#4ade80'; // Green - normal
 	}
 
 	function getBatteryRow(battery: { level: number; charging: boolean }): string {
-		const batteryColor = battery.level < 20 ? '#ff4444' : battery.level < 50 ? '#ffaa00' : '#00ff00';
+		const batteryColor =
+			battery.level < 20 ? '#f87171' : battery.level < 50 ? '#fbbf24' : '#4ade80';
 		const chargingStatus = battery.charging ? ' (Charging ⚡)' : '';
-		
+
 		return `
 			<tr>
 				<td style="padding: 4px 8px 4px 0; font-weight: bold; color: #88ff88;">Battery:</td>

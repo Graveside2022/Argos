@@ -50,7 +50,11 @@
 <div class="hackrf-controller">
 	<div class="controller-header">
 		<h3>🔍 HackRF Signal Search</h3>
-		<div class="connection-status" class:connected={hackrfState.connectionStatus === 'Connected'} class:disconnected={hackrfState.connectionStatus === 'Disconnected'}>
+		<div
+			class="connection-status"
+			class:connected={hackrfState.connectionStatus === 'Connected'}
+			class:disconnected={hackrfState.connectionStatus === 'Disconnected'}
+		>
 			<span class="status-indicator"></span>
 			<span class="status-text">{hackrfState.connectionStatus}</span>
 		</div>
@@ -88,12 +92,7 @@
 			🗑️ Clear Signals
 		</button>
 
-		<button
-			class="spectrum-button"
-			on:click={goToSpectrum}
-		>
-			📊 View Spectrum
-		</button>
+		<button class="spectrum-button" on:click={goToSpectrum}> 📊 View Spectrum </button>
 	</div>
 
 	<div class="search-status">
@@ -101,7 +100,7 @@
 			<span class="label">Signals Found:</span>
 			<span class="value">{hackrfState.signalCount}</span>
 		</div>
-		
+
 		<div class="status-item">
 			<span class="label">Target:</span>
 			<span class="value">{hackrfState.targetFrequency} MHz</span>
@@ -111,8 +110,9 @@
 			<div class="current-signal">
 				<span class="label">Current Signal:</span>
 				<span class="signal-info">
-					{hackrfState.currentSignal.frequency.toFixed(1)} MHz 
-					({hackrfState.currentSignal.power.toFixed(1)} dBm)
+					{hackrfState.currentSignal.frequency.toFixed(1)} MHz ({hackrfState.currentSignal.power.toFixed(
+						1
+					)} dBm)
 				</span>
 			</div>
 		{/if}
@@ -122,11 +122,11 @@
 <style>
 	.hackrf-controller {
 		background: rgba(0, 20, 0, 0.9);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 		border-radius: 6px;
 		padding: 16px;
 		font-family: 'Courier New', monospace;
-		color: #00ff00;
+		color: #4ade80;
 		min-width: 300px;
 	}
 
@@ -160,8 +160,8 @@
 	}
 
 	.connection-status.connected .status-indicator {
-		background: #00ff00;
-		box-shadow: 0 0 6px #00ff00;
+		background: #4ade80;
+		box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
 	}
 
 	.connection-status.disconnected .status-indicator {
@@ -198,7 +198,7 @@
 
 	.frequency-input:focus {
 		outline: none;
-		border-color: #00ff00;
+		border-color: #4ade80;
 		box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 	}
 
@@ -245,7 +245,7 @@
 	}
 
 	.clear-button {
-		background: #ff4444;
+		background: #f87171;
 		color: white;
 		border: 1px solid #cc3333;
 	}
@@ -276,8 +276,13 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.7; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
 	}
 
 	.search-status {
@@ -316,7 +321,7 @@
 	}
 
 	.signal-info {
-		color: #ffff00;
+		color: #fbbf24;
 		font-weight: bold;
 		font-size: 11px;
 	}

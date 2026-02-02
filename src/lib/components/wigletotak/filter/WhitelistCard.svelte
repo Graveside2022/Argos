@@ -20,11 +20,11 @@
 		try {
 			await wigleService.addToWhitelist(whitelistSSID || '', whitelistMAC || '');
 			logInfo('Added to whitelist successfully', { ssid: whitelistSSID, mac: whitelistMAC });
-			
+
 			// Clear form
 			whitelistSSID = '';
 			whitelistMAC = '';
-			
+
 			alert('Added to whitelist');
 		} catch (error) {
 			logError('Failed to add to whitelist:', error as any);
@@ -38,20 +38,20 @@
 	<h3 class="card-title">Whitelist</h3>
 	<div class="form-group">
 		<label for="whitelistSSID">SSID</label>
-		<input 
-			id="whitelistSSID" 
-			type="text" 
-			bind:value={whitelistSSID} 
-			placeholder="Network name" 
+		<input
+			id="whitelistSSID"
+			type="text"
+			bind:value={whitelistSSID}
+			placeholder="Network name"
 		/>
 	</div>
 	<div class="form-group">
 		<label for="whitelistMAC">MAC Address</label>
-		<input 
-			id="whitelistMAC" 
-			type="text" 
-			bind:value={whitelistMAC} 
-			placeholder="00:00:00:00:00:00" 
+		<input
+			id="whitelistMAC"
+			type="text"
+			bind:value={whitelistMAC}
+			placeholder="00:00:00:00:00:00"
 		/>
 	</div>
 	<button class="btn btn-primary" on:click={() => void addToWhitelist()}>
@@ -61,7 +61,7 @@
 
 <style>
 	.filter-card {
-		background: #141414;
+		background: #1c1f26;
 		border: 1px solid #262626;
 		border-radius: 0.5rem;
 		padding: 1.5rem;
@@ -71,7 +71,7 @@
 		font-size: 1.25rem;
 		font-weight: 600;
 		margin-bottom: 1rem;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.form-group {
@@ -81,13 +81,13 @@
 	.form-group label {
 		display: block;
 		font-size: 0.875rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		margin-bottom: 0.25rem;
 	}
 
-	.form-group input[type="text"] {
+	.form-group input[type='text'] {
 		width: 100%;
-		background: #0a0a0a;
+		background: #0e1116;
 		border: 1px solid #262626;
 		border-radius: 0.25rem;
 		padding: 0.5rem;
@@ -97,7 +97,7 @@
 
 	.form-group input:focus {
 		outline: none;
-		border-color: #fb923c;
+		border-color: #f97316;
 	}
 
 	.btn {
@@ -113,12 +113,12 @@
 	}
 
 	.btn:hover {
-		background: #2d2d2d;
+		background: #2a2d35;
 	}
 
 	.btn-primary {
-		background: #fb923c;
-		border-color: #fb923c;
+		background: #f97316;
+		border-color: #f97316;
 		color: #000;
 	}
 

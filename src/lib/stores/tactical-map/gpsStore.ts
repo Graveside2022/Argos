@@ -11,6 +11,8 @@ export interface GPSStatus {
 	accuracy: number;
 	satellites: number;
 	fixType: string;
+	heading: number | null;
+	speed: number | null;
 	currentCountry: { name: string; flag: string };
 	formattedCoords: { lat: string; lon: string };
 	mgrsCoord: string;
@@ -29,6 +31,8 @@ const initialGPSState: GPSState = {
 		accuracy: 0,
 		satellites: 0,
 		fixType: 'No',
+		heading: null,
+		speed: null,
 		currentCountry: { name: 'Unknown', flag: '🌍' },
 		formattedCoords: { lat: '0.000000°N', lon: '0.000000°E' },
 		mgrsCoord: 'Invalid'
@@ -38,12 +42,12 @@ const initialGPSState: GPSState = {
 export const gpsStore: Writable<GPSState> = writable(initialGPSState);
 
 export const updateGPSPosition = (position: GPSPosition) => {
-	gpsStore.update(state => ({ ...state, position }));
+	gpsStore.update((state) => ({ ...state, position }));
 };
 
 export const updateGPSStatus = (status: Partial<GPSStatus>) => {
-	gpsStore.update(state => ({ 
-		...state, 
-		status: { ...state.status, ...status } 
+	gpsStore.update((state) => ({
+		...state,
+		status: { ...state.status, ...status }
 	}));
 };

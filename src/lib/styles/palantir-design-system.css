@@ -243,13 +243,35 @@
 	color: var(--palantir-text-primary);
 }
 
+.btn-open {
+	background: transparent;
+	color: var(--palantir-accent);
+	border-color: transparent;
+}
+.btn-open:hover {
+	background: var(--palantir-accent-muted);
+}
+
+.btn-start {
+	background: transparent;
+	color: var(--palantir-success);
+	border-color: transparent;
+}
+.btn-start:hover {
+	background: rgba(74, 222, 128, 0.12);
+}
+.btn-start:disabled {
+	color: var(--palantir-text-tertiary);
+	background: transparent;
+}
+
 .btn-danger {
-	background: rgba(248, 113, 113, 0.12);
+	background: transparent;
 	color: var(--palantir-error);
-	border-color: rgba(248, 113, 113, 0.25);
+	border-color: transparent;
 }
 .btn-danger:hover {
-	background: rgba(248, 113, 113, 0.2);
+	background: rgba(248, 113, 113, 0.12);
 }
 
 .btn-sm {
@@ -260,6 +282,12 @@
 .btn-lg {
 	padding: var(--space-3) var(--space-6);
 	font-size: var(--text-base);
+}
+
+.btn-full {
+	width: 100%;
+	justify-content: center;
+	margin-bottom: var(--space-2);
 }
 
 /* ---- Map Popup ---- */
@@ -468,4 +496,90 @@
 	justify-content: space-between;
 	align-items: baseline;
 	gap: var(--space-2);
+}
+
+/* ---- Sidebar Layout Patterns ---- */
+.tactical-sidebar {
+	width: 320px;
+	background: var(--palantir-bg-panel);
+	border-right: 1px solid var(--palantir-border-default);
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	scroll-behavior: smooth;
+}
+
+.tactical-sidebar-section {
+	padding: var(--space-4);
+	border-bottom: 1px solid var(--palantir-border-subtle);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.tactical-sidebar-section-scrollable {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 200px;
+}
+
+/* ---- Sidebar Data Table Variant ---- */
+.data-table-compact {
+	font-size: var(--text-xs);
+	table-layout: fixed;
+	width: 100%;
+}
+
+.data-table-compact thead th {
+	padding: var(--space-1) var(--space-2);
+}
+
+.data-table-compact tbody td {
+	padding: var(--space-1) var(--space-2);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.data-table-compact tbody tr {
+	cursor: pointer;
+}
+
+.data-table-compact tbody tr:hover {
+	background: var(--palantir-bg-hover);
+	border-left: 2px solid var(--palantir-accent);
+}
+
+.data-table-compact tbody tr.selected {
+	background: rgba(74, 158, 255, 0.12);
+	border-left: 3px solid var(--palantir-accent);
+}
+
+/* ---- Form Input Controls ---- */
+.input-field {
+	width: 100%;
+	padding: var(--space-2) var(--space-3);
+	font-size: var(--text-sm);
+	font-family: monospace;
+	background: var(--palantir-bg-input);
+	color: var(--palantir-text-primary);
+	border: 1px solid var(--palantir-border-default);
+	border-radius: var(--radius-md);
+	outline: none;
+}
+
+.input-field:focus {
+	border-color: var(--palantir-accent);
+	box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
+}
+
+.input-field:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background: var(--palantir-bg-surface);
+}
+
+.input-field-sm {
+	padding: var(--space-1) var(--space-2);
+	font-size: var(--text-xs);
 }

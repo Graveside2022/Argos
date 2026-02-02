@@ -17,7 +17,7 @@
 				class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
 				fill="currentColor"
 				viewBox="0 0 20 20"
-				style="color: #fb923c !important;"
+				style="color: #f97316 !important;"
 			>
 				<path
 					fill-rule="evenodd"

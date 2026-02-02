@@ -388,7 +388,7 @@ Available Commands:
 		--red-muted: rgba(255, 43, 90, 0.1);
 		--black: #0a0a0b;
 		--gray-900: #111111;
-		--gray-800: #1a1a1a;
+		--gray-800: #1a1d23;
 		--gray-700: #262626;
 		--gray-600: #404040;
 		--gray-400: #a1a1aa;
@@ -468,7 +468,7 @@ Available Commands:
 		left: 0;
 		right: 0;
 		width: 100%;
-		background: rgba(26, 26, 26, 0.95);
+		background: rgba(37, 40, 47, 0.95);
 		backdrop-filter: blur(10px);
 		border-bottom: 1px solid var(--gray-800);
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);

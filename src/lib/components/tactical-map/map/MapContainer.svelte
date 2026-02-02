@@ -20,9 +20,9 @@
 
 	async function initializeMap() {
 		if (isMapReady) return;
-		
+
 		isMapReady = true;
-		
+
 		try {
 			const map = await mapService.initializeMap(mapContainer);
 			if (map && onMapInitialized) {
@@ -64,7 +64,7 @@
 		width: 100%;
 		height: 600px;
 		position: relative;
-		border: 2px solid #00ff00;
+		border: 2px solid #4ade80;
 		border-radius: 8px;
 		overflow: hidden;
 		background: #001100;
@@ -82,7 +82,7 @@
 		align-items: center;
 		justify-content: center;
 		background: rgba(0, 20, 0, 0.9);
-		color: #00ff00;
+		color: #4ade80;
 		font-family: 'Courier New', monospace;
 	}
 
@@ -98,14 +98,18 @@
 		width: 40px;
 		height: 40px;
 		border: 3px solid rgba(0, 255, 0, 0.3);
-		border-top: 3px solid #00ff00;
+		border-top: 3px solid #4ade80;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 	}
 
 	@keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 
 	.placeholder-content p {
@@ -126,22 +130,22 @@
 
 	:global(.leaflet-popup-content-wrapper) {
 		background: rgba(0, 20, 0, 0.95) !important;
-		border: 1px solid #00ff00 !important;
+		border: 1px solid #4ade80 !important;
 		border-radius: 4px !important;
-		color: #00ff00 !important;
+		color: #4ade80 !important;
 		font-family: 'Courier New', monospace !important;
 	}
 
 	:global(.leaflet-popup-tip) {
 		background: rgba(0, 20, 0, 0.95) !important;
-		border: 1px solid #00ff00 !important;
+		border: 1px solid #4ade80 !important;
 	}
 
 	:global(.pi-popup) {
 		background: rgba(0, 20, 0, 0.95) !important;
-		border: 1px solid #00ff00 !important;
+		border: 1px solid #4ade80 !important;
 		border-radius: 4px !important;
-		color: #00ff00 !important;
+		color: #4ade80 !important;
 		font-family: 'Courier New', monospace !important;
 	}
 

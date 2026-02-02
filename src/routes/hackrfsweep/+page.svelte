@@ -3,10 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { cycleStatus, spectrumData, sweepStatus, connectionStatus } from '$lib/stores/hackrf';
 	import { hackrfAPI } from '$lib/services/hackrf/api';
-	
+
 	// Redirect to the tactical map which supports USRP
 	onMount(() => {
-		alert('This page has been deprecated. Redirecting to the new RF Detection interface that supports USRP B205 mini...');
+		alert(
+			'This page has been deprecated. Redirecting to the new RF Detection interface that supports USRP B205 mini...'
+		);
 		goto('/tactical-map-simple');
 	});
 
@@ -50,18 +52,11 @@
 		}
 
 		try {
-			const validFreqs = frequencies
-				.filter((f) => f.value)
-				.map((f) => ({
-					start: Number(f.value) - 10,
-					stop: Number(f.value) + 10,
-					step: 1
-				}));
-
 			// This page is deprecated - redirecting
 			goto('/tactical-map-simple');
 			return;
 
+			/* eslint-disable no-unreachable */
 			// Store target frequencies for offset calculation
 			const validFreqValues = frequencies.filter((f) => f.value);
 			if (validFreqValues.length > 0) {
@@ -575,13 +570,13 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%) !important; border: 1px solid rgba(52, 211, 153, 0.2) !important; box-shadow: 0 8px 25px rgba(52, 211, 153, 0.2), 0 0 15px rgba(52, 211, 153, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(74, 158, 255, 0.07) 100%) !important; border: 1px solid rgba(74, 158, 255, 0.15) !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;"
 							>
 								<svg
 									class="w-6 h-6 frequency-config-icon group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 24 24"
-									style="color: #34d399 !important;"
+									style="color: #4a9eff !important;"
 								>
 									<path d="M3 12h4l3-9 4 18 3-9h4M3 3v18M21 3v18" />
 								</svg>
@@ -676,13 +671,13 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.1) 100%) !important; border: 1px solid rgba(0, 212, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(74, 158, 255, 0.1) 100%) !important; border: 1px solid rgba(74, 158, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2), 0 0 15px rgba(74, 158, 255, 0.15) !important;"
 							>
 								<svg
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 20 20"
-									style="color: #00d4ff !important;"
+									style="color: #4a9eff !important;"
 								>
 									<path
 										d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
@@ -882,7 +877,7 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%) !important; border: 1px solid rgba(168, 85, 247, 0.2) !important; box-shadow: 0 8px 25px rgba(168, 85, 247, 0.2), 0 0 15px rgba(168, 85, 247, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%) !important; border: 1px solid rgba(139, 92, 246, 0.2) !important; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2), 0 0 15px rgba(139, 92, 246, 0.15) !important;"
 							>
 								<svg
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
@@ -962,7 +957,7 @@
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 20 20"
-									style="color: #fb923c !important;"
+									style="color: #f97316 !important;"
 								>
 									<path
 										fill-rule="evenodd"
@@ -1317,9 +1312,9 @@
 	:global(h3),
 	:global(.text-glow) {
 		/* text-shadow:
-			0 0 10px rgba(0, 212, 255, 0.5),
-			0 0 20px rgba(0, 212, 255, 0.3),
-			0 0 30px rgba(0, 212, 255, 0.1); */
+			0 0 10px rgba(74, 158, 255, 0.5),
+			0 0 20px rgba(74, 158, 255, 0.3),
+			0 0 30px rgba(74, 158, 255, 0.1); */
 		/* animation: textGlow 3s ease-in-out infinite; */
 	}
 
@@ -1327,15 +1322,15 @@
 		0%,
 		100% {
 			text-shadow:
-				0 0 10px rgba(0, 212, 255, 0.5),
-				0 0 20px rgba(0, 212, 255, 0.3),
-				0 0 30px rgba(0, 212, 255, 0.1);
+				0 0 10px rgba(74, 158, 255, 0.5),
+				0 0 20px rgba(74, 158, 255, 0.3),
+				0 0 30px rgba(74, 158, 255, 0.1);
 		}
 		50% {
 			text-shadow:
-				0 0 15px rgba(0, 212, 255, 0.7),
-				0 0 30px rgba(0, 212, 255, 0.5),
-				0 0 45px rgba(0, 212, 255, 0.3);
+				0 0 15px rgba(74, 158, 255, 0.7),
+				0 0 30px rgba(74, 158, 255, 0.5),
+				0 0 45px rgba(74, 158, 255, 0.3);
 		}
 	} */
 
@@ -1346,14 +1341,14 @@
 	}
 
 	:global(button:hover) {
-		background-color: rgba(0, 212, 255, 0.1) !important;
-		border-color: rgba(0, 212, 255, 0.5) !important;
+		background-color: rgba(74, 158, 255, 0.1) !important;
+		border-color: rgba(74, 158, 255, 0.5) !important;
 		box-shadow:
-			0 0 10px rgba(0, 212, 255, 0.5),
-			0 0 20px rgba(0, 212, 255, 0.3),
-			0 0 30px rgba(0, 212, 255, 0.1),
-			inset 0 0 10px rgba(0, 212, 255, 0.1) !important;
-		color: #00d4ff !important;
+			0 0 10px rgba(74, 158, 255, 0.5),
+			0 0 20px rgba(74, 158, 255, 0.3),
+			0 0 30px rgba(74, 158, 255, 0.1),
+			inset 0 0 10px rgba(74, 158, 255, 0.1) !important;
+		color: #4a9eff !important;
 	}
 
 	/* Glass panels with neon accent */
@@ -1367,7 +1362,7 @@
 			0 2px 12px rgba(0, 0, 0, 0.3),
 			inset 0 1px 0 rgba(255, 255, 255, 0.05),
 			inset 0 0 20px rgba(255, 255, 255, 0.02),
-			0 0 20px rgba(0, 212, 255, 0.05);
+			0 0 20px rgba(74, 158, 255, 0.05);
 	}
 
 	/* Saasfly card styles */
@@ -1383,7 +1378,7 @@
 		left: 0;
 		right: 0;
 		height: 2px;
-		background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.4), transparent);
+		background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.4), transparent);
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}
@@ -1461,19 +1456,19 @@
 
 	/* Start button - Cyan gradient */
 	:global(.saasfly-btn-start) {
-		background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+		background: linear-gradient(135deg, #4a9eff 0%, #3a8eef 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(14, 165, 233, 0.3),
-			0 0 20px rgba(14, 165, 233, 0.1) !important;
+			0 2px 8px rgba(74, 158, 255, 0.3),
+			0 0 20px rgba(74, 158, 255, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-start:hover:not(:disabled)) {
-		background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%) !important;
+		background: linear-gradient(135deg, #3a8eef 0%, #2a7edf 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(14, 165, 233, 0.4),
-			0 0 30px rgba(14, 165, 233, 0.2) !important;
+			0 4px 12px rgba(74, 158, 255, 0.4),
+			0 0 30px rgba(74, 158, 255, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
@@ -1501,33 +1496,33 @@
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(168, 85, 247, 0.3),
-			0 0 20px rgba(168, 85, 247, 0.1) !important;
+			0 2px 8px rgba(139, 92, 246, 0.3),
+			0 0 20px rgba(139, 92, 246, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-load:hover) {
 		background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(168, 85, 247, 0.4),
-			0 0 30px rgba(168, 85, 247, 0.2) !important;
+			0 4px 12px rgba(139, 92, 246, 0.4),
+			0 0 30px rgba(139, 92, 246, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
 	/* Add button - Green gradient */
 	:global(.saasfly-btn-add) {
-		background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+		background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(52, 211, 153, 0.3),
-			0 0 20px rgba(52, 211, 153, 0.1) !important;
+			0 2px 8px rgba(74, 222, 128, 0.3),
+			0 0 20px rgba(74, 222, 128, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-add:hover) {
 		background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(52, 211, 153, 0.4),
-			0 0 30px rgba(52, 211, 153, 0.2) !important;
+			0 4px 12px rgba(74, 222, 128, 0.4),
+			0 0 30px rgba(74, 222, 128, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
@@ -1557,24 +1552,24 @@
 
 	/* Cyan accent override */
 	:global(.text-neon-cyan) {
-		color: #00d4ff !important;
+		color: #4a9eff !important;
 	}
 	:global(.bg-neon-cyan) {
-		background-color: #00d4ff !important;
+		background-color: #4a9eff !important;
 	}
 	:global(.border-neon-cyan) {
-		border-color: #00d4ff !important;
+		border-color: #4a9eff !important;
 	}
 
 	/* Metric cards - monochrome override to match original */
 	:global(.saasfly-metric-card) {
-		background: rgba(20, 20, 20, 0.6) !important;
-		border-color: rgba(38, 38, 38, 0.6) !important;
+		background: rgba(28, 31, 38, 0.6) !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
 	}
 
 	:global(.saasfly-metric-card:hover) {
-		background: rgba(26, 26, 26, 0.8) !important;
-		border-color: rgba(64, 64, 64, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
 	}
 
@@ -1584,75 +1579,75 @@
 	:global(.saasfly-metric-card .text-neon-cyan),
 	:global(.saasfly-metric-card .text-accent-primary),
 	:global(.saasfly-metric-card .text-purple-400) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Info cards - monochrome override to match original */
 	:global(.saasfly-info-card) {
-		background: rgba(20, 20, 20, 0.6) !important;
-		border-color: rgba(38, 38, 38, 0.6) !important;
+		background: rgba(28, 31, 38, 0.6) !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
 	}
 
 	:global(.saasfly-info-card:hover) {
-		background: rgba(26, 26, 26, 0.8) !important;
-		border-color: rgba(64, 64, 64, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	/* Remove colored text from info card values */
 	:global(.saasfly-info-card .text-accent-primary),
 	:global(.saasfly-info-card .text-neon-cyan) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Sweep Control card - override to monochrome */
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-accent-primary\/20) {
-		background: rgba(64, 64, 64, 0.2) !important;
-		border-color: rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.2) !important;
+		border-color: rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-accent-primary\/20:hover) {
-		background: rgba(64, 64, 64, 0.4) !important;
-		border-color: rgba(64, 64, 64, 0.4) !important;
-		box-shadow: 0 8px 25px rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.4) !important;
+		border-color: rgba(74, 158, 255, 0.4) !important;
+		box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .text-accent-primary) {
-		color: #a3a3a3 !important;
+		color: #9aa0a6 !important;
 	}
 
 	:global(.saasfly-feature-card:hover .text-accent-primary) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Sweep Control header text */
 	:global(.sweep-control-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Analysis Tools card - override purple to monochrome */
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-purple-500\/20) {
-		background: rgba(64, 64, 64, 0.2) !important;
-		border-color: rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.2) !important;
+		border-color: rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-purple-500\/20:hover) {
-		background: rgba(64, 64, 64, 0.4) !important;
-		border-color: rgba(64, 64, 64, 0.4) !important;
-		box-shadow: 0 8px 25px rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.4) !important;
+		border-color: rgba(74, 158, 255, 0.4) !important;
+		box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .text-purple-400) {
-		color: #a3a3a3 !important;
+		color: #9aa0a6 !important;
 	}
 
 	:global(.saasfly-feature-card:hover .text-purple-400) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* External Tools header text */
 	:global(.external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Remove glow effects from all card headers */
@@ -1672,41 +1667,41 @@
 	}
 
 	:global(.sweep-brand) {
-		color: #ffffff;
+		color: #e8eaed;
 		text-shadow: none;
 	}
 
 	:global(.nav-link) {
-		color: #a3a3a3;
+		color: #9aa0a6;
 		transition: all 0.2s ease;
 	}
 
 	:global(.nav-link:hover) {
-		color: #00d4ff;
-		background: rgba(0, 212, 255, 0.1);
+		color: #4a9eff;
+		background: rgba(74, 158, 255, 0.1);
 	}
 
 	:global(.nav-link.active) {
-		color: #00d4ff;
-		background: rgba(0, 212, 255, 0.1);
+		color: #4a9eff;
+		background: rgba(74, 158, 255, 0.1);
 	}
 
 	:global(.status-panel) {
-		background: rgba(20, 20, 20, 0.6);
-		border: 1px solid rgba(38, 38, 38, 0.6);
+		background: rgba(28, 31, 38, 0.6);
+		border: 1px solid rgba(44, 47, 54, 0.6);
 	}
 
 	:global(.glass-button) {
-		background: rgba(20, 20, 20, 0.6);
-		border: 1px solid rgba(38, 38, 38, 0.6);
-		color: #a3a3a3;
+		background: rgba(28, 31, 38, 0.6);
+		border: 1px solid rgba(44, 47, 54, 0.6);
+		color: #9aa0a6;
 		transition: all 0.2s ease;
 	}
 
 	:global(.glass-button:hover) {
-		background: rgba(26, 26, 26, 0.8);
-		border-color: rgba(64, 64, 64, 0.8);
-		color: #ffffff;
+		background: rgba(37, 40, 47, 0.8);
+		border-color: rgba(74, 158, 255, 0.8);
+		color: #e8eaed;
 	}
 
 	:global(.status-indicator) {
@@ -1716,31 +1711,31 @@
 	/* All cards - remove colored hover effects, keep monochrome */
 	:global(.saasfly-feature-card:hover),
 	:global(.saasfly-dashboard-card:hover) {
-		border-color: rgba(64, 64, 64, 0.8) !important;
-		background: rgba(26, 26, 26, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
 	}
 
 	:global(.saasfly-feature-card h3),
 	:global(.saasfly-dashboard-card h3) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	:global(.saasfly-feature-card:hover h3),
 	:global(.saasfly-dashboard-card:hover h3) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Keep header text white on all cards */
 	:global(.frequency-config-header),
 	:global(.sweep-control-header),
 	:global(.external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	:global(.saasfly-feature-card:hover .frequency-config-header),
 	:global(.saasfly-feature-card:hover .sweep-control-header),
 	:global(.saasfly-feature-card:hover .external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Mobile optimizations for iPhone */

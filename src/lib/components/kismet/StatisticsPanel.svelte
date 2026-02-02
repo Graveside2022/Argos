@@ -173,8 +173,8 @@
 		align-items: center;
 		padding: 12px 16px;
 		background: rgba(12, 22, 48, 0.85);
-		border-bottom: 2px solid #00d2ff;
-		box-shadow: 0 0 20px rgba(0, 220, 255, 0.5);
+		border-bottom: 2px solid #4a9eff;
+		box-shadow: 0 0 20px rgba(74, 158, 255, 0.5);
 	}
 
 	.stats-header h3 {
@@ -221,13 +221,13 @@
 		background: rgba(0, 70, 100, 0.4);
 		border-color: rgba(0, 190, 215, 0.4);
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 210, 255, 0.2);
+		box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
 	}
 
 	.stat-icon {
 		font-size: 2em;
 		margin-bottom: 8px;
-		filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.5));
+		filter: drop-shadow(0 0 8px rgba(74, 158, 255, 0.5));
 	}
 
 	.stat-content {
@@ -240,8 +240,8 @@
 	.stat-value {
 		font-size: 1.8em;
 		font-weight: 700;
-		color: #00d2ff;
-		/* text-shadow: 0 0 10px rgba(0, 210, 255, 0.6); */
+		color: #4a9eff;
+		/* text-shadow: 0 0 10px rgba(74, 158, 255, 0.6); */
 		line-height: 1;
 		margin-bottom: 4px;
 		font-family: 'Courier New', monospace;
@@ -321,11 +321,11 @@
 
 	.channel-fill {
 		width: 100%;
-		background: linear-gradient(to top, #00d2ff, rgba(0, 210, 255, 0.3));
+		background: linear-gradient(to top, #4a9eff, rgba(74, 158, 255, 0.3));
 		border-radius: 2px 2px 0 0;
 		transition: height 0.5s ease;
 		position: relative;
-		box-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
+		box-shadow: 0 0 8px rgba(74, 158, 255, 0.4);
 	}
 
 	.channel-num {

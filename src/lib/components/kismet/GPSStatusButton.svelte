@@ -28,7 +28,7 @@
 
 	function getStatusColor() {
 		if (status.hasGPSFix) {
-			return status.fixType === '3D' ? '#00ff00' : '#ffff00';
+			return status.fixType === '3D' ? '#4ade80' : '#fbbf24';
 		}
 		return '#ff4400';
 	}
@@ -146,19 +146,19 @@
 
 	/* Add button - Green gradient (for 3D GPS fix) */
 	:global(.saasfly-btn-add) {
-		background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+		background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(52, 211, 153, 0.3),
-			0 0 20px rgba(52, 211, 153, 0.1) !important;
+			0 2px 8px rgba(74, 222, 128, 0.3),
+			0 0 20px rgba(74, 222, 128, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-add:hover) {
 		background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(52, 211, 153, 0.4),
-			0 0 30px rgba(52, 211, 153, 0.2) !important;
+			0 4px 12px rgba(74, 222, 128, 0.4),
+			0 0 30px rgba(74, 222, 128, 0.2) !important;
 		transform: translateY(-1px);
 	}
 

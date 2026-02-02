@@ -42,8 +42,8 @@ export class GPSService {
 				const fix = result.data.fix || 0;
 				const fixType = fix === 3 ? '3D' : fix === 2 ? '2D' : 'No';
 				const gpsStatus = `GPS: ${fixType} Fix (${satellites} sats)`;
-
-				// GPS position updated successfully
+				const heading = result.data.heading ?? null;
+				const speed = result.data.speed ?? null;
 
 				// Update country and formatted coordinates
 				const currentCountry = detectCountry(position.lat, position.lon);
@@ -58,6 +58,8 @@ export class GPSService {
 					accuracy,
 					satellites,
 					fixType,
+					heading,
+					speed,
 					currentCountry,
 					formattedCoords,
 					mgrsCoord

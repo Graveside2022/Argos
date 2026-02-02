@@ -335,13 +335,13 @@
 						<!-- WiFi Icon -->
 						<div
 							class="p-3 rounded-xl transition-all duration-300"
-							style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.1) 100%) !important; border: 1px solid rgba(0, 212, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.15) !important;"
+							style="background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(74, 158, 255, 0.1) 100%) !important; border: 1px solid rgba(74, 158, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2), 0 0 15px rgba(74, 158, 255, 0.15) !important;"
 						>
 							<svg
 								class="w-6 h-6"
 								fill="currentColor"
 								viewBox="0 0 24 24"
-								style="color: #00d4ff !important;"
+								style="color: #4a9eff !important;"
 							>
 								<path
 									d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"
@@ -655,19 +655,19 @@
 
 	/* Start button - Cyan gradient */
 	:global(.saasfly-btn-start) {
-		background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+		background: linear-gradient(135deg, #4a9eff 0%, #3a8eef 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(14, 165, 233, 0.3),
-			0 0 20px rgba(14, 165, 233, 0.1) !important;
+			0 2px 8px rgba(74, 158, 255, 0.3),
+			0 0 20px rgba(74, 158, 255, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-start:hover:not(:disabled)) {
-		background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%) !important;
+		background: linear-gradient(135deg, #3a8eef 0%, #2a7edf 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(14, 165, 233, 0.4),
-			0 0 30px rgba(14, 165, 233, 0.2) !important;
+			0 4px 12px rgba(74, 158, 255, 0.4),
+			0 0 30px rgba(74, 158, 255, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
@@ -724,21 +724,21 @@
 
 	/* Glass button styles */
 	:global(.glass-button) {
-		background: rgba(20, 20, 20, 0.6);
-		border: 1px solid rgba(38, 38, 38, 0.6);
-		color: #a3a3a3;
+		background: rgba(28, 31, 38, 0.6);
+		border: 1px solid rgba(44, 47, 54, 0.6);
+		color: #9aa0a6;
 		transition: all 0.2s ease;
 	}
 
 	:global(.glass-button:hover) {
-		background: rgba(26, 26, 26, 0.8);
-		border-color: rgba(64, 64, 64, 0.8);
-		color: #ffffff;
+		background: rgba(37, 40, 47, 0.8);
+		border-color: rgba(74, 158, 255, 0.8);
+		color: #e8eaed;
 	}
 
 	/* Kismet brand styles */
 	:global(.kismet-brand) {
-		color: #00d4ff;
+		color: #4a9eff;
 		text-shadow: none;
 	}
 </style>

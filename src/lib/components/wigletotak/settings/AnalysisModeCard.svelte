@@ -21,10 +21,12 @@
 	onMount(async () => {
 		if (browser) {
 			// Dynamic imports to prevent SSR issues
-			const { wigleStore: ws, wigleActions: wa } = await import('$lib/stores/wigletotak/wigleStore');
+			const { wigleStore: ws, wigleActions: wa } = await import(
+				'$lib/stores/wigletotak/wigleStore'
+			);
 			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigleService');
 			const { logInfo: li, logError: le } = await import('$lib/utils/logger');
-			
+
 			wigleStore = ws;
 			_wigleActions = wa;
 			wigleService = wserv;
@@ -59,33 +61,33 @@
 	<h3 class="card-title">Analysis Mode</h3>
 	<div class="radio-group">
 		<label>
-			<input 
-				type="radio" 
-				bind:group={analysisMode} 
-				value="realtime" 
-				on:change={() => void updateAnalysisMode()} 
+			<input
+				type="radio"
+				bind:group={analysisMode}
+				value="realtime"
+				on:change={() => void updateAnalysisMode()}
 			/>
 			<span>Real-time Analysis</span>
 		</label>
 		<label>
-			<input 
-				type="radio" 
-				bind:group={analysisMode} 
-				value="postcollection" 
-				on:change={() => void updateAnalysisMode()} 
+			<input
+				type="radio"
+				bind:group={analysisMode}
+				value="postcollection"
+				on:change={() => void updateAnalysisMode()}
 			/>
 			<span>Post-collection Analysis</span>
 		</label>
 	</div>
 	<p class="help-text">
-		Real-time: Continuously monitors and broadcasts new devices<br>
+		Real-time: Continuously monitors and broadcasts new devices<br />
 		Post-collection: Processes entire file in chunks
 	</p>
 </div>
 
 <style>
 	.settings-card {
-		background: #141414;
+		background: #1c1f26;
 		border: 1px solid #262626;
 		border-radius: 0.5rem;
 		padding: 1.5rem;
@@ -95,7 +97,7 @@
 		font-size: 1.25rem;
 		font-weight: 600;
 		margin-bottom: 1rem;
-		color: #fb923c;
+		color: #f97316;
 	}
 
 	.radio-group {
@@ -106,7 +108,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		color: #a3a3a3;
+		color: #9aa0a6;
 		cursor: pointer;
 		margin-bottom: 0.5rem;
 	}

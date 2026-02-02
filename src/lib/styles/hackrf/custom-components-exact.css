@@ -71,11 +71,11 @@
 	--font-black: 900;
 
 	/* Professional Color Palette - Node.js Style */
-	--bg-primary: #0a0a0a;
-	--bg-secondary: #141414;
-	--bg-card: #141414;
-	--bg-input: #1a1a1a;
-	--bg-hover: #2d2d2d;
+	--bg-primary: #0e1116;
+	--bg-secondary: #1c1f26;
+	--bg-card: #1c1f26;
+	--bg-input: #1a1d23;
+	--bg-hover: #2a2d35;
 	--bg-button: #404040;
 
 	/* Text Colors */
@@ -86,7 +86,7 @@
 	--text-disabled: rgba(255, 255, 255, 0.3);
 
 	/* Accent Colors - Node.js Green */
-	--accent-primary: #68d391;
+	--accent-primary: #4a9eff;
 	--accent-hover: #9ae6b4;
 	--accent-muted: #48bb78;
 	--accent-active: #38a169;
@@ -112,7 +112,7 @@
 	--error-bg: #2a1f1f;
 	--error-border: #ff6b6b;
 	--recovery-bg: #1f2a1f;
-	--recovery-border: #68d391;
+	--recovery-border: #4a9eff;
 }
 
 /* Base typography setup */
@@ -460,7 +460,7 @@ h6,
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.01em;
 	color: var(--accent-primary);
-	/* text-shadow: 0 0 8px rgba(104, 211, 145, 0.3); */
+	/* text-shadow: 0 0 8px rgba(74, 158, 255, 0.3); */
 }
 
 .text-signal-strong {
@@ -874,7 +874,7 @@ textarea:focus {
 
 /* Glass Panel System - Node.js Aesthetic */
 .glass-panel {
-	background: rgba(20, 20, 20, 0.85);
+	background: rgba(28, 31, 38, 0.85);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
 	border: 1px solid var(--border-primary);
@@ -1006,7 +1006,7 @@ textarea:focus {
 }
 
 .node-button--secondary:hover:not(:disabled) {
-	background: rgba(104, 211, 145, 0.1);
+	background: rgba(74, 158, 255, 0.1);
 	color: var(--accent-hover);
 	border-color: var(--accent-hover);
 }
@@ -1052,7 +1052,7 @@ textarea:focus {
 .node-input:focus {
 	outline: none;
 	border-color: var(--accent-primary);
-	box-shadow: 0 0 0 3px rgba(104, 211, 145, 0.1);
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
 	background: var(--bg-hover);
 }
 
@@ -1209,9 +1209,9 @@ textarea:focus {
 }
 
 .node-badge--success {
-	background: rgba(104, 211, 145, 0.2);
+	background: rgba(74, 158, 255, 0.2);
 	color: var(--accent-primary);
-	border: 1px solid rgba(104, 211, 145, 0.3);
+	border: 1px solid rgba(74, 158, 255, 0.3);
 }
 
 .node-badge--warning {
@@ -1250,7 +1250,7 @@ textarea:focus {
 
 .node-status--online .node-status-dot {
 	background: var(--accent-primary);
-	box-shadow: 0 0 6px rgba(104, 211, 145, 0.6);
+	box-shadow: 0 0 6px rgba(74, 158, 255, 0.6);
 }
 
 .node-status--offline .node-status-dot {
@@ -1496,7 +1496,7 @@ select:focus,
 textarea:focus {
 	outline: none !important;
 	border-color: var(--accent-primary) !important;
-	box-shadow: 0 0 0 3px rgba(104, 211, 145, 0.1) !important;
+	box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1) !important;
 	background: var(--bg-hover) !important;
 }
 
@@ -1513,7 +1513,7 @@ input::placeholder {
 /* Status indicator overrides */
 .bg-green-500 {
 	background-color: var(--accent-primary) !important;
-	box-shadow: 0 0 6px rgba(104, 211, 145, 0.6) !important;
+	box-shadow: 0 0 6px rgba(74, 158, 255, 0.6) !important;
 }
 
 .bg-red-500 {
@@ -1669,7 +1669,7 @@ nav button.active {
 /* Modal and overlay overrides */
 .modal,
 .overlay {
-	background: rgba(10, 10, 10, 0.9) !important;
+	background: rgba(14, 17, 22, 0.9) !important;
 	backdrop-filter: blur(8px) !important;
 	-webkit-backdrop-filter: blur(8px) !important;
 }
@@ -1748,12 +1748,12 @@ nav button.active {
 
 /* Selection styling */
 ::selection {
-	background: rgba(104, 211, 145, 0.2);
+	background: rgba(74, 158, 255, 0.2);
 	color: var(--text-primary);
 }
 
 ::-moz-selection {
-	background: rgba(104, 211, 145, 0.2);
+	background: rgba(74, 158, 255, 0.2);
 	color: var(--text-primary);
 }
 
@@ -1854,7 +1854,7 @@ nav button.active {
 }
 
 .saasfly-btn-primary:hover:not(:disabled) {
-	background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+	background: linear-gradient(135deg, #4ade80 0%, #10b981 100%);
 	border-color: #10b981;
 	box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
@@ -1883,21 +1883,21 @@ nav button.active {
 
 /* Secondary Button - Neutral */
 .saasfly-btn-secondary {
-	background: linear-gradient(135deg, #404040 0%, #2d2d2d 100%);
-	color: #a3a3a3;
+	background: linear-gradient(135deg, #404040 0%, #2a2d35 100%);
+	color: #9aa0a6;
 	border-color: #262626;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .saasfly-btn-secondary:hover:not(:disabled) {
 	background: linear-gradient(135deg, #525252 0%, #404040 100%);
-	color: #ffffff;
+	color: #e8eaed;
 	border-color: #404040;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .saasfly-btn-secondary:active:not(:disabled) {
-	background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+	background: linear-gradient(135deg, #2a2d35 0%, #1a1d23 100%);
 }
 
 /* Ghost Button - Outline */
@@ -1909,16 +1909,16 @@ nav button.active {
 }
 
 .saasfly-btn-ghost:hover:not(:disabled) {
-	background: rgba(0, 212, 255, 0.1);
+	background: rgba(74, 158, 255, 0.1);
 	color: var(--neon-cyan-light);
 	border-color: var(--neon-cyan-light);
 	box-shadow:
 		inset 0 0 0 2px var(--neon-cyan-light),
-		0 0 20px rgba(0, 212, 255, 0.3);
+		0 0 20px rgba(74, 158, 255, 0.3);
 }
 
 .saasfly-btn-ghost:active:not(:disabled) {
-	background: rgba(0, 212, 255, 0.2);
+	background: rgba(74, 158, 255, 0.2);
 }
 
 /* Icon Button */
@@ -1968,13 +1968,13 @@ nav button.active {
 
 @keyframes pulse {
 	0% {
-		box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
+		box-shadow: 0 0 0 0 rgba(74, 158, 255, 0.4);
 	}
 	70% {
-		box-shadow: 0 0 0 10px rgba(0, 212, 255, 0);
+		box-shadow: 0 0 0 10px rgba(74, 158, 255, 0);
 	}
 	100% {
-		box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+		box-shadow: 0 0 0 0 rgba(74, 158, 255, 0);
 	}
 }
 
@@ -2037,7 +2037,7 @@ nav button.active {
 }
 
 #startButton:hover:not(:disabled) {
-	background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+	background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
 	border-color: #10b981 !important;
 	box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4) !important;
 }
@@ -2050,7 +2050,7 @@ nav button.active {
 }
 
 #stopButton:disabled {
-	background: linear-gradient(135deg, #404040 0%, #2d2d2d 100%) !important;
+	background: linear-gradient(135deg, #404040 0%, #2a2d35 100%) !important;
 	color: #525252 !important;
 	border-color: #262626 !important;
 }
@@ -2077,7 +2077,7 @@ nav button.active {
 }
 
 #openSpectrumButton {
-	background: linear-gradient(135deg, #404040 0%, #2d2d2d 100%) !important;
-	color: #a3a3a3 !important;
+	background: linear-gradient(135deg, #404040 0%, #2a2d35 100%) !important;
+	color: #9aa0a6 !important;
 	border-color: #262626 !important;
 }

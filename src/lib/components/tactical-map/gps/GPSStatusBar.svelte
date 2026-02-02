@@ -24,13 +24,13 @@
 			<span class="mgrs-value">{status.mgrsCoord}</span>
 		</div>
 	</div>
-	
+
 	<div class="gps-fix-info">
 		<div class="fix-status" class:has-fix={status.hasGPSFix} class:no-fix={!status.hasGPSFix}>
 			<span class="fix-type">{status.fixType} Fix</span>
 			<span class="status-text">{status.gpsStatus}</span>
 		</div>
-		
+
 		{#if status.hasGPSFix}
 			<div class="gps-details">
 				<div class="detail-item">
@@ -51,11 +51,11 @@
 		display: flex;
 		flex-direction: column;
 		background: rgba(0, 20, 0, 0.9);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 		border-radius: 4px;
 		padding: 12px;
 		font-family: 'Courier New', monospace;
-		color: #00ff00;
+		color: #4ade80;
 		font-size: 12px;
 		min-width: 280px;
 	}
@@ -106,7 +106,7 @@
 	}
 
 	.mgrs-value {
-		color: #ffff00;
+		color: #fbbf24;
 		font-weight: bold;
 	}
 
@@ -127,7 +127,7 @@
 
 	.fix-status.has-fix {
 		background: rgba(0, 255, 0, 0.1);
-		border: 1px solid #00ff00;
+		border: 1px solid #4ade80;
 	}
 
 	.fix-status.no-fix {

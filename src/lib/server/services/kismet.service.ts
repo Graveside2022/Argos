@@ -48,26 +48,14 @@ export interface DevicesResponse {
  * Handles communication with Kismet server and provides fallback mechanisms
  */
 export class KismetService {
-	private static readonly DEFAULT_LAT = 50.083933333;
-	private static readonly DEFAULT_LON = 8.274061667;
-	private static readonly LOCATION_VARIANCE = 0.002;
 	private static readonly DEFAULT_SIGNAL = -100;
-
-	private static readonly FALLBACK_DEVICES: Array<{
-		mac: string;
-		signal: number;
-		manufacturer: string;
-		type: string;
-		channel: number;
-		frequency: number;
-	}> = [];
 
 	/**
 	 * Retrieves current GPS position from the GPS API
 	 * @param fetchFn - The fetch function to use for HTTP requests
-	 * @returns GPS position or default coordinates if unavailable
+	 * @returns GPS position or null if unavailable
 	 */
-	static async getGPSPosition(fetchFn: typeof fetch): Promise<GPSPosition> {
+	static async getGPSPosition(fetchFn: typeof fetch): Promise<GPSPosition | null> {
 		try {
 			const gpsResponse = await fetchFn('/api/gps/position');
 			if (gpsResponse.ok) {
@@ -81,13 +69,10 @@ export class KismetService {
 				}
 			}
 		} catch (error) {
-			logWarn('Could not get GPS position, using defaults', { error });
+			logWarn('Could not get GPS position', { error });
 		}
 
-		return {
-			latitude: this.DEFAULT_LAT,
-			longitude: this.DEFAULT_LON
-		};
+		return null;
 	}
 
 	/**
@@ -147,24 +132,100 @@ export class KismetService {
 			logError('Summary endpoint failed', { error: (err3 as { message?: string }).message });
 		}
 
-		// If all methods failed, return fallback devices
-		if (devices.length === 0 && error) {
-			logWarn('All Kismet API methods failed, using fallback devices from logs');
-			devices = this.createFallbackDevices(gpsPosition);
+		logWarn(`Returning ${devices.length} devices (error: ${error || 'none'})`);
+		return { devices, error, source: error ? 'fallback' : 'kismet' };
+	}
+
+	/**
+	 * Checks if a device has valid GPS coordinates (not 0,0 or missing)
+	 */
+	private static hasValidLocation(lat: number | undefined, lon: number | undefined): boolean {
+		return lat !== undefined && lon !== undefined && !(lat === 0 && lon === 0);
+	}
+
+	/**
+	 * FNV-1a 32-bit hash of a MAC address, normalized to [0, 1).
+	 * Deterministic: same MAC always produces the same value.
+	 */
+	private static hashMAC(mac: string): number {
+		let hash = 0x811c9dc5;
+		for (let i = 0; i < mac.length; i++) {
+			hash ^= mac.charCodeAt(i);
+			hash = (hash * 0x01000193) | 0;
+		}
+		return ((hash >>> 0) % 100000) / 100000;
+	}
+
+	/** Second independent hash for the same MAC (different seed). */
+	private static hashMAC2(mac: string): number {
+		let hash = 0x01000193;
+		for (let i = 0; i < mac.length; i++) {
+			hash ^= mac.charCodeAt(i);
+			hash = (hash * 0x811c9dc5) | 0;
+		}
+		return ((hash >>> 0) % 100000) / 100000;
+	}
+
+	/**
+	 * Returns device coordinates, falling back to receiver GPS with deterministic,
+	 * signal-aware positioning when device has no valid location.
+	 *
+	 * - Angle is derived from MAC hash (stable across refreshes)
+	 * - Distance from center is driven by signal strength:
+	 *   strong signals (~-30 dBm) → ~20m, weak (~-100 dBm) → ~200m
+	 */
+	private static resolveLocation(
+		deviceLat: number | undefined,
+		deviceLon: number | undefined,
+		gpsPosition: GPSPosition | null,
+		mac: string,
+		signalDbm: number
+	): { lat: number; lon: number } {
+		if (this.hasValidLocation(deviceLat, deviceLon)) {
+			return { lat: deviceLat!, lon: deviceLon! };
 		}
 
-		logWarn(`Returning ${devices.length} devices (real: ${!error}, fallback: ${!!error})`);
-		return { devices, error, source: error ? 'fallback' : 'kismet' };
+		if (gpsPosition) {
+			const angle = this.hashMAC(mac) * 2 * Math.PI;
+
+			// Quantize to 10 dBm steps so positions stay rock-stable across polls
+			const quantized = Math.round(signalDbm / 10) * 10;
+			const clamped = Math.max(-100, Math.min(-20, quantized));
+			const signalNorm = (clamped + 100) / 80;
+
+			const minDist = 20;
+			const maxDist = 200;
+			const variation = this.hashMAC2(mac) * 0.3; // 0-30 % per-device spread
+			const baseDist = minDist + (1 - signalNorm) * (maxDist - minDist);
+			const dist = baseDist * (0.85 + variation);
+
+			const R = 6371000;
+			const dLat = ((dist * Math.cos(angle)) / R) * (180 / Math.PI);
+			const dLon =
+				((dist * Math.sin(angle)) /
+					(R * Math.cos((gpsPosition.latitude * Math.PI) / 180))) *
+				(180 / Math.PI);
+
+			return {
+				lat: gpsPosition.latitude + dLat,
+				lon: gpsPosition.longitude + dLon
+			};
+		}
+
+		return { lat: 0, lon: 0 };
 	}
 
 	private static transformKismetDevices(
 		kismetDevices: unknown[],
-		gpsPosition: GPSPosition
+		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
 		return kismetDevices.map((device: unknown) => {
 			const d = device as Record<string, unknown>;
 			const rawSignal = (d.signal as number) || this.DEFAULT_SIGNAL;
 			const rawType = d.type as string;
+
+			const deviceLat = (d.location as Record<string, unknown>)?.lat as number;
+			const deviceLon = (d.location as Record<string, unknown>)?.lon as number;
 
 			return {
 				mac: d.mac as string,
@@ -186,21 +247,20 @@ export class KismetService {
 					: Array.isArray(d.encryptionType)
 						? (d.encryptionType as string[])
 						: undefined,
-				location: {
-					lat:
-						((d.location as Record<string, unknown>)?.lat as number) ||
-						gpsPosition.latitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE,
-					lon:
-						((d.location as Record<string, unknown>)?.lon as number) ||
-						gpsPosition.longitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE
-				}
+				location: this.resolveLocation(
+					deviceLat,
+					deviceLon,
+					gpsPosition,
+					d.mac as string,
+					rawSignal
+				)
 			};
 		});
 	}
 
 	private static transformRawKismetDevices(
 		rawDevices: unknown[],
-		gpsPosition: GPSPosition
+		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
 		return rawDevices.map((device: unknown) => {
 			const d = device as Record<string, unknown>;
@@ -222,6 +282,12 @@ export class KismetService {
 				ssid = d['kismet.device.base.name'] as string;
 			}
 
+			const locationData = d['kismet.device.base.location'] as
+				| Record<string, unknown>
+				| undefined;
+			const deviceLat = locationData?.['kismet.common.location.lat'] as number | undefined;
+			const deviceLon = locationData?.['kismet.common.location.lon'] as number | undefined;
+
 			return {
 				mac: (d['kismet.device.base.macaddr'] as string) || 'Unknown',
 				last_seen: ((d['kismet.device.base.last_time'] as number) || 0) * 1000,
@@ -236,19 +302,14 @@ export class KismetService {
 				frequency: (d['kismet.device.base.frequency'] as number) || 0,
 				packets: (d['kismet.device.base.packets.total'] as number) || 0,
 				datasize: (d['kismet.device.base.packets.total'] as number) || 0,
-				ssid: ssid, // Include SSID data
-				location: {
-					lat:
-						((d['kismet.device.base.location'] as Record<string, unknown>)?.[
-							'kismet.common.location.lat'
-						] as number) ||
-						gpsPosition.latitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE,
-					lon:
-						((d['kismet.device.base.location'] as Record<string, unknown>)?.[
-							'kismet.common.location.lon'
-						] as number) ||
-						gpsPosition.longitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE
-				}
+				ssid: ssid,
+				location: this.resolveLocation(
+					deviceLat,
+					deviceLon,
+					gpsPosition,
+					(d['kismet.device.base.macaddr'] as string) || 'Unknown',
+					rawSignal
+				)
 			};
 		});
 	}
@@ -266,27 +327,5 @@ export class KismetService {
 		}
 
 		return (signalField as number) || this.DEFAULT_SIGNAL;
-	}
-
-	private static createFallbackDevices(gpsPosition: GPSPosition): KismetDevice[] {
-		return this.FALLBACK_DEVICES.map((device) => ({
-			mac: device.mac,
-			last_seen: Date.now(),
-			signal: {
-				last_signal: device.signal,
-				max_signal: device.signal,
-				min_signal: device.signal
-			},
-			manufacturer: device.manufacturer,
-			type: device.type,
-			channel: device.channel,
-			frequency: device.frequency,
-			packets: Math.floor(Math.random() * 1000),
-			datasize: Math.floor(Math.random() * 1000),
-			location: {
-				lat: gpsPosition.latitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE,
-				lon: gpsPosition.longitude + (Math.random() - 0.5) * this.LOCATION_VARIANCE
-			}
-		}));
 	}
 }

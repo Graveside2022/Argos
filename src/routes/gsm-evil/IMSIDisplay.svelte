@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	
+
 	interface IMSIRecord {
 		id: number;
 		imsi: string;
@@ -11,12 +11,12 @@
 		ci: string;
 		datetime: string;
 	}
-	
+
 	let imsiRecords: IMSIRecord[] = [];
 	let loading = true;
 	let error = '';
 	let refreshInterval: ReturnType<typeof setInterval>;
-	
+
 	async function fetchIMSIData() {
 		try {
 			const response = await fetch('/api/gsm-evil/imsi-data');
@@ -31,19 +31,19 @@
 			} else {
 				error = 'Failed to fetch IMSI data';
 			}
-		} catch (e) {
+		} catch {
 			error = 'Error connecting to server';
 		} finally {
 			loading = false;
 		}
 	}
-	
+
 	onMount(() => {
 		fetchIMSIData();
 		// Refresh every 5 seconds
 		refreshInterval = setInterval(fetchIMSIData, 5000);
 	});
-	
+
 	onDestroy(() => {
 		if (refreshInterval) {
 			clearInterval(refreshInterval);
@@ -62,11 +62,11 @@
 			{/if}
 		</div>
 	</div>
-	
+
 	{#if error}
 		<div class="error">{error}</div>
 	{/if}
-	
+
 	<div class="table-container">
 		<table>
 			<thead>
@@ -114,7 +114,7 @@
 		display: flex;
 		flex-direction: column;
 	}
-	
+
 	.header {
 		display: flex;
 		justify-content: space-between;
@@ -123,26 +123,26 @@
 		padding-bottom: 0.5rem;
 		border-bottom: 1px solid #333;
 	}
-	
+
 	h3 {
 		margin: 0;
-		color: #ff0000;
+		color: #dc2626;
 		font-size: 1.25rem;
 	}
-	
+
 	.status {
 		color: #888;
 		font-size: 0.875rem;
 	}
-	
+
 	.loading {
-		color: #ffaa00;
+		color: #fbbf24;
 	}
-	
+
 	.count {
-		color: #00ff00;
+		color: #4ade80;
 	}
-	
+
 	.error {
 		background: rgba(255, 0, 0, 0.1);
 		border: 1px solid rgba(255, 0, 0, 0.3);
@@ -151,72 +151,72 @@
 		border-radius: 4px;
 		margin-bottom: 1rem;
 	}
-	
+
 	.table-container {
 		flex: 1;
 		overflow-y: auto;
-		background: #0a0a0a;
-		border: 1px solid #ff0000;
+		background: #0e1116;
+		border: 1px solid #dc2626;
 		border-radius: 4px;
 	}
-	
+
 	table {
 		width: 100%;
 		border-collapse: collapse;
 		font-size: 0.875rem;
 	}
-	
+
 	th {
 		background: #2a0000;
-		color: #ff0000;
+		color: #dc2626;
 		padding: 0.5rem;
 		text-align: left;
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		border-bottom: 1px solid #ff0000;
+		border-bottom: 1px solid #dc2626;
 	}
-	
+
 	td {
 		padding: 0.5rem;
 		color: #ccc;
 		border-bottom: 1px solid #330000;
 	}
-	
+
 	tr:hover {
 		background: rgba(255, 0, 0, 0.05);
 	}
-	
+
 	.imsi {
-		color: #ffaa00;
+		color: #fbbf24;
 		font-family: monospace;
 	}
-	
+
 	.time {
 		color: #ff6666;
 		font-size: 0.75rem;
 	}
-	
+
 	.empty {
 		text-align: center;
 		color: #666;
 		padding: 2rem;
 	}
-	
+
 	/* Scrollbar */
 	.table-container::-webkit-scrollbar {
 		width: 8px;
 	}
-	
+
 	.table-container::-webkit-scrollbar-track {
-		background: #1a1a1a;
+		background: #1a1d23;
 	}
-	
+
 	.table-container::-webkit-scrollbar-thumb {
-		background: #ff0000;
+		background: #dc2626;
 		border-radius: 4px;
 	}
-	
+
 	.table-container::-webkit-scrollbar-thumb:hover {
 		background: #ff3333;
 	}

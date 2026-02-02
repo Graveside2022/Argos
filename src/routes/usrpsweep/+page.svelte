@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { usrpAPI } from '$lib/services/hackrf/usrp-api';
-	import { spectrumData, sweepStatus, cycleStatus, connectionStatus, updateSweepStatus, updateSpectrumData } from '$lib/stores/hackrf';
+	import {
+		spectrumData,
+		sweepStatus,
+		cycleStatus,
+		connectionStatus,
+		updateSweepStatus,
+		updateSpectrumData
+	} from '$lib/stores/hackrf';
 
 	let frequencies: Array<{ id: number; value: number | string }> = [{ id: 1, value: 2400 }];
 	let cycleTime = 10;
 	let isStarted = false;
-	
+
 	// Ensure button state is properly initialized from store
 	$: if (typeof $sweepStatus === 'object' && $sweepStatus !== null && 'active' in $sweepStatus) {
 		isStarted = $sweepStatus.active;
@@ -51,7 +58,7 @@
 			// Immediate UI feedback
 			statusMessage = 'Initializing USRP hardware... (this may take 5-10 seconds)';
 			isStarted = true; // Show stop button immediately
-			
+
 			const validFreqs = frequencies
 				.filter((f) => f.value)
 				.map((f) => ({
@@ -70,10 +77,12 @@
 			if (validFreqValues.length > 0) {
 				currentFrequencyDisplay = validFreqValues[0].value + ' MHz';
 				targetFrequency = validFreqValues[0].value + ' MHz';
-				
+
 				// Note: USRP device cannot be accessed by multiple processes
 				// Power measurements will come from the spectrum scan data stream
-				console.debug(`[USRP Sweep] Monitoring spectrum scan data for frequency ${validFreqValues[0].value} MHz`);
+				console.debug(
+					`[USRP Sweep] Monitoring spectrum scan data for frequency ${validFreqValues[0].value} MHz`
+				);
 			}
 
 			// Start local timer as backup
@@ -205,9 +214,11 @@
 						targetFrequency = validFreqs[nextIndex].value + ' MHz';
 
 						// Switched to frequency: currentFrequencyDisplay
-						
+
 						// Note: Power measurements come from spectrum scan data
-						console.debug(`[USRP Sweep] Switched to frequency: ${validFreqs[nextIndex].value} MHz`);
+						console.debug(
+							`[USRP Sweep] Switched to frequency: ${validFreqs[nextIndex].value} MHz`
+						);
 					}
 
 					// Reset timer after switch
@@ -256,28 +267,32 @@
 			const response = await fetch('/api/rf/usrp-power', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ 
+				body: JSON.stringify({
 					frequency: frequencyMHz,
 					gain: 70, // Max gain for USRP B205 Mini
 					duration: 0.5 // Quick measurement
 				})
 			});
-			
+
 			if (response.ok) {
-				const data = await response.json() as { power: number; frequency: number; unit: string };
+				const data = (await response.json()) as {
+					power: number;
+					frequency: number;
+					unit: string;
+				};
 				if (typeof data.power === 'number') {
 					// Update all signal analysis displays directly
 					dbLevelValue = data.power.toFixed(2);
 					dbCurrentValue = data.power.toFixed(1) + ' dB';
-					
+
 					// Update signal strength and visual indicators
 					updateSignalStrength(data.power);
 					updateSignalIndicator(data.power);
-					
+
 					// Update detected frequency to match target (since we're measuring at that frequency)
 					detectedFrequency = frequencyMHz.toFixed(2) + ' MHz';
 					frequencyOffset = '0.00 MHz'; // No offset since we're measuring at exact frequency
-					
+
 					// Also update the spectrum data store to trigger any reactive UI updates
 					updateSpectrumData({
 						frequencies: [],
@@ -291,9 +306,11 @@
 						timestamp: Date.now(),
 						processed: true
 					});
-					
-					console.debug(`[USRP Power] Measurement: ${data.power} dBm at ${frequencyMHz} MHz`);
-					
+
+					console.debug(
+						`[USRP Power] Measurement: ${data.power} dBm at ${frequencyMHz} MHz`
+					);
+
 					// Update status message to show activity
 					if (isStarted && !isSwitching) {
 						statusMessage = `Measuring: ${data.power.toFixed(1)} dBm at ${frequencyMHz} MHz`;
@@ -311,37 +328,42 @@
 
 	// Periodic power measurement for real-time signal analysis
 	let powerMeasurementInterval: ReturnType<typeof setInterval> | null = null;
-	
-	function startPeriodicPowerMeasurement(frequencyMHz: number) {
+
+	function _startPeriodicPowerMeasurement(frequencyMHz: number) {
 		// Clear any existing interval
 		if (powerMeasurementInterval) {
 			clearInterval(powerMeasurementInterval);
 		}
-		
+
 		// Store the current frequency for the interval
 		let currentMeasurementFreq = frequencyMHz;
-		
+
 		// Immediate first measurement
 		measureUSRPPower(currentMeasurementFreq);
-		
+
 		// Set up periodic measurements every 2 seconds
 		powerMeasurementInterval = setInterval(() => {
-			if (isStarted && !isSwitching) { // Only measure when sweep is running and not switching
+			if (isStarted && !isSwitching) {
+				// Only measure when sweep is running and not switching
 				// Update frequency if it changed
 				const targetFreqStr = targetFrequency.toString().replace(/\s*MHz\s*$/i, '');
 				const targetFreqMHz = parseFloat(targetFreqStr);
 				if (!isNaN(targetFreqMHz) && targetFreqMHz !== currentMeasurementFreq) {
 					currentMeasurementFreq = targetFreqMHz;
-					console.debug(`[USRP Sweep] Frequency changed to ${currentMeasurementFreq} MHz`);
+					console.debug(
+						`[USRP Sweep] Frequency changed to ${currentMeasurementFreq} MHz`
+					);
 				}
 				measureUSRPPower(currentMeasurementFreq);
 			}
 		}, 2000);
-		
-		console.debug(`[USRP Sweep] Started periodic power measurement for ${frequencyMHz} MHz every 2 seconds`);
+
+		console.debug(
+			`[USRP Sweep] Started periodic power measurement for ${frequencyMHz} MHz every 2 seconds`
+		);
 	}
-	
-	function stopPeriodicPowerMeasurement() {
+
+	function _stopPeriodicPowerMeasurement() {
 		if (powerMeasurementInterval) {
 			clearInterval(powerMeasurementInterval);
 			powerMeasurementInterval = null;
@@ -385,7 +407,7 @@
 			timestamp: $spectrumData.timestamp,
 			keys: Object.keys($spectrumData)
 		});
-		
+
 		// Update signal analysis displays
 		if (
 			typeof $spectrumData === 'object' &&
@@ -420,7 +442,7 @@
 				detectedFrequency = detectedFreqMHz.toFixed(2) + ' MHz';
 				const offset = detectedFreqMHz - targetFreqMHz;
 				frequencyOffset = (offset >= 0 ? '+' : '') + offset.toFixed(2) + ' MHz';
-				
+
 				// Get power measurement for USRP
 				if ($spectrumData.peak_power !== undefined) {
 					dbLevelValue = $spectrumData.peak_power.toFixed(2);
@@ -431,7 +453,9 @@
 				}
 			} else {
 				// Data is likely from previous frequency, ignore it
-				console.debug(`Ignoring stale frequency data: ${detectedFreqMHz} MHz (target: ${targetFreqMHz} MHz)`);
+				console.debug(
+					`Ignoring stale frequency data: ${detectedFreqMHz} MHz (target: ${targetFreqMHz} MHz)`
+				);
 			}
 		}
 	}
@@ -501,16 +525,16 @@
 	// Connect to data stream on mount
 	onMount(() => {
 		let healthCheckInterval: NodeJS.Timeout;
-		
+
 		// Initialize async operations
 		(async () => {
 			console.debug('[USRP Sweep] Page mounting...');
-			
+
 			// First, get the actual backend state
 			try {
 				const status = await usrpAPI.getStatus();
 				console.debug('[USRP Sweep] Backend status:', status);
-				
+
 				// Update store with real backend state
 				if (status && typeof status.sweeping === 'boolean') {
 					isStarted = status.sweeping;
@@ -524,7 +548,7 @@
 				console.warn('[USRP Sweep] Failed to get backend status:', error);
 				isStarted = false;
 			}
-			
+
 			// Connect to data stream
 			console.debug('[USRP Sweep] Connecting to data stream...');
 			void usrpAPI.connectToDataStream();
@@ -727,13 +751,13 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%) !important; border: 1px solid rgba(52, 211, 153, 0.2) !important; box-shadow: 0 8px 25px rgba(52, 211, 153, 0.2), 0 0 15px rgba(52, 211, 153, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.1) 100%) !important; border: 1px solid rgba(74, 222, 128, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 222, 128, 0.2), 0 0 15px rgba(74, 222, 128, 0.15) !important;"
 							>
 								<svg
 									class="w-6 h-6 frequency-config-icon group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 24 24"
-									style="color: #34d399 !important;"
+									style="color: #4ade80 !important;"
 								>
 									<path d="M3 12h4l3-9 4 18 3-9h4M3 3v18M21 3v18" />
 								</svg>
@@ -828,13 +852,13 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.1) 100%) !important; border: 1px solid rgba(0, 212, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(74, 158, 255, 0.1) 100%) !important; border: 1px solid rgba(74, 158, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2), 0 0 15px rgba(74, 158, 255, 0.15) !important;"
 							>
 								<svg
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 20 20"
-									style="color: #00d4ff !important;"
+									style="color: #4a9eff !important;"
 								>
 									<path
 										d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
@@ -910,9 +934,11 @@
 											try {
 												const _response = await fetch(
 													'/api/rf/emergency-stop',
-													{ 
+													{
 														method: 'POST',
-														headers: { 'Content-Type': 'application/json' },
+														headers: {
+															'Content-Type': 'application/json'
+														},
 														body: JSON.stringify({ deviceType: 'usrp' })
 													}
 												);
@@ -1038,7 +1064,7 @@
 						<div class="flex items-center mb-6">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%) !important; border: 1px solid rgba(168, 85, 247, 0.2) !important; box-shadow: 0 8px 25px rgba(168, 85, 247, 0.2), 0 0 15px rgba(168, 85, 247, 0.15) !important;"
+								style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%) !important; border: 1px solid rgba(139, 92, 246, 0.2) !important; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2), 0 0 15px rgba(139, 92, 246, 0.15) !important;"
 							>
 								<svg
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
@@ -1118,7 +1144,7 @@
 									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
 									fill="currentColor"
 									viewBox="0 0 20 20"
-									style="color: #fb923c !important;"
+									style="color: #f97316 !important;"
 								>
 									<path
 										fill-rule="evenodd"
@@ -1473,9 +1499,9 @@
 	:global(h3),
 	:global(.text-glow) {
 		/* text-shadow:
-			0 0 10px rgba(0, 212, 255, 0.5),
-			0 0 20px rgba(0, 212, 255, 0.3),
-			0 0 30px rgba(0, 212, 255, 0.1); */
+			0 0 10px rgba(74, 158, 255, 0.5),
+			0 0 20px rgba(74, 158, 255, 0.3),
+			0 0 30px rgba(74, 158, 255, 0.1); */
 		/* animation: textGlow 3s ease-in-out infinite; */
 	}
 
@@ -1483,15 +1509,15 @@
 		0%,
 		100% {
 			text-shadow:
-				0 0 10px rgba(0, 212, 255, 0.5),
-				0 0 20px rgba(0, 212, 255, 0.3),
-				0 0 30px rgba(0, 212, 255, 0.1);
+				0 0 10px rgba(74, 158, 255, 0.5),
+				0 0 20px rgba(74, 158, 255, 0.3),
+				0 0 30px rgba(74, 158, 255, 0.1);
 		}
 		50% {
 			text-shadow:
-				0 0 15px rgba(0, 212, 255, 0.7),
-				0 0 30px rgba(0, 212, 255, 0.5),
-				0 0 45px rgba(0, 212, 255, 0.3);
+				0 0 15px rgba(74, 158, 255, 0.7),
+				0 0 30px rgba(74, 158, 255, 0.5),
+				0 0 45px rgba(74, 158, 255, 0.3);
 		}
 	} */
 
@@ -1502,14 +1528,14 @@
 	}
 
 	:global(button:hover) {
-		background-color: rgba(0, 212, 255, 0.1) !important;
-		border-color: rgba(0, 212, 255, 0.5) !important;
+		background-color: rgba(74, 158, 255, 0.1) !important;
+		border-color: rgba(74, 158, 255, 0.5) !important;
 		box-shadow:
-			0 0 10px rgba(0, 212, 255, 0.5),
-			0 0 20px rgba(0, 212, 255, 0.3),
-			0 0 30px rgba(0, 212, 255, 0.1),
-			inset 0 0 10px rgba(0, 212, 255, 0.1) !important;
-		color: #00d4ff !important;
+			0 0 10px rgba(74, 158, 255, 0.5),
+			0 0 20px rgba(74, 158, 255, 0.3),
+			0 0 30px rgba(74, 158, 255, 0.1),
+			inset 0 0 10px rgba(74, 158, 255, 0.1) !important;
+		color: #4a9eff !important;
 	}
 
 	/* Glass panels with neon accent */
@@ -1523,7 +1549,7 @@
 			0 2px 12px rgba(0, 0, 0, 0.3),
 			inset 0 1px 0 rgba(255, 255, 255, 0.05),
 			inset 0 0 20px rgba(255, 255, 255, 0.02),
-			0 0 20px rgba(0, 212, 255, 0.05);
+			0 0 20px rgba(74, 158, 255, 0.05);
 	}
 
 	/* Saasfly card styles */
@@ -1539,7 +1565,7 @@
 		left: 0;
 		right: 0;
 		height: 2px;
-		background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.4), transparent);
+		background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.4), transparent);
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}
@@ -1617,19 +1643,19 @@
 
 	/* Start button - Cyan gradient */
 	:global(.saasfly-btn-start) {
-		background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+		background: linear-gradient(135deg, #4a9eff 0%, #3a8eef 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(14, 165, 233, 0.3),
-			0 0 20px rgba(14, 165, 233, 0.1) !important;
+			0 2px 8px rgba(74, 158, 255, 0.3),
+			0 0 20px rgba(74, 158, 255, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-start:hover:not(:disabled)) {
-		background: linear-gradient(135deg, #0284c7 0%, #0e7490 100%) !important;
+		background: linear-gradient(135deg, #3a8eef 0%, #2a7edf 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(14, 165, 233, 0.4),
-			0 0 30px rgba(14, 165, 233, 0.2) !important;
+			0 4px 12px rgba(74, 158, 255, 0.4),
+			0 0 30px rgba(74, 158, 255, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
@@ -1657,33 +1683,33 @@
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(168, 85, 247, 0.3),
-			0 0 20px rgba(168, 85, 247, 0.1) !important;
+			0 2px 8px rgba(139, 92, 246, 0.3),
+			0 0 20px rgba(139, 92, 246, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-load:hover) {
 		background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(168, 85, 247, 0.4),
-			0 0 30px rgba(168, 85, 247, 0.2) !important;
+			0 4px 12px rgba(139, 92, 246, 0.4),
+			0 0 30px rgba(139, 92, 246, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
 	/* Add button - Green gradient */
 	:global(.saasfly-btn-add) {
-		background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+		background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
 		color: white !important;
 		border: none !important;
 		box-shadow:
-			0 2px 8px rgba(52, 211, 153, 0.3),
-			0 0 20px rgba(52, 211, 153, 0.1) !important;
+			0 2px 8px rgba(74, 222, 128, 0.3),
+			0 0 20px rgba(74, 222, 128, 0.1) !important;
 	}
 
 	:global(.saasfly-btn-add:hover) {
 		background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 		box-shadow:
-			0 4px 12px rgba(52, 211, 153, 0.4),
-			0 0 30px rgba(52, 211, 153, 0.2) !important;
+			0 4px 12px rgba(74, 222, 128, 0.4),
+			0 0 30px rgba(74, 222, 128, 0.2) !important;
 		transform: translateY(-1px);
 	}
 
@@ -1713,24 +1739,24 @@
 
 	/* Cyan accent override */
 	:global(.text-neon-cyan) {
-		color: #00d4ff !important;
+		color: #4a9eff !important;
 	}
 	:global(.bg-neon-cyan) {
-		background-color: #00d4ff !important;
+		background-color: #4a9eff !important;
 	}
 	:global(.border-neon-cyan) {
-		border-color: #00d4ff !important;
+		border-color: #4a9eff !important;
 	}
 
 	/* Metric cards - monochrome override to match original */
 	:global(.saasfly-metric-card) {
-		background: rgba(20, 20, 20, 0.6) !important;
-		border-color: rgba(38, 38, 38, 0.6) !important;
+		background: rgba(28, 31, 38, 0.6) !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
 	}
 
 	:global(.saasfly-metric-card:hover) {
-		background: rgba(26, 26, 26, 0.8) !important;
-		border-color: rgba(64, 64, 64, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
 	}
 
@@ -1740,75 +1766,75 @@
 	:global(.saasfly-metric-card .text-neon-cyan),
 	:global(.saasfly-metric-card .text-accent-primary),
 	:global(.saasfly-metric-card .text-purple-400) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Info cards - monochrome override to match original */
 	:global(.saasfly-info-card) {
-		background: rgba(20, 20, 20, 0.6) !important;
-		border-color: rgba(38, 38, 38, 0.6) !important;
+		background: rgba(28, 31, 38, 0.6) !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
 	}
 
 	:global(.saasfly-info-card:hover) {
-		background: rgba(26, 26, 26, 0.8) !important;
-		border-color: rgba(64, 64, 64, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	/* Remove colored text from info card values */
 	:global(.saasfly-info-card .text-accent-primary),
 	:global(.saasfly-info-card .text-neon-cyan) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Sweep Control card - override to monochrome */
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-accent-primary\/20) {
-		background: rgba(64, 64, 64, 0.2) !important;
-		border-color: rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.2) !important;
+		border-color: rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-accent-primary\/20:hover) {
-		background: rgba(64, 64, 64, 0.4) !important;
-		border-color: rgba(64, 64, 64, 0.4) !important;
-		box-shadow: 0 8px 25px rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.4) !important;
+		border-color: rgba(74, 158, 255, 0.4) !important;
+		box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .text-accent-primary) {
-		color: #a3a3a3 !important;
+		color: #9aa0a6 !important;
 	}
 
 	:global(.saasfly-feature-card:hover .text-accent-primary) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Sweep Control header text */
 	:global(.sweep-control-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Analysis Tools card - override purple to monochrome */
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-purple-500\/20) {
-		background: rgba(64, 64, 64, 0.2) !important;
-		border-color: rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.2) !important;
+		border-color: rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .bg-gradient-to-br.from-purple-500\/20:hover) {
-		background: rgba(64, 64, 64, 0.4) !important;
-		border-color: rgba(64, 64, 64, 0.4) !important;
-		box-shadow: 0 8px 25px rgba(64, 64, 64, 0.2) !important;
+		background: rgba(74, 158, 255, 0.4) !important;
+		border-color: rgba(74, 158, 255, 0.4) !important;
+		box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2) !important;
 	}
 
 	:global(.saasfly-feature-card .text-purple-400) {
-		color: #a3a3a3 !important;
+		color: #9aa0a6 !important;
 	}
 
 	:global(.saasfly-feature-card:hover .text-purple-400) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* External Tools header text */
 	:global(.external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Remove glow effects from all card headers */
@@ -1828,41 +1854,41 @@
 	}
 
 	:global(.sweep-brand) {
-		color: #ffffff;
+		color: #e8eaed;
 		text-shadow: none;
 	}
 
 	:global(.nav-link) {
-		color: #a3a3a3;
+		color: #9aa0a6;
 		transition: all 0.2s ease;
 	}
 
 	:global(.nav-link:hover) {
-		color: #00d4ff;
-		background: rgba(0, 212, 255, 0.1);
+		color: #4a9eff;
+		background: rgba(74, 158, 255, 0.1);
 	}
 
 	:global(.nav-link.active) {
-		color: #00d4ff;
-		background: rgba(0, 212, 255, 0.1);
+		color: #4a9eff;
+		background: rgba(74, 158, 255, 0.1);
 	}
 
 	:global(.status-panel) {
-		background: rgba(20, 20, 20, 0.6);
-		border: 1px solid rgba(38, 38, 38, 0.6);
+		background: rgba(28, 31, 38, 0.6);
+		border: 1px solid rgba(44, 47, 54, 0.6);
 	}
 
 	:global(.glass-button) {
-		background: rgba(20, 20, 20, 0.6);
-		border: 1px solid rgba(38, 38, 38, 0.6);
-		color: #a3a3a3;
+		background: rgba(28, 31, 38, 0.6);
+		border: 1px solid rgba(44, 47, 54, 0.6);
+		color: #9aa0a6;
 		transition: all 0.2s ease;
 	}
 
 	:global(.glass-button:hover) {
-		background: rgba(26, 26, 26, 0.8);
-		border-color: rgba(64, 64, 64, 0.8);
-		color: #ffffff;
+		background: rgba(37, 40, 47, 0.8);
+		border-color: rgba(74, 158, 255, 0.8);
+		color: #e8eaed;
 	}
 
 	:global(.status-indicator) {
@@ -1872,31 +1898,31 @@
 	/* All cards - remove colored hover effects, keep monochrome */
 	:global(.saasfly-feature-card:hover),
 	:global(.saasfly-dashboard-card:hover) {
-		border-color: rgba(64, 64, 64, 0.8) !important;
-		background: rgba(26, 26, 26, 0.8) !important;
+		border-color: rgba(74, 158, 255, 0.8) !important;
+		background: rgba(37, 40, 47, 0.8) !important;
 	}
 
 	:global(.saasfly-feature-card h3),
 	:global(.saasfly-dashboard-card h3) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	:global(.saasfly-feature-card:hover h3),
 	:global(.saasfly-dashboard-card:hover h3) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Keep header text white on all cards */
 	:global(.frequency-config-header),
 	:global(.sweep-control-header),
 	:global(.external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	:global(.saasfly-feature-card:hover .frequency-config-header),
 	:global(.saasfly-feature-card:hover .sweep-control-header),
 	:global(.saasfly-feature-card:hover .external-tools-header) {
-		color: #ffffff !important;
+		color: #e8eaed !important;
 	}
 
 	/* Mobile optimizations for iPhone */

@@ -100,7 +100,7 @@
 		frequencyRange.end = frequencies[frequencies.length - 1] / 1e6;
 
 		// Clear spectrum area
-		ctx.fillStyle = '#1a1a1a';
+		ctx.fillStyle = '#1a1d23';
 		ctx.fillRect(0, 0, width, height);
 
 		// Draw grid
@@ -307,7 +307,7 @@
 		peakHold = [];
 		waterfallData = [];
 		if (ctx && canvas) {
-			ctx.fillStyle = '#1a1a1a';
+			ctx.fillStyle = '#1a1d23';
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 			drawGrid();
 		}
@@ -324,7 +324,7 @@
 
 			// Initial draw
 			if (ctx) {
-				ctx.fillStyle = '#1a1a1a';
+				ctx.fillStyle = '#1a1d23';
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 				drawGrid();
 			}

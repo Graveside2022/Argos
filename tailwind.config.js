@@ -10,28 +10,38 @@ export default {
 		extend: {
 			colors: {
 				primary: {
-					50: '#f0f9ff',
-					500: '#3b82f6',
-					600: '#2563eb',
-					700: '#1d4ed8',
-					900: '#1e3a8a'
+					50: '#e8f4ff',
+					500: '#4a9eff',
+					600: '#3a8eef',
+					700: '#2a7edf',
+					900: '#1a4e8f'
 				},
 				// Border colors
-				'border-hover': '#4f46e5',
-				'border-primary': '#374151',
+				'border-hover': '#4a9eff',
+				'border-primary': '#2c2f36',
 				// Text colors
-				'text-primary': '#f8fafc',
-				'text-secondary': '#94a3b8',
-				'text-muted': '#64748b',
+				'text-primary': '#e8eaed',
+				'text-secondary': '#9aa0a6',
+				'text-muted': '#5f6368',
 				// Background colors
-				'bg-secondary': '#1e293b',
-				'bg-primary': '#0f172a',
-				'bg-card': '#1f2937',
-				'bg-button': '#374151',
-				'bg-input': '#1f2937',
+				'bg-secondary': '#16181d',
+				'bg-primary': '#0e1116',
+				'bg-card': '#1c1f26',
+				'bg-button': '#2a2d35',
+				'bg-input': '#1a1d23',
 				// Accent colors
-				'accent-primary': '#3b82f6',
-				'accent-hover': '#2563eb'
+				'accent-primary': '#4a9eff',
+				'accent-hover': '#3a8eef',
+				// Signal colors
+				'signal-critical': '#dc2626',
+				'signal-strong': '#f97316',
+				'signal-good': '#fbbf24',
+				'signal-fair': '#10b981',
+				'signal-weak': '#4a90e2',
+				// Status colors
+				'status-success': '#4ade80',
+				'status-warning': '#fbbf24',
+				'status-error': '#f87171'
 			}
 		}
 	},

@@ -1,40 +1,40 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
-	
+
 	export let height = '400px';
 	export let showControls = true;
-	
+
 	let mapContainer: HTMLDivElement;
 	let centerLat = 0;
 	let centerLon = 0;
 	let zoomLevel = 13;
-	
+
 	// Placeholder for future map integration
 	// This could integrate with Leaflet, Mapbox, or other mapping libraries
-	
+
 	onMount(() => {
 		// Subscribe to GPS updates from the store
-		const unsubscribe = kismetStore.subscribe($store => {
+		const unsubscribe = kismetStore.subscribe(($store) => {
 			if ($store.gps.lat !== 'N/A' && $store.gps.lon !== 'N/A') {
 				centerLat = parseFloat($store.gps.lat);
 				centerLon = parseFloat($store.gps.lon);
 			}
 		});
-		
+
 		return () => {
 			unsubscribe();
 		};
 	});
-	
+
 	function zoomIn() {
 		if (zoomLevel < 18) zoomLevel++;
 	}
-	
+
 	function zoomOut() {
 		if (zoomLevel > 1) zoomLevel--;
 	}
-	
+
 	function centerOnGPS() {
 		// Center map on current GPS location
 		// TODO: Implement GPS centering logic
@@ -58,7 +58,7 @@
 			</div>
 		{/if}
 	</div>
-	
+
 	<div class="map-container" bind:this={mapContainer}>
 		<div class="map-placeholder">
 			<div class="map-grid">
@@ -68,7 +68,7 @@
 					{/each}
 				{/each}
 			</div>
-			
+
 			<div class="map-info">
 				<p class="placeholder-text">Map View</p>
 				<p class="coordinates">
@@ -76,12 +76,12 @@
 				</p>
 				<p class="zoom-info">Zoom: {zoomLevel}</p>
 			</div>
-			
+
 			<!-- Animated radar sweep effect -->
 			<div class="radar-sweep"></div>
 		</div>
 	</div>
-	
+
 	<div class="map-legend">
 		<div class="legend-item">
 			<span class="legend-icon wifi-ap">📡</span>
@@ -114,8 +114,8 @@
 		align-items: center;
 		padding: 12px 16px;
 		background: rgba(12, 22, 48, 0.85);
-		border-bottom: 2px solid #00d2ff;
-		box-shadow: 0 0 20px rgba(0, 220, 255, 0.5);
+		border-bottom: 2px solid #4a9eff;
+		box-shadow: 0 0 20px rgba(74, 158, 255, 0.5);
 	}
 
 	.map-header h3 {
@@ -135,9 +135,9 @@
 
 	.map-control-btn {
 		background: rgba(0, 0, 0, 0.5);
-		border: 1px solid #00d2ff;
+		border: 1px solid #4a9eff;
 		border-radius: 4px;
-		color: #00d2ff;
+		color: #4a9eff;
 		cursor: pointer;
 		width: 32px;
 		height: 32px;
@@ -150,9 +150,9 @@
 	}
 
 	.map-control-btn:hover {
-		background: rgba(0, 210, 255, 0.2);
+		background: rgba(74, 158, 255, 0.2);
 		transform: translateY(-1px);
-		box-shadow: 0 2px 8px rgba(0, 210, 255, 0.3);
+		box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
 	}
 
 	.map-control-btn:active {
@@ -172,8 +172,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: 
-			radial-gradient(circle at center, rgba(0, 190, 215, 0.1) 0%, transparent 70%);
+		background: radial-gradient(circle at center, rgba(0, 190, 215, 0.1) 0%, transparent 70%);
 	}
 
 	.map-grid {
@@ -186,10 +185,11 @@
 	}
 
 	.grid-cell {
-		border: 1px solid #00d2ff;
-		background: linear-gradient(45deg, 
-			transparent 48%, 
-			rgba(0, 210, 255, 0.1) 50%, 
+		border: 1px solid #4a9eff;
+		background: linear-gradient(
+			45deg,
+			transparent 48%,
+			rgba(74, 158, 255, 0.1) 50%,
 			transparent 52%
 		);
 	}
@@ -202,7 +202,7 @@
 		padding: 20px 40px;
 		border-radius: 8px;
 		border: 1px solid rgba(0, 190, 215, 0.4);
-		box-shadow: 0 0 30px rgba(0, 220, 255, 0.3);
+		box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
 	}
 
 	.placeholder-text {
@@ -211,8 +211,8 @@
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 3px;
-		color: #00d2ff;
-		/* text-shadow: 0 0 20px rgba(0, 210, 255, 0.8); */
+		color: #4a9eff;
+		/* text-shadow: 0 0 20px rgba(74, 158, 255, 0.8); */
 		margin-bottom: 10px;
 	}
 
@@ -235,7 +235,7 @@
 		background: conic-gradient(
 			from 0deg,
 			transparent 0deg,
-			rgba(0, 210, 255, 0.3) 30deg,
+			rgba(74, 158, 255, 0.3) 30deg,
 			transparent 60deg,
 			transparent 360deg
 		);
@@ -245,8 +245,12 @@
 	}
 
 	@keyframes radar-rotate {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.map-legend {

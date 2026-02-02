@@ -2,11 +2,11 @@
 
 :root {
 	/* Core monochromatic palette */
-	--mono-bg-primary: #0a0a0a;
-	--mono-bg-secondary: #141414;
-	--mono-bg-card: #141414;
-	--mono-bg-input: #1a1a1a;
-	--mono-bg-hover: #2d2d2d;
+	--mono-bg-primary: #0e1116;
+	--mono-bg-secondary: #1c1f26;
+	--mono-bg-card: #1c1f26;
+	--mono-bg-input: #1a1d23;
+	--mono-bg-hover: #2a2d35;
 	--mono-bg-button: #404040;
 
 	/* Text hierarchy */
@@ -129,12 +129,12 @@ h6,
 
 /* Start button - Cyan like sweep control */
 #startButton {
-	background: linear-gradient(135deg, #0ea5e9 0%, #0891b2 100%) !important;
+	background: linear-gradient(135deg, #4a9eff 0%, #3a8eef 100%) !important;
 	color: white !important;
 }
 
 #startButton:hover {
-	background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%) !important;
+	background: linear-gradient(135deg, #38bdf8 0%, #4a9eff 100%) !important;
 }
 
 /* Keep stop button red */
@@ -170,7 +170,7 @@ h6,
 /* Icon colors to match their sections */
 /* Frequency Configuration icon - Green like Add Frequency */
 .frequency-config-icon {
-	background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+	background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
 	-webkit-background-clip: text !important;
 	-webkit-text-fill-color: transparent !important;
 	background-clip: text !important;
@@ -178,7 +178,7 @@ h6,
 
 /* Sweep Control icon - Cyan */
 .sweep-control-icon {
-	background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+	background: linear-gradient(135deg, #06b6d4 0%, #3a8eef 100%) !important;
 	-webkit-background-clip: text !important;
 	-webkit-text-fill-color: transparent !important;
 	background-clip: text !important;
@@ -194,7 +194,7 @@ h6,
 
 /* External Tools header - Keep white */
 .external-tools-header {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Signal Analysis icon and header - Yellow/Amber */
@@ -205,7 +205,7 @@ h6,
 
 /* Update card header backgrounds to match */
 .saasfly-feature-card:has(.external-tools-icon) .group-hover\:border-purple-400\/40:hover {
-	border-color: rgba(168, 85, 247, 0.4) !important;
+	border-color: rgba(139, 92, 246, 0.4) !important;
 }
 
 .saasfly-feature-card:has(.sweep-control-icon) .group-hover\:border-cyan-400\/40:hover {
@@ -317,14 +317,14 @@ h6,
 .saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br {
 	background: linear-gradient(
 		135deg,
-		rgba(52, 211, 153, 0.2) 0%,
+		rgba(74, 222, 128, 0.2) 0%,
 		rgba(16, 185, 129, 0.1) 100%
 	) !important;
-	border-color: rgba(52, 211, 153, 0.2) !important;
+	border-color: rgba(74, 222, 128, 0.2) !important;
 }
 
 .saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br svg {
-	color: #34d399 !important;
+	color: #4ade80 !important;
 }
 
 /* Sweep Control card icon - Cyan */
@@ -345,10 +345,10 @@ h6,
 .saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br {
 	background: linear-gradient(
 		135deg,
-		rgba(168, 85, 247, 0.2) 0%,
+		rgba(139, 92, 246, 0.2) 0%,
 		rgba(147, 51, 234, 0.1) 100%
 	) !important;
-	border-color: rgba(168, 85, 247, 0.2) !important;
+	border-color: rgba(139, 92, 246, 0.2) !important;
 }
 
 .saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br svg {
@@ -390,15 +390,15 @@ h6,
 /* Add Frequency button - Green */
 #addFrequencyButton,
 .add-frequency-btn {
-	background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+	background: linear-gradient(135deg, #4ade80 0%, #38a56d 100%) !important;
 	color: white !important;
-	border-color: #16a34a !important;
+	border-color: #38a56d !important;
 }
 
 #addFrequencyButton:hover,
 .add-frequency-btn:hover {
-	background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
-	border-color: #22c55e !important;
+	background: linear-gradient(135deg, #4ade80 0%, #4ade80 100%) !important;
+	border-color: #4ade80 !important;
 }
 
 /* Section header text colors - Keep white */
@@ -406,7 +406,7 @@ h6,
 .sweep-control-header,
 .external-tools-header,
 .saasfly-feature-card h3 {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* HackRF Sweep branding */
@@ -415,12 +415,12 @@ h6,
 }
 
 .sweep-brand {
-	color: #ffffff !important; /* White for Sweep */
+	color: #e8eaed !important; /* White for Sweep */
 }
 
 /* Signal strength label - Always white */
 .signal-strength-label {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Signal strength value text - changes color based on strength */
@@ -443,17 +443,17 @@ h6,
 /* No Signal text - Always white */
 #signalStrengthText.signal-no-signal,
 #signalStrengthText:not([class*='signal-']) {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Default signal strength text to white */
 #signalStrengthText {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Override text-signal-none to be white */
 .text-signal-none {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Keep frequency display monochrome */
@@ -497,7 +497,7 @@ h6,
 /* Ensure all uppercase labels are white by default */
 .uppercase.tracking-wide:not(.signal-scale-label),
 .text-text-muted.uppercase:not(.signal-scale-label) {
-	color: #ffffff !important;
+	color: #e8eaed !important;
 }
 
 /* Signal Strength Scale specifically grey */
@@ -510,8 +510,8 @@ h6,
 /* Frequency Configuration - Green glow */
 .saasfly-feature-card:nth-child(1) .p-3.bg-gradient-to-br {
 	box-shadow:
-		0 0 15px rgba(52, 211, 153, 0.2),
-		0 0 25px rgba(52, 211, 153, 0.1) !important;
+		0 0 15px rgba(74, 222, 128, 0.2),
+		0 0 25px rgba(74, 222, 128, 0.1) !important;
 }
 
 /* Sweep Control - Cyan glow */
@@ -524,8 +524,8 @@ h6,
 /* Analysis Tools - Purple glow */
 .saasfly-feature-card:nth-child(3) .p-3.bg-gradient-to-br {
 	box-shadow:
-		0 0 15px rgba(168, 85, 247, 0.2),
-		0 0 25px rgba(168, 85, 247, 0.1) !important;
+		0 0 15px rgba(139, 92, 246, 0.2),
+		0 0 25px rgba(139, 92, 246, 0.1) !important;
 }
 
 /* Signal Analysis - Yellow glow */

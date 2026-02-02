@@ -343,10 +343,10 @@
 	}
 
 	function getSignalColor(signal: number): string {
-		if (signal > -50) return '#ff0000'; // Red - Very Strong
-		if (signal > -60) return '#ff8800'; // Orange - Strong
-		if (signal > -70) return '#ffff00'; // Yellow - Good
-		if (signal > -80) return '#00ff00'; // Green - Fair
+		if (signal > -50) return '#dc2626'; // Red - Very Strong
+		if (signal > -60) return '#f97316'; // Orange - Strong
+		if (signal > -70) return '#fbbf24'; // Yellow - Good
+		if (signal > -80) return '#4ade80'; // Green - Fair
 		return '#0088ff'; // Blue - Weak
 	}
 
@@ -813,7 +813,7 @@
 	}
 
 	.overlay-container {
-		background: #1a1a1a;
+		background: #1a1d23;
 		border: 1px solid #444;
 		border-radius: 8px;
 		max-width: 900px;
@@ -829,7 +829,7 @@
 		align-items: center;
 		padding: 1.5rem;
 		border-bottom: 1px solid #444;
-		background: #2a2a2a;
+		background: #25282f;
 		position: sticky;
 		top: 0;
 		z-index: 10;
@@ -870,7 +870,7 @@
 	}
 
 	.status-card {
-		background: #2a2a2a;
+		background: #25282f;
 		border: 1px solid #444;
 		border-radius: 6px;
 		padding: 1.25rem;
@@ -879,7 +879,7 @@
 
 	.status-card.highlight {
 		border-color: #3b82f6;
-		background: linear-gradient(135deg, #2a2a2a 0%, #1e3a8a 100%);
+		background: linear-gradient(135deg, #25282f 0%, #1e3a8a 100%);
 	}
 
 	.status-label {
@@ -930,7 +930,7 @@
 	}
 
 	.breakdown-item {
-		background: #2a2a2a;
+		background: #25282f;
 		border: 1px solid #444;
 		border-radius: 6px;
 		padding: 1rem;
@@ -1010,7 +1010,7 @@
 	}
 
 	.devices-table {
-		background: #2a2a2a;
+		background: #25282f;
 		border: 1px solid #444;
 		border-radius: 6px;
 		overflow: hidden;
@@ -1129,7 +1129,7 @@
 	}
 
 	.table-row.clickable:hover {
-		background: #3a3a3a;
+		background: #35383f;
 		transform: translateX(2px);
 	}
 
@@ -1149,7 +1149,7 @@
 	}
 
 	.device-detail-modal {
-		background: #1a1a1a;
+		background: #1a1d23;
 		border: 1px solid #444;
 		border-radius: 8px;
 		max-width: 600px;
@@ -1165,7 +1165,7 @@
 		align-items: center;
 		padding: 1.5rem;
 		border-bottom: 1px solid #444;
-		background: #2a2a2a;
+		background: #25282f;
 		position: sticky;
 		top: 0;
 		z-index: 10;
