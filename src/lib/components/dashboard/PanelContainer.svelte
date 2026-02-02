@@ -32,8 +32,16 @@
 		width: 0;
 		min-width: 0;
 		overflow: hidden;
-		background: var(--palantir-bg-panel);
-		border-right: 1px solid var(--palantir-border-subtle);
+		background: linear-gradient(
+			to bottom,
+			rgba(26, 29, 35, 0.98) 0%,
+			rgba(22, 24, 29, 0.98) 100%
+		);
+		backdrop-filter: blur(8px);
+		border-right: 1px solid rgba(74, 158, 255, 0.12);
+		box-shadow:
+			2px 0 8px rgba(0, 0, 0, 0.3),
+			inset 1px 0 0 rgba(255, 255, 255, 0.03);
 		transition:
 			width 0.2s ease,
 			min-width 0.2s ease;

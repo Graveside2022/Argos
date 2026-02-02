@@ -2,7 +2,8 @@
 	import { onDestroy, setContext } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
-	import { getSignalHex } from '$lib/utils/signalUtils';
+	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboardStore';
+	import { getSignalHex, getSignalBandKey } from '$lib/utils/signalUtils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import {
 		MapLibre,
@@ -244,6 +245,7 @@
 					mac,
 					ssid: device.ssid || 'Unknown',
 					rssi,
+					band: getSignalBandKey(rssi),
 					type: device.type || 'unknown',
 					color: getSignalHex(rssi),
 					manufacturer: device.manufacturer || device.manuf || 'Unknown',
@@ -341,6 +343,35 @@
 				if (map) map.getCanvas().style.cursor = '';
 			});
 		}
+
+		// Apply initial layer visibility after declarative layers mount
+		setTimeout(() => applyLayerVisibility(), 200);
+	}
+
+	function applyLayerVisibility() {
+		if (!map) return;
+		// Apply layer on/off toggles
+		let vis: Record<string, boolean> = {};
+		layerVisibility.subscribe((v) => (vis = v))();
+		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
+			const visible = vis[key] !== false;
+			for (const id of layerIds) {
+				if (map.getLayer(id)) {
+					map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+				}
+			}
+		}
+		// Apply band filter on device dots
+		if (map.getLayer('device-circles')) {
+			let bands: Set<string> = new Set();
+			activeBands.subscribe((b) => (bands = b))();
+			const bandList = Array.from(bands);
+			map.setFilter('device-circles', [
+				'all',
+				['!', ['has', 'point_count']],
+				['in', ['get', 'band'], ['literal', bandList]]
+			]);
+		}
 	}
 
 	function handleLocateClick() {
@@ -417,9 +448,42 @@
 		return `${freq} MHz`;
 	}
 
+	// Layer visibility — maps toggle keys to MapLibre layer IDs
+	const LAYER_MAP: Record<string, string[]> = {
+		deviceDots: ['device-clusters', 'device-cluster-count', 'device-circles'],
+		signalMarkers: ['detection-range-fill'],
+		accuracyCircle: ['accuracy-fill']
+	};
+
+	const unsubLayers = layerVisibility.subscribe((vis) => {
+		if (!map) return;
+		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
+			const visible = vis[key] !== false;
+			for (const id of layerIds) {
+				if (map.getLayer(id)) {
+					map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+				}
+			}
+		}
+	});
+
+	// Signal band filtering — update MapLibre filter on device-circles when bands change
+	const unsubBands = activeBands.subscribe((bands) => {
+		if (!map || !map.getLayer('device-circles')) return;
+		const bandList = Array.from(bands);
+		// Unclustered dots: exclude clusters AND filter by active band
+		map.setFilter('device-circles', [
+			'all',
+			['!', ['has', 'point_count']],
+			['in', ['get', 'band'], ['literal', bandList]]
+		]);
+	});
+
 	onDestroy(() => {
 		unsubGps();
 		unsubKismet();
+		unsubLayers();
+		unsubBands();
 	});
 </script>
 
@@ -504,9 +568,15 @@
 					fill="none"
 					stroke="currentColor"
 					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
 				>
-					<circle cx="12" cy="12" r="3" />
-					<path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+					<circle cx="12" cy="12" r="8" />
+					<circle cx="12" cy="12" r="3" fill="currentColor" />
+					<line x1="12" y1="2" x2="12" y2="4" />
+					<line x1="12" y1="20" x2="12" y2="22" />
+					<line x1="2" y1="12" x2="4" y2="12" />
+					<line x1="20" y1="12" x2="22" y2="12" />
 				</svg>
 			</button>
 		</CustomControl>
@@ -517,7 +587,7 @@
 				id="accuracy-fill"
 				paint={{
 					'fill-color': '#4a9eff',
-					'fill-opacity': 0.08
+					'fill-opacity': 0.18
 				}}
 			/>
 		</GeoJSONSource>
@@ -689,6 +759,7 @@
 		border: 1px solid #2a2a3e;
 		border-radius: 4px;
 		padding: 0;
+		margin: 0;
 	}
 
 	.locate-btn:hover {
@@ -745,6 +816,11 @@
 		background: transparent !important;
 		box-shadow: none !important;
 		border: none !important;
+	}
+
+	/* Tighten spacing between bottom-right controls (locate + zoom) */
+	.map-area :global(.maplibregl-ctrl-bottom-right > .maplibregl-ctrl) {
+		margin-bottom: 4px !important;
 	}
 
 	.legend-title {
