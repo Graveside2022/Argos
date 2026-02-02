@@ -314,10 +314,9 @@ hackrfbackup.svelte
 *.sqlite
 *.db-shm
 *.db-wal
-!rf_signals.db
-!orchestrator/knowledge/knowledge.db
 signals.db
 knowledge_base.db
+database/
 docker-images/
 
 # AI Development Tools
@@ -377,3 +376,23 @@ hackrf_emitter/frontend/.cache/
 *.kismet
 *.kismet-journal
 *.kismetdb
+
+# IDE — Nova editor
+.nova/
+
+# Generated build artifacts
+css-integrity-baselines.json
+css-integrity-report.json
+
+# Libtool / autotools artifacts
+ltmain.sh
+
+# Compiled external tools
+tools/
+
+# Debug and test utilities (not part of main app)
+utils/debug/
+utils/python/
+
+# Stale report directories
+completed/
