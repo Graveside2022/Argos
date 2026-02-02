@@ -79,6 +79,14 @@
 		features: []
 	});
 
+	// Cell tower state
+	let cellTowerGeoJSON: FeatureCollection = $state({
+		type: 'FeatureCollection',
+		features: []
+	});
+	let lastTowerFetchLat = 0;
+	let lastTowerFetchLon = 0;
+
 	// Popup state
 	let popupLngLat: LngLatLike | null = $state(null);
 	let popupContent: {
@@ -91,6 +99,19 @@
 		frequency: number;
 		packets: number;
 		last_seen: number;
+	} | null = $state(null);
+
+	// Cell tower popup state
+	let towerPopupLngLat: LngLatLike | null = $state(null);
+	let towerPopupContent: {
+		radio: string;
+		mcc: number;
+		mnc: number;
+		lac: number;
+		ci: number;
+		range: number;
+		samples: number;
+		avgSignal: number;
 	} | null = $state(null);
 
 	// Expose context for child components (DevicesPanel uses flyTo)
@@ -178,6 +199,82 @@
 		</svg>`;
 	}
 
+	// Cell tower radio type → color
+	function getRadioColor(radio: string): string {
+		switch (radio?.toUpperCase()) {
+			case 'LTE':
+				return '#4a9eff';
+			case 'NR':
+				return '#ec4899';
+			case 'UMTS':
+				return '#10b981';
+			case 'GSM':
+				return '#f97316';
+			case 'CDMA':
+				return '#8b5cf6';
+			default:
+				return '#9aa0a6';
+		}
+	}
+
+	// Haversine distance in km
+	function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+		const R = 6371;
+		const dLat = ((lat2 - lat1) * Math.PI) / 180;
+		const dLon = ((lon2 - lon1) * Math.PI) / 180;
+		const a =
+			Math.sin(dLat / 2) ** 2 +
+			Math.cos((lat1 * Math.PI) / 180) *
+				Math.cos((lat2 * Math.PI) / 180) *
+				Math.sin(dLon / 2) ** 2;
+		return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	}
+
+	// Fetch nearby cell towers from API
+	async function fetchCellTowers(lat: number, lon: number) {
+		try {
+			const res = await fetch(`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=5`);
+			if (!res.ok) return;
+			const data = await res.json();
+			if (!data.success || !data.towers?.length) return;
+
+			const features: Feature[] = data.towers.map(
+				(t: {
+					radio: string;
+					mcc: number;
+					mnc: number;
+					lac: number;
+					ci: number;
+					lat: number;
+					lon: number;
+					range: number;
+					samples: number;
+					avgSignal: number;
+				}) => ({
+					type: 'Feature' as const,
+					geometry: { type: 'Point' as const, coordinates: [t.lon, t.lat] },
+					properties: {
+						radio: t.radio,
+						mcc: t.mcc,
+						mnc: t.mnc,
+						lac: t.lac,
+						ci: t.ci,
+						range: t.range,
+						samples: t.samples,
+						avgSignal: t.avgSignal,
+						color: getRadioColor(t.radio)
+					}
+				})
+			);
+
+			cellTowerGeoJSON = { type: 'FeatureCollection', features };
+			lastTowerFetchLat = lat;
+			lastTowerFetchLon = lon;
+		} catch {
+			// silent — cell tower data is optional
+		}
+	}
+
 	// Subscribe to GPS store
 	const unsubGps = gpsStore.subscribe((gps) => {
 		const { lat, lon } = gps.position;
@@ -225,6 +322,13 @@
 		if (!initialViewSet && gps.status.hasGPSFix && map) {
 			map.flyTo({ center: [lon, lat], zoom: 15 });
 			initialViewSet = true;
+		}
+
+		// Fetch cell towers: on first valid GPS position, then re-fetch if moved > 1km
+		if (lastTowerFetchLat === 0 && lastTowerFetchLon === 0) {
+			fetchCellTowers(lat, lon);
+		} else if (haversineKm(lat, lon, lastTowerFetchLat, lastTowerFetchLon) > 1) {
+			fetchCellTowers(lat, lon);
 		}
 	});
 
@@ -335,7 +439,7 @@
 		});
 
 		// Pointer cursor for clickable layers
-		for (const layer of ['device-clusters', 'device-circles']) {
+		for (const layer of ['device-clusters', 'device-circles', 'cell-tower-circles']) {
 			map.on('mouseenter', layer, () => {
 				if (map) map.getCanvas().style.cursor = 'pointer';
 			});
@@ -440,6 +544,29 @@
 		return `${Math.floor(hrs / 24)}d ago`;
 	}
 
+	function handleTowerClick(ev: maplibregl.MapMouseEvent) {
+		const features = map?.queryRenderedFeatures(ev.point, {
+			layers: ['cell-tower-circles']
+		});
+		if (features && features.length > 0) {
+			const props = features[0].properties;
+			const geom = features[0].geometry;
+			if (geom.type === 'Point') {
+				towerPopupLngLat = geom.coordinates as [number, number];
+				towerPopupContent = {
+					radio: props?.radio ?? 'Unknown',
+					mcc: props?.mcc ?? 0,
+					mnc: props?.mnc ?? 0,
+					lac: props?.lac ?? 0,
+					ci: props?.ci ?? 0,
+					range: props?.range ?? 0,
+					samples: props?.samples ?? 0,
+					avgSignal: props?.avgSignal ?? 0
+				};
+			}
+		}
+	}
+
 	function formatFrequency(freq: number): string {
 		if (!freq) return '—';
 		// Kismet reports in KHz (e.g. 5240000 = 5.24 GHz)
@@ -451,6 +578,7 @@
 	// Layer visibility — maps toggle keys to MapLibre layer IDs
 	const LAYER_MAP: Record<string, string[]> = {
 		deviceDots: ['device-clusters', 'device-cluster-count', 'device-circles'],
+		cellTowers: ['cell-tower-circles', 'cell-tower-labels'],
 		signalMarkers: ['detection-range-fill'],
 		accuracyCircle: ['accuracy-fill']
 	};
@@ -592,6 +720,39 @@
 			/>
 		</GeoJSONSource>
 
+		<!-- Cell tower markers (toggled via Layers panel) -->
+		<GeoJSONSource id="cell-towers-src" data={cellTowerGeoJSON}>
+			<CircleLayer
+				id="cell-tower-circles"
+				paint={{
+					'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8, 18, 12],
+					'circle-color': ['get', 'color'],
+					'circle-opacity': 0.25,
+					'circle-stroke-width': 2.5,
+					'circle-stroke-color': ['get', 'color'],
+					'circle-stroke-opacity': 0.9
+				}}
+				onclick={handleTowerClick}
+			/>
+			<SymbolLayer
+				id="cell-tower-labels"
+				minzoom={12}
+				layout={{
+					'text-field': ['get', 'radio'],
+					'text-font': ['Stadia Regular'],
+					'text-size': 9,
+					'text-offset': [0, 1.6],
+					'text-allow-overlap': false,
+					'text-optional': true
+				}}
+				paint={{
+					'text-color': '#888',
+					'text-halo-color': '#111119',
+					'text-halo-width': 1
+				}}
+			/>
+		</GeoJSONSource>
+
 		<!-- Device markers with zoom-aware clustering -->
 		<GeoJSONSource
 			id="devices-src"
@@ -693,6 +854,65 @@
 						<span class="popup-label">LAST SEEN</span>
 						<span class="popup-value">{formatTimeAgo(popupContent.last_seen)}</span>
 					</div>
+				</div>
+			</Popup>
+		{/if}
+
+		<!-- Cell tower popup -->
+		{#if towerPopupLngLat && towerPopupContent}
+			<Popup
+				lnglat={towerPopupLngLat}
+				class="palantir-popup"
+				closeButton={true}
+				onclose={() => {
+					towerPopupLngLat = null;
+					towerPopupContent = null;
+				}}
+			>
+				<div class="map-popup">
+					<div class="popup-title tower-title">
+						<span
+							class="tower-radio-dot"
+							style="background: {getRadioColor(towerPopupContent.radio)}"
+						></span>
+						{towerPopupContent.radio} Tower
+					</div>
+					<div class="popup-row">
+						<span class="popup-label">MCC</span>
+						<span class="popup-value">{towerPopupContent.mcc}</span>
+					</div>
+					<div class="popup-row">
+						<span class="popup-label">MNC</span>
+						<span class="popup-value">{towerPopupContent.mnc}</span>
+					</div>
+					<div class="popup-row">
+						<span class="popup-label">LAC</span>
+						<span class="popup-value">{towerPopupContent.lac}</span>
+					</div>
+					<div class="popup-row">
+						<span class="popup-label">CELL ID</span>
+						<span class="popup-value">{towerPopupContent.ci}</span>
+					</div>
+					<div class="popup-divider"></div>
+					<div class="popup-row">
+						<span class="popup-label">RANGE</span>
+						<span class="popup-value"
+							>{towerPopupContent.range >= 1000
+								? `${(towerPopupContent.range / 1000).toFixed(1)} km`
+								: `${towerPopupContent.range} m`}</span
+						>
+					</div>
+					<div class="popup-row">
+						<span class="popup-label">SAMPLES</span>
+						<span class="popup-value">{towerPopupContent.samples.toLocaleString()}</span
+						>
+					</div>
+					{#if towerPopupContent.avgSignal}
+						<div class="popup-row">
+							<span class="popup-label">AVG SIGNAL</span>
+							<span class="popup-value">{towerPopupContent.avgSignal} dBm</span>
+						</div>
+					{/if}
 				</div>
 			</Popup>
 		{/if}
@@ -913,5 +1133,19 @@
 	.popup-divider {
 		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
 		margin: 4px 0;
+	}
+
+	/* Cell tower popup */
+	.tower-title {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.tower-radio-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>
