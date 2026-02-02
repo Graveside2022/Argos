@@ -8,8 +8,11 @@ Argos runs in Docker containers, but **hardware access requires host system conf
 
 - USB device permissions (udev rules)
 - Hardware drivers (HackRF, USRP, GPS, WiFi adapters)
-- SDR tools (gr-gsm, kalibrate, SoapySDR)
-- System packages (libusb, fftw, etc.)
+- SDR tools (gr-gsm, gr-osmosdr, kalibrate, SoapySDR)
+- System packages (libusb, fftw, Node.js, etc.)
+- Python Flask ecosystem for backend services
+- System monitoring and diagnostic tools
+- Complete kernel parameter tuning
 
 ## Quick Start
 
@@ -19,15 +22,45 @@ Run the master setup script (requires sudo):
 sudo ./scripts/setup-host-complete.sh
 ```
 
-This installs all dependencies for:
+This installs **EVERYTHING** discovered during troubleshooting (14 installation phases):
 
-- Docker & Portainer
-- HackRF One
-- USRP (optional)
-- GPS devices
-- Kismet WiFi scanning
-- GSM Evil (gr-gsm)
-- System optimizations
+**Core Infrastructure:**
+
+- Node.js 20 with npm
+- Docker & Docker Compose
+- Portainer container management
+
+**SDR Hardware:**
+
+- HackRF One (hackrf, libhackrf, SoapySDR)
+- USRP (optional: libuhd, uhd-host, python3-uhd)
+- Extended radio tools (rtl-sdr, multimon-ng, gqrx-sdr)
+
+**GSM Evil (COMPLETE):**
+
+- gnuradio, gr-gsm, gr-osmosdr (required)
+- kalibrate-hackrf, kalibrate-rtl (frequency calibration)
+- libosmocore-dev, libosmo-dsp-dev (Osmocom libraries)
+- Python Flask, Flask-SocketIO, Flask-CORS (backend)
+
+**Other Hardware:**
+
+- GPS devices (gpsd with USB auto-detection)
+- Kismet WiFi scanning (with user group setup)
+
+**System Tools:**
+
+- Monitoring: iotop, nethogs, iftop, tcpdump, wireshark, aircrack-ng
+- Development: ripgrep, fd-find, bat, exa, fzf, ncdu, btop
+- Python: numpy, scipy, pyserial, psutil, requests, pyyaml
+
+**System Optimizations:**
+
+- Complete kernel parameter tuning (USB buffers, network buffers, memory)
+- File descriptor limits (65536)
+- SystemD limits configuration
+- USB power optimization (udev rules)
+- Bluetooth disable on Raspberry Pi (free USB power)
 
 ## Manual Setup by Component
 
@@ -86,50 +119,94 @@ hackrf_info
 - If permission denied: Logout and login after adding to plugdev group
 - Check device: `lsusb | grep HackRF`
 
-### 3. GSM Evil (gr-gsm Tools)
+### 3. Node.js Runtime
 
 ```bash
-# Install GNU Radio and gr-gsm
-sudo apt install -y gnuradio gr-gsm \
+# Install Node.js 20.x
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+**Why needed**: Argos application requires Node.js runtime for building and running the frontend.
+
+### 4. Docker Compose
+
+```bash
+# Install Docker Compose
+DOCKER_COMPOSE_VERSION="2.24.0"
+sudo curl -L "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" \
+  -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Verify installation
+docker-compose --version
+```
+
+**Why needed**: Multi-container orchestration for Argos services.
+
+### 5. GSM Evil (gr-gsm Tools) - COMPLETE
+
+```bash
+# Install GNU Radio, gr-gsm, and gr-osmosdr - ALL REQUIRED
+sudo apt install -y gnuradio gr-gsm gr-osmosdr \
   kalibrate-hackrf kalibrate-rtl
 
-# Install GSM scanning tools
+# Install Osmocom libraries - REQUIRED for GSM Evil
 sudo apt install -y libosmocore-dev libosmo-dsp-dev
+
+# Install Python Flask ecosystem for GSM backend
+sudo apt install -y python3-flask python3-flask-socketio python3-flask-cors
+# OR via pip:
+pip3 install Flask Flask-SocketIO Flask-CORS pyshark werkzeug
 
 # Verify gr-gsm installation
 grgsm_scanner --help
+
+# Verify gr-osmosdr
+python3 -c "import osmosdr"
 
 # Test kalibrate
 kal -s GSM900 -g 40
 ```
 
-**Why needed**: GSM Evil requires gr-gsm (GNU Radio GSM) tools installed on the host to process GSM signals from HackRF/USRP.
+**Why needed**:
+
+- gr-gsm: GNU Radio GSM decoder for processing GSM signals from HackRF/USRP
+- gr-osmosdr: SDR abstraction layer for various hardware backends
+- libosmocore/libosmo-dsp: Core Osmocom libraries for GSM protocol handling
+- Flask: Python web framework for GSM Evil backend API
 
 **Troubleshooting**:
 
 - If gr-gsm not found: May need to build from source on some systems
-- Alternative: `sudo apt install -y gr-gsm` on Kali/Ubuntu
+- If gr-osmosdr fails: Check `sudo apt install -y libosmocore-dev`
+- If Flask missing: Install via pip as shown above
+- Alternative: Manual build from https://github.com/ptrkrysik/gr-gsm
 
-### 4. USRP (Optional, for higher-end SDR)
+### 6. USRP (Optional, for higher-end SDR)
 
 ```bash
-# Install UHD drivers
-sudo apt install -y libuhd-dev uhd-host
+# Install UHD drivers with Python bindings
+sudo apt install -y libuhd-dev uhd-host soapysdr-module-uhd python3-uhd
 
-# Download USRP firmware images
+# Download USRP firmware images (can take time)
 sudo uhd_images_downloader
-
-# Install SoapySDR UHD module
-sudo apt install -y soapysdr-module-uhd
 
 # Test USRP detection
 uhd_find_devices
 SoapySDRUtil --find="driver=uhd"
+
+# Verify Python bindings
+python3 -c "import uhd"
 ```
 
-**Why needed**: USRP devices require UHD (USRP Hardware Driver) on the host.
+**Why needed**: USRP devices require UHD (USRP Hardware Driver) on the host. Python bindings enable programmatic control.
 
-### 5. GPS Device Support
+### 7. GPS Device Support
 
 ```bash
 # Install gpsd
@@ -159,7 +236,7 @@ cgps
 - Check GPS device: `ls /dev/ttyACM* /dev/ttyUSB*`
 - Test manually: `gpsd -N -D 5 /dev/ttyACM0`
 
-### 6. Kismet WiFi Scanning
+### 8. Kismet WiFi Scanning
 
 ```bash
 # Add Kismet repository
@@ -184,30 +261,130 @@ sudo usermod -aG kismet $USER
 - Check WiFi adapters: `iwconfig`
 - Test monitor mode: `sudo iw dev wlan0 set monitor none`
 
-### 7. System Optimizations
+### 9. Extended Radio Tools (Optional)
 
 ```bash
-# Increase USB buffer size for SDR
-echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+# Install RTL-SDR tools
+sudo apt install -y rtl-sdr
 
-# Increase file descriptor limits
-echo '* soft nofile 65536' | sudo tee -a /etc/security/limits.conf
-echo '* hard nofile 65536' | sudo tee -a /etc/security/limits.conf
+# Install multimon-ng (digital signal decoder)
+sudo apt install -y multimon-ng
 
-# Apply immediately
-sudo sysctl -p
+# Install GUI SDR tools (if on desktop system)
+sudo apt install -y gqrx-sdr cubicsdr
 
-# Disable Bluetooth to free USB power (Raspberry Pi)
-echo 'dtoverlay=disable-bt' | sudo tee -a /boot/firmware/config.txt
-sudo systemctl disable hciuart bluetooth
+# Test RTL-SDR
+rtl_test -t
 
-# Optimize USB for high-speed devices
-echo 'SUBSYSTEM=="usb", ATTR{power/control}="on"' | sudo tee /etc/udev/rules.d/50-usb-power.rules
+# Test multimon-ng
+multimon-ng --help
 ```
 
-**Why needed**: SDR devices transfer large amounts of data over USB and need optimized buffers and power.
+**Why needed**: Extended support for RTL-SDR dongles and additional digital signal decoding capabilities.
 
-### 8. Argos Auto-Start Service
+**Tools included**:
+
+- rtl-sdr: Cheap USB SDR dongle support (RTL2832U chipset)
+- multimon-ng: Decode POCSAG, FLEX, EAS, UFSK, CLIPL, AFSK, etc.
+- gqrx-sdr: GUI spectrum analyzer and receiver
+- cubicsdr: Cross-platform SDR application
+
+### 10. System Monitoring & Diagnostics (Optional)
+
+```bash
+# Install network monitoring tools
+sudo apt install -y iotop nethogs iftop nload bmon vnstat tcpdump wireshark-common
+
+# Install system analysis tools
+sudo apt install -y lsof strace
+
+# Install WiFi security tools
+sudo apt install -y aircrack-ng
+
+# Install modern CLI utilities
+sudo apt install -y ripgrep fd-find bat exa fzf ncdu btop
+```
+
+**Why needed**: Troubleshooting hardware issues, monitoring system resources, analyzing network traffic.
+
+**Tools included**:
+
+- Network: iotop, nethogs, iftop, nload, bmon, vnstat, tcpdump
+- System: lsof, strace, btop, ncdu
+- WiFi: aircrack-ng (packet capture and analysis)
+- CLI: ripgrep (fast grep), fd-find (fast find), bat (cat with syntax highlighting)
+
+### 11. Python Development Packages
+
+```bash
+# Upgrade pip
+sudo pip3 install --upgrade pip
+
+# Install core packages
+sudo pip3 install virtualenv setuptools wheel psutil requests pyyaml jinja2
+
+# Install scientific computing
+sudo pip3 install numpy scipy
+
+# Install hardware interfacing
+sudo pip3 install pyserial python-dotenv eventlet
+```
+
+**Why needed**: Python packages required for backend services, data analysis, and hardware control.
+
+### 12. System Optimizations (COMPLETE)
+
+```bash
+# Complete kernel parameter tuning
+sudo tee -a /etc/sysctl.conf <<'EOF'
+# Argos System Optimizations
+vm.max_map_count=262144               # USB buffer sizes for SDR
+net.core.rmem_max = 16777216          # Network receive buffer
+net.core.wmem_max = 16777216          # Network send buffer
+net.core.netdev_max_backlog = 5000    # Network queue depth
+vm.swappiness = 10                    # Reduce swap usage
+fs.file-max = 65536                   # File descriptor limit
+EOF
+
+# File descriptor limits
+sudo tee -a /etc/security/limits.conf <<'EOF'
+* soft nofile 65536
+* hard nofile 65536
+EOF
+
+# SystemD limits
+sudo mkdir -p /etc/systemd/system.conf.d
+sudo tee /etc/systemd/system.conf.d/limits.conf <<'EOF'
+[Manager]
+DefaultLimitNOFILE=65536
+EOF
+
+# Apply kernel parameters immediately
+sudo sysctl -p
+
+# USB power optimization
+sudo tee /etc/udev/rules.d/50-usb-power.rules <<'EOF'
+SUBSYSTEM=="usb", ATTR{power/control}="on"
+EOF
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# Disable Bluetooth to free USB power (Raspberry Pi only)
+if [ -f /boot/firmware/config.txt ]; then
+  echo 'dtoverlay=disable-bt' | sudo tee -a /boot/firmware/config.txt
+  sudo systemctl disable hciuart bluetooth
+fi
+```
+
+**Why needed**:
+
+- USB buffers: SDR devices transfer large amounts of data over USB
+- Network buffers: High-throughput WebSocket connections and data streaming
+- File descriptors: Multiple concurrent connections and file handles
+- USB power: Keep SDR devices from power-saving modes
+- Bluetooth disable: Free USB power budget on Raspberry Pi
+
+### 13. Argos Auto-Start Service
 
 ```bash
 # Install startup check service
@@ -235,13 +412,18 @@ sudo systemctl enable argos-startup.service
 
 ## Hardware Dependencies Summary
 
-| Hardware      | Host Dependencies                     | Test Command       |
-| ------------- | ------------------------------------- | ------------------ |
-| HackRF One    | hackrf, libhackrf, libusb, udev rules | `hackrf_info`      |
-| USRP          | uhd-host, libuhd-dev, firmware images | `uhd_find_devices` |
-| GPS           | gpsd, gpsd-clients                    | `cgps`             |
-| WiFi Adapters | kismet, wireless drivers              | `iwconfig`         |
-| GSM Scanning  | gnuradio, gr-gsm, kalibrate           | `grgsm_scanner`    |
+| Component         | Host Dependencies                                           | Test Command                |
+| ----------------- | ----------------------------------------------------------- | --------------------------- |
+| HackRF One        | hackrf, libhackrf, SoapySDR, udev rules                     | `hackrf_info`               |
+| USRP              | uhd-host, libuhd-dev, python3-uhd, firmware                 | `uhd_find_devices`          |
+| GPS               | gpsd, gpsd-clients                                          | `cgps`                      |
+| WiFi Adapters     | kismet, wireless drivers                                    | `iwconfig`                  |
+| GSM Evil          | gnuradio, gr-gsm, gr-osmosdr, kalibrate, libosmocore, Flask | `grgsm_scanner`             |
+| RTL-SDR           | rtl-sdr tools                                               | `rtl_test -t`               |
+| Node.js           | nodejs, npm                                                 | `node --version`            |
+| Docker            | docker-ce, docker-compose                                   | `docker --version`          |
+| Python Backend    | Flask, Flask-SocketIO, numpy, scipy, pyserial               | `python3 -c "import flask"` |
+| System Monitoring | iotop, nethogs, tcpdump, aircrack-ng, btop                  | `nethogs --version`         |
 
 ## Common Issues
 
@@ -275,29 +457,88 @@ sudo systemctl enable argos-startup.service
 - Fix: `sudo usermod -aG kismet $USER`
 - Check: `sudo kismet -c wlan0` (replace wlan0 with your adapter)
 
+### gr-osmosdr Python bindings missing
+
+- Cause: gr-osmosdr installed but Python module not found
+- Fix: `sudo apt install -y gr-osmosdr` or rebuild from source
+- Test: `python3 -c "import osmosdr"`
+- Alternative: Build from https://github.com/osmocom/gr-osmosdr
+
+### Python Flask not found for GSM Evil backend
+
+- Cause: Flask ecosystem not installed via apt or pip
+- Fix (via apt): `sudo apt install -y python3-flask python3-flask-socketio`
+- Fix (via pip): `pip3 install Flask Flask-SocketIO Flask-CORS pyshark`
+- Test: `python3 -c "import flask; import flask_socketio"`
+
+### libosmocore-dev installation fails
+
+- Cause: Osmocom packages not available in distribution repositories
+- Fix: Build from source:
+    ```bash
+    git clone https://gitea.osmocom.org/osmocom/libosmocore
+    cd libosmocore
+    autoreconf -fi && ./configure && make && sudo make install
+    ```
+- Documentation: https://osmocom.org/projects/libosmocore/wiki
+
+### Node.js version mismatch
+
+- Cause: System has old Node.js version
+- Fix: Install from NodeSource repository:
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+    sudo apt install -y nodejs
+    ```
+- Verify: `node --version` should show v20.x.x
+
+### Docker Compose not found
+
+- Cause: Docker Compose not installed or not in PATH
+- Fix: Download binary manually:
+    ```bash
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+      -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    ```
+- Verify: `docker-compose --version`
+
 ## Post-Setup Verification
 
 After completing host setup, verify all components:
 
 ```bash
-# Verify Docker
+# Core Infrastructure
+node --version                    # Should show v20.x.x
+npm --version
 docker --version
-docker ps
+docker-compose --version
+docker ps                         # Should show running containers
 
-# Verify HackRF
-hackrf_info
+# SDR Hardware
+hackrf_info                       # Should detect HackRF One
+uhd_find_devices                  # USRP (optional)
+rtl_test -t                       # RTL-SDR (optional)
 
-# Verify GPS
-cgps
+# GSM Evil (CRITICAL - all must pass)
+grgsm_scanner --help              # gr-gsm command line tool
+python3 -c "import osmosdr"       # gr-osmosdr Python bindings
+python3 -c "import flask"         # Flask for backend
+kal -h                            # kalibrate frequency tool
 
-# Verify Kismet
+# GPS
+cgps                              # Should show satellites
+gpsd -V                           # gpsd version
+
+# Kismet
 kismet --version
+iwconfig                          # Show WiFi adapters
 
-# Verify gr-gsm (if using GSM Evil)
-grgsm_scanner --help
+# Python Packages
+python3 -c "import numpy, scipy, flask, serial"
 
-# Verify USRP (if installed)
-uhd_find_devices
+# System Groups (after logout/login)
+groups                            # Should show: docker, plugdev, kismet, dialout
 ```
 
 ## Next Steps
