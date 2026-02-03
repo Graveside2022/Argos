@@ -115,6 +115,7 @@
 		"leaflet.heat": "^0.2.0",
 		"leaflet.markercluster": "^1.5.3",
 		"maplibre-gl": "^5.6.1",
+		"mgrs": "^2.1.0",
 		"node-fetch": "^3.3.2",
 		"postcss": "^8.4.49",
 		"svelte-maplibre-gl": "^1.0.3",
