@@ -9,7 +9,10 @@ export default defineConfig({
 		port: 5173
 	},
 	optimizeDeps: {
-		include: ['leaflet', 'cytoscape']
+		include: ['leaflet', 'cytoscape', 'mgrs']
+	},
+	ssr: {
+		noExternal: ['mgrs']
 	},
 	define: {
 		// Helps with Node.js compatibility issues
