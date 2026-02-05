@@ -1,31 +1,43 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	interface Props {
+		name: string;
+		description?: string;
+		icon: string;
+		status?: 'stopped' | 'starting' | 'running' | 'stopping';
+		count?: number | null;
+		canOpen?: boolean;
+		showControls?: boolean;
+		externalUrl?: string | null;
+		onstart?: () => void;
+		onstop?: () => void;
+		onopen?: () => void;
+	}
 
-	export let name: string;
-	export let description: string = '';
-	export let icon: string;
-	export let status: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
-	export let count: number | null = null;
-	export let canOpen: boolean = true;
-	export let showControls: boolean = true;
-	export let externalUrl: string | null = null;
+	let {
+		name,
+		description = '',
+		icon,
+		status = 'stopped',
+		count = null,
+		canOpen = true,
+		showControls = true,
+		externalUrl = null,
+		onstart,
+		onstop,
+		onopen
+	}: Props = $props();
 
-	const dispatch = createEventDispatcher<{
-		start: void;
-		stop: void;
-		open: void;
-	}>();
-
-	$: isRunning = status === 'running';
-	$: isTransitioning = status === 'starting' || status === 'stopping';
-	$: statusLabel =
+	let isRunning = $derived(status === 'running');
+	let isTransitioning = $derived(status === 'starting' || status === 'stopping');
+	let statusLabel = $derived(
 		status === 'starting'
 			? 'Starting...'
 			: status === 'stopping'
 				? 'Stopping...'
 				: status === 'running'
 					? 'Running'
-					: 'Stopped';
+					: 'Stopped'
+	);
 </script>
 
 <div class="tool-card" class:running={isRunning}>
@@ -64,7 +76,7 @@
 					rel="noopener noreferrer">Open</a
 				>
 			{:else}
-				<button class="btn btn-open btn-sm" on:click={() => dispatch('open')}>Open</button>
+				<button class="btn btn-open btn-sm" onclick={() => onopen?.()}>Open</button>
 			{/if}
 		{/if}
 		{#if showControls}
@@ -72,13 +84,13 @@
 				<button
 					class="btn btn-danger btn-sm"
 					disabled={isTransitioning}
-					on:click={() => dispatch('stop')}>Stop</button
+					onclick={() => onstop?.()}>Stop</button
 				>
 			{:else}
 				<button
 					class="btn btn-start btn-sm"
 					disabled={isTransitioning}
-					on:click={() => dispatch('start')}>Start</button
+					onclick={() => onstart?.()}>Start</button
 				>
 			{/if}
 		{/if}

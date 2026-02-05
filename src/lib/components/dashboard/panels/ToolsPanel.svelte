@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
 	import { activeView } from '$lib/stores/dashboard/dashboardStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
 	import { KismetService } from '$lib/services/tactical-map/kismetService';
@@ -7,13 +6,8 @@
 
 	// Used only for start/stop actions - periodic fetching is managed at page level
 	const kismetService = new KismetService();
-	let kismetStatus: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
-	let kismetDeviceCount = 0;
-
-	const unsubKismet = kismetStore.subscribe((state) => {
-		kismetStatus = state.status;
-		kismetDeviceCount = state.deviceCount;
-	});
+	let kismetStatus = $derived($kismetStore.status);
+	let kismetDeviceCount = $derived($kismetStore.deviceCount);
 
 	// Tool icon SVGs (inline, 20x20, currentColor)
 	const icons = {
@@ -38,7 +32,7 @@
 	}
 
 	// GSM Evil control
-	let gsmStatus: 'stopped' | 'starting' | 'running' | 'stopping' = 'stopped';
+	let gsmStatus: 'stopped' | 'starting' | 'running' | 'stopping' = $state('stopped');
 
 	async function startGSMEvil() {
 		if (gsmStatus === 'starting' || gsmStatus === 'stopping') return;
@@ -77,10 +71,6 @@
 			gsmStatus = 'running';
 		}
 	}
-
-	onDestroy(() => {
-		unsubKismet();
-	});
 </script>
 
 <div class="tools-panel">
@@ -100,7 +90,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('bettercap')}
+				onopen={() => openTool('bettercap')}
 			/>
 
 			<ToolCard
@@ -109,9 +99,9 @@
 				icon={icons.kismet}
 				status={kismetStatus}
 				count={kismetDeviceCount}
-				on:start={() => kismetService.startKismet()}
-				on:stop={() => kismetService.stopKismet()}
-				on:open={() => openTool('kismet')}
+				onstart={() => kismetService.startKismet()}
+				onstop={() => kismetService.stopKismet()}
+				onopen={() => openTool('kismet')}
 			/>
 
 			<ToolCard
@@ -121,7 +111,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('wifite')}
+				onopen={() => openTool('wifite')}
 			/>
 
 			<ToolCard
@@ -131,7 +121,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('wigletotak')}
+				onopen={() => openTool('wigletotak')}
 			/>
 		</div>
 
@@ -146,7 +136,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('btle')}
+				onopen={() => openTool('btle')}
 			/>
 
 			<ToolCard
@@ -156,7 +146,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('droneid')}
+				onopen={() => openTool('droneid')}
 			/>
 
 			<ToolCard
@@ -164,9 +154,9 @@
 				description="GSM signal monitoring and IMSI detection"
 				icon={icons.gsm}
 				status={gsmStatus}
-				on:start={startGSMEvil}
-				on:stop={stopGSMEvil}
-				on:open={() => openTool('gsm-evil')}
+				onstart={startGSMEvil}
+				onstop={stopGSMEvil}
+				onopen={() => openTool('gsm-evil')}
 			/>
 
 			<ToolCard
@@ -176,7 +166,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('hackrf')}
+				onopen={() => openTool('hackrf')}
 			/>
 
 			<ToolCard
@@ -186,7 +176,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('pagermon')}
+				onopen={() => openTool('pagermon')}
 			/>
 
 			<ToolCard
@@ -196,7 +186,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('rf-emitter')}
+				onopen={() => openTool('rf-emitter')}
 			/>
 
 			<ToolCard
@@ -206,7 +196,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('rtl-433')}
+				onopen={() => openTool('rtl-433')}
 			/>
 
 			<ToolCard
@@ -216,7 +206,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('usrpsweep')}
+				onopen={() => openTool('usrpsweep')}
 			/>
 		</div>
 
@@ -231,7 +221,7 @@
 				status="stopped"
 				canOpen={true}
 				showControls={false}
-				on:open={() => openTool('openwebrx')}
+				onopen={() => openTool('openwebrx')}
 			/>
 
 			<ToolCard

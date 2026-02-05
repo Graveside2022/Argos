@@ -1,21 +1,19 @@
 <script lang="ts">
 	import { hardwareStatus, acquireDevice, releaseDevice } from '$lib/stores/hardwareStore';
 
-	export let toolName: string;
-	export let deviceType: 'hackrf' | 'alfa' | 'bluetooth';
-	export let onConflict: ((owner: string) => void) | undefined = undefined;
+	interface Props {
+		toolName: string;
+		deviceType: 'hackrf' | 'alfa' | 'bluetooth';
+		onConflict?: (owner: string) => void;
+	}
 
-	let isOwner = false;
-	let available = true;
-	let currentOwner: string | null = null;
-	let loading = false;
+	let { toolName, deviceType, onConflict }: Props = $props();
 
-	hardwareStatus.subscribe((s) => {
-		const device = s[deviceType];
-		available = device.available;
-		currentOwner = device.owner;
-		isOwner = device.owner === toolName;
-	});
+	let loading = $state(false);
+
+	let isOwner = $derived($hardwareStatus[deviceType].owner === toolName);
+	let available = $derived($hardwareStatus[deviceType].available);
+	let currentOwner = $derived($hardwareStatus[deviceType].owner);
 
 	async function handleClick() {
 		loading = true;
@@ -37,7 +35,7 @@
 </script>
 
 <button
-	on:click={handleClick}
+	onclick={handleClick}
 	disabled={loading || (!available && !isOwner)}
 	class="px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-50
 		{isOwner
