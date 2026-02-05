@@ -201,7 +201,7 @@
 		<!-- Control Buttons -->
 		<div class="grid grid-cols-3 gap-2">
 			<button
-				on:click={() => (isGenerating ? stopGeneration() : startGeneration())}
+				onclick={() => (isGenerating ? stopGeneration() : startGeneration())}
 				class="px-3 py-2 text-sm rounded-lg transition-colors
 					{isGenerating
 					? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
@@ -211,7 +211,7 @@
 			</button>
 
 			<button
-				on:click={simulateDroneMovement}
+				onclick={simulateDroneMovement}
 				class="px-3 py-2 text-sm rounded-lg transition-colors
 					{isDroneMoving
 					? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400'
@@ -221,7 +221,7 @@
 			</button>
 
 			<button
-				on:click={clearAll}
+				onclick={clearAll}
 				class="px-3 py-2 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
 			>
 				Clear All
@@ -244,7 +244,7 @@
 
 		<!-- Export Button -->
 		<button
-			on:click={exportData}
+			onclick={exportData}
 			class="w-full px-3 py-2 text-sm bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-colors flex items-center justify-center gap-2"
 		>
 			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
