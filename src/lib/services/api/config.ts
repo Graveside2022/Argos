@@ -57,7 +57,7 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 				code?: string;
 				details?: unknown;
 			};
-		} catch {
+		} catch (_error: unknown) {
 			// Response might not be JSON
 		}
 
@@ -76,7 +76,7 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 
 	try {
 		return (await response.json()) as T;
-	} catch {
+	} catch (_error: unknown) {
 		throw new APIError('Invalid JSON response from server');
 	}
 }

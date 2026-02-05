@@ -43,8 +43,8 @@ export class ProcessManager {
 				// Use unbuffered output for real-time data
 				const modifiedConfig = {
 					...config,
-					env: { 
-						...process.env, 
+					env: {
+						...process.env,
 						NODE_NO_READLINE: '1',
 						PYTHONUNBUFFERED: '1', // For Python-based UHD tools
 						UHD_IMAGES_DIR: '/usr/share/uhd/images' // UHD firmware images location
@@ -60,7 +60,9 @@ export class ProcessManager {
 					this.processRegistry.set(actualProcessPid, sweepProcess);
 				}
 
-				logInfo(`✅ USRP process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`);
+				logInfo(
+					`✅ USRP process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
+				);
 
 				// Attach event handlers to the process
 				if (sweepProcess.stdout && this.eventHandlers.onStdout) {
@@ -116,7 +118,7 @@ export class ProcessManager {
 						{ pid: processState.actualProcessPid },
 						'process-sigterm-sent'
 					);
-				} catch {
+				} catch (_error: unknown) {
 					logWarn(
 						'Process already dead or SIGTERM failed',
 						{ pid: processState.actualProcessPid },
@@ -137,7 +139,7 @@ export class ProcessManager {
 						'process-sigkill-needed'
 					);
 					process.kill(processState.actualProcessPid, 'SIGKILL');
-				} catch {
+				} catch (_error: unknown) {
 					// Process is already dead
 					logInfo(
 						'Process terminated successfully',
@@ -243,20 +245,20 @@ export class ProcessManager {
 	 */
 	getProcessState(): ProcessState & { isRunning: boolean } {
 		// Clean up dead processes from registry
-		for (const [pid, childProcess] of this.processRegistry) {
+		for (const [pid, _childProcess] of this.processRegistry) {
 			if (!this.isProcessAlive(pid)) {
 				logWarn(`Process ${pid} is dead, removing from registry`);
 				this.processRegistry.delete(pid);
 			}
 		}
-		
+
 		const isRunning = this.processRegistry.size > 0;
 		// Get the first process if any exist
 		const firstProcess = this.processRegistry.values().next().value || null;
-		
+
 		// Store process start time separately from the process object
 		const processStartTime = firstProcess ? Date.now() : null;
-		
+
 		return {
 			sweepProcess: firstProcess,
 			sweepProcessPgid: firstProcess?.pid || null,
@@ -273,7 +275,7 @@ export class ProcessManager {
 		try {
 			process.kill(pid, 0);
 			return true;
-		} catch {
+		} catch (_error: unknown) {
 			return false;
 		}
 	}
@@ -287,29 +289,32 @@ export class ProcessManager {
 		deviceInfo?: string;
 	}> {
 		return new Promise((resolve) => {
-			exec('UHD_IMAGES_DIR=/usr/share/uhd/images timeout 5 uhd_find_devices', (error, stdout, stderr) => {
-				if (error) {
-					if (error.code === 124) {
-						resolve({ available: false, reason: 'Device check timeout' });
+			exec(
+				'UHD_IMAGES_DIR=/usr/share/uhd/images timeout 5 uhd_find_devices',
+				(error, stdout, stderr) => {
+					if (error) {
+						if (error.code === 124) {
+							resolve({ available: false, reason: 'Device check timeout' });
+						} else {
+							resolve({
+								available: false,
+								reason: `Device check failed: ${error.message}`
+							});
+						}
+					} else if (stderr.includes('No UHD Devices Found')) {
+						resolve({ available: false, reason: 'No USRP found' });
+					} else if (stdout.includes('Device Address')) {
+						// Extract device info
+						const deviceInfo = stdout
+							.split('\n')
+							.filter((line) => line.trim())
+							.join(', ');
+						resolve({ available: true, reason: 'USRP detected', deviceInfo });
 					} else {
-						resolve({
-							available: false,
-							reason: `Device check failed: ${error.message}`
-						});
+						resolve({ available: false, reason: 'Unknown error' });
 					}
-				} else if (stderr.includes('No UHD Devices Found')) {
-					resolve({ available: false, reason: 'No USRP found' });
-				} else if (stdout.includes('Device Address')) {
-					// Extract device info
-					const deviceInfo = stdout
-						.split('\n')
-						.filter((line) => line.trim())
-						.join(', ');
-					resolve({ available: true, reason: 'USRP detected', deviceInfo });
-				} else {
-					resolve({ available: false, reason: 'Unknown error' });
 				}
-			});
+			);
 		});
 	}
 
@@ -317,8 +322,8 @@ export class ProcessManager {
 	 * Force kill process immediately
 	 */
 	async forceKillProcess(): Promise<void> {
-		const processState = this.getProcessState();
-		
+		const _processState = this.getProcessState();
+
 		// Kill all registered processes
 		for (const [pid, childProcess] of this.processRegistry) {
 			try {
@@ -329,7 +334,7 @@ export class ProcessManager {
 				try {
 					process.kill(pid, 'SIGKILL');
 					logInfo(`Force killed PID: ${pid}`);
-				} catch {
+				} catch (_error: unknown) {
 					logInfo('Process already dead or kill failed');
 				}
 			} catch (e) {

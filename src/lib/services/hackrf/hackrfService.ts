@@ -4,6 +4,7 @@
  */
 
 import { writable, derived, type Readable, type Writable } from 'svelte/store';
+import { logWarn } from '$lib/utils/logger';
 import { hackrfAPI } from '../api';
 import { HackRFWebSocketClient } from '../websocket/hackrf';
 import type {
@@ -364,9 +365,12 @@ export class HackRFService {
 
 			// Connect
 			this.websocket.connect();
-		} catch {
-			// Failed to setup WebSocket
-			// Don't throw - service can work without WebSocket
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn('[HackRF] WebSocket setup failed, continuing without real-time updates', {
+				error: msg,
+				operation: 'WebSocket.setup'
+			});
 		}
 	}
 
@@ -406,8 +410,9 @@ export class HackRFService {
 	 */
 	private startStatusPolling(): void {
 		this.statusInterval = setInterval(() => {
-			void this.updateStatus().catch(() => {
-				// Status polling error
+			void this.updateStatus().catch((error: unknown) => {
+				const msg = error instanceof Error ? error.message : String(error);
+				logWarn('[HackRF] Status poll failed', { error: msg }, 'hackrf-poll');
 			});
 		}, 5000);
 	}
@@ -419,8 +424,13 @@ export class HackRFService {
 		try {
 			const status = await hackrfAPI.getStatus();
 			this.updateState({ status, lastUpdate: Date.now() });
-		} catch {
-			// Failed to update status
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn(
+				'[HackRF] Status update failed',
+				{ error: msg, operation: 'status.poll' },
+				'hackrf-status-poll'
+			);
 		}
 	}
 
@@ -431,8 +441,9 @@ export class HackRFService {
 		try {
 			const config = await hackrfAPI.getConfig();
 			this.updateState({ config });
-		} catch {
-			// Failed to refresh config
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn('[HackRF] Config refresh failed', { error: msg, operation: 'config.refresh' });
 		}
 	}
 

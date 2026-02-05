@@ -270,7 +270,7 @@
 			cellTowerGeoJSON = { type: 'FeatureCollection', features };
 			lastTowerFetchLat = lat;
 			lastTowerFetchLon = lon;
-		} catch {
+		} catch (_error: unknown) {
 			// silent — cell tower data is optional
 		}
 	}
@@ -525,7 +525,7 @@
 					zoom: Math.min(zoom, 18)
 				});
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// cluster may have been removed between click and resolution
 		}
 	}

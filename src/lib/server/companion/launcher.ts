@@ -91,7 +91,7 @@ class CompanionLauncherService {
 		if (tracked?.process.pid) {
 			try {
 				process.kill(tracked.process.pid);
-			} catch {
+			} catch (_error: unknown) {
 				// Already dead
 			}
 		}
@@ -99,7 +99,7 @@ class CompanionLauncherService {
 		// Also kill by process pattern
 		try {
 			await execAsync(`pkill -f "${app.processPattern}" 2>/dev/null`);
-		} catch {
+		} catch (_error: unknown) {
 			// Not found
 		}
 
@@ -131,7 +131,7 @@ class CompanionLauncherService {
 					startedAt: tracked.startedAt,
 					appName
 				};
-			} catch {
+			} catch (_error: unknown) {
 				this.processes.delete(appName);
 			}
 		}
@@ -143,7 +143,7 @@ class CompanionLauncherService {
 			if (pid) {
 				return { running: true, pid, startedAt: null, appName };
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Not running
 		}
 

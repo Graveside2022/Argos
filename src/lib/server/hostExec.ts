@@ -26,7 +26,7 @@ export async function isDockerContainer(): Promise<boolean> {
 		await execAsync('cat /.dockerenv 2>/dev/null');
 		await execAsync('nsenter -t 1 -m -- true 2>/dev/null');
 		_isDocker = true;
-	} catch {
+	} catch (_error: unknown) {
 		_isDocker = false;
 	}
 	return _isDocker;
@@ -39,7 +39,7 @@ export function isDockerContainerSync(): boolean {
 		execSync('cat /.dockerenv 2>/dev/null', { stdio: 'pipe' });
 		execSync('nsenter -t 1 -m -- true 2>/dev/null', { stdio: 'pipe' });
 		_isDocker = true;
-	} catch {
+	} catch (_error: unknown) {
 		_isDocker = false;
 	}
 	return _isDocker;

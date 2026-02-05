@@ -31,7 +31,7 @@
 			} else {
 				error = 'Failed to fetch IMSI data';
 			}
-		} catch {
+		} catch (_err: unknown) {
 			error = 'Error connecting to server';
 		} finally {
 			loading = false;

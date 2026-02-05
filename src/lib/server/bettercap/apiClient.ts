@@ -25,7 +25,7 @@ async function apiRequest(method: string, path: string, body?: string): Promise<
 			{ timeout: 10000 }
 		);
 		return JSON.parse(stdout);
-	} catch {
+	} catch (_error: unknown) {
 		return null;
 	}
 }
@@ -62,7 +62,7 @@ export async function isContainerRunning(): Promise<boolean> {
 			'docker ps --filter "name=bettercap" --format "{{.Names}}" 2>/dev/null'
 		);
 		return stdout.trim().length > 0;
-	} catch {
+	} catch (_error: unknown) {
 		return false;
 	}
 }

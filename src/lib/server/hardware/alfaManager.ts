@@ -16,7 +16,7 @@ export async function getMode(iface: string): Promise<'monitor' | 'managed' | 'u
 		if (stdout.includes('Mode:Monitor')) return 'monitor';
 		if (stdout.includes('Mode:Managed')) return 'managed';
 		return 'unknown';
-	} catch {
+	} catch (_error: unknown) {
 		return 'unknown';
 	}
 }
@@ -31,7 +31,7 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 			for (const pid of pids) {
 				blocking.push({ pid, name: proc });
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Process not found
 		}
 	}
@@ -43,7 +43,7 @@ export async function killBlockingProcesses(): Promise<void> {
 	for (const proc of ALFA_BLOCKING_PROCESSES) {
 		try {
 			await execAsync(`pkill -9 -x "${proc}" 2>/dev/null`);
-		} catch {
+		} catch (_error: unknown) {
 			// Process not found
 		}
 	}

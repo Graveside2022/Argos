@@ -779,8 +779,15 @@
 													totalCycles: 0,
 													progress: 0
 												});
-											} catch {
-												// Emergency stop failed
+											} catch (error: unknown) {
+												const msg =
+													error instanceof Error
+														? error.message
+														: String(error);
+												console.error(
+													'[HackRF] Emergency stop failed:',
+													msg
+												);
 												statusMessage = 'Emergency stop failed';
 											}
 										}}

@@ -117,7 +117,7 @@
 			locationName = city && country ? `${city}, ${country}` : city || country || '';
 			lastGeocodeLat = lat;
 			lastGeocodeLon = lon;
-		} catch {
+		} catch (_error: unknown) {
 			// Silently fail
 		}
 	}
@@ -181,7 +181,7 @@
 				sdrState = 'offline';
 				sdrInfo = {};
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Silently fail
 		}
 	}
@@ -229,7 +229,7 @@
 					gpsdVersion: details.gps.gpsdVersion || undefined
 				};
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Silently fail
 		}
 	}
@@ -268,7 +268,7 @@
 			};
 			lastWeatherLat = lat;
 			lastWeatherLon = lon;
-		} catch {
+		} catch (_error: unknown) {
 			// Silently fail
 		}
 	}

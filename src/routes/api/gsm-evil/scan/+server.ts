@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				requestedFreq = parseFloat(body.frequency);
 				console.log(`Requested frequency: ${requestedFreq} MHz`);
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// No body or invalid JSON, use defaults
 		}
 
@@ -151,7 +151,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						const tcpdumpCommand = `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729"`;
 						const { stdout: packetCount } = await hostExec(tcpdumpCommand);
 						frameCount = parseInt(packetCount.trim()) || 0;
-					} catch {
+					} catch (_error: unknown) {
 						frameCount = 0;
 						console.log(`Both log analysis and tcpdump failed for ${freq} MHz`);
 					}
@@ -203,7 +203,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							channelType = 'SDCCH';
 							controlChannel = false;
 						}
-					} catch {
+					} catch (_error: unknown) {
 						// Fallback to frame count heuristic if log parsing fails
 						channelType = frameCount > 10 ? 'BCCH/CCCH' : 'SDCCH';
 						controlChannel = frameCount > 10;
@@ -255,7 +255,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (pid && pid !== '0') {
 					try {
 						await hostExec(`sudo kill ${pid} 2>/dev/null`);
-					} catch {
+					} catch (_error: unknown) {
 						console.log(`Warning: Failed to clean up process ${pid}`);
 						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(() => {});
 					}

@@ -49,7 +49,7 @@ export class SignalInterpolator {
 		if (typeof Worker !== 'undefined') {
 			try {
 				this.worker = new Worker('/workers/interpolationWorker.js');
-			} catch {
+			} catch (_error: unknown) {
 				console.warn('Interpolation worker not available, using main thread');
 			}
 		}

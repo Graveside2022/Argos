@@ -16,7 +16,7 @@ function isDocker(): boolean {
 	try {
 		execSync('test -f /.dockerenv', { stdio: 'ignore' });
 		return true;
-	} catch {
+	} catch (_error: unknown) {
 		return false;
 	}
 }
@@ -82,7 +82,7 @@ class WifiteProcessManager extends EventEmitter {
 					console.log(
 						'[wifite] Kismet detected via process check (not tracked by resource manager)'
 					);
-			} catch {
+			} catch (_error: unknown) {
 				// pgrep not found or no match — assume not running
 			}
 		}
@@ -111,7 +111,7 @@ class WifiteProcessManager extends EventEmitter {
 				} else {
 					console.log('[wifite] Kismet process confirmed dead');
 				}
-			} catch {
+			} catch (_error: unknown) {
 				// Continue even if stop fails
 			}
 
@@ -122,7 +122,7 @@ class WifiteProcessManager extends EventEmitter {
 			try {
 				// airmon-ng does driver-specific cleanup (preferred)
 				await execAsync(hostExec('airmon-ng stop wlan1mon 2>/dev/null')).catch(() => {});
-			} catch {
+			} catch (_error: unknown) {
 				// Fallback: iw is available in the container with host network namespace
 				await execAsync('iw dev wlan1mon del 2>/dev/null').catch(() => {});
 			}
@@ -135,7 +135,7 @@ class WifiteProcessManager extends EventEmitter {
 					() => ({ stdout: 'unavailable' })
 				);
 				console.log(`[wifite] Interface state after cleanup:\n${ifState}`);
-			} catch {
+			} catch (_error: unknown) {
 				/* ignore */
 			}
 
@@ -166,7 +166,7 @@ class WifiteProcessManager extends EventEmitter {
 					() => ({ stdout: 'unavailable' })
 				);
 				console.log(`[wifite] Pre-flight interface state:\n${preFlight}`);
-			} catch {
+			} catch (_error: unknown) {
 				/* ignore */
 			}
 
@@ -367,7 +367,7 @@ class WifiteProcessManager extends EventEmitter {
 					await execAsync(kismetCmd).catch(() => {});
 				}
 				console.log('[wifite] Kismet started via direct command');
-			} catch {
+			} catch (_error: unknown) {
 				console.error('[wifite] Failed to restart Kismet');
 			}
 		}

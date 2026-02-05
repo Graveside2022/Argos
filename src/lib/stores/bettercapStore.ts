@@ -37,7 +37,7 @@ async function fetchStatus(): Promise<void> {
 			const data = await response.json();
 			bettercapState.update((s) => ({ ...s, running: data.running }));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -53,7 +53,7 @@ async function fetchDevices(): Promise<void> {
 				bleDevices: data.bleDevices || []
 			}));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -106,7 +106,7 @@ export async function stopRecon(): Promise<{ success: boolean }> {
 			bettercapState.update((s) => ({ ...s, running: false, mode: null }));
 		}
 		return result;
-	} catch {
+	} catch (_error: unknown) {
 		return { success: false };
 	}
 }
@@ -124,7 +124,7 @@ export async function sendCommand(cmd: string): Promise<void> {
 			commandHistory: [...s.commandHistory, cmd],
 			commandOutput: [...s.commandOutput, JSON.stringify(result.result ?? result.error ?? '')]
 		}));
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }

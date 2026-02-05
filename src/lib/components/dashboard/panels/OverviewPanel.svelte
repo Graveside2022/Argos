@@ -39,7 +39,7 @@
 		try {
 			const res = await fetch('/api/system/info');
 			if (res.ok) systemInfo = await res.json();
-		} catch {
+		} catch (_error: unknown) {
 			/* silent */
 		}
 	}

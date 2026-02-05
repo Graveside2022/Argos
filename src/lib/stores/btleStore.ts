@@ -53,7 +53,7 @@ async function fetchAll(): Promise<void> {
 			const data = await packetsRes.json();
 			btleState.update((s) => ({ ...s, packets: data.packets.slice(-200) }));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -92,7 +92,7 @@ export async function stopBtle(): Promise<{ success: boolean }> {
 			body: JSON.stringify({ action: 'stop' })
 		});
 		return await res.json();
-	} catch {
+	} catch (_error: unknown) {
 		return { success: false };
 	}
 }

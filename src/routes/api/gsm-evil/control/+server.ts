@@ -53,7 +53,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								HardwareDevice.HACKRF
 							);
 						}
-					} catch {
+					} catch (_error: unknown) {
 						console.warn('[gsm-evil] Process check failed — forcing resource release');
 						await resourceManager.forceRelease(HardwareDevice.HACKRF);
 						acquireResult = await resourceManager.acquire(

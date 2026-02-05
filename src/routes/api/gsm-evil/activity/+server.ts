@@ -31,7 +31,7 @@ export const GET: RequestHandler = async () => {
 				'find /usr/src/gsmevil2/database/imsi.db -mmin -5 2>/dev/null | head -1'
 			).catch(() => ({ stdout: '' }));
 			recentIMSI = dbAge.trim().length > 0;
-		} catch {
+		} catch (_error: unknown) {
 			recentIMSI = false;
 		}
 
@@ -55,8 +55,8 @@ export const GET: RequestHandler = async () => {
 			if (channelTypes) {
 				channelInfo = channelTypes.trim().replace(/\n/g, ', ');
 			}
-		} catch {
-			/* ignore */
+		} catch (_error: unknown) {
+			/* channel type check failed - non-critical */
 		}
 
 		return json({

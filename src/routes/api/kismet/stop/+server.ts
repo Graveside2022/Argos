@@ -21,7 +21,7 @@ export const POST: RequestHandler = async () => {
 			if (pids.length > 0) {
 				console.log('Found Kismet processes to terminate:', pids.join(', '));
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// No Kismet processes found
 			console.log('No Kismet processes found');
 			return json({
@@ -47,7 +47,7 @@ export const POST: RequestHandler = async () => {
 					console.log('Some Kismet processes still running, sending SIGKILL...');
 					await execAsync('pkill -KILL kismet');
 					await new Promise((resolve) => setTimeout(resolve, 1000));
-				} catch {
+				} catch (_error: unknown) {
 					// Good - no processes remaining
 				}
 			} catch (error) {
@@ -58,7 +58,7 @@ export const POST: RequestHandler = async () => {
 		// Also kill any kismon interfaces that might be lingering
 		try {
 			await execAsync('sudo ip link delete kismon0 2>/dev/null || true');
-		} catch {
+		} catch (_error: unknown) {
 			// Ignore errors - interface might not exist
 		}
 
@@ -77,7 +77,7 @@ export const POST: RequestHandler = async () => {
 					status: 500
 				}
 			);
-		} catch {
+		} catch (_error: unknown) {
 			// Good - no Kismet processes found
 			console.log('Verification passed: No Kismet processes found');
 		}

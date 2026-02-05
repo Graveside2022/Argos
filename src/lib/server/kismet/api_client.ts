@@ -88,7 +88,7 @@ export class KismetAPIClient extends EventEmitter {
 	async ping(): Promise<void> {
 		try {
 			await this.makeRequest('GET', '/system/status.json');
-		} catch {
+		} catch (_error: unknown) {
 			throw new Error('Kismet server not responding');
 		}
 	}
@@ -121,7 +121,7 @@ export class KismetAPIClient extends EventEmitter {
 					this.setCache(cacheKey, devices);
 					return devices;
 				}
-			} catch {
+			} catch (_error: unknown) {
 				logWarn('Failed to get recent devices, trying summary endpoint');
 			}
 
@@ -134,7 +134,7 @@ export class KismetAPIClient extends EventEmitter {
 					this.setCache(cacheKey, devices);
 					return devices;
 				}
-			} catch {
+			} catch (_error: unknown) {
 				logWarn('Failed to get device summary');
 			}
 
@@ -147,7 +147,7 @@ export class KismetAPIClient extends EventEmitter {
 					this.setCache(cacheKey, devices);
 					return devices;
 				}
-			} catch {
+			} catch (_error: unknown) {
 				logWarn('Failed to get all devices');
 			}
 
@@ -281,7 +281,7 @@ export class KismetAPIClient extends EventEmitter {
 				this.emit('stream_error', error);
 				this.handleConnectionLoss();
 			};
-		} catch {
+		} catch (_error: unknown) {
 			logWarn('Failed to setup event streaming, using polling instead');
 			this.setupPolling();
 		}

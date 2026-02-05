@@ -78,7 +78,7 @@
 				},
 				configurable: true
 			});
-		} catch {
+		} catch (_error: unknown) {
 			// Property already defined, skip
 			console.warn('Location.href already defined, navigation protection may be limited');
 		}
@@ -224,7 +224,7 @@
 					if (errorData.debug) {
 						console.error('Debug info:', errorData.debug);
 					}
-				} catch {
+				} catch (_error: unknown) {
 					errorText = await response.text();
 				}
 				throw new Error(`Failed to start Kismet: ${errorText}`);
@@ -273,7 +273,7 @@
 					if (errorData.details) {
 						errorText += '\n' + errorData.details;
 					}
-				} catch {
+				} catch (_error: unknown) {
 					errorText = await response.text();
 				}
 				throw new Error(`Failed to stop Kismet: ${errorText}`);

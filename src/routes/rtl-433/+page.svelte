@@ -209,7 +209,7 @@
 							} else if (data.type === 'signal') {
 								rtl433Store.addCapturedSignal(data.signal);
 							}
-						} catch {
+						} catch (_error: unknown) {
 							// Regular console output
 							rtl433Store.addConsoleOutput(line);
 						}

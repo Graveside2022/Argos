@@ -379,7 +379,7 @@ export class KismetController extends EventEmitter {
 							this.kismetProcess = null;
 							return;
 						}
-					} catch {
+					} catch (_error: unknown) {
 						logWarn('Could not verify process identity, proceeding with caution');
 					}
 				}
@@ -510,7 +510,7 @@ export class KismetController extends EventEmitter {
 				await this.apiClient.ping();
 				logInfo('Kismet server ready for connections');
 				return;
-			} catch {
+			} catch (_error: unknown) {
 				logDebug(`Waiting for Kismet... (${i + 1}/${maxAttempts})`);
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
@@ -801,7 +801,7 @@ export class KismetController extends EventEmitter {
 				rss: parseInt(parts[1]) * 1024, // Convert KB to bytes
 				cpu: parseFloat(parts[2])
 			};
-		} catch {
+		} catch (_error: unknown) {
 			return { pid, rss: 0, cpu: 0 };
 		}
 	}
