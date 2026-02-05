@@ -8,6 +8,7 @@
 		canOpen?: boolean;
 		showControls?: boolean;
 		externalUrl?: string | null;
+		installed?: boolean;
 		onstart?: () => void;
 		onstop?: () => void;
 		onopen?: () => void;
@@ -22,6 +23,7 @@
 		canOpen = true,
 		showControls = true,
 		externalUrl = null,
+		installed = true,
 		onstart,
 		onstop,
 		onopen
@@ -40,7 +42,7 @@
 	);
 </script>
 
-<div class="tool-card" class:running={isRunning}>
+<div class="tool-card" class:running={isRunning} class:not-installed={!installed}>
 	<div class="tool-header">
 		<div class="tool-icon">
 			{@html icon}
@@ -48,15 +50,19 @@
 		<div class="tool-info">
 			<span class="tool-name">{name}</span>
 			<div class="tool-status-row">
-				<span
-					class="tool-status-dot"
-					class:dot-active={isRunning}
-					class:dot-transition={isTransitioning}
-					class:dot-stopped={status === 'stopped'}
-				></span>
-				<span class="tool-status-label">{statusLabel}</span>
-				{#if count !== null && isRunning}
-					<span class="tool-count">{count}</span>
+				{#if installed}
+					<span
+						class="tool-status-dot"
+						class:dot-active={isRunning}
+						class:dot-transition={isTransitioning}
+						class:dot-stopped={status === 'stopped'}
+					></span>
+					<span class="tool-status-label">{statusLabel}</span>
+					{#if count !== null && isRunning}
+						<span class="tool-count">{count}</span>
+					{/if}
+				{:else}
+					<span class="installation-badge">Not Installed</span>
 				{/if}
 			</div>
 		</div>
@@ -66,35 +72,37 @@
 		<p class="tool-description">{description}</p>
 	{/if}
 
-	<div class="tool-actions">
-		{#if canOpen}
-			{#if externalUrl}
-				<a
-					class="btn btn-open btn-sm"
-					href={externalUrl}
-					target="_blank"
-					rel="noopener noreferrer">Open</a
-				>
-			{:else}
-				<button class="btn btn-open btn-sm" onclick={() => onopen?.()}>Open</button>
+	{#if installed}
+		<div class="tool-actions">
+			{#if canOpen}
+				{#if externalUrl}
+					<a
+						class="btn btn-open btn-sm"
+						href={externalUrl}
+						target="_blank"
+						rel="noopener noreferrer">Open</a
+					>
+				{:else}
+					<button class="btn btn-open btn-sm" onclick={() => onopen?.()}>Open</button>
+				{/if}
 			{/if}
-		{/if}
-		{#if showControls}
-			{#if isRunning}
-				<button
-					class="btn btn-danger btn-sm"
-					disabled={isTransitioning}
-					onclick={() => onstop?.()}>Stop</button
-				>
-			{:else}
-				<button
-					class="btn btn-start btn-sm"
-					disabled={isTransitioning}
-					onclick={() => onstart?.()}>Start</button
-				>
+			{#if showControls}
+				{#if isRunning}
+					<button
+						class="btn btn-danger btn-sm"
+						disabled={isTransitioning}
+						onclick={() => onstop?.()}>Stop</button
+					>
+				{:else}
+					<button
+						class="btn btn-start btn-sm"
+						disabled={isTransitioning}
+						onclick={() => onstart?.()}>Start</button
+					>
+				{/if}
 			{/if}
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -111,6 +119,14 @@
 
 	.tool-card.running {
 		border-color: var(--palantir-border-default);
+	}
+
+	.tool-card.not-installed {
+		opacity: 0.6;
+	}
+
+	.tool-card.not-installed .tool-name {
+		color: var(--palantir-text-tertiary);
 	}
 
 	.tool-header {
@@ -190,6 +206,14 @@
 		color: var(--palantir-text-tertiary);
 		line-height: 1.4;
 		margin: 0;
+	}
+
+	.installation-badge {
+		font-size: var(--text-xs);
+		color: var(--palantir-text-tertiary);
+		padding: 2px var(--space-2);
+		border: 1px dashed var(--palantir-border-subtle);
+		border-radius: var(--radius-sm);
 	}
 
 	.tool-actions {
