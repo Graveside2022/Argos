@@ -1,16 +1,17 @@
 <script lang="ts">
-	export let frequencies: Array<{ id: number; value: number | string }> = [];
-	export let onRemoveFrequency: (id: number) => void;
+	interface Props {
+		frequencies?: Array<{ id: number; value: number | string }>;
+		onRemoveFrequency: (id: number) => void;
+	}
 
-	// Reactive statements for validation
-	$: hasValidFrequencies = frequencies.some((f) => f.value);
-	$: frequencyCount = frequencies.length;
+	let { frequencies = [], onRemoveFrequency }: Props = $props();
+
+	let hasValidFrequencies = $derived(frequencies.some((f) => f.value));
+	let frequencyCount = $derived(frequencies.length);
 </script>
 
 <div class="frequency-list">
-	<div
-		class="block text-sm font-medium text-text-muted mb-3 uppercase tracking-wide"
-	>
+	<div class="block text-sm font-medium text-text-muted mb-3 uppercase tracking-wide">
 		Frequencies
 	</div>
 	<div class="space-y-3 mb-6 max-h-[300px] overflow-y-auto">
@@ -23,9 +24,7 @@
 					>{freq.id}</span
 				>
 				<div class="flex-1 relative">
-					<label class="sr-only" for="freq-{freq.id}"
-						>Frequency {freq.id} in MHz</label
-					>
+					<label class="sr-only" for="freq-{freq.id}">Frequency {freq.id} in MHz</label>
 					<input
 						id="freq-{freq.id}"
 						type="number"
@@ -40,15 +39,11 @@
 				</div>
 				{#if frequencyCount > 1}
 					<button
-						on:click={() => onRemoveFrequency(freq.id)}
+						onclick={() => onRemoveFrequency(freq.id)}
 						class="remove-frequency-btn p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
 						aria-label="Remove frequency {freq.id}"
 					>
-						<svg
-							class="w-4 h-4"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
+						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 							<path
 								fill-rule="evenodd"
 								d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -64,7 +59,11 @@
 	{#if frequencies.length > 0 && !hasValidFrequencies}
 		<div class="mt-2 text-sm text-amber-400 flex items-center gap-2">
 			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-				<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+				<path
+					fill-rule="evenodd"
+					d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+					clip-rule="evenodd"
+				/>
 			</svg>
 			Please enter at least one frequency
 		</div>

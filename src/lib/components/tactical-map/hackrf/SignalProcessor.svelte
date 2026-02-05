@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { HackRFService } from '$lib/services/tactical-map/hackrfService';
 	import { MapService } from '$lib/services/tactical-map/mapService';
 	import {
@@ -12,8 +12,12 @@
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import type { SimplifiedSignal } from '$lib/stores/tactical-map/hackrfStore';
 
-	export let updateRate: number = 2000; // Update every 2 seconds
-	export let tolerance: number = 5; // MHz tolerance for signal matching
+	interface Props {
+		updateRate?: number;
+		tolerance?: number;
+	}
+
+	let { updateRate = 2000, tolerance = 5 }: Props = $props();
 
 	const hackrfService = new HackRFService();
 	const _mapService = new MapService();
@@ -21,9 +25,9 @@
 	let processingInterval: NodeJS.Timeout | null = null;
 	let L: any = null; // Leaflet library
 
-	$: hackrfState = $hackrfStore;
-	$: mapState = $mapStore;
-	$: gpsState = $gpsStore;
+	let hackrfState = $derived($hackrfStore);
+	let mapState = $derived($mapStore);
+	let gpsState = $derived($gpsStore);
 
 	onMount(async () => {
 		// Import Leaflet dynamically
@@ -37,13 +41,13 @@
 				processSignals();
 			}
 		}, updateRate);
-	});
 
-	onDestroy(() => {
-		if (processingInterval) {
-			clearInterval(processingInterval);
-			processingInterval = null;
-		}
+		return () => {
+			if (processingInterval) {
+				clearInterval(processingInterval);
+				processingInterval = null;
+			}
+		};
 	});
 
 	function processSignals() {

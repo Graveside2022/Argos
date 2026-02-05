@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		bettercapState,
 		startBettercapPolling,
@@ -11,35 +11,36 @@
 	import { hardwareStatus } from '$lib/stores/hardwareStore';
 	import HardwareConflictModal from '$lib/components/hardware/HardwareConflictModal.svelte';
 
-	let state = {
+	let state: any = $state({
 		mode: null as string | null,
 		running: false,
 		wifiAPs: [] as any[],
 		bleDevices: [] as any[],
 		commandHistory: [] as string[],
 		commandOutput: [] as string[]
-	};
-	let selectedMode: 'wifi-recon' | 'ble-recon' | 'net-recon' = 'wifi-recon';
-	let commandInput = '';
-	let loading = false;
-	let showConflict = false;
-	let conflictOwner = '';
-	let alfaAvailable = true;
-
-	const unsubState = bettercapState.subscribe((s) => {
-		state = s;
 	});
-	const unsubHw = hardwareStatus.subscribe((s) => {
-		alfaAvailable = s.alfa.available;
-	});
+	let selectedMode: 'wifi-recon' | 'ble-recon' | 'net-recon' = $state('wifi-recon');
+	let commandInput = $state('');
+	let loading = $state(false);
+	let showConflict = $state(false);
+	let conflictOwner = $state('');
+	let alfaAvailable = $state(true);
 
 	onMount(() => {
+		const unsubState = bettercapState.subscribe((s) => {
+			state = s;
+		});
+		const unsubHw = hardwareStatus.subscribe((s) => {
+			alfaAvailable = s.alfa.available;
+		});
+
 		startBettercapPolling();
-	});
-	onDestroy(() => {
-		stopBettercapPolling();
-		unsubState();
-		unsubHw();
+
+		return () => {
+			stopBettercapPolling();
+			unsubState();
+			unsubHw();
+		};
 	});
 
 	async function handleStart() {
@@ -77,7 +78,7 @@
 		<div class="flex gap-2">
 			{#each [{ value: 'wifi-recon', label: 'WiFi', color: 'cyan' }, { value: 'ble-recon', label: 'BLE', color: 'blue' }, { value: 'net-recon', label: 'Network', color: 'green' }] as mode}
 				<button
-					on:click={() => (selectedMode = mode.value as any)}
+					onclick={() => (selectedMode = mode.value as any)}
 					class="px-4 py-2 rounded text-sm font-medium transition-colors
 						{selectedMode === mode.value
 						? `bg-${mode.color}-600 text-white`
@@ -90,7 +91,7 @@
 
 		{#if state.running}
 			<button
-				on:click={handleStop}
+				onclick={handleStop}
 				disabled={loading}
 				class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white rounded transition-colors"
 			>
@@ -98,7 +99,7 @@
 			</button>
 		{:else}
 			<button
-				on:click={handleStart}
+				onclick={handleStart}
 				disabled={loading}
 				class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded transition-colors"
 			>
@@ -214,13 +215,13 @@
 			<input
 				type="text"
 				bind:value={commandInput}
-				on:keydown={(e) => e.key === 'Enter' && handleCommand()}
+				onkeydown={(e) => e.key === 'Enter' && handleCommand()}
 				placeholder="Enter bettercap command..."
 				class="flex-1 bg-gray-900 text-white px-4 py-2 text-sm font-mono outline-none"
 				disabled={!state.running}
 			/>
 			<button
-				on:click={handleCommand}
+				onclick={handleCommand}
 				disabled={!state.running || !commandInput.trim()}
 				class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 text-white text-sm transition-colors"
 			>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { hackrfService } from '$lib/services/hackrf';
 	import type { SpectrumData } from '$lib/services/hackrf';
 
@@ -337,15 +337,15 @@
 			// Start animation loop
 			animate();
 		}
-	});
 
-	onDestroy(() => {
-		if (animationFrame) {
-			cancelAnimationFrame(animationFrame);
-		}
-		if (unsubscribe) {
-			unsubscribe();
-		}
+		return () => {
+			if (animationFrame) {
+				cancelAnimationFrame(animationFrame);
+			}
+			if (unsubscribe) {
+				unsubscribe();
+			}
+		};
 	});
 </script>
 
@@ -354,7 +354,7 @@
 	<div class="flex items-center justify-between mb-6">
 		<h2 class="font-heading text-2xl font-bold">Spectrum Analysis</h2>
 		<div class="flex items-center space-x-4">
-			<button class="saasfly-btn saasfly-btn-sm saasfly-btn-secondary" on:click={resetView}>
+			<button class="saasfly-btn saasfly-btn-sm saasfly-btn-secondary" onclick={resetView}>
 				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 					<path
 						fill-rule="evenodd"

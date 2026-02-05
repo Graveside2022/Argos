@@ -1,52 +1,57 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { MapService } from '$lib/services/tactical-map/mapService';
 	import { mapStore } from '$lib/stores/tactical-map/mapStore';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
-	export let onUserMarkerClick: (() => void) | undefined = undefined;
+	interface Props {
+		onUserMarkerClick?: () => void;
+	}
+
+	let { onUserMarkerClick }: Props = $props();
 
 	const mapService = new MapService();
-	let unsubscribeGPS: (() => void) | undefined;
-	let unsubscribeMap: (() => void) | undefined;
-	
+
 	let currentPosition: { lat: number; lon: number } | null = null;
 	let hasMarker = false;
 
 	onMount(() => {
 		// Subscribe to GPS position changes
-		unsubscribeGPS = gpsStore.subscribe(async (gpsState) => {
+		const unsubscribeGPS = gpsStore.subscribe(async (gpsState) => {
 			if (gpsState.status.hasGPSFix) {
 				const newPosition = { lat: gpsState.position.lat, lon: gpsState.position.lon };
-				
+
 				// Create or update user marker
 				if (!hasMarker) {
 					await createUserMarker(newPosition);
-				} else if (currentPosition && 
-						(currentPosition.lat !== newPosition.lat || currentPosition.lon !== newPosition.lon)) {
+				} else if (
+					currentPosition &&
+					(currentPosition.lat !== newPosition.lat ||
+						currentPosition.lon !== newPosition.lon)
+				) {
 					updateUserMarker(newPosition);
 				}
-				
+
 				// Create or update accuracy circle if accuracy data is available
 				if (gpsState.status.accuracy > 0) {
 					await createAccuracyCircle(newPosition, gpsState.status.accuracy);
 				}
-				
+
 				currentPosition = newPosition;
 			}
 		});
 
 		// Subscribe to map initialization
-		unsubscribeMap = mapStore.subscribe((mapState) => {
+		const unsubscribeMap = mapStore.subscribe((mapState) => {
 			if (mapState.isInitialized && currentPosition && !hasMarker) {
 				void createUserMarker(currentPosition);
 			}
 		});
-	});
 
-	onDestroy(() => {
-		if (unsubscribeGPS) unsubscribeGPS();
-		if (unsubscribeMap) unsubscribeMap();
+		return () => {
+			unsubscribeGPS();
+			unsubscribeMap();
+		};
 	});
 
 	async function createUserMarker(position: { lat: number; lon: number }) {

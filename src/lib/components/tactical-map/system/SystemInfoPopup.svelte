@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
-	import { mapStore } from '$lib/stores/tactical-map/mapStore';
 
 	// Define SystemInfo interface to match the API response
 	interface SystemInfo {
@@ -34,10 +33,13 @@
 		};
 	}
 
-	export let userMarker: any = null; // Leaflet marker for user position
+	interface Props {
+		userMarker?: any;
+	}
 
-	$: gpsState = $gpsStore;
-	$: _mapState = $mapStore;
+	let { userMarker = null }: Props = $props();
+
+	let gpsState = $derived($gpsStore);
 
 	let systemInfo: SystemInfo | null = null;
 

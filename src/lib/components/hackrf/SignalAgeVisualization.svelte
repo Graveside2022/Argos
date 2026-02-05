@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { timeWindowFilter, getAgeColor } from '$lib/services/hackrf/timeWindowFilter';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	const { signals: _signals, stats } = timeWindowFilter;
 
@@ -241,15 +241,15 @@
 		if (typeof window !== 'undefined') {
 			window.addEventListener('resize', resizeCanvas);
 		}
-	});
 
-	onDestroy(() => {
-		if (animationFrame) {
-			cancelAnimationFrame(animationFrame);
-		}
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('resize', resizeCanvas);
-		}
+		return () => {
+			if (animationFrame) {
+				cancelAnimationFrame(animationFrame);
+			}
+			if (typeof window !== 'undefined') {
+				window.removeEventListener('resize', resizeCanvas);
+			}
+		};
 	});
 </script>
 

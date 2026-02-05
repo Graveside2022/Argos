@@ -2,7 +2,11 @@
 	import { HackRFService } from '$lib/services/tactical-map/hackrfService';
 	import { hackrfStore } from '$lib/stores/tactical-map/hackrfStore';
 
-	export let onFrequencySelected: ((frequency: number) => void) | undefined = undefined;
+	interface Props {
+		onFrequencySelected?: (frequency: number) => void;
+	}
+
+	let { onFrequencySelected }: Props = $props();
 
 	const hackrfService = new HackRFService();
 
@@ -26,7 +30,7 @@
 		{ name: 'Cellular', frequency: 850, description: 'Cellular Band' }
 	];
 
-	$: hackrfState = $hackrfStore;
+	let hackrfState = $derived($hackrfStore);
 
 	function selectFrequency(frequency: number) {
 		if (onFrequencySelected) {
@@ -63,7 +67,7 @@
 					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
-						on:click={() => selectFrequency(preset.frequency)}
+						onclick={() => selectFrequency(preset.frequency)}
 						title={preset.description}
 					>
 						<span class="preset-name">{preset.name}</span>
@@ -81,7 +85,7 @@
 					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
-						on:click={() => selectFrequency(preset.frequency)}
+						onclick={() => selectFrequency(preset.frequency)}
 						title={preset.description}
 					>
 						<span class="preset-name">{preset.name}</span>
@@ -99,7 +103,7 @@
 					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
-						on:click={() => selectFrequency(preset.frequency)}
+						onclick={() => selectFrequency(preset.frequency)}
 						title={preset.description}
 					>
 						<span class="preset-name">{preset.name}</span>
@@ -117,7 +121,7 @@
 					<button
 						class="frequency-preset"
 						class:active={hackrfState.targetFrequency === preset.frequency}
-						on:click={() => selectFrequency(preset.frequency)}
+						onclick={() => selectFrequency(preset.frequency)}
 						title={preset.description}
 					>
 						<span class="preset-name">{preset.name}</span>
@@ -134,21 +138,21 @@
 		<div class="action-buttons">
 			<button
 				class="quick-search-btn wifi"
-				on:click={() => quickSearch(2437)}
+				onclick={() => quickSearch(2437)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
 			>
 				🔍 Search WiFi
 			</button>
 			<button
 				class="quick-search-btn bluetooth"
-				on:click={() => quickSearch(2440)}
+				onclick={() => quickSearch(2440)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
 			>
 				🔍 Search Bluetooth
 			</button>
 			<button
 				class="quick-search-btn ism"
-				on:click={() => quickSearch(433.92)}
+				onclick={() => quickSearch(433.92)}
 				disabled={hackrfState.connectionStatus === 'Disconnected'}
 			>
 				🔍 Search 433 MHz

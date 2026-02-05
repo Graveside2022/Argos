@@ -5,8 +5,8 @@
 	import { displayActions } from '$lib/services/hackrfsweep/displayService';
 	import { connectionStatus, sweepStatus, cycleStatus } from '$lib/stores/hackrf';
 
-	$: controlState = $controlStore.sweepControl;
-	$: frequencies = $frequencyStore.frequencies;
+	let controlState = $derived($controlStore.sweepControl);
+	let frequencies = $derived($frequencyStore.frequencies);
 
 	async function startSweep() {
 		if (frequencies.length === 0 || !frequencies.some((f) => f.value)) {
@@ -119,7 +119,7 @@
 			id="cycleTimeInput"
 			type="number"
 			value={controlState.cycleTime}
-			on:input={(e) => controlActions.setCycleTime(Number(e.currentTarget.value))}
+			oninput={(e) => controlActions.setCycleTime(Number(e.currentTarget.value))}
 			min="1"
 			max="30"
 			placeholder="1-30"
@@ -129,7 +129,7 @@
 
 	<div class="grid grid-cols-1 gap-3">
 		<button
-			on:click={startSweep}
+			onclick={startSweep}
 			disabled={!controlState.canStart || controlState.isLoading}
 			class="saasfly-btn saasfly-btn-start w-full"
 		>
@@ -143,7 +143,7 @@
 		</button>
 
 		<button
-			on:click={stopSweep}
+			onclick={stopSweep}
 			disabled={!controlState.canStop || controlState.isLoading}
 			class="saasfly-btn saasfly-btn-stop w-full"
 		>
@@ -158,7 +158,7 @@
 
 		{#if controlState.canEmergencyStop}
 			<button
-				on:click={emergencyStop}
+				onclick={emergencyStop}
 				class="saasfly-btn w-full mt-2 bg-red-600/20 border-red-500/40 hover:bg-red-600/30 hover:border-border-hover hover:border-opacity-50 text-red-400"
 			>
 				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -202,7 +202,7 @@
 				</div>
 				{#if $connectionStatus.error.includes('please refresh') || $connectionStatus.error.includes('stale')}
 					<button
-						on:click={reconnectToHackRF}
+						onclick={reconnectToHackRF}
 						class="px-3 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 rounded transition-colors"
 					>
 						Reconnect

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import type { FlightPoint, SignalCapture } from '$lib/stores/drone';
 	// import type { SignalMarker } from '$lib/stores/map/signals';
 	import { getSignalColor } from '$lib/utils/hackrf/signalAnalysis';
@@ -28,21 +28,34 @@
 		};
 	}
 
-	export let map: LeafletMap | null;
-	export let flightPath: FlightPoint[] = [];
-	export let signalCaptures: SignalCapture[] = [];
-	export let showAltitude = true;
-	export let showSignalStrength = true;
-	export let show3D = false;
+	interface Props {
+		map: LeafletMap | null;
+		flightPath?: FlightPoint[];
+		signalCaptures?: SignalCapture[];
+		showAltitude?: boolean;
+		showSignalStrength?: boolean;
+		show3D?: boolean;
+	}
+
+	let {
+		map,
+		flightPath = [],
+		signalCaptures = [],
+		showAltitude = true,
+		showSignalStrength = true,
+		show3D = false
+	}: Props = $props();
 
 	let pathLayer: LeafletLayer | null = null;
 	let altitudeLayer: LeafletLayer | null = null;
 	let signalLayer: LeafletLayer | null = null;
 	let is3DEnabled = false;
 
-	$: if (map && flightPath.length > 0) {
-		updateVisualization();
-	}
+	$effect(() => {
+		if (map && flightPath.length > 0) {
+			updateVisualization();
+		}
+	});
 
 	function updateVisualization() {
 		if (!map) return;
@@ -360,10 +373,12 @@
 		};
 	}
 
-	onDestroy(() => {
-		if (pathLayer && map) map.removeLayer(pathLayer);
-		if (altitudeLayer && map) map.removeLayer(altitudeLayer);
-		if (signalLayer && map) map.removeLayer(signalLayer);
+	onMount(() => {
+		return () => {
+			if (pathLayer && map) map.removeLayer(pathLayer);
+			if (altitudeLayer && map) map.removeLayer(altitudeLayer);
+			if (signalLayer && map) map.removeLayer(signalLayer);
+		};
 	});
 </script>
 

@@ -1,12 +1,19 @@
 <script lang="ts">
-	export let title: string;
-	export let status: string = '';
-	export let onBack: () => void;
+	import type { Snippet } from 'svelte';
+
+	interface Props {
+		title: string;
+		status?: string;
+		onBack: () => void;
+		children: Snippet;
+	}
+
+	let { title, status = '', onBack, children }: Props = $props();
 </script>
 
 <div class="tool-view">
 	<div class="tool-view-header">
-		<button class="btn btn-ghost btn-sm" on:click={onBack}>
+		<button class="btn btn-ghost btn-sm" onclick={onBack}>
 			<svg
 				width="16"
 				height="16"
@@ -27,7 +34,7 @@
 		{/if}
 	</div>
 	<div class="tool-view-content">
-		<slot />
+		{@render children()}
 	</div>
 </div>
 

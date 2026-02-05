@@ -1,14 +1,10 @@
 <script lang="ts">
-	import { wigleStore } from '$lib/stores/wigletotak/wigleStore';
 	import { wigleService } from '$lib/services/wigletotak/wigleService';
 	import { logInfo, logError } from '$lib/utils/logger';
 
-	// Reactive state from store
-	$: _filterSettings = $wigleStore.filterSettings;
-
 	// Local form state
-	let whitelistSSID = '';
-	let whitelistMAC = '';
+	let whitelistSSID = $state('');
+	let whitelistMAC = $state('');
 
 	// Add to whitelist
 	async function addToWhitelist() {
@@ -54,7 +50,7 @@
 			placeholder="00:00:00:00:00:00"
 		/>
 	</div>
-	<button class="btn btn-primary" on:click={() => void addToWhitelist()}>
+	<button class="btn btn-primary" onclick={() => void addToWhitelist()}>
 		Add to Whitelist
 	</button>
 </div>

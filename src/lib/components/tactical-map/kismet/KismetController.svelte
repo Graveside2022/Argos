@@ -1,13 +1,17 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { KismetService } from '$lib/services/tactical-map/kismetService';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismetStore';
 
-	export let whitelistMAC: string = '';
+	interface Props {
+		whitelistMAC?: string;
+	}
+
+	let { whitelistMAC = '' }: Props = $props();
 
 	const kismetService = new KismetService();
 
-	$: kismetState = $kismetStore;
+	let kismetState = $derived($kismetStore);
 
 	// Handle whitelist MAC input
 	function handleWhitelistChange(event: Event) {
@@ -29,10 +33,9 @@
 	onMount(() => {
 		kismetService.startPeriodicStatusCheck();
 		kismetService.startPeriodicDeviceFetch();
-	});
-
-	onDestroy(() => {
-		kismetService.stopPeriodicChecks();
+		return () => {
+			kismetService.stopPeriodicChecks();
+		};
 	});
 </script>
 
@@ -60,7 +63,7 @@
 			id="whitelist-input"
 			type="text"
 			bind:value={whitelistMAC}
-			on:input={handleWhitelistChange}
+			oninput={handleWhitelistChange}
 			placeholder="AA:BB:CC:DD:EE:FF"
 			class="whitelist-input"
 		/>
@@ -72,7 +75,7 @@
 			class="service-button"
 			class:start={kismetState.status === 'stopped'}
 			class:stop={kismetState.status === 'running'}
-			on:click={toggleKismet}
+			onclick={toggleKismet}
 			disabled={kismetState.status === 'starting' || kismetState.status === 'stopping'}
 		>
 			{#if kismetState.status === 'stopped'}
@@ -88,7 +91,7 @@
 
 		<button
 			class="clear-button"
-			on:click={clearDevices}
+			onclick={clearDevices}
 			disabled={kismetState.deviceCount === 0}
 		>
 			🗑️ Clear Devices

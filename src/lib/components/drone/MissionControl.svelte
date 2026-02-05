@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import {
 		activeMission,
 		droneState,
@@ -58,9 +57,16 @@
 		};
 	}
 
-	export let map: LeafletMap;
+	interface Props {
+		map: LeafletMap;
+		onMissionStarted?: (mission: DroneMission) => void;
+		onMissionPaused?: () => void;
+		onMissionResumed?: () => void;
+		onMissionCompleted?: () => void;
+	}
 
-	const dispatch = createEventDispatcher();
+	let { map, onMissionStarted, onMissionPaused, onMissionResumed, onMissionCompleted }: Props =
+		$props();
 
 	function getLeafletLibrary(): LeafletLibrary {
 		const windowWithL = window as unknown as { L?: LeafletLibrary };
@@ -70,18 +76,18 @@
 		return windowWithL.L;
 	}
 
-	let showMissionPlanner = false;
-	let missionName = '';
-	let missionType: DroneMission['type'] = 'survey';
-	let defaultAltitude = 50;
-	let scanInterval = 1;
-	let signalThreshold = -90;
-	let plannedWaypoints: Waypoint[] = [];
-	let drawingMode = false;
-	let selectedWaypoint: Waypoint | null = null;
+	let showMissionPlanner = $state(false);
+	let missionName = $state('');
+	let missionType: DroneMission['type'] = $state('survey');
+	let defaultAltitude = $state(50);
+	let scanInterval = $state(1);
+	let signalThreshold = $state(-90);
+	let plannedWaypoints: Waypoint[] = $state([]);
+	let drawingMode = $state(false);
+	let selectedWaypoint: Waypoint | null = $state(null);
 
-	$: missionActive = $activeMission?.status === 'active';
-	$: missionPaused = $activeMission?.status === 'paused';
+	let missionActive = $derived($activeMission?.status === 'active');
+	let missionPaused = $derived($activeMission?.status === 'paused');
 
 	function toggleMissionPlanner() {
 		showMissionPlanner = !showMissionPlanner;
@@ -252,25 +258,25 @@
 		clearWaypoints();
 		missionName = '';
 
-		dispatch('missionStarted', mission);
+		onMissionStarted?.(mission);
 	}
 
 	function handlePauseMission() {
 		void pauseMission();
-		dispatch('missionPaused');
+		onMissionPaused?.();
 	}
 
 	function handleResumeMission() {
 		if ($activeMission) {
 			$activeMission.status = 'active';
 			activeMission.set($activeMission);
-			dispatch('missionResumed');
+			onMissionResumed?.();
 		}
 	}
 
 	function handleStopMission() {
 		void completeMission();
-		dispatch('missionCompleted');
+		onMissionCompleted?.();
 	}
 
 	function formatDuration(ms: number): string {
@@ -335,14 +341,14 @@
 
 			<div class="mission-controls">
 				{#if missionActive}
-					<button class="btn-pause" on:click={handlePauseMission}>
+					<button class="btn-pause" onclick={handlePauseMission}>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 							<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
 						</svg>
 						Pause
 					</button>
 				{:else if missionPaused}
-					<button class="btn-resume" on:click={handleResumeMission}>
+					<button class="btn-resume" onclick={handleResumeMission}>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 							<path d="M8 5v14l11-7z" />
 						</svg>
@@ -350,7 +356,7 @@
 					</button>
 				{/if}
 
-				<button class="btn-stop" on:click={handleStopMission}>
+				<button class="btn-stop" onclick={handleStopMission}>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 						<path d="M6 6h12v12H6z" />
 					</svg>
@@ -360,7 +366,7 @@
 		</div>
 	{:else}
 		<!-- Mission Planner -->
-		<button class="btn-plan-mission" on:click={toggleMissionPlanner}>
+		<button class="btn-plan-mission" onclick={toggleMissionPlanner}>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 				<path d="M14 2l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h8zm4 8h-5V5l5 5z" />
 			</svg>
@@ -373,7 +379,7 @@
 		<div class="mission-planner" transition:slide>
 			<div class="planner-header">
 				<h3>Mission Planner</h3>
-				<button class="btn-close" on:click={toggleMissionPlanner}>×</button>
+				<button class="btn-close" onclick={toggleMissionPlanner}>×</button>
 			</div>
 
 			<div class="planner-content">
@@ -438,7 +444,7 @@
 						<h4>Waypoints ({plannedWaypoints.length})</h4>
 						<button
 							class="btn-clear"
-							on:click={clearWaypoints}
+							onclick={clearWaypoints}
 							disabled={plannedWaypoints.length === 0}
 						>
 							Clear All
@@ -464,10 +470,7 @@
 										Alt: {waypoint.altitude}m
 									</div>
 								</div>
-								<button
-									class="btn-remove"
-									on:click={() => removeWaypoint(waypoint)}
-								>
+								<button class="btn-remove" onclick={() => removeWaypoint(waypoint)}>
 									×
 								</button>
 							</div>
@@ -478,7 +481,7 @@
 				<div class="planner-actions">
 					<button
 						class="btn-start-mission"
-						on:click={createAndStartMission}
+						onclick={createAndStartMission}
 						disabled={!missionName ||
 							plannedWaypoints.length === 0 ||
 							!$droneState.connected}

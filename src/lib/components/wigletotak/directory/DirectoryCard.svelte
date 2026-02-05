@@ -10,19 +10,19 @@
 	let logError: any;
 
 	// Reactive state from store with safe defaults
-	let directorySettings = {
+	let directorySettings: any = $state({
 		wigleDirectory: '/home/pi/kismet_ops',
 		selectedFile: '',
 		wigleFiles: []
-	};
-	let broadcastState = {
+	});
+	let broadcastState = $state({
 		isBroadcasting: false
-	};
+	});
 
 	// Local input bindings
-	let wigleDirectory = directorySettings.wigleDirectory;
-	let selectedFile = directorySettings.selectedFile;
-	let wigleFiles = directorySettings.wigleFiles;
+	let wigleDirectory = $state(directorySettings.wigleDirectory);
+	let selectedFile = $state(directorySettings.selectedFile);
+	let wigleFiles: any[] = $state(directorySettings.wigleFiles);
 
 	// Initialize in browser only
 	onMount(async () => {
@@ -52,11 +52,11 @@
 	});
 
 	// Update local values when store changes
-	$: {
+	$effect(() => {
 		wigleDirectory = directorySettings.wigleDirectory;
 		selectedFile = directorySettings.selectedFile;
 		wigleFiles = directorySettings.wigleFiles;
-	}
+	});
 
 	// List Wigle files in directory
 	async function listWigleFiles() {
@@ -105,7 +105,7 @@
 				bind:value={wigleDirectory}
 				placeholder="/home/pi/kismet_ops"
 			/>
-			<button class="btn btn-secondary" on:click={() => void listWigleFiles()}>
+			<button class="btn btn-secondary" onclick={() => void listWigleFiles()}>
 				List Files
 			</button>
 		</div>
@@ -122,14 +122,14 @@
 		<div class="button-group">
 			<button
 				class="btn btn-success"
-				on:click={() => void startBroadcast()}
+				onclick={() => void startBroadcast()}
 				disabled={broadcastState.isBroadcasting}
 			>
 				Start Broadcast
 			</button>
 			<button
 				class="btn btn-danger"
-				on:click={() => void stopBroadcast()}
+				onclick={() => void stopBroadcast()}
 				disabled={!broadcastState.isBroadcasting}
 			>
 				Stop Broadcast

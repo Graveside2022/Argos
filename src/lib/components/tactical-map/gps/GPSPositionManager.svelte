@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { GPSService } from '$lib/services/tactical-map/gpsService';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
-	export let onGPSFix: ((hasGPSFix: boolean) => void) | undefined = undefined;
+	interface Props {
+		onGPSFix?: (hasGPSFix: boolean) => void;
+	}
+
+	let { onGPSFix }: Props = $props();
 
 	const gpsService = new GPSService();
 	let previousHasFix = false;
 
-	$: {
+	$effect(() => {
 		const { status } = $gpsStore;
 		if (status.hasGPSFix !== previousHasFix) {
 			previousHasFix = status.hasGPSFix;
@@ -16,14 +20,13 @@
 				onGPSFix(status.hasGPSFix);
 			}
 		}
-	}
+	});
 
 	onMount(() => {
 		gpsService.startPositionUpdates();
-	});
-
-	onDestroy(() => {
-		gpsService.stopPositionUpdates();
+		return () => {
+			gpsService.stopPositionUpdates();
+		};
 	});
 </script>
 
