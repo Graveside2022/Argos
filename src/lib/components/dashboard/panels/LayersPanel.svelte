@@ -22,7 +22,7 @@
 			<button
 				class="toggle-switch"
 				class:on={$layerVisibility.deviceDots}
-				on:click={() => toggleLayerVisibility('deviceDots')}
+				onclick={() => toggleLayerVisibility('deviceDots')}
 				role="switch"
 				aria-checked={$layerVisibility.deviceDots}
 			>
@@ -35,7 +35,7 @@
 			<button
 				class="toggle-switch"
 				class:on={$layerVisibility.cellTowers}
-				on:click={() => toggleLayerVisibility('cellTowers')}
+				onclick={() => toggleLayerVisibility('cellTowers')}
 				role="switch"
 				aria-checked={$layerVisibility.cellTowers}
 			>
@@ -48,7 +48,7 @@
 			<button
 				class="toggle-switch"
 				class:on={$layerVisibility.signalMarkers}
-				on:click={() => toggleLayerVisibility('signalMarkers')}
+				onclick={() => toggleLayerVisibility('signalMarkers')}
 				role="switch"
 				aria-checked={$layerVisibility.signalMarkers}
 			>
@@ -61,7 +61,7 @@
 			<button
 				class="toggle-switch"
 				class:on={$layerVisibility.accuracyCircle}
-				on:click={() => toggleLayerVisibility('accuracyCircle')}
+				onclick={() => toggleLayerVisibility('accuracyCircle')}
 				role="switch"
 				aria-checked={$layerVisibility.accuracyCircle}
 			>
@@ -83,7 +83,7 @@
 				<button
 					class="toggle-switch"
 					class:on={$activeBands.has(band.key)}
-					on:click={() => toggleBand(band.key)}
+					onclick={() => toggleBand(band.key)}
 					role="switch"
 					aria-checked={$activeBands.has(band.key)}
 				>

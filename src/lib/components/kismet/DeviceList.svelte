@@ -1,22 +1,18 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 	import type { KismetDevice } from '$lib/types/kismet';
 
-	export let maxItems = 10;
-	export let showEmpty = true;
+	interface Props {
+		maxItems?: number;
+		showEmpty?: boolean;
+	}
 
-	let devices: KismetDevice[] = [];
-	let unsubscribe: () => void;
+	let { maxItems = 10, showEmpty = true }: Props = $props();
 
-	onMount(() => {
-		unsubscribe = kismetStore.subscribe(($store) => {
-			devices = $store.devices.sort((a, b) => b.last_seen - a.last_seen).slice(0, maxItems);
-		});
-	});
-
-	onDestroy(() => {
-		if (unsubscribe) unsubscribe();
+	let devices: KismetDevice[] = $derived.by(() => {
+		return [...$kismetStore.devices]
+			.sort((a, b) => b.last_seen - a.last_seen)
+			.slice(0, maxItems);
 	});
 
 	function formatTime(timestamp: number): string {

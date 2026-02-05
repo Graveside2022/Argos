@@ -4,14 +4,17 @@
 	import { userPosition } from '$lib/stores/map/signals';
 	import { SignalSource } from '$lib/types/enums';
 
-	export let signals: SignalMarker[] = [];
-	export let onSignalClick: (signal: SignalMarker) => void = () => {};
+	interface Props {
+		signals?: SignalMarker[];
+		onSignalClick?: (signal: SignalMarker) => void;
+	}
 
-	let sortBy: 'power' | 'distance' | 'time' = 'power';
-	let sortedSignals: SignalMarker[] = [];
+	let { signals = [], onSignalClick = () => {} }: Props = $props();
 
-	$: {
-		sortedSignals = [...signals].sort((a, b) => {
+	let sortBy: 'power' | 'distance' | 'time' = $state('power');
+
+	let sortedSignals = $derived.by(() => {
+		return [...signals].sort((a, b) => {
 			switch (sortBy) {
 				case 'power':
 					return b.power - a.power;
@@ -38,7 +41,7 @@
 					return 0;
 			}
 		});
-	}
+	});
 
 	function getTimeAgo(timestamp: number): string {
 		const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -70,7 +73,7 @@
 
 		<div class="flex space-x-2">
 			<button
-				on:click={() => (sortBy = 'power')}
+				onclick={() => (sortBy = 'power')}
 				class="px-3 py-1 text-xs rounded {sortBy === 'power'
 					? 'bg-cyan-600'
 					: 'bg-gray-700'} hover:bg-cyan-600 transition-colors"
@@ -78,7 +81,7 @@
 				Power
 			</button>
 			<button
-				on:click={() => (sortBy = 'distance')}
+				onclick={() => (sortBy = 'distance')}
 				class="px-3 py-1 text-xs rounded {sortBy === 'distance'
 					? 'bg-cyan-600'
 					: 'bg-gray-700'} hover:bg-cyan-600 transition-colors"
@@ -87,7 +90,7 @@
 				Distance
 			</button>
 			<button
-				on:click={() => (sortBy = 'time')}
+				onclick={() => (sortBy = 'time')}
 				class="px-3 py-1 text-xs rounded {sortBy === 'time'
 					? 'bg-cyan-600'
 					: 'bg-gray-700'} hover:bg-cyan-600 transition-colors"
@@ -103,7 +106,7 @@
 		{:else}
 			{#each sortedSignals as signal (signal.id)}
 				<button
-					on:click={() => onSignalClick(signal)}
+					onclick={() => onSignalClick(signal)}
 					class="w-full p-3 hover:bg-gray-800/50 transition-colors border-b border-gray-800 text-left"
 				>
 					<div class="flex items-start justify-between">

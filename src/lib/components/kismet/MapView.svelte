@@ -2,13 +2,17 @@
 	import { onMount } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 
-	export let height = '400px';
-	export let showControls = true;
+	interface Props {
+		height?: string;
+		showControls?: boolean;
+	}
+
+	let { height = '400px', showControls = true }: Props = $props();
 
 	let mapContainer: HTMLDivElement;
-	let centerLat = 0;
-	let centerLon = 0;
-	let zoomLevel = 13;
+	let centerLat = $state(0);
+	let centerLon = $state(0);
+	let zoomLevel = $state(13);
 
 	// Placeholder for future map integration
 	// This could integrate with Leaflet, Mapbox, or other mapping libraries
@@ -46,13 +50,13 @@
 		<h3>Device Map</h3>
 		{#if showControls}
 			<div class="map-controls">
-				<button class="map-control-btn" on:click={zoomIn} title="Zoom In">
+				<button class="map-control-btn" onclick={zoomIn} title="Zoom In">
 					<span>+</span>
 				</button>
-				<button class="map-control-btn" on:click={zoomOut} title="Zoom Out">
+				<button class="map-control-btn" onclick={zoomOut} title="Zoom Out">
 					<span>-</span>
 				</button>
-				<button class="map-control-btn" on:click={centerOnGPS} title="Center on GPS">
+				<button class="map-control-btn" onclick={centerOnGPS} title="Center on GPS">
 					<span>⊕</span>
 				</button>
 			</div>

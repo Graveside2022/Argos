@@ -1,38 +1,41 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import type { KismetDevice } from '$lib/types/kismet';
 
-	export let isOpen = false;
-	export let onClose: () => void = () => {};
+	interface Props {
+		isOpen?: boolean;
+		onClose?: () => void;
+	}
+
+	let { isOpen = false, onClose = () => {} }: Props = $props();
 
 	// Data
-	let devices: KismetDevice[] = [];
-	let filteredDevices: KismetDevice[] = [];
-	let kismetStatus = 'checking';
-	let totalDevices = 0;
-	let _activeThreats = 0;
-	let droneCount = 0;
-	let _wifiDevices = 0;
-	let selectedCategory: string | null = null;
-	let selectedDevice: KismetDevice | null = null;
-	let showDeviceDetail = false;
-	let isLoading = true;
+	let devices: KismetDevice[] = $state([]);
+	let filteredDevices: KismetDevice[] = $state([]);
+	let kismetStatus = $state('checking');
+	let totalDevices = $state(0);
+	let _activeThreats = $state(0);
+	let droneCount = $state(0);
+	let _wifiDevices = $state(0);
+	let selectedCategory: string | null = $state(null);
+	let selectedDevice: KismetDevice | null = $state(null);
+	let showDeviceDetail = $state(false);
+	let isLoading = $state(true);
 
 	// Device type breakdown
-	let deviceBreakdown = {
+	let deviceBreakdown = $state({
 		mobile: 0,
 		laptop: 0,
 		iot: 0,
 		ap: 0,
 		drone: 0,
 		unknown: 0
-	};
+	});
 
 	// Sort state
 	type SortColumn = 'name' | 'type' | 'signal' | 'channel' | 'last_seen';
 	type SortDirection = 'asc' | 'desc';
-	let sortColumn: SortColumn = 'signal';
-	let sortDirection: SortDirection = 'asc';
+	let sortColumn: SortColumn = $state<SortColumn>('signal');
+	let sortDirection: SortDirection = $state<SortDirection>('asc');
 
 	function toggleSort(column: SortColumn) {
 		if (sortColumn === column) {
@@ -89,7 +92,7 @@
 	}
 
 	// Update interval
-	let updateInterval: ReturnType<typeof setInterval> | undefined;
+	let updateInterval: ReturnType<typeof setInterval> | undefined = $state(undefined);
 
 	async function fetchKismetData() {
 		try {
@@ -397,51 +400,42 @@
 		selectedDevice = null;
 	}
 
-	onMount(() => {
-		// Initial setup handled by reactive statement
-	});
-
-	onDestroy(() => {
-		if (updateInterval) {
-			clearInterval(updateInterval);
-			updateInterval = undefined;
-		}
-	});
-
-	$: if (isOpen) {
-		if (!updateInterval) {
-			// Show loading only on first open
-			isLoading = true;
-			// Reset and initialize filteredDevices
+	$effect(() => {
+		if (isOpen) {
+			if (!updateInterval) {
+				// Show loading only on first open
+				isLoading = true;
+				// Reset and initialize filteredDevices
+				filteredDevices = [];
+				// Initial fetch
+				fetchKismetData();
+				// Set up polling
+				updateInterval = setInterval(fetchKismetData, 5000);
+			}
+		} else {
+			// Clean up when closed
+			if (updateInterval) {
+				clearInterval(updateInterval);
+				updateInterval = undefined;
+			}
+			// Reset state when closing
+			isLoading = false;
+			selectedCategory = null;
+			selectedDevice = null;
+			showDeviceDetail = false;
+			devices = [];
 			filteredDevices = [];
-			// Initial fetch
-			fetchKismetData();
-			// Set up polling
-			updateInterval = setInterval(fetchKismetData, 5000);
 		}
-	} else {
-		// Clean up when closed
-		if (updateInterval) {
-			clearInterval(updateInterval);
-			updateInterval = undefined;
-		}
-		// Reset state when closing
-		isLoading = false;
-		selectedCategory = null;
-		selectedDevice = null;
-		showDeviceDetail = false;
-		devices = [];
-		filteredDevices = [];
-	}
+	});
 </script>
 
 {#if isOpen}
-	<div class="overlay-backdrop" on:click={onClose}>
-		<div class="overlay-container" on:click|stopPropagation>
+	<div class="overlay-backdrop" onclick={onClose}>
+		<div class="overlay-container" onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
 			<div class="overlay-header">
 				<h2>🛡️ Kismet Dashboard</h2>
-				<button class="close-button" on:click={onClose}>×</button>
+				<button class="close-button" onclick={onClose}>×</button>
 			</div>
 
 			<!-- Loading Indicator -->
@@ -484,7 +478,7 @@
 				<div class="breakdown-grid">
 					<button
 						class="breakdown-item {selectedCategory === 'mobile' ? 'selected' : ''}"
-						on:click={() => filterByCategory('mobile')}
+						onclick={() => filterByCategory('mobile')}
 					>
 						<span class="device-icon">📱</span>
 						<span class="device-type">Mobile</span>
@@ -492,7 +486,7 @@
 					</button>
 					<button
 						class="breakdown-item {selectedCategory === 'laptop' ? 'selected' : ''}"
-						on:click={() => filterByCategory('laptop')}
+						onclick={() => filterByCategory('laptop')}
 					>
 						<span class="device-icon">💻</span>
 						<span class="device-type">Laptop</span>
@@ -500,7 +494,7 @@
 					</button>
 					<button
 						class="breakdown-item {selectedCategory === 'iot' ? 'selected' : ''}"
-						on:click={() => filterByCategory('iot')}
+						onclick={() => filterByCategory('iot')}
 					>
 						<span class="device-icon">🏠</span>
 						<span class="device-type">IoT</span>
@@ -508,7 +502,7 @@
 					</button>
 					<button
 						class="breakdown-item {selectedCategory === 'ap' ? 'selected' : ''}"
-						on:click={() => filterByCategory('ap')}
+						onclick={() => filterByCategory('ap')}
 					>
 						<span class="device-icon">📡</span>
 						<span class="device-type">AP</span>
@@ -516,7 +510,7 @@
 					</button>
 					<button
 						class="breakdown-item {selectedCategory === 'drone' ? 'selected' : ''}"
-						on:click={() => filterByCategory('drone')}
+						onclick={() => filterByCategory('drone')}
 					>
 						<span class="device-icon">🚁</span>
 						<span class="device-type">Drone</span>
@@ -524,7 +518,7 @@
 					</button>
 					<button
 						class="breakdown-item {selectedCategory === 'unknown' ? 'selected' : ''}"
-						on:click={() => filterByCategory('unknown')}
+						onclick={() => filterByCategory('unknown')}
 					>
 						<span class="device-icon">❓</span>
 						<span class="device-type">Unknown</span>
@@ -542,7 +536,7 @@
 					{#if selectedCategory}
 						<button
 							class="clear-filter"
-							on:click={() => filterByCategory(selectedCategory || '')}
+							onclick={() => filterByCategory(selectedCategory || '')}
 						>
 							Clear Filter ×
 						</button>
@@ -550,22 +544,22 @@
 				</h3>
 				<div class="devices-table">
 					<div class="table-header">
-						<button class="sort-header" on:click={() => toggleSort('name')}>
+						<button class="sort-header" onclick={() => toggleSort('name')}>
 							Device/SSID <span class="sort-indicator"
 								>{getSortIndicator('name')}</span
 							>
 						</button>
-						<button class="sort-header" on:click={() => toggleSort('type')}>
+						<button class="sort-header" onclick={() => toggleSort('type')}>
 							Type <span class="sort-indicator">{getSortIndicator('type')}</span>
 						</button>
-						<button class="sort-header" on:click={() => toggleSort('signal')}>
+						<button class="sort-header" onclick={() => toggleSort('signal')}>
 							Signal <span class="sort-indicator">{getSortIndicator('signal')}</span>
 						</button>
-						<button class="sort-header" on:click={() => toggleSort('channel')}>
+						<button class="sort-header" onclick={() => toggleSort('channel')}>
 							Channel <span class="sort-indicator">{getSortIndicator('channel')}</span
 							>
 						</button>
-						<button class="sort-header" on:click={() => toggleSort('last_seen')}>
+						<button class="sort-header" onclick={() => toggleSort('last_seen')}>
 							Last Seen <span class="sort-indicator"
 								>{getSortIndicator('last_seen')}</span
 							>
@@ -577,10 +571,10 @@
 							{#each sortDevices(devices).slice(0, 50) as device}
 								<div
 									class="table-row {isDrone(device) ? 'drone-row' : ''} clickable"
-									on:click={() => selectDevice(device)}
+									onclick={() => selectDevice(device)}
 									role="button"
 									tabindex="0"
-									on:keypress={(e) => e.key === 'Enter' && selectDevice(device)}
+									onkeypress={(e) => e.key === 'Enter' && selectDevice(device)}
 								>
 									<div class="device-name">
 										{#if isDrone(device)}🚁{/if}
@@ -613,10 +607,10 @@
 							{#each filteredDevices.slice(0, 50) as device}
 								<div
 									class="table-row {isDrone(device) ? 'drone-row' : ''} clickable"
-									on:click={() => selectDevice(device)}
+									onclick={() => selectDevice(device)}
 									role="button"
 									tabindex="0"
-									on:keypress={(e) => e.key === 'Enter' && selectDevice(device)}
+									onkeypress={(e) => e.key === 'Enter' && selectDevice(device)}
 								>
 									<div class="device-name">
 										{#if isDrone(device)}🚁{/if}
@@ -654,11 +648,11 @@
 
 	<!-- Device Detail Modal -->
 	{#if showDeviceDetail && selectedDevice}
-		<div class="device-detail-backdrop" on:click={closeDeviceDetail}>
-			<div class="device-detail-modal" on:click|stopPropagation>
+		<div class="device-detail-backdrop" onclick={closeDeviceDetail}>
+			<div class="device-detail-modal" onclick={(e) => e.stopPropagation()}>
 				<div class="detail-header">
 					<h3>Device Details</h3>
-					<button class="close-button" on:click={closeDeviceDetail}>×</button>
+					<button class="close-button" onclick={closeDeviceDetail}>×</button>
 				</div>
 
 				<div class="detail-content">

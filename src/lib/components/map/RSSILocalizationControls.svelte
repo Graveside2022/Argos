@@ -2,18 +2,22 @@
 	import { onMount } from 'svelte';
 	import { kismetRSSIService } from '$lib/services/map/kismetRSSIService';
 
-	export let selectedDevice: string | null = null;
-	export let onHeatmapToggle: (enabled: boolean) => void = () => {};
+	interface Props {
+		selectedDevice?: string | null;
+		onHeatmapToggle?: (enabled: boolean) => void;
+	}
 
-	let enabled = false;
-	let status = {
+	let { selectedDevice = null, onHeatmapToggle = () => {} }: Props = $props();
+
+	let enabled = $state(false);
+	let status = $state({
 		enabled: false,
 		usingCoralTPU: false,
 		deviceCount: 0,
 		totalMeasurements: 0
-	};
+	});
 
-	let showDetails = false;
+	let showDetails = $state(false);
 
 	onMount(() => {
 		// Initialize the service
@@ -55,7 +59,7 @@
 	<div class="control-header">
 		<button
 			class="toggle-btn {enabled ? 'active' : ''}"
-			on:click={toggleLocalization}
+			onclick={toggleLocalization}
 			title="Toggle RSSI Localization"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -94,13 +98,13 @@
 
 			<button
 				class="clear-btn"
-				on:click={clearMeasurements}
+				onclick={clearMeasurements}
 				disabled={status.totalMeasurements === 0}
 			>
 				Clear {selectedDevice ? 'Device' : 'All'} Data
 			</button>
 
-			<button class="details-btn" on:click={() => (showDetails = !showDetails)}>
+			<button class="details-btn" onclick={() => (showDetails = !showDetails)}>
 				{showDetails ? 'Hide' : 'Show'} Details
 			</button>
 

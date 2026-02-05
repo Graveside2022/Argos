@@ -8,13 +8,13 @@
 		{ flyTo: (lat: number, lon: number, zoom?: number) => void } | undefined
 	>('dashboardMap');
 
-	let searchQuery = '';
-	let whitelistInput = '';
-	let whitelistedMACs: string[] = [];
-	let sortColumn: 'mac' | 'rssi' | 'type' = 'rssi';
-	let sortDirection: 'asc' | 'desc' = 'desc';
-	let selectedMAC: string | null = null;
-	let hiddenBands = new Set<string>();
+	let searchQuery = $state('');
+	let whitelistInput = $state('');
+	let whitelistedMACs: string[] = $state([]);
+	let sortColumn: 'mac' | 'rssi' | 'type' = $state('rssi');
+	let sortDirection: 'asc' | 'desc' = $state('desc');
+	let selectedMAC: string | null = $state(null);
+	let hiddenBands = $state(new Set<string>());
 
 	function toggleBand(key: string) {
 		if (hiddenBands.has(key)) {
@@ -57,7 +57,7 @@
 	}
 
 	// Filtered and sorted devices
-	$: devices = (() => {
+	let devices = $derived.by(() => {
 		const all = Array.from($kismetStore.devices.values());
 		const q = searchQuery.toLowerCase().trim();
 
@@ -84,7 +84,7 @@
 				}
 				return sortDirection === 'asc' ? cmp : -cmp;
 			});
-	})();
+	});
 
 	function sortIndicator(col: string): string {
 		if (sortColumn !== col) return '';
@@ -114,7 +114,7 @@
 			<button
 				class="band-chip"
 				class:hidden-band={hiddenBands.has(band.key)}
-				on:click={() => toggleBand(band.key)}
+				onclick={() => toggleBand(band.key)}
 				title={band.label}
 			>
 				<span class="band-dot" style="background: var({band.cssVar})"></span>
@@ -127,13 +127,13 @@
 		<table class="data-table data-table-compact">
 			<thead>
 				<tr>
-					<th on:click={() => handleSort('mac')} class="sortable" style="width:45%"
+					<th onclick={() => handleSort('mac')} class="sortable" style="width:45%"
 						>MAC / SSID{sortIndicator('mac')}</th
 					>
-					<th on:click={() => handleSort('rssi')} class="sortable" style="width:25%"
+					<th onclick={() => handleSort('rssi')} class="sortable" style="width:25%"
 						>RSSI{sortIndicator('rssi')}</th
 					>
-					<th on:click={() => handleSort('type')} class="sortable" style="width:30%"
+					<th onclick={() => handleSort('type')} class="sortable" style="width:30%"
 						>TYPE{sortIndicator('type')}</th
 					>
 				</tr>
@@ -142,7 +142,7 @@
 				{#each devices as device (device.mac)}
 					<tr
 						class:selected={selectedMAC === device.mac}
-						on:click={() => handleRowClick(device)}
+						onclick={() => handleRowClick(device)}
 					>
 						<td>
 							<div class="cell-stack">
@@ -190,9 +190,9 @@
 				type="text"
 				placeholder="MAC address..."
 				bind:value={whitelistInput}
-				on:keydown={(e) => e.key === 'Enter' && addToWhitelist()}
+				onkeydown={(e) => e.key === 'Enter' && addToWhitelist()}
 			/>
-			<button class="btn btn-secondary btn-sm" on:click={addToWhitelist}>Add</button>
+			<button class="btn btn-secondary btn-sm" onclick={addToWhitelist}>Add</button>
 		</div>
 
 		{#if whitelistedMACs.length > 0}
@@ -200,7 +200,7 @@
 				{#each whitelistedMACs as mac (mac)}
 					<div class="whitelist-item">
 						<span class="whitelist-mac">{mac}</span>
-						<button class="whitelist-remove" on:click={() => removeFromWhitelist(mac)}>
+						<button class="whitelist-remove" onclick={() => removeFromWhitelist(mac)}>
 							<svg
 								width="12"
 								height="12"

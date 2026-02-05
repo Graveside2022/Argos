@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
 	type DeviceState = 'active' | 'standby' | 'offline';
@@ -35,26 +35,24 @@
 		gpsdVersion?: string;
 	}
 
-	let wifiState: DeviceState = 'offline';
-	let sdrState: DeviceState = 'offline';
-	let gpsState: DeviceState = 'offline';
+	let wifiState: DeviceState = $state('offline');
+	let sdrState: DeviceState = $state('offline');
+	let gpsState: DeviceState = $state('offline');
 
-	let wifiInfo: WifiInfo = {};
-	let sdrInfo: SdrInfo = {};
-	let gpsInfo: GpsInfo = {};
+	let wifiInfo: WifiInfo = $state({});
+	let sdrInfo: SdrInfo = $state({});
+	let gpsInfo: GpsInfo = $state({});
 
-	let gpsSats = 0;
-	let gpsCoords = { lat: '', lon: '', mgrs: '' };
-	let gpsSpeed: number | null = null;
-	let gpsAccuracy: number | null = null;
-	let gpsFix = 0;
-	let statusInterval: ReturnType<typeof setInterval> | null = null;
-	let clockInterval: ReturnType<typeof setInterval> | null = null;
-	let zuluTime = '';
-	let locationName = '';
+	let gpsSats = $state(0);
+	let gpsCoords = $state({ lat: '', lon: '', mgrs: '' });
+	let gpsSpeed: number | null = $state(null);
+	let gpsAccuracy: number | null = $state(null);
+	let gpsFix = $state(0);
+	let zuluTime = $state('');
+	let locationName = $state('');
 	let lastGeocodeLat = 0;
 	let lastGeocodeLon = 0;
-	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | null = null;
+	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | null = $state(null);
 
 	// Weather state
 	interface WeatherData {
@@ -69,12 +67,11 @@
 		isDay: boolean;
 	}
 
-	let weather: WeatherData | null = null;
+	let weather: WeatherData | null = $state(null);
 	let lastWeatherLat = 0;
 	let lastWeatherLon = 0;
 	let currentGpsLat = 0;
 	let currentGpsLon = 0;
-	let weatherInterval: ReturnType<typeof setInterval> | null = null;
 
 	function updateClock() {
 		const now = new Date();
@@ -123,7 +120,8 @@
 	}
 
 	// GPS state from store
-	const unsubGps = gpsStore.subscribe((gps) => {
+	$effect(() => {
+		const gps = $gpsStore;
 		const s = gps.status;
 		if (s.hasGPSFix) {
 			gpsState = 'active';
@@ -333,23 +331,22 @@
 	onMount(() => {
 		void fetchHardwareStatus();
 		void fetchHardwareDetails();
-		statusInterval = setInterval(() => void fetchHardwareStatus(), 5000);
-		clockInterval = setInterval(updateClock, 1000);
+		const statusInterval = setInterval(() => void fetchHardwareStatus(), 5000);
+		const clockInterval = setInterval(updateClock, 1000);
 		// Poll weather every 10 minutes using current GPS position
-		weatherInterval = setInterval(() => {
+		const weatherInterval = setInterval(() => {
 			if (currentGpsLat && currentGpsLon) {
 				lastWeatherLat = 0; // Reset to force refetch
 				lastWeatherLon = 0;
 				void fetchWeather(currentGpsLat, currentGpsLon);
 			}
 		}, 600000);
-	});
 
-	onDestroy(() => {
-		if (statusInterval) clearInterval(statusInterval);
-		if (clockInterval) clearInterval(clockInterval);
-		if (weatherInterval) clearInterval(weatherInterval);
-		unsubGps();
+		return () => {
+			clearInterval(statusInterval);
+			clearInterval(clockInterval);
+			clearInterval(weatherInterval);
+		};
 	});
 
 	function formatSerial(s: string): string {
@@ -359,8 +356,13 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="top-status-bar" on:click|self={closeDropdown}>
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div
+	class="top-status-bar"
+	onclick={(e) => {
+		if (e.target === e.currentTarget) closeDropdown();
+	}}
+>
 	<div class="status-group">
 		<span class="app-brand">ARGOS</span>
 		<span class="status-divider"></span>
@@ -369,7 +371,7 @@
 		<div class="device-wrapper">
 			<div
 				class="status-item device-btn"
-				on:click={() => toggleDropdown('wifi')}
+				onclick={() => toggleDropdown('wifi')}
 				role="button"
 				tabindex="0"
 			>
@@ -455,7 +457,7 @@
 		<div class="device-wrapper">
 			<div
 				class="status-item device-btn"
-				on:click={() => toggleDropdown('sdr')}
+				onclick={() => toggleDropdown('sdr')}
 				role="button"
 				tabindex="0"
 			>
@@ -549,7 +551,7 @@
 		<div class="device-wrapper">
 			<div
 				class="status-item device-btn"
-				on:click={() => toggleDropdown('gps')}
+				onclick={() => toggleDropdown('gps')}
 				role="button"
 				tabindex="0"
 			>
@@ -655,7 +657,7 @@
 			<div class="device-wrapper weather-wrapper">
 				<div
 					class="weather-chip device-btn"
-					on:click={() => toggleDropdown('weather')}
+					onclick={() => toggleDropdown('weather')}
 					role="button"
 					tabindex="0"
 				>
