@@ -1,13 +1,13 @@
 <script lang="ts">
-	export let onClick: () => void = () => {};
-	export let deviceCount: number = 0;
+	interface Props {
+		onClick?: () => void;
+		deviceCount?: number;
+	}
+
+	let { onClick = () => {}, deviceCount = 0 }: Props = $props();
 </script>
 
-<button
-	class="kismet-dashboard-button"
-	on:click={onClick}
-	title="Open Kismet Dashboard"
->
+<button class="kismet-dashboard-button" onclick={onClick} title="Open Kismet Dashboard">
 	<span class="label">Dashboard</span>
 	{#if deviceCount > 0}
 		<span class="device-count">{deviceCount}</span>
