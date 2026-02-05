@@ -42,7 +42,8 @@ export default [
 				'error',
 				{
 					argsIgnorePattern: '^_',
-					varsIgnorePattern: '^_'
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_'
 				}
 			]
 		}
@@ -66,7 +67,8 @@ export default [
 				'error',
 				{
 					argsIgnorePattern: '^_',
-					varsIgnorePattern: '^_'
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_'
 				}
 			],
 			'@typescript-eslint/no-explicit-any': 'warn',
@@ -104,7 +106,8 @@ export default [
 				'error',
 				{
 					argsIgnorePattern: '^_',
-					varsIgnorePattern: '^_'
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_'
 				}
 			]
 		}
