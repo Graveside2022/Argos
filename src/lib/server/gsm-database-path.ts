@@ -47,16 +47,16 @@ export async function resolveGsmDatabasePath(): Promise<string | null> {
 								`Found GSM database at process location: ${processDatabasePath}`
 							);
 							return processDatabasePath;
-						} catch {
+						} catch (_error: unknown) {
 							// Process directory doesn't contain database, continue to other methods
 						}
 					}
-				} catch {
+				} catch (_error: unknown) {
 					// Failed to get process working directory, continue
 				}
 			}
 		}
-	} catch {
+	} catch (_error: unknown) {
 		// No GSM Evil process running or error getting process info
 	}
 
@@ -66,7 +66,7 @@ export async function resolveGsmDatabasePath(): Promise<string | null> {
 			await accessAsync(path, constants.F_OK | constants.R_OK);
 			console.log(`Found accessible GSM database at: ${path}`);
 			return path;
-		} catch {
+		} catch (_error: unknown) {
 			// Path doesn't exist or not accessible, try next
 		}
 	}
@@ -93,7 +93,7 @@ export async function resolveGsmDatabasePath(): Promise<string | null> {
 			console.log(`Found generic IMSI database: ${foundDatabases[0]}`);
 			return foundDatabases[0];
 		}
-	} catch {
+	} catch (_error: unknown) {
 		// Find command failed or no databases found
 	}
 

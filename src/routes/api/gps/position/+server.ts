@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { logWarn } from '$lib/utils/logger';
 
 const execAsync = promisify(exec);
 
@@ -102,13 +103,24 @@ export const GET: RequestHandler = async () => {
 				{ timeout: 5000 }
 			);
 			allLines = result.stdout;
-		} catch {
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn(
+				'[GPS] Primary source (nc) failed, trying gpspipe fallback',
+				{ error: msg, source: 'nc' },
+				'gps-nc'
+			);
 			// nc failed, try gpspipe as fallback
 			try {
 				const result = await execAsync('timeout 3 gpspipe -w -n 10 2>/dev/null || true');
 				allLines = result.stdout;
-			} catch {
-				// gpspipe also failed
+			} catch (error: unknown) {
+				const msg = error instanceof Error ? error.message : String(error);
+				logWarn(
+					'[GPS] Fallback source (gpspipe) also failed',
+					{ error: msg, source: 'gpspipe' },
+					'gps-pipe'
+				);
 			}
 		}
 
@@ -133,7 +145,7 @@ export const GET: RequestHandler = async () => {
 					// Full SKY message — update cache with accurate used-satellite count
 					cachedSatelliteCount = msg.satellites.filter((sat) => sat.used === true).length;
 				}
-			} catch {
+			} catch (_error: unknown) {
 				// Skip non-JSON lines
 			}
 		}

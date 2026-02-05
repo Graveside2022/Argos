@@ -97,13 +97,13 @@ export function checkInstalledTools(): Record<string, ToolStatus> {
 								`${cmd} --version 2>&1 | head -1`
 							).trim();
 						}
-					} catch {
+					} catch (_error: unknown) {
 						// Version check failed, that's ok
 					}
 
 					break; // Found one variant, stop checking
 				}
-			} catch {
+			} catch (_error: unknown) {
 				// Command not found, try next
 			}
 		}

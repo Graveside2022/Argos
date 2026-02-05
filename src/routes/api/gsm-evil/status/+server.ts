@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/hostExec';
+import { logWarn } from '$lib/utils/logger';
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -44,13 +45,18 @@ export const GET: RequestHandler = async () => {
 							status.grgsm.running = true;
 							status.grgsm.pid = pid;
 						}
-					} catch {
-						// Couldn't check runtime, assume it's a scan
+					} catch (error: unknown) {
+						const msg = error instanceof Error ? error.message : String(error);
+						logWarn(
+							'[GSM-Evil] Runtime check failed for PID',
+							{ error: msg, pid },
+							'gsm-runtime-check'
+						);
 					}
 				}
 			}
-		} catch {
-			// Not running
+		} catch (_error: unknown) {
+			// grgsm process check - expected to fail when not running
 		}
 
 		// Check GSMEvil2 with exact match (including auto version)
@@ -71,13 +77,13 @@ export const GET: RequestHandler = async () => {
 							'timeout 1 curl -s -o /dev/null -w "%{http_code}" http://localhost:80 2>/dev/null || echo "000"'
 						);
 						status.gsmevil.webInterface = curlCheck.trim() === '200';
-					} catch {
+					} catch (_error: unknown) {
 						status.gsmevil.webInterface = false;
 					}
 				}
 			}
-		} catch {
-			// Not running
+		} catch (_error: unknown) {
+			// gsmevil process check - expected to fail when not running
 		}
 
 		// If both are running, assume data collection is active

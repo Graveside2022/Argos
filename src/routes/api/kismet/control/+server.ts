@@ -136,7 +136,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 					if (authCheck.includes('Login configured')) {
 						console.warn('[kismet] Initial credentials set (admin/password)');
 					}
-				} catch {
+				} catch (_error: unknown) {
 					// Already configured or not yet ready — either is fine
 				}
 
@@ -226,7 +226,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 						'curl -s -m 2 http://localhost:2501/system/timestamp.json 2>/dev/null || true'
 					);
 					apiResponding = apiOut.includes('timestamp') || apiOut.includes('{');
-				} catch {
+				} catch (_error: unknown) {
 					// Not responding
 				}
 
@@ -236,7 +236,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 					running: isRunning,
 					status: isRunning ? 'active' : 'inactive'
 				});
-			} catch {
+			} catch (_error: unknown) {
 				return json({
 					success: true,
 					running: false,

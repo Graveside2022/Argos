@@ -68,7 +68,7 @@ async function fetchTargets(): Promise<void> {
 			const data = await res.json();
 			wifiteState.update((s) => ({ ...s, targets: data.targets }));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -89,7 +89,7 @@ async function fetchStatus(): Promise<void> {
 				lastRun: data.lastRun || s.lastRun
 			}));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -165,7 +165,7 @@ export async function stopAttack(): Promise<{ success: boolean }> {
 			body: JSON.stringify({ action: 'stop' })
 		});
 		return await res.json();
-	} catch {
+	} catch (_error: unknown) {
 		return { success: false };
 	}
 }

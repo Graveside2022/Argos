@@ -73,7 +73,7 @@
 	function formatTimestamp(timestamp: string) {
 		try {
 			return new Date(timestamp).toLocaleString();
-		} catch {
+		} catch (_error: unknown) {
 			return timestamp;
 		}
 	}

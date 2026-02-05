@@ -87,7 +87,7 @@ class BTLEProcessManager extends EventEmitter {
 				timestamp: new Date().toISOString(),
 				name: null
 			};
-		} catch {
+		} catch (_error: unknown) {
 			return null;
 		}
 	}

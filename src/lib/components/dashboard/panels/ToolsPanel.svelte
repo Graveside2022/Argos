@@ -54,7 +54,7 @@
 			} else {
 				gsmStatus = 'stopped';
 			}
-		} catch {
+		} catch (_error: unknown) {
 			gsmStatus = 'stopped';
 		}
 	}
@@ -73,7 +73,7 @@
 			} else {
 				gsmStatus = 'running';
 			}
-		} catch {
+		} catch (_error: unknown) {
 			gsmStatus = 'running';
 		}
 	}

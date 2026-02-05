@@ -40,7 +40,7 @@ async function fetchStatus(): Promise<void> {
 				messageCount: data.messageCount
 			}));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -52,7 +52,7 @@ async function fetchMessages(): Promise<void> {
 			const data = await res.json();
 			pagermonState.update((s) => ({ ...s, messages: data.messages }));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* ignore */
 	}
 }
@@ -99,7 +99,7 @@ export async function stopPagermon(): Promise<{ success: boolean }> {
 			body: JSON.stringify({ action: 'stop' })
 		});
 		return await res.json();
-	} catch {
+	} catch (_error: unknown) {
 		return { success: false };
 	}
 }

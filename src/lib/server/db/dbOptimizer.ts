@@ -141,7 +141,7 @@ export class DatabaseOptimizer {
 			try {
 				const result = this.db.pragma(pragma);
 				settings[pragma] = result;
-			} catch {
+			} catch (_error: unknown) {
 				// Some pragmas might not be available
 			}
 		}
@@ -432,7 +432,7 @@ export class DatabaseOptimizer {
 					.prepare(`SELECT COUNT(*) as count FROM ${(table as { name: string }).name}`)
 					.get() as { count: number };
 				(table as { row_count: number }).row_count = count.count;
-			} catch {
+			} catch (_error: unknown) {
 				(table as { row_count: number }).row_count = -1;
 			}
 		}

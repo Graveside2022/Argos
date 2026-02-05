@@ -59,7 +59,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 				try {
 					await hostExec('which grgsm_livemon_headless');
 					sendUpdate('[SCAN] grgsm_livemon_headless found');
-				} catch {
+				} catch (_error: unknown) {
 					sendError(
 						'grgsm_livemon_headless is not installed. Install the gr-gsm package to enable GSM scanning.'
 					);
@@ -70,7 +70,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 				try {
 					await hostExec('which tcpdump');
 					sendUpdate('[SCAN] tcpdump found');
-				} catch {
+				} catch (_error: unknown) {
 					sendUpdate('[SCAN] WARNING: tcpdump not found — packet counting may fail');
 				}
 
@@ -87,7 +87,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 					} else {
 						sendUpdate('[SCAN] HackRF detected');
 					}
-				} catch {
+				} catch (_error: unknown) {
 					sendUpdate(
 						'[SCAN] WARNING: hackrf_info check failed — scan will attempt anyway'
 					);
@@ -135,7 +135,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 								HardwareDevice.HACKRF
 							);
 						}
-					} catch {
+					} catch (_error: unknown) {
 						// pgrep check failed — force release anyway
 						sendUpdate('[SCAN] Process check failed — forcing resource release');
 						await resourceManager.forceRelease(HardwareDevice.HACKRF);
@@ -225,7 +225,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 						// Verify process is still running after init delay
 						try {
 							await hostExec(`sudo kill -0 ${pid} 2>/dev/null`);
-						} catch {
+						} catch (_error: unknown) {
 							// Process died during init — read stderr for diagnostics
 							let stderrContent = '';
 							try {
@@ -233,7 +233,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 									`cat ${stderrLog} 2>/dev/null | tail -10`
 								);
 								stderrContent = String(errLog).trim();
-							} catch {
+							} catch (_error: unknown) {
 								/* ignore */
 							}
 
@@ -379,7 +379,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 										channelType = 'SDCCH';
 										controlChannel = false;
 									}
-								} catch {
+								} catch (_error: unknown) {
 									channelType = frameCount > 10 ? 'BCCH/CCCH' : 'SDCCH';
 									controlChannel = frameCount > 10;
 								}
@@ -514,10 +514,10 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 								sendUpdate(
 									`[FREQ ${i + 1}/${checkFreqs.length}] Cleaned up process ${pid}`
 								);
-							} catch {
+							} catch (_error: unknown) {
 								try {
 									await hostExec(`sudo kill -9 ${pid} 2>/dev/null`);
-								} catch {
+								} catch (_error: unknown) {
 									// Process already exited — that's fine
 								}
 							}

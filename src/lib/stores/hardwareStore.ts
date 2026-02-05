@@ -51,7 +51,7 @@ async function fetchStatus(): Promise<void> {
 			const data = await response.json();
 			hardwareStatus.set(data);
 		}
-	} catch {
+	} catch (_error: unknown) {
 		// Network error, keep current state
 	}
 }

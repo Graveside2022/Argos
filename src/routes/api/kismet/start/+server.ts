@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
+import { logWarn } from '$lib/utils/logger';
 
 const execAsync = promisify(exec);
 
@@ -12,7 +13,9 @@ async function isKismetRunning(): Promise<boolean> {
 	try {
 		const { stdout } = await execAsync('pgrep -x kismet');
 		return stdout.trim().length > 0;
-	} catch {
+	} catch (error: unknown) {
+		const msg = error instanceof Error ? error.message : String(error);
+		logWarn('[Kismet] Start check failed', { error: msg });
 		return false;
 	}
 }
@@ -29,8 +32,9 @@ async function waitForKismet(maxAttempts = 15): Promise<boolean> {
 			if (response.ok) {
 				return true;
 			}
-		} catch {
-			// Not ready yet
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn('[Kismet] Start check failed', { error: msg });
 		}
 		// Wait 1 second before next attempt
 		await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -170,7 +174,7 @@ export const POST: RequestHandler = async ({ _url }) => {
 			if (match) {
 				detectedInterface = match[1];
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Ignore errors, use default
 		}
 

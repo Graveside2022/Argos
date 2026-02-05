@@ -41,7 +41,7 @@ export class BufferManager {
 		if (config.maxBufferSize) {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
-		
+
 		logInfo('📊 BufferManager initialized', {
 			maxBufferSize: this.bufferState.maxBufferSize,
 			maxLineLength: this.maxLineLength
@@ -75,7 +75,7 @@ export class BufferManager {
 	 */
 	private processCompleteLines(onLineProcessed: (parsedLine: ParsedLine) => void): void {
 		const lines = this.bufferState.stdoutBuffer.split('\n');
-		
+
 		// Keep the last incomplete line in buffer
 		this.bufferState.stdoutBuffer = lines.pop() || '';
 
@@ -106,9 +106,9 @@ export class BufferManager {
 
 		// Check line length
 		if (trimmedLine.length > this.maxLineLength) {
-			logWarn('Line too long, truncating', { 
-				length: trimmedLine.length, 
-				maxLength: this.maxLineLength 
+			logWarn('Line too long, truncating', {
+				length: trimmedLine.length,
+				maxLength: this.maxLineLength
 			});
 			return {
 				data: null,
@@ -136,7 +136,7 @@ export class BufferManager {
 
 			// Parse spectrum data
 			const spectrumData = this.parseSpectrumData(trimmedLine);
-			
+
 			if (spectrumData) {
 				return {
 					data: spectrumData,
@@ -188,7 +188,7 @@ export class BufferManager {
 			/^DEBUG:/
 		];
 
-		return nonDataPatterns.some(pattern => pattern.test(line));
+		return nonDataPatterns.some((pattern) => pattern.test(line));
 	}
 
 	/**
@@ -198,15 +198,19 @@ export class BufferManager {
 		try {
 			// Real hackrf_sweep format: date, time, hz_low, hz_high, hz_bin_width, num_samples, dB, dB, dB...
 			// Example: 2023-11-20, 15:30:45, 2400000000, 2410000000, 20000, 512, -45.2, -46.1, -47.0, ...
-			
-			const parts = line.split(',').map(part => part.trim());
-			
+
+			const parts = line.split(',').map((part) => part.trim());
+
 			// Check for minimum required fields (need at least 7 fields for hackrf_sweep format)
 			if (parts.length < 7) {
 				return null; // Not enough data
 			}
 
-			let startFreq: number, endFreq: number, binWidth: number, numSamples: number, powerStartIndex: number;
+			let startFreq: number,
+				endFreq: number,
+				binWidth: number,
+				numSamples: number,
+				powerStartIndex: number;
 			let timestamp = new Date(); // Default to current time
 
 			// Try to determine format by checking if first field looks like a date
@@ -216,11 +220,11 @@ export class BufferManager {
 				if (parts.length < 7) {
 					return null; // Not enough data for hackrf_sweep format
 				}
-				
+
 				const dateStr = parts[0];
 				const timeStr = parts[1];
 				timestamp = this.parseTimestamp(dateStr, timeStr);
-				
+
 				startFreq = parseInt(parts[2]);
 				endFreq = parseInt(parts[3]);
 				binWidth = parseFloat(parts[4]);
@@ -293,14 +297,14 @@ export class BufferManager {
 			// Try to parse the timestamp
 			const fullTimestamp = `${dateStr} ${timeStr}`;
 			const parsedDate = new Date(fullTimestamp);
-			
+
 			// If parsing fails, use current time
 			if (isNaN(parsedDate.getTime())) {
 				return new Date();
 			}
-			
+
 			return parsedDate;
-		} catch {
+		} catch (_error: unknown) {
 			return new Date(); // Fallback to current time
 		}
 	}
@@ -310,7 +314,7 @@ export class BufferManager {
 	 */
 	private handleBufferOverflow(): void {
 		this.bufferState.bufferOverflowCount++;
-		
+
 		logWarn('📊 Buffer overflow detected', {
 			bufferSize: this.bufferState.stdoutBuffer.length,
 			maxSize: this.bufferState.maxBufferSize,
@@ -341,9 +345,10 @@ export class BufferManager {
 	} {
 		const currentBufferLength = this.bufferState.stdoutBuffer.length;
 		const bufferUtilization = (currentBufferLength / this.bufferState.maxBufferSize) * 100;
-		const averageLineLength = this.bufferState.lineCount > 0 
-			? this.bufferState.totalBytesProcessed / this.bufferState.lineCount 
-			: 0;
+		const averageLineLength =
+			this.bufferState.lineCount > 0
+				? this.bufferState.totalBytesProcessed / this.bufferState.lineCount
+				: 0;
 
 		return {
 			...this.bufferState,
@@ -358,7 +363,7 @@ export class BufferManager {
 	 */
 	clearBuffer(): void {
 		const oldStats = this.getBufferStats();
-		
+
 		this.bufferState.stdoutBuffer = '';
 		this.bufferState.bufferOverflowCount = 0;
 		this.bufferState.lineCount = 0;
@@ -396,7 +401,11 @@ export class BufferManager {
 		const issues: string[] = [];
 
 		// Check frequency range
-		if (data.startFreq !== undefined && data.endFreq !== undefined && data.startFreq >= data.endFreq) {
+		if (
+			data.startFreq !== undefined &&
+			data.endFreq !== undefined &&
+			data.startFreq >= data.endFreq
+		) {
 			issues.push('Invalid frequency range');
 		}
 
@@ -407,7 +416,7 @@ export class BufferManager {
 
 		// Check for reasonable power values (-150 to +50 dBm)
 		if (data.powerValues) {
-			const unreasonablePowers = data.powerValues.filter(p => p < -150 || p > 50);
+			const unreasonablePowers = data.powerValues.filter((p) => p < -150 || p > 50);
 			if (unreasonablePowers.length > 0) {
 				issues.push(`${unreasonablePowers.length} unreasonable power values`);
 			}
@@ -423,7 +432,8 @@ export class BufferManager {
 		// USRP might use UTC while server uses local time, so allow up to 24 hours difference
 		const now = Date.now();
 		const dataTime = data.timestamp.getTime();
-		if (Math.abs(now - dataTime) > 86400000) { // More than 24 hours off
+		if (Math.abs(now - dataTime) > 86400000) {
+			// More than 24 hours off
 			issues.push('Timestamp far from current time');
 		}
 
@@ -466,9 +476,11 @@ export class BufferManager {
 		// Determine status
 		let status: 'healthy' | 'warning' | 'critical' = 'healthy';
 		if (issues.length > 0) {
-			status = stats.bufferUtilization > 95 || stats.bufferOverflowCount > this.overflowThreshold * 2 
-				? 'critical' 
-				: 'warning';
+			status =
+				stats.bufferUtilization > 95 ||
+				stats.bufferOverflowCount > this.overflowThreshold * 2
+					? 'critical'
+					: 'warning';
 		}
 
 		return { status, issues, recommendations };

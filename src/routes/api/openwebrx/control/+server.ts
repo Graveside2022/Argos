@@ -14,7 +14,7 @@ async function isContainerRunning(): Promise<boolean> {
 			`docker ps --filter "name=${CONTAINER_NAME}" --format "{{.Names}}" 2>/dev/null`
 		);
 		return stdout.trim().length > 0;
-	} catch {
+	} catch (_error: unknown) {
 		return false;
 	}
 }
@@ -29,7 +29,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
 			if (stdout.trim() === '200' || stdout.trim() === '301' || stdout.trim() === '302') {
 				return true;
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Not ready yet
 		}
 		await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -67,7 +67,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// First try to start existing container, then create new one
 				try {
 					await execAsync(`docker start ${CONTAINER_NAME} 2>&1`);
-				} catch {
+				} catch (_error: unknown) {
 					// Container doesn't exist - remove stale if any, then create fresh
 					await execAsync(`docker rm -f ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
 					await execAsync(

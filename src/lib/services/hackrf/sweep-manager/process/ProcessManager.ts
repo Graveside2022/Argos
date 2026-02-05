@@ -38,24 +38,24 @@ export class ProcessManager {
 		return new Promise((resolve, reject) => {
 			try {
 				// Event handlers are set, proceeding with spawn
-				
+
 				logInfo(`🚀 Spawning real hackrf_sweep with args: ${args.join(' ')}`);
 
 				// Use unbuffered output for real-time data
 				const modifiedConfig = {
 					...config,
-					env: { 
-						...process.env, 
+					env: {
+						...process.env,
 						NODE_NO_READLINE: '1',
 						PYTHONUNBUFFERED: '1',
-						FORCE_USRP: '1'  // Force USRP mode since we want to use USRP
+						FORCE_USRP: '1' // Force USRP mode since we want to use USRP
 					}
 				};
 				// Use auto_sweep.sh which detects HackRF or USRP B205 Mini
 				const scriptPath = new URL('./auto_sweep.sh', import.meta.url).pathname;
-				
+
 				// Spawning process with modified config
-				
+
 				// Use the config as passed, sweep manager now handles detached setting
 				const sweepProcess = spawn(scriptPath, args, modifiedConfig);
 				const sweepProcessPgid = sweepProcess.pid || null;
@@ -69,26 +69,28 @@ export class ProcessManager {
 					this.processRegistry.set(actualProcessPid, sweepProcess);
 				}
 
-				logInfo(`✅ Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`);
+				logInfo(
+					`✅ Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
+				);
 
 				// Attach event handlers to the process
 				if (sweepProcess.stdout && this.eventHandlers.onStdout) {
 					// Attaching stdout handler to process
-					
+
 					// Store reference to handler for debugging
 					const stdoutHandler = this.eventHandlers.onStdout;
 					// Handler exists, attaching to stdout
-					
+
 					sweepProcess.stdout.on('data', (data: Buffer) => {
 						const preview = data.toString().substring(0, 100);
 						// Received stdout data: ${data.length} bytes
-						
+
 						// Data received, forwarding to handler
-						logInfo('ProcessManager received stdout data', { 
+						logInfo('ProcessManager received stdout data', {
 							size: data.length,
 							preview: preview
 						});
-						
+
 						// Call the handler
 						if (stdoutHandler) {
 							// Calling stdout handler
@@ -100,7 +102,7 @@ export class ProcessManager {
 					logInfo('Attached stdout handler to real process');
 					// Stdout handler attached successfully
 					// Handler attachment complete
-					
+
 					// Stream event handlers are set automatically by Node.js
 				} else {
 					const error = {
@@ -159,7 +161,7 @@ export class ProcessManager {
 						{ pid: processState.actualProcessPid },
 						'process-sigterm-sent'
 					);
-				} catch {
+				} catch (_error: unknown) {
 					logWarn(
 						'Process already dead or SIGTERM failed',
 						{ pid: processState.actualProcessPid },
@@ -180,7 +182,7 @@ export class ProcessManager {
 						'process-sigkill-needed'
 					);
 					process.kill(processState.actualProcessPid, 'SIGKILL');
-				} catch {
+				} catch (_error: unknown) {
 					// Process is already dead
 					logInfo(
 						'Process terminated successfully',
@@ -306,20 +308,20 @@ export class ProcessManager {
 	 */
 	getProcessState(): ProcessState & { isRunning: boolean } {
 		// Clean up dead processes from registry
-		for (const [pid, childProcess] of this.processRegistry) {
+		for (const [pid, _childProcess] of this.processRegistry) {
 			if (!this.isProcessAlive(pid)) {
 				logWarn(`Process ${pid} is dead, removing from registry`);
 				this.processRegistry.delete(pid);
 			}
 		}
-		
+
 		const isRunning = this.processRegistry.size > 0;
 		// Get the first process if any exist
 		const firstProcess = this.processRegistry.values().next().value || null;
-		
+
 		// Store process start time separately from the process object
 		const processStartTime = firstProcess ? Date.now() : null;
-		
+
 		return {
 			sweepProcess: firstProcess,
 			sweepProcessPgid: firstProcess?.pid || null,
@@ -336,7 +338,7 @@ export class ProcessManager {
 		try {
 			process.kill(pid, 0);
 			return true;
-		} catch {
+		} catch (_error: unknown) {
 			return false;
 		}
 	}
@@ -382,8 +384,8 @@ export class ProcessManager {
 	 * Force kill process immediately
 	 */
 	async forceKillProcess(): Promise<void> {
-		const processState = this.getProcessState();
-		
+		const _processState = this.getProcessState();
+
 		// Kill all registered processes
 		for (const [pid, childProcess] of this.processRegistry) {
 			try {
@@ -394,7 +396,7 @@ export class ProcessManager {
 				try {
 					process.kill(pid, 'SIGKILL');
 					logInfo(`Force killed PID: ${pid}`);
-				} catch {
+				} catch (_error: unknown) {
 					logInfo('Process already dead or kill failed');
 				}
 			} catch (e) {

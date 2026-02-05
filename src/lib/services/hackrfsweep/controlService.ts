@@ -1,4 +1,8 @@
-import { controlStore, controlActions, type SweepControlState } from '$lib/stores/hackrfsweep/controlStore';
+import {
+	controlStore,
+	controlActions,
+	type SweepControlState
+} from '$lib/stores/hackrfsweep/controlStore';
 import { frequencyStore } from '$lib/stores/hackrfsweep/frequencyStore';
 import { hackrfAPI } from '$lib/services/hackrf/api';
 import { get } from 'svelte/store';
@@ -13,9 +17,10 @@ export class ControlService {
 	private initialize(): void {
 		// Subscribe to frequency changes to update control availability
 		this.unsubscribe = frequencyStore.subscribe((frequencyState) => {
-			const hasValidFrequencies = frequencyState.frequencies.length > 0 && 
-				frequencyState.frequencies.some(f => f.value);
-			
+			const hasValidFrequencies =
+				frequencyState.frequencies.length > 0 &&
+				frequencyState.frequencies.some((f) => f.value);
+
 			// Only enable controls if we have valid frequencies and not currently sweeping
 			const currentControl = get(controlStore);
 			if (!currentControl.sweepControl.isStarted && !currentControl.sweepControl.isLoading) {
@@ -31,7 +36,7 @@ export class ControlService {
 
 	async startSweep(): Promise<void> {
 		const frequencyState = get(frequencyStore);
-		const validFrequencies = frequencyState.frequencies.filter(f => f.value);
+		const validFrequencies = frequencyState.frequencies.filter((f) => f.value);
 
 		if (validFrequencies.length === 0) {
 			throw new Error('Please add at least one frequency');
@@ -40,7 +45,7 @@ export class ControlService {
 		controlActions.setSweepLoading(true);
 
 		try {
-			const validFreqs = validFrequencies.map(f => ({
+			const validFreqs = validFrequencies.map((f) => ({
 				start: Number(f.value) - 10,
 				stop: Number(f.value) + 10,
 				step: 1
@@ -48,7 +53,7 @@ export class ControlService {
 
 			const controlState = get(controlStore);
 			await hackrfAPI.startSweep(validFreqs, controlState.sweepControl.cycleTime);
-			
+
 			controlActions.setSweepStarted();
 		} catch (error) {
 			controlActions.setSweepLoading(false);
@@ -72,7 +77,7 @@ export class ControlService {
 		try {
 			await fetch('/api/hackrf/emergency-stop', { method: 'POST' });
 			controlActions.setSweepStopped();
-		} catch {
+		} catch (_error: unknown) {
 			throw new Error('Emergency stop failed');
 		}
 	}
@@ -81,10 +86,12 @@ export class ControlService {
 	isReadyToStart(): boolean {
 		const controlState = get(controlStore);
 		const frequencyState = get(frequencyStore);
-		
-		return !controlState.sweepControl.isStarted && 
-			   !controlState.sweepControl.isLoading &&
-			   frequencyState.frequencies.some(f => f.value);
+
+		return (
+			!controlState.sweepControl.isStarted &&
+			!controlState.sweepControl.isLoading &&
+			frequencyState.frequencies.some((f) => f.value)
+		);
 	}
 
 	getCurrentState(): SweepControlState {
@@ -100,7 +107,7 @@ export class ControlService {
 			return { valid: false, error: 'No frequencies configured' };
 		}
 
-		const validFrequencies = frequencyState.frequencies.filter(f => f.value);
+		const validFrequencies = frequencyState.frequencies.filter((f) => f.value);
 		if (validFrequencies.length === 0) {
 			return { valid: false, error: 'No valid frequencies specified' };
 		}

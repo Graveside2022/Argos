@@ -18,7 +18,7 @@ async function getReceiverGPS(fetchFn: typeof fetch): Promise<{ lat: number; lon
 				}
 			}
 		}
-	} catch {
+	} catch (_error: unknown) {
 		/* GPS unavailable — non-fatal */
 	}
 	return null;
@@ -120,7 +120,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		try {
 			const response = await KismetService.getDevices(fetch);
 			return json(response);
-		} catch {
+		} catch (error: unknown) {
 			return json({
 				devices: [],
 				error: (error as { message?: string }).message || 'Unknown error',

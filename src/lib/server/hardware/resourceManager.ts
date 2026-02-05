@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { HardwareDevice, type ResourceState, type HardwareStatus } from './types';
 import * as hackrfMgr from './hackrfManager';
 import * as alfaMgr from './alfaManager';
+import { logWarn } from '$lib/utils/logger';
 
 class ResourceManager extends EventEmitter {
 	private state: Map<HardwareDevice, ResourceState> = new Map();
@@ -110,8 +111,13 @@ class ResourceManager extends EventEmitter {
 			const alfaCurrent = this.state.get(HardwareDevice.ALFA)!;
 			alfaCurrent.detected = !!alfaIface;
 			this.state.set(HardwareDevice.ALFA, alfaCurrent);
-		} catch {
-			// Silently fail on detection refresh
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logWarn(
+				'[ResourceManager] Hardware detection refresh failed',
+				{ error: msg, operation: 'hardware.detect' },
+				'resource-detect'
+			);
 		}
 	}
 

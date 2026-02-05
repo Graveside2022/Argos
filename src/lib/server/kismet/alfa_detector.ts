@@ -45,7 +45,7 @@ export class AlfaDetector {
 						detectedAdapters.push({ usbId, description });
 					}
 				}
-			} catch {
+			} catch (_error: unknown) {
 				logWarn('lsusb not available, trying sysfs method');
 
 				// Fallback to reading from sysfs
@@ -68,7 +68,7 @@ export class AlfaDetector {
 								description: alfaDevice
 							});
 						}
-					} catch {
+					} catch (_error: unknown) {
 						// Skip devices we can't read
 					}
 				}
@@ -115,7 +115,7 @@ export class AlfaDetector {
 						logInfo(`Found wireless interface: ${iface}`);
 						return iface;
 					}
-				} catch {
+				} catch (_error: unknown) {
 					// Not a wireless interface
 				}
 			}

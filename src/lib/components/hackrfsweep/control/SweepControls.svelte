@@ -26,7 +26,7 @@
 				}));
 
 			await hackrfAPI.startSweep(validFreqs, controlState.cycleTime);
-			
+
 			// Update display with first frequency
 			const validFreqValues = frequencies.filter((f) => f.value);
 			if (validFreqValues.length > 0) {
@@ -47,9 +47,9 @@
 	async function stopSweep() {
 		try {
 			controlActions.setSweepLoading(true);
-			
+
 			await hackrfAPI.stopSweep();
-			
+
 			controlActions.setSweepStopped();
 			displayActions.setStatusMessage('Sweep stopped');
 			displayActions.resetDisplays();
@@ -73,7 +73,7 @@
 	async function emergencyStop() {
 		try {
 			await fetch('/api/hackrf/emergency-stop', { method: 'POST' });
-			
+
 			// Force reset everything
 			controlActions.setSweepStopped();
 			displayActions.setStatusMessage('Emergency stop executed');
@@ -95,7 +95,7 @@
 				totalCycles: 0,
 				progress: 0
 			});
-		} catch {
+		} catch (_error: unknown) {
 			displayActions.setStatusMessage('Emergency stop failed');
 		}
 	}
@@ -141,7 +141,7 @@
 			</svg>
 			{controlState.isLoading ? 'Starting...' : 'Start Sweep'}
 		</button>
-		
+
 		<button
 			on:click={stopSweep}
 			disabled={!controlState.canStop || controlState.isLoading}
@@ -177,7 +177,9 @@
 		<div
 			class="mt-4 p-3 rounded-lg text-sm {$connectionStatus.error.includes('please refresh')
 				? 'bg-red-500/10 border border-red-500/20 text-red-400'
-				: 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'} {$connectionStatus.error.includes('Recovering') || $connectionStatus.error.includes('Reconnecting')
+				: 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'} {$connectionStatus.error.includes(
+				'Recovering'
+			) || $connectionStatus.error.includes('Reconnecting')
 				? 'animate-pulse'
 				: ''}"
 		>

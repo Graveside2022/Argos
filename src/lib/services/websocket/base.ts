@@ -220,7 +220,7 @@ export abstract class BaseWebSocket {
 	protected parseMessage(data: string | ArrayBuffer | Blob): unknown {
 		try {
 			return typeof data === 'string' ? JSON.parse(data) : data;
-		} catch {
+		} catch (_error: unknown) {
 			return data;
 		}
 	}

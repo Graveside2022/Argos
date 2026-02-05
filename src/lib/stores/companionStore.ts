@@ -30,7 +30,7 @@ async function fetchStatus(appName: string): Promise<void> {
 			const data = await response.json();
 			companionStatuses.update((s) => ({ ...s, [appName]: data }));
 		}
-	} catch {
+	} catch (_error: unknown) {
 		// Network error
 	}
 }

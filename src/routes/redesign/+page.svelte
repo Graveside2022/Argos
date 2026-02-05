@@ -133,7 +133,7 @@ Available Commands:
 				cpuPercentage = Math.floor(Math.random() * 30) + 15 + '%';
 				memoryPercentage = Math.floor(Math.random() * 40) + 30 + '%';
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Use simulated values if API fails
 			cpuPercentage = Math.floor(Math.random() * 30) + 15 + '%';
 			memoryPercentage = Math.floor(Math.random() * 40) + 30 + '%';

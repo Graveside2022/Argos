@@ -11,7 +11,7 @@ async function run(cmd: string): Promise<string> {
 	try {
 		const { stdout } = await execAsync(cmd, { timeout: 5000 });
 		return stdout.trim();
-	} catch {
+	} catch (_error: unknown) {
 		return '';
 	}
 }
@@ -20,7 +20,7 @@ async function run(cmd: string): Promise<string> {
 async function sysRead(path: string): Promise<string> {
 	try {
 		return (await readFile(path, 'utf-8')).trim();
-	} catch {
+	} catch (_error: unknown) {
 		return '';
 	}
 }
@@ -30,7 +30,7 @@ async function sysLink(path: string): Promise<string> {
 	try {
 		const link = await readlink(path);
 		return link.split('/').pop() || '';
-	} catch {
+	} catch (_error: unknown) {
 		return '';
 	}
 }
@@ -42,7 +42,7 @@ async function listUsbDevices(): Promise<string[]> {
 		return entries
 			.filter((e) => /^\d+-\d+(\.\d+)*$/.test(e))
 			.map((e) => `/sys/bus/usb/devices/${e}`);
-	} catch {
+	} catch (_error: unknown) {
 		return [];
 	}
 }
@@ -278,7 +278,7 @@ async function getGpsDetails(): Promise<GpsDetails | null> {
 					baudRate = (dev.bps as number) || 0;
 				}
 			}
-		} catch {
+		} catch (_error: unknown) {
 			// Skip non-JSON
 		}
 	}

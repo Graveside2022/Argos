@@ -66,7 +66,7 @@
 		try {
 			const { WebLinksAddon } = await import('@xterm/addon-web-links');
 			terminal.loadAddon(new WebLinksAddon());
-		} catch {
+		} catch (_error: unknown) {
 			/* optional */
 		}
 
