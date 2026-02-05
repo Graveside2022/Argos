@@ -25,6 +25,9 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
+# Install Cython (needed to build python-hackrf wheel)
+RUN pip install --no-cache-dir Cython>=3.1.0
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -8,51 +8,54 @@
 
 	let canGoBack = $derived($toolNavigationPath.length > 0);
 	let currentBreadcrumbs = $derived($breadcrumbs);
-	let breadcrumbText = $derived(currentBreadcrumbs.slice(0, -1).join(' / '));
+	let currentTitle = $derived(currentBreadcrumbs[currentBreadcrumbs.length - 1] || 'TOOLS');
+	let parentTitle = $derived(currentBreadcrumbs[currentBreadcrumbs.length - 2] || 'TOOLS');
 </script>
 
 <header class="panel-header">
 	{#if canGoBack}
 		<button class="back-btn" onclick={navigateBack}>
 			{@html uiIcons.arrowLeft}
-			<span class="breadcrumb-path">{breadcrumbText}</span>
+			<span class="back-label">{parentTitle}</span>
 		</button>
-	{:else}
-		<span class="panel-title">TOOLS</span>
 	{/if}
+	<span class="panel-title">{currentTitle}</span>
 </header>
 
 <style>
 	.panel-header {
-		padding: var(--space-4);
+		padding: var(--space-3) var(--space-4);
 		border-bottom: 1px solid var(--palantir-border-subtle);
-		min-height: 48px;
 		display: flex;
-		align-items: center;
+		flex-direction: column;
+		gap: var(--space-2);
 	}
 
 	.panel-title {
-		font-size: var(--text-xs);
+		font-size: var(--text-sm);
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-secondary);
+		color: var(--palantir-text-primary);
 	}
 
 	.back-btn {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		background: none;
-		border: none;
-		color: var(--palantir-text-tertiary);
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--palantir-border-subtle);
+		border-radius: var(--radius-sm);
+		color: var(--palantir-accent);
 		font-size: var(--text-xs);
 		cursor: pointer;
-		padding: 0;
-		transition: color 0.15s ease;
-		width: 100%;
+		padding: var(--space-1) var(--space-3);
+		transition: all 0.15s ease;
+		width: fit-content;
 	}
 
 	.back-btn:hover {
+		background: rgba(255, 255, 255, 0.1);
+		border-color: var(--palantir-accent);
 		color: var(--palantir-text-primary);
 	}
 
@@ -60,10 +63,8 @@
 		flex-shrink: 0;
 	}
 
-	.breadcrumb-path {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	.back-label {
 		letter-spacing: var(--letter-spacing-wide);
+		font-weight: var(--font-weight-medium);
 	}
 </style>

@@ -972,6 +972,11 @@ export class SweepManager extends EventEmitter {
 				exec('pkill -9 -f hackrf_info', () => resolve());
 			});
 
+			// Kill any sweep_bridge.py processes (python_hackrf sweep bridge)
+			await new Promise<void>((resolve) => {
+				exec('pkill -9 -f sweep_bridge.py', () => resolve());
+			});
+
 			// Wait for cleanup
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 

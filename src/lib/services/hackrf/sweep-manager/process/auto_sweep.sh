@@ -58,9 +58,17 @@ if [ $USRP_DETECTED -eq 1 ]; then
     export PYTHONUNBUFFERED=1
     exec python3 -u ./scripts/usrp_spectrum_scan.py $ARGS
 elif hackrf_info 2>/dev/null | grep -q "Serial number"; then
-    echo "HackRF detected, using hackrf_sweep" >&2
-    # Use original hackrf_sweep
-    exec hackrf_sweep "$@"
+    echo "HackRF detected" >&2
+    # Try python_hackrf sweep bridge first (native API, no subprocess overhead)
+    SWEEP_BRIDGE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../../../../../hackrf_emitter/backend/sweep_bridge.py"
+    if [ -f "$SWEEP_BRIDGE" ] && python3 -c "from python_hackrf import pyhackrf_sweep" 2>/dev/null; then
+        echo "Using python_hackrf sweep bridge" >&2
+        export PYTHONUNBUFFERED=1
+        exec python3 -u "$SWEEP_BRIDGE" "$@"
+    else
+        echo "Falling back to hackrf_sweep binary" >&2
+        exec hackrf_sweep "$@"
+    fi
 else
     echo "Warning: No supported SDR device found (HackRF or USRP B205 Mini)" >&2
     echo "Running in mock mode for testing..." >&2
