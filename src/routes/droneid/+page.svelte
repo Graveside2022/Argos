@@ -366,7 +366,7 @@
 			<button
 				class="service-control-btn"
 				class:running={isServiceRunning}
-				on:click={toggleService}
+				onclick={toggleService}
 				disabled={isStartingStopping}
 			>
 				{#if isStartingStopping}

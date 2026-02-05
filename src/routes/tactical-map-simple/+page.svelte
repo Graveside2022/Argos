@@ -481,7 +481,6 @@
 
 		// Clear existing signals but preserve targetFrequency display
 		clearSignals();
-
 	}
 
 	// Add MAC to whitelist
@@ -928,7 +927,6 @@
 			console.error('No user marker available for popup');
 			return;
 		}
-
 
 		// Show loading message first
 		const loadingPopup = L.popup({
@@ -1382,14 +1380,13 @@
 							icon: userIcon
 						}).addTo(map);
 
-
 						// Add click handler to user marker (remove popup binding that might interfere)
 						userMarker.on('click', (e) => {
 							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
 
-					userMarker.on('dblclick', (e) => {
+						userMarker.on('dblclick', (e) => {
 							e.originalEvent?.stopPropagation();
 							void showPiPopup();
 						});
@@ -1482,19 +1479,19 @@
 
 				// Update or create markers for each device
 				const devices = data.devices;
-				let devicesWithLocation = 0;
-				let devicesWithoutLocation = 0;
-				let markersCreated = 0;
-				let markersUpdated = 0;
+				let _devicesWithLocation = 0;
+				let _devicesWithoutLocation = 0;
+				let _markersCreated = 0;
+				let _markersUpdated = 0;
 
 				devices.forEach((device: KismetDevice) => {
 					const markerId = `kismet_${device.mac}`;
 
 					// Track location data
 					if (device.location?.lat && device.location?.lon) {
-						devicesWithLocation++;
+						_devicesWithLocation++;
 					} else {
-						devicesWithoutLocation++;
+						_devicesWithoutLocation++;
 					}
 
 					// Check if marker already exists
@@ -1596,7 +1593,7 @@
 
 						if (map) {
 							marker.addTo(map);
-							markersCreated++;
+							_markersCreated++;
 						}
 						kismetMarkers.set(markerId, marker);
 					} else {
@@ -1613,7 +1610,7 @@
 									className: 'kismet-marker'
 								})
 							);
-							markersUpdated++;
+							_markersUpdated++;
 						}
 
 						// Update popup if needed
@@ -1702,7 +1699,6 @@
 					}
 				});
 
-
 				// Clean up markers for devices that no longer exist
 				let removedDevices = 0;
 				kismetMarkers.forEach((marker, id) => {
@@ -1717,6 +1713,7 @@
 				});
 
 				if (removedDevices > 0) {
+					// Stale device markers already removed in loop above
 				}
 
 				// Update the reactive counter and distributions
@@ -2171,7 +2168,7 @@
 <div class="tactical-map-simple">
 	<!-- Top Navigation Bar -->
 	<header class="tactical-top-nav">
-		<button class="back-console-button" on:click={() => (window.location.href = '/')}>
+		<button class="back-console-button" onclick={() => (window.location.href = '/')}>
 			<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 				<path
 					fill-rule="evenodd"
@@ -2183,7 +2180,7 @@
 
 		<button
 			class="sidebar-toggle-btn"
-			on:click={() => (sidebarCollapsed = !sidebarCollapsed)}
+			onclick={() => (sidebarCollapsed = !sidebarCollapsed)}
 			aria-label="Toggle sidebar"
 			aria-expanded={!sidebarCollapsed}
 			title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
@@ -2255,13 +2252,13 @@
 
 				<button
 					class="btn btn-danger btn-full"
-					on:click={stopKismet}
+					onclick={stopKismet}
 					disabled={kismetStatus === 'stopping' || kismetStatus === 'stopped'}
 				>
 					Stop Kismet Service
 				</button>
 
-				<button class="btn btn-secondary btn-full" on:click={() => setDashboardState(true)}>
+				<button class="btn btn-secondary btn-full" onclick={() => setDashboardState(true)}>
 					View Dashboard ({kismetDeviceCount})
 				</button>
 			</div>
@@ -2292,7 +2289,7 @@
 					bind:value={searchFrequencies[0]}
 					placeholder="e.g., 2450.0"
 					step="0.01"
-					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 				/>
 
 				<input
@@ -2301,7 +2298,7 @@
 					bind:value={searchFrequencies[1]}
 					placeholder="e.g., 433.92"
 					step="0.01"
-					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 				/>
 
 				<input
@@ -2310,12 +2307,12 @@
 					bind:value={searchFrequencies[2]}
 					placeholder="e.g., 915.0"
 					step="0.01"
-					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 				/>
 
 				<button
 					class="btn btn-primary btn-full"
-					on:click={handleSearch}
+					onclick={handleSearch}
 					disabled={!searchFrequencies.some((f) => f)}
 				>
 					Search Frequencies
@@ -2323,7 +2320,7 @@
 
 				<button
 					class="btn btn-secondary btn-full"
-					on:click={clearSignals}
+					onclick={clearSignals}
 					disabled={signalCount === 0 && kismetDeviceCount === 0}
 				>
 					Clear All Signals
@@ -2334,32 +2331,32 @@
 			<div class="tactical-sidebar-section">
 				<h3 class="section-header">QUICK ACTIONS</h3>
 
-				<button class="btn btn-ghost btn-full" on:click={openSpectrumAnalyzer}>
+				<button class="btn btn-ghost btn-full" onclick={openSpectrumAnalyzer}>
 					📊 View Spectrum Analyzer
 				</button>
 
 				<button
 					class="btn btn-ghost btn-full"
-					on:click={() => setAirSignalOverlayState(true)}
+					onclick={() => setAirSignalOverlayState(true)}
 				>
 					📡 AirSignal RF Tools
 				</button>
 
 				<button
 					class="btn btn-ghost btn-full"
-					on:click={() => setBettercapOverlayState(!showBettercapOverlay)}
+					onclick={() => setBettercapOverlayState(!showBettercapOverlay)}
 				>
 					🔧 Bettercap Controls
 				</button>
 
 				<button
 					class="btn btn-ghost btn-full"
-					on:click={() => setBtleOverlayState(!showBtleOverlay)}
+					onclick={() => setBtleOverlayState(!showBtleOverlay)}
 				>
 					📘 BTLE Scanner
 				</button>
 
-				<button class="btn btn-ghost btn-full" on:click={toggleCellTowers}>
+				<button class="btn btn-ghost btn-full" onclick={toggleCellTowers}>
 					📍 {showCellTowers ? 'Hide' : 'Show'} Cell Towers
 				</button>
 			</div>
@@ -2392,7 +2389,7 @@
 							role="switch"
 							aria-checked={!hiddenSignalBands.has(band.key)}
 							aria-label="Toggle {band.label} signal visibility"
-							on:click={() => toggleSignalBand(band.key)}
+							onclick={() => toggleSignalBand(band.key)}
 						>
 							{band.label.split(' ')[0]}
 							{band.label.split(' ')[1]}
@@ -2443,8 +2440,8 @@
 											: 'descending'
 										: 'none'}
 									aria-label="Sort by MAC address"
-									on:click={() => handleSort('mac')}
-									on:keydown={(e) => e.key === 'Enter' && handleSort('mac')}
+									onclick={() => handleSort('mac')}
+									onkeydown={(e) => e.key === 'Enter' && handleSort('mac')}
 									style="cursor: pointer;"
 								>
 									MAC {sortColumn === 'mac'
@@ -2463,8 +2460,8 @@
 											: 'descending'
 										: 'none'}
 									aria-label="Sort by signal strength"
-									on:click={() => handleSort('rssi')}
-									on:keydown={(e) => e.key === 'Enter' && handleSort('rssi')}
+									onclick={() => handleSort('rssi')}
+									onkeydown={(e) => e.key === 'Enter' && handleSort('rssi')}
 									style="cursor: pointer;"
 								>
 									RSSI {sortColumn === 'rssi'
@@ -2483,8 +2480,8 @@
 											: 'descending'
 										: 'none'}
 									aria-label="Sort by device type"
-									on:click={() => handleSort('type')}
-									on:keydown={(e) => e.key === 'Enter' && handleSort('type')}
+									onclick={() => handleSort('type')}
+									onkeydown={(e) => e.key === 'Enter' && handleSort('type')}
 									style="cursor: pointer;"
 								>
 									Type {sortColumn === 'type'
@@ -2505,7 +2502,7 @@
 								<tr
 									data-device-key={device.mac}
 									class:selected={selectedDeviceKey === device.mac}
-									on:click={() => handleDeviceRowClick(device)}
+									onclick={() => handleDeviceRowClick(device)}
 									style="cursor: pointer;"
 								>
 									<td title={device.mac}>{macDisplay}</td>
@@ -2554,7 +2551,7 @@
 					pattern="[0-9A-Fa-f:]{17}"
 					aria-label="MAC address to whitelist"
 					aria-describedby="whitelist-count"
-					on:keydown={(e) => e.key === 'Enter' && addToWhitelist()}
+					onkeydown={(e) => e.key === 'Enter' && addToWhitelist()}
 				/>
 
 				<div class="metric-row" style="margin-top: var(--space-2);">
@@ -2590,7 +2587,7 @@
 						class="legend-item-btn {hiddenSignalBands.has(band.key)
 							? 'legend-disabled'
 							: ''}"
-						on:click={() => toggleSignalBand(band.key)}
+						onclick={() => toggleSignalBand(band.key)}
 					>
 						<span class="legend-color" style="background: {band.color}"></span>
 						<span class="legend-label">{band.label}</span>

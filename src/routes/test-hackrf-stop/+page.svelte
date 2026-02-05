@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { hackrfAPI } from '$lib/services/hackrf/api';
 	import { sweepStatus } from '$lib/stores/hackrf';
-	
-	let isStarted = false;
-	let messages: string[] = [];
-	
+
+	let isStarted = $state(false);
+	let messages: string[] = $state([]);
+
 	function log(msg: string) {
 		console.warn(msg);
 		messages = [...messages, `${new Date().toISOString()}: ${msg}`];
 	}
-	
+
 	// Subscribe to sweep status
-	$: {
+	$effect(() => {
 		log(`Sweep status update: active=${$sweepStatus.active}`);
 		isStarted = $sweepStatus.active;
-	}
-	
+	});
+
 	async function startSweep() {
 		try {
 			log('Starting sweep...');
@@ -29,16 +29,16 @@
 			log(`Start error: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
 	}
-	
+
 	async function stopSweep() {
 		try {
 			log('=== STOP BUTTON CLICKED ===');
 			log(`Current isStarted: ${isStarted}`);
 			log('Calling hackrfAPI.stopSweep()...');
-			
+
 			const response = await hackrfAPI.stopSweep();
 			log(`Stop response: ${JSON.stringify(response)}`);
-			
+
 			// Force update
 			isStarted = false;
 			log(`Stop completed. New isStarted: ${isStarted}`);
@@ -46,43 +46,42 @@
 			log(`Stop error: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
 	}
-	
+
 	onMount(() => {
 		log('Component mounted, connecting to data stream...');
 		hackrfAPI.connectToDataStream();
-	});
-	
-	onDestroy(() => {
-		log('Component destroyed, disconnecting...');
-		hackrfAPI.disconnectDataStream();
+		return () => {
+			log('Component destroyed, disconnecting...');
+			hackrfAPI.disconnectDataStream();
+		};
 	});
 </script>
 
 <div class="p-8">
 	<h1 class="text-2xl mb-4">HackRF Stop Button Test</h1>
-	
+
 	<div class="mb-4">
 		<p>Sweep Status: {isStarted ? 'RUNNING' : 'STOPPED'}</p>
 	</div>
-	
+
 	<div class="flex gap-4 mb-8">
-		<button 
-			on:click={startSweep}
+		<button
+			onclick={startSweep}
 			disabled={isStarted}
 			class="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
 		>
 			Start Sweep
 		</button>
-		
-		<button 
-			on:click={stopSweep}
+
+		<button
+			onclick={stopSweep}
 			disabled={!isStarted}
 			class="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50"
 		>
-			Stop Sweep (Enabled: {!(!isStarted)})
+			Stop Sweep (Enabled: {!!isStarted})
 		</button>
 	</div>
-	
+
 	<div class="bg-gray-900 p-4 rounded">
 		<h2 class="text-lg mb-2">Console Log:</h2>
 		<div class="font-mono text-sm">

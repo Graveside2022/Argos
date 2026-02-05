@@ -171,7 +171,7 @@ Available Commands:
 	/>
 </svelte:head>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="app-container">
 	<header class="header">
@@ -226,7 +226,7 @@ Available Commands:
 				<!-- Cellular Analysis -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('cellular')}
+					onclick={() => handleOperationClick('cellular')}
 					aria-selected={selectedOperation === 'cellular'}
 					data-operation="cellular"
 				>
@@ -246,7 +246,7 @@ Available Commands:
 				<!-- Data Broadcasting -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('data')}
+					onclick={() => handleOperationClick('data')}
 					aria-selected={selectedOperation === 'data'}
 					data-operation="data"
 				>
@@ -265,7 +265,7 @@ Available Commands:
 				<!-- Geospatial Mapping -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('geo')}
+					onclick={() => handleOperationClick('geo')}
 					aria-selected={selectedOperation === 'geo'}
 					data-operation="geo"
 				>
@@ -285,7 +285,7 @@ Available Commands:
 				<!-- Network Discovery -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('network')}
+					onclick={() => handleOperationClick('network')}
 					aria-selected={selectedOperation === 'network'}
 					data-operation="network"
 				>
@@ -305,7 +305,7 @@ Available Commands:
 				<!-- Signal Visualization -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('signal')}
+					onclick={() => handleOperationClick('signal')}
 					aria-selected={selectedOperation === 'signal'}
 					data-operation="signal"
 				>
@@ -325,7 +325,7 @@ Available Commands:
 				<!-- Spectrum Analysis -->
 				<button
 					class="operation"
-					on:click={() => handleOperationClick('spectrum')}
+					onclick={() => handleOperationClick('spectrum')}
 					aria-selected={selectedOperation === 'spectrum'}
 					data-operation="spectrum"
 				>
@@ -360,7 +360,7 @@ Available Commands:
 			aria-label="Command input"
 			id="commandInput"
 			bind:value={commandInput}
-			on:keydown={(e) => e.key === 'Enter' && executeCommand()}
+			onkeydown={(e) => e.key === 'Enter' && executeCommand()}
 		/>
 		<div class="command-shortcuts">
 			<span class="command-shortcut">ESC</span>

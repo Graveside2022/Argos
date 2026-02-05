@@ -87,25 +87,25 @@
 		<div class="tab-navigation">
 			<button
 				class="tab-button {activeTab === 'settings' ? 'active' : ''}"
-				on:click={() => (activeTab = 'settings')}
+				onclick={() => (activeTab = 'settings')}
 			>
 				⚙️ Settings
 			</button>
 			<button
 				class="tab-button {activeTab === 'devices' ? 'active' : ''}"
-				on:click={() => (activeTab = 'devices')}
+				onclick={() => (activeTab = 'devices')}
 			>
 				📱 Devices
 			</button>
 			<button
 				class="tab-button {activeTab === 'filters' ? 'active' : ''}"
-				on:click={() => (activeTab = 'filters')}
+				onclick={() => (activeTab = 'filters')}
 			>
 				🔧 Filters
 			</button>
 			<button
 				class="tab-button {activeTab === 'messages' ? 'active' : ''}"
-				on:click={() => (activeTab = 'messages')}
+				onclick={() => (activeTab = 'messages')}
 			>
 				💬 Messages
 			</button>

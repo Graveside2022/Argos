@@ -373,7 +373,7 @@
 					<!-- Start/Stop Kismet Button -->
 					<button
 						type="button"
-						on:click={() => toggleKismet()}
+						onclick={() => toggleKismet()}
 						disabled={kismetStatus === 'starting' || kismetStatus === 'stopping'}
 						class="saasfly-btn
 						{kismetStatus === 'stopped' ? 'saasfly-btn-start' : ''}
@@ -594,7 +594,7 @@
 					<iframe
 						bind:this={iframeElement}
 						src={iframeUrl}
-						on:load={(_e) => {
+						onload={(_e) => {
 							console.warn('Kismet iframe loaded successfully');
 							handleIframeLoad();
 
@@ -610,7 +610,7 @@
 								});
 							}
 						}}
-						on:error={(_e) => {
+						onerror={(_e) => {
 							console.warn(
 								'Kismet iframe connection failed - service may not be running'
 							);
