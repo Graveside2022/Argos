@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		hardwareStatus,
 		startPolling,
@@ -7,35 +7,39 @@
 		forceReleaseDevice
 	} from '$lib/stores/hardwareStore';
 
-	let status = {
+	let status = $state({
 		hackrf: { available: true, owner: null as string | null, detected: false },
 		alfa: { available: true, owner: null as string | null, detected: false },
 		bluetooth: { available: true, owner: null as string | null, detected: false }
-	};
-
-	const unsubscribe = hardwareStatus.subscribe((s) => {
-		status = {
-			hackrf: {
-				available: s.hackrf.available,
-				owner: s.hackrf.owner,
-				detected: s.hackrf.detected
-			},
-			alfa: { available: s.alfa.available, owner: s.alfa.owner, detected: s.alfa.detected },
-			bluetooth: {
-				available: s.bluetooth.available,
-				owner: s.bluetooth.owner,
-				detected: s.bluetooth.detected
-			}
-		};
 	});
 
 	onMount(() => {
-		startPolling();
-	});
+		const unsubscribe = hardwareStatus.subscribe((s) => {
+			status = {
+				hackrf: {
+					available: s.hackrf.available,
+					owner: s.hackrf.owner,
+					detected: s.hackrf.detected
+				},
+				alfa: {
+					available: s.alfa.available,
+					owner: s.alfa.owner,
+					detected: s.alfa.detected
+				},
+				bluetooth: {
+					available: s.bluetooth.available,
+					owner: s.bluetooth.owner,
+					detected: s.bluetooth.detected
+				}
+			};
+		});
 
-	onDestroy(() => {
-		stopPolling();
-		unsubscribe();
+		startPolling();
+
+		return () => {
+			stopPolling();
+			unsubscribe();
+		};
 	});
 
 	function getBadgeColor(detected: boolean, available: boolean): string {
@@ -77,7 +81,7 @@
 		>
 		{#if !status.hackrf.available && status.hackrf.owner}
 			<button
-				on:click={() => handleForceRelease('hackrf')}
+				onclick={() => handleForceRelease('hackrf')}
 				class="text-xs text-red-400 hover:text-red-300 underline"
 			>
 				Release
@@ -102,7 +106,7 @@
 		>
 		{#if !status.alfa.available && status.alfa.owner}
 			<button
-				on:click={() => handleForceRelease('alfa')}
+				onclick={() => handleForceRelease('alfa')}
 				class="text-xs text-red-400 hover:text-red-300 underline"
 			>
 				Release

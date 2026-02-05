@@ -5,7 +5,7 @@
 		getAgeColor,
 		getRelevanceIcon
 	} from '$lib/services/hackrf/timeWindowFilter';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { scale as _scale, fade as _fade } from 'svelte/transition';
 
 	// Get stores
@@ -17,28 +17,27 @@
 	} = timeWindowFilter;
 
 	// Display options
-	let showFading = true;
-	let sortBy: 'power' | 'age' | 'frequency' = 'power';
-	let maxDisplay = 20;
-
-	// Animation frame for smooth updates
-	let animationFrame: number;
+	let showFading = $state(true);
+	let sortBy: 'power' | 'age' | 'frequency' = $state('power');
+	let maxDisplay = $state(20);
 
 	// Sorted signals
-	$: sortedSignals = [...$signals]
-		.sort((a, b) => {
-			switch (sortBy) {
-				case 'power':
-					return b.power - a.power;
-				case 'age':
-					return a.age - b.age;
-				case 'frequency':
-					return a.frequency - b.frequency;
-				default:
-					return 0;
-			}
-		})
-		.slice(0, maxDisplay);
+	let sortedSignals = $derived.by(() =>
+		[...$signals]
+			.sort((a, b) => {
+				switch (sortBy) {
+					case 'power':
+						return b.power - a.power;
+					case 'age':
+						return a.age - b.age;
+					case 'frequency':
+						return a.frequency - b.frequency;
+					default:
+						return 0;
+				}
+			})
+			.slice(0, maxDisplay)
+	);
 
 	// Format frequency
 	function formatFrequency(freq: number): string {
@@ -62,19 +61,18 @@
 
 	// Continuous update for smooth animations
 	function updateDisplay() {
-		// Animation frame for smooth visual updates
-		// The derived store updates automatically, no need to force reassignment
 		animationFrame = requestAnimationFrame(updateDisplay);
 	}
 
+	let animationFrame: number;
+
 	onMount(() => {
 		updateDisplay();
-	});
-
-	onDestroy(() => {
-		if (animationFrame) {
-			cancelAnimationFrame(animationFrame);
-		}
+		return () => {
+			if (animationFrame) {
+				cancelAnimationFrame(animationFrame);
+			}
+		};
 	});
 </script>
 

@@ -1,22 +1,19 @@
 <script lang="ts">
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { GPSService } from '$lib/services/tactical-map/gpsService';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	const gpsService = new GPSService();
-	let showDetails = false;
+	let showDetails = $state(false);
 
 	onMount(() => {
-		// Start GPS tracking
 		gpsService.startPositionUpdates();
+		return () => {
+			gpsService.stopPositionUpdates();
+		};
 	});
 
-	onDestroy(() => {
-		// Stop GPS tracking
-		gpsService.stopPositionUpdates();
-	});
-
-	$: ({ status } = $gpsStore);
+	let status = $derived($gpsStore.status);
 
 	// Debug logging - uncomment for troubleshooting
 	// $: console.warn('[GPS Button Debug] Status:', status);
@@ -52,7 +49,7 @@
 <div class="gps-button-container">
 	<button
 		class="saasfly-btn {getButtonClass()}"
-		on:click={toggleDetails}
+		onclick={toggleDetails}
 		title="GPS Status: {status.gpsStatus}"
 	>
 		{#if getStatusIcon() === 'fix'}
@@ -77,7 +74,7 @@
 		<div class="gps-details-popup">
 			<div class="popup-header">
 				<span class="popup-title">GPS Status</span>
-				<button class="close-btn" on:click={toggleDetails}>×</button>
+				<button class="close-btn" onclick={toggleDetails}>×</button>
 			</div>
 
 			<div class="popup-content">

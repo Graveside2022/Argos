@@ -10,16 +10,16 @@
 	let logError: any;
 
 	// Reactive state from store with safe defaults
-	let takSettings = {
+	let takSettings = $state({
 		serverIp: '0.0.0.0',
 		serverPort: '6666',
 		multicastEnabled: false
-	};
+	});
 
 	// Local input bindings
-	let takServerIp = takSettings.serverIp;
-	let takServerPort = takSettings.serverPort;
-	let multicastEnabled = takSettings.multicastEnabled;
+	let takServerIp = $state(takSettings.serverIp);
+	let takServerPort = $state(takSettings.serverPort);
+	let multicastEnabled = $state(takSettings.multicastEnabled);
 
 	// Initialize in browser only
 	onMount(async () => {
@@ -48,11 +48,11 @@
 	});
 
 	// Update local values when store changes
-	$: {
+	$effect(() => {
 		takServerIp = takSettings.serverIp;
 		takServerPort = takSettings.serverPort;
 		multicastEnabled = takSettings.multicastEnabled;
-	}
+	});
 
 	// Update TAK server settings
 	async function updateTakSettings() {
@@ -90,12 +90,12 @@
 			<input
 				type="checkbox"
 				bind:checked={multicastEnabled}
-				on:change={() => void updateMulticastState()}
+				onchange={() => void updateMulticastState()}
 			/>
 			<span>Enable Multicast (239.2.3.1:6969)</span>
 		</label>
 	</div>
-	<button class="btn btn-primary" on:click={() => void updateTakSettings()}>
+	<button class="btn btn-primary" onclick={() => void updateTakSettings()}>
 		Save Settings
 	</button>
 </div>

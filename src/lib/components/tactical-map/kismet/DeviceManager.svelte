@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { KismetService } from '$lib/services/tactical-map/kismetService';
 	import { MapService } from '$lib/services/tactical-map/mapService';
 	import {
@@ -17,29 +17,29 @@
 	let L: any = null; // Leaflet library
 	let deviceObservers = new Map<string, any>(); // Track device changes
 
-	$: kismetState = $kismetStore;
-	$: mapState = $mapStore;
-	$: gpsState = $gpsStore;
+	let kismetState = $derived($kismetStore);
+	let mapState = $derived($mapStore);
+	let gpsState = $derived($gpsStore);
 
 	onMount(async () => {
 		// Import Leaflet dynamically
 		if (typeof window !== 'undefined') {
 			L = (await import('leaflet')).default;
 		}
-	});
 
-	onDestroy(() => {
-		// Clean up device markers and observers
-		clearAllDeviceMarkers();
-		deviceObservers.clear();
+		return () => {
+			// Clean up device markers and observers
+			clearAllDeviceMarkers();
+			deviceObservers.clear();
+		};
 	});
 
 	// Reactive statement to handle device changes
-	$: {
+	$effect(() => {
 		if (L && mapState.map && kismetState.devices) {
 			updateDeviceMarkers();
 		}
-	}
+	});
 
 	function updateDeviceMarkers() {
 		if (!L || !mapState.map) return;

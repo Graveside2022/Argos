@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		companionStatuses,
 		startCompanionPolling,
@@ -7,46 +7,46 @@
 		launchApp,
 		stopApp
 	} from '$lib/stores/companionStore';
-	import {
-		hardwareStatus,
-		startPolling,
-		stopPolling as _stopPolling
-	} from '$lib/stores/hardwareStore';
+	import { hardwareStatus, startPolling } from '$lib/stores/hardwareStore';
 	import HardwareConflictModal from '$lib/components/hardware/HardwareConflictModal.svelte';
 
-	export let appName: string;
-	export let description: string = '';
-	export let requiredDevice: 'hackrf' | 'alfa' = 'hackrf';
+	interface Props {
+		appName: string;
+		description?: string;
+		requiredDevice?: 'hackrf' | 'alfa';
+	}
 
-	let running = false;
-	let loading = false;
-	let deviceAvailable = true;
-	let deviceOwner: string | null = null;
-	let showConflict = false;
-	let conflictOwner = '';
+	let { appName, description = '', requiredDevice = 'hackrf' }: Props = $props();
 
-	const unsubStatus = companionStatuses.subscribe((s) => {
-		const status = s[appName];
-		if (status) {
-			running = status.running;
-		}
-	});
-
-	const unsubHw = hardwareStatus.subscribe((s) => {
-		const device = s[requiredDevice];
-		deviceAvailable = device.available;
-		deviceOwner = device.owner;
-	});
+	let running = $state(false);
+	let loading = $state(false);
+	let deviceAvailable = $state(true);
+	let deviceOwner: string | null = $state(null);
+	let showConflict = $state(false);
+	let conflictOwner = $state('');
 
 	onMount(() => {
+		const unsubStatus = companionStatuses.subscribe((s) => {
+			const status = s[appName];
+			if (status) {
+				running = status.running;
+			}
+		});
+
+		const unsubHw = hardwareStatus.subscribe((s) => {
+			const device = s[requiredDevice];
+			deviceAvailable = device.available;
+			deviceOwner = device.owner;
+		});
+
 		startCompanionPolling(appName);
 		startPolling();
-	});
 
-	onDestroy(() => {
-		stopCompanionPolling(appName);
-		unsubStatus();
-		unsubHw();
+		return () => {
+			stopCompanionPolling(appName);
+			unsubStatus();
+			unsubHw();
+		};
 	});
 
 	async function handleLaunch() {
@@ -106,7 +106,7 @@
 
 		{#if running}
 			<button
-				on:click={handleStop}
+				onclick={handleStop}
 				disabled={loading}
 				class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white rounded transition-colors"
 			>
@@ -114,7 +114,7 @@
 			</button>
 		{:else}
 			<button
-				on:click={handleLaunch}
+				onclick={handleLaunch}
 				disabled={loading}
 				class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded transition-colors"
 			>

@@ -1,31 +1,28 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { signalStore } from '$lib/stores/hackrfsweep/signalStore';
 	import { signalHelpers } from '$lib/services/hackrfsweep/signalService';
 	import { displayStore } from '$lib/stores/hackrfsweep/displayStore';
 	import { spectrumData, connectionStatus } from '$lib/stores/hackrf';
 
 	// Reactive signal state
-	$: signalState = $signalStore;
-	$: displayState = $displayStore;
-	$: spectrum = $spectrumData;
-	$: connection = $connectionStatus;
+	let signalState = $derived($signalStore);
+	let displayState = $derived($displayStore);
+	let spectrum = $derived($spectrumData);
+	let connection = $derived($connectionStatus);
 
 	// Component lifecycle
 	onMount(() => {
-		// Initialize signal processing when component mounts
 		signalHelpers.startProcessing();
-	});
-
-	onDestroy(() => {
-		// Clean up signal processing when component unmounts
-		signalHelpers.stopProcessing();
+		return () => signalHelpers.stopProcessing();
 	});
 
 	// Reactive signal processing
-	$: if (spectrum && !displayState.timer.isSwitching) {
-		processSignalData(spectrum);
-	}
+	$effect(() => {
+		if (spectrum && !displayState.timer.isSwitching) {
+			processSignalData(spectrum);
+		}
+	});
 
 	// Process incoming spectrum data
 	function processSignalData(data: any) {
@@ -34,7 +31,7 @@
 		// Extract peak power and frequency
 		if ('peak_power' in data && data.peak_power !== undefined) {
 			const peakPower = data.peak_power;
-			
+
 			// Update signal strength text and visual indicators
 			updateSignalStrength(peakPower);
 			updateSignalIndicator(peakPower);
@@ -49,7 +46,7 @@
 	// Update signal strength classification
 	function updateSignalStrength(db: number) {
 		let strengthText: string;
-		
+
 		if (db < -90) strengthText = 'No Signal';
 		else if (db < -70) strengthText = 'Very Weak';
 		else if (db < -50) strengthText = 'Weak';
@@ -58,7 +55,7 @@
 		else strengthText = 'Very Strong';
 
 		// Update display store with signal strength
-		displayStore.update(state => ({
+		displayStore.update((state) => ({
 			...state,
 			signalAnalysis: {
 				...state.signalAnalysis,
@@ -75,7 +72,7 @@
 		const percentage = ((clampedDb + 90) / 80) * 100;
 
 		// Update display store with indicator values
-		displayStore.update(state => ({
+		displayStore.update((state) => ({
 			...state,
 			signalAnalysis: {
 				...state.signalAnalysis,
@@ -101,7 +98,7 @@
 			const offsetStr = (offset >= 0 ? '+' : '') + offset.toFixed(2) + ' MHz';
 
 			// Update display store with frequency information
-			displayStore.update(state => ({
+			displayStore.update((state) => ({
 				...state,
 				signalAnalysis: {
 					...state.signalAnalysis,
@@ -113,14 +110,18 @@
 	}
 
 	// Handle frequency switching
-	$: if (displayState.timer.isSwitching) {
-		signalHelpers.handleFrequencySwitch();
-	}
+	$effect(() => {
+		if (displayState.timer.isSwitching) {
+			signalHelpers.handleFrequencySwitch();
+		}
+	});
 
 	// Handle connection loss
-	$: if (!connection.connected && signalState.processingActive) {
-		signalHelpers.stopProcessing();
-	}
+	$effect(() => {
+		if (!connection.connected && signalState.processingActive) {
+			signalHelpers.stopProcessing();
+		}
+	});
 </script>
 
 <!-- Signal Analyzer Component -->

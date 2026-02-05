@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { forceReleaseDevice } from '$lib/stores/hardwareStore';
 
-	export let show = false;
-	export let currentOwner: string;
-	export let device: string;
-	export let onTakeOver: (() => void) | undefined = undefined;
-	export let onCancel: (() => void) | undefined = undefined;
+	interface Props {
+		show?: boolean;
+		currentOwner: string;
+		device: string;
+		onTakeOver?: () => void;
+		onCancel?: () => void;
+	}
 
-	let forcing = false;
+	let { show = false, currentOwner, device, onTakeOver, onCancel }: Props = $props();
+
+	let forcing = $state(false);
 
 	async function handleTakeOver() {
 		forcing = true;
@@ -39,13 +43,13 @@
 			</p>
 			<div class="flex gap-3 justify-end">
 				<button
-					on:click={handleCancel}
+					onclick={handleCancel}
 					class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
 				>
 					Cancel
 				</button>
 				<button
-					on:click={handleTakeOver}
+					onclick={handleTakeOver}
 					disabled={forcing}
 					class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white rounded transition-colors"
 				>

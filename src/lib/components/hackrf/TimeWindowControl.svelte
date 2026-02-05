@@ -5,7 +5,7 @@
 		getAgeColor as _getAgeColor,
 		type TimeWindowConfig
 	} from '$lib/services/hackrf/timeWindowFilter';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	// Get stores from the filter
 	const {
@@ -16,20 +16,14 @@
 	} = timeWindowFilter;
 
 	// Configuration
-	let windowDuration = 30; // seconds
-	let fadeStartPercent = 60;
-	let maxSignalAge = 45;
-	let autoRemoveOld = true;
+	let windowDuration = $state(30);
+	let fadeStartPercent = $state(60);
+	let maxSignalAge = $state(45);
+	let autoRemoveOld = $state(true);
 
 	// UI state
-	let showAdvanced = false;
-	let selectedPreset: string = 'drone';
-
-	// Computed property for selected preset description
-	$: selectedPresetData =
-		selectedPreset && presets[selectedPreset as keyof typeof presets]
-			? presets[selectedPreset as keyof typeof presets]
-			: null;
+	let showAdvanced = $state(false);
+	let selectedPreset = $state<string>('drone');
 
 	// Preset configurations
 	const presets = {
@@ -62,6 +56,13 @@
 			description: 'Long-term pattern detection and analysis'
 		}
 	};
+
+	// Computed property for selected preset description
+	let selectedPresetData = $derived(
+		selectedPreset && presets[selectedPreset as keyof typeof presets]
+			? presets[selectedPreset as keyof typeof presets]
+			: null
+	);
 
 	// Apply configuration changes
 	function applyConfig() {
@@ -97,28 +98,19 @@
 		timeWindowFilter.clear();
 	}
 
-	// Auto-remove timer
-	let autoRemoveInterval: NodeJS.Timeout | null = null;
+	// Auto-remove timer with $effect cleanup
+	$effect(() => {
+		if (!autoRemoveOld) return;
 
-	$: if (autoRemoveOld) {
-		if (autoRemoveInterval) clearInterval(autoRemoveInterval);
-		autoRemoveInterval = setInterval(() => {
+		const interval = setInterval(() => {
 			timeWindowFilter.clearOlderThan(maxSignalAge);
-		}, 5000); // Check every 5 seconds
-	} else if (autoRemoveInterval) {
-		clearInterval(autoRemoveInterval);
-		autoRemoveInterval = null;
-	}
+		}, 5000);
 
-	onMount(() => {
-		// Apply default preset
-		applyPreset('drone');
+		return () => clearInterval(interval);
 	});
 
-	onDestroy(() => {
-		if (autoRemoveInterval) {
-			clearInterval(autoRemoveInterval);
-		}
+	onMount(() => {
+		applyPreset('drone');
 	});
 </script>
 
@@ -136,7 +128,7 @@
 			Time Window Filter
 		</h3>
 		<button
-			on:click={() => (showAdvanced = !showAdvanced)}
+			onclick={() => (showAdvanced = !showAdvanced)}
 			class="text-text-muted hover:text-text-primary transition-colors"
 		>
 			<svg
@@ -177,7 +169,7 @@
 		<div class="grid grid-cols-2 gap-2">
 			{#each Object.entries(presets) as [key, preset]}
 				<button
-					on:click={() => applyPreset(key)}
+					onclick={() => applyPreset(key)}
 					class="p-3 rounded-lg border transition-all text-left
 						{selectedPreset === key
 						? 'bg-accent-primary/20 border-accent-primary text-text-primary'
@@ -209,7 +201,7 @@
 					id="windowDuration"
 					type="range"
 					bind:value={windowDuration}
-					on:change={applyConfig}
+					onchange={applyConfig}
 					min="5"
 					max="300"
 					step="5"
@@ -230,7 +222,7 @@
 					id="fadeStart"
 					type="range"
 					bind:value={fadeStartPercent}
-					on:change={applyConfig}
+					onchange={applyConfig}
 					min="20"
 					max="90"
 					step="5"
@@ -251,7 +243,7 @@
 					id="maxAge"
 					type="range"
 					bind:value={maxSignalAge}
-					on:change={applyConfig}
+					onchange={applyConfig}
 					min="10"
 					max="600"
 					step="5"
@@ -272,13 +264,13 @@
 			<!-- Actions -->
 			<div class="flex gap-2 pt-2">
 				<button
-					on:click={clearOldSignals}
+					onclick={clearOldSignals}
 					class="flex-1 px-3 py-2 text-sm bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg transition-colors"
 				>
 					Clear Old
 				</button>
 				<button
-					on:click={clearAllSignals}
+					onclick={clearAllSignals}
 					class="flex-1 px-3 py-2 text-sm bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
 				>
 					Clear All

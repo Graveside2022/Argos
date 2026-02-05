@@ -10,12 +10,12 @@
 	let logError: any;
 
 	// Reactive state from store with safe defaults
-	let analysisSettings = {
+	let analysisSettings = $state({
 		mode: 'realtime'
-	};
+	});
 
 	// Local input binding
-	let analysisMode = analysisSettings.mode;
+	let analysisMode = $state(analysisSettings.mode);
 
 	// Initialize in browser only
 	onMount(async () => {
@@ -42,9 +42,9 @@
 	});
 
 	// Update local value when store changes
-	$: {
+	$effect(() => {
 		analysisMode = analysisSettings.mode;
-	}
+	});
 
 	// Update analysis mode
 	async function updateAnalysisMode() {
@@ -65,7 +65,7 @@
 				type="radio"
 				bind:group={analysisMode}
 				value="realtime"
-				on:change={() => void updateAnalysisMode()}
+				onchange={() => void updateAnalysisMode()}
 			/>
 			<span>Real-time Analysis</span>
 		</label>
@@ -74,7 +74,7 @@
 				type="radio"
 				bind:group={analysisMode}
 				value="postcollection"
-				on:change={() => void updateAnalysisMode()}
+				onchange={() => void updateAnalysisMode()}
 			/>
 			<span>Post-collection Analysis</span>
 		</label>

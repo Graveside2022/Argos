@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { HackRFService } from '$lib/services/tactical-map/hackrfService';
 	import { hackrfStore } from '$lib/stores/tactical-map/hackrfStore';
 
-	export let targetFrequency: number = 2437;
-	export let onFrequencyChange: ((frequency: number) => void) | undefined = undefined;
+	interface Props {
+		targetFrequency?: number;
+		onFrequencyChange?: (frequency: number) => void;
+	}
+
+	let { targetFrequency = 2437, onFrequencyChange }: Props = $props();
 
 	const hackrfService = new HackRFService();
 
-	$: hackrfState = $hackrfStore;
+	let hackrfState = $derived($hackrfStore);
 
 	// Handle frequency input changes
 	function handleFrequencyChange(event: Event) {
@@ -39,10 +43,9 @@
 
 	onMount(() => {
 		hackrfService.connectToHackRF();
-	});
-
-	onDestroy(() => {
-		hackrfService.disconnectFromHackRF();
+		return () => {
+			hackrfService.disconnectFromHackRF();
+		};
 	});
 </script>
 
@@ -66,7 +69,7 @@
 			id="frequency-input"
 			type="number"
 			bind:value={targetFrequency}
-			on:input={handleFrequencyChange}
+			oninput={handleFrequencyChange}
 			min="1"
 			max="6000"
 			step="0.1"
@@ -78,7 +81,7 @@
 		<button
 			class="search-button"
 			class:searching={hackrfState.isSearching}
-			on:click={toggleSearch}
+			onclick={toggleSearch}
 			disabled={hackrfState.connectionStatus === 'Disconnected'}
 		>
 			{hackrfState.isSearching ? '⏹️ Stop Search' : '🔍 Start Search'}
@@ -86,13 +89,13 @@
 
 		<button
 			class="clear-button"
-			on:click={clearSignals}
+			onclick={clearSignals}
 			disabled={hackrfState.signalCount === 0}
 		>
 			🗑️ Clear Signals
 		</button>
 
-		<button class="spectrum-button" on:click={goToSpectrum}> 📊 View Spectrum </button>
+		<button class="spectrum-button" onclick={goToSpectrum}> 📊 View Spectrum </button>
 	</div>
 
 	<div class="search-status">

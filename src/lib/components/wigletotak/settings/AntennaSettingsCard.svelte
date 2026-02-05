@@ -10,14 +10,14 @@
 	let logError: any;
 
 	// Reactive state from store with safe defaults
-	let antennaSettings = {
+	let antennaSettings = $state({
 		type: 'Standard',
 		customSensitivity: 1.0
-	};
+	});
 
 	// Local input bindings
-	let antennaType = antennaSettings.type;
-	let customSensitivity = antennaSettings.customSensitivity;
+	let antennaType = $state(antennaSettings.type);
+	let customSensitivity = $state(antennaSettings.customSensitivity);
 
 	// Initialize in browser only
 	onMount(async () => {
@@ -45,10 +45,10 @@
 	});
 
 	// Update local values when store changes
-	$: {
+	$effect(() => {
 		antennaType = antennaSettings.type;
 		customSensitivity = antennaSettings.customSensitivity;
-	}
+	});
 
 	// Update antenna sensitivity
 	async function updateAntennaSensitivity() {
@@ -95,7 +95,7 @@
 			/>
 		</div>
 	{/if}
-	<button class="btn btn-primary" on:click={() => void updateAntennaSensitivity()}>
+	<button class="btn btn-primary" onclick={() => void updateAntennaSensitivity()}>
 		Save Antenna Settings
 	</button>
 </div>

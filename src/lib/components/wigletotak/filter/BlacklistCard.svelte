@@ -1,15 +1,11 @@
 <script lang="ts">
-	import { wigleStore } from '$lib/stores/wigletotak/wigleStore';
 	import { wigleService } from '$lib/services/wigletotak/wigleService';
 	import { logInfo, logError } from '$lib/utils/logger';
 
-	// Reactive state from store
-	$: _filterSettings = $wigleStore.filterSettings;
-
 	// Local form state
-	let blacklistSSID = '';
-	let blacklistMAC = '';
-	let blacklistColor = '-65281'; // Default purple
+	let blacklistSSID = $state('');
+	let blacklistMAC = $state('');
+	let blacklistColor = $state('-65281'); // Default purple
 
 	// Color options for blacklist entries
 	const colorOptions = [
@@ -80,7 +76,7 @@
 			{/each}
 		</select>
 	</div>
-	<button class="btn btn-primary" on:click={() => void addToBlacklist()}>
+	<button class="btn btn-primary" onclick={() => void addToBlacklist()}>
 		Add to Blacklist
 	</button>
 </div>

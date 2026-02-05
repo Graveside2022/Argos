@@ -4,7 +4,7 @@
 	import { activeView } from '$lib/stores/dashboard/dashboardStore';
 
 	let terminalEl: HTMLDivElement;
-	let connectionError = false;
+	let connectionError = $state(false);
 	let cleanup: (() => void) | null = null;
 
 	function goBack() {
@@ -130,7 +130,7 @@
 
 <div class="terminal-view">
 	<div class="terminal-header">
-		<button class="btn btn-ghost btn-sm" on:click={goBack}>
+		<button class="btn btn-ghost btn-sm" onclick={goBack}>
 			<svg
 				width="16"
 				height="16"

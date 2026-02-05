@@ -1,22 +1,28 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { MapService } from '$lib/services/tactical-map/mapService';
 	import { mapStore } from '$lib/stores/tactical-map/mapStore';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
-	export let onMapInitialized: ((map: any) => void) | undefined = undefined;
+	interface Props {
+		onMapInitialized?: (map: any) => void;
+	}
+
+	let { onMapInitialized }: Props = $props();
 
 	const mapService = new MapService();
 	let mapContainer: HTMLDivElement;
 	let isMapReady = false;
 
-	$: gpsState = $gpsStore;
-	$: mapState = $mapStore;
+	let gpsState = $derived($gpsStore);
+	let mapState = $derived($mapStore);
 
 	// Initialize map when GPS fix is obtained
-	$: if (gpsState.status.hasGPSFix && !mapState.isInitialized && mapContainer && !isMapReady) {
-		initializeMap();
-	}
+	$effect(() => {
+		if (gpsState.status.hasGPSFix && !mapState.isInitialized && mapContainer && !isMapReady) {
+			initializeMap();
+		}
+	});
 
 	async function initializeMap() {
 		if (isMapReady) return;
@@ -36,11 +42,6 @@
 
 	onMount(async () => {
 		await mapService.initializeLeaflet();
-	});
-
-	onDestroy(() => {
-		const _mapState = mapStore;
-		// Cleanup is handled by the MapService when the store is cleared
 	});
 </script>
 
