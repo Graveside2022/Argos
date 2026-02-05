@@ -7,6 +7,8 @@ import { HardwareDevice } from '$lib/server/hardware/types';
 
 const execAsync = promisify(exec);
 const CONTAINER_NAME = 'openwebrx-hackrf';
+// All names the resource manager might assign to OpenWebRX ownership
+const OPENWEBRX_OWNERS = ['openwebrx', 'openwebrx-hackrf', 'soapy_connector'];
 
 async function isContainerRunning(): Promise<boolean> {
 	try {
@@ -43,20 +45,37 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (action === 'start') {
 			try {
+				// Check if OpenWebRX is already running
+				const alreadyRunning = await isContainerRunning();
+				if (alreadyRunning) {
+					return json({
+						success: true,
+						running: true,
+						message: 'OpenWebRX is already running'
+					});
+				}
+
 				// Acquire HackRF via Resource Manager
 				const acquireResult = await resourceManager.acquire(
 					'openwebrx',
 					HardwareDevice.HACKRF
 				);
 				if (!acquireResult.success) {
-					return json(
-						{
-							success: false,
-							message: `HackRF is in use by ${acquireResult.owner}. Stop it first.`,
-							owner: acquireResult.owner
-						},
-						{ status: 409 }
-					);
+					// If the HackRF is held by OpenWebRX's own processes, treat as already ours
+					if (acquireResult.owner && OPENWEBRX_OWNERS.includes(acquireResult.owner)) {
+						// Force-take ownership since it's our own stale lock
+						await resourceManager.forceRelease(HardwareDevice.HACKRF);
+						await resourceManager.acquire('openwebrx', HardwareDevice.HACKRF);
+					} else {
+						return json(
+							{
+								success: false,
+								message: `HackRF is in use by ${acquireResult.owner}. Stop it first.`,
+								owner: acquireResult.owner
+							},
+							{ status: 409 }
+						);
+					}
 				}
 
 				// Stop hackrf-backend container to free USB device
@@ -137,8 +156,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				// Restart hackrf-backend
 				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
 
-				// Release HackRF
-				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+				// Release HackRF — force release since ownership name may vary
+				await resourceManager.forceRelease(HardwareDevice.HACKRF);
 
 				return json({
 					success: true,
@@ -146,7 +165,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					message: 'OpenWebRX stopped. HackRF released.'
 				});
 			} catch (error: unknown) {
-				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
+				await resourceManager.forceRelease(HardwareDevice.HACKRF);
 				return json(
 					{
 						success: false,

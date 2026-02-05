@@ -1,0 +1,150 @@
+# Sniffle
+
+## DO NOT INSTALL -- Required hardware not available
+
+> **RISK CLASSIFICATION**: MODERATE RISK
+> Passive Bluetooth 5 sniffer capturing all PHY modes including long range coded PHY; capable of following connections and capturing encrypted traffic for offline analysis. Military education/training toolkit - Not for public release.
+
+---
+
+## Deployment Classification
+
+> **RUNS ON ARGOS RPi 5: YES** — Pure Python host-side receiver; sniffer firmware runs on TI CC1352/CC26x2 hardware
+
+| Method               | Supported | Notes                                                           |
+| -------------------- | --------- | --------------------------------------------------------------- |
+| **Docker Container** | YES       | Lightweight image; USB serial passthrough for TI LaunchPad      |
+| **Native Install**   | YES       | `pip install pyserial` on Kali ARM64; zero compilation required |
+
+---
+
+## Tool Description
+
+Sniffle is a Bluetooth 5 and 4.x sniffer built for Texas Instruments CC1352 and CC26x2 LaunchPad hardware. It is the first open-source sniffer capable of capturing Bluetooth 5 long range (coded PHY S2/S8), 2M PHY, and legacy 1M PHY simultaneously. Sniffle can passively follow new connections from advertisements, sniff existing connections by detecting connection parameters, capture encrypted PDUs for offline analysis, and decode advertisement extensions (extended advertising, periodic advertising). Output is provided as PCAP files compatible with Wireshark and as JSON for programmatic consumption.
+
+## Category
+
+BT5/BLE Passive Sniffer
+
+## Repository
+
+https://github.com/nccgroup/Sniffle
+
+---
+
+## Docker Compatibility Analysis
+
+### Can it run in Docker?
+
+**YES** - Sniffle's host-side Python receiver runs in Docker with USB serial passthrough for the TI LaunchPad hardware. The sniffer firmware runs on the CC1352/CC26x2, not on the host.
+
+### Host OS-Level Requirements
+
+- `--device=/dev/ttyACM0` (or equivalent) - USB serial passthrough for TI LaunchPad
+- `--privileged` - Required for USB serial device access
+- Host kernel modules: `cdc_acm` for TI LaunchPad USB serial interface
+- No `--net=host` required (communication is via USB serial)
+- No Bluetooth stack required on host (Sniffle uses its own radio, not HCI)
+
+### Docker-to-Host Communication
+
+- TI CC1352 or CC26x2 LaunchPad must be connected to host USB
+- LaunchPad appears as `/dev/ttyACM*` on the host (standard `cdc_acm` driver)
+- PCAP capture files via volume mount: `-v /host/captures:/captures`
+- Firmware flashing requires UniFlash or OpenOCD (can be done from host or container)
+
+---
+
+## Install Instructions (Docker on Kali RPi 5)
+
+### Dockerfile
+
+```dockerfile
+FROM kalilinux/kali-rolling:latest
+
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-serial \
+    git \
+    usbutils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 \
+    https://github.com/nccgroup/Sniffle.git /opt/sniffle
+
+WORKDIR /opt/sniffle
+
+RUN python3 -m venv /opt/sniffle/venv && \
+    /opt/sniffle/venv/bin/pip install --upgrade pip && \
+    /opt/sniffle/venv/bin/pip install pyserial
+
+ENV PATH="/opt/sniffle/venv/bin:$PATH"
+
+WORKDIR /opt/sniffle/python_cli
+
+ENTRYPOINT ["python3"]
+CMD ["sniff_receiver.py", "--help"]
+```
+
+### Build and Run
+
+```bash
+# Build the image
+docker build -t argos/sniffle .
+
+# Run - sniff all BLE advertisements
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  -v $(pwd)/captures:/captures \
+  argos/sniffle sniff_receiver.py -s /dev/ttyACM0 -a \
+    -o /captures/ble_adverts.pcap
+
+# Run - follow connections from a specific device
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  -v $(pwd)/captures:/captures \
+  argos/sniffle sniff_receiver.py -s /dev/ttyACM0 \
+    -t AA:BB:CC:DD:EE:FF \
+    -o /captures/connection.pcap
+
+# Run - sniff BT5 long range (coded PHY)
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  -v $(pwd)/captures:/captures \
+  argos/sniffle sniff_receiver.py -s /dev/ttyACM0 \
+    --coded -a \
+    -o /captures/coded_phy.pcap
+
+# Run - output as JSON for Argos integration
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  argos/sniffle sniff_receiver.py -s /dev/ttyACM0 -a --json
+```
+
+---
+
+## Kali Linux Raspberry Pi 5 Compatibility
+
+### Architecture Support
+
+**ARM64 NATIVE** - Sniffle's host-side component is a pure Python application with only pyserial as a dependency. Runs natively on ARM64 without any compilation. The sniffer firmware runs on the TI CC1352/CC26x2 (ARM Cortex-M4F), not on the host. Firmware is pre-compiled in the repository or can be built with TI Code Composer Studio.
+
+### Hardware Constraints
+
+- CPU: Minimal CPU requirements for serial data reception and PCAP writing; Cortex-A76 is vastly overpowered for this task
+- RAM: Very lightweight (~50MB); trivial for 8GB system
+- Hardware: Requires one of:
+    - TI CC1352R1 LaunchPad (LAUNCHXL-CC1352R1) - recommended, supports all BT5 PHY modes
+    - TI CC26x2R1 LaunchPad (LAUNCHXL-CC26X2R1)
+    - TI CC1352P LaunchPad (with PA for extended range)
+- Cost: LaunchPad boards are approximately $30-40 USD
+
+### Verdict
+
+**COMPATIBLE** - Sniffle runs natively on RPi 5 Kali ARM64 with zero compilation required. Docker deployment is straightforward with USB serial passthrough. The only constraint is the requirement for TI CC1352/CC26x2 LaunchPad hardware. Excellent candidate for Argos integration due to its Python API and JSON output support.

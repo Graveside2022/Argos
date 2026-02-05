@@ -8,11 +8,21 @@ import { browser } from '$app/environment';
 import type { ToolStatus } from '$lib/types/tools';
 import { toolHierarchy, findByPath } from '$lib/data/toolHierarchy';
 
+// Validate stored path against current hierarchy (handles structure changes)
+function getValidatedPath(): string[] {
+	if (!browser) return [];
+	const stored: string[] = JSON.parse(localStorage.getItem('toolNavigationPath') || '[]');
+	if (stored.length === 0) return [];
+	const result = findByPath(stored, toolHierarchy.root);
+	if (result && 'children' in result) return stored;
+	// Stale path from old hierarchy, reset
+	localStorage.setItem('toolNavigationPath', '[]');
+	return [];
+}
+
 // Navigation state: stack of category IDs representing the path
-// Example: [] = root (OFFNET), ['rf-spectrum'] = RF & SPECTRUM, ['rf-spectrum', 'bluetooth'] = Bluetooth
-export const toolNavigationPath = writable<string[]>(
-	browser ? JSON.parse(localStorage.getItem('toolNavigationPath') || '[]') : []
-);
+// Example: [] = root (TOOLS), ['offnet'] = OFFNET, ['offnet', 'recon'] = RECON
+export const toolNavigationPath = writable<string[]>(getValidatedPath());
 
 // Which categories are expanded (for collapsible sections)
 export const expandedCategories = writable<Set<string>>(
@@ -25,8 +35,11 @@ export const toolStates = writable<Map<string, ToolStatus>>(new Map());
 
 // Derived: current category being viewed
 export const currentCategory = derived(toolNavigationPath, ($path) => {
+	if ($path.length === 0) return toolHierarchy.root;
 	const result = findByPath($path, toolHierarchy.root);
-	return result && 'children' in result ? result : toolHierarchy.root;
+	if (result && 'children' in result) return result;
+	// Invalid path — return root (navigateToCategory prevents this case)
+	return toolHierarchy.root;
 });
 
 // Derived: breadcrumb trail for navigation header
@@ -46,10 +59,20 @@ export const breadcrumbs = derived(toolNavigationPath, ($path) => {
 });
 
 /**
- * Navigate to a specific category by ID
+ * Navigate to a specific category by ID.
+ * Validates that the target path exists before committing.
  */
 export function navigateToCategory(categoryId: string) {
-	toolNavigationPath.update((path) => [...path, categoryId]);
+	toolNavigationPath.update((path) => {
+		const newPath = [...path, categoryId];
+		const result = findByPath(newPath, toolHierarchy.root);
+		// Only navigate if the target is a valid category with children
+		if (result && 'children' in result) {
+			return newPath;
+		}
+		// Invalid target — stay where we are
+		return path;
+	});
 }
 
 /**
