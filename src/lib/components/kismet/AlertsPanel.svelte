@@ -1,14 +1,26 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 	import type { KismetAlert } from '$lib/types/kismet';
 
-	export let maxAlerts = 50;
-	export let autoScroll = true;
+	interface Props {
+		maxAlerts?: number;
+		autoScroll?: boolean;
+	}
 
-	let alerts: KismetAlert[] = [];
+	let { maxAlerts = 50, autoScroll = true }: Props = $props();
+
 	let alertsContainer: HTMLDivElement;
-	let unsubscribe: () => void;
+
+	let alerts: KismetAlert[] = $derived($kismetStore.alerts.slice(-maxAlerts));
+
+	$effect(() => {
+		const _count = alerts.length;
+		if (autoScroll && alertsContainer) {
+			setTimeout(() => {
+				alertsContainer.scrollTop = alertsContainer.scrollHeight;
+			}, 100);
+		}
+	});
 
 	// Alert types with their styling
 	const alertTypes = {
@@ -20,23 +32,6 @@
 		suspicious: { icon: '🔴', color: '#f87171', label: 'Suspicious' },
 		info: { icon: 'ℹ️', color: '#737373', label: 'Information' }
 	};
-
-	onMount(() => {
-		unsubscribe = kismetStore.subscribe(($store) => {
-			alerts = $store.alerts.slice(-maxAlerts);
-
-			// Auto-scroll to bottom when new alerts arrive
-			if (autoScroll && alertsContainer) {
-				setTimeout(() => {
-					alertsContainer.scrollTop = alertsContainer.scrollHeight;
-				}, 100);
-			}
-		});
-	});
-
-	onDestroy(() => {
-		if (unsubscribe) unsubscribe();
-	});
 
 	function formatTime(timestamp: number): string {
 		const date = new Date(timestamp * 1000);
@@ -64,7 +59,7 @@
 			<span class="alert-count">{alerts.length}</span>
 			<button
 				class="clear-button"
-				on:click={clearAlerts}
+				onclick={clearAlerts}
 				disabled={alerts.length === 0}
 				title="Clear all alerts"
 			>

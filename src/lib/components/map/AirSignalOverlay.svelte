@@ -1,26 +1,30 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { usrpAPI } from '$lib/services/usrp/api';
 	import { spectrumData } from '$lib/stores/usrp';
 
-	export let isOpen = false;
-	export let onClose: () => void = () => {};
+	interface Props {
+		isOpen?: boolean;
+		onClose?: () => void;
+	}
+
+	let { isOpen = false, onClose = () => {} }: Props = $props();
 
 	// State
-	let isRFEnabled = false;
-	let isProcessing = false;
-	let connectionStatus = 'Disconnected';
-	let _deviceInfo = '';
-	let signalCount = 0;
-	let targetFrequency = '';
-	let frequencyBands = {
+	let isRFEnabled = $state(false);
+	let isProcessing = $state(false);
+	let connectionStatus = $state('Disconnected');
+	let _deviceInfo = $state('');
+	let signalCount = $state(0);
+	let targetFrequency = $state('');
+	let frequencyBands = $state({
 		wifi24: false,
 		wifi5: false,
 		drone24: false,
 		drone58: false,
 		drone900: false,
 		custom: false
-	};
+	});
 
 	// Signal stats
 	let detectedSignals: Array<{
@@ -28,9 +32,8 @@
 		power: number;
 		type: string;
 		timestamp: number;
-	}> = [];
+	}> = $state([]);
 
-	let updateInterval: ReturnType<typeof setInterval>;
 	let spectrumUnsubscribe: (() => void) | null = null;
 
 	async function toggleRFDetection() {
@@ -311,42 +314,40 @@
 
 	onMount(() => {
 		// Update detected signals periodically
-		updateInterval = setInterval(() => {
+		const updateInterval = setInterval(() => {
 			// Remove signals older than 30 seconds
 			const cutoff = Date.now() - 30000;
 			detectedSignals = detectedSignals.filter((s) => s.timestamp > cutoff);
 			signalCount = detectedSignals.length;
 		}, 1000);
-	});
 
-	onDestroy(() => {
-		if (updateInterval) {
+		return () => {
 			clearInterval(updateInterval);
-		}
 
-		if (spectrumUnsubscribe) {
-			spectrumUnsubscribe();
-		}
+			if (spectrumUnsubscribe) {
+				spectrumUnsubscribe();
+			}
 
-		// Stop RF if still running
-		if (isRFEnabled) {
-			fetch('/api/rf/stop-sweep', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ deviceType: 'usrp' })
-			});
-			usrpAPI.disconnect();
-		}
+			// Stop RF if still running
+			if (isRFEnabled) {
+				fetch('/api/rf/stop-sweep', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ deviceType: 'usrp' })
+				});
+				usrpAPI.disconnect();
+			}
+		};
 	});
 </script>
 
 {#if isOpen}
-	<div class="overlay-backdrop" on:click={onClose}>
-		<div class="overlay-container" on:click|stopPropagation>
+	<div class="overlay-backdrop" onclick={onClose}>
+		<div class="overlay-container" onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
 			<div class="overlay-header">
 				<h2>AirSignal RF</h2>
-				<button class="close-button" on:click={onClose}>×</button>
+				<button class="close-button" onclick={onClose}>×</button>
 			</div>
 
 			<!-- Status Bar -->
@@ -377,7 +378,7 @@
 				<div class="frequency-grid">
 					<button
 						class="freq-button {frequencyBands.wifi24 ? 'active' : ''}"
-						on:click={() => toggleFrequencyBand('wifi24')}
+						onclick={() => toggleFrequencyBand('wifi24')}
 					>
 						<div class="freq-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -394,7 +395,7 @@
 
 					<button
 						class="freq-button {frequencyBands.wifi5 ? 'active' : ''}"
-						on:click={() => toggleFrequencyBand('wifi5')}
+						onclick={() => toggleFrequencyBand('wifi5')}
 					>
 						<div class="freq-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -411,7 +412,7 @@
 
 					<button
 						class="freq-button {frequencyBands.drone24 ? 'active' : ''}"
-						on:click={() => toggleFrequencyBand('drone24')}
+						onclick={() => toggleFrequencyBand('drone24')}
 					>
 						<div class="freq-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -428,7 +429,7 @@
 
 					<button
 						class="freq-button {frequencyBands.drone58 ? 'active' : ''}"
-						on:click={() => toggleFrequencyBand('drone58')}
+						onclick={() => toggleFrequencyBand('drone58')}
 					>
 						<div class="freq-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -445,7 +446,7 @@
 
 					<button
 						class="freq-button {frequencyBands.drone900 ? 'active' : ''}"
-						on:click={() => toggleFrequencyBand('drone900')}
+						onclick={() => toggleFrequencyBand('drone900')}
 					>
 						<div class="freq-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -472,7 +473,7 @@
 							class="freq-input"
 						/>
 						<span class="freq-unit">MHz</span>
-						<button class="apply-button" on:click={applyCustomFrequency}> Add </button>
+						<button class="apply-button" onclick={applyCustomFrequency}> Add </button>
 					</div>
 				</div>
 
@@ -499,7 +500,7 @@
 						class="rf-toggle-button {isRFEnabled ? 'active' : ''} {isProcessing
 							? 'processing'
 							: ''}"
-						on:click={toggleRFDetection}
+						onclick={toggleRFDetection}
 						disabled={isProcessing}
 					>
 						{#if isRFEnabled}

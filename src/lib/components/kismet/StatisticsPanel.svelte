@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 
-	let stats = {
+	let stats = $state({
 		totalDevices: 0,
 		totalNetworks: 0,
 		activeDevices: 0,
@@ -10,36 +10,35 @@
 		dataRate: '0 KB/s',
 		uptime: '00:00:00',
 		lastUpdate: new Date()
-	};
+	});
 
-	let unsubscribe: () => void;
-	let updateInterval: NodeJS.Timeout;
+	$effect(() => {
+		const store = $kismetStore;
+		stats.totalDevices = store.devices.length;
+		stats.totalNetworks = store.networks.length;
+
+		// Count active devices (seen in last 5 minutes)
+		const fiveMinutesAgo = Date.now() / 1000 - 300;
+		stats.activeDevices = store.devices.filter(
+			(d: { last_seen: number }) => d.last_seen > fiveMinutesAgo
+		).length;
+
+		stats.lastUpdate = new Date();
+	});
 
 	onMount(() => {
-		unsubscribe = kismetStore.subscribe(($store) => {
-			// Update stats from store
-			stats.totalDevices = $store.devices.length;
-			stats.totalNetworks = $store.networks.length;
-
-			// Count active devices (seen in last 5 minutes)
-			const fiveMinutesAgo = Date.now() / 1000 - 300;
-			stats.activeDevices = $store.devices.filter((d) => d.last_seen > fiveMinutesAgo).length;
-
-			stats.lastUpdate = new Date();
-		});
-
 		// Update uptime counter every second
-		updateInterval = setInterval(() => {
+		const updateInterval = setInterval(() => {
 			updateUptime();
 		}, 1000);
 
 		// Simulate packet rate updates
-		simulatePacketStats();
-	});
+		const packetInterval = simulatePacketStats();
 
-	onDestroy(() => {
-		if (unsubscribe) unsubscribe();
-		if (updateInterval) clearInterval(updateInterval);
+		return () => {
+			clearInterval(updateInterval);
+			if (packetInterval) clearInterval(packetInterval);
+		};
 	});
 
 	function updateUptime() {
@@ -57,7 +56,7 @@
 
 	function simulatePacketStats() {
 		// In a real implementation, these would come from Kismet
-		setInterval(() => {
+		return setInterval(() => {
 			if (kismetStore.getStatus().kismet_running) {
 				stats.packetsPerSecond = Math.floor(Math.random() * 500) + 100;
 				const dataRate = Math.random() * 2048 + 512; // KB/s

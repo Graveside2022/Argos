@@ -6,7 +6,7 @@
 	import LayersPanel from './panels/LayersPanel.svelte';
 	import SettingsPanel from './panels/SettingsPanel.svelte';
 
-	$: isOpen = $activePanel !== null;
+	let isOpen = $derived($activePanel !== null);
 </script>
 
 <aside class="panel-container" class:open={isOpen}>

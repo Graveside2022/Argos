@@ -55,7 +55,7 @@
 				title={icon.label}
 				aria-label={icon.label}
 				aria-pressed={$activePanel === icon.id}
-				on:click={() => handleClick(icon.id)}
+				onclick={() => handleClick(icon.id)}
 			>
 				{@html icon.svg}
 			</button>
@@ -71,7 +71,7 @@
 			title={terminalIcon.label}
 			aria-label={terminalIcon.label}
 			aria-pressed={$activeView === 'terminal'}
-			on:click={() => handleClick(terminalIcon.id)}
+			onclick={() => handleClick(terminalIcon.id)}
 		>
 			{@html terminalIcon.svg}
 		</button>
@@ -81,7 +81,7 @@
 			title={layersIcon.label}
 			aria-label={layersIcon.label}
 			aria-pressed={$activePanel === layersIcon.id}
-			on:click={() => handleClick(layersIcon.id)}
+			onclick={() => handleClick(layersIcon.id)}
 		>
 			{@html layersIcon.svg}
 		</button>
@@ -91,7 +91,7 @@
 			title={bottomIcon.label}
 			aria-label={bottomIcon.label}
 			aria-pressed={$activePanel === bottomIcon.id}
-			on:click={() => handleClick(bottomIcon.id)}
+			onclick={() => handleClick(bottomIcon.id)}
 		>
 			{@html bottomIcon.svg}
 		</button>

@@ -4,9 +4,13 @@
 	import type { SignalMarker } from '$lib/stores/map/signals';
 	import { SignalSource } from '$lib/types/enums';
 
-	export let signals: SignalMarker[] = [];
+	interface Props {
+		signals?: SignalMarker[];
+	}
 
-	let showPanel = true;
+	let { signals = [] }: Props = $props();
+
+	let showPanel = $state(true);
 
 	function handleExport(format: 'geojson' | 'kml') {
 		const data = format === 'geojson' ? exportAsGeoJSON(signals) : exportAsKML(signals);
@@ -24,7 +28,7 @@
 
 <!-- Toggle Button -->
 <button
-	on:click={() => (showPanel = !showPanel)}
+	onclick={() => (showPanel = !showPanel)}
 	class="absolute top-4 left-4 z-[1000] bg-gray-900/90 text-white p-3 rounded-lg shadow-lg hover:bg-gray-800/90 transition-colors"
 	aria-label="Toggle controls"
 >
@@ -169,21 +173,21 @@
 		<!-- Actions -->
 		<div class="space-y-2">
 			<button
-				on:click={() => clearSignals()}
+				onclick={() => clearSignals()}
 				class="w-full px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600 rounded text-sm transition-colors"
 			>
 				Clear All Signals
 			</button>
 
 			<button
-				on:click={() => clearSignals(SignalSource.HackRF)}
+				onclick={() => clearSignals(SignalSource.HackRF)}
 				class="w-full px-3 py-2 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600 rounded text-sm transition-colors"
 			>
 				Clear HackRF
 			</button>
 
 			<button
-				on:click={() => clearSignals(SignalSource.Kismet)}
+				onclick={() => clearSignals(SignalSource.Kismet)}
 				class="w-full px-3 py-2 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600 rounded text-sm transition-colors"
 			>
 				Clear Kismet
@@ -193,14 +197,14 @@
 				<p class="text-xs text-gray-400 mb-2">Export Data</p>
 				<div class="grid grid-cols-2 gap-2">
 					<button
-						on:click={() => handleExport('geojson')}
+						onclick={() => handleExport('geojson')}
 						disabled={signals.length === 0}
 						class="px-3 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						GeoJSON
 					</button>
 					<button
-						on:click={() => handleExport('kml')}
+						onclick={() => handleExport('kml')}
 						disabled={signals.length === 0}
 						class="px-3 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 					>

@@ -1,17 +1,12 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { kismetStore } from '$lib/stores/kismet';
 	import { notifications } from '$lib/stores/notifications';
 
-	let isRunning = false;
-	let isLoading = false;
-	let unsubscribe: () => void;
+	let isRunning = $derived($kismetStore.status.kismet_running);
+	let isLoading = $state(false);
 
 	onMount(() => {
-		unsubscribe = kismetStore.subscribe(($store) => {
-			isRunning = $store.status.kismet_running;
-		});
-
 		// Check initial status
 		void checkStatus();
 
@@ -23,10 +18,6 @@
 		return () => {
 			clearInterval(interval);
 		};
-	});
-
-	onDestroy(() => {
-		if (unsubscribe) unsubscribe();
 	});
 
 	async function checkStatus() {
@@ -133,7 +124,7 @@
 	<div class="control-buttons">
 		<button
 			class="control-button start-button"
-			on:click={startService}
+			onclick={startService}
 			disabled={isRunning || isLoading}
 			class:loading={isLoading && !isRunning}
 		>
@@ -148,7 +139,7 @@
 
 		<button
 			class="control-button stop-button"
-			on:click={stopService}
+			onclick={stopService}
 			disabled={!isRunning || isLoading}
 			class:loading={isLoading && isRunning}
 		>

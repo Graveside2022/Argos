@@ -1,27 +1,21 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { btleState, startBtlePolling, stopBtlePolling } from '$lib/stores/btleStore';
 
-	export let isOpen = false;
-	export let onClose: () => void = () => {};
+	interface Props {
+		isOpen?: boolean;
+		onClose?: () => void;
+	}
 
-	let state = {
-		running: false,
-		channel: 37,
-		packets: [] as any[],
-		packetCount: 0,
-		uniqueDevices: 0
-	};
+	let { isOpen = false, onClose = () => {} }: Props = $props();
 
-	const unsub = btleState.subscribe((s) => {
-		state = s;
-	});
+	let state = $derived($btleState);
+
 	onMount(() => {
 		startBtlePolling();
-	});
-	onDestroy(() => {
-		stopBtlePolling();
-		unsub();
+		return () => {
+			stopBtlePolling();
+		};
 	});
 
 	// Aggregate unique devices from packets
@@ -55,7 +49,7 @@
 		return 'text-red-400';
 	}
 
-	$: uniqueDevices = getUniqueDevices();
+	let uniqueDevices = $derived(getUniqueDevices());
 </script>
 
 {#if isOpen}
@@ -64,8 +58,7 @@
 	>
 		<div class="flex items-center justify-between p-4 border-b border-gray-700">
 			<h2 class="text-sm font-bold text-blue-400">BTLE Devices</h2>
-			<button on:click={onClose} class="text-gray-400 hover:text-white text-lg"
-				>&times;</button
+			<button onclick={onClose} class="text-gray-400 hover:text-white text-lg">&times;</button
 			>
 		</div>
 

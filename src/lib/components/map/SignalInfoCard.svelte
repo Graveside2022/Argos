@@ -5,16 +5,20 @@
 	import SignalStrengthMeter from './SignalStrengthMeter.svelte';
 	import { getSimplifiedSignalType } from '$lib/services/map/signalClustering';
 
-	export let data: SignalMarker | SignalCluster;
-	export let isCluster = false;
+	interface Props {
+		data: SignalMarker | SignalCluster;
+		isCluster?: boolean;
+	}
+
+	let { data, isCluster = false }: Props = $props();
 
 	// Helper to check if data is a cluster
 	function isSignalCluster(data: SignalMarker | SignalCluster): data is SignalCluster {
 		return 'signals' in data && 'stats' in data;
 	}
 
-	$: cluster = isCluster && isSignalCluster(data) ? data : null;
-	$: signal = !isCluster && !isSignalCluster(data) ? data : null;
+	let cluster = $derived(isCluster && isSignalCluster(data) ? data : null);
+	let signal = $derived(!isCluster && !isSignalCluster(data) ? data : null);
 
 	// Format frequency display
 	function formatFrequency(freq: number): string {
@@ -113,7 +117,7 @@
 			<div>
 				<div class="text-xs text-gray-400 mb-1">Position</div>
 				<div class="font-mono text-sm text-cyan-400">
-					{signal.position.lat.toFixed(6)}°, {signal.position.lon.toFixed(6)}°
+					{signal.position.lat.toFixed(6)}, {signal.position.lon.toFixed(6)}
 				</div>
 			</div>
 

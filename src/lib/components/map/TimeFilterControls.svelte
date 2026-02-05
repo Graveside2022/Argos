@@ -1,15 +1,27 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 
-	export let timeWindow = 30; // Default 30 seconds
-	export let minWindow = 10;
-	export let maxWindow = 300;
-	export let enabled = true;
+	interface Props {
+		timeWindow?: number;
+		minWindow?: number;
+		maxWindow?: number;
+		enabled?: boolean;
+		ontimewindowchange?: (timeWindow: number) => void;
+		onenabledchange?: (enabled: boolean) => void;
+	}
 
-	const dispatch = createEventDispatcher();
+	let {
+		timeWindow: initialTimeWindow = 30,
+		minWindow = 10,
+		maxWindow = 300,
+		enabled: initialEnabled = true,
+		ontimewindowchange,
+		onenabledchange
+	}: Props = $props();
 
-	let selectedPreset: number | null = null;
+	let timeWindow = $state(initialTimeWindow);
+	let enabled = $state(initialEnabled);
+	let selectedPreset: number | null = $state(null);
 	let updateTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const presets = [
@@ -20,6 +32,12 @@
 		{ value: 300, label: '5m' }
 	];
 
+	onMount(() => {
+		return () => {
+			if (updateTimer) clearTimeout(updateTimer);
+		};
+	});
+
 	function handleTimeWindowChange() {
 		// Clear preset selection if custom value
 		selectedPreset = presets.find((p) => p.value === timeWindow)?.value || null;
@@ -27,7 +45,7 @@
 		// Debounce updates
 		if (updateTimer) clearTimeout(updateTimer);
 		updateTimer = setTimeout(() => {
-			dispatch('timeWindowChange', { timeWindow });
+			ontimewindowchange?.(timeWindow);
 		}, 100);
 	}
 
@@ -49,12 +67,8 @@
 
 	function toggleEnabled() {
 		enabled = !enabled;
-		dispatch('enabledChange', { enabled });
+		onenabledchange?.(enabled);
 	}
-
-	onDestroy(() => {
-		if (updateTimer) clearTimeout(updateTimer);
-	});
 </script>
 
 <div class="time-filter-controls {enabled ? '' : 'disabled'}">
@@ -62,7 +76,7 @@
 		<h3 class="title">Time Filter</h3>
 		<button
 			class="toggle-btn {enabled ? 'active' : ''}"
-			on:click={toggleEnabled}
+			onclick={toggleEnabled}
 			title={enabled ? 'Disable time filter' : 'Enable time filter'}
 		>
 			{#if enabled}
@@ -100,7 +114,7 @@
 				{#each presets as preset}
 					<button
 						class="preset-btn {selectedPreset === preset.value ? 'selected' : ''}"
-						on:click={() => selectPreset(preset.value)}
+						onclick={() => selectPreset(preset.value)}
 					>
 						{preset.label}
 					</button>
@@ -119,7 +133,7 @@
 					max={maxWindow}
 					step="5"
 					bind:value={timeWindow}
-					on:input={handleTimeWindowChange}
+					oninput={handleTimeWindowChange}
 					class="time-slider"
 				/>
 				<div class="slider-bounds">

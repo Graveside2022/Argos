@@ -1,32 +1,25 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		bettercapState,
 		startBettercapPolling,
 		stopBettercapPolling
 	} from '$lib/stores/bettercapStore';
 
-	export let isOpen = false;
-	export let onClose: () => void = () => {};
+	interface Props {
+		isOpen?: boolean;
+		onClose?: () => void;
+	}
 
-	let state = {
-		mode: null as string | null,
-		running: false,
-		wifiAPs: [] as any[],
-		bleDevices: [] as any[],
-		commandHistory: [] as string[],
-		commandOutput: [] as string[]
-	};
+	let { isOpen = false, onClose = () => {} }: Props = $props();
 
-	const unsub = bettercapState.subscribe((s) => {
-		state = s;
-	});
+	let state = $derived($bettercapState);
+
 	onMount(() => {
 		startBettercapPolling();
-	});
-	onDestroy(() => {
-		stopBettercapPolling();
-		unsub();
+		return () => {
+			stopBettercapPolling();
+		};
 	});
 </script>
 
@@ -36,8 +29,7 @@
 	>
 		<div class="flex items-center justify-between p-4 border-b border-gray-700">
 			<h2 class="text-sm font-bold text-green-400">Bettercap Devices</h2>
-			<button on:click={onClose} class="text-gray-400 hover:text-white text-lg"
-				>&times;</button
+			<button onclick={onClose} class="text-gray-400 hover:text-white text-lg">&times;</button
 			>
 		</div>
 

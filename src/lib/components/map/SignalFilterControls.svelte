@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import {
 		signalFilter,
 		type FilteringOptions,
@@ -8,14 +7,22 @@
 	} from '$lib/services/map/signalFiltering';
 	import { type DroneDetectionResult } from '$lib/services/map/droneDetection';
 
-	export let signalCount = 0;
-	export let filteredCount = 0;
-	export let showControls = true;
+	interface Props {
+		signalCount?: number;
+		filteredCount?: number;
+		showControls?: boolean;
+		onfilterchange?: (detail: { options: FilteringOptions; droneDetection: boolean }) => void;
+	}
 
-	const dispatch = createEventDispatcher();
+	let {
+		signalCount = 0,
+		filteredCount = 0,
+		showControls = $bindable(true),
+		onfilterchange
+	}: Props = $props();
 
 	// Filter settings
-	let filterOptions: FilteringOptions = {
+	let filterOptions: FilteringOptions = $state({
 		minPower: -80,
 		maxPower: 0,
 		gridSize: 50,
@@ -25,7 +32,7 @@
 		priorityMode: 'anomalous' as 'strongest' | 'newest' | 'persistent' | 'anomalous',
 		droneFrequencies: true,
 		movingSignalsOnly: false
-	};
+	});
 
 	// Quick presets
 	const filterPresets = {
@@ -72,13 +79,13 @@
 		}
 	};
 
-	let selectedPreset = 'drone-surveillance';
-	let showAdvanced = false;
-	let droneDetectionEnabled = true;
-	let droneResults: DroneDetectionResult | null = null;
+	let selectedPreset = $state('drone-surveillance');
+	let showAdvanced = $state(false);
+	let droneDetectionEnabled = $state(true);
+	let droneResults: DroneDetectionResult | null = $state(null);
 
 	// Frequency band toggles
-	let enabledBands = new Map<string, boolean>();
+	let enabledBands = $state(new Map<string, boolean>());
 
 	// Initialize the Map with proper type safety
 	DRONE_FREQUENCY_BANDS.forEach((band) => enabledBands.set(band.name, true));
@@ -113,7 +120,7 @@
 
 		signalFilter.setOptions(options);
 
-		dispatch('filterChange', {
+		onfilterchange?.({
 			options,
 			droneDetection: droneDetectionEnabled
 		});
@@ -139,7 +146,7 @@
 	<div class="controls-header">
 		<button
 			class="toggle-btn"
-			on:click={() => (showControls = !showControls)}
+			onclick={() => (showControls = !showControls)}
 			aria-label="Toggle filter controls"
 		>
 			<svg
@@ -190,7 +197,7 @@
 					{#each Object.entries(filterPresets) as [key, preset]}
 						<button
 							class="preset-btn {selectedPreset === key ? 'active' : ''}"
-							on:click={() => applyPreset(key)}
+							onclick={() => applyPreset(key)}
 							title={preset.description}
 						>
 							{preset.name}
@@ -208,7 +215,7 @@
 						min="-100"
 						max="0"
 						bind:value={filterOptions.minPower}
-						on:input={handleSliderChange}
+						oninput={handleSliderChange}
 						class="slider min-slider"
 					/>
 					<input
@@ -216,7 +223,7 @@
 						min="-100"
 						max="0"
 						bind:value={filterOptions.maxPower}
-						on:input={handleSliderChange}
+						oninput={handleSliderChange}
 						class="slider max-slider"
 					/>
 					<div class="range-values">
@@ -235,7 +242,7 @@
 						<label class="sub-label">Grid Size (m)</label>
 						<select
 							bind:value={filterOptions.gridSize}
-							on:change={applyFilters}
+							onchange={applyFilters}
 							class="select-input"
 						>
 							<option value={25}>25m (Fine)</option>
@@ -251,7 +258,7 @@
 							min="1"
 							max="50"
 							bind:value={filterOptions.maxSignalsPerArea}
-							on:change={applyFilters}
+							onchange={applyFilters}
 							class="number-input"
 						/>
 					</div>
@@ -263,7 +270,7 @@
 				<label class="section-label">Priority Mode</label>
 				<select
 					bind:value={filterOptions.priorityMode}
-					on:change={applyFilters}
+					onchange={applyFilters}
 					class="select-input"
 				>
 					<option value="anomalous">Anomalous Signals</option>
@@ -279,7 +286,7 @@
 					<input
 						type="checkbox"
 						bind:checked={droneDetectionEnabled}
-						on:change={applyFilters}
+						onchange={applyFilters}
 						class="checkbox"
 					/>
 					<span class="text-sm text-gray-300">Enable Drone Detection</span>
@@ -305,7 +312,7 @@
 					<input
 						type="checkbox"
 						bind:checked={filterOptions.movingSignalsOnly}
-						on:change={applyFilters}
+						onchange={applyFilters}
 						class="checkbox"
 					/>
 					<span class="text-sm text-gray-300">Moving Signals Only</span>
@@ -313,7 +320,7 @@
 			</div>
 
 			<!-- Advanced Options -->
-			<button class="advanced-toggle" on:click={() => (showAdvanced = !showAdvanced)}>
+			<button class="advanced-toggle" onclick={() => (showAdvanced = !showAdvanced)}>
 				{showAdvanced ? 'Hide' : 'Show'} Advanced Options
 				<svg
 					class="w-4 h-4 ml-1 transform transition-transform {showAdvanced
@@ -342,7 +349,7 @@
 										<input
 											type="checkbox"
 											checked={enabledBands.get(band.name)}
-											on:change={(e) => {
+											onchange={(e) => {
 												enabledBands.set(
 													band.name,
 													e.currentTarget.checked
@@ -368,7 +375,7 @@
 										<input
 											type="checkbox"
 											checked={enabledBands.get(band.name)}
-											on:change={(e) => {
+											onchange={(e) => {
 												enabledBands.set(
 													band.name,
 													e.currentTarget.checked
@@ -400,7 +407,7 @@
 									min="5"
 									max="300"
 									value={(filterOptions.timeWindow || 30000) / 1000}
-									on:change={(e) => {
+									onchange={(e) => {
 										filterOptions.timeWindow =
 											parseInt(e.currentTarget.value) * 1000;
 										applyFilters();
@@ -412,7 +419,7 @@
 								<label class="sub-label">Aggregation</label>
 								<select
 									bind:value={filterOptions.aggregationMethod}
-									on:change={applyFilters}
+									onchange={applyFilters}
 									class="select-input"
 								>
 									<option value="max">Maximum</option>

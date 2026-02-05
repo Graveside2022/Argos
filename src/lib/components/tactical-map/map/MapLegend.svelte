@@ -1,12 +1,21 @@
 <script lang="ts">
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 
-	export let kismetDeviceCount: number = 0;
-	export let signalMarkerCount: number = 0;
-	export let isSearching: boolean = false;
-	export let targetFrequency: number = 2437;
+	interface Props {
+		kismetDeviceCount?: number;
+		signalMarkerCount?: number;
+		isSearching?: boolean;
+		targetFrequency?: number;
+	}
 
-	$: gpsState = $gpsStore;
+	let {
+		kismetDeviceCount = 0,
+		signalMarkerCount = 0,
+		isSearching = false,
+		targetFrequency = 2437
+	}: Props = $props();
+
+	let gpsState = $derived($gpsStore);
 </script>
 
 <!-- Map Legend and Status -->

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
 
@@ -14,8 +14,7 @@
 		uptime: number;
 	}
 
-	let systemInfo: SystemInfo | null = null;
-	let refreshInterval: ReturnType<typeof setInterval> | null = null;
+	let systemInfo: SystemInfo | null = $state(null);
 
 	function formatBytes(bytes: number): string {
 		if (bytes === 0) return '0 B';
@@ -46,11 +45,10 @@
 
 	onMount(() => {
 		void fetchSystem();
-		refreshInterval = setInterval(() => void fetchSystem(), 15000);
-	});
-
-	onDestroy(() => {
-		if (refreshInterval) clearInterval(refreshInterval);
+		const refreshInterval = setInterval(() => void fetchSystem(), 15000);
+		return () => {
+			clearInterval(refreshInterval);
+		};
 	});
 </script>
 
