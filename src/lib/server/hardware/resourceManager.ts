@@ -102,14 +102,47 @@ class ResourceManager extends EventEmitter {
 
 	private async refreshDetection(): Promise<void> {
 		try {
+			// --- HackRF: detection + ownership ---
 			const hackrfDetected = await hackrfMgr.detectHackRF();
-			const current = this.state.get(HardwareDevice.HACKRF)!;
-			current.detected = hackrfDetected;
-			this.state.set(HardwareDevice.HACKRF, current);
+			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF)!;
+			hackrfCurrent.detected = hackrfDetected;
 
+			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
+			const hackrfContainers = await hackrfMgr.getContainerStatus(true);
+			const runningContainer = hackrfContainers.find((c) => c.running);
+
+			if (hackrfProcesses.length > 0) {
+				hackrfCurrent.owner = hackrfProcesses[0].name;
+				hackrfCurrent.available = false;
+				if (!hackrfCurrent.connectedSince) hackrfCurrent.connectedSince = Date.now();
+			} else if (runningContainer) {
+				hackrfCurrent.owner = runningContainer.name;
+				hackrfCurrent.available = false;
+				if (!hackrfCurrent.connectedSince) hackrfCurrent.connectedSince = Date.now();
+			} else if (hackrfCurrent.owner) {
+				// Owner process/container no longer running — release
+				hackrfCurrent.owner = null;
+				hackrfCurrent.available = true;
+				hackrfCurrent.connectedSince = null;
+			}
+			this.state.set(HardwareDevice.HACKRF, hackrfCurrent);
+
+			// --- ALFA: detection + ownership ---
 			const alfaIface = await alfaMgr.detectAdapter();
 			const alfaCurrent = this.state.get(HardwareDevice.ALFA)!;
 			alfaCurrent.detected = !!alfaIface;
+
+			const alfaProcesses = await alfaMgr.getBlockingProcesses();
+			if (alfaProcesses.length > 0) {
+				alfaCurrent.owner = alfaProcesses[0].name;
+				alfaCurrent.available = false;
+				if (!alfaCurrent.connectedSince) alfaCurrent.connectedSince = Date.now();
+			} else if (alfaCurrent.owner) {
+				// Owner process no longer running — release
+				alfaCurrent.owner = null;
+				alfaCurrent.available = true;
+				alfaCurrent.connectedSince = null;
+			}
 			this.state.set(HardwareDevice.ALFA, alfaCurrent);
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);

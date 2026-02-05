@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
+	import { activeView, activePanel } from '$lib/stores/dashboard/dashboardStore';
 
 	interface SystemInfo {
 		hostname: string;
@@ -14,7 +15,62 @@
 		uptime: number;
 	}
 
+	interface DeviceState {
+		device: string;
+		available: boolean;
+		owner: string | null;
+		connectedSince: number | null;
+		detected: boolean;
+	}
+
+	interface HardwareStatus {
+		hackrf: DeviceState;
+		alfa: DeviceState;
+		bluetooth: DeviceState;
+	}
+
+	interface HardwareDetails {
+		wifi?: {
+			interface?: string;
+			monitorInterface?: string;
+			mac?: string;
+			driver?: string;
+			chipset?: string;
+			mode?: string;
+			channel?: string;
+			bands?: string[];
+		};
+		sdr?: {
+			serial?: string;
+			product?: string;
+			manufacturer?: string;
+			firmwareApi?: string;
+			usbSpeed?: string;
+			maxPower?: string;
+			configuration?: string;
+		};
+		gps?: {
+			device?: string;
+			protocol?: string;
+			baudRate?: number;
+			usbAdapter?: string;
+			gpsdVersion?: string;
+		};
+	}
+
 	let systemInfo: SystemInfo | null = $state(null);
+	let hardwareStatus: HardwareStatus | null = $state(null);
+	let hardwareDetails: HardwareDetails | null = $state(null);
+	let expandedRow: string | null = $state(null);
+
+	function toggleExpand(id: string) {
+		expandedRow = expandedRow === id ? null : id;
+	}
+
+	function openTool(view: string) {
+		activeView.set(view);
+		activePanel.set(null);
+	}
 
 	function formatBytes(bytes: number): string {
 		if (bytes === 0) return '0 B';
@@ -43,9 +99,32 @@
 		}
 	}
 
+	async function fetchHardware() {
+		try {
+			const res = await fetch('/api/hardware/status');
+			if (res.ok) hardwareStatus = await res.json();
+		} catch (_error: unknown) {
+			/* silent */
+		}
+	}
+
+	async function fetchHardwareDetails() {
+		try {
+			const res = await fetch('/api/hardware/details');
+			if (res.ok) hardwareDetails = await res.json();
+		} catch (_error: unknown) {
+			/* silent */
+		}
+	}
+
 	onMount(() => {
 		void fetchSystem();
-		const refreshInterval = setInterval(() => void fetchSystem(), 15000);
+		void fetchHardware();
+		void fetchHardwareDetails();
+		const refreshInterval = setInterval(() => {
+			void fetchSystem();
+			void fetchHardware();
+		}, 15000);
 		return () => {
 			clearInterval(refreshInterval);
 		};
@@ -168,17 +247,244 @@
 		{/if}
 	</section>
 
-	<!-- Active Scans -->
+	<!-- Services -->
 	<section class="panel-section">
-		<div class="section-label">ACTIVE SCANS</div>
-		{#if $kismetStore.status === 'running'}
-			<div class="scan-row">
-				<span class="scan-dot active"></span>
-				<span class="scan-name">Kismet WiFi</span>
+		<div class="section-label">SERVICES</div>
+		<button class="scan-row clickable" onclick={() => openTool('kismet')}>
+			<span class="scan-dot" class:active={$kismetStore.status === 'running'}></span>
+			<span class="scan-name">Kismet WiFi</span>
+			{#if $kismetStore.status === 'running'}
 				<span class="scan-count">{$kismetStore.deviceCount}</span>
+			{:else}
+				<span class="scan-status-text">stopped</span>
+			{/if}
+			<span class="row-chevron">&#8250;</span>
+		</button>
+		<button class="scan-row clickable" onclick={() => toggleExpand('gps')}>
+			<span class="scan-dot" class:active={$gpsStore.status.hasGPSFix}></span>
+			<span class="scan-name">GPS</span>
+			{#if $gpsStore.status.hasGPSFix}
+				<span class="scan-count">{$gpsStore.status.satellites} sats</span>
+			{:else}
+				<span class="scan-status-text">no fix</span>
+			{/if}
+			<span class="row-chevron" class:expanded={expandedRow === 'gps'}>&#8250;</span>
+		</button>
+		{#if expandedRow === 'gps' && hardwareDetails?.gps}
+			<div class="detail-panel">
+				{#if hardwareDetails.gps.device}
+					<div class="detail-row">
+						<span class="detail-key">Device</span>
+						<span class="detail-val">{hardwareDetails.gps.device}</span>
+					</div>
+				{/if}
+				{#if hardwareDetails.gps.protocol}
+					<div class="detail-row">
+						<span class="detail-key">Protocol</span>
+						<span class="detail-val">{hardwareDetails.gps.protocol}</span>
+					</div>
+				{/if}
+				{#if hardwareDetails.gps.baudRate}
+					<div class="detail-row">
+						<span class="detail-key">Baud Rate</span>
+						<span class="detail-val">{hardwareDetails.gps.baudRate}</span>
+					</div>
+				{/if}
+				{#if hardwareDetails.gps.usbAdapter}
+					<div class="detail-row">
+						<span class="detail-key">Adapter</span>
+						<span class="detail-val">{hardwareDetails.gps.usbAdapter}</span>
+					</div>
+				{/if}
+				{#if hardwareDetails.gps.gpsdVersion}
+					<div class="detail-row">
+						<span class="detail-key">GPSD</span>
+						<span class="detail-val">v{hardwareDetails.gps.gpsdVersion}</span>
+					</div>
+				{/if}
 			</div>
+		{/if}
+	</section>
+
+	<!-- Hardware -->
+	<section class="panel-section">
+		<div class="section-label">HARDWARE</div>
+		{#if hardwareStatus}
+			<!-- HackRF -->
+			<button class="scan-row clickable" onclick={() => toggleExpand('hackrf')}>
+				<span
+					class="scan-dot"
+					class:active={hardwareStatus.hackrf.detected && hardwareStatus.hackrf.owner}
+					class:standby={hardwareStatus.hackrf.detected && !hardwareStatus.hackrf.owner}
+				></span>
+				<span class="scan-name">HackRF</span>
+				{#if !hardwareStatus.hackrf.detected}
+					<span class="scan-status-text">not found</span>
+				{:else if hardwareStatus.hackrf.owner}
+					<span class="scan-owner">{hardwareStatus.hackrf.owner}</span>
+				{:else}
+					<span class="scan-status-text available">available</span>
+				{/if}
+				<span class="row-chevron" class:expanded={expandedRow === 'hackrf'}>&#8250;</span>
+			</button>
+			{#if expandedRow === 'hackrf'}
+				<div class="detail-panel">
+					{#if hardwareDetails?.sdr?.manufacturer}
+						<div class="detail-row">
+							<span class="detail-key">Make</span>
+							<span class="detail-val">{hardwareDetails.sdr.manufacturer}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.sdr?.product}
+						<div class="detail-row">
+							<span class="detail-key">Model</span>
+							<span class="detail-val">{hardwareDetails.sdr.product}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.sdr?.serial}
+						<div class="detail-row">
+							<span class="detail-key">Serial</span>
+							<span class="detail-val">{hardwareDetails.sdr.serial}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.sdr?.firmwareApi}
+						<div class="detail-row">
+							<span class="detail-key">FW API</span>
+							<span class="detail-val">{hardwareDetails.sdr.firmwareApi}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.sdr?.usbSpeed}
+						<div class="detail-row">
+							<span class="detail-key">USB</span>
+							<span class="detail-val">{hardwareDetails.sdr.usbSpeed}</span>
+						</div>
+					{/if}
+					{#if hardwareStatus.hackrf.owner}
+						<div class="detail-row">
+							<span class="detail-key">Used by</span>
+							<span class="detail-val accent">{hardwareStatus.hackrf.owner}</span>
+						</div>
+					{/if}
+					{#if !hardwareDetails?.sdr?.manufacturer && !hardwareStatus.hackrf.detected}
+						<div class="detail-row">
+							<span class="detail-key">Status</span>
+							<span class="detail-val dim">Not detected</span>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- ALFA WiFi -->
+			<button class="scan-row clickable" onclick={() => toggleExpand('alfa')}>
+				<span
+					class="scan-dot"
+					class:active={hardwareStatus.alfa.detected && hardwareStatus.alfa.owner}
+					class:standby={hardwareStatus.alfa.detected && !hardwareStatus.alfa.owner}
+				></span>
+				<span class="scan-name">ALFA WiFi</span>
+				{#if !hardwareStatus.alfa.detected}
+					<span class="scan-status-text">not found</span>
+				{:else if hardwareStatus.alfa.owner}
+					<span class="scan-owner">{hardwareStatus.alfa.owner}</span>
+				{:else}
+					<span class="scan-status-text available">available</span>
+				{/if}
+				<span class="row-chevron" class:expanded={expandedRow === 'alfa'}>&#8250;</span>
+			</button>
+			{#if expandedRow === 'alfa'}
+				<div class="detail-panel">
+					{#if hardwareDetails?.wifi?.chipset}
+						<div class="detail-row">
+							<span class="detail-key">Chipset</span>
+							<span class="detail-val">{hardwareDetails.wifi.chipset}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.wifi?.mac}
+						<div class="detail-row">
+							<span class="detail-key">MAC</span>
+							<span class="detail-val">{hardwareDetails.wifi.mac}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.wifi?.driver}
+						<div class="detail-row">
+							<span class="detail-key">Driver</span>
+							<span class="detail-val">{hardwareDetails.wifi.driver}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.wifi?.interface || hardwareDetails?.wifi?.monitorInterface}
+						<div class="detail-row">
+							<span class="detail-key">Interface</span>
+							<span class="detail-val"
+								>{hardwareDetails.wifi.monitorInterface ||
+									hardwareDetails.wifi.interface}</span
+							>
+						</div>
+					{/if}
+					{#if hardwareDetails?.wifi?.mode}
+						<div class="detail-row">
+							<span class="detail-key">Mode</span>
+							<span class="detail-val">{hardwareDetails.wifi.mode}</span>
+						</div>
+					{/if}
+					{#if hardwareDetails?.wifi?.bands && hardwareDetails.wifi.bands.length > 0}
+						<div class="detail-row">
+							<span class="detail-key">Bands</span>
+							<span class="detail-val">{hardwareDetails.wifi.bands.join(', ')}</span>
+						</div>
+					{/if}
+					{#if hardwareStatus.alfa.owner}
+						<div class="detail-row">
+							<span class="detail-key">Used by</span>
+							<span class="detail-val accent">{hardwareStatus.alfa.owner}</span>
+						</div>
+					{/if}
+					{#if !hardwareDetails?.wifi?.chipset && !hardwareStatus.alfa.detected}
+						<div class="detail-row">
+							<span class="detail-key">Status</span>
+							<span class="detail-val dim">Not detected</span>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Bluetooth -->
+			<button class="scan-row clickable" onclick={() => toggleExpand('bluetooth')}>
+				<span
+					class="scan-dot"
+					class:active={hardwareStatus.bluetooth.detected &&
+						hardwareStatus.bluetooth.owner}
+					class:standby={hardwareStatus.bluetooth.detected &&
+						!hardwareStatus.bluetooth.owner}
+				></span>
+				<span class="scan-name">Bluetooth</span>
+				{#if !hardwareStatus.bluetooth.detected}
+					<span class="scan-status-text">not found</span>
+				{:else if hardwareStatus.bluetooth.owner}
+					<span class="scan-owner">{hardwareStatus.bluetooth.owner}</span>
+				{:else}
+					<span class="scan-status-text available">available</span>
+				{/if}
+				<span class="row-chevron" class:expanded={expandedRow === 'bluetooth'}>&#8250;</span
+				>
+			</button>
+			{#if expandedRow === 'bluetooth'}
+				<div class="detail-panel">
+					<div class="detail-row">
+						<span class="detail-key">Status</span>
+						<span class="detail-val"
+							>{hardwareStatus.bluetooth.detected ? 'Detected' : 'Not detected'}</span
+						>
+					</div>
+					{#if hardwareStatus.bluetooth.owner}
+						<div class="detail-row">
+							<span class="detail-key">Used by</span>
+							<span class="detail-val accent">{hardwareStatus.bluetooth.owner}</span>
+						</div>
+					{/if}
+				</div>
+			{/if}
 		{:else}
-			<div class="no-data">No scans running</div>
+			<div class="no-data">Scanning hardware...</div>
 		{/if}
 	</section>
 
@@ -317,6 +623,7 @@
 		color: var(--palantir-text-tertiary);
 	}
 
+	/* Scan / hardware rows */
 	.scan-row {
 		display: flex;
 		align-items: center;
@@ -324,6 +631,17 @@
 		padding: var(--space-2);
 		background: var(--palantir-bg-elevated);
 		border-radius: var(--radius-md);
+		width: 100%;
+		text-align: left;
+	}
+
+	.scan-row.clickable {
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.scan-row.clickable:hover {
+		background: var(--palantir-bg-hover);
 	}
 
 	.scan-dot {
@@ -339,6 +657,11 @@
 		box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
 	}
 
+	.scan-dot.standby {
+		background: var(--palantir-warning);
+		box-shadow: 0 0 4px rgba(251, 191, 36, 0.4);
+	}
+
 	.scan-name {
 		font-size: var(--text-sm);
 		color: var(--palantir-text-primary);
@@ -350,6 +673,74 @@
 		font-size: var(--text-sm);
 		color: var(--palantir-accent);
 		font-variant-numeric: tabular-nums;
+	}
+
+	.scan-status-text {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--palantir-text-tertiary);
+	}
+
+	.scan-status-text.available {
+		color: var(--palantir-accent);
+	}
+
+	.scan-owner {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--palantir-success);
+	}
+
+	.row-chevron {
+		font-size: var(--text-base);
+		color: var(--palantir-text-tertiary);
+		flex-shrink: 0;
+		transition: transform 0.15s ease;
+	}
+
+	.row-chevron.expanded {
+		transform: rotate(90deg);
+	}
+
+	/* Expandable detail panels */
+	.detail-panel {
+		margin-top: calc(-1 * var(--space-2));
+		padding: var(--space-3);
+		background: var(--palantir-bg-elevated);
+		border-radius: 0 0 var(--radius-md) var(--radius-md);
+		border-top: 1px solid var(--palantir-border-subtle);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.detail-row {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+
+	.detail-key {
+		font-size: var(--text-xs);
+		color: var(--palantir-text-tertiary);
+		white-space: nowrap;
+	}
+
+	.detail-val {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--palantir-text-primary);
+		text-align: right;
+		word-break: break-all;
+	}
+
+	.detail-val.accent {
+		color: var(--palantir-success);
+	}
+
+	.detail-val.dim {
+		color: var(--palantir-text-tertiary);
+		font-style: italic;
 	}
 
 	.no-data {
