@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, setContext } from 'svelte';
+	import { setContext } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
 	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboardStore';
@@ -60,23 +60,78 @@
 		{ outerR: 300, innerR: 175, band: 'weak', color: '#4a90e2', rssi: '< -80', label: '300m' }
 	];
 
-	// GPS state
-	let gpsLngLat: LngLatLike | null = $state(null);
-	let headingDeg: number | null = $state(null);
-	let showCone = $state(false);
-	let accuracyGeoJSON: FeatureCollection = $state({
-		type: 'FeatureCollection',
-		features: []
-	});
-	let detectionRangeGeoJSON: FeatureCollection = $state({
-		type: 'FeatureCollection',
-		features: []
+	// GPS derived state
+	let gpsLngLat: LngLatLike | null = $derived.by(() => {
+		const { lat, lon } = $gpsStore.position;
+		if (lat === 0 && lon === 0) return null;
+		return [lon, lat] as LngLatLike;
 	});
 
-	// Device state
-	let deviceGeoJSON: FeatureCollection = $state({
-		type: 'FeatureCollection',
-		features: []
+	let headingDeg: number | null = $derived.by(() => {
+		const h = $gpsStore.status.heading;
+		const spd = $gpsStore.status.speed;
+		const hasH = h !== null && h !== undefined && !isNaN(h);
+		const moving = spd !== null && spd !== undefined && spd > 0.5;
+		return hasH && moving ? h : null;
+	});
+
+	let showCone = $derived(headingDeg !== null);
+
+	let accuracyGeoJSON: FeatureCollection = $derived.by(() => {
+		const { lat, lon } = $gpsStore.position;
+		const acc = $gpsStore.status.accuracy;
+		if ((lat === 0 && lon === 0) || acc <= 0) {
+			return { type: 'FeatureCollection' as const, features: [] };
+		}
+		return {
+			type: 'FeatureCollection' as const,
+			features: [createCirclePolygon(lon, lat, acc)]
+		};
+	});
+
+	let detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
+		const { lat, lon } = $gpsStore.position;
+		if (lat === 0 && lon === 0) {
+			return { type: 'FeatureCollection' as const, features: [] };
+		}
+		const rangeFeatures: Feature[] = [];
+		for (const b of RANGE_BANDS) {
+			rangeFeatures.push({
+				...createRingPolygon(lon, lat, b.outerR, b.innerR),
+				properties: { band: b.band, color: b.color }
+			});
+		}
+		return { type: 'FeatureCollection' as const, features: rangeFeatures };
+	});
+
+	// Device derived state
+	let deviceGeoJSON: FeatureCollection = $derived.by(() => {
+		const state = $kismetStore;
+		const features: Feature[] = [];
+		state.devices.forEach((device, mac) => {
+			const lat = device.location?.lat;
+			const lon = device.location?.lon;
+			if (!lat || !lon || (lat === 0 && lon === 0)) return;
+			const rssi = device.signal?.last_signal ?? -80;
+			features.push({
+				type: 'Feature',
+				geometry: { type: 'Point', coordinates: [lon, lat] },
+				properties: {
+					mac,
+					ssid: device.ssid || 'Unknown',
+					rssi,
+					band: getSignalBandKey(rssi),
+					type: device.type || 'unknown',
+					color: getSignalHex(rssi),
+					manufacturer: device.manufacturer || device.manuf || 'Unknown',
+					channel: device.channel || 0,
+					frequency: device.frequency || 0,
+					packets: device.packets || 0,
+					last_seen: device.last_seen || 0
+				}
+			});
+		});
+		return { type: 'FeatureCollection' as const, features };
 	});
 
 	// Cell tower state
@@ -275,93 +330,24 @@
 		}
 	}
 
-	// Subscribe to GPS store
-	const unsubGps = gpsStore.subscribe((gps) => {
-		const { lat, lon } = gps.position;
-		if (lat === 0 && lon === 0) return;
-
-		gpsLngLat = [lon, lat];
-
-		// Heading cone
-		const h = gps.status.heading;
-		const spd = gps.status.speed;
-		const hasH = h !== null && h !== undefined && !isNaN(h);
-		const moving = spd !== null && spd !== undefined && spd > 0.5;
-		if (hasH && moving) {
-			headingDeg = h;
-			showCone = true;
-		} else {
-			showCone = false;
-			headingDeg = null;
-		}
-
-		// Accuracy circle
-		const acc = gps.status.accuracy;
-		if (acc > 0) {
-			accuracyGeoJSON = {
-				type: 'FeatureCollection',
-				features: [createCirclePolygon(lon, lat, acc)]
-			};
-		} else {
-			accuracyGeoJSON = { type: 'FeatureCollection', features: [] };
-		}
-
-		// Signal range donut rings — colors match device dot colors (getSignalHex)
-		const rangeFeatures: Feature[] = [];
-
-		for (const b of RANGE_BANDS) {
-			rangeFeatures.push({
-				...createRingPolygon(lon, lat, b.outerR, b.innerR),
-				properties: { band: b.band, color: b.color }
-			});
-		}
-
-		detectionRangeGeoJSON = { type: 'FeatureCollection', features: rangeFeatures };
-
-		// Initial view
-		if (!initialViewSet && gps.status.hasGPSFix && map) {
+	// Side effect: fly to initial GPS position
+	$effect(() => {
+		const { lat, lon } = $gpsStore.position;
+		if (!initialViewSet && $gpsStore.status.hasGPSFix && map && lat !== 0 && lon !== 0) {
 			map.flyTo({ center: [lon, lat], zoom: 15 });
 			initialViewSet = true;
 		}
+	});
 
-		// Fetch cell towers: on first valid GPS position, then re-fetch if moved > 1km
+	// Side effect: fetch cell towers when GPS position changes significantly
+	$effect(() => {
+		const { lat, lon } = $gpsStore.position;
+		if (lat === 0 && lon === 0) return;
 		if (lastTowerFetchLat === 0 && lastTowerFetchLon === 0) {
 			fetchCellTowers(lat, lon);
 		} else if (haversineKm(lat, lon, lastTowerFetchLat, lastTowerFetchLon) > 1) {
 			fetchCellTowers(lat, lon);
 		}
-	});
-
-	// Subscribe to Kismet store for device markers
-	const unsubKismet = kismetStore.subscribe((state) => {
-		const features: Feature[] = [];
-
-		state.devices.forEach((device, mac) => {
-			const lat = device.location?.lat;
-			const lon = device.location?.lon;
-			if (!lat || !lon || (lat === 0 && lon === 0)) return;
-
-			const rssi = device.signal?.last_signal ?? -80;
-			features.push({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [lon, lat] },
-				properties: {
-					mac,
-					ssid: device.ssid || 'Unknown',
-					rssi,
-					band: getSignalBandKey(rssi),
-					type: device.type || 'unknown',
-					color: getSignalHex(rssi),
-					manufacturer: device.manufacturer || device.manuf || 'Unknown',
-					channel: device.channel || 0,
-					frequency: device.frequency || 0,
-					packets: device.packets || 0,
-					last_seen: device.last_seen || 0
-				}
-			});
-		});
-
-		deviceGeoJSON = { type: 'FeatureCollection', features };
 	});
 
 	// Add custom POI/building label layers the Stadia dark style omits.
@@ -454,9 +440,7 @@
 
 	function applyLayerVisibility() {
 		if (!map) return;
-		// Apply layer on/off toggles
-		let vis: Record<string, boolean> = {};
-		layerVisibility.subscribe((v) => (vis = v))();
+		const vis = $layerVisibility;
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
 			const visible = vis[key] !== false;
 			for (const id of layerIds) {
@@ -465,11 +449,8 @@
 				}
 			}
 		}
-		// Apply band filter on device dots
 		if (map.getLayer('device-circles')) {
-			let bands: Set<string> = new Set();
-			activeBands.subscribe((b) => (bands = b))();
-			const bandList = Array.from(bands);
+			const bandList = Array.from($activeBands);
 			map.setFilter('device-circles', [
 				'all',
 				['!', ['has', 'point_count']],
@@ -583,8 +564,9 @@
 		accuracyCircle: ['accuracy-fill']
 	};
 
-	const unsubLayers = layerVisibility.subscribe((vis) => {
+	$effect(() => {
 		if (!map) return;
+		const vis = $layerVisibility;
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
 			const visible = vis[key] !== false;
 			for (const id of layerIds) {
@@ -596,22 +578,14 @@
 	});
 
 	// Signal band filtering — update MapLibre filter on device-circles when bands change
-	const unsubBands = activeBands.subscribe((bands) => {
+	$effect(() => {
 		if (!map || !map.getLayer('device-circles')) return;
-		const bandList = Array.from(bands);
-		// Unclustered dots: exclude clusters AND filter by active band
+		const bandList = Array.from($activeBands);
 		map.setFilter('device-circles', [
 			'all',
 			['!', ['has', 'point_count']],
 			['in', ['get', 'band'], ['literal', bandList]]
 		]);
-	});
-
-	onDestroy(() => {
-		unsubGps();
-		unsubKismet();
-		unsubLayers();
-		unsubBands();
 	});
 </script>
 
