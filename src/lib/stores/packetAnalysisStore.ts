@@ -52,13 +52,17 @@ export interface Conversation {
 
 // SecurityAlert interface is imported from shared module
 
+// Maximum sizes for bounded stores to prevent memory exhaustion
+const MAX_SECURITY_ALERTS = 500;
+const MAX_FLAGGED_PACKETS = 200;
+
 // Store for all analyzed packets
 export const analyzedPackets = writable<AnalyzedPacket[]>([]);
 
-// Store for security alerts
+// Store for security alerts (capped)
 export const securityAlerts = writable<SecurityAlert[]>([]);
 
-// Store for flagged packets
+// Store for flagged packets (capped)
 export const flaggedPackets = writable<AnalyzedPacket[]>([]);
 
 // Configuration for analysis
@@ -75,98 +79,92 @@ export const analysisConfig = writable({
 });
 
 // Derived store for protocol statistics
-export const protocolStats = derived(
-	analyzedPackets,
-	($packets) => {
-		const stats = new Map<string, { count: number; bytes: number }>();
-		
-		$packets.forEach(packet => {
-			const existing = stats.get(packet.protocol) || { count: 0, bytes: 0 };
-			stats.set(packet.protocol, {
-				count: existing.count + 1,
-				bytes: existing.bytes + packet.length
-			});
+export const protocolStats = derived(analyzedPackets, ($packets) => {
+	const stats = new Map<string, { count: number; bytes: number }>();
+
+	$packets.forEach((packet) => {
+		const existing = stats.get(packet.protocol) || { count: 0, bytes: 0 };
+		stats.set(packet.protocol, {
+			count: existing.count + 1,
+			bytes: existing.bytes + packet.length
 		});
-		
-		const total = $packets.length;
-		const result: ProtocolStats[] = [];
-		
-		stats.forEach((value, protocol) => {
-			result.push({
-				protocol,
-				count: value.count,
-				percentage: total > 0 ? (value.count / total) * 100 : 0,
-				bytes: value.bytes
-			});
+	});
+
+	const total = $packets.length;
+	const result: ProtocolStats[] = [];
+
+	stats.forEach((value, protocol) => {
+		result.push({
+			protocol,
+			count: value.count,
+			percentage: total > 0 ? (value.count / total) * 100 : 0,
+			bytes: value.bytes
 		});
-		
-		return result.sort((a, b) => b.count - a.count);
-	}
-);
+	});
+
+	return result.sort((a, b) => b.count - a.count);
+});
 
 // Derived store for active conversations
-export const activeConversations = derived(
-	analyzedPackets,
-	($packets) => {
-		const conversations = new Map<string, Conversation>();
-		
-		$packets.forEach(packet => {
-			const key = `${packet.src_ip}->${packet.dst_ip}`;
-			const reverseKey = `${packet.dst_ip}->${packet.src_ip}`;
-			
-			// Check both directions to group bidirectional traffic
-			let conv = conversations.get(key) || conversations.get(reverseKey);
-			
-			if (!conv) {
-				conv = {
-					src_ip: packet.src_ip,
-					dst_ip: packet.dst_ip,
-					protocol: packet.protocol,
-					packetCount: 0,
-					bytesTransferred: 0,
-					startTime: packet.timestamp,
-					lastSeen: packet.timestamp,
-					ports: new Set(),
-					suspicious: packet.analysis.isSuspicious
-				};
-				conversations.set(key, conv);
-			}
-			
-			conv.packetCount++;
-			conv.bytesTransferred += packet.length;
-			conv.lastSeen = packet.timestamp;
-			if (packet.analysis.isSuspicious) {
-				conv.suspicious = true;
-			}
-			
-			// Extract port info from packet info if available
-			const portMatch = packet.info.match(/port (\d+)/i);
-			if (portMatch) {
-				conv.ports.add(parseInt(portMatch[1]));
-			}
-		});
-		
-		return Array.from(conversations.values())
-			.sort((a, b) => b.packetCount - a.packetCount)
-			.slice(0, 20); // Top 20 conversations
-	}
-);
+export const activeConversations = derived(analyzedPackets, ($packets) => {
+	const conversations = new Map<string, Conversation>();
+
+	$packets.forEach((packet) => {
+		const key = `${packet.src_ip}->${packet.dst_ip}`;
+		const reverseKey = `${packet.dst_ip}->${packet.src_ip}`;
+
+		// Check both directions to group bidirectional traffic
+		let conv = conversations.get(key) || conversations.get(reverseKey);
+
+		if (!conv) {
+			conv = {
+				src_ip: packet.src_ip,
+				dst_ip: packet.dst_ip,
+				protocol: packet.protocol,
+				packetCount: 0,
+				bytesTransferred: 0,
+				startTime: packet.timestamp,
+				lastSeen: packet.timestamp,
+				ports: new Set(),
+				suspicious: packet.analysis.isSuspicious
+			};
+			conversations.set(key, conv);
+		}
+
+		conv.packetCount++;
+		conv.bytesTransferred += packet.length;
+		conv.lastSeen = packet.timestamp;
+		if (packet.analysis.isSuspicious) {
+			conv.suspicious = true;
+		}
+
+		// Extract port info from packet info if available
+		const portMatch = packet.info.match(/port (\d+)/i);
+		if (portMatch) {
+			conv.ports.add(parseInt(portMatch[1]));
+		}
+	});
+
+	return Array.from(conversations.values())
+		.sort((a, b) => b.packetCount - a.packetCount)
+		.slice(0, 20); // Top 20 conversations
+});
 
 // Derived store for suspicious activity summary
 export const suspiciousActivity = derived(
 	[analyzedPackets, securityAlerts],
 	([$packets, $alerts]) => {
-		const suspicious = $packets.filter(p => p.analysis.isSuspicious);
-		const malicious = $packets.filter(p => p.analysis.category === 'malicious');
-		const unresolvedAlerts = $alerts.filter(a => !a.resolved);
-		
+		const suspicious = $packets.filter((p) => p.analysis.isSuspicious);
+		const malicious = $packets.filter((p) => p.analysis.category === 'malicious');
+		const unresolvedAlerts = $alerts.filter((a) => !a.resolved);
+
 		return {
 			suspiciousPackets: suspicious.length,
 			maliciousPackets: malicious.length,
 			totalAlerts: $alerts.length,
 			unresolvedAlerts: unresolvedAlerts.length,
-			criticalAlerts: unresolvedAlerts.filter(a => a.severity === 'critical').length,
-			highAlerts: unresolvedAlerts.filter(a => a.severity === 'high').length
+			criticalAlerts: unresolvedAlerts.filter((a) => a.severity === 'critical').length,
+			highAlerts: unresolvedAlerts.filter((a) => a.severity === 'high').length
 		};
 	}
 );
@@ -180,11 +178,11 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 		tags: [] as string[],
 		severity: 0
 	};
-	
+
 	// Check for suspicious ports
 	const portMatch = packet.info.match(/port (\d+)/gi);
 	if (portMatch) {
-		portMatch.forEach(match => {
+		portMatch.forEach((match) => {
 			const port = parseInt(match.replace(/port /i, ''));
 			if ([135, 139, 445, 1433, 3306, 5432, 6379, 27017].includes(port)) {
 				analysis.isSuspicious = true;
@@ -194,13 +192,13 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 			}
 		});
 	}
-	
+
 	// Check for scanning patterns
 	if (packet.protocol === 'TCP' && packet.info.includes('SYN') && !packet.info.includes('ACK')) {
 		analysis.tags.push('syn-scan');
 		analysis.severity = Math.max(analysis.severity, 3);
 	}
-	
+
 	// Check for potential malicious IPs (simplified - in production use threat feeds)
 	const suspiciousIPs = ['10.0.0.1', '192.168.1.1']; // Example only
 	if (suspiciousIPs.includes(packet.src_ip)) {
@@ -208,14 +206,14 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 		analysis.suspicionReasons.push('Traffic from suspicious IP');
 		analysis.severity = Math.max(analysis.severity, 7);
 	}
-	
+
 	// Check for unusual protocols
 	const unusualProtocols = ['ICMP', 'GRE', 'ESP'];
 	if (unusualProtocols.includes(packet.protocol)) {
 		analysis.tags.push('unusual-protocol');
 		analysis.severity = Math.max(analysis.severity, 2);
 	}
-	
+
 	// Check packet size anomalies
 	if (packet.length > 1500) {
 		analysis.tags.push('jumbo-frame');
@@ -225,7 +223,7 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 		analysis.tags.push('tiny-packet');
 		analysis.severity = Math.max(analysis.severity, 2);
 	}
-	
+
 	// Determine category based on severity
 	if (analysis.severity >= 7) {
 		analysis.category = 'malicious';
@@ -234,7 +232,7 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 	} else if (analysis.severity > 0) {
 		analysis.category = 'unknown';
 	}
-	
+
 	return {
 		...packet,
 		analysis
@@ -244,22 +242,30 @@ export function analyzePacket(packet: NetworkPacket): AnalyzedPacket {
 // Function to add and analyze a new packet
 export function addPacket(packet: NetworkPacket) {
 	const analyzed = analyzePacket(packet);
-	
-	analyzedPackets.update(packets => {
+
+	analyzedPackets.update((packets) => {
 		// Keep only the last N packets
 		const updated = [analyzed, ...packets].slice(0, 10000);
 		return updated;
 	});
-	
+
 	// Generate alerts if needed
 	if (analyzed.analysis.category === 'malicious') {
-		generateAlert('high', 'Malicious Activity Detected', 
-			`Detected malicious traffic from ${analyzed.src_ip}`, [analyzed.id]);
+		generateAlert(
+			'high',
+			'Malicious Activity Detected',
+			`Detected malicious traffic from ${analyzed.src_ip}`,
+			[analyzed.id]
+		);
 	} else if (analyzed.analysis.category === 'suspicious' && analyzed.analysis.severity >= 6) {
-		generateAlert('medium', 'Suspicious Activity', 
-			analyzed.analysis.suspicionReasons.join(', '), [analyzed.id]);
+		generateAlert(
+			'medium',
+			'Suspicious Activity',
+			analyzed.analysis.suspicionReasons.join(', '),
+			[analyzed.id]
+		);
 	}
-	
+
 	return analyzed;
 }
 
@@ -279,17 +285,17 @@ export function generateAlert(
 		relatedPackets,
 		resolved: false
 	};
-	
-	securityAlerts.update(alerts => [alert, ...alerts]);
+
+	securityAlerts.update((alerts) => [alert, ...alerts].slice(0, MAX_SECURITY_ALERTS));
 }
 
 // Function to flag a packet for review
 export function flagPacketForReview(packetId: string) {
-	analyzedPackets.update(packets => {
-		return packets.map(p => {
+	analyzedPackets.update((packets) => {
+		return packets.map((p) => {
 			if (p.id === packetId) {
 				p.flaggedForReview = true;
-				flaggedPackets.update(flagged => [p, ...flagged]);
+				flaggedPackets.update((flagged) => [p, ...flagged].slice(0, MAX_FLAGGED_PACKETS));
 			}
 			return p;
 		});
@@ -298,8 +304,8 @@ export function flagPacketForReview(packetId: string) {
 
 // Function to resolve an alert
 export function resolveAlert(alertId: string) {
-	securityAlerts.update(alerts => {
-		return alerts.map(a => {
+	securityAlerts.update((alerts) => {
+		return alerts.map((a) => {
 			if (a.id === alertId) {
 				a.resolved = true;
 			}
@@ -311,8 +317,8 @@ export function resolveAlert(alertId: string) {
 // Function to detect port scanning
 export function detectPortScanning(packets: AnalyzedPacket[]): void {
 	const ipPortMap = new Map<string, Set<number>>();
-	
-	packets.forEach(packet => {
+
+	packets.forEach((packet) => {
 		const portMatch = packet.info.match(/port (\d+)/i);
 		if (portMatch) {
 			const port = parseInt(portMatch[1]);
@@ -321,11 +327,15 @@ export function detectPortScanning(packets: AnalyzedPacket[]): void {
 			ipPortMap.set(packet.src_ip, ports);
 		}
 	});
-	
+
 	ipPortMap.forEach((ports, ip) => {
 		if (ports.size > 20) {
-			generateAlert('high', 'Port Scanning Detected',
-				`IP ${ip} has accessed ${ports.size} different ports`, []);
+			generateAlert(
+				'high',
+				'Port Scanning Detected',
+				`IP ${ip} has accessed ${ports.size} different ports`,
+				[]
+			);
 		}
 	});
 }
@@ -336,8 +346,16 @@ export function exportPackets(packets: AnalyzedPacket[], format: 'json' | 'csv' 
 		return JSON.stringify(packets, null, 2);
 	} else {
 		// CSV export
-		const headers = ['timestamp', 'src_ip', 'dst_ip', 'protocol', 'length', 'category', 'severity'];
-		const rows = packets.map(p => [
+		const headers = [
+			'timestamp',
+			'src_ip',
+			'dst_ip',
+			'protocol',
+			'length',
+			'category',
+			'severity'
+		];
+		const rows = packets.map((p) => [
 			p.timestamp.toISOString(),
 			p.src_ip,
 			p.dst_ip,
@@ -346,7 +364,7 @@ export function exportPackets(packets: AnalyzedPacket[], format: 'json' | 'csv' 
 			p.analysis.category,
 			p.analysis.severity.toString()
 		]);
-		
-		return [headers, ...rows].map(row => row.join(',')).join('\n');
+
+		return [headers, ...rows].map((row) => row.join(',')).join('\n');
 	}
 }
