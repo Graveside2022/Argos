@@ -73,7 +73,7 @@
 							</h2>
 							<p class="text-text-secondary mb-6">{initError}</p>
 							<button
-								on:click={() => window.location.reload()}
+								onclick={() => window.location.reload()}
 								class="saasfly-btn saasfly-btn-primary"
 							>
 								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

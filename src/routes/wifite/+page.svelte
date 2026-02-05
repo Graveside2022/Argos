@@ -231,7 +231,7 @@
 						<p class="text-sm text-red-300 mt-1">{startError || state.lastError}</p>
 					</div>
 					<button
-						on:click={() => {
+						onclick={() => {
 							startError = null;
 							clearError();
 						}}
@@ -268,7 +268,7 @@
 							: 'Last Run — No Captures'}
 					</h3>
 					<button
-						on:click={dismissLastRun}
+						onclick={dismissLastRun}
 						class="text-gray-500 hover:text-gray-300 text-lg leading-none"
 						>&times;</button
 					>
@@ -368,11 +368,11 @@
 					</h3>
 					<div class="flex gap-3">
 						<button
-							on:click={selectAllTargets}
+							onclick={selectAllTargets}
 							class="text-xs text-cyan-400 hover:text-cyan-300">Select All</button
 						>
 						<button
-							on:click={deselectAllTargets}
+							onclick={deselectAllTargets}
 							class="text-xs text-gray-400 hover:text-gray-300">Deselect</button
 						>
 					</div>
@@ -384,32 +384,32 @@
 								<th class="px-4 py-2 w-8"></th>
 								<th
 									class="px-4 py-2 cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('essid')}
+									onclick={() => toggleSort('essid')}
 									>ESSID{sortIndicator('essid')}</th
 								>
 								<th
 									class="px-4 py-2 cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('bssid')}
+									onclick={() => toggleSort('bssid')}
 									>BSSID{sortIndicator('bssid')}</th
 								>
 								<th
 									class="px-4 py-2 text-center cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('channel')}
+									onclick={() => toggleSort('channel')}
 									>CH{sortIndicator('channel')}</th
 								>
 								<th
 									class="px-4 py-2 cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('encryption')}
+									onclick={() => toggleSort('encryption')}
 									>Enc{sortIndicator('encryption')}</th
 								>
 								<th
 									class="px-4 py-2 text-right cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('power')}
+									onclick={() => toggleSort('power')}
 									>Signal{sortIndicator('power')}</th
 								>
 								<th
 									class="px-4 py-2 text-right cursor-pointer hover:text-gray-300 select-none"
-									on:click={() => toggleSort('clients')}
+									onclick={() => toggleSort('clients')}
 									>Clients{sortIndicator('clients')}</th
 								>
 							</tr>
@@ -418,7 +418,7 @@
 							{#each sortedTargets as target}
 								<tr
 									class="border-b border-gray-800/50 hover:bg-gray-800/50 cursor-pointer transition-colors"
-									on:click={() => selectTarget(target.bssid)}
+									onclick={() => selectTarget(target.bssid)}
 								>
 									<td class="px-4 py-2">
 										<input
@@ -471,7 +471,7 @@
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 						{#each attackModes as mode}
 							<button
-								on:click={() => handleModeChange(mode.value)}
+								onclick={() => handleModeChange(mode.value)}
 								class="text-left p-3 rounded-lg border transition-all
 									{state?.attackMode === mode.value
 									? 'border-cyan-500/50 bg-cyan-950/30'
@@ -523,7 +523,7 @@
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-4">
 								<button
-									on:click={handleStartClick}
+									onclick={handleStartClick}
 									disabled={loading || !targetCount}
 									class="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-500
 										text-white font-medium rounded transition-colors"
@@ -571,7 +571,7 @@
 						{/if}
 					</div>
 					<button
-						on:click={handleStop}
+						onclick={handleStop}
 						disabled={loading}
 						class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white text-sm rounded transition-colors"
 					>
@@ -681,12 +681,12 @@
 
 			<div class="flex gap-3 justify-end">
 				<button
-					on:click={() => (showConfirm = false)}
+					onclick={() => (showConfirm = false)}
 					class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
 					>Cancel</button
 				>
 				<button
-					on:click={confirmStart}
+					onclick={confirmStart}
 					class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded transition-colors"
 					>Confirm &amp; Launch</button
 				>

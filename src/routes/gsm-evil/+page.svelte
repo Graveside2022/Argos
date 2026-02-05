@@ -1367,7 +1367,7 @@
 
 					<button
 						class="control-btn {isActive ? 'scan-btn-red' : 'scan-btn-green'}"
-						on:click={handleScanButton}
+						onclick={handleScanButton}
 					>
 						<span class="font-bold">{buttonText}</span>
 					</button>
@@ -1522,7 +1522,7 @@
 												result.frequency
 													? 'selected'
 													: ''}"
-												on:click={() =>
+												onclick={() =>
 													gsmEvilStore.setSelectedFrequency(
 														result.frequency
 													)}

@@ -141,7 +141,7 @@
 						<span class="text-sm text-green-400">OpenWebRX Running</span>
 					</div>
 					<button
-						on:click={stopOpenWebRX}
+						onclick={stopOpenWebRX}
 						disabled={stoppingOpenWebRX}
 						class="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white px-4 py-2 rounded transition-colors"
 					>
@@ -153,7 +153,7 @@
 						<span class="text-sm text-red-400">OpenWebRX Stopped</span>
 					</div>
 					<button
-						on:click={startOpenWebRX}
+						onclick={startOpenWebRX}
 						disabled={startingOpenWebRX}
 						class="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-4 py-2 rounded transition-colors"
 					>
@@ -163,7 +163,7 @@
 
 				{#if iframeUrl}
 					<button
-						on:click={openInNewTab}
+						onclick={openInNewTab}
 						class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
 					>
 						Open in New Tab
@@ -201,7 +201,7 @@
 						</div>
 					{/if}
 					<button
-						on:click={() => {
+						onclick={() => {
 							errorMessage = '';
 							startOpenWebRX();
 						}}
@@ -232,7 +232,7 @@
 							Unable to connect to OpenWebRX at port 8073
 						</p>
 						<button
-							on:click={openInNewTab}
+							onclick={openInNewTab}
 							class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
 						>
 							Try Opening Directly
@@ -246,8 +246,8 @@
 					src={iframeUrl}
 					class="w-full h-full border-0"
 					title="OpenWebRX Spectrum Viewer"
-					on:load={handleIframeLoad}
-					on:error={handleIframeError}
+					onload={handleIframeLoad}
+					onerror={handleIframeError}
 					style="display: {hasError ? 'none' : 'block'}"
 					allow="autoplay; microphone"
 				></iframe>

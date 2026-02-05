@@ -321,7 +321,7 @@
 	<!-- Header -->
 	<header class="rtl433-header">
 		<div class="header-content">
-			<button class="back-button" on:click={goBack}>
+			<button class="back-button" onclick={goBack}>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 					<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
 				</svg>
@@ -366,7 +366,7 @@
 							<button
 								class="freq-btn"
 								class:active={selectedFrequency === '315'}
-								on:click={() => setFrequency('315')}
+								onclick={() => setFrequency('315')}
 								disabled={rtl433Status === 'running'}
 							>
 								315 MHz
@@ -375,7 +375,7 @@
 							<button
 								class="freq-btn"
 								class:active={selectedFrequency === '433.92'}
-								on:click={() => setFrequency('433.92')}
+								onclick={() => setFrequency('433.92')}
 								disabled={rtl433Status === 'running'}
 							>
 								433.92 MHz
@@ -384,7 +384,7 @@
 							<button
 								class="freq-btn"
 								class:active={selectedFrequency === '868'}
-								on:click={() => setFrequency('868')}
+								onclick={() => setFrequency('868')}
 								disabled={rtl433Status === 'running'}
 							>
 								868 MHz
@@ -393,7 +393,7 @@
 							<button
 								class="freq-btn"
 								class:active={selectedFrequency === '915'}
-								on:click={() => setFrequency('915')}
+								onclick={() => setFrequency('915')}
 								disabled={rtl433Status === 'running'}
 							>
 								915 MHz
@@ -406,7 +406,7 @@
 						<select
 							id="sampleRate"
 							bind:value={selectedSampleRate}
-							on:change={updateSampleRate}
+							onchange={updateSampleRate}
 							disabled={rtl433Status === 'running'}
 						>
 							<option value="250000">250k</option>
@@ -419,7 +419,7 @@
 						<select
 							id="format"
 							bind:value={selectedFormat}
-							on:change={updateFormat}
+							onchange={updateFormat}
 							disabled={rtl433Status === 'running'}
 						>
 							<option value="json">JSON</option>
@@ -443,7 +443,7 @@
 				<div class="control-content">
 					<button
 						class="control-button primary"
-						on:click={toggleRTL433}
+						onclick={toggleRTL433}
 						disabled={rtl433Status === 'starting' || rtl433Status === 'stopping'}
 					>
 						{rtl433Status === 'running'
@@ -454,12 +454,12 @@
 					</button>
 					<button
 						class="control-button secondary"
-						on:click={clearSignals}
+						onclick={clearSignals}
 						disabled={rtl433Status === 'running'}
 					>
 						Clear Signals
 					</button>
-					<button class="control-button secondary" on:click={clearConsole}>
+					<button class="control-button secondary" onclick={clearConsole}>
 						Clear Console
 					</button>
 				</div>
@@ -500,7 +500,7 @@
 					<h3>Console Output</h3>
 					<button
 						class="toggle-button"
-						on:click={() => rtl433Store.setShowConsole(!showConsole)}
+						onclick={() => rtl433Store.setShowConsole(!showConsole)}
 					>
 						{showConsole ? 'Hide' : 'Show'} Console
 					</button>

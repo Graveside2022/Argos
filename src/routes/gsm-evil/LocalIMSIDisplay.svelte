@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
-	export let isVisible = false;
+	interface Props {
+		isVisible?: boolean;
+	}
+
+	let { isVisible = false }: Props = $props();
 
 	interface IMSIRecord {
 		id: number;
@@ -16,10 +20,10 @@
 		lon?: number;
 	}
 
-	let imsiRecords: IMSIRecord[] = [];
-	let loading = false;
-	let error = '';
-	let total = 0;
+	let imsiRecords: IMSIRecord[] = $state([]);
+	let loading = $state(false);
+	let error = $state('');
+	let total = $state(0);
 	let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function fetchIMSIData() {
@@ -50,25 +54,25 @@
 	onMount(() => {
 		if (isVisible) {
 			fetchIMSIData();
-			// Refresh every 2 seconds when visible
 			refreshInterval = setInterval(fetchIMSIData, 2000);
 		}
-	});
-
-	onDestroy(() => {
-		if (refreshInterval) {
-			clearInterval(refreshInterval);
-		}
+		return () => {
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
+			}
+		};
 	});
 
 	// Watch for visibility changes
-	$: if (isVisible && !refreshInterval) {
-		fetchIMSIData();
-		refreshInterval = setInterval(fetchIMSIData, 2000);
-	} else if (!isVisible && refreshInterval) {
-		clearInterval(refreshInterval);
-		refreshInterval = null;
-	}
+	$effect(() => {
+		if (isVisible && !refreshInterval) {
+			fetchIMSIData();
+			refreshInterval = setInterval(fetchIMSIData, 2000);
+		} else if (!isVisible && refreshInterval) {
+			clearInterval(refreshInterval);
+			refreshInterval = null;
+		}
+	});
 
 	function formatTimestamp(timestamp: string) {
 		try {
@@ -113,7 +117,7 @@
 		{#if error}
 			<div class="error">
 				<p>❌ Error: {error}</p>
-				<button on:click={fetchIMSIData} class="retry-btn">Retry</button>
+				<button onclick={fetchIMSIData} class="retry-btn">Retry</button>
 			</div>
 		{:else if imsiRecords.length === 0 && !loading}
 			<div class="empty">

@@ -629,7 +629,7 @@
 											</div>
 											{#if frequencies.length > 1}
 												<button
-													on:click={() => removeFrequency(freq.id)}
+													onclick={() => removeFrequency(freq.id)}
 													class="remove-frequency-btn p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
 													aria-label="Remove frequency {freq.id}"
 												>
@@ -649,7 +649,7 @@
 									{/each}
 								</div>
 								<button
-									on:click={addFrequency}
+									onclick={addFrequency}
 									class="saasfly-btn saasfly-btn-add w-full"
 								>
 									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -718,7 +718,7 @@
 
 							<div class="grid grid-cols-1 gap-3">
 								<button
-									on:click={startCycling}
+									onclick={startCycling}
 									disabled={isStarted}
 									class="saasfly-btn saasfly-btn-start w-full"
 								>
@@ -731,7 +731,7 @@
 									Start Sweep
 								</button>
 								<button
-									on:click={() => {
+									onclick={() => {
 										// Stop button clicked! isStarted: isStarted
 										void stopCycling();
 									}}
@@ -749,7 +749,7 @@
 
 								{#if isStarted}
 									<button
-										on:click={async () => {
+										onclick={async () => {
 											try {
 												const _response = await fetch(
 													'/api/hackrf/emergency-stop',
@@ -850,7 +850,7 @@
 										</div>
 										{#if $connectionStatus.error.includes('please refresh') || $connectionStatus.error.includes('stale')}
 											<button
-												on:click={reconnectToHackRF}
+												onclick={reconnectToHackRF}
 												class="px-3 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 rounded transition-colors"
 											>
 												Reconnect
@@ -914,7 +914,7 @@
 
 						<div class="space-y-3">
 							<button
-								on:click={loadFrequencies}
+								onclick={loadFrequencies}
 								class="saasfly-btn saasfly-btn-load w-full relative"
 							>
 								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -933,7 +933,7 @@
 								</div>
 							</button>
 							<button
-								on:click={openSpectrumAnalyzer}
+								onclick={openSpectrumAnalyzer}
 								class="saasfly-btn saasfly-btn-spectrum w-full"
 							>
 								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

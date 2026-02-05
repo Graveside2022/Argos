@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	interface IMSIRecord {
 		id: number;
@@ -12,9 +12,9 @@
 		datetime: string;
 	}
 
-	let imsiRecords: IMSIRecord[] = [];
-	let loading = true;
-	let error = '';
+	let imsiRecords: IMSIRecord[] = $state([]);
+	let loading = $state(true);
+	let error = $state('');
 	let refreshInterval: ReturnType<typeof setInterval>;
 
 	async function fetchIMSIData() {
@@ -40,14 +40,12 @@
 
 	onMount(() => {
 		fetchIMSIData();
-		// Refresh every 5 seconds
 		refreshInterval = setInterval(fetchIMSIData, 5000);
-	});
-
-	onDestroy(() => {
-		if (refreshInterval) {
-			clearInterval(refreshInterval);
-		}
+		return () => {
+			if (refreshInterval) {
+				clearInterval(refreshInterval);
+			}
+		};
 	});
 </script>
 

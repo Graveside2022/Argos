@@ -82,10 +82,10 @@
 	<div class="mission-grid">
 		<div
 			class="mission-card mission-wifi"
-			on:click={navigateToKismet}
+			onclick={navigateToKismet}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToKismet()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToKismet()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -99,10 +99,10 @@
 
 		<div
 			class="mission-card mission-location"
-			on:click={navigateToTacticalMap}
+			onclick={navigateToTacticalMap}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToTacticalMap()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToTacticalMap()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -116,10 +116,10 @@
 
 		<div
 			class="mission-card mission-spectrum"
-			on:click={navigateToUSRPSweep}
+			onclick={navigateToUSRPSweep}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToUSRPSweep()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToUSRPSweep()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -134,10 +134,10 @@
 
 		<div
 			class="mission-card mission-analyze"
-			on:click={navigateToViewSpectrum}
+			onclick={navigateToViewSpectrum}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToViewSpectrum()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToViewSpectrum()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -149,10 +149,10 @@
 
 		<div
 			class="mission-card mission-broadcast"
-			on:click={navigateToWigleToTAK}
+			onclick={navigateToWigleToTAK}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToWigleToTAK()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToWigleToTAK()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -164,10 +164,10 @@
 
 		<div
 			class="mission-card mission-gsm"
-			on:click={navigateToGSMEvil}
+			onclick={navigateToGSMEvil}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToGSMEvil()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToGSMEvil()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -180,10 +180,10 @@
 		</div>
 		<div
 			class="mission-card mission-rtl433"
-			on:click={navigateToRTL433}
+			onclick={navigateToRTL433}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToRTL433()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToRTL433()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -197,10 +197,10 @@
 
 		<div
 			class="mission-card mission-emitter"
-			on:click={navigateToRFEmitter}
+			onclick={navigateToRFEmitter}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToRFEmitter()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToRFEmitter()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -215,10 +215,10 @@
 
 		<div
 			class="mission-card mission-droneid"
-			on:click={navigateToDroneID}
+			onclick={navigateToDroneID}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToDroneID()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToDroneID()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -235,10 +235,10 @@
 
 		<div
 			class="mission-card mission-bettercap"
-			on:click={navigateToBettercap}
+			onclick={navigateToBettercap}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToBettercap()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToBettercap()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -252,10 +252,10 @@
 
 		<div
 			class="mission-card mission-pagermon"
-			on:click={navigateToPagermon}
+			onclick={navigateToPagermon}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToPagermon()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToPagermon()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -269,10 +269,10 @@
 
 		<div
 			class="mission-card mission-btle"
-			on:click={navigateToBTLE}
+			onclick={navigateToBTLE}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToBTLE()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToBTLE()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -286,10 +286,10 @@
 
 		<div
 			class="mission-card mission-wifite"
-			on:click={navigateToWifite}
+			onclick={navigateToWifite}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToWifite()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToWifite()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -303,10 +303,10 @@
 
 		<div
 			class="mission-card mission-urh"
-			on:click={navigateToURH}
+			onclick={navigateToURH}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToURH()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToURH()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
@@ -323,10 +323,10 @@
 
 		<div
 			class="mission-card mission-tempestsdr"
-			on:click={navigateToTempestSDR}
+			onclick={navigateToTempestSDR}
 			role="button"
 			tabindex="0"
-			on:keydown={(e) => e.key === 'Enter' && navigateToTempestSDR()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToTempestSDR()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">

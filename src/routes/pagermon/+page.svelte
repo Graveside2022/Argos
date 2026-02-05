@@ -85,7 +85,7 @@
 
 				{#if state.running}
 					<button
-						on:click={handleStop}
+						onclick={handleStop}
 						disabled={loading}
 						class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white rounded transition-colors"
 					>
@@ -95,7 +95,7 @@
 					>
 				{:else}
 					<button
-						on:click={handleStart}
+						onclick={handleStart}
 						disabled={loading}
 						class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded transition-colors"
 					>
