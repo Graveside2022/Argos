@@ -594,46 +594,21 @@ export class SweepManager extends EventEmitter {
 			// Set up data processing using BufferManager
 			this.bufferManager.clearBuffer(); // Clear any old data
 
-			// Handle stdout data
+			// Handle stdout data -- NO console.log in this hot path to avoid
+			// excessive log volume and GC pressure from string allocation.
 			const handleStdout = (data: Buffer) => {
-				const dataStr = data.toString();
-				console.log('[SWEEP MANAGER] ===== STDOUT HANDLER CALLED =====');
-				console.log('[SWEEP MANAGER] Data size:', data.length);
-				console.log('[SWEEP MANAGER] Data preview:', dataStr.substring(0, 200));
-				console.log('[SWEEP MANAGER] Has SSE emitter:', !!this.sseEmitter);
-				console.log('[SWEEP MANAGER] ===================================');
-				logInfo('📊 SweepManager received stdout data', {
-					size: data.length,
-					preview: dataStr.substring(0, 200),
-					hasCommas: dataStr.includes(','),
-					lineCount: dataStr.split('\n').length
-				});
 				this.bufferManager.processDataChunk(data, (parsedLine) => {
-					console.log('[USRP SWEEP] Processing line:', {
-						isValid: parsedLine.isValid,
-						hasData: !!parsedLine.data,
-						rawLine: parsedLine.rawLine.substring(0, 100)
-					});
-					logInfo('🔍 Processing parsed line', {
-						isValid: parsedLine.isValid,
-						hasData: !!parsedLine.data,
-						parseError: parsedLine.parseError,
-						rawLinePreview: parsedLine.rawLine.substring(0, 150)
-					});
-
 					if (parsedLine.isValid && parsedLine.data) {
-						console.log('[USRP SWEEP] Valid data! Calling _handleSpectrumData');
-						logInfo('✅ Valid spectrum data parsed', {
-							frequency: parsedLine.data.frequency,
-							power: parsedLine.data.power
-						});
 						this._handleSpectrumData(parsedLine.data, frequency);
 					} else if (parsedLine.parseError) {
-						console.warn('[USRP SWEEP] Parse error:', parsedLine.parseError);
-						logWarn('❌ Failed to parse line', {
-							error: parsedLine.parseError,
-							line: parsedLine.rawLine.substring(0, 100)
-						});
+						logWarn(
+							'Failed to parse spectrum line',
+							{
+								error: parsedLine.parseError,
+								line: parsedLine.rawLine.substring(0, 100)
+							},
+							'sweep-parse-error'
+						);
 					}
 				});
 			};
@@ -697,17 +672,14 @@ export class SweepManager extends EventEmitter {
 		frequency: { value: number; unit: string }
 	): void {
 		try {
-			console.log('[USRP SWEEP] _handleSpectrumData called with:', {
-				frequency: data.frequency,
-				power: data.power,
-				hasValues: !!data.powerValues
-			});
-
 			// Validate data quality
 			const validation = this.bufferManager.validateSpectrumData(data);
 			if (!validation.isValid) {
-				console.warn('[USRP SWEEP] Invalid spectrum data:', validation.issues);
-				logWarn('Invalid spectrum data received', { issues: validation.issues });
+				logWarn(
+					'Invalid spectrum data received',
+					{ issues: validation.issues },
+					'invalid-spectrum'
+				);
 				return;
 			}
 
@@ -1113,12 +1085,6 @@ export class SweepManager extends EventEmitter {
 	 * Emit event via SSE and EventEmitter
 	 */
 	private _emitEvent(event: string, data: unknown): void {
-		console.log('[USRP SWEEP] _emitEvent called:', {
-			event,
-			hasSseEmitter: !!this.sseEmitter,
-			hasListeners: this.listenerCount(event) > 0
-		});
-
 		if (this.sseEmitter) {
 			try {
 				this.sseEmitter(event, data);

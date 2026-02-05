@@ -1,5 +1,7 @@
 import { spawn, exec, type ChildProcess } from 'child_process';
 import { logInfo, logError, logWarn } from '$lib/utils/logger';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 export interface ProcessState {
 	sweepProcess: ChildProcess | null;
@@ -47,12 +49,17 @@ export class ProcessManager {
 					env: {
 						...process.env,
 						NODE_NO_READLINE: '1',
-						PYTHONUNBUFFERED: '1',
-						FORCE_USRP: '1' // Force USRP mode since we want to use USRP
+						PYTHONUNBUFFERED: '1'
+						// Auto-detect device - auto_sweep.sh will check for HackRF or USRP
 					}
 				};
 				// Use auto_sweep.sh which detects HackRF or USRP B205 Mini
-				const scriptPath = new URL('./auto_sweep.sh', import.meta.url).pathname;
+				// Use proper ESM path resolution for Vite compatibility
+				const __filename = fileURLToPath(import.meta.url);
+				const __dirname = dirname(__filename);
+				const scriptPath = join(__dirname, 'auto_sweep.sh');
+
+				logInfo(`📁 Script path resolved to: ${scriptPath}`);
 
 				// Spawning process with modified config
 
@@ -75,35 +82,19 @@ export class ProcessManager {
 
 				// Attach event handlers to the process
 				if (sweepProcess.stdout && this.eventHandlers.onStdout) {
-					// Attaching stdout handler to process
-
-					// Store reference to handler for debugging
 					const stdoutHandler = this.eventHandlers.onStdout;
-					// Handler exists, attaching to stdout
 
+					// Forward stdout data to handler without verbose logging.
+					// Previous implementation logged every data chunk with preview
+					// strings, creating significant GC pressure in the hot path.
 					sweepProcess.stdout.on('data', (data: Buffer) => {
-						const preview = data.toString().substring(0, 100);
-						// Received stdout data: ${data.length} bytes
-
-						// Data received, forwarding to handler
-						logInfo('ProcessManager received stdout data', {
-							size: data.length,
-							preview: preview
-						});
-
-						// Call the handler
 						if (stdoutHandler) {
-							// Calling stdout handler
 							stdoutHandler(data);
 						} else {
 							logError('Stdout handler disappeared unexpectedly');
 						}
 					});
 					logInfo('Attached stdout handler to real process');
-					// Stdout handler attached successfully
-					// Handler attachment complete
-
-					// Stream event handlers are set automatically by Node.js
 				} else {
 					const error = {
 						hasStdout: !!sweepProcess.stdout,

@@ -6,6 +6,9 @@ import type {
 	BettercapMode
 } from '$lib/server/bettercap/types';
 
+// Cap command history to prevent unbounded memory growth
+const MAX_COMMAND_HISTORY = 200;
+
 interface BettercapState {
 	mode: BettercapMode | null;
 	running: boolean;
@@ -121,8 +124,11 @@ export async function sendCommand(cmd: string): Promise<void> {
 		const result = await response.json();
 		bettercapState.update((s) => ({
 			...s,
-			commandHistory: [...s.commandHistory, cmd],
-			commandOutput: [...s.commandOutput, JSON.stringify(result.result ?? result.error ?? '')]
+			commandHistory: [...s.commandHistory, cmd].slice(-MAX_COMMAND_HISTORY),
+			commandOutput: [
+				...s.commandOutput,
+				JSON.stringify(result.result ?? result.error ?? '')
+			].slice(-MAX_COMMAND_HISTORY)
 		}));
 	} catch (_error: unknown) {
 		/* ignore */

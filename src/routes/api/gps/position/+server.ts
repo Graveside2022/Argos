@@ -1,13 +1,23 @@
 import type { RequestHandler } from './$types';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { Socket } from 'net';
 import { logWarn } from '$lib/utils/logger';
-
-const execAsync = promisify(exec);
 
 // Cache last known satellite count from full SKY messages (accurate per-satellite data).
 // Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
 let cachedSatelliteCount = 0;
+
+// Cache the last successful TPV data so we can serve it between polls
+let cachedTPV: TPVData | null = null;
+let cachedTPVTimestamp = 0;
+const TPV_CACHE_TTL_MS = 5000; // Serve cached data for up to 5 seconds
+
+// Circuit breaker state: backs off when gpsd is unreachable to avoid
+// wasting resources on doomed connection attempts.
+let consecutiveFailures = 0;
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 30000; // 30 seconds between retries when circuit is open
+let lastFailureTimestamp = 0;
+let circuitBreakerLogged = false;
 
 interface TPVData {
 	class: string;
@@ -92,42 +102,195 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 	};
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		// Single GPSD connection — capture both TPV and SKY in one query.
-		// Use timeout to let nc run for 2s then collect all output (avoids SIGPIPE from head).
-		let allLines = '';
-		try {
-			const result = await execAsync(
-				'timeout 2 bash -c \'echo \\\'?WATCH={"enable":true,"json":true}\\\' | nc localhost 2947\' 2>/dev/null || true',
-				{ timeout: 5000 }
-			);
-			allLines = result.stdout;
-		} catch (error: unknown) {
-			const msg = error instanceof Error ? error.message : String(error);
-			logWarn(
-				'[GPS] Primary source (nc) failed, trying gpspipe fallback',
-				{ error: msg, source: 'nc' },
-				'gps-nc'
-			);
-			// nc failed, try gpspipe as fallback
-			try {
-				const result = await execAsync('timeout 3 gpspipe -w -n 10 2>/dev/null || true');
-				allLines = result.stdout;
-			} catch (error: unknown) {
-				const msg = error instanceof Error ? error.message : String(error);
-				logWarn(
-					'[GPS] Fallback source (gpspipe) also failed',
-					{ error: msg, source: 'gpspipe' },
-					'gps-pipe'
-				);
+/**
+ * Query gpsd using a short-lived TCP socket connection.
+ * This avoids spawning bash/nc/timeout child processes on every call,
+ * eliminating the ~12,960 process spawns over 6 hours that contributed
+ * to memory exhaustion.
+ */
+function queryGpsd(timeoutMs: number = 3000): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		let resolved = false;
+
+		const socket = new Socket();
+		socket.setTimeout(timeoutMs);
+
+		const cleanup = () => {
+			if (!socket.destroyed) {
+				socket.destroy();
 			}
+		};
+
+		const finish = (result: string | null, error?: Error) => {
+			if (resolved) return;
+			resolved = true;
+			cleanup();
+			if (error) {
+				reject(error);
+			} else {
+				resolve(result || '');
+			}
+		};
+
+		socket.on('connect', () => {
+			// Send WATCH command to enable JSON output
+			socket.write('?WATCH={"enable":true,"json":true}\n');
+
+			// Collect data for up to 2 seconds, then close
+			setTimeout(() => {
+				finish(Buffer.concat(chunks).toString('utf8'));
+			}, 2000);
+		});
+
+		socket.on('data', (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+
+		socket.on('timeout', () => {
+			// If we have data, return it; otherwise error
+			if (chunks.length > 0) {
+				finish(Buffer.concat(chunks).toString('utf8'));
+			} else {
+				finish(null, new Error('Connection to gpsd timed out'));
+			}
+		});
+
+		socket.on('error', (err: Error) => {
+			finish(null, err);
+		});
+
+		socket.on('close', () => {
+			if (!resolved) {
+				if (chunks.length > 0) {
+					finish(Buffer.concat(chunks).toString('utf8'));
+				} else {
+					finish(null, new Error('Connection closed without data'));
+				}
+			}
+		});
+
+		socket.connect(2947, 'localhost');
+	});
+}
+
+/**
+ * Build a GPS response JSON payload.
+ */
+function buildGpsResponse(
+	success: boolean,
+	tpvData: TPVData | null,
+	error?: string,
+	details?: string
+) {
+	if (success && tpvData && tpvData.mode >= 2) {
+		return {
+			body: JSON.stringify({
+				success: true,
+				data: {
+					latitude: tpvData.lat ?? null,
+					longitude: tpvData.lon ?? null,
+					altitude: tpvData.alt ?? null,
+					speed: tpvData.speed ?? null,
+					heading: tpvData.track ?? null,
+					accuracy: tpvData.epx ?? tpvData.epy ?? 10,
+					satellites: cachedSatelliteCount,
+					fix: tpvData.mode,
+					time: tpvData.time ?? null
+				}
+			}),
+			status: 200
+		};
+	}
+
+	if (tpvData) {
+		return {
+			body: JSON.stringify({
+				success: false,
+				error: error || 'No GPS fix available',
+				data: {
+					latitude: null,
+					longitude: null,
+					altitude: null,
+					speed: null,
+					heading: null,
+					accuracy: null,
+					satellites: cachedSatelliteCount,
+					fix: tpvData.mode,
+					time: tpvData.time ?? null
+				},
+				mode: tpvData.mode
+			}),
+			status: 200
+		};
+	}
+
+	return {
+		body: JSON.stringify({
+			success: false,
+			error: error || 'GPS service not available. Make sure gpsd is running.',
+			details: details || undefined,
+			data: {
+				latitude: null,
+				longitude: null,
+				altitude: null,
+				speed: null,
+				heading: null,
+				accuracy: null,
+				satellites: null,
+				fix: 0,
+				time: null
+			}
+		}),
+		status: 200
+	};
+}
+
+export const GET: RequestHandler = async () => {
+	const headers = { 'Content-Type': 'application/json' };
+
+	// Circuit breaker: if gpsd has been unreachable, return cached data
+	// or a soft error without attempting a connection.
+	if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+		const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
+
+		if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN_MS) {
+			// Circuit is open -- serve cached data if fresh enough, otherwise soft error
+			if (!circuitBreakerLogged) {
+				logWarn(
+					'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
+					{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+					'gps-circuit-breaker'
+				);
+				circuitBreakerLogged = true;
+			}
+
+			if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
+				const resp = buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
+				return new Response(resp.body, { status: resp.status, headers });
+			}
+
+			const resp = buildGpsResponse(
+				false,
+				null,
+				'GPS service temporarily unavailable (circuit breaker active)'
+			);
+			return new Response(resp.body, { status: resp.status, headers });
 		}
 
-		// Parse both TPV and SKY from the single output.
-		// GPSD sends two SKY formats: compact (uSat only — inflated aggregate) and
-		// full (includes satellites array with per-sat used flag — accurate count).
-		// Full SKY only arrives every ~4-5s, so we cache the last accurate count.
+		// Cooldown elapsed -- allow a retry (half-open state)
+	}
+
+	// Serve cached data if it is still fresh (avoids redundant queries)
+	if (cachedTPV && Date.now() - cachedTPVTimestamp < TPV_CACHE_TTL_MS) {
+		const resp = buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
+		return new Response(resp.body, { status: resp.status, headers });
+	}
+
+	try {
+		const allLines = await queryGpsd(3000);
+
+		// Parse both TPV and SKY from the output.
 		let tpvData: TPVData | null = null;
 		const lines = allLines.trim().split('\n');
 
@@ -140,88 +303,59 @@ export const GET: RequestHandler = async () => {
 					tpvData = parseTPVData(parsed);
 				}
 
-				const msg = parseSkyMessage(parsed);
-				if (msg && msg.satellites && msg.satellites.length > 0) {
-					// Full SKY message — update cache with accurate used-satellite count
-					cachedSatelliteCount = msg.satellites.filter((sat) => sat.used === true).length;
+				const skyMsg = parseSkyMessage(parsed);
+				if (skyMsg && skyMsg.satellites && skyMsg.satellites.length > 0) {
+					cachedSatelliteCount = skyMsg.satellites.filter(
+						(sat) => sat.used === true
+					).length;
 				}
 			} catch (_error: unknown) {
-				// Skip non-JSON lines
+				// Skip non-JSON lines (e.g. gpsd banner)
 			}
 		}
 
 		if (!tpvData) {
-			throw new Error('Failed to parse TPV data');
+			throw new Error('Failed to parse TPV data from gpsd response');
 		}
 
-		if (tpvData.class === 'TPV' && tpvData.mode >= 2) {
-			// We have a valid fix
-			return new Response(
-				JSON.stringify({
-					success: true,
-					data: {
-						latitude: tpvData.lat ?? null,
-						longitude: tpvData.lon ?? null,
-						altitude: tpvData.alt ?? null,
-						speed: tpvData.speed ?? null,
-						heading: tpvData.track ?? null,
-						accuracy: tpvData.epx ?? tpvData.epy ?? 10, // Horizontal error in meters
-						satellites: cachedSatelliteCount,
-						fix: tpvData.mode, // 0=no fix, 1=no fix, 2=2D fix, 3=3D fix
-						time: tpvData.time ?? null
-					}
-				}),
+		// Success -- reset circuit breaker
+		consecutiveFailures = 0;
+		circuitBreakerLogged = false;
+
+		// Update cache
+		cachedTPV = tpvData;
+		cachedTPVTimestamp = Date.now();
+
+		const resp = buildGpsResponse(tpvData.mode >= 2, tpvData);
+		return new Response(resp.body, { status: resp.status, headers });
+	} catch (error: unknown) {
+		// Record failure for circuit breaker
+		consecutiveFailures++;
+		lastFailureTimestamp = Date.now();
+
+		if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
+			logWarn(
+				'[GPS] gpsd connection failed, circuit breaker activating',
 				{
-					headers: { 'Content-Type': 'application/json' }
-				}
-			);
-		} else {
-			// No valid fix yet - this is a normal GPS state, not a service error
-			return new Response(
-				JSON.stringify({
-					success: false,
-					error: 'No GPS fix available',
-					data: {
-						latitude: null,
-						longitude: null,
-						altitude: null,
-						speed: null,
-						heading: null,
-						accuracy: null,
-						satellites: cachedSatelliteCount,
-						fix: tpvData.mode, // 0=no fix, 1=no fix, 2=2D fix, 3=3D fix
-						time: tpvData.time ?? null
-					},
-					mode: tpvData.mode
-				}),
-				{
-					status: 200, // Changed from 503 - no GPS fix is normal operational state
-					headers: { 'Content-Type': 'application/json' }
-				}
+					consecutiveFailures,
+					error: error instanceof Error ? error.message : String(error)
+				},
+				'gps-circuit-open'
 			);
 		}
-	} catch (error: unknown) {
-		return new Response(
-			JSON.stringify({
-				success: false,
-				error: 'GPS service not available. Make sure gpsd is running.',
-				details: error instanceof Error ? error.message : 'Unknown error',
-				data: {
-					latitude: null,
-					longitude: null,
-					altitude: null,
-					speed: null,
-					heading: null,
-					accuracy: null,
-					satellites: null,
-					fix: 0, // No fix available
-					time: null
-				}
-			}),
-			{
-				status: 500,
-				headers: { 'Content-Type': 'application/json' }
-			}
+
+		// Still serve cached data if available
+		if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
+			const resp = buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
+			return new Response(resp.body, { status: resp.status, headers });
+		}
+
+		const resp = buildGpsResponse(
+			false,
+			null,
+			'GPS service not available. Make sure gpsd is running.',
+			error instanceof Error ? error.message : 'Unknown error'
 		);
+		return new Response(resp.body, { status: resp.status, headers });
 	}
 };
