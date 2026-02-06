@@ -181,6 +181,9 @@
 	}
 
 	.rail-btn.active {
+		display: flex !important;
+		align-items: center;
+		justify-content: center;
 		color: var(--palantir-accent);
 		background-color: rgba(74, 158, 255, 0.12);
 	}

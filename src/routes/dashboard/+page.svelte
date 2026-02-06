@@ -173,6 +173,26 @@
 					<div class="tab-list">
 						<button
 							class="panel-tab"
+							class:active={$activeBottomTab === 'chat'}
+							onclick={() => activeBottomTab.set('chat')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><path
+									d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+								/></svg
+							>
+							Agent Chat
+						</button>
+						<button
+							class="panel-tab"
 							class:active={$activeBottomTab === 'terminal'}
 							onclick={() => activeBottomTab.set('terminal')}
 						>
@@ -193,26 +213,6 @@
 								/></svg
 							>
 							Terminal
-						</button>
-						<button
-							class="panel-tab"
-							class:active={$activeBottomTab === 'chat'}
-							onclick={() => activeBottomTab.set('chat')}
-						>
-							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><path
-									d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-								/></svg
-							>
-							Agent Chat
 						</button>
 					</div>
 					<button class="tab-close-btn" title="Close panel" onclick={closeBottomPanel}>
@@ -300,16 +300,19 @@
 	}
 
 	.panel-tab {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		gap: 6px;
 		height: 100%;
+		box-sizing: border-box;
 		padding: 0 12px;
+		margin: 0;
 		background: transparent;
 		border: none;
 		border-bottom: 2px solid transparent;
 		color: var(--palantir-text-tertiary, #5f6368);
 		font-size: 12px;
+		line-height: 1;
 		font-family: var(--font-sans, system-ui);
 		cursor: pointer;
 		transition:
@@ -323,8 +326,15 @@
 	}
 
 	.panel-tab.active {
+		display: inline-flex !important;
+		align-items: center;
 		color: var(--palantir-text-primary, #e8eaed);
 		border-bottom-color: var(--palantir-accent, #4a9eff);
+	}
+
+	.panel-tab svg {
+		display: block;
+		flex-shrink: 0;
 	}
 
 	.tab-close-btn {
