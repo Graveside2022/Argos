@@ -468,6 +468,8 @@
 	}
 
 	.terminal-tab.active {
+		display: flex !important;
+		align-items: center;
 		background: var(--palantir-bg-elevated, #1a1f27);
 		color: var(--palantir-text-primary);
 	}
@@ -479,7 +481,7 @@
 	}
 
 	.tab-title {
-		max-width: 120px;
+		max-width: 200px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
