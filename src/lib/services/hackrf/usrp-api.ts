@@ -122,6 +122,7 @@ export class USRPAPI {
 		});
 
 		this.eventSource.addEventListener('sweep_data', (event) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const rawData = JSON.parse(event.data as string) as any;
 			this.lastDataTimestamp = Date.now();
 

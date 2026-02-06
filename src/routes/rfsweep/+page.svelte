@@ -86,12 +86,12 @@
 					step: 1
 				}));
 
-			console.debug(
+			console.warn(
 				`[RF Sweep] Starting sweep on ${selectedDevice} for frequencies:`,
 				validFreqs
 			);
 			const _response = await usrpAPI.startSweep(validFreqs, cycleTime, selectedDevice);
-			console.debug(`[RF Sweep] Sweep started successfully on ${selectedDevice}:`, _response);
+			console.warn(`[RF Sweep] Sweep started successfully on ${selectedDevice}:`, _response);
 			statusMessage = `${deviceName} sweep running - collecting signal data...`;
 
 			// Store target frequencies for offset calculation
@@ -102,7 +102,7 @@
 
 				// Note: USRP device cannot be accessed by multiple processes
 				// Power measurements will come from the spectrum scan data stream
-				console.debug(
+				console.warn(
 					`[RF Sweep] Monitoring spectrum scan data for frequency ${validFreqValues[0].value} MHz`
 				);
 			}
@@ -238,7 +238,7 @@
 						// Switched to frequency: currentFrequencyDisplay
 
 						// Note: Power measurements come from spectrum scan data
-						console.debug(
+						console.warn(
 							`[RF Sweep] Switched to frequency: ${validFreqs[nextIndex].value} MHz`
 						);
 					}
@@ -329,7 +329,7 @@
 						processed: true
 					});
 
-					console.debug(
+					console.warn(
 						`[USRP Power] Measurement: ${data.power} dBm at ${frequencyMHz} MHz`
 					);
 
@@ -372,13 +372,13 @@
 				const targetFreqMHz = parseFloat(targetFreqStr);
 				if (!isNaN(targetFreqMHz) && targetFreqMHz !== currentMeasurementFreq) {
 					currentMeasurementFreq = targetFreqMHz;
-					console.debug(`[RF Sweep] Frequency changed to ${currentMeasurementFreq} MHz`);
+					console.warn(`[RF Sweep] Frequency changed to ${currentMeasurementFreq} MHz`);
 				}
 				measureUSRPPower(currentMeasurementFreq);
 			}
 		}, 2000);
 
-		console.debug(
+		console.warn(
 			`[RF Sweep] Started periodic power measurement for ${frequencyMHz} MHz every 2 seconds`
 		);
 	}
@@ -387,7 +387,7 @@
 		if (powerMeasurementInterval) {
 			clearInterval(powerMeasurementInterval);
 			powerMeasurementInterval = null;
-			console.debug('[RF Sweep] Stopped periodic power measurement');
+			console.warn('[RF Sweep] Stopped periodic power measurement');
 		}
 	}
 
@@ -421,7 +421,7 @@
 	// Subscribe to stores
 	$: if ($spectrumData && !isSwitching) {
 		// Debug spectrum data
-		console.debug('[RF Sweep] Spectrum data received:', {
+		console.warn('[RF Sweep] Spectrum data received:', {
 			peak_power: $spectrumData.peak_power,
 			peak_freq: $spectrumData.peak_freq,
 			timestamp: $spectrumData.timestamp,
@@ -439,9 +439,9 @@
 			dbLevelValue = peakPower.toFixed(2);
 			updateSignalStrength(peakPower);
 			updateSignalIndicator(peakPower);
-			console.debug(`[RF Sweep] Signal analysis updated: ${peakPower} dB`);
+			console.warn(`[RF Sweep] Signal analysis updated: ${peakPower} dB`);
 		} else {
-			console.debug('[RF Sweep] No valid peak_power in spectrum data');
+			console.warn('[RF Sweep] No valid peak_power in spectrum data');
 		}
 
 		if (
@@ -473,7 +473,7 @@
 				}
 			} else {
 				// Data is likely from previous frequency, ignore it
-				console.debug(
+				console.warn(
 					`Ignoring stale frequency data: ${detectedFreqMHz} MHz (target: ${targetFreqMHz} MHz)`
 				);
 			}
@@ -548,21 +548,21 @@
 
 		// Initialize async operations
 		(async () => {
-			console.debug('[RF Sweep] Page mounting...');
+			console.warn('[RF Sweep] Page mounting...');
 
 			// First, get the actual backend state
 			try {
 				const status = await usrpAPI.getStatus();
-				console.debug('[RF Sweep] Backend status:', status);
+				console.warn('[RF Sweep] Backend status:', status);
 
 				// Update store with real backend state
 				if (status && typeof status.sweeping === 'boolean') {
 					isStarted = status.sweeping;
 					updateSweepStatus({ active: status.sweeping });
-					console.debug(`[RF Sweep] Synced with backend: isStarted=${isStarted}`);
+					console.warn(`[RF Sweep] Synced with backend: isStarted=${isStarted}`);
 				} else {
 					isStarted = false;
-					console.debug('[RF Sweep] No backend status, defaulting to stopped');
+					console.warn('[RF Sweep] No backend status, defaulting to stopped');
 				}
 			} catch (error) {
 				console.warn('[RF Sweep] Failed to get backend status:', error);
@@ -570,7 +570,7 @@
 			}
 
 			// Connect to data stream
-			console.debug('[RF Sweep] Connecting to data stream...');
+			console.warn('[RF Sweep] Connecting to data stream...');
 			void usrpAPI.connectToDataStream();
 		})();
 
