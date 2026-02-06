@@ -22,11 +22,11 @@ services:
     deploy:
       resources:
         limits:
-          # Reduced from 5G to 3G to prevent memory exhaustion on 8GB system
-          # llama3.2:1b typically uses 1.8GB when loaded (40% headroom)
-          memory: 3G
-        reservations:
+          # Reduced to 2G: llama3.2:1b uses ~1.3GB on disk, ~1.8GB loaded
+          # Only 1b model allowed on RPi 5 8GB (3b model deleted - caused OOM crashes)
           memory: 2G
+        reservations:
+          memory: 1G
 
 volumes:
   ollama-data:

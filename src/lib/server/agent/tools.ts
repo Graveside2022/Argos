@@ -1,8 +1,19 @@
 /**
  * MCP Tools for Argos Agent
  * Provides agent with ability to query devices, signals, and tactical data
+ *
+ * NOTE: This file now integrates with the Tool Execution Framework.
+ * Tools are dynamically loaded from the global registry instead of hardcoded.
  */
 
+import { globalRegistry } from '$lib/server/agent/tool-execution';
+import type { ToolDefinition } from '$lib/server/agent/tool-execution';
+import { getFrontendToolsForAgent } from '$lib/server/agent/frontend-tools';
+
+/**
+ * Legacy hardcoded tools for backward compatibility
+ * These will be merged with auto-detected tools from the framework
+ */
 export const argosTools = [
 	{
 		name: 'get_device_details',
@@ -181,71 +192,124 @@ export const argosTools = [
 ];
 
 /**
+ * Convert Tool Execution Framework tools to MCP format
+ */
+function convertToMCPFormat(tool: ToolDefinition): {
+	name: string;
+	description: string;
+	input_schema: any;
+} {
+	return {
+		name: tool.name,
+		description: tool.description || 'No description available',
+		input_schema: {
+			type: 'object',
+			properties: tool.parameters || {},
+			required: tool.requiredParameters || []
+		}
+	};
+}
+
+/**
+ * Get all available tools (legacy + framework)
+ * Dynamically fetches tools from the execution framework registry
+ */
+export function getAllTools(): Array<{ name: string; description: string; input_schema: any }> {
+	// Get framework tools from registry
+	const frameworkTools = globalRegistry.getAll();
+
+	// Convert framework tools to MCP format
+	const convertedFrameworkTools = frameworkTools.map(convertToMCPFormat);
+
+	// Get frontend UI control tools
+	const frontendTools = getFrontendToolsForAgent();
+
+	// Merge all tools: legacy + framework + frontend (framework tools take priority)
+	const allTools = [...argosTools, ...convertedFrameworkTools, ...frontendTools];
+
+	// Deduplicate by name (keep first occurrence)
+	const seen = new Set<string>();
+	return allTools.filter((tool) => {
+		if (seen.has(tool.name)) return false;
+		seen.add(tool.name);
+		return true;
+	});
+}
+
+/**
+ * Get tool list formatted for system prompt
+ */
+function getToolListForPrompt(): string {
+	const tools = getAllTools();
+
+	if (tools.length === 0) {
+		return '- No tools currently available';
+	}
+
+	return tools
+		.map((tool, index) => {
+			const params = Object.keys(tool.input_schema?.properties || {}).join(', ');
+			return `${index + 1}. ${tool.name}${params ? ` (${params})` : ''} - ${tool.description}`;
+		})
+		.join('\n');
+}
+
+/**
  * System prompt for Argos Agent
  * Provides context about the system and available capabilities
  */
-export function getSystemPrompt(context?: {
-	selectedDevice?: string;
-	mapBounds?: { north: number; south: number; east: number; west: number };
-	activeSignals?: number;
-	userLocation?: { lat: number; lon: number };
-	kismetStatus?: string;
-	hackrfStatus?: string;
-}): string {
+export function getSystemPrompt(context?: any): string {
 	const timestamp = new Date().toISOString();
 
-	return `You are Argos Agent, an AI tactical assistant for the Argos SDR & Network Analysis Console.
+	// Extract context from AG-UI shared state structure
+	const selectedDevice = context?.selectedDevice;
+	const selectedDeviceDetails = context?.selectedDeviceDetails;
+	const userLocation = context?.userLocation;
+	const activeSignals = context?.activeSignals;
+	const kismetStatus = context?.kismetStatus;
+	const currentWorkflow = context?.currentWorkflow;
+	const workflowStep = context?.workflowStep;
+	const workflowGoal = context?.workflowGoal;
 
-SYSTEM: Military-grade SDR and network intelligence platform
-TIMESTAMP: ${timestamp}
-OPERATOR: Tactical analyst conducting signals intelligence operations
+	// Build device context string if device is selected
+	let deviceContext = '';
+	if (selectedDevice && selectedDeviceDetails) {
+		deviceContext = `
+- SELECTED TARGET: ${selectedDevice}
+  SSID: ${selectedDeviceDetails.ssid}
+  Type: ${selectedDeviceDetails.type}
+  Manufacturer: ${selectedDeviceDetails.manufacturer}
+  Signal: ${selectedDeviceDetails.signalDbm !== null ? `${selectedDeviceDetails.signalDbm} dBm` : 'Unknown'}
+  Channel: ${selectedDeviceDetails.channel || 'Unknown'}
+  Frequency: ${selectedDeviceDetails.frequency ? `${selectedDeviceDetails.frequency} MHz` : 'Unknown'}
+  Encryption: ${selectedDeviceDetails.encryption || 'Unknown'}
+  Packets: ${selectedDeviceDetails.packets}
+  [OPERATOR CLICKED THIS DEVICE - PROVIDE DETAILED TACTICAL ANALYSIS]`;
+	}
 
-CURRENT OPERATIONAL CONTEXT:
-${context?.selectedDevice ? `- SELECTED TARGET: ${context.selectedDevice} (operator clicked this device - provide detailed analysis)` : '- No device currently selected'}
-${context?.activeSignals ? `- ACTIVE SIGNALS: ${context.activeSignals} signals currently detected` : '- Signal detection: standby'}
-${context?.userLocation ? `- POSITION: ${context.userLocation.lat.toFixed(4)}°N, ${context.userLocation.lon.toFixed(4)}°E` : '- Position: unknown'}
-${context?.mapBounds ? `- MAP VIEW: Active tactical display` : '- Map: inactive'}
-${context?.kismetStatus ? `- KISMET: ${context.kismetStatus}` : '- KISMET: status unknown'}
-${context?.hackrfStatus ? `- HACKRF: ${context.hackrfStatus}` : '- HACKRF: status unknown'}
+	// Build workflow context if active
+	let workflowContext = '';
+	if (currentWorkflow) {
+		workflowContext = `
+ACTIVE WORKFLOW: ${currentWorkflow}
+- Goal: ${workflowGoal || 'Not specified'}
+- Step: ${workflowStep + 1}
+- Continue guiding the operator through this workflow`;
+	}
 
-YOUR CAPABILITIES:
-You have access to the following intelligence tools via MCP (Model Context Protocol):
+	return `You are Argos Agent, a tactical SIGINT assistant for the Argos SDR & Network Analysis Console.
+Time: ${timestamp}
 
-1. get_device_details - Query detailed information about WiFi devices, networks, and clients
-2. get_nearby_signals - Get RF signals near a location with power and frequency data
-3. analyze_network_security - Perform security analysis on WiFi networks (encryption, vulnerabilities)
-4. get_active_devices - List all currently detected devices with filtering options
-5. get_spectrum_data - Access HackRF spectrum analysis data for frequency ranges
-6. get_cell_towers - Query cell tower database for nearby towers (IMSI-catcher detection)
-7. query_signal_history - Search historical signal database for patterns and tracking
-8. get_map_state - Get current tactical map state and visible data
+CONTEXT:
+${deviceContext || '- No device selected'}
+${activeSignals ? `- ${activeSignals} active signals` : '- Signals: standby'}
+${userLocation ? `- Position: ${userLocation.lat.toFixed(4)}°N, ${userLocation.lon.toFixed(4)}°E` : ''}
+${kismetStatus?.connected ? `- Kismet: ${kismetStatus.status}` : '- Kismet: disconnected'}
+${workflowContext}
 
-OPERATIONAL GUIDELINES:
-- When the operator clicks a device or asks about a target, IMMEDIATELY use get_device_details to fetch intelligence
-- Provide tactical analysis with military precision - signal strength, encryption status, threat assessment
-- Identify security vulnerabilities and potential threats (fake APs, evil twins, IMSI-catchers, rogue devices)
-- Use technical terminology appropriate for signals intelligence (SIGINT): dBm, BSSID, SSID, frequency bands
-- When analyzing devices, check for anomalies: unusual power levels, suspicious SSIDs, weak encryption
-- Correlate multiple data sources (WiFi, RF spectrum, cell towers) for comprehensive analysis
-- Always mention confidence levels and data freshness when making assessments
-- If the operator's query requires real-time data, use the appropriate tools rather than making assumptions
+TOOLS: ${getToolListForPrompt()}
 
-SECURITY FOCUS AREAS:
-- WEP/WPA encryption weaknesses
-- Evil twin access points
-- Rogue base stations (IMSI-catchers)
-- Abnormal signal patterns
-- MAC address spoofing indicators
-- Deauth attack detection
-- Fake cell towers (MCC/MNC mismatches)
+To use a tool, state which tool and parameters. Example: "get_device_details device_id: AA:BB:CC:DD:EE:FF"
 
-RESPONSE STYLE:
-- Direct, tactical, professional
-- Lead with critical intelligence first
-- Use bullet points for multi-point analysis
-- Include specific technical details (frequencies, power levels, encryption types)
-- Flag security concerns immediately
-- Provide actionable recommendations
-
-Remember: The operator relies on you for real-time threat assessment. When they click a target, they expect immediate, accurate intelligence.`;
+RULES: Be direct and tactical. Use SIGINT terminology. Flag security threats (evil twins, rogue APs, IMSI-catchers, weak encryption). Provide actionable intelligence.`;
 }

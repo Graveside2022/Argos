@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { get } from 'svelte/store';
+	import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agentContextStore';
 
-	// Props for UI context integration
+	// Props are no longer needed - context comes from store
 	interface Props {
 		selectedDevice?: string;
 		mapBounds?: { north: number; south: number; east: number; west: number };
@@ -10,7 +12,12 @@
 		userLocation?: { lat: number; lon: number };
 	}
 
-	let { selectedDevice = $bindable(), mapBounds, activeSignals, userLocation }: Props = $props();
+	let {
+		selectedDevice = $bindable(),
+		mapBounds: _mapBounds,
+		activeSignals: _activeSignals,
+		userLocation: _userLocation
+	}: Props = $props();
 
 	// Chat state
 	let messages = $state<
@@ -55,6 +62,34 @@
 		});
 	});
 
+	// Auto-send device context when operator clicks a device on the map
+	$effect(() => {
+		const event = $lastInteractionEvent;
+		if (!event || isStreaming || llmProvider === 'unavailable') return;
+
+		if (event.type === 'device_selected' && event.data.mac) {
+			const deviceData = event.data;
+			// Build contextual message that embeds device data
+			const contextMessage =
+				`[OPERATOR SELECTED DEVICE]\n` +
+				`SSID: ${deviceData.ssid}\n` +
+				`MAC: ${deviceData.mac}\n` +
+				`RSSI: ${deviceData.rssi} dBm\n` +
+				`Type: ${deviceData.type}\n` +
+				`Manufacturer: ${deviceData.manufacturer}\n` +
+				`Channel: ${deviceData.channel}\n` +
+				`Frequency: ${deviceData.frequency} MHz\n` +
+				`Packets: ${deviceData.packets}\n\n` +
+				`Provide tactical analysis of this device.`;
+
+			// Auto-send to agent
+			sendMessageWithContent(contextMessage);
+
+			// Clear the event to prevent re-triggering
+			lastInteractionEvent.set(null);
+		}
+	});
+
 	// Generate UUID (works in both secure and non-secure contexts)
 	function generateUUID(): string {
 		if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -68,12 +103,11 @@
 		});
 	}
 
-	// Send message to agent
-	async function sendMessage() {
-		if (!inputValue.trim() || isStreaming) return;
+	// Send message with specific content (used by auto-query and manual input)
+	async function sendMessageWithContent(content: string) {
+		if (isStreaming) return;
 
-		const userMessage = inputValue.trim();
-		inputValue = '';
+		const userMessage = content;
 
 		// Add user message
 		messages.push({
@@ -95,23 +129,23 @@
 		});
 
 		try {
-			// Collect UI context to pass to agent
-			const uiContext = {
-				selectedDevice,
-				mapBounds,
-				activeSignals,
-				userLocation,
-				kismetStatus: 'connected', // TODO: Get from store
-				hackrfStatus: 'active' // TODO: Get from store
-			};
+			// Get current agent context from store (AG-UI shared state)
+			const currentContext = get(agentContext);
+
+			// Build conversation history for context (last 10 messages)
+			const conversationHistory = messages
+				.filter((m) => m.role !== 'system')
+				.slice(-10)
+				.map((m) => ({ role: m.role, content: m.content }));
 
 			const response = await fetch('/api/agent/stream', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					message: userMessage,
+					messages: conversationHistory,
 					runId: currentRunId,
-					context: uiContext
+					context: currentContext
 				})
 			});
 
@@ -155,6 +189,14 @@
 			isStreaming = false;
 			currentRunId = null;
 		}
+	}
+
+	// Send message from input (wrapper for sendMessageWithContent)
+	async function sendMessage() {
+		if (!inputValue.trim() || isStreaming) return;
+		const userMessage = inputValue.trim();
+		inputValue = '';
+		await sendMessageWithContent(userMessage);
 	}
 
 	function scrollToBottom() {

@@ -1,10 +1,11 @@
 /**
- * Argos Agent Runtime with Hybrid LLM and MCP Tools
+ * Argos Agent Runtime with Hybrid LLM and Tool Execution Framework
  * Supports Anthropic Claude (online) with Ollama fallback (offline)
  * Full integration with Argos UI state and tactical data
+ * Dynamically loads tools from Tool Execution Framework
  */
 
-import { argosTools, getSystemPrompt } from './tools';
+import { getAllTools, getSystemPrompt } from './tools';
 
 interface AgentMessage {
 	role: 'user' | 'assistant' | 'system';
@@ -102,7 +103,7 @@ async function isOllamaAvailable(): Promise<boolean> {
  */
 async function* processWithAnthropic(
 	messages: AgentMessage[],
-	tools: typeof argosTools,
+	tools: ReturnType<typeof getAllTools>,
 	context?: AgentContext
 ): AsyncGenerator<AgentEvent> {
 	const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -236,7 +237,7 @@ async function fetchOllamaResponse(
  */
 async function* processWithOllama(
 	messages: AgentMessage[],
-	_tools: typeof argosTools,
+	_tools: ReturnType<typeof getAllTools>,
 	context?: AgentContext,
 	prefetchedResponse?: string
 ): AsyncGenerator<AgentEvent> {
@@ -291,10 +292,13 @@ export async function createAgent() {
 					ollamaResponse = await fetchOllamaResponse(messages, context);
 				}
 
+				// Get dynamic tool list from framework
+				const availableTools = getAllTools();
+
 				// Choose LLM based on availability and pass context
 				const processor = hasAnthropic
-					? processWithAnthropic(messages, argosTools, context)
-					: processWithOllama(messages, argosTools, context, ollamaResponse);
+					? processWithAnthropic(messages, availableTools, context)
+					: processWithOllama(messages, availableTools, context, ollamaResponse);
 
 				// Stream LLM responses
 				for await (const event of processor) {

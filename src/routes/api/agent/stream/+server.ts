@@ -4,31 +4,61 @@
  */
 
 import type { RequestHandler } from './$types';
+import { getSystemPrompt } from '$lib/server/agent/tools';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const { message, threadId, runId } = await request.json();
+	const {
+		message,
+		messages: conversationHistory,
+		threadId,
+		runId,
+		context
+	} = await request.json();
+
+	// Build system prompt with full UI context (AG-UI shared state)
+	const systemPrompt = getSystemPrompt(context);
+
+	// Build message array: system prompt + conversation history + current message
+	const ollamaMessages: Array<{ role: string; content: string }> = [
+		{ role: 'system', content: systemPrompt }
+	];
+
+	// Add conversation history if provided (for multi-turn memory)
+	if (conversationHistory && Array.isArray(conversationHistory)) {
+		// Skip the last message since we add it explicitly below
+		for (const msg of conversationHistory.slice(0, -1)) {
+			ollamaMessages.push({ role: msg.role, content: msg.content });
+		}
+	}
+
+	// Add the current user message
+	ollamaMessages.push({ role: 'user', content: message });
 
 	// WORKAROUND: Fetch Ollama response BEFORE starting SSE stream
 	// This avoids async deadlock in SSE context
 	let ollamaResponse: string | undefined;
 	try {
+		console.log('[Agent API] Fetching from Ollama with', ollamaMessages.length, 'messages');
+		console.log('[Agent API] System prompt length:', ollamaMessages[0]?.content?.length);
 		const resp = await fetch('http://localhost:11434/api/chat', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				model: 'llama3.2:1b',
-				messages: [
-					{
-						role: 'user',
-						content: message
-					}
-				],
-				stream: false
+				messages: ollamaMessages,
+				stream: false,
+				options: {
+					num_ctx: 2048,
+					num_predict: 64,
+					temperature: 0.7
+				}
 			}),
-			signal: AbortSignal.timeout(30000)
+			signal: AbortSignal.timeout(120000)
 		});
+		console.log('[Agent API] Ollama responded with status:', resp.status);
 		const data = await resp.json();
 		ollamaResponse = data.message?.content;
+		console.log('[Agent API] Got response from Ollama, length:', ollamaResponse?.length);
 	} catch (error) {
 		console.error('[Agent API] Ollama fetch error:', error);
 	}

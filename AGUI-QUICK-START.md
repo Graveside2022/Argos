@@ -24,8 +24,8 @@ echo 'ANTHROPIC_API_KEY=your-key-here' >> .env
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull the model (3B fits on RPi 5)
-ollama pull llama3.2:3b
+# Pull the model (1B - safe for RPi 5 8GB RAM)
+ollama pull llama3.2:1b
 
 # Verify
 curl http://localhost:11434/api/tags
