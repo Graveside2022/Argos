@@ -21,7 +21,8 @@ if ! docker exec "${CONTAINER_NAME}" which tmux &>/dev/null; then
     }
 fi
 
-# Connect to persistent tmux session
+# Connect to persistent tmux session in /app with zsh
 # -A: Attach if exists, create if doesn't
 # -s: Session name
-exec docker exec -it "${CONTAINER_NAME}" tmux new-session -A -s "${TMUX_SESSION}"
+# -c: Working directory
+exec docker exec -it "${CONTAINER_NAME}" tmux new-session -A -s "${TMUX_SESSION}" -c /app zsh

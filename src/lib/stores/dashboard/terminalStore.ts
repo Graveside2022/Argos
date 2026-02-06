@@ -69,7 +69,7 @@ function getDefaultState(): TerminalPanelState {
 		activeTabId: null,
 		sessions: [],
 		splits: null,
-		preferredShell: '/home/kali/Documents/Argos/Argos/scripts/docker-claude-terminal.sh',
+		preferredShell: '/app/scripts/tmux-zsh-wrapper.sh',
 		isMaximized: false
 	};
 }
@@ -140,8 +140,8 @@ export function toggleTerminalPanel(): void {
 function createNewSession(shell: string): TerminalSession {
 	let shellName = shell.split('/').pop() || 'terminal';
 
-	// Friendly name for Docker + tmux terminal
-	if (shell.includes('docker-claude-terminal.sh')) {
+	// Friendly name for tmux + zsh terminal
+	if (shell.includes('tmux-zsh-wrapper.sh')) {
 		shellName = '🐋 Claude';
 	}
 
