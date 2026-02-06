@@ -1,0 +1,15 @@
+{
+	"mcpServers": {
+		"argos-tools": {
+			"command": "bash",
+			"args": [
+				"-c",
+				"if [ -d /app/src ]; then cd /app && exec npx tsx src/lib/server/mcp/dynamic-server.ts; else cd /home/kali/Documents/Argos/Argos && exec npx tsx src/lib/server/mcp/dynamic-server.ts; fi"
+			],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173"
+			}
+		}
+	}
+}

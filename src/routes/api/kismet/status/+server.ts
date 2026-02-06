@@ -1,18 +1,16 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { fusionKismetController } from '$lib/server/kismet/fusion_controller';
+import { KismetProxy } from '$lib/server/kismet/kismetProxy';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		// Check if we're in development mode
-		const isDevelopment = process.env.NODE_ENV === 'development';
 		const useMock = url.searchParams.get('mock') === 'true';
 
-		if (isDevelopment || useMock) {
-			// Return mock status for development
+		if (useMock) {
 			return json({
 				success: true,
-				running: false, // Show as stopped initially in dev mode
+				running: false,
 				status: 'inactive',
 				data: {
 					running: false,
@@ -27,20 +25,77 @@ export const GET: RequestHandler = async ({ url }) => {
 			});
 		}
 
-		const status = fusionKismetController.getStatus();
+		// Try real Kismet API first (uses proper Basic Auth)
+		try {
+			const systemStatus = await KismetProxy.getSystemStatus();
+			const config = KismetProxy.getConfig();
+			const ss = systemStatus as Record<string, unknown>;
 
+			const startSec = (ss['kismet.system.timestamp.start_sec'] as number) || 0;
+			const nowSec = (ss['kismet.system.timestamp.sec'] as number) || 0;
+			const deviceCount = (ss['kismet.system.devices.count'] as number) || 0;
+			const version = (ss['kismet.system.version'] as string) || 'unknown';
+			const memoryRss = (ss['kismet.system.memory.rss'] as number) || 0;
+
+			return json({
+				success: true,
+				running: true,
+				status: 'running',
+				data: {
+					running: true,
+					host: config.host,
+					port: config.port,
+					version,
+					deviceCount,
+					uptime: nowSec - startSec,
+					startTime: startSec ? new Date(startSec * 1000).toISOString() : null,
+					memoryKB: memoryRss,
+					monitorInterfaces: [],
+					metrics: {
+						sensors: ss['kismet.system.sensors.temp'] || {},
+						fan: ss['kismet.system.sensors.fan'] || {}
+					}
+				}
+			});
+		} catch (_proxyError) {
+			// Kismet API not reachable, try fusion controller
+		}
+
+		// Fall back to fusion controller
+		if (fusionKismetController.isReady()) {
+			const status = fusionKismetController.getStatus();
+
+			return json({
+				success: true,
+				running: status.running,
+				status: status.running ? 'running' : 'stopped',
+				data: {
+					running: status.running,
+					interface: status.interface,
+					channels: status.channels,
+					deviceCount: status.deviceCount,
+					uptime: status.uptime,
+					startTime: status.startTime,
+					monitorInterfaces: status.monitorInterfaces,
+					metrics: status.metrics
+				}
+			});
+		}
+
+		// Neither source available
 		return json({
 			success: true,
-			status: status.running ? 'running' : 'stopped',
+			running: false,
+			status: 'inactive',
 			data: {
-				running: status.running,
-				interface: status.interface,
-				channels: status.channels,
-				deviceCount: status.deviceCount,
-				uptime: status.uptime,
-				startTime: status.startTime,
-				monitorInterfaces: status.monitorInterfaces,
-				metrics: status.metrics
+				running: false,
+				interface: null,
+				channels: [],
+				deviceCount: 0,
+				uptime: 0,
+				startTime: null,
+				monitorInterfaces: [],
+				metrics: {}
 			}
 		});
 	} catch (error) {
