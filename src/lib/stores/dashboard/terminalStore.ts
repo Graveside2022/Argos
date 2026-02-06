@@ -27,11 +27,19 @@ function getInitialState(): TerminalPanelState {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			const parsed = JSON.parse(stored);
-			// Restore state but clear sessions (they can't reconnect)
+			// Restore sessions marked as disconnected — they may reattach to server PTYs
+			const restoredSessions: TerminalSession[] = (parsed.sessions ?? []).map(
+				(s: TerminalSession) => ({
+					...s,
+					isConnected: false // Will be set true on reattach
+				})
+			);
 			return {
 				...getDefaultState(),
 				height: parsed.height ?? DEFAULT_HEIGHT,
 				preferredShell: parsed.preferredShell ?? '',
+				sessions: restoredSessions,
+				activeTabId: restoredSessions.length > 0 ? restoredSessions[0].id : null,
 				isMaximized: false // Always start non-maximized
 			};
 		}
@@ -63,7 +71,8 @@ if (browser) {
 	terminalPanelState.subscribe((state) => {
 		const toPersist = {
 			height: state.height,
-			preferredShell: state.preferredShell
+			preferredShell: state.preferredShell,
+			sessions: state.sessions
 		};
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
 	});

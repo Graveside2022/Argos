@@ -56,6 +56,19 @@ export interface TerminalReadyMessage {
 	sessionId?: string;
 }
 
+/** WebSocket reattached response (session resumed after reconnect) */
+export interface TerminalReattachedMessage {
+	type: 'reattached';
+	shell: string;
+	sessionId: string;
+}
+
+/** WebSocket sessions list response */
+export interface TerminalSessionsMessage {
+	type: 'sessions';
+	sessions: { id: string; shell: string; alive: boolean }[];
+}
+
 /** WebSocket input message */
 export interface TerminalInputMessage {
 	type: 'input';
@@ -73,5 +86,7 @@ export interface TerminalResizeMessage {
 export type TerminalMessage =
 	| TerminalInitMessage
 	| TerminalReadyMessage
+	| TerminalReattachedMessage
+	| TerminalSessionsMessage
 	| TerminalInputMessage
 	| TerminalResizeMessage;
