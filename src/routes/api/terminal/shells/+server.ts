@@ -8,8 +8,9 @@ import type { RequestHandler } from './$types';
 import { access, constants } from 'fs/promises';
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
 
-// Common shell paths to check (ZSH first as preferred default)
+// Common shell paths to check (Docker + tmux first, then ZSH as preferred default)
 const SHELL_PATHS = [
+	'/home/kali/Documents/Argos/Argos/scripts/docker-claude-terminal.sh', // Docker + tmux persistent session
 	'/bin/zsh',
 	'/usr/bin/zsh',
 	'/bin/bash',
@@ -37,6 +38,10 @@ async function isShellAvailable(shellPath: string): Promise<boolean> {
  * Get the display name for a shell
  */
 function getShellName(shellPath: string): string {
+	// Friendly name for Docker + tmux terminal
+	if (shellPath.includes('docker-claude-terminal.sh')) {
+		return '🐋 Claude (Docker + tmux)';
+	}
 	const basename = shellPath.split('/').pop() || shellPath;
 	return basename;
 }
