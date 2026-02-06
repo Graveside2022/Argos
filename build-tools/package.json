@@ -5,9 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"validate:env": "node src/lib/server/validate-env.js",
-		"dev": "npm run validate:env && NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port 5173 --host 0.0.0.0",
-		"dev:simple": "npm run validate:env && NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port 5173 --host 0.0.0.0",
-		"dev:auto-kismet": "npm run validate:env && ./scripts/development/auto-start-kismet.sh && NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port 5173 --host 0.0.0.0",
+		"dev": "npm run validate:env && NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0",
+		"dev:simple": "npm run validate:env && NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0",
+		"dev:auto-kismet": "npm run validate:env && ./scripts/development/auto-start-kismet.sh && NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0",
 		"dev:clean": "npm run kill-dev && npm run dev",
 		"dev:full": "./scripts/development/start-all-services.sh",
 		"start:full": "./scripts/start-argos-full.sh",
@@ -46,7 +46,12 @@
 		"test:coverage": "vitest run --coverage",
 		"test:ui": "vitest --ui",
 		"test:visual:generate": "vitest run tests/visual -- --generate-baselines",
-		"test:all": "npm run test:unit && npm run test:integration && npm run test:visual && npm run test:performance"
+		"test:all": "npm run test:unit && npm run test:integration && npm run test:visual && npm run test:performance",
+		"mcp:start": "tsx src/lib/server/mcp/dynamic-server.ts",
+		"mcp:install-b": "tsx scripts/mcp-install.ts b",
+		"mcp:install-c": "tsx scripts/mcp-install.ts c",
+		"mcp:config-b": "tsx scripts/mcp-config.ts b",
+		"mcp:config-c": "tsx scripts/mcp-config.ts c"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.53.2",

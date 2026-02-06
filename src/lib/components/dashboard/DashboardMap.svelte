@@ -3,6 +3,7 @@
 	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
 	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
 	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboardStore';
+	import { selectDevice } from '$lib/stores/dashboard/agentContextStore';
 	import { getSignalHex, getSignalBandKey } from '$lib/utils/signalUtils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import {
@@ -483,6 +484,9 @@
 					packets: props?.packets ?? 0,
 					last_seen: props?.last_seen ?? 0
 				};
+
+				// Notify agent context store (AG-UI shared state bridge)
+				selectDevice(props?.mac ?? '', popupContent);
 			}
 		}
 	}
@@ -943,7 +947,7 @@
 		background: transparent !important;
 		border: none !important;
 		border-bottom: 1px solid #2a2a3e !important;
-		color: #888 !important;
+		color: #bbb !important;
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button:last-child) {
@@ -956,7 +960,7 @@
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button .maplibregl-ctrl-icon) {
-		filter: invert(0.6);
+		filter: invert(0.85);
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon) {

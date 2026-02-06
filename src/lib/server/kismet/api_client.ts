@@ -235,14 +235,12 @@ export class KismetAPIClient extends EventEmitter {
 	 */
 	private async authenticate(): Promise<void> {
 		try {
-			// For now, use basic auth or session tokens
-			// In production, implement proper authentication
-
+			// Verify connectivity using Basic Auth (credentials sent per-request)
 			const response = await this.makeRequest('GET', '/system/status.json');
 
 			if (response) {
 				logInfo('Authenticated with Kismet server');
-				this.authToken = 'authenticated'; // Simplified for demo
+				this.authToken = 'authenticated';
 			} else {
 				throw new Error('Authentication failed');
 			}
@@ -390,19 +388,20 @@ export class KismetAPIClient extends EventEmitter {
 	private async makeRequest(method: string, endpoint: string, data?: any): Promise<any> {
 		try {
 			const url = `${this.baseUrl}${endpoint}`;
+
+			// Use Basic Auth with configured credentials
+			const user = this.config.restUser || 'admin';
+			const pass = this.config.restPassword || 'password';
+			const auth = Buffer.from(`${user}:${pass}`).toString('base64');
+
 			const options: globalThis.RequestInit = {
 				method,
 				headers: {
 					'Content-Type': 'application/json',
-					'User-Agent': 'Argos-Fusion-Client/1.0'
+					'User-Agent': 'Argos-Fusion-Client/1.0',
+					Authorization: `Basic ${auth}`
 				}
 			};
-
-			// Add authentication if available
-			if (this.authToken) {
-				(options.headers as Record<string, string>)['Authorization'] =
-					`Bearer ${this.authToken}`;
-			}
 
 			// Add body for POST/PUT requests
 			if (data && (method === 'POST' || method === 'PUT')) {
