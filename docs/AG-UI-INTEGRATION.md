@@ -119,8 +119,8 @@ export ANTHROPIC_API_KEY="your-api-key-here"
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull the model (3B parameters fits in RPi 5 RAM)
-ollama pull llama3.2:3b
+# Pull the model (1B parameter - safe for RPi 5 8GB RAM)
+ollama pull llama3.2:1b
 
 # Verify it's running
 curl http://localhost:11434/api/tags
@@ -354,18 +354,15 @@ cat src/lib/server/mcp/tools/*.ts
 # List installed models
 ollama list
 
-# Pull recommended model
-ollama pull llama3.2:3b
-
-# For better quality (requires more RAM)
-ollama pull llama3.2:7b
+# Pull recommended model (1B - optimized for RPi 5 8GB RAM)
+ollama pull llama3.2:1b
 ```
 
 ## Performance Notes
 
 ### RPi 5 Constraints
 
-- **8GB RAM**: Use `llama3.2:3b` model (fits in ~4GB)
+- **8GB RAM**: Use `llama3.2:1b` model (~1.8GB loaded, leaves headroom for other services)
 - **CPU**: 4x Cortex-A76 sufficient for Ollama inference
 - **Latency**: ~2-3 seconds per response (offline)
 - **Anthropic API**: ~500ms per response (online)

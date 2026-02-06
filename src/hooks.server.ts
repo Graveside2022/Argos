@@ -6,12 +6,38 @@ import { WebSocketManager } from '$lib/server/kismet';
 import { dev } from '$app/environment';
 import type { IncomingMessage } from 'http';
 import { logger } from '$lib/utils/logger';
+import { initializeToolExecutionFramework } from '$lib/server/agent/tool-execution/init';
+import { scanAllHardware, globalHardwareMonitor } from '$lib/server/hardware';
 
 // Create WebSocket server
 const wss = new WebSocketServer({ noServer: true });
 
 // Initialize WebSocket manager
 const wsManager = WebSocketManager.getInstance();
+
+// Initialize tool execution framework (auto-detect and register installed tools)
+initializeToolExecutionFramework().catch((error) => {
+	logger.error('Failed to initialize tool execution framework', { error });
+});
+
+// Initialize hardware detection system (auto-detect connected hardware)
+scanAllHardware()
+	.then((result) => {
+		logger.info('Hardware detection complete', {
+			total: result.stats.total,
+			connected: result.stats.connected,
+			sdrs: result.stats.byCategory.sdr || 0,
+			wifi: result.stats.byCategory.wifi || 0,
+			bluetooth: result.stats.byCategory.bluetooth || 0
+		});
+
+		// Start continuous hardware monitoring (scan every 30 seconds)
+		globalHardwareMonitor.start(30000);
+		logger.info('Hardware monitoring started');
+	})
+	.catch((error) => {
+		logger.error('Failed to scan hardware', { error });
+	});
 
 // Handle WebSocket connections
 wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
