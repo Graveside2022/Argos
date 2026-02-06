@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { activePanel, togglePanel, activeView } from '$lib/stores/dashboard/dashboardStore';
+	import {
+		activePanel,
+		togglePanel,
+		activeBottomTab,
+		toggleBottomTab
+	} from '$lib/stores/dashboard/dashboardStore';
+	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminalStore';
 
 	const topIcons = [
 		{
@@ -18,6 +24,12 @@
 			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
 		}
 	];
+
+	const chatIcon = {
+		id: 'chat',
+		label: 'Agent Chat',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+	};
 
 	const terminalIcon = {
 		id: 'terminal',
@@ -39,7 +51,9 @@
 
 	function handleClick(id: string) {
 		if (id === 'terminal') {
-			activeView.update((v) => (v === 'terminal' ? 'map' : 'terminal'));
+			toggleTerminalPanel();
+		} else if (id === 'chat') {
+			toggleBottomTab('chat');
 		} else {
 			togglePanel(id);
 		}
@@ -67,13 +81,23 @@
 	<div class="rail-bottom">
 		<button
 			class="rail-btn"
-			class:active={$activeView === 'terminal'}
+			class:active={$activeBottomTab === 'terminal'}
 			title={terminalIcon.label}
 			aria-label={terminalIcon.label}
-			aria-pressed={$activeView === 'terminal'}
+			aria-pressed={$activeBottomTab === 'terminal'}
 			onclick={() => handleClick(terminalIcon.id)}
 		>
 			{@html terminalIcon.svg}
+		</button>
+		<button
+			class="rail-btn"
+			class:active={$activeBottomTab === 'chat'}
+			title={chatIcon.label}
+			aria-label={chatIcon.label}
+			aria-pressed={$activeBottomTab === 'chat'}
+			onclick={() => handleClick(chatIcon.id)}
+		>
+			{@html chatIcon.svg}
 		</button>
 		<button
 			class="rail-btn"

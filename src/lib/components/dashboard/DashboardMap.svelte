@@ -625,39 +625,7 @@
 			/>
 		</GeoJSONSource>
 
-		<!-- Detection range legend — bottom of bottom-right stack -->
-		<CustomControl position="bottom-right">
-			<div class="range-legend">
-				<div class="legend-title">DETECTION RANGE</div>
-				<div class="legend-row">
-					<span class="legend-dot" style="background:#dc2626"></span>
-					<span class="legend-dist">25m</span>
-					<span class="legend-rssi">&gt; -50 dBm</span>
-				</div>
-				<div class="legend-row">
-					<span class="legend-dot" style="background:#f97316"></span>
-					<span class="legend-dist">60m</span>
-					<span class="legend-rssi">-50 to -60</span>
-				</div>
-				<div class="legend-row">
-					<span class="legend-dot" style="background:#fbbf24"></span>
-					<span class="legend-dist">100m</span>
-					<span class="legend-rssi">-60 to -70</span>
-				</div>
-				<div class="legend-row">
-					<span class="legend-dot" style="background:#10b981"></span>
-					<span class="legend-dist">175m</span>
-					<span class="legend-rssi">-70 to -80</span>
-				</div>
-				<div class="legend-row">
-					<span class="legend-dot" style="background:#4a90e2"></span>
-					<span class="legend-dist">300m</span>
-					<span class="legend-rssi">&lt; -80 dBm</span>
-				</div>
-			</div>
-		</CustomControl>
-
-		<!-- Navigation (zoom +/-) — above legend -->
+		<!-- Navigation (zoom +/-) -->
 		<NavigationControl position="bottom-right" showCompass={false} />
 
 		<!-- Center-on-location button — top of bottom-right stack -->
@@ -963,7 +931,7 @@
 
 	/* MapLibre zoom controls — dark theme to match UI */
 	.map-area :global(.maplibregl-ctrl-group) {
-		background: rgba(20, 20, 32, 0.92) !important;
+		background: rgba(20, 20, 32, 0.97) !important;
 		border: 1px solid #2a2a3e !important;
 		border-radius: 6px !important;
 		box-shadow: none !important;
@@ -995,16 +963,6 @@
 		filter: invert(0.8) sepia(1) saturate(3) hue-rotate(190deg);
 	}
 
-	/* Detection range legend */
-	.range-legend {
-		background: rgba(20, 20, 32, 0.92);
-		border: 1px solid #2a2a3e;
-		border-radius: 6px;
-		padding: 8px 10px;
-		margin-bottom: 6px;
-		box-shadow: none;
-	}
-
 	/* Remove MapLibre default white wrapper on custom controls */
 	.map-area :global(.maplibregl-ctrl) {
 		background: transparent !important;
@@ -1015,40 +973,6 @@
 	/* Tighten spacing between bottom-right controls (locate + zoom) */
 	.map-area :global(.maplibregl-ctrl-bottom-right > .maplibregl-ctrl) {
 		margin-bottom: 4px !important;
-	}
-
-	.legend-title {
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 0.1em;
-		color: #666;
-		margin-bottom: 6px;
-	}
-
-	.legend-row {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 1.5px 0;
-	}
-
-	.legend-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.legend-dist {
-		font-family: monospace;
-		font-size: 11px;
-		color: #e0e0e8;
-		min-width: 34px;
-	}
-
-	.legend-rssi {
-		font-size: 10px;
-		color: #777;
 	}
 
 	/* Popup styling (Palantir theme) */

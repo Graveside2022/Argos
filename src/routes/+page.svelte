@@ -5,8 +5,8 @@
 		void goto('/viewspectrum');
 	}
 
-	function navigateToUSRPSweep() {
-		void goto('/usrpsweep');
+	function navigateToRFSweep() {
+		void goto('/rfsweep');
 	}
 
 	function navigateToWigleToTAK() {
@@ -116,17 +116,17 @@
 
 		<div
 			class="mission-card mission-spectrum"
-			onclick={navigateToUSRPSweep}
+			onclick={navigateToRFSweep}
 			role="button"
 			tabindex="0"
-			onkeydown={(e) => e.key === 'Enter' && navigateToUSRPSweep()}
+			onkeydown={(e) => e.key === 'Enter' && navigateToRFSweep()}
 		>
 			<div class="mission-status-badge"></div>
 			<svg class="mission-icon" fill="currentColor" viewBox="0 0 24 24">
 				<path d="M4 20v-2h2v2H4zm4 0v-5h2v5H8zm4 0V10h2v10h-2zm4 0V4h2v16h-2z"></path>
 			</svg>
 			<h2 class="mission-title">
-				<span class="text-feature-rf">USRP</span>
+				<span class="text-feature-rf">RF</span>
 				<span>Sweep</span>
 			</h2>
 			<p class="mission-desc">Spectrum Analysis</p>

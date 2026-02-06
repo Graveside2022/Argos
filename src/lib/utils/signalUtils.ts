@@ -6,27 +6,60 @@
 export interface SignalBand {
 	key: string;
 	label: string;
+	name: string;
+	dbm: string;
 	min: number;
 	cssVar: string;
+	range: string;
 }
 
 /** Five signal strength bands using Palantir CSS variables */
 export const signalBands: SignalBand[] = [
 	{
 		key: 'critical',
+		name: 'Very Strong',
+		dbm: '> -50 dBm',
 		label: '> -50 dBm (Very Strong)',
 		min: -50,
-		cssVar: '--palantir-signal-critical'
+		cssVar: '--palantir-signal-critical',
+		range: '25m'
 	},
 	{
 		key: 'strong',
+		name: 'Strong',
+		dbm: '-50 to -60 dBm',
 		label: '-50 to -60 dBm (Strong)',
 		min: -60,
-		cssVar: '--palantir-signal-strong'
+		cssVar: '--palantir-signal-strong',
+		range: '60m'
 	},
-	{ key: 'good', label: '-60 to -70 dBm (Good)', min: -70, cssVar: '--palantir-signal-good' },
-	{ key: 'fair', label: '-70 to -80 dBm (Fair)', min: -80, cssVar: '--palantir-signal-fair' },
-	{ key: 'weak', label: '< -80 dBm (Weak)', min: -Infinity, cssVar: '--palantir-signal-weak' }
+	{
+		key: 'good',
+		name: 'Good',
+		dbm: '-60 to -70 dBm',
+		label: '-60 to -70 dBm (Good)',
+		min: -70,
+		cssVar: '--palantir-signal-good',
+		range: '100m'
+	},
+	{
+		key: 'fair',
+		name: 'Fair',
+		dbm: '-70 to -80 dBm',
+		label: '-70 to -80 dBm (Fair)',
+		min: -80,
+		cssVar: '--palantir-signal-fair',
+		range: '175m'
+	},
+	{
+		key: 'weak',
+		name: 'Weak',
+		dbm: '< -80 dBm',
+		label: '< -80 dBm (Weak)',
+		min: -Infinity,
+		cssVar: '--palantir-signal-weak',
+		range: '300m'
+	}
 ];
 
 /** Get the signal band key for an RSSI value */

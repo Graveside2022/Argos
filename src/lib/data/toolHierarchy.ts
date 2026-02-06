@@ -53,14 +53,14 @@ export const toolHierarchy: ToolHierarchy = {
 										showControls: false
 									},
 									{
-										id: 'usrp-sweep',
-										name: 'USRP Sweep',
+										id: 'rf-sweep',
+										name: 'RF Sweep',
 										description:
-											'Argos built-in USRP spectrum analysis module with wider bandwidth capability than HackRF',
-										icon: toolIcons.usrpsweep,
+											'Argos built-in RF spectrum sweep module supporting HackRF and USRP hardware',
+										icon: toolIcons.rfsweep,
 										installed: true,
 										deployment: 'native',
-										viewName: 'usrpsweep',
+										viewName: 'rfsweep',
 										canOpen: true,
 										showControls: false
 									},

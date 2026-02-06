@@ -55,19 +55,6 @@
 				<span class="toggle-knob"></span>
 			</button>
 		</label>
-
-		<label class="toggle-row">
-			<span class="toggle-label">GPS Accuracy</span>
-			<button
-				class="toggle-switch"
-				class:on={$layerVisibility.accuracyCircle}
-				onclick={() => toggleLayerVisibility('accuracyCircle')}
-				role="switch"
-				aria-checked={$layerVisibility.accuracyCircle}
-			>
-				<span class="toggle-knob"></span>
-			</button>
-		</label>
 	</section>
 
 	<!-- Signal Strength Filter -->
@@ -78,7 +65,8 @@
 			<label class="toggle-row">
 				<div class="band-label">
 					<span class="band-dot" style="background: var({band.cssVar})"></span>
-					<span class="toggle-label">{band.label}</span>
+					<span class="toggle-label">{band.name}</span>
+					<span class="band-range">{band.range}</span>
 				</div>
 				<button
 					class="toggle-switch"
@@ -152,6 +140,11 @@
 		height: 8px;
 		border-radius: 50%;
 		flex-shrink: 0;
+	}
+
+	.band-range {
+		font-size: var(--text-xs);
+		color: var(--palantir-text-tertiary);
 	}
 
 	/* Toggle switch */
