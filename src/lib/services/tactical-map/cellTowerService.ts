@@ -2,6 +2,7 @@ import type { LeafletMap } from '$lib/stores/tactical-map/mapStore';
 
 declare global {
 	interface Window {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		L: any;
 	}
 }
@@ -20,8 +21,11 @@ export interface CellTower {
 }
 
 export class CellTowerService {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private L: any = null;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private towerMarkers: Map<string, any> = new Map();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private towerLayer: any = null;
 
 	async initializeLeaflet(): Promise<void> {

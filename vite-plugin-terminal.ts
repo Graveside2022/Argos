@@ -20,7 +20,7 @@ export function terminalPlugin(): Plugin {
 	return {
 		name: 'argos-terminal',
 		configureServer(_server: ViteDevServer) {
-			console.log('[argos-terminal] Plugin hook called');
+			console.warn('[argos-terminal] Plugin hook called');
 			// Don't return the promise — fire-and-forget so we don't block Vite
 			setupTerminal().catch((err) => {
 				console.error('[argos-terminal] Setup failed:', err);
@@ -59,7 +59,7 @@ async function setupTerminal() {
 	let ptyModule: typeof import('node-pty');
 	try {
 		ptyModule = await import('node-pty');
-		console.log('[argos-terminal] node-pty loaded OK');
+		console.warn('[argos-terminal] node-pty loaded OK');
 	} catch {
 		console.warn('[argos-terminal] node-pty not available — terminal disabled');
 		return;
@@ -68,7 +68,7 @@ async function setupTerminal() {
 	const wss = new WebSocketServer({ port: TERMINAL_PORT, host: '0.0.0.0' });
 
 	wss.on('listening', () => {
-		console.log(`[argos-terminal] Shell server listening on port ${TERMINAL_PORT}`);
+		console.warn(`[argos-terminal] Shell server listening on port ${TERMINAL_PORT}`);
 	});
 
 	wss.on('error', (err: Error) => {
@@ -127,7 +127,7 @@ async function setupTerminal() {
 		// Set up timeout to spawn with default shell if no init received
 		initTimeout = setTimeout(() => {
 			if (!initialized) {
-				console.log(
+				console.warn(
 					'[argos-terminal] No init message received, spawning with default shell'
 				);
 				spawnPty(defaultShell);
