@@ -73,6 +73,10 @@ RUN curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
+# Copy ZSH configuration files into the image (baked in, not mounted)
+COPY docker/.zshrc /root/.zshrc
+COPY docker/.p10k.zsh /root/.p10k.zsh
+
 # Set ZSH as default shell
 RUN chsh -s /bin/zsh root
 

@@ -1,5 +1,4 @@
-import { get } from 'svelte/store';
-import { mapStore, type LeafletMap } from '$lib/stores/tactical-map/mapStore';
+import type { LeafletMap } from '$lib/stores/tactical-map/mapStore';
 
 declare global {
 	interface Window {
@@ -44,16 +43,16 @@ export class CellTowerService {
 		if (!this.L || !this.towerLayer) return;
 
 		const towerId = `${tower.mcc}-${tower.mnc}-${tower.lac}-${tower.ci}`;
-		
+
 		// Skip if tower already exists
 		if (this.towerMarkers.has(towerId)) return;
 
 		// Create tower icon based on status
 		const iconColor = {
-			'ok': '#10b981',      // Green
-			'unknown': '#f59e0b', // Orange
-			'suspicious': '#ef4444', // Red
-			'fake': '#dc2626'     // Dark red
+			ok: '#10b981', // Green
+			unknown: '#f59e0b', // Orange
+			suspicious: '#ef4444', // Red
+			fake: '#dc2626' // Dark red
 		}[tower.status];
 
 		const towerIcon = this.L.divIcon({
@@ -92,12 +91,15 @@ export class CellTowerService {
 
 		marker.bindPopup(popupContent, {
 			maxWidth: 250,
-			className: tower.status === 'fake' || tower.status === 'suspicious' ? 'signal-popup' : 'pi-popup'
+			className:
+				tower.status === 'fake' || tower.status === 'suspicious'
+					? 'signal-popup'
+					: 'pi-popup'
 		});
 
 		// Add range circle if available
 		if (tower.range && tower.range > 0) {
-			const rangeCircle = this.L.circle([tower.lat, tower.lon], {
+			this.L.circle([tower.lat, tower.lon], {
 				radius: tower.range,
 				color: iconColor,
 				fillColor: iconColor,
@@ -108,6 +110,31 @@ export class CellTowerService {
 		}
 
 		this.towerMarkers.set(towerId, marker);
+
+		// Enforce marker limit to prevent memory overflow on Raspberry Pi
+		this.enforceMarkerLimit(1000);
+	}
+
+	/**
+	 * Limit the number of markers to prevent memory overflow
+	 * Removes oldest markers when limit is exceeded
+	 */
+	private enforceMarkerLimit(maxMarkers: number = 1000): void {
+		if (this.towerMarkers.size > maxMarkers) {
+			// Remove oldest markers (first entries in Map)
+			const markersToRemove = this.towerMarkers.size - maxMarkers;
+			let removed = 0;
+
+			for (const [id, marker] of this.towerMarkers.entries()) {
+				if (removed >= markersToRemove) break;
+
+				if (this.towerLayer) {
+					this.towerLayer.removeLayer(marker);
+				}
+				this.towerMarkers.delete(id);
+				removed++;
+			}
+		}
 	}
 
 	async removeCellTower(towerId: string): Promise<void> {

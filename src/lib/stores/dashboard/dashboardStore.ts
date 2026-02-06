@@ -1,7 +1,57 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
+import { browser } from '$app/environment';
 
 /** Which panel is open in the icon rail (null = closed) */
 export const activePanel = writable<string | null>(null);
+
+/** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
+export const activeBottomTab = writable<'terminal' | 'chat' | null>(null);
+
+/** Shared bottom panel height (persisted to localStorage) */
+const BOTTOM_PANEL_STORAGE_KEY = 'bottomPanelHeight';
+const DEFAULT_BOTTOM_HEIGHT = 300;
+const MIN_BOTTOM_HEIGHT = 100;
+const MAX_BOTTOM_HEIGHT_PERCENT = 0.8;
+
+function getInitialBottomHeight(): number {
+	if (!browser) return DEFAULT_BOTTOM_HEIGHT;
+	try {
+		const stored = localStorage.getItem(BOTTOM_PANEL_STORAGE_KEY);
+		if (stored)
+			return Math.max(MIN_BOTTOM_HEIGHT, parseInt(stored, 10) || DEFAULT_BOTTOM_HEIGHT);
+	} catch {
+		/* use default */
+	}
+	return DEFAULT_BOTTOM_HEIGHT;
+}
+
+export const bottomPanelHeight = writable<number>(getInitialBottomHeight());
+
+// Persist height
+if (browser) {
+	bottomPanelHeight.subscribe((h) => {
+		localStorage.setItem(BOTTOM_PANEL_STORAGE_KEY, String(h));
+	});
+}
+
+/** Whether the bottom panel is open */
+export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);
+
+/** Toggle a bottom panel tab: if already active, close; otherwise open */
+export function toggleBottomTab(tab: 'terminal' | 'chat'): void {
+	activeBottomTab.update((current) => (current === tab ? null : tab));
+}
+
+/** Close the bottom panel */
+export function closeBottomPanel(): void {
+	activeBottomTab.set(null);
+}
+
+/** Set bottom panel height with clamping */
+export function setBottomPanelHeight(height: number): void {
+	const maxHeight = browser ? window.innerHeight * MAX_BOTTOM_HEIGHT_PERCENT : 600;
+	bottomPanelHeight.set(Math.max(MIN_BOTTOM_HEIGHT, Math.min(maxHeight, height)));
+}
 
 /**
  * What the main content area shows.

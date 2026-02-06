@@ -25,9 +25,9 @@ services:
       - NODE_ENV=development
       - PORT=5173
       # Constrain Node.js heap to stay within container memory limit.
-      # With mem_limit=2048m, allow ~1536MB for V8 heap, leaving room for
+      # With mem_limit=1536m, allow ~1024MB for V8 heap, leaving room for
       # OS, Kismet, and other processes inside the container.
-      - NODE_OPTIONS=--max-old-space-size=1536
+      - NODE_OPTIONS=--max-old-space-size=1024
       - PUBLIC_BASE_URL=http://localhost:5173
       - PUBLIC_HACKRF_API_URL=http://localhost:8092
       - PUBLIC_KISMET_API_URL=http://localhost:2501
@@ -53,17 +53,26 @@ services:
       # Docker access for container management (OpenWebRX, Bettercap, etc.)
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro
-      # ZSH configuration from host (for terminal panel)
-      - ${HOME}/.zshrc:/root/.zshrc:ro
-      - ${HOME}/.p10k.zsh:/root/.p10k.zsh:ro
+      # ZSH config now baked into image (removed host mounts to fix terminal errors)
       # Atuin data persistence (shell history)
       - argos-atuin-data:/root/.local/share/atuin
       # Claude Code config persistence
       - ${HOME}/.claude:/root/.claude:rw
     command: npm run dev -- --host 0.0.0.0
-    mem_limit: 2048m
-    memswap_limit: 3072m
+    mem_limit: 1536m
+    memswap_limit: 2048m
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # ============================================
   # HACKRF BACKEND - DEV MODE
@@ -89,13 +98,20 @@ services:
       - argos-dev-network
     restart: unless-stopped
     command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8092", "--reload"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
 
   # ============================================
   # OPENWEBRX - SDR Web Interface (HackRF)
+  # On-demand only: started by Argos Tools panel
   # ============================================
   openwebrx:
     image: slechev/openwebrxplus:latest
     container_name: openwebrx-hackrf
+    profiles: ["tools"]
     mem_limit: 512m
     memswap_limit: 768m
     ports:
@@ -113,13 +129,20 @@ services:
     networks:
       - argos-dev-network
     restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
 
   # ============================================
   # BETTERCAP - WiFi/BLE/Network Recon
+  # On-demand only: started by Argos Tools panel
   # ============================================
   bettercap:
     image: bettercap/bettercap:latest
     container_name: bettercap
+    profiles: ["tools"]
     mem_limit: 256m
     memswap_limit: 384m
     network_mode: host
@@ -133,6 +156,11 @@ services:
       - BETTERCAP_API_PASSWORD=${BETTERCAP_PASSWORD:-argos}
     command: bettercap -api-rest-address 0.0.0.0 -api-rest-port 8081
     restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
 
 networks:
   argos-dev-network:

@@ -1,6 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { activeView } from '$lib/stores/dashboard/dashboardStore';
 	import ToolViewWrapper from './ToolViewWrapper.svelte';
+
+	let iframeUrl = '';
+
+	onMount(() => {
+		const host = window.location.hostname;
+		iframeUrl = `http://${host}:2501/`;
+	});
 
 	function goBack() {
 		activeView.set('map');
@@ -8,7 +16,9 @@
 </script>
 
 <ToolViewWrapper title="Kismet WiFi Scanner" onBack={goBack}>
-	<iframe src="http://localhost:2501" title="Kismet Web Interface" class="kismet-iframe" />
+	{#if iframeUrl}
+		<iframe src={iframeUrl} title="Kismet Web Interface" class="kismet-iframe"></iframe>
+	{/if}
 </ToolViewWrapper>
 
 <style>

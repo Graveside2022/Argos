@@ -757,12 +757,14 @@
 		padding: 0 var(--space-4);
 		z-index: 10;
 		position: relative;
+		overflow: hidden;
 	}
 
 	.status-group {
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
+		flex-shrink: 0;
 	}
 
 	.app-brand {
@@ -911,6 +913,9 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
 	}
 
 	.coord-value {
@@ -962,5 +967,35 @@
 
 	.time-value {
 		letter-spacing: 0.08em;
+	}
+
+	/* Responsive: progressively hide less critical items */
+	@media (max-width: 1200px) {
+		.location-name,
+		.location-name + .coord-sep {
+			display: none;
+		}
+	}
+
+	@media (max-width: 1000px) {
+		.weather-wrapper,
+		.weather-wrapper + .coord-sep {
+			display: none;
+		}
+	}
+
+	@media (max-width: 850px) {
+		.status-label {
+			font-size: 11px;
+		}
+		.sat-count {
+			display: none;
+		}
+	}
+
+	@media (max-width: 700px) {
+		.coords-group {
+			display: none;
+		}
 	}
 </style>

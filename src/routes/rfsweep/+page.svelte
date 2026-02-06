@@ -10,6 +10,24 @@
 		updateSpectrumData
 	} from '$lib/stores/hackrf';
 
+	// SDR Hardware Selection
+	type SDRDevice = 'hackrf' | 'usrp';
+	let selectedDevice: SDRDevice = 'hackrf'; // Default to HackRF
+	let _deviceStatus: 'connected' | 'disconnected' | 'checking' = 'checking';
+
+	const deviceInfo: Record<SDRDevice, { name: string; freqRange: string; sampleRate: string }> = {
+		hackrf: {
+			name: 'HackRF One',
+			freqRange: '1 MHz – 6 GHz',
+			sampleRate: '20 MS/s'
+		},
+		usrp: {
+			name: 'USRP B205 mini',
+			freqRange: '70 MHz – 6 GHz',
+			sampleRate: '56 MS/s'
+		}
+	};
+
 	let frequencies: Array<{ id: number; value: number | string }> = [{ id: 1, value: 2400 }];
 	let cycleTime = 10;
 	let isStarted = false;
@@ -21,7 +39,7 @@
 	let currentFrequencyDisplay = '--';
 	let switchTimer = '--';
 	let timerProgress = 0;
-	let dbLevelValue = '--.--';
+	let dbLevelValue = '--';
 	let signalStrengthText = 'No Signal';
 	let targetFrequency = '--';
 	let detectedFrequency = '--';
@@ -56,7 +74,8 @@
 
 		try {
 			// Immediate UI feedback
-			statusMessage = 'Initializing USRP hardware... (this may take 5-10 seconds)';
+			const deviceName = deviceInfo[selectedDevice].name;
+			statusMessage = `Initializing ${deviceName}... (this may take 5-10 seconds)`;
 			isStarted = true; // Show stop button immediately
 
 			const validFreqs = frequencies
@@ -67,10 +86,13 @@
 					step: 1
 				}));
 
-			console.debug(`[USRP Sweep] Starting sweep for frequencies:`, validFreqs);
-			const _response = await usrpAPI.startSweep(validFreqs, cycleTime);
-			console.debug(`[USRP Sweep] Sweep started successfully:`, _response);
-			statusMessage = 'USRP sweep running - collecting signal data...';
+			console.debug(
+				`[RF Sweep] Starting sweep on ${selectedDevice} for frequencies:`,
+				validFreqs
+			);
+			const _response = await usrpAPI.startSweep(validFreqs, cycleTime, selectedDevice);
+			console.debug(`[RF Sweep] Sweep started successfully on ${selectedDevice}:`, _response);
+			statusMessage = `${deviceName} sweep running - collecting signal data...`;
 
 			// Store target frequencies for offset calculation
 			const validFreqValues = frequencies.filter((f) => f.value);
@@ -81,7 +103,7 @@
 				// Note: USRP device cannot be accessed by multiple processes
 				// Power measurements will come from the spectrum scan data stream
 				console.debug(
-					`[USRP Sweep] Monitoring spectrum scan data for frequency ${validFreqValues[0].value} MHz`
+					`[RF Sweep] Monitoring spectrum scan data for frequency ${validFreqValues[0].value} MHz`
 				);
 			}
 
@@ -173,7 +195,7 @@
 				switchTimer = 'Switching...';
 
 				// Clear signal analysis during switch
-				dbLevelValue = '--.--';
+				dbLevelValue = '--';
 				signalStrengthText = 'Switching...';
 				detectedFrequency = '--';
 				frequencyOffset = '--';
@@ -217,7 +239,7 @@
 
 						// Note: Power measurements come from spectrum scan data
 						console.debug(
-							`[USRP Sweep] Switched to frequency: ${validFreqs[nextIndex].value} MHz`
+							`[RF Sweep] Switched to frequency: ${validFreqs[nextIndex].value} MHz`
 						);
 					}
 
@@ -350,16 +372,14 @@
 				const targetFreqMHz = parseFloat(targetFreqStr);
 				if (!isNaN(targetFreqMHz) && targetFreqMHz !== currentMeasurementFreq) {
 					currentMeasurementFreq = targetFreqMHz;
-					console.debug(
-						`[USRP Sweep] Frequency changed to ${currentMeasurementFreq} MHz`
-					);
+					console.debug(`[RF Sweep] Frequency changed to ${currentMeasurementFreq} MHz`);
 				}
 				measureUSRPPower(currentMeasurementFreq);
 			}
 		}, 2000);
 
 		console.debug(
-			`[USRP Sweep] Started periodic power measurement for ${frequencyMHz} MHz every 2 seconds`
+			`[RF Sweep] Started periodic power measurement for ${frequencyMHz} MHz every 2 seconds`
 		);
 	}
 
@@ -367,7 +387,7 @@
 		if (powerMeasurementInterval) {
 			clearInterval(powerMeasurementInterval);
 			powerMeasurementInterval = null;
-			console.debug('[USRP Sweep] Stopped periodic power measurement');
+			console.debug('[RF Sweep] Stopped periodic power measurement');
 		}
 	}
 
@@ -375,14 +395,14 @@
 		currentFrequencyDisplay = '--';
 		switchTimer = '--';
 		timerProgress = 0;
-		dbLevelValue = '--.--';
+		dbLevelValue = '--';
 		signalStrengthText = 'No Signal';
 		targetFrequency = '--';
 		detectedFrequency = '--';
 		frequencyOffset = '--';
 	}
 
-	function loadFrequencies() {
+	function _loadFrequencies() {
 		// Placeholder for load frequencies functionality
 		// Load frequencies clicked
 	}
@@ -394,14 +414,14 @@
 			await stopCycling();
 		}
 
-		// Navigate to the viewspectrum page with USRP parameter
-		window.location.href = '/viewspectrum?device=usrp';
+		// Navigate to the viewspectrum page with selected device
+		window.location.href = `/viewspectrum?device=${selectedDevice}`;
 	}
 
 	// Subscribe to stores
 	$: if ($spectrumData && !isSwitching) {
 		// Debug spectrum data
-		console.debug('[USRP Sweep] Spectrum data received:', {
+		console.debug('[RF Sweep] Spectrum data received:', {
 			peak_power: $spectrumData.peak_power,
 			peak_freq: $spectrumData.peak_freq,
 			timestamp: $spectrumData.timestamp,
@@ -419,9 +439,9 @@
 			dbLevelValue = peakPower.toFixed(2);
 			updateSignalStrength(peakPower);
 			updateSignalIndicator(peakPower);
-			console.debug(`[USRP Sweep] Signal analysis updated: ${peakPower} dB`);
+			console.debug(`[RF Sweep] Signal analysis updated: ${peakPower} dB`);
 		} else {
-			console.debug('[USRP Sweep] No valid peak_power in spectrum data');
+			console.debug('[RF Sweep] No valid peak_power in spectrum data');
 		}
 
 		if (
@@ -528,29 +548,29 @@
 
 		// Initialize async operations
 		(async () => {
-			console.debug('[USRP Sweep] Page mounting...');
+			console.debug('[RF Sweep] Page mounting...');
 
 			// First, get the actual backend state
 			try {
 				const status = await usrpAPI.getStatus();
-				console.debug('[USRP Sweep] Backend status:', status);
+				console.debug('[RF Sweep] Backend status:', status);
 
 				// Update store with real backend state
 				if (status && typeof status.sweeping === 'boolean') {
 					isStarted = status.sweeping;
 					updateSweepStatus({ active: status.sweeping });
-					console.debug(`[USRP Sweep] Synced with backend: isStarted=${isStarted}`);
+					console.debug(`[RF Sweep] Synced with backend: isStarted=${isStarted}`);
 				} else {
 					isStarted = false;
-					console.debug('[USRP Sweep] No backend status, defaulting to stopped');
+					console.debug('[RF Sweep] No backend status, defaulting to stopped');
 				}
 			} catch (error) {
-				console.warn('[USRP Sweep] Failed to get backend status:', error);
+				console.warn('[RF Sweep] Failed to get backend status:', error);
 				isStarted = false;
 			}
 
 			// Connect to data stream
-			console.debug('[USRP Sweep] Connecting to data stream...');
+			console.debug('[RF Sweep] Connecting to data stream...');
 			void usrpAPI.connectToDataStream();
 		})();
 
@@ -633,7 +653,7 @@
 </script>
 
 <!-- Main Container with Black Background -->
-<div class="relative min-h-screen bg-bg-primary overflow-x-hidden font-body">
+<div class="rf-sweep-page relative min-h-screen bg-bg-primary overflow-x-hidden">
 	<!-- Header -->
 	<header
 		class="sticky top-0 z-50 backdrop-blur-2xl bg-bg-primary/80 border-b border-border-primary/50 shadow-xl"
@@ -641,44 +661,15 @@
 		<div class="container mx-auto px-4 lg:px-8 max-w-7xl">
 			<div class="flex items-center justify-between h-16">
 				<!-- Brand/Logo Section -->
-				<div class="flex items-center space-x-4">
-					<!-- Back to Console Button -->
-					<a
-						href="/"
-						class="flex items-center space-x-2 px-4 py-2 rounded-lg glass-button hover:bg-bg-hover/20 transition-all duration-200"
-					>
-						<svg
-							class="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 19l-7-7m0 0l7-7m-7 7h18"
-							></path>
-						</svg>
-						<span class="font-medium text-sm">Back to Console</span>
-					</a>
-
-					<div class="flex items-center space-x-3">
-						<!-- Animated Logo Icon -->
-						<!-- Brand Text -->
-						<div class="flex flex-col">
-							<h1
-								class="font-heading text-h4 font-semibold tracking-tight leading-tight"
-							>
-								<span class="usrp-brand">USRP</span>
-								<span class="sweep-brand font-bold">Sweep</span>
-							</h1>
-							<span
-								class="font-mono text-caption uppercase tracking-widest"
-								style="color: #9CA3AF !important;">SDR Monitoring Platform</span
-							>
-						</div>
+				<div class="flex items-center">
+					<div class="flex flex-col">
+						<h1 class="font-heading text-h4 font-semibold tracking-tight leading-tight">
+							<span class="rf-brand">RF</span>
+							<span class="sweep-brand font-bold">Sweep</span>
+						</h1>
+						<span class="text-caption uppercase tracking-widest text-text-muted">
+							SDR Spectrum Analysis
+						</span>
 					</div>
 				</div>
 
@@ -697,7 +688,7 @@
 										? '#FBBF24'
 										: '#EF4444'};"
 							></div>
-							<span class="font-mono text-caption text-text-secondary">
+							<span class="text-caption text-text-secondary">
 								{#if $connectionStatus.error}
 									{$connectionStatus.error}
 								{:else if $connectionStatus.connecting}
@@ -711,7 +702,7 @@
 						</div>
 						<div class="w-px h-4 bg-border-primary"></div>
 						<div class="flex items-center space-x-2">
-							<span class="font-mono text-caption text-text-muted">Mode:</span>
+							<span class="text-caption text-text-muted">Mode:</span>
 							<span class="font-mono text-caption text-neon-cyan font-semibold"
 								>Sweep</span
 							>
@@ -743,53 +734,149 @@
 		<div class="grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-12">
 			<!-- Control Panel Section -->
 			<div class="xl:col-span-1">
-				<div class="sticky top-24 space-y-8">
-					<!-- Frequency Configuration Card -->
+				<div class="sticky top-24 space-y-6">
+					<!-- Hardware Selection Card -->
 					<div
-						class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-6">
+						<div class="flex items-center mb-5">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.1) 100%) !important; border: 1px solid rgba(74, 222, 128, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 222, 128, 0.2), 0 0 15px rgba(74, 222, 128, 0.15) !important;"
+								style="background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 frequency-config-icon group-hover:scale-110 transition-transform duration-300"
-									fill="currentColor"
+									class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
 									viewBox="0 0 24 24"
-									style="color: #4ade80 !important;"
+									style="color: #2563EB;"
 								>
-									<path d="M3 12h4l3-9 4 18 3-9h4M3 3v18M21 3v18" />
+									<rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+									<rect x="9" y="9" width="6" height="6" />
+									<line x1="9" y1="1" x2="9" y2="4" />
+									<line x1="15" y1="1" x2="15" y2="4" />
+									<line x1="9" y1="20" x2="9" y2="23" />
+									<line x1="15" y1="20" x2="15" y2="23" />
 								</svg>
 							</div>
 							<div>
 								<h3
-									class="font-heading text-xl font-semibold frequency-config-header mb-1 transition-colors duration-300"
+									class="font-heading text-lg font-semibold text-text-primary mb-0.5"
 								>
-									Frequency Configuration
+									SDR Hardware
 								</h3>
-								<p
-									class="text-sm text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									Manage target frequencies
-								</p>
+								<p class="text-xs text-text-muted">Select radio device</p>
 							</div>
 						</div>
 
-						<div class="space-y-6">
+						<div class="space-y-4">
+							<div>
+								<label
+									for="deviceSelector"
+									class="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide"
+								>
+									Active Device
+								</label>
+								<select
+									id="deviceSelector"
+									bind:value={selectedDevice}
+									disabled={isStarted}
+									class="w-full px-3 py-2.5 bg-bg-input/80 border border-border-primary/60 rounded-lg text-text-primary text-sm font-medium outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan/30 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<option value="hackrf">HackRF One</option>
+									<option value="usrp">USRP B205 mini</option>
+								</select>
+							</div>
+
+							<!-- Device Info -->
+							<div class="grid grid-cols-2 gap-3 pt-2">
+								<div
+									class="p-3 bg-bg-elevated/50 rounded-lg border border-border-subtle"
+								>
+									<div
+										class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
+									>
+										Frequency
+									</div>
+									<div class="text-xs font-mono text-text-secondary">
+										{deviceInfo[selectedDevice].freqRange}
+									</div>
+								</div>
+								<div
+									class="p-3 bg-bg-elevated/50 rounded-lg border border-border-subtle"
+								>
+									<div
+										class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
+									>
+										Sample Rate
+									</div>
+									<div class="text-xs font-mono text-text-secondary">
+										{deviceInfo[selectedDevice].sampleRate}
+									</div>
+								</div>
+							</div>
+
+							<!-- Device Status -->
+							<div class="flex items-center gap-2 pt-1">
+								<div
+									class="w-2 h-2 rounded-full {$connectionStatus.connected
+										? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
+										: 'bg-red-500'}"
+								></div>
+								<span class="text-xs text-text-secondary">
+									{$connectionStatus.connected
+										? deviceInfo[selectedDevice].name + ' Ready'
+										: 'Awaiting connection'}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Frequency Configuration Card -->
+					<div
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
+					>
+						<div class="flex items-center mb-5">
+							<div
+								class="p-3 rounded-xl mr-4 transition-all duration-300"
+								style="background: rgba(5, 150, 105, 0.15); border: 1px solid rgba(5, 150, 105, 0.2);"
+							>
+								<svg
+									class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									viewBox="0 0 24 24"
+									style="color: #059669;"
+								>
+									<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+								</svg>
+							</div>
+							<div>
+								<h3
+									class="font-heading text-lg font-semibold text-text-primary mb-0.5"
+								>
+									Frequency Configuration
+								</h3>
+								<p class="text-xs text-text-muted">Target frequencies</p>
+							</div>
+						</div>
+
+						<div class="space-y-4">
 							<div>
 								<div
-									class="block text-sm font-medium text-text-muted mb-3 uppercase tracking-wide"
+									class="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide"
 								>
 									Frequencies
 								</div>
-								<div class="space-y-3 mb-6 max-h-[300px] overflow-y-auto">
+								<div class="space-y-2 mb-4 max-h-[240px] overflow-y-auto">
 									{#each frequencies as freq (freq.id)}
 										<div
-											class="frequency-item saasfly-interactive-card flex items-center gap-3 p-4 bg-gradient-to-r from-bg-card/40 to-bg-card/20 rounded-xl border border-border-primary/40 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-r hover:from-bg-card/60 hover:to-bg-card/40 hover:shadow-md transition-all duration-300"
+											class="frequency-item flex items-center gap-2 p-3 bg-bg-elevated/50 rounded-lg border border-border-subtle hover:border-border-default transition-all duration-200"
 										>
 											<span
-												class="font-mono text-sm text-text-muted font-semibold min-w-[24px] text-center bg-neon-cyan/10 rounded-lg px-2 py-1"
+												class="font-mono text-xs text-text-muted font-medium min-w-[20px] text-center"
 												>{freq.id}</span
 											>
 											<div class="flex-1 relative">
@@ -800,11 +887,11 @@
 													id="freq-{freq.id}"
 													type="number"
 													bind:value={freq.value}
-													placeholder="Enter frequency"
-													class="glass-input font-mono w-full pl-3 pr-12 py-2 bg-bg-input/80 border border-border-primary/60 rounded-lg text-text-primary outline-none focus:border-neon-cyan focus:bg-bg-input focus:shadow-neon-cyan-sm transition-all duration-300"
+													placeholder="Frequency"
+													class="font-mono text-sm w-full pl-3 pr-12 py-1.5 bg-bg-input/80 border border-border-primary/60 rounded text-text-primary outline-none focus:border-neon-cyan transition-all duration-200"
 												/>
 												<span
-													class="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm text-text-secondary font-medium pointer-events-none"
+													class="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-text-muted pointer-events-none"
 													>MHz</span
 												>
 											</div>
@@ -847,43 +934,40 @@
 
 					<!-- Sweep Control Card -->
 					<div
-						class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-6">
+						<div class="flex items-center mb-5">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(74, 158, 255, 0.1) 100%) !important; border: 1px solid rgba(74, 158, 255, 0.2) !important; box-shadow: 0 8px 25px rgba(74, 158, 255, 0.2), 0 0 15px rgba(74, 158, 255, 0.15) !important;"
+								style="background: rgba(217, 119, 6, 0.15); border: 1px solid rgba(217, 119, 6, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-									style="color: #4a9eff !important;"
+									class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									viewBox="0 0 24 24"
+									style="color: #D97706;"
 								>
-									<path
-										d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-									/>
+									<circle cx="12" cy="12" r="10" />
+									<polyline points="12 6 12 12 16 14" />
 								</svg>
 							</div>
 							<div>
 								<h3
-									class="font-heading text-xl font-semibold sweep-control-header mb-1 transition-colors duration-300"
+									class="font-heading text-lg font-semibold text-text-primary mb-0.5"
 								>
 									Sweep Control
 								</h3>
-								<p
-									class="text-sm text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									Configure frequency cycling
-								</p>
+								<p class="text-xs text-text-muted">Cycle timing</p>
 							</div>
 						</div>
 
-						<div class="space-y-6">
+						<div class="space-y-4">
 							<div>
 								<label
 									for="cycleTimeInput"
-									class="block text-sm font-medium text-text-muted mb-3 uppercase tracking-wide"
+									class="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide"
 									>Cycle Time (seconds)</label
 								>
 								<input
@@ -893,11 +977,11 @@
 									min="1"
 									max="30"
 									placeholder="1-30"
-									class="w-full px-4 py-3 bg-bg-input/80 border border-border-primary/60 rounded-xl text-text-primary outline-none focus:border-accent-primary focus:bg-bg-input focus:shadow-lg focus:shadow-accent-primary/20 transition-all duration-300"
+									class="w-full px-3 py-2 text-sm bg-bg-input/80 border border-border-primary/60 rounded-lg text-text-primary outline-none focus:border-neon-cyan transition-all duration-200"
 								/>
 							</div>
 
-							<div class="grid grid-cols-1 gap-3">
+							<div class="grid grid-cols-2 gap-2">
 								<button
 									onclick={startCycling}
 									disabled={isStarted}
@@ -939,7 +1023,9 @@
 														headers: {
 															'Content-Type': 'application/json'
 														},
-														body: JSON.stringify({ deviceType: 'usrp' })
+														body: JSON.stringify({
+															deviceType: selectedDevice
+														})
 													}
 												);
 												void _response.json();
@@ -971,7 +1057,10 @@
 													error instanceof Error
 														? error.message
 														: String(error);
-												console.error('[USRP] Emergency stop failed:', msg);
+												console.error(
+													'[RF Sweep] Emergency stop failed:',
+													msg
+												);
 												statusMessage = 'Emergency stop failed';
 											}
 										}}
@@ -1063,62 +1152,47 @@
 
 					<!-- Analysis Tools Card -->
 					<div
-						class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-6">
+						<div class="flex items-center mb-5">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%) !important; border: 1px solid rgba(139, 92, 246, 0.2) !important; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2), 0 0 15px rgba(139, 92, 246, 0.15) !important;"
+								style="background: rgba(124, 58, 237, 0.15); border: 1px solid rgba(124, 58, 237, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-									style="color: #a855f7 !important;"
+									class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									viewBox="0 0 24 24"
+									style="color: #7C3AED;"
 								>
 									<path
-										fill-rule="evenodd"
-										d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01.293.707V12a1 1 0 01-.293.707l-2.293 2.293H8a1 1 0 010 2H4a1 1 0 01-1-1v-4a1 1 0 01.293-.707L5.586 9 3.293 6.707A1 1 0 013 6V4zm8-2a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-.293.707L14.414 7l2.293 2.293A1 1 0 0117 10v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293A1 1 0 0111 10V8a1 1 0 01.293-.707L13.586 5H12a1 1 0 010-2z"
+										d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5z"
+									/>
+									<path
+										d="M8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7z"
+									/>
+									<path
+										d="M14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
 									/>
 								</svg>
 							</div>
 							<div>
 								<h3
-									class="font-heading text-xl font-semibold external-tools-header mb-1 transition-colors duration-300"
+									class="font-heading text-lg font-semibold text-text-primary mb-0.5"
 								>
 									Analysis Tools
 								</h3>
-								<p
-									class="text-sm text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									External analysis utilities
-								</p>
+								<p class="text-xs text-text-muted">Spectrum visualization</p>
 							</div>
 						</div>
 
-						<div class="space-y-3">
-							<button
-								onclick={loadFrequencies}
-								class="saasfly-btn saasfly-btn-load w-full relative"
-							>
-								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-									<path
-										fill-rule="evenodd"
-										d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-									/>
-								</svg>
-								<span class="button-text">Load Frequencies</span>
-								<div
-									class="loading-spinner hidden absolute inset-0 flex items-center justify-center bg-accent-primary/10 rounded-xl"
-								>
-									<div
-										class="w-5 h-5 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin"
-									></div>
-								</div>
-							</button>
+						<div class="space-y-2">
 							<button
 								onclick={openSpectrumAnalyzer}
 								class="saasfly-btn saasfly-btn-spectrum w-full"
+								style="background: #4A90E2 !important; background-image: none !important;"
 							>
 								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 									<path
@@ -1134,75 +1208,71 @@
 
 			<!-- Monitoring Section -->
 			<div class="xl:col-span-2">
-				<div class="space-y-8">
+				<div class="space-y-6">
 					<!-- Cycle Status Card -->
 					<div
-						class="saasfly-dashboard-card cycle-status-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/90 via-bg-card/70 to-bg-card/50 border border-border-primary/50 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/95 hover:via-bg-card/75 hover:to-bg-card/55 transition-all duration-300"
+						class="saasfly-dashboard-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-8">
+						<div class="flex items-center mb-5">
 							<div
-								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(251, 146, 60, 0.1) 100%) !important; border: 1px solid rgba(251, 146, 60, 0.2) !important; box-shadow: 0 8px 25px rgba(251, 146, 60, 0.2), 0 0 15px rgba(251, 146, 60, 0.15) !important;"
+								class="p-3 rounded-xl mr-4"
+								style="background: rgba(8, 145, 178, 0.15); border: 1px solid rgba(8, 145, 178, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-									style="color: #f97316 !important;"
+									class="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									viewBox="0 0 24 24"
+									style="color: #0891B2;"
 								>
 									<path
-										fill-rule="evenodd"
-										d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707L11 12.414V6z"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
 									/>
 								</svg>
 							</div>
 							<div>
 								<h3
-									class="font-heading text-2xl font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors duration-300"
+									class="font-heading text-lg font-semibold text-text-primary mb-0.5"
 								>
 									Cycle Status
 								</h3>
-								<p
-									class="text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									Real-time sweep monitoring
-								</p>
+								<p class="text-xs text-text-muted">Sweep monitoring</p>
 							</div>
 						</div>
 
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+						<div class="grid grid-cols-2 gap-4 mb-5">
 							<div
-								class="saasfly-info-card p-6 bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-xl border border-accent-primary/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-accent-primary/15 hover:to-accent-primary/8 hover:shadow-lg hover:shadow-accent-primary/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm font-medium uppercase tracking-wide mb-2"
-									style="color: #525252 !important;"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
-									Next Frequency
+									Current Frequency
 								</div>
-								<div class="font-mono text-3xl font-bold text-accent-primary">
+								<div class="font-mono text-xl font-semibold text-text-primary">
 									{currentFrequencyDisplay}
 								</div>
 							</div>
 							<div
-								class="saasfly-info-card p-6 bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 rounded-xl border border-neon-cyan/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-neon-cyan/15 hover:to-neon-cyan/8 hover:shadow-lg hover:shadow-neon-cyan/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm font-medium uppercase tracking-wide mb-2"
-									style="color: #525252 !important;"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
-									Next Switch In
+									Next Switch
 								</div>
-								<div class="font-mono text-3xl font-bold text-neon-cyan">
+								<div class="font-mono text-xl font-semibold text-text-primary">
 									{switchTimer}
 								</div>
 							</div>
 						</div>
 
-						<div class="h-2 bg-bg-secondary rounded-full overflow-hidden">
+						<div class="h-1.5 bg-bg-elevated rounded-full overflow-hidden">
 							<div
-								id="timerProgressBar"
-								class="h-full bg-gradient-to-r from-accent-primary to-accent-hover rounded-full transition-[width] duration-100 ease-linear"
+								class="h-full bg-neon-cyan rounded-full transition-[width] duration-100 ease-linear"
 								style="width: {timerProgress}%"
 							></div>
 						</div>
@@ -1210,18 +1280,18 @@
 
 					<!-- Signal Analysis Card -->
 					<div
-						class="saasfly-dashboard-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/90 via-bg-card/70 to-bg-card/50 border border-border-primary/50 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/95 hover:via-bg-card/75 hover:to-bg-card/55 transition-all duration-300"
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-8">
+						<div class="flex items-center mb-4">
 							<div
 								class="p-3 rounded-xl mr-4 transition-all duration-300"
-								style="background: linear-gradient(135deg, rgba(250, 204, 21, 0.2) 0%, rgba(250, 204, 21, 0.1) 100%) !important; border: 1px solid rgba(250, 204, 21, 0.2) !important; box-shadow: 0 8px 25px rgba(250, 204, 21, 0.2), 0 0 15px rgba(250, 204, 21, 0.15) !important;"
+								style="background: rgba(202, 138, 4, 0.15); border: 1px solid rgba(202, 138, 4, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 group-hover:scale-110 transition-transform duration-300"
+									class="w-5 h-5"
 									fill="currentColor"
 									viewBox="0 0 20 20"
-									style="color: #facc15 !important;"
+									style="color: #CA8A04;"
 								>
 									<path
 										d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
@@ -1229,87 +1299,81 @@
 								</svg>
 							</div>
 							<div>
-								<h3
-									class="font-heading text-2xl font-semibold text-white mb-1 group-hover:text-yellow-400 transition-colors duration-300"
-								>
+								<h3 class="font-heading text-lg font-semibold text-white">
 									Signal Analysis
 								</h3>
-								<p
-									class="text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									Real-time signal strength monitoring and frequency analysis
-								</p>
+								<p class="text-xs text-text-muted">Real-time signal monitoring</p>
 							</div>
 						</div>
 
 						<!-- Signal Metrics Grid -->
-						<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+						<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
 							<div
-								class="saasfly-metric-card p-6 bg-gradient-to-br from-orange-500/10 to-orange-500/5 rounded-xl border border-orange-400/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-orange-500/15 hover:to-orange-500/8 hover:shadow-lg hover:shadow-orange-400/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
 									dB Level
 								</div>
-								<div class="font-mono text-2xl font-bold text-orange-400">
+								<div class="font-mono text-xl font-semibold text-orange-400">
 									{dbLevelValue}
 								</div>
 							</div>
 							<div
-								class="saasfly-metric-card p-6 bg-gradient-to-br from-signal-strong/10 to-signal-strong/5 rounded-xl border border-signal-strong/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-signal-strong/15 hover:to-signal-strong/8 hover:shadow-lg hover:shadow-signal-strong/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
-									Signal Strength
+									Strength
 								</div>
-								<div class="text-2xl font-bold text-signal-none">
+								<div class="text-xl font-semibold text-signal-strong">
 									{signalStrengthText}
 								</div>
 							</div>
 							<div
-								class="saasfly-metric-card p-6 bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 rounded-xl border border-neon-cyan/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-neon-cyan/15 hover:to-neon-cyan/8 hover:shadow-lg hover:shadow-neon-cyan/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
 									Target
 								</div>
-								<div class="font-mono text-2xl font-bold text-neon-cyan">
+								<div class="font-mono text-xl font-semibold text-neon-cyan">
 									{targetFrequency}
 								</div>
 							</div>
 							<div
-								class="saasfly-metric-card p-6 bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-xl border border-accent-primary/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-accent-primary/15 hover:to-accent-primary/8 hover:shadow-lg hover:shadow-accent-primary/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
 									Detected
 								</div>
-								<div class="font-mono text-2xl font-bold text-accent-primary">
+								<div class="font-mono text-xl font-semibold text-accent-primary">
 									{detectedFrequency}
 								</div>
 							</div>
 							<div
-								class="saasfly-metric-card p-6 bg-gradient-to-br from-purple-400/10 to-purple-400/5 rounded-xl border border-purple-400/20 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-purple-400/15 hover:to-purple-400/8 hover:shadow-lg hover:shadow-purple-400/20 transition-all duration-300"
+								class="p-4 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 							>
 								<div
-									class="text-sm text-text-muted font-medium uppercase tracking-wide mb-2"
+									class="text-[10px] text-text-muted uppercase tracking-wide mb-1"
 								>
 									Offset
 								</div>
-								<div class="font-mono text-2xl font-bold text-purple-400">
+								<div class="font-mono text-xl font-semibold text-purple-400">
 									{frequencyOffset}
 								</div>
 							</div>
 						</div>
 
 						<!-- Signal Visualization -->
-						<div class="relative pb-20">
+						<div class="relative pb-16">
 							<div
-								class="text-sm text-text-muted uppercase tracking-wide mb-8 text-center font-medium"
+								class="text-xs text-text-muted uppercase tracking-wide mb-4 text-center font-medium"
 							>
 								Signal Strength Scale
 							</div>
@@ -1433,16 +1497,18 @@
 
 					<!-- System Status Card -->
 					<div
-						class="saasfly-feature-card group rounded-2xl p-8 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-br hover:from-bg-card/90 hover:via-bg-card/70 hover:to-bg-card/50 transition-all duration-300"
+						class="saasfly-feature-card group rounded-2xl p-6 bg-gradient-to-br from-bg-card/80 via-bg-card/60 to-bg-card/40 border border-border-primary/40 backdrop-blur-xl shadow-lg hover:shadow-xl hover:border-border-hover/50 transition-all duration-300"
 					>
-						<div class="flex items-center mb-6">
+						<div class="flex items-center mb-4">
 							<div
-								class="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-xl mr-4 border border-green-400/20 group-hover:border-border-hover hover:border-opacity-50 group-hover:shadow-lg group-hover:shadow-green-400/20 transition-all duration-300"
+								class="p-3 rounded-xl mr-4 transition-all duration-300"
+								style="background: rgba(5, 150, 105, 0.15); border: 1px solid rgba(5, 150, 105, 0.2);"
 							>
 								<svg
-									class="w-6 h-6 text-green-400 group-hover:scale-110 transition-transform duration-300"
+									class="w-5 h-5"
 									fill="currentColor"
 									viewBox="0 0 20 20"
+									style="color: #059669;"
 								>
 									<path
 										fill-rule="evenodd"
@@ -1451,20 +1517,14 @@
 								</svg>
 							</div>
 							<div>
-								<h3
-									class="font-heading text-xl font-semibold text-white mb-1 transition-colors duration-300"
-								>
+								<h3 class="font-heading text-lg font-semibold text-white">
 									System Status
 								</h3>
-								<p
-									class="text-sm text-text-muted group-hover:text-text-secondary transition-colors duration-300"
-								>
-									Current system information
-								</p>
+								<p class="text-xs text-text-muted">Current system information</p>
 							</div>
 						</div>
 						<div
-							class="saasfly-status-card text-text-secondary min-h-[3rem] flex items-center px-4 py-3 bg-gradient-to-r from-bg-card/30 to-bg-card/20 rounded-xl border border-border-primary/30 hover:border-border-hover hover:border-opacity-50 hover:bg-gradient-to-r hover:from-bg-card/40 hover:to-bg-card/30 hover:shadow-lg hover:shadow-neon-cyan/10 transition-all duration-300"
+							class="text-text-secondary text-sm min-h-[2.5rem] flex items-center px-4 py-3 bg-bg-elevated/50 rounded-lg border border-border-subtle"
 						>
 							{statusMessage || 'Ready to start monitoring'}
 						</div>
@@ -1475,21 +1535,19 @@
 	</div>
 
 	<!-- Footer -->
-	<footer class="py-12 border-t border-border-primary/20">
+	<footer class="py-6 border-t border-border-primary/20">
 		<div class="container mx-auto px-4 lg:px-8 max-w-7xl">
 			<div class="flex flex-col md:flex-row justify-between items-center">
 				<div class="flex items-center space-x-3 mb-4 md:mb-0">
-					<div></div>
+					<span class="text-xs text-text-muted font-mono">
+						{deviceInfo[selectedDevice].name} • {deviceInfo[selectedDevice].freqRange}
+					</span>
 				</div>
 				<div class="flex items-center space-x-6 text-sm text-text-muted">
 					<span
-						><span class="usrp-brand">USRP</span>
+						><span class="rf-brand">RF</span>
 						<span class="sweep-brand">Sweep</span></span
 					>
-					<button class="hover:text-accent-primary transition-colors"
-						>Documentation</button
-					>
-					<button class="hover:text-accent-primary transition-colors">Support</button>
 				</div>
 			</div>
 		</div>
@@ -1497,49 +1555,151 @@
 </div>
 
 <style>
-	/* Neon Glow Effects - DISABLED */
-	:global(h1),
-	:global(h2),
-	:global(h3),
-	:global(.text-glow) {
-		/* text-shadow:
-			0 0 10px rgba(74, 158, 255, 0.5),
-			0 0 20px rgba(74, 158, 255, 0.3),
-			0 0 30px rgba(74, 158, 255, 0.1); */
-		/* animation: textGlow 3s ease-in-out infinite; */
+	/* ============================================
+	   ENTERPRISE TYPOGRAPHY & COLOR SYSTEM
+	   Based on Grafana/Datadog design principles
+
+	   CRITICAL: Use !important to override Tailwind
+	   ============================================ */
+
+	/* ===========================================
+	   FONT SYSTEM - OVERRIDE ALL TAILWIND FONTS
+	   =========================================== */
+
+	/* Base page font - Inter for ALL UI elements */
+	:global(.rf-sweep-page),
+	:global(.rf-sweep-page *) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
 	}
 
-	/* @keyframes textGlow {
-		0%,
-		100% {
-			text-shadow:
-				0 0 10px rgba(74, 158, 255, 0.5),
-				0 0 20px rgba(74, 158, 255, 0.3),
-				0 0 30px rgba(74, 158, 255, 0.1);
-		}
-		50% {
-			text-shadow:
-				0 0 15px rgba(74, 158, 255, 0.7),
-				0 0 30px rgba(74, 158, 255, 0.5),
-				0 0 45px rgba(74, 158, 255, 0.3);
-		}
-	} */
-
-	/* Cyan neon glow for buttons */
-	:global(button) {
-		transition: all 0.3s ease;
-		position: relative;
+	/* Override Tailwind's font-body class */
+	:global(.rf-sweep-page .font-body),
+	:global(.rf-sweep-page [class*='font-body']) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
 	}
 
-	:global(button:hover) {
-		background-color: rgba(74, 158, 255, 0.1) !important;
-		border-color: rgba(74, 158, 255, 0.5) !important;
-		box-shadow:
-			0 0 10px rgba(74, 158, 255, 0.5),
-			0 0 20px rgba(74, 158, 255, 0.3),
-			0 0 30px rgba(74, 158, 255, 0.1),
-			inset 0 0 10px rgba(74, 158, 255, 0.1) !important;
-		color: #4a9eff !important;
+	/* Override Tailwind's font-heading class */
+	:global(.rf-sweep-page .font-heading),
+	:global(.rf-sweep-page [class*='font-heading']) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* EXCEPTION: Only these elements get monospace font */
+	:global(.rf-sweep-page .font-mono),
+	:global(.rf-sweep-page input[type='number']),
+	:global(.rf-sweep-page .data-value) {
+		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Override Tailwind's text-caption class */
+	:global(.rf-sweep-page .text-caption) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* Page title - larger size, override text-h4 and font-heading */
+	:global(.rf-sweep-page header h1),
+	:global(.rf-sweep-page header h1.font-heading),
+	:global(.rf-sweep-page header h1.text-h4),
+	:global(.rf-sweep-page header .font-heading) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+		font-size: 1.25rem !important;
+		font-weight: 600 !important;
+		line-height: 1.2 !important;
+	}
+
+	/* Brand text in header */
+	:global(.rf-sweep-page .rf-brand),
+	:global(.rf-sweep-page .sweep-brand) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* ALL uppercase labels must use Inter, not monospace */
+	:global(.rf-sweep-page .uppercase),
+	:global(.rf-sweep-page [class*='uppercase']) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* Buttons - always Inter */
+	:global(.rf-sweep-page button),
+	:global(.rf-sweep-page .saasfly-btn) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+		transition: all 0.2s ease;
+	}
+
+	/* Select dropdowns - Inter */
+	:global(.rf-sweep-page select),
+	:global(.rf-sweep-page option) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* Metric box labels - explicit Inter override for uppercase labels */
+	:global(.rf-sweep-page .bg-bg-elevated .text-\[10px\]),
+	:global(.rf-sweep-page .bg-bg-elevated\/50 .text-\[10px\]),
+	:global(.rf-sweep-page .p-4 .text-\[10px\]),
+	:global(.rf-sweep-page .p-3 .text-\[10px\]),
+	:global(.rf-sweep-page [class*='bg-bg-elevated'] [class*='uppercase']) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+		font-weight: 600 !important;
+		letter-spacing: 0.05em !important;
+	}
+
+	/* Data values inside metric boxes - these SHOULD be monospace */
+	:global(.rf-sweep-page .bg-bg-elevated .text-xl.font-semibold),
+	:global(.rf-sweep-page .bg-bg-elevated\/50 .text-xl.font-semibold),
+	:global(.rf-sweep-page .p-4 .text-xl.font-semibold.font-mono) {
+		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+		font-variant-numeric: tabular-nums !important;
+	}
+
+	/* But Strength text value should be Inter (it shows "No Signal", not numbers) */
+	:global(.rf-sweep-page .text-signal-strong:not(.font-mono)),
+	:global(.rf-sweep-page .text-xl.font-semibold.text-signal-strong) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
 	}
 
 	/* Glass panels with neon accent */
@@ -1568,7 +1728,7 @@
 		top: 0;
 		left: 0;
 		right: 0;
-		height: 2px;
+		height: 1px;
 		background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.4), transparent);
 		opacity: 0;
 		transition: opacity 0.3s ease;
@@ -1645,93 +1805,77 @@
 			0 0 0 4px currentColor;
 	}
 
-	/* Start button - Cyan gradient */
+	/* Start button - ARGOS System Blue */
 	:global(.saasfly-btn-start) {
-		background: linear-gradient(135deg, #4a9eff 0%, #3a8eef 100%) !important;
+		background: #4a90e2 !important;
 		color: white !important;
 		border: none !important;
-		box-shadow:
-			0 2px 8px rgba(74, 158, 255, 0.3),
-			0 0 20px rgba(74, 158, 255, 0.1) !important;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	:global(.saasfly-btn-start:hover:not(:disabled)) {
-		background: linear-gradient(135deg, #3a8eef 0%, #2a7edf 100%) !important;
-		box-shadow:
-			0 4px 12px rgba(74, 158, 255, 0.4),
-			0 0 30px rgba(74, 158, 255, 0.2) !important;
+		background: #3a80d2 !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 		transform: translateY(-1px);
 	}
 
-	/* Stop button - Red gradient */
+	/* Stop button - ARGOS System Red */
 	:global(.saasfly-btn-stop) {
-		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+		background: #dc2626 !important;
 		color: white !important;
 		border: none !important;
-		box-shadow:
-			0 2px 8px rgba(239, 68, 68, 0.3),
-			0 0 20px rgba(239, 68, 68, 0.1) !important;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	:global(.saasfly-btn-stop:hover:not(:disabled)) {
-		background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-		box-shadow:
-			0 4px 12px rgba(239, 68, 68, 0.4),
-			0 0 30px rgba(239, 68, 68, 0.2) !important;
+		background: #b91c1c !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 		transform: translateY(-1px);
 	}
 
-	/* Load button - Purple gradient */
+	/* Load button - ARGOS System Orange */
 	:global(.saasfly-btn-load) {
-		background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%) !important;
+		background: #f97316 !important;
 		color: white !important;
 		border: none !important;
-		box-shadow:
-			0 2px 8px rgba(139, 92, 246, 0.3),
-			0 0 20px rgba(139, 92, 246, 0.1) !important;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	:global(.saasfly-btn-load:hover) {
-		background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%) !important;
-		box-shadow:
-			0 4px 12px rgba(139, 92, 246, 0.4),
-			0 0 30px rgba(139, 92, 246, 0.2) !important;
+		background: #ea580c !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 		transform: translateY(-1px);
 	}
 
-	/* Add button - Green gradient */
+	/* Add button - ARGOS System Green */
 	:global(.saasfly-btn-add) {
-		background: linear-gradient(135deg, #4ade80 0%, #10b981 100%) !important;
+		background: #10b981 !important;
 		color: white !important;
 		border: none !important;
-		box-shadow:
-			0 2px 8px rgba(74, 222, 128, 0.3),
-			0 0 20px rgba(74, 222, 128, 0.1) !important;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	:global(.saasfly-btn-add:hover) {
-		background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-		box-shadow:
-			0 4px 12px rgba(74, 222, 128, 0.4),
-			0 0 30px rgba(74, 222, 128, 0.2) !important;
+		background: #059669 !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 		transform: translateY(-1px);
 	}
 
-	/* Spectrum analyzer button - Blue gradient */
-	:global(.saasfly-btn-spectrum) {
-		background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+	/* Spectrum analyzer button - ARGOS System Blue (high specificity to override global) */
+	:global(.saasfly-btn.saasfly-btn-spectrum),
+	:global(button.saasfly-btn-spectrum) {
+		background: #4a90e2 !important;
+		background-image: none !important;
 		color: white !important;
 		border: none !important;
-		box-shadow:
-			0 2px 8px rgba(59, 130, 246, 0.3),
-			0 0 20px rgba(59, 130, 246, 0.1) !important;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 	}
 
-	:global(.saasfly-btn-spectrum:hover) {
-		background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-		box-shadow:
-			0 4px 12px rgba(59, 130, 246, 0.4),
-			0 0 30px rgba(59, 130, 246, 0.2) !important;
+	:global(.saasfly-btn.saasfly-btn-spectrum:hover),
+	:global(button.saasfly-btn-spectrum:hover) {
+		background: #3a80d2 !important;
+		background-image: none !important;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 		transform: translateY(-1px);
 	}
 
@@ -1741,15 +1885,15 @@
 		transform: none !important;
 	}
 
-	/* Cyan accent override */
+	/* Cyan accent override - Muted Enterprise cyan */
 	:global(.text-neon-cyan) {
-		color: #4a9eff !important;
+		color: #0891b2 !important;
 	}
 	:global(.bg-neon-cyan) {
-		background-color: #4a9eff !important;
+		background-color: #0891b2 !important;
 	}
 	:global(.border-neon-cyan) {
-		border-color: #4a9eff !important;
+		border-color: #0891b2 !important;
 	}
 
 	/* Metric cards - monochrome override to match original */
@@ -1852,13 +1996,14 @@
 	}
 
 	/* Header and Navigation styles */
-	:global(.usrp-brand) {
-		color: #3b82f6; /* Blue for USRP */
+	:global(.rf-brand) {
+		color: #2563eb; /* Muted Enterprise Blue */
+		font-weight: 600;
 		text-shadow: none;
 	}
 
 	:global(.sweep-brand) {
-		color: #e8eaed;
+		color: #f9fafb;
 		text-shadow: none;
 	}
 
@@ -1927,6 +2072,92 @@
 	:global(.saasfly-feature-card:hover .sweep-control-header),
 	:global(.saasfly-feature-card:hover .external-tools-header) {
 		color: #e8eaed !important;
+	}
+
+	/* ============================================
+	   ENTERPRISE TYPOGRAPHY STANDARDIZATION
+	   ============================================ */
+
+	/* ALL uppercase labels must be sans-serif, NEVER monospace */
+	:global(.rf-sweep-page .text-\[10px\]),
+	:global(.rf-sweep-page .text-xs.uppercase),
+	:global(.rf-sweep-page [class*='uppercase'][class*='tracking']) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* Standardized borders - exactly 1px everywhere with consistent light color */
+	:global(.rf-sweep-page .border-border-subtle),
+	:global(.rf-sweep-page .border-border-primary),
+	:global(.rf-sweep-page [class*='border-border']) {
+		border-width: 1px !important;
+		border-color: rgba(44, 47, 54, 0.6) !important; /* Same as input borders */
+	}
+
+	/* Metric boxes - subtle light borders matching frequency input */
+	:global(.rf-sweep-page .p-4.rounded-lg.border),
+	:global(.rf-sweep-page .p-3.rounded-lg.border),
+	:global(.rf-sweep-page [class*='bg-bg-elevated'].border) {
+		border-width: 1px !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
+	}
+
+	/* Frequency items - match the input border style */
+	:global(.rf-sweep-page .frequency-item) {
+		border-width: 1px !important;
+		border-color: rgba(44, 47, 54, 0.6) !important;
+	}
+
+	/* Metric box labels - explicit sans-serif */
+	:global(.rf-sweep-page .bg-bg-elevated .text-\[10px\]) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+		font-weight: 600 !important;
+		color: #6b7280 !important;
+	}
+
+	/* Data values in metric boxes - explicit monospace */
+	:global(.rf-sweep-page .bg-bg-elevated .text-xl) {
+		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Exception: "Strength" value shows text like "No Signal", not numbers */
+	:global(.rf-sweep-page .text-signal-strong:not(.font-mono)) {
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif !important;
+	}
+
+	/* Signal strength scale labels - MUST be monospace */
+	:global(.rf-sweep-page .signal-indicator ~ div .font-mono),
+	:global(.rf-sweep-page [data-db] .font-mono),
+	:global(.rf-sweep-page .signal-indicator .font-mono),
+	:global(.rf-sweep-page .text-signal-weak.font-mono),
+	:global(.rf-sweep-page .text-signal-moderate.font-mono),
+	:global(.rf-sweep-page .text-signal-strong.font-mono),
+	:global(.rf-sweep-page .text-signal-very-strong.font-mono),
+	:global(.rf-sweep-page .text-blue-400.font-mono) {
+		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+		font-variant-numeric: tabular-nums !important;
+	}
+
+	/* Muted brand colors */
+	:global(.rf-brand) {
+		color: #2563eb !important; /* Muted from #3B82F6 */
+	}
+
+	/* Placeholder text styling */
+	:global(.rf-sweep-page .text-xl.font-semibold) {
+		color: var(--text-primary);
 	}
 
 	/* Mobile optimizations for iPhone */

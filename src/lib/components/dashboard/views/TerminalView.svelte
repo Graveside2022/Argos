@@ -30,7 +30,7 @@
 			cursorStyle: 'bar',
 			fontSize: 14,
 			fontFamily:
-				"'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
+				"'FiraCode Nerd Font', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
 			lineHeight: 1.2,
 			scrollback: 10000,
 			theme: {

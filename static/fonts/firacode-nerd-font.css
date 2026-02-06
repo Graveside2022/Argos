@@ -1,0 +1,42 @@
+/* FiraCode Nerd Font - for terminal rendering */
+/* Use Mono variant for fixed-width terminal display */
+
+@font-face {
+	font-family: 'FiraCode Nerd Font';
+	src: url('/fonts/firacode/FiraCodeNerdFontMono-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'FiraCode Nerd Font';
+	src: url('/fonts/firacode/FiraCodeNerdFontMono-Medium.ttf') format('truetype');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'FiraCode Nerd Font';
+	src: url('/fonts/firacode/FiraCodeNerdFontMono-SemiBold.ttf') format('truetype');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'FiraCode Nerd Font';
+	src: url('/fonts/firacode/FiraCodeNerdFontMono-Bold.ttf') format('truetype');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'FiraCode Nerd Font';
+	src: url('/fonts/firacode/FiraCodeNerdFontMono-Light.ttf') format('truetype');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}

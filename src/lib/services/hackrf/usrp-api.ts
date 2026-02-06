@@ -6,7 +6,6 @@ import {
 	updateEmergencyStopStatus,
 	type SpectrumData
 } from '$lib/stores/hackrf';
-import type { HackRFData } from '$lib/types/signals';
 import type { HackRFStatus } from '$lib/services/api/hackrf';
 import { logError, logInfo, logDebug, logWarn } from '$lib/utils/logger';
 import { SystemStatus } from '$lib/types/enums';
@@ -33,19 +32,21 @@ export class USRPAPI {
 
 	async startSweep(
 		frequencies: Array<{ start: number; stop: number; step: number }>,
-		cycleTime: number
+		cycleTime: number,
+		device: 'hackrf' | 'usrp' = 'hackrf'
 	): Promise<{ message: string }> {
 		// Use hackrf endpoint since auto_sweep.sh handles device detection
 		const response = await fetch('/api/hackrf/start-sweep', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ 
-				frequencies, 
-				cycleTime
+			body: JSON.stringify({
+				frequencies,
+				cycleTime,
+				device
 			})
 		});
 
-		if (!response.ok) throw new Error('Failed to start USRP sweep');
+		if (!response.ok) throw new Error(`Failed to start ${device} sweep`);
 
 		// Connect to SSE for real-time data
 		this.connectToDataStream();
@@ -165,7 +166,8 @@ export class USRPAPI {
 
 			// Update sweep status
 			const newStatus = {
-				active: status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
+				active:
+					status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
 				startFreq: status.startFrequency || 0,
 				endFreq: status.endFrequency || 0,
 				currentFreq: status.currentFrequency || 0,
@@ -395,9 +397,7 @@ export class USRPAPI {
 
 					// If connection was lost while hidden, try to reconnect
 					if (this.eventSource?.readyState !== EventSource.OPEN) {
-						logInfo(
-							'[USRPAPI] Connection lost while tab was hidden, reconnecting...'
-						);
+						logInfo('[USRPAPI] Connection lost while tab was hidden, reconnecting...');
 						this.connectToDataStream();
 					}
 				}

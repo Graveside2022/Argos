@@ -90,6 +90,12 @@ class RFDatabase {
 		this.db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
 		this.db.pragma('synchronous = NORMAL'); // Balance between safety and speed
 
+		// Memory management for Raspberry Pi - prevent unbounded memory growth
+		this.db.pragma('cache_size = -64000'); // 64MB cache max (negative = KB)
+		this.db.pragma('mmap_size = 134217728'); // 128MB memory-mapped I/O max
+		this.db.pragma('temp_store = memory'); // Use memory for temporary tables
+		this.db.pragma('page_size = 4096'); // Optimize page size for ARM
+
 		// Load and execute schema
 		try {
 			const schemaPath = join(process.cwd(), 'src/lib/server/db/schema.sql');
