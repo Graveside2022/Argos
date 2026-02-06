@@ -5,7 +5,20 @@ import { browser } from '$app/environment';
 export const activePanel = writable<string | null>(null);
 
 /** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
-export const activeBottomTab = writable<'terminal' | 'chat' | null>(null);
+const ACTIVE_BOTTOM_TAB_KEY = 'activeBottomTab';
+
+function getInitialBottomTab(): 'terminal' | 'chat' | null {
+	if (!browser) return null;
+	try {
+		const stored = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
+		if (stored === 'terminal' || stored === 'chat') return stored;
+	} catch {
+		/* use default */
+	}
+	return null;
+}
+
+export const activeBottomTab = writable<'terminal' | 'chat' | null>(getInitialBottomTab());
 
 /** Shared bottom panel height (persisted to localStorage) */
 const BOTTOM_PANEL_STORAGE_KEY = 'bottomPanelHeight';
@@ -27,10 +40,18 @@ function getInitialBottomHeight(): number {
 
 export const bottomPanelHeight = writable<number>(getInitialBottomHeight());
 
-// Persist height
+// Persist height and active tab
 if (browser) {
 	bottomPanelHeight.subscribe((h) => {
 		localStorage.setItem(BOTTOM_PANEL_STORAGE_KEY, String(h));
+	});
+
+	activeBottomTab.subscribe((tab) => {
+		if (tab === null) {
+			localStorage.removeItem(ACTIVE_BOTTOM_TAB_KEY);
+		} else {
+			localStorage.setItem(ACTIVE_BOTTOM_TAB_KEY, tab);
+		}
 	});
 }
 

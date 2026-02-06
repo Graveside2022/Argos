@@ -34,6 +34,17 @@ function getInitialState(): TerminalPanelState {
 					isConnected: false // Will be set true on reattach
 				})
 			);
+
+			// If we have restored sessions, auto-open the terminal panel
+			const hasRestorableSessions = restoredSessions.length > 0;
+			if (hasRestorableSessions) {
+				console.log(
+					`[Terminal] Restoring ${restoredSessions.length} session(s), auto-opening panel`
+				);
+				// Set activeBottomTab to 'terminal' to auto-open the panel
+				setTimeout(() => activeBottomTab.set('terminal'), 0);
+			}
+
 			return {
 				...getDefaultState(),
 				height: parsed.height ?? DEFAULT_HEIGHT,
@@ -58,7 +69,7 @@ function getDefaultState(): TerminalPanelState {
 		activeTabId: null,
 		sessions: [],
 		splits: null,
-		preferredShell: '',
+		preferredShell: '/home/kali/Documents/Argos/Argos/scripts/docker-claude-terminal.sh',
 		isMaximized: false
 	};
 }
@@ -127,7 +138,13 @@ export function toggleTerminalPanel(): void {
 
 // Session management
 function createNewSession(shell: string): TerminalSession {
-	const shellName = shell.split('/').pop() || 'terminal';
+	let shellName = shell.split('/').pop() || 'terminal';
+
+	// Friendly name for Docker + tmux terminal
+	if (shell.includes('docker-claude-terminal.sh')) {
+		shellName = '🐋 Claude';
+	}
+
 	return {
 		id: generateId(),
 		title: shellName,

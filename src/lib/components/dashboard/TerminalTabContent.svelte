@@ -108,6 +108,7 @@
 
 		ws.onopen = () => {
 			connectionError = false;
+			console.log(`[Terminal ${sessionId}] WebSocket connected, sending init`);
 			// Send init message with shell selection
 			ws?.send(JSON.stringify({ type: 'init', shell, sessionId }));
 		};
@@ -118,9 +119,14 @@
 				try {
 					const msg = JSON.parse(e.data);
 					if (msg.type === 'ready') {
+						console.log(`[Terminal ${sessionId}] New PTY session spawned`);
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
-						const shellName = msg.shell.split('/').pop() || 'terminal';
+						let shellName = msg.shell.split('/').pop() || 'terminal';
+						// Friendly name for Docker + tmux terminal
+						if (msg.shell.includes('docker-claude-terminal.sh')) {
+							shellName = '🐋 Claude';
+						}
 						onTitleChange?.(shellName);
 						// Send initial resize
 						if (terminal) {
@@ -135,10 +141,21 @@
 						return;
 					}
 					if (msg.type === 'reattached') {
+						console.log(`[Terminal ${sessionId}] PTY session reattached successfully`);
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
-						const shellName = msg.shell.split('/').pop() || 'terminal';
+						let shellName = msg.shell.split('/').pop() || 'terminal';
+						// Friendly name for Docker + tmux terminal
+						if (msg.shell.includes('docker-claude-terminal.sh')) {
+							shellName = '🐋 Claude';
+						}
 						onTitleChange?.(shellName);
+
+						// Notify user of reconnection
+						terminal?.write(
+							'\r\n\x1b[90m[terminal reconnected - session restored]\x1b[0m\r\n'
+						);
+
 						// Send resize so PTY matches current terminal dimensions
 						if (terminal) {
 							ws?.send(
