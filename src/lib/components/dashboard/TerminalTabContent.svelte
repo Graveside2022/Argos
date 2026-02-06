@@ -14,7 +14,6 @@
 
 	let terminalEl: HTMLDivElement | undefined = $state();
 	let connectionError = $state(false);
-	let isConnected = $state(false);
 	let _actualShell = $state(shell);
 
 	// References for cleanup
@@ -119,10 +118,8 @@
 				try {
 					const msg = JSON.parse(e.data);
 					if (msg.type === 'ready') {
-						isConnected = true;
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
-						// Update title with shell name
 						const shellName = msg.shell.split('/').pop() || 'terminal';
 						onTitleChange?.(shellName);
 						// Send initial resize
@@ -137,9 +134,26 @@
 						}
 						return;
 					}
+					if (msg.type === 'reattached') {
+						_actualShell = msg.shell;
+						updateSessionConnection(sessionId, true);
+						const shellName = msg.shell.split('/').pop() || 'terminal';
+						onTitleChange?.(shellName);
+						// Send resize so PTY matches current terminal dimensions
+						if (terminal) {
+							ws?.send(
+								JSON.stringify({
+									type: 'resize',
+									cols: terminal.cols,
+									rows: terminal.rows
+								})
+							);
+						}
+						// Buffered output will arrive as regular data after this message
+						return;
+					}
 					if (msg.type === 'exit') {
 						terminal?.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n');
-						isConnected = false;
 						updateSessionConnection(sessionId, false);
 						return;
 					}
@@ -152,15 +166,12 @@
 
 		ws.onerror = () => {
 			connectionError = true;
-			isConnected = false;
 			updateSessionConnection(sessionId, false);
 		};
 
 		ws.onclose = () => {
-			if (!connectionError && isConnected) {
-				terminal?.write('\r\n\x1b[90m[connection closed]\x1b[0m\r\n');
-			}
-			isConnected = false;
+			// Don't print "[connection closed]" — the PTY persists server-side
+			// and will be reattached on next page load
 			updateSessionConnection(sessionId, false);
 		};
 
