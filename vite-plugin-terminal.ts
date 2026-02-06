@@ -16,8 +16,8 @@ const VALID_SHELLS = [
 	'/usr/bin/zsh',
 	'/usr/bin/fish',
 	'/bin/fish',
-	// Docker + tmux persistent terminal
-	'/home/kali/Documents/Argos/Argos/scripts/docker-claude-terminal.sh'
+	// Tmux + zsh persistent terminal (runs inside container)
+	'/app/scripts/tmux-zsh-wrapper.sh'
 ];
 
 /** Persistent PTY session that survives WebSocket disconnections */
