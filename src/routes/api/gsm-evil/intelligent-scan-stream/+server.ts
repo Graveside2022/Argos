@@ -3,20 +3,13 @@ import { resourceManager } from '$lib/server/hardware/resourceManager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { hostExec, isDockerContainer } from '$lib/server/hostExec';
 import { validateGain, sanitizeGainForShell } from '$lib/validators/gsm';
-
-interface FrequencyTestResult {
-	frequency: string;
-	power: number;
-	frameCount: number;
-	hasGsmActivity: boolean;
-	strength: string;
-	channelType?: string;
-	controlChannel?: boolean;
-	mcc?: string;
-	mnc?: string;
-	lac?: string;
-	ci?: string;
-}
+import type { FrequencyTestResult } from '$lib/types/gsm';
+import {
+	parseCellIdentity,
+	analyzeGsmFrames,
+	classifySignalStrength,
+	determineChannelType
+} from '$lib/services/gsm/protocolParser';
 
 export const POST: RequestHandler = async ({ request: _request }) => {
 	const encoder = new TextEncoder();
@@ -263,12 +256,6 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 
 						// Run tcpdump (frame count) and tshark (cell identity) IN PARALLEL
 						// tshark must run concurrently to capture SI3 messages as they arrive.
-						let frameCount = 0;
-						let cellMcc = '';
-						let cellMnc = '';
-						let cellLac = '';
-						let cellCi = '';
-
 						const tcpdumpPromise = hostExec(
 							`sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || true`
 						).catch(() => ({ stdout: '0', stderr: '' }));
@@ -285,37 +272,22 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 							tsharkPromise
 						]);
 
-						frameCount = parseInt(String(tcpdumpResult.stdout).trim()) || 0;
+						const frameCount = parseInt(String(tcpdumpResult.stdout).trim()) || 0;
 
-						// Parse tshark cell identity output (4 fields: MCC, MNC, LAC, CI)
-						// LAC and CI are returned as hex (0x1065, 0x9dca) — convert to decimal
+						// Parse tshark cell identity output using extracted pure function
+						const cellId = parseCellIdentity(String(tsharkResult.stdout));
+						const { mcc: cellMcc, mnc: cellMnc, lac: cellLac, ci: cellCi } = cellId;
+
 						if (tsharkResult.stdout) {
-							const cellLines = String(tsharkResult.stdout)
+							const cellLineCount = String(tsharkResult.stdout)
 								.trim()
 								.split('\n')
-								.filter((l: string) => l.trim() && !/^,*$/.test(l));
+								.filter((l: string) => l.trim() && !/^,*$/.test(l)).length;
 							sendUpdate(
-								`[FREQ ${i + 1}/${checkFreqs.length}] Found ${cellLines.length} packets with cell/identity data`
+								`[FREQ ${i + 1}/${checkFreqs.length}] Found ${cellLineCount} packets with cell/identity data`
 							);
 
-							// Accumulate data from SI3/SI4 packets
-							for (const line of cellLines) {
-								const parts = line.split(',');
-								if (parts[0] && parts[0].trim()) cellMcc = parts[0].trim();
-								if (parts[1] && parts[1].trim()) cellMnc = parts[1].trim();
-								if (parts[2] && parts[2].trim()) {
-									const raw = parts[2].trim();
-									cellLac = raw.startsWith('0x')
-										? String(parseInt(raw, 16))
-										: raw;
-								}
-								if (parts[3] && parts[3].trim()) {
-									const raw = parts[3].trim();
-									cellCi = raw.startsWith('0x') ? String(parseInt(raw, 16)) : raw;
-								}
-							}
-
-							// Check what we captured
+							// Report what we captured
 							if (cellMcc && cellLac && cellCi) {
 								sendUpdate(
 									`[FREQ ${i + 1}/${checkFreqs.length}] [PASS] Complete cell identity captured!`
@@ -340,63 +312,29 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 						}
 
 						// Analyze channel types from actual frame content and tshark cell identity
-						let channelType = '';
-						let controlChannel = false;
-
-						if (frameCount > 0) {
-							// If tshark decoded MCC/LAC/CI, those come from SI3/SI4 → guaranteed BCCH
-							if (cellMcc && cellLac && cellCi) {
-								channelType = 'BCCH/CCCH';
-								controlChannel = true;
-							} else {
-								// Parse hex frame data from the log file
-								try {
-									const { stdout: recentLines } = await hostExec(
-										`grep -E "^\\s*[0-9a-f]{2}\\s" ${stderrLog} 2>/dev/null | tail -30`
-									);
-									const lines = String(recentLines)
-										.split('\n')
-										.filter((l: string) => l.trim());
-									let hasSI = false;
-									let hasPaging = false;
-
-									for (const line of lines) {
-										const bytes = line.trim().split(/\s+/);
-										if (bytes.length >= 3 && bytes[1] === '06') {
-											const msgType = parseInt(bytes[2], 16);
-											if (
-												[
-													0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x02, 0x03,
-													0x07
-												].includes(msgType)
-											) {
-												hasSI = true;
-											}
-											if ([0x21, 0x22, 0x24, 0x3e, 0x3f].includes(msgType)) {
-												hasPaging = true;
-											}
-										}
-									}
-
-									if (hasSI) {
-										channelType = 'BCCH/CCCH';
-										controlChannel = true;
-									} else if (hasPaging) {
-										channelType = 'CCCH';
-										controlChannel = true;
-									} else if (frameCount > 100) {
-										channelType = 'TCH';
-										controlChannel = false;
-									} else {
-										channelType = 'SDCCH';
-										controlChannel = false;
-									}
-								} catch (_error: unknown) {
-									channelType = frameCount > 10 ? 'BCCH/CCCH' : 'SDCCH';
-									controlChannel = frameCount > 10;
-								}
+						let frameAnalysis = null;
+						if (frameCount > 0 && !(cellMcc && cellLac && cellCi)) {
+							// Only read hex log when cell identity is incomplete
+							try {
+								const { stdout: recentLines } = await hostExec(
+									`grep -E "^\\s*[0-9a-f]{2}\\s" ${stderrLog} 2>/dev/null | tail -30`
+								);
+								const hexLines = String(recentLines)
+									.split('\n')
+									.filter((l: string) => l.trim());
+								frameAnalysis = analyzeGsmFrames(hexLines, frameCount);
+							} catch (_error: unknown) {
+								// Hex log unreadable — determineChannelType handles null
 							}
 						}
+
+						const channelResult = determineChannelType(
+							cellId,
+							frameAnalysis,
+							frameCount
+						);
+						const channelType = channelResult.channelType;
+						const controlChannel = channelResult.controlChannel;
 
 						if (cellMcc && cellLac && cellCi) {
 							sendUpdate(
@@ -411,37 +349,8 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 							);
 						}
 
-						// Determine signal strength based on actual power
-						if (power > -40) {
-							strength = 'Excellent';
-						} else if (power > -50) {
-							strength = 'Very Strong';
-						} else if (power > -60) {
-							strength = 'Strong';
-						} else if (power > -70) {
-							strength = 'Good';
-						} else if (power > -80) {
-							strength = 'Moderate';
-						} else if (power > -90) {
-							strength = 'Weak';
-						}
-
-						// If no power measurement available, fall back to frame count
-						if (power === -100 && frameCount > 0) {
-							if (frameCount > 200) {
-								strength = 'Excellent';
-							} else if (frameCount > 150) {
-								strength = 'Very Strong';
-							} else if (frameCount > 100) {
-								strength = 'Strong';
-							} else if (frameCount > 50) {
-								strength = 'Good';
-							} else if (frameCount > 10) {
-								strength = 'Moderate';
-							} else if (frameCount > 0) {
-								strength = 'Weak';
-							}
-						}
+						// Classify signal strength using extracted pure function
+						strength = classifySignalStrength(power, frameCount);
 
 						const hasActivity = frameCount > 10;
 
