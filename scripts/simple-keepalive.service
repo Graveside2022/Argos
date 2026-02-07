@@ -14,7 +14,7 @@ StandardOutput=journal
 StandardError=journal
 
 # Environment variables
-Environment=NODE_OPTIONS=--max-old-space-size=2048
+Environment=NODE_OPTIONS=--max-old-space-size=1024
 Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/pi/.local/bin
 
 [Install]

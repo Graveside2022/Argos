@@ -81,7 +81,7 @@ start_dev_server() {
     cleanup_zombies
     
     # Export environment variables
-    export NODE_OPTIONS='--max-old-space-size=2048'
+    export NODE_OPTIONS='--max-old-space-size=1024'
     export VITE_PORT=5173
     
     # Start the server in background with proper error handling

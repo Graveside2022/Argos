@@ -41,8 +41,8 @@ start_vite() {
     
     # Start vite with the existing memory settings
     cd "$PROJECT_DIR"
-    # Increased memory limit to 2048MB to handle larger builds and prevent out-of-memory errors
-    NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port $PORT --host
+    # Memory limit set to 1024MB to match production config and prevent OOM on RPi 5
+    NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port $PORT --host
 }
 
 # Main execution

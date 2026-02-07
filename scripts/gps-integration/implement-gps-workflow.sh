@@ -39,7 +39,7 @@ User=ubuntu
 Group=ubuntu
 WorkingDirectory=/home/ubuntu/projects/Argos
 Environment="NODE_ENV=production"
-Environment="NODE_OPTIONS=--max-old-space-size=2048"
+Environment="NODE_OPTIONS=--max-old-space-size=1024"
 Environment="PORT=5173"
 Environment="HOST=0.0.0.0"
 
