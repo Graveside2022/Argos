@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { resourceManager } from '$lib/server/hardware/resourceManager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { hostExec, isDockerContainer } from '$lib/server/hostExec';
+import { validateGain, sanitizeGainForShell } from '$lib/validators/gsm';
 
 interface FrequencyTestResult {
 	frequency: string;
@@ -26,7 +27,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 				controller.enqueue(encoder.encode(`data: ${JSON.stringify({ message })}\n\n`));
 			};
 
-			const sendResult = (data: any) => {
+			const sendResult = (data: Record<string, unknown>) => {
 				controller.enqueue(encoder.encode(`data: ${JSON.stringify({ result: data })}\n\n`));
 			};
 
@@ -188,7 +189,18 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 					const stderrLog = `/tmp/grgsm_scan_${Date.now()}_${i}.log`;
 
 					try {
-						const gain = 40;
+						// Validate gain parameter (prevents command injection)
+						let validatedGain: number;
+						try {
+							validatedGain = validateGain(40);
+						} catch (validationError) {
+							sendUpdate(
+								`[ERROR] Invalid gain parameter: ${(validationError as Error).message}`
+							);
+							continue;
+						}
+
+						const safeGain = sanitizeGainForShell(validatedGain);
 
 						sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Testing ${freq} MHz...`);
 						sendUpdate(`[DEVICE] Using HackRF`);
@@ -196,8 +208,8 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 						let strength = 'No Signal';
 						let power = -100;
 
-						// Build grgsm command for HackRF
-						const grgsm_base = `sudo grgsm_livemon_headless -f ${freq}M -g ${gain}`;
+						// Build grgsm command for HackRF with sanitized parameters
+						const grgsm_base = `sudo grgsm_livemon_headless -f ${freq}M -g ${safeGain}`;
 
 						sendUpdate(`[CMD] $ ${grgsm_base}`);
 

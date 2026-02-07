@@ -47,8 +47,15 @@ export class KismetProxy {
 	private static readonly KISMET_PORT = process.env.KISMET_PORT || '2501';
 	private static readonly API_KEY = process.env.KISMET_API_KEY || '';
 	private static readonly KISMET_USER = process.env.KISMET_USER || 'admin';
-	private static readonly KISMET_PASSWORD = process.env.KISMET_PASSWORD || 'password';
+	private static readonly KISMET_PASSWORD = process.env.KISMET_PASSWORD;
 	private static readonly BASE_URL = `http://${KismetProxy.KISMET_HOST}:${KismetProxy.KISMET_PORT}`;
+
+	static {
+		// Validate required credentials are set
+		if (!KismetProxy.KISMET_PASSWORD) {
+			throw new Error('KISMET_PASSWORD environment variable must be set. See .env.example for configuration.');
+		}
+	}
 
 	/**
 	 * Make a request to the Kismet API

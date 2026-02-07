@@ -6,7 +6,12 @@ const execAsync = promisify(exec);
 
 const API_BASE = 'http://127.0.0.1:8081/api';
 const API_USER = process.env.BETTERCAP_USER || 'admin';
-const API_PASS = process.env.BETTERCAP_PASSWORD || 'argos';
+const API_PASS = process.env.BETTERCAP_PASSWORD;
+
+// Validate required credentials are set
+if (!API_PASS) {
+	throw new Error('BETTERCAP_PASSWORD environment variable must be set. See .env.example for configuration.');
+}
 
 async function apiRequest(method: string, path: string, body?: string): Promise<unknown> {
 	const auth = Buffer.from(`${API_USER}:${API_PASS}`).toString('base64');

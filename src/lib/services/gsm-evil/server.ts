@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import { WebSocketServer } from 'ws';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
 import { createServer } from 'http';
 import cors from 'cors';
 import { EventEmitter } from 'events';
@@ -19,7 +19,7 @@ interface GSMData {
 
 class GSMEvilServer extends EventEmitter {
   private app: express.Application;
-  private server: any;
+  private server: ReturnType<typeof createServer>;
   private wss: WebSocketServer;
   private grgsm_process: ChildProcess | null = null;
   private capturedData: GSMData[] = [];
@@ -134,33 +134,64 @@ class GSMEvilServer extends EventEmitter {
               
               ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.type === 'gsm_data') {
                   packetCount++;
                   countSpan.textContent = packetCount;
-                  
+
                   if (data.frequency) {
                     freqSpan.textContent = (data.frequency / 1e6).toFixed(1);
                   }
-                  
+
                   if (data.cell_id) {
                     activeCells.add(data.cell_id);
                     cellsSpan.textContent = activeCells.size;
                   }
-                  
+
+                  // Create entry safely using DOM methods (prevents XSS)
                   const entry = document.createElement('div');
                   entry.className = 'data-entry';
-                  entry.innerHTML = \`
-                    <span class="timestamp">[\${new Date(data.timestamp).toLocaleTimeString()}]</span>
-                    <span class="frequency">Freq: \${(data.frequency / 1e6).toFixed(1)} MHz</span>
-                    \${data.channel ? \`Ch: \${data.channel}\` : ''}
-                    \${data.cell_id ? \`Cell: \${data.cell_id}\` : ''}
-                    \${data.signal_strength ? \`<span class="signal">Signal: \${data.signal_strength} dB</span>\` : ''}
-                    <br>Data: \${data.data}
-                  \`;
-                  
+
+                  // Timestamp
+                  const timestampSpan = document.createElement('span');
+                  timestampSpan.className = 'timestamp';
+                  timestampSpan.textContent = \`[\${new Date(data.timestamp).toLocaleTimeString()}]\`;
+                  entry.appendChild(timestampSpan);
+                  entry.appendChild(document.createTextNode(' '));
+
+                  // Frequency
+                  const freqSpan = document.createElement('span');
+                  freqSpan.className = 'frequency';
+                  freqSpan.textContent = \`Freq: \${(data.frequency / 1e6).toFixed(1)} MHz\`;
+                  entry.appendChild(freqSpan);
+                  entry.appendChild(document.createTextNode(' '));
+
+                  // Channel (optional)
+                  if (data.channel) {
+                    entry.appendChild(document.createTextNode(\`Ch: \${data.channel} \`));
+                  }
+
+                  // Cell ID (optional) - sanitized
+                  if (data.cell_id) {
+                    entry.appendChild(document.createTextNode(\`Cell: \${data.cell_id} \`));
+                  }
+
+                  // Signal strength (optional)
+                  if (data.signal_strength) {
+                    const signalSpan = document.createElement('span');
+                    signalSpan.className = 'signal';
+                    signalSpan.textContent = \`Signal: \${data.signal_strength} dB\`;
+                    entry.appendChild(signalSpan);
+                  }
+
+                  // Line break
+                  entry.appendChild(document.createElement('br'));
+
+                  // Data content - sanitized
+                  entry.appendChild(document.createTextNode(\`Data: \${data.data || ''}\`));
+
                   dataContainer.insertBefore(entry, dataContainer.firstChild);
-                  
+
                   // Keep only last 100 entries in view
                   while (dataContainer.children.length > 100) {
                     dataContainer.removeChild(dataContainer.lastChild);
@@ -199,31 +230,27 @@ class GSMEvilServer extends EventEmitter {
 
   private setupWebSocket() {
     this.wss.on('connection', (ws) => {
-      console.log('New WebSocket client connected');
-      
       // Send recent data to new client
       this.capturedData.slice(-20).forEach(data => {
         ws.send(JSON.stringify({ type: 'gsm_data', ...data }));
       });
-      
+
       ws.on('close', () => {
-        console.log('WebSocket client disconnected');
+        // Client disconnected
       });
     });
   }
 
   public startCapture(frequency: number = 935.2e6, sampleRate: number = 2e6, gain: number = 40) {
     if (this.grgsm_process) {
-      console.log('Capture already running');
       return;
     }
 
     // Auto-detect device and start grgsm_livemon_headless
     let adjustedGain = gain;
     let adjustedSampleRate = sampleRate;
-    
+
     // Check if USRP B205 Mini is available
-    const { execSync } = require('child_process');
     let deviceArgs: string[] = [];
     try {
       execSync('uhd_find_devices 2>/dev/null | grep -q "B205"');
@@ -231,9 +258,8 @@ class GSMEvilServer extends EventEmitter {
       deviceArgs = ['--args', 'type=b200'];
       adjustedGain = Math.min(gain + 10, 60); // USRP needs higher gain
       adjustedSampleRate = 2e6; // B205 Mini works best at 2 MSPS for GSM
-      console.log(`Using USRP B205 Mini for GSM capture (gain: ${adjustedGain}, rate: ${adjustedSampleRate/1e6} MSPS)`);
-    } catch (e) {
-      console.log('Using HackRF for GSM capture');
+    } catch (_error) {
+      // Using HackRF for GSM capture (default)
     }
     
     const args = [
@@ -254,8 +280,7 @@ class GSMEvilServer extends EventEmitter {
       console.error('grgsm_livemon error:', data.toString());
     });
 
-    this.grgsm_process.on('close', (code) => {
-      console.log(`grgsm_livemon_headless exited with code ${code}`);
+    this.grgsm_process.on('close', (_code) => {
       this.grgsm_process = null;
     });
 
@@ -302,7 +327,7 @@ class GSMEvilServer extends EventEmitter {
     });
   }
 
-  private broadcast(data: any) {
+  private broadcast(data: Record<string, unknown>) {
     const message = JSON.stringify(data);
     this.wss.clients.forEach(client => {
       if (client.readyState === 1) { // WebSocket.OPEN
@@ -319,9 +344,7 @@ class GSMEvilServer extends EventEmitter {
   }
 
   public start(port: number = 8080) {
-    this.server.listen(port, () => {
-      console.log(`GSM Evil Server running on port ${port}`);
-    });
+    this.server.listen(port);
   }
 
   public stop() {
