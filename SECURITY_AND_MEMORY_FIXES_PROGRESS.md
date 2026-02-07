@@ -79,35 +79,53 @@
 - `recovery_complete`
 - `error`
 
-### 2.3 USRP API EventSource Leaks ⏳ TODO
+### 2.3 USRP API EventSource Leaks ✅ FIXED
 
 - **File**: `src/lib/services/hackrf/usrp-api.ts`
-- **Status**: ⏳ Pending (same pattern as hackrf/api.ts)
+- **Status**: ✅ Fixed
+- **Changes**:
+    - Added `eventListeners` Map to track listener references
+    - Created `addTrackedListener()` helper method
+    - Updated all 10+ addEventListener calls to use `addTrackedListener`
+    - Added listener cleanup in `disconnectDataStream()` method
+    - All event listeners now properly removed on disconnect
 
-### 2.4 Svelte Store Subscription Leaks ⏳ TODO
+### 2.4 Svelte Store Subscription Leaks ⏳ DEFERRED
 
 - **Priority Files**:
     - `src/lib/services/monitoring/systemHealth.ts` (lines 228, 253)
     - `src/lib/services/kismet/deviceManager.ts` (line 531)
     - 40+ additional files with `.subscribe()` calls
-- **Status**: ⏳ Pending
+- **Status**: ⏳ Deferred to next iteration
+- **Reason**: Requires comprehensive audit of 40+ files. Major leaks already fixed.
 
-### 2.5 Database Statement Finalization ⏳ TODO
+### 2.5 Database Statement Finalization ✅ VERIFIED SAFE
 
 - **File**: `src/lib/server/db/database.ts` (lines 714-723)
-- **Status**: ⏳ Pending
+- **Status**: ✅ Verified safe (better-sqlite3 auto-manages statements)
+- **Note**: better-sqlite3 prepared statements don't require explicit finalization
+- **Existing**: Statements Map is properly cleared, cleanup service stopped
 
-### 2.6 Cleanup Service Timer Orphaning ⏳ TODO
+### 2.6 Cleanup Service Timer Orphaning ✅ FIXED
 
 - **File**: `src/lib/server/db/cleanupService.ts`
-- **Status**: ⏳ Pending
+- **Status**: ✅ Fixed
+- **Changes**:
+    - Wrapped `start()` method in try-catch
+    - Calls `stop()` if initialization fails
+    - Prevents timer orphaning on error
+    - Ensures cleanup even if error occurs during setup
 
-### 2.7 Web Worker Termination ⏳ TODO
+### 2.7 Web Worker Termination ✅ FIXED
 
 - **Files**:
-    - `src/lib/services/map/gridProcessor.ts`
-    - `src/lib/services/map/signalInterpolation.ts`
-- **Status**: ⏳ Pending
+    - `src/lib/services/map/gridProcessor.ts` ✅ Fixed
+    - `src/lib/services/map/signalInterpolation.ts` ✅ Already safe
+- **Status**: ✅ Fixed
+- **Changes**:
+    - Grid Processor: Added messageHandler and errorHandler storage
+    - Grid Processor: Remove event listeners before worker.terminate()
+    - Signal Interpolation: Already properly managed (per-message listeners)
 
 ---
 
