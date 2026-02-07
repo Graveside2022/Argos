@@ -15,6 +15,9 @@ interface WebSocketMessage {
 // Store for active connections
 const connections = new Map<string, Set<WebSocket>>();
 
+// Store for active intervals (prevents memory leaks)
+const activeIntervals = new Map<WebSocket, NodeJS.Timeout>();
+
 // Message handlers for different endpoints
 const messageHandlers = new Map<string, (ws: WebSocket, message: WebSocketMessage) => void>();
 
@@ -95,10 +98,24 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
     ws.on('close', () => {
       console.warn(`WebSocket connection closed for ${endpoint}`);
       connections.get(endpoint)?.delete(ws);
+
+      // Clean up any active intervals for this connection (prevents memory leak)
+      const interval = activeIntervals.get(ws);
+      if (interval) {
+        clearInterval(interval);
+        activeIntervals.delete(ws);
+      }
     });
-    
+
     ws.on('error', (error: Error) => {
       console.error(`WebSocket error for ${endpoint}:`, error);
+
+      // Clean up intervals on error as well
+      const interval = activeIntervals.get(ws);
+      if (interval) {
+        clearInterval(interval);
+        activeIntervals.delete(ws);
+      }
     });
   });
   
@@ -154,6 +171,7 @@ messageHandlers.set('/hackrf', (ws, message) => {
         progress += 10;
         if (progress > 100) {
           clearInterval(interval);
+          activeIntervals.delete(ws);
           ws.send(JSON.stringify({
             type: 'sweep_status',
             data: { active: false, progress: 100 }
@@ -169,6 +187,9 @@ messageHandlers.set('/hackrf', (ws, message) => {
           }));
         }
       }, 1000);
+
+      // Store interval reference for cleanup
+      activeIntervals.set(ws, interval);
       break;
     }
       

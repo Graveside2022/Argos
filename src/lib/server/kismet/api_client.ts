@@ -389,9 +389,14 @@ export class KismetAPIClient extends EventEmitter {
 		try {
 			const url = `${this.baseUrl}${endpoint}`;
 
-			// Use Basic Auth with configured credentials
-			const user = this.config.restUser || 'admin';
-			const pass = this.config.restPassword || 'password';
+			// Use Basic Auth with configured credentials (from environment)
+			const user = this.config.restUser || process.env.KISMET_REST_USER || 'admin';
+			const pass = this.config.restPassword || process.env.KISMET_REST_PASSWORD;
+
+			if (!pass) {
+				throw new Error('Kismet REST password not configured. Set KISMET_REST_PASSWORD environment variable.');
+			}
+
 			const auth = Buffer.from(`${user}:${pass}`).toString('base64');
 
 			const options: globalThis.RequestInit = {
