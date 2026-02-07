@@ -16,7 +16,6 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { SignalMarker } from '$lib/stores/map/signals';
 import type { NetworkNode, NetworkEdge } from '$lib/services/map/networkAnalyzer';
-import type { Pattern as _Pattern } from '$lib/services/map/aiPatternDetector';
 import { DatabaseCleanupService } from './cleanupService';
 import { runMigrations } from './migrations/runMigrations';
 import { logError, logWarn, logInfo } from '$lib/utils/logger';
@@ -38,7 +37,7 @@ export type {
 
 import type { DbSignal, DbDevice, SpatialQuery, TimeQuery, DbRelationship } from './types';
 
-class RFDatabase {
+export class RFDatabase {
 	private db: Database.Database;
 	private statements: Map<string, Database.Statement> = new Map();
 	private cleanupService: DatabaseCleanupService | null = null;
