@@ -86,9 +86,9 @@ def main():
     print(f"USRP B205 Mini - RX2 antenna - Gain: {args.gain} dB", file=sys.stderr)
     
     if power_dbm > -99:
-        print(f"✓ Real measurement: {power_dbm:.1f} dBm", file=sys.stderr)
+        print(f"[PASS] Real measurement: {power_dbm:.1f} dBm", file=sys.stderr)
     else:
-        print("✗ Measurement failed", file=sys.stderr)
+        print("[FAIL] Measurement failed", file=sys.stderr)
 
 if __name__ == '__main__':
     main()

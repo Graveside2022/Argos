@@ -63,7 +63,7 @@ for GAIN in "${GAINS[@]}"; do
         
         # If we found strong signal, test longer
         if [ $PACKETS -gt 10 ]; then
-            echo "  ★ Active frequency! Testing longer..."
+            echo "  * Active frequency! Testing longer..."
             sudo grgsm_livemon_headless -s 2e6 -f ${FREQ}.0M -g $GAIN >/dev/null 2>&1 &
             PID=$!
             sleep 2
@@ -80,7 +80,7 @@ echo "=== SWEEP COMPLETE ==="
 echo
 
 if [ $BEST_PACKETS -gt 0 ]; then
-    echo "✓ GSM activity detected!"
+    echo "[PASS] GSM activity detected!"
     echo "  Best frequency: $BEST_FREQ MHz"
     echo "  Best gain: $BEST_GAIN"
     echo "  Packets captured: $BEST_PACKETS"
@@ -88,7 +88,7 @@ if [ $BEST_PACKETS -gt 0 ]; then
     echo "Active frequencies (>0 packets):"
     grep -v ": 0 packets" $RESULTS_FILE | sort -t: -k2 -nr | head -10
 else
-    echo "✗ No GSM activity detected on any frequency"
+    echo "[FAIL] No GSM activity detected on any frequency"
     echo
     echo "Troubleshooting steps:"
     echo "1. Check antenna is connected to RX port"

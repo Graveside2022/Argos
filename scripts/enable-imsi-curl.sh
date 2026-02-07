@@ -13,7 +13,7 @@ echo "Attempting to enable IMSI sniffer..."
 
 # Check if database is being updated
 if [ -f "/usr/src/gsmevil2/database/imsi.db" ]; then
-    echo "✓ IMSI database found"
+    echo "[PASS] IMSI database found"
 else
-    echo "⚠ IMSI database not found yet"
+    echo "[WARN] IMSI database not found yet"
 fi

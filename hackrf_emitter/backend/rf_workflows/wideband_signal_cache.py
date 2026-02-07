@@ -75,9 +75,9 @@ class WidebandSignalCache:
                 for key, data in metadata.items():
                     self.cached_signals[key] = CachedSignal(**data)
                     
-                print(f"📁 Loaded {len(self.cached_signals)} cached signals from disk")
+                print(f"[FILE] Loaded {len(self.cached_signals)} cached signals from disk")
             except Exception as e:
-                print(f"❌ Error loading cache metadata: {e}")
+                print(f"[ERROR] Error loading cache metadata: {e}")
                 self.cached_signals = {}
     
     def save_cache_metadata(self) -> None:
@@ -100,7 +100,7 @@ class WidebandSignalCache:
                 json.dump(metadata, f, indent=2)
                 
         except Exception as e:
-            print(f"❌ Error saving cache metadata: {e}")
+            print(f"[ERROR] Error saving cache metadata: {e}")
     
     def generate_wideband_signal(self, bandwidth: float, duration: float, 
                                signal_type: str = 'video_noise') -> Tuple[Any, Any, float]:
@@ -109,7 +109,7 @@ class WidebandSignalCache:
         sample_rate = int(bandwidth * 2.5)
         num_samples = int(duration * sample_rate)
         
-        print(f"🎯 Generating {bandwidth/1e6:.1f} MHz wideband signal ({duration}s)")
+        print(f"[TARGET] Generating {bandwidth/1e6:.1f} MHz wideband signal ({duration}s)")
         print(f"   Sample rate: {sample_rate/1e6:.1f} MHz")
         print(f"   Total samples: {num_samples:,}")
         
@@ -158,7 +158,7 @@ class WidebandSignalCache:
             cached_signal = self.cached_signals[cache_key]
             cache_file_path = os.path.join(self.cache_dir, cached_signal.filename)
             if os.path.exists(cache_file_path):
-                print(f"✅ Signal already cached: {cached_signal.filename}")
+                print(f"[OK] Signal already cached: {cached_signal.filename}")
                 return cache_file_path
         
         # Generate signal
@@ -202,7 +202,7 @@ class WidebandSignalCache:
         self.save_cache_metadata()
         
         generation_time = time.time() - start_time
-        print(f"✅ Cached signal: {filename}")
+        print(f"[OK] Cached signal: {filename}")
         print(f"   File size: {file_size_mb:.1f} MB")
         print(f"   Generation time: {generation_time:.1f}s")
         
@@ -238,7 +238,7 @@ class WidebandSignalCache:
     
     def pregenerate_common_signals(self) -> None:
         """Pre-generate all common signal configurations"""
-        print("🚀 Pre-generating common wideband signals...")
+        print("[START] Pre-generating common wideband signals...")
         print(f"   Configurations to generate: {len(self.COMMON_CONFIGS)}")
         
         start_time = time.time()
@@ -258,7 +258,7 @@ class WidebandSignalCache:
             total_size_mb += file_size_mb
         
         total_time = time.time() - start_time
-        print(f"\n✅ Pre-generation complete!")
+        print(f"\n[OK] Pre-generation complete!")
         print(f"   Total files: {len(self.COMMON_CONFIGS)}")
         print(f"   Total size: {total_size_mb:.1f} MB")
         print(f"   Generation time: {total_time:.1f}s")
@@ -300,10 +300,10 @@ class WidebandSignalCache:
             # Clear in-memory cache
             self.cached_signals.clear()
             
-            print("🗑️  Cache cleared successfully")
+            print("[DELETE]  Cache cleared successfully")
             
         except Exception as e:
-            print(f"❌ Error clearing cache: {e}")
+            print(f"[ERROR] Error clearing cache: {e}")
     
     def cleanup_old_files(self, max_age_days: int = 7) -> None:
         """Remove cached files older than specified days"""
@@ -320,11 +320,11 @@ class WidebandSignalCache:
                     del self.cached_signals[cache_key]
                     removed_count += 1
                 except Exception as e:
-                    print(f"❌ Error removing old file {signal.filename}: {e}")
+                    print(f"[ERROR] Error removing old file {signal.filename}: {e}")
         
         if removed_count > 0:
             self.save_cache_metadata()
-            print(f"🗑️  Removed {removed_count} old cached files")
+            print(f"[DELETE]  Removed {removed_count} old cached files")
 
 
 # Global cache instance
@@ -346,15 +346,15 @@ def initialize_signal_cache() -> None:
     status = cache.get_cache_status()
     
     if status['existing_files'] < status['common_configs']:
-        print("🚀 Initializing wideband signal cache...")
+        print("[START] Initializing wideband signal cache...")
         cache.pregenerate_common_signals()
     else:
-        print(f"✅ Signal cache ready: {status['existing_files']} files, {status['total_size_mb']:.1f} MB")
+        print(f"[OK] Signal cache ready: {status['existing_files']} files, {status['total_size_mb']:.1f} MB")
 
 
 if __name__ == "__main__":
     # Test the cache system
-    print("🎯 Testing Wideband Signal Cache System")
+    print("[TARGET] Testing Wideband Signal Cache System")
     print("=" * 50)
     
     cache = WidebandSignalCache()

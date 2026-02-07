@@ -23,7 +23,7 @@ if [ -n "$ALFA_INTERFACE" ]; then
     echo "Resetting $ALFA_INTERFACE to managed mode..."
     sudo ip link set $ALFA_INTERFACE down 2>/dev/null || true
     sudo iw dev $ALFA_INTERFACE set type managed 2>/dev/null || true
-    echo "✓ Alfa adapter reset"
+    echo "[PASS] Alfa adapter reset"
 fi
 
 echo "DroneID backend stopped"

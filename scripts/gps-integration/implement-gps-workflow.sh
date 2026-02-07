@@ -17,9 +17,9 @@ NC='\033[0m'
 USB_DEVICE=$(ls /dev/ttyUSB* 2>/dev/null | head -1)
 if [ -z "$USB_DEVICE" ]; then
     USB_DEVICE="/dev/ttyUSB0"  # Default fallback
-    echo -e "${YELLOW}⚠${NC} No USB device found, using default: $USB_DEVICE"
+    echo -e "${YELLOW}[WARN]${NC} No USB device found, using default: $USB_DEVICE"
 else
-    echo -e "${GREEN}✓${NC} Found GPS device: $USB_DEVICE"
+    echo -e "${GREEN}[OK]${NC} Found GPS device: $USB_DEVICE"
 fi
 
 # ===== COMPONENT 1: Argos Auto-start Service =====
@@ -63,7 +63,7 @@ TimeoutStartSec=60
 WantedBy=multi-user.target
 EOF
 
-echo -e "${GREEN}✓${NC} Argos service created"
+echo -e "${GREEN}[OK]${NC} Argos service created"
 
 # ===== COMPONENT 2: GPS Device Configuration =====
 echo ""
@@ -81,7 +81,7 @@ START_DAEMON="true"
 GPSD_SOCKET="/var/run/gpsd.sock"
 EOF
 
-echo -e "${GREEN}✓${NC} GPSD configured for $USB_DEVICE"
+echo -e "${GREEN}[OK]${NC} GPSD configured for $USB_DEVICE"
 
 # ===== COMPONENT 3: GPS Device Permissions Service =====
 echo ""
@@ -102,7 +102,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-echo -e "${GREEN}✓${NC} GPS device setup service created"
+echo -e "${GREEN}[OK]${NC} GPS device setup service created"
 
 # ===== COMPONENT 4: Kismet GPS Configuration =====
 echo ""
@@ -136,7 +136,7 @@ gps_poll_interval=1
 httpd_gps=true
 EOF
 
-echo -e "${GREEN}✓${NC} Kismet GPS configuration created"
+echo -e "${GREEN}[OK]${NC} Kismet GPS configuration created"
 
 # ===== COMPONENT 5: GPS Status Propagation Script =====
 echo ""
@@ -174,7 +174,7 @@ done
 EOF
 
 chmod +x /home/ubuntu/projects/Argos/scripts/gps-status-monitor.sh
-echo -e "${GREEN}✓${NC} GPS status monitor created"
+echo -e "${GREEN}[OK]${NC} GPS status monitor created"
 
 # ===== COMPONENT 6: Argos GPS API Endpoint =====
 echo ""
@@ -230,7 +230,7 @@ export const GET: RequestHandler = async () => {
 };
 EOF
 
-echo -e "${GREEN}✓${NC} GPS status API endpoint created"
+echo -e "${GREEN}[OK]${NC} GPS status API endpoint created"
 
 # ===== COMPONENT 7: Enable All Services =====
 echo ""
@@ -245,7 +245,7 @@ sudo systemctl enable gpsd.service 2>/dev/null
 sudo systemctl enable gps-device-setup.service 2>/dev/null
 sudo systemctl enable argos.service 2>/dev/null
 
-echo -e "${GREEN}✓${NC} Services enabled for auto-start"
+echo -e "${GREEN}[OK]${NC} Services enabled for auto-start"
 
 # ===== COMPONENT 8: Start Services =====
 echo ""
@@ -260,7 +260,7 @@ sudo systemctl start gps-device-setup.service
 sudo systemctl start gpsd.socket
 sudo systemctl start gpsd.service
 
-echo -e "${GREEN}✓${NC} GPS services started"
+echo -e "${GREEN}[OK]${NC} GPS services started"
 
 # ===== VALIDATION =====
 echo ""
@@ -269,17 +269,17 @@ echo ""
 
 # Check service status
 echo "Service Status:"
-systemctl is-active gpsd.service > /dev/null && echo -e "${GREEN}✓${NC} GPSD: Active" || echo -e "${RED}✗${NC} GPSD: Inactive"
-systemctl is-enabled gpsd.service > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} GPSD: Auto-start enabled" || echo -e "${RED}✗${NC} GPSD: Auto-start disabled"
-systemctl is-enabled argos.service > /dev/null 2>&1 && echo -e "${GREEN}✓${NC} Argos: Auto-start enabled" || echo -e "${RED}✗${NC} Argos: Auto-start disabled"
+systemctl is-active gpsd.service > /dev/null && echo -e "${GREEN}[OK]${NC} GPSD: Active" || echo -e "${RED}[FAIL]${NC} GPSD: Inactive"
+systemctl is-enabled gpsd.service > /dev/null 2>&1 && echo -e "${GREEN}[OK]${NC} GPSD: Auto-start enabled" || echo -e "${RED}[FAIL]${NC} GPSD: Auto-start disabled"
+systemctl is-enabled argos.service > /dev/null 2>&1 && echo -e "${GREEN}[OK]${NC} Argos: Auto-start enabled" || echo -e "${RED}[FAIL]${NC} Argos: Auto-start disabled"
 
 # Test GPS data flow
 echo ""
 echo "GPS Data Flow Test:"
 if timeout 3 gpspipe -w -n 1 2>/dev/null | grep -q "class"; then
-    echo -e "${GREEN}✓${NC} GPSD receiving data from Prolific adapter"
+    echo -e "${GREEN}[OK]${NC} GPSD receiving data from Prolific adapter"
 else
-    echo -e "${YELLOW}⚠${NC} No GPS data (normal if indoors or no satellites)"
+    echo -e "${YELLOW}[WARN]${NC} No GPS data (normal if indoors or no satellites)"
 fi
 
 # ===== SUMMARY =====

@@ -50,12 +50,12 @@ sleep 5
 # Check success
 if sudo lsof -i :80 | grep -q LISTEN; then
     echo ""
-    echo "✓ GSM Evil started successfully!"
+    echo "[PASS] GSM Evil started successfully!"
     echo "  Frequency: ${FREQ} MHz"
     echo "  Open: http://100.79.154.94/gsm-evil"
     echo "  Click gear → Select IMSI"
 else
-    echo "✗ Failed to start GSM Evil"
+    echo "[FAIL] Failed to start GSM Evil"
     # Try the alternate method
     echo "Trying alternate start method..."
     /home/ubuntu/projects/Argos/scripts/gsm-evil-start-wrapper.sh &

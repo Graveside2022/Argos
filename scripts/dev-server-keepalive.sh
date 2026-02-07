@@ -187,7 +187,7 @@ monitor_server() {
             
             # Log status every 5 minutes (10 checks * 30s = 5min)
             if (( $(date +%s) % 300 < 30 )); then
-                log "Status: localhost:✓ LAN:$([ "$lan_ok" == true ] && echo "✓" || echo "✗") Tailscale:$([ "$tailscale_ok" == true ] && echo "✓" || echo "✗")"
+                log "Status: localhost:[PASS] LAN:$([ "$lan_ok" == true ] && echo "[OK]" || echo "[FAIL]") Tailscale:$([ "$tailscale_ok" == true ] && echo "[OK]" || echo "[FAIL]")"
             fi
         else
             ((consecutive_failures++))

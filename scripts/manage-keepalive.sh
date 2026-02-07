@@ -102,23 +102,23 @@ show_status() {
     
     # Check localhost
     if curl -s --connect-timeout 2 --max-time 5 "http://localhost:5173" >/dev/null 2>&1; then
-        echo -e "  Localhost:5173:  ${GREEN}✓ RESPONDING${NC}"
+        echo -e "  Localhost:5173:  ${GREEN}[PASS] RESPONDING${NC}"
     else
-        echo -e "  Localhost:5173:  ${RED}✗ NOT RESPONDING${NC}"
+        echo -e "  Localhost:5173:  ${RED}[FAIL] NOT RESPONDING${NC}"
     fi
     
     # Check LAN
     if curl -s --connect-timeout 2 --max-time 5 "http://192.168.0.172:5173" >/dev/null 2>&1; then
-        echo -e "  LAN (192.168.0.172):5173: ${GREEN}✓ RESPONDING${NC}"
+        echo -e "  LAN (192.168.0.172):5173: ${GREEN}[PASS] RESPONDING${NC}"
     else
-        echo -e "  LAN (192.168.0.172):5173: ${RED}✗ NOT RESPONDING${NC}"
+        echo -e "  LAN (192.168.0.172):5173: ${RED}[FAIL] NOT RESPONDING${NC}"
     fi
     
     # Check Tailscale
     if curl -s --connect-timeout 2 --max-time 5 "http://100.68.185.86:5173" >/dev/null 2>&1; then
-        echo -e "  Tailscale (100.68.185.86):5173: ${GREEN}✓ RESPONDING${NC}"
+        echo -e "  Tailscale (100.68.185.86):5173: ${GREEN}[PASS] RESPONDING${NC}"
     else
-        echo -e "  Tailscale (100.68.185.86):5173: ${RED}✗ NOT RESPONDING${NC}"
+        echo -e "  Tailscale (100.68.185.86):5173: ${RED}[FAIL] NOT RESPONDING${NC}"
     fi
     
     # Tailscale status

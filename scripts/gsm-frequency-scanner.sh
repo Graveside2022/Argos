@@ -158,9 +158,9 @@ GRGSM_PID=$!
 
 sleep 3
 if ps -p $GRGSM_PID > /dev/null; then
-    echo -e "${GREEN}✓ grgsm_livemon_headless started (PID: $GRGSM_PID)${NC}"
+    echo -e "${GREEN}[PASS] grgsm_livemon_headless started (PID: $GRGSM_PID)${NC}"
 else
-    echo -e "${RED}✗ Failed to start grgsm_livemon_headless${NC}"
+    echo -e "${RED}[FAIL] Failed to start grgsm_livemon_headless${NC}"
     cat /tmp/grgsm_monitor.log
     exit 1
 fi

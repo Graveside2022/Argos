@@ -24,14 +24,14 @@ async function main() {
 			console.log('# Save to: .claude-container/mcp.json\n');
 			console.log(config);
 		} else {
-			console.error(`❌ Unknown command: ${command}`);
+			console.error(`[ERROR] Unknown command: ${command}`);
 			console.log('\nUsage:');
 			console.log('  npm run mcp:config-b    # Show config for Context B (host)');
 			console.log('  npm run mcp:config-c    # Show config for Context C (container)');
 			process.exit(1);
 		}
 	} catch (error) {
-		console.error('❌ Error generating config:', error);
+		console.error('[ERROR] Error generating config:', error);
 		process.exit(1);
 	}
 }

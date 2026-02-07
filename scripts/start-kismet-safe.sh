@@ -15,7 +15,7 @@ sudo systemctl start kismet-auto-wlan1
 echo "Waiting for Kismet to initialize..."
 for i in {1..10}; do
     if curl -s http://localhost:2501/system/status.json >/dev/null 2>&1; then
-        echo "✓ Kismet is running"
+        echo "[PASS] Kismet is running"
         break
     fi
     sleep 1
@@ -40,7 +40,7 @@ if ip link show | grep -q "wlx"; then
         # Note: This may fail due to authentication, but Kismet will still try to use it
         curl -s -X POST http://localhost:2501/datasource/add_source.json \
              -d "json={\"source\":\"${ADAPTER}:type=linuxwifi\"}" 2>/dev/null && \
-        echo "✓ Added $ADAPTER to Kismet" || echo "✓ $ADAPTER will be available in Kismet UI"
+        echo "[PASS] Added $ADAPTER to Kismet" || echo "[PASS] $ADAPTER will be available in Kismet UI"
     fi
 fi
 

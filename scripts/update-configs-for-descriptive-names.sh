@@ -13,18 +13,18 @@ sudo cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup 2>/dev/null || echo "dnsmasq.
 if [ -f /etc/hostapd/hostapd.conf ]; then
     echo "Updating hostapd.conf..."
     sudo sed -i 's/interface=wlx00c0cab684ad/interface=wlan_ap/g' /etc/hostapd/hostapd.conf
-    echo "✓ Updated hostapd.conf to use wlan_ap"
+    echo "[PASS] Updated hostapd.conf to use wlan_ap"
 else
-    echo "⚠ hostapd.conf not found - you may need to update it manually"
+    echo "[WARN] hostapd.conf not found - you may need to update it manually"
 fi
 
 # Update dnsmasq configuration
 if [ -f /etc/dnsmasq.conf ]; then
     echo "Updating dnsmasq.conf..."
     sudo sed -i 's/interface=wlx00c0cab684ad/interface=wlan_ap/g' /etc/dnsmasq.conf
-    echo "✓ Updated dnsmasq.conf to use wlan_ap"
+    echo "[PASS] Updated dnsmasq.conf to use wlan_ap"
 else
-    echo "⚠ dnsmasq.conf not found - you may need to update it manually"
+    echo "[WARN] dnsmasq.conf not found - you may need to update it manually"
 fi
 
 # Update NetworkManager configuration to ignore our interfaces
@@ -33,7 +33,7 @@ sudo tee /etc/NetworkManager/conf.d/99-unmanaged-argos.conf << 'EOF'
 [keyfile]
 unmanaged-devices=interface-name:wlan_ap;interface-name:wlan_monitor
 EOF
-echo "✓ Updated NetworkManager to ignore Argos interfaces"
+echo "[PASS] Updated NetworkManager to ignore Argos interfaces"
 
 echo ""
 echo "System configuration update complete!"

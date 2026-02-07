@@ -45,7 +45,7 @@ sleep 2
 # Check if services are running
 if ps -p $GRGSM_PID > /dev/null && ps -p $GSMEVIL_PID > /dev/null; then
     echo ""
-    echo "✓ GSM Evil started successfully!"
+    echo "[PASS] GSM Evil started successfully!"
     echo "  Frequency: ${FREQ} MHz"
     echo "  Web Interface: http://localhost:80"
     echo ""

@@ -38,7 +38,7 @@ main() {
     echo "Auto-starting HackRF Emitter services..."
     check_and_start_backend
     check_and_start_frontend
-    echo "✅ HackRF services are running"
+    echo "[OK] HackRF services are running"
     echo "Frontend: http://100.79.154.94:3000"
     echo "Backend:  http://100.79.154.94:5000"
 }

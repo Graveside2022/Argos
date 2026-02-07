@@ -68,7 +68,7 @@ export class FrequencyCycler {
 			Math.max(500, Math.floor(this.cycleConfig.cycleTime * 0.25))
 		);
 
-		logInfo('🔄 Frequency cycling initialized', {
+		logInfo('[RETRY] Frequency cycling initialized', {
 			frequencies: config.frequencies.length,
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime,
@@ -123,7 +123,7 @@ export class FrequencyCycler {
 			});
 		}, this.cycleConfig.cycleTime);
 
-		logInfo('🔄 Automatic cycling started', {
+		logInfo('[RETRY] Automatic cycling started', {
 			currentFreq: currentFreq?.value,
 			nextCycleIn: this.cycleConfig.cycleTime
 		});
@@ -151,7 +151,7 @@ export class FrequencyCycler {
 			return;
 		}
 
-		logInfo('🔄 Cycling to next frequency', {
+		logInfo('[RETRY] Cycling to next frequency', {
 			from: this.cycleState.currentIndex === 0 
 				? this.cycleConfig.frequencies[this.cycleConfig.frequencies.length - 1] 
 				: this.cycleConfig.frequencies[this.cycleState.currentIndex - 1],
@@ -204,7 +204,7 @@ export class FrequencyCycler {
 			this.cycleState.switchTimer = null;
 		}
 
-		logInfo('🛑 Frequency cycling stopped');
+		logInfo('[STOP] Frequency cycling stopped');
 	}
 
 	/**
@@ -214,7 +214,7 @@ export class FrequencyCycler {
 		const freqHz = this.convertToHz(frequency.value, frequency.unit);
 		this.frequencyBlacklist.add(freqHz);
 		
-		logWarn('⚫ Frequency blacklisted', { frequency, freqHz });
+		logWarn('[BLOCK] Frequency blacklisted', { frequency, freqHz });
 	}
 
 	/**
@@ -239,7 +239,7 @@ export class FrequencyCycler {
 		const freqHz = this.convertToHz(frequency.value, frequency.unit);
 		this.frequencyBlacklist.delete(freqHz);
 		
-		logInfo('⚪ Frequency removed from blacklist', { frequency, freqHz });
+		logInfo('[CLEAR] Frequency removed from blacklist', { frequency, freqHz });
 	}
 
 	/**
@@ -247,7 +247,7 @@ export class FrequencyCycler {
 	 */
 	clearBlacklist(): void {
 		this.frequencyBlacklist.clear();
-		logInfo('🧹 Frequency blacklist cleared');
+		logInfo('[CLEANUP] Frequency blacklist cleared');
 	}
 
 	/**
@@ -358,7 +358,7 @@ export class FrequencyCycler {
 			this.cycleConfig.switchingTime = switchingTime;
 		}
 
-		logInfo('⏱️ Cycle timing updated', {
+		logInfo('[TIMER] Cycle timing updated', {
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime
 		});
@@ -372,7 +372,7 @@ export class FrequencyCycler {
 		this.cycleState.currentIndex = 0;
 		this.cycleState.isCycling = false;
 		this.cycleState.inFrequencyTransition = false;
-		logInfo('🔄 Cycling reset');
+		logInfo('[RETRY] Cycling reset');
 	}
 
 	/**
@@ -387,7 +387,7 @@ export class FrequencyCycler {
 			clearTimeout(this.cycleState.switchTimer);
 			this.cycleState.switchTimer = null;
 		}
-		logInfo('⏱️ All timers cleared');
+		logInfo('[TIMER] All timers cleared');
 	}
 
 	/**
@@ -396,7 +396,7 @@ export class FrequencyCycler {
 	emergencyStop(): void {
 		this.stopCycling();
 		this.clearAllTimers();
-		logWarn('🚨 Emergency stop - frequency cycling halted');
+		logWarn('[ALERT] Emergency stop - frequency cycling halted');
 	}
 
 	/**
@@ -419,6 +419,6 @@ export class FrequencyCycler {
 	cleanup(): void {
 		this.stopCycling();
 		this.clearBlacklist();
-		logInfo('🧹 FrequencyCycler cleanup completed');
+		logInfo('[CLEANUP] FrequencyCycler cleanup completed');
 	}
 }

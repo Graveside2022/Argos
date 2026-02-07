@@ -10,11 +10,11 @@ PROJECT_DIR="/home/pi/projects/Argos"
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 DEPLOYMENT_ID="deploy-$(date +%s)"
 
-echo "🚀 INITIALIZING PARALLEL AGENT DEPLOYMENT: ${DEPLOYMENT_ID}"
-echo "📋 BINDING PROTOCOL COMPLIANCE: Mandatory parallel execution enforced"
+echo "[START] INITIALIZING PARALLEL AGENT DEPLOYMENT: ${DEPLOYMENT_ID}"
+echo "[INFO] BINDING PROTOCOL COMPLIANCE: Mandatory parallel execution enforced"
 
 # Create coordination infrastructure
-echo "📁 Creating agent coordination structure..."
+echo "[FILE] Creating agent coordination structure..."
 mkdir -p "${AGENTS_DIR}"/{coordination,work-areas,handoffs/{pending,in-progress,completed},scripts,logs}
 
 # Initialize status tracking
@@ -38,14 +38,14 @@ cat > "${AGENTS_DIR}/coordination/deployment-status.json" << EOF
 EOF
 
 # Setup git worktrees for isolated agent workspaces
-echo "🌳 Setting up isolated git worktrees..."
+echo "[TREE] Setting up isolated git worktrees..."
 cd "${PROJECT_DIR}"
 
 for i in {01..10}; do
     BRANCH_NAME="agent-${i}-${DEPLOYMENT_ID}"
     WORKSPACE_DIR="${AGENTS_DIR}/work-areas/agent-${i}-workspace"
     
-    echo "  📂 Agent-${i}: Creating workspace ${WORKSPACE_DIR}"
+    echo "  [DIR] Agent-${i}: Creating workspace ${WORKSPACE_DIR}"
     
     # Create branch and worktree
     git worktree add "${WORKSPACE_DIR}" -b "${BRANCH_NAME}"
@@ -68,7 +68,7 @@ EOF
 done
 
 # Create monitoring scripts
-echo "📊 Installing monitoring scripts..."
+echo "[STATUS] Installing monitoring scripts..."
 
 # Status monitor
 cat > "${AGENTS_DIR}/scripts/status-monitor.sh" << 'EOF'
@@ -79,8 +79,8 @@ AGENTS_DIR="/tmp/argos-agents"
 
 while true; do
     echo "=== PARALLEL AGENT STATUS $(date) ==="
-    echo "📊 Deployment: $(jq -r '.deployment_id' ${AGENTS_DIR}/coordination/deployment-status.json)"
-    echo "⏱️  Started: $(jq -r '.start_time' ${AGENTS_DIR}/coordination/deployment-status.json)"
+    echo "[STATUS] Deployment: $(jq -r '.deployment_id' ${AGENTS_DIR}/coordination/deployment-status.json)"
+    echo "[TIMER]  Started: $(jq -r '.start_time' ${AGENTS_DIR}/coordination/deployment-status.json)"
     echo ""
     
     for i in {01..10}; do
@@ -89,7 +89,7 @@ while true; do
             STATUS=$(jq -r '.status' "$STATUS_FILE")
             PROGRESS=$(jq -r '.progress' "$STATUS_FILE")
             TASK=$(jq -r '.current_task // "none"' "$STATUS_FILE")
-            echo "🤖 Agent-${i}: ${STATUS} (${PROGRESS}%) - Task: ${TASK}"
+            echo "[AUTO] Agent-${i}: ${STATUS} (${PROGRESS}%) - Task: ${TASK}"
         fi
     done
     
@@ -105,7 +105,7 @@ cat > "${AGENTS_DIR}/scripts/resolve-conflicts.sh" << 'EOF'
 
 AGENTS_DIR="/tmp/argos-agents"
 
-echo "🔧 Scanning for conflicts..."
+echo "[FIX] Scanning for conflicts..."
 
 # Check file locks
 if [ -f "${AGENTS_DIR}/coordination/file-locks.log" ]; then
@@ -120,7 +120,7 @@ if [ -f "${AGENTS_DIR}/coordination/file-locks.log" ]; then
     ' "${AGENTS_DIR}/coordination/file-locks.log")
     
     if [ -n "$STALE_LOCKS" ]; then
-        echo "⚠️  Stale locks detected:"
+        echo "[WARN]  Stale locks detected:"
         echo "$STALE_LOCKS"
     fi
 fi
@@ -131,7 +131,7 @@ for i in {01..10}; do
     if [ -d "$WORKSPACE" ]; then
         cd "$WORKSPACE"
         if git status --porcelain | grep -q "UU\|AA\|DD"; then
-            echo "💥 Git conflict in Agent-${i} workspace"
+            echo "[CRASH] Git conflict in Agent-${i} workspace"
         fi
     fi
 done
@@ -157,12 +157,12 @@ ALL_READY=true
 for agent in "${AGENTS[@]}"; do
     if ! grep -q "CHECKPOINT_REACHED ${agent} ${CHECKPOINT}" "${AGENTS_DIR}/coordination/checkpoints.log" 2>/dev/null; then
         ALL_READY=false
-        echo "⏳ Waiting for ${agent} at checkpoint ${CHECKPOINT}"
+        echo "[WAIT] Waiting for ${agent} at checkpoint ${CHECKPOINT}"
     fi
 done
 
 if [ "$ALL_READY" = true ]; then
-    echo "✅ SYNC READY: ${CHECKPOINT}"
+    echo "[OK] SYNC READY: ${CHECKPOINT}"
     exit 0
 else
     exit 1
@@ -179,16 +179,16 @@ touch "${AGENTS_DIR}/coordination"/{checkpoints.log,handoffs.log,file-locks.log,
 jq '.status = "ready" | .agents.initialized = 10' "${AGENTS_DIR}/coordination/deployment-status.json" > /tmp/deployment-status.tmp
 mv /tmp/deployment-status.tmp "${AGENTS_DIR}/coordination/deployment-status.json"
 
-echo "✅ PARALLEL AGENT ENVIRONMENT INITIALIZED"
-echo "📋 Deployment ID: ${DEPLOYMENT_ID}"
-echo "📁 Coordination Directory: ${AGENTS_DIR}"
-echo "📊 Monitor Command: ${AGENTS_DIR}/scripts/status-monitor.sh"
-echo "🔧 Conflict Resolution: ${AGENTS_DIR}/scripts/resolve-conflicts.sh"
+echo "[OK] PARALLEL AGENT ENVIRONMENT INITIALIZED"
+echo "[INFO] Deployment ID: ${DEPLOYMENT_ID}"
+echo "[FILE] Coordination Directory: ${AGENTS_DIR}"
+echo "[STATUS] Monitor Command: ${AGENTS_DIR}/scripts/status-monitor.sh"
+echo "[FIX] Conflict Resolution: ${AGENTS_DIR}/scripts/resolve-conflicts.sh"
 echo ""
-echo "🎯 BINDING PROTOCOL CONFIRMED:"
-echo "   ✅ 10 agent workspaces created"
-echo "   ✅ Parallel execution enforced"
-echo "   ✅ Sequential execution disabled"
-echo "   ✅ Coordination infrastructure ready"
+echo "[TARGET] BINDING PROTOCOL CONFIRMED:"
+echo "   [OK] 10 agent workspaces created"
+echo "   [OK] Parallel execution enforced"
+echo "   [OK] Sequential execution disabled"
+echo "   [OK] Coordination infrastructure ready"
 echo ""
-echo "🚀 Ready for parallel agent deployment!"
+echo "[START] Ready for parallel agent deployment!"

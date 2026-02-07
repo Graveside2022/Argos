@@ -7,7 +7,7 @@ echo "====================================="
 # Check if database exists
 DB_PATH="/home/ubuntu/projects/Argos/data/celltowers/towers.db"
 if [ -f "$DB_PATH" ]; then
-    echo "✓ Database exists at: $DB_PATH"
+    echo "[PASS] Database exists at: $DB_PATH"
     
     # Get database stats
     echo ""
@@ -24,7 +24,7 @@ if [ -f "$DB_PATH" ]; then
     sqlite3 "$DB_PATH" -header -column "SELECT mcc, net, area, cell, lat, lon FROM towers WHERE mcc = 310 AND net = 410 LIMIT 1;"
     
 else
-    echo "✗ Database not found at: $DB_PATH"
+    echo "[FAIL] Database not found at: $DB_PATH"
 fi
 
 # Test the API endpoints

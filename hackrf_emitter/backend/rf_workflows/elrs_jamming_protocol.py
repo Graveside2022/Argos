@@ -231,7 +231,7 @@ class ELRSJammingProtocol:
         print(f"- Channels: {len(config.channels)}")
         print(f"- Power: {config.power_level} dBm")
         print(f"- Duration: {duration}s")
-        print(f"⚡ Starting TRUE frequency hopping...")
+        print(f"[ACTIVE] Starting TRUE frequency hopping...")
         
         # Start transmission in separate thread
         def jammer_thread():
@@ -248,7 +248,7 @@ class ELRSJammingProtocol:
         print(f"- Power per channel: {config.power_level} dBm")
         print(f"- Barrage cycle time: {len(config.channels) * 0.15:.1f}s per full sweep")
         print(f"- Duration: {duration}s")
-        print(f"⚡ Starting TRUE rapid barrage jamming...")
+        print(f"[ACTIVE] Starting TRUE rapid barrage jamming...")
         
         # Set barrage pattern for frequency hopping
         config.sweep_pattern = 'barrage'
@@ -267,7 +267,7 @@ class ELRSJammingProtocol:
         print("- Monitoring for ELRS traffic patterns")
         print("- Adapting jamming strategy based on activity")
         print(f"- Duration: {duration}s")
-        print(f"⚡ Starting TRUE adaptive frequency hopping...")
+        print(f"[ACTIVE] Starting TRUE adaptive frequency hopping...")
         
         # Set adaptive pattern for frequency hopping
         config.sweep_pattern = 'adaptive'
@@ -384,13 +384,13 @@ class ELRSJammingProtocol:
                 if hop_count % 100 == 0:
                     print(f"Generated {hop_count} frequency hops...")
         
-        print(f"✅ Complete jamming sequence generated: {duration}s, {len(config.channels)} channels")
+        print(f"[OK] Complete jamming sequence generated: {duration}s, {len(config.channels)} channels")
         return signal, center_freq
     
     def _transmit_frequency_hopping_sequence(self, config: ELRSJammingConfig, duration: float) -> None:
         """Transmit with actual frequency hopping - changes HackRF frequency in real-time"""
         if self.hackrf is None:
-            print(f"🔥 Simulating MAX POWER frequency hopping: {duration}s @ 47dBm")
+            print(f"[CRITICAL] Simulating MAX POWER frequency hopping: {duration}s @ 47dBm")
             time.sleep(duration)
             return
         
@@ -404,7 +404,7 @@ class ELRSJammingProtocol:
                 cycles_needed = int(duration / (len(config.channels) * dwell_time))
                 hop_sequence = list(range(len(config.channels))) * cycles_needed
                 barrage_cycle_time = len(config.channels) * dwell_time
-                print(f"⚡ BARRAGE MODE: {cycles_needed} rapid cycles, {barrage_cycle_time:.1f}s per full sweep")
+                print(f"[ACTIVE] BARRAGE MODE: {cycles_needed} rapid cycles, {barrage_cycle_time:.1f}s per full sweep")
             else:
                 # For other patterns, use generated sequences
                 dwell_time = max(min_dwell_time, config.dwell_time)  # Enforce minimum
@@ -414,14 +414,14 @@ class ELRSJammingProtocol:
                 hop_sequence = [sequence[i % len(sequence)] for i in range(hops_needed)]
             
             if config.sweep_pattern == 'barrage':
-                print(f"🔥 Starting TRUE BARRAGE jamming @ 47dBm")
-                print(f"⚡ RAPID cycling through {len(config.channels)} channels with {dwell_time:.1f}s bursts")
-                print(f"🌊 Full sweep every {barrage_cycle_time:.1f}s for maximum coverage")
+                print(f"[CRITICAL] Starting TRUE BARRAGE jamming @ 47dBm")
+                print(f"[ACTIVE] RAPID cycling through {len(config.channels)} channels with {dwell_time:.1f}s bursts")
+                print(f"[SWEEP] Full sweep every {barrage_cycle_time:.1f}s for maximum coverage")
             else:
-                print(f"🔥 Starting TRUE frequency hopping jamming @ 47dBm")
-                print(f"📡 Hopping across {len(config.channels)} channels with {dwell_time:.1f}s dwell time")
+                print(f"[CRITICAL] Starting TRUE frequency hopping jamming @ 47dBm")
+                print(f"[RF] Hopping across {len(config.channels)} channels with {dwell_time:.1f}s dwell time")
             
-            print(f"⏱️ Total hops planned: {len(hop_sequence)} over {duration}s")
+            print(f"[TIMER] Total hops planned: {len(hop_sequence)} over {duration}s")
             
             # Pre-generate short jamming signal for each hop
             sample_rate = 2000000
@@ -489,20 +489,20 @@ class ELRSJammingProtocol:
                         if hop_count % channels_per_cycle == 0:  # Report after each full cycle
                             cycle = hop_count // channels_per_cycle
                             elapsed = time.time() - start_time
-                            print(f"🔥 BARRAGE cycle {cycle} completed: {hop_count} total hops, {elapsed:.1f}s elapsed")
+                            print(f"[CRITICAL] BARRAGE cycle {cycle} completed: {hop_count} total hops, {elapsed:.1f}s elapsed")
                     else:
                         if hop_count % 20 == 0:  # Report every 20 hops for normal mode
                             elapsed = time.time() - start_time
-                            print(f"📶 Hopped {hop_count} times, {elapsed:.1f}s elapsed")
+                            print(f"[SIGNAL] Hopped {hop_count} times, {elapsed:.1f}s elapsed")
                 else:
                     # If transmission fails, just wait and continue hopping
                     time.sleep(0.05)  # Shorter wait for barrage mode
             
             elapsed = time.time() - start_time
-            print(f"✅ Frequency hopping completed: {hop_count} hops in {elapsed:.1f}s")
+            print(f"[OK] Frequency hopping completed: {hop_count} hops in {elapsed:.1f}s")
             
         except Exception as e:
-            print(f"❌ Error in frequency hopping transmission: {e}")
+            print(f"[ERROR] Error in frequency hopping transmission: {e}")
             if self.hackrf:
                 self.hackrf.stop_transmission()
     

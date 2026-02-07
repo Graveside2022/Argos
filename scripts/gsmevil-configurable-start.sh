@@ -31,7 +31,7 @@ if ! ps -p $GRGSM_PID > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "✓ grgsm_livemon is running at ${FREQUENCY}MHz (PID: $GRGSM_PID)"
+echo "[PASS] grgsm_livemon is running at ${FREQUENCY}MHz (PID: $GRGSM_PID)"
 echo $GRGSM_PID > /tmp/grgsm.pid
 
 # Step 2: Go to GSMEvil2 directory
@@ -66,9 +66,9 @@ sleep 2
 if ps -p $GSMEVIL_PID > /dev/null 2>&1; then
     echo ""
     echo "=== GSMEvil2 Started Successfully! ==="
-    echo "✓ grgsm_livemon is running at ${FREQUENCY}MHz"
-    echo "✓ venv is activated"  
-    echo "✓ GsmEvil.py is running"
+    echo "[PASS] grgsm_livemon is running at ${FREQUENCY}MHz"
+    echo "[PASS] venv is activated"  
+    echo "[PASS] GsmEvil.py is running"
     echo ""
     echo "→ Open Firefox and go to: http://localhost:80"
     echo "→ Turn on IMSI and/or SMS catching"

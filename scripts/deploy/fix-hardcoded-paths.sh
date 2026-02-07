@@ -293,9 +293,9 @@ validate_fixes() {
     -exec grep -l "/home/pi" {} \; 2>/dev/null | wc -l)
     
     if [[ $remaining_files -eq 0 ]]; then
-        log "✅ All hardcoded paths fixed successfully!"
+        log "[OK] All hardcoded paths fixed successfully!"
     else
-        warn "⚠️  $remaining_files files still contain hardcoded paths"
+        warn "[WARN]  $remaining_files files still contain hardcoded paths"
         
         # Show remaining files
         find "$PROJECT_DIR" -type f \( \
@@ -335,10 +335,10 @@ print_summary() {
     echo -e "  • Project Dir: ${YELLOW}${PROJECT_DIR}${NC}"
     echo ""
     echo -e "${BLUE}Files Fixed:${NC}"
-    echo -e "  • Systemd Services: ${YELLOW}✓${NC}"
-    echo -e "  • Shell Scripts: ${YELLOW}✓${NC}"
-    echo -e "  • TypeScript/JS Files: ${YELLOW}✓${NC}"
-    echo -e "  • Documentation: ${YELLOW}✓${NC}"
+    echo -e "  • Systemd Services: ${YELLOW}[OK]${NC}"
+    echo -e "  • Shell Scripts: ${YELLOW}[OK]${NC}"
+    echo -e "  • TypeScript/JS Files: ${YELLOW}[OK]${NC}"
+    echo -e "  • Documentation: ${YELLOW}[OK]${NC}"
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
     echo -e "  1. Run: ${YELLOW}bash deploy-dragon-os.sh${NC}"

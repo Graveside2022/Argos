@@ -9,7 +9,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${RED}☢️  NUCLEAR STOP - Forcefully terminating ALL GSM Evil processes ☢️${NC}"
+echo -e "${RED}[NUCLEAR]  NUCLEAR STOP - Forcefully terminating ALL GSM Evil processes [NUCLEAR]${NC}"
 
 # 1. Kill by exact process names with SIGKILL
 echo "Force killing by process names..."
@@ -89,10 +89,10 @@ sleep 1
 echo -e "\n${YELLOW}=== VERIFICATION ===${NC}"
 REMAINING=$(ps aux | grep -E "(grgsm|GsmEvil)" | grep -v grep | wc -l)
 if [ $REMAINING -eq 0 ]; then
-    echo -e "${GREEN}✓ ALL GSM Evil processes terminated!${NC}"
-    echo -e "${GREEN}✓ System is clean${NC}"
+    echo -e "${GREEN}[PASS] ALL GSM Evil processes terminated!${NC}"
+    echo -e "${GREEN}[PASS] System is clean${NC}"
 else
-    echo -e "${RED}⚠ WARNING: $REMAINING processes may still be running${NC}"
+    echo -e "${RED}[WARN] WARNING: $REMAINING processes may still be running${NC}"
     echo -e "${RED}Remaining processes:${NC}"
     ps aux | grep -E "(grgsm|GsmEvil)" | grep -v grep
 fi

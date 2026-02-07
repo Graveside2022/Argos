@@ -25,17 +25,17 @@ pip3 install --user gnuradio
 # Test USRP detection
 echo "Testing USRP detection..."
 if uhd_find_devices 2>/dev/null | grep -q "B205"; then
-    echo "✓ USRP B205 Mini detected!"
+    echo "[PASS] USRP B205 Mini detected!"
 else
-    echo "ℹ No USRP B205 Mini detected (this is OK if using HackRF)"
+    echo "[INFO] No USRP B205 Mini detected (this is OK if using HackRF)"
 fi
 
 # Make sure gr-gsm supports USRP
 echo "Checking gr-gsm USRP support..."
 if grgsm_livemon_headless --help 2>&1 | grep -q "args"; then
-    echo "✓ gr-gsm has USRP support"
+    echo "[PASS] gr-gsm has USRP support"
 else
-    echo "⚠ gr-gsm may need to be rebuilt with UHD support"
+    echo "[WARN] gr-gsm may need to be rebuilt with UHD support"
 fi
 
 echo "Installation complete!"

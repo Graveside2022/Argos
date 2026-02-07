@@ -55,7 +55,7 @@ for FREQ in "${FREQUENCIES[@]}"; do
     wait $PID 2>/dev/null
     
     if [ $PACKETS -gt 10 ]; then
-        echo "$PACKETS packets ★ ACTIVE GSM"
+        echo "$PACKETS packets * ACTIVE GSM"
         ACTIVE_FREQS+=("$FREQ MHz: $PACKETS packets")
     elif [ $PACKETS -gt 0 ]; then
         echo "$PACKETS packets (weak)"

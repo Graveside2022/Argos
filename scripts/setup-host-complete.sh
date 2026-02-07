@@ -18,7 +18,7 @@
 set -e
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "❌ Run as root: sudo bash scripts/setup-host-complete.sh"
+    echo "[ERROR] Run as root: sudo bash scripts/setup-host-complete.sh"
     exit 1
 fi
 
@@ -35,9 +35,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-success() { echo -e "${GREEN}[✓]${NC} $1"; }
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
-error() { echo -e "${RED}[✗]${NC} $1"; }
+error() { echo -e "${RED}[FAIL]${NC} $1"; }
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════╗"
@@ -512,18 +512,18 @@ echo "   - Argos:      http://localhost:5173 (after container deployment)"
 echo ""
 
 if [ -f /boot/firmware/config.txt ] && grep -q "dtoverlay=disable-bt" /boot/firmware/config.txt; then
-    warn "⚠️  Bluetooth disabled - REBOOT REQUIRED for change to take effect"
+    warn "[WARN]  Bluetooth disabled - REBOOT REQUIRED for change to take effect"
 fi
 
 echo ""
 info "Documentation: $PROJECT_ROOT/docs/HOST_SETUP.md"
 echo ""
 info "This script installed EVERYTHING discovered during troubleshooting:"
-echo "  ✓ Core SDR tools (HackRF, USRP, SoapySDR)"
-echo "  ✓ GSM Evil COMPLETE (gnuradio, gr-gsm, gr-osmosdr, kalibrate, Osmocom libs)"
-echo "  ✓ Python Flask ecosystem for GSM backend"
-echo "  ✓ Extended radio tools (rtl-sdr, multimon-ng)"
-echo "  ✓ System monitoring and diagnostics"
-echo "  ✓ Complete system tuning and optimizations"
-echo "  ✓ Node.js, Docker, Docker Compose"
+echo "  [PASS] Core SDR tools (HackRF, USRP, SoapySDR)"
+echo "  [PASS] GSM Evil COMPLETE (gnuradio, gr-gsm, gr-osmosdr, kalibrate, Osmocom libs)"
+echo "  [PASS] Python Flask ecosystem for GSM backend"
+echo "  [PASS] Extended radio tools (rtl-sdr, multimon-ng)"
+echo "  [PASS] System monitoring and diagnostics"
+echo "  [PASS] Complete system tuning and optimizations"
+echo "  [PASS] Node.js, Docker, Docker Compose"
 echo ""

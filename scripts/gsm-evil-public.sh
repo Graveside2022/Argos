@@ -37,7 +37,7 @@ echo "Enabling IMSI sniffer..."
 sleep 5  # Wait for web interface to fully start
 python3 /home/ubuntu/projects/Argos/scripts/enable-imsi-sniffer.py 2>/dev/null || echo "Note: Could not auto-enable IMSI sniffer"
 
-echo "✓ GSM Evil started!"
+echo "[PASS] GSM Evil started!"
 echo "  Access from: http://100.79.154.94/gsm-evil"
 echo "  Direct access: http://100.79.154.94:80"
 echo "  IMSI sniffer: Auto-enabled"

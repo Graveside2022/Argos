@@ -81,7 +81,7 @@ export function detectCountry(lat: number, lon: number): { name: string; flag: s
   }
   
   // Default if no country found
-  return { name: 'Unknown', flag: '🌍' };
+  return { name: 'Unknown', flag: '[GLOBE]' };
 }
 
 // Format coordinates to decimal degrees with direction

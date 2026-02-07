@@ -12,9 +12,9 @@ sed -i 's/var socket = io();/var socket = io(window.location.origin);/g' /usr/sr
 
 # Verify the patch was applied (check for either old or new format)
 if grep -q "io(window.location.origin" /usr/src/gsmevil2/templates/imsi.html; then
-    echo "✓ Socket.IO patch already applied"
+    echo "[PASS] Socket.IO patch already applied"
 else
-    echo "✗ Failed to apply Socket.IO patch"
+    echo "[FAIL] Failed to apply Socket.IO patch"
     exit 1
 fi
 
@@ -32,6 +32,6 @@ if [ -f /usr/src/gsmevil2/GsmEvil_auto.py ]; then
     sed -i 's/socketio = SocketIO(app, cors_allowed_origins="\\*")/socketio = SocketIO(app, cors_allowed_origins="*")/g' /usr/src/gsmevil2/GsmEvil_auto.py
 fi
 
-echo "✓ CORS support added to GSM Evil server"
+echo "[PASS] CORS support added to GSM Evil server"
 
 echo "Patch complete! GSM Evil should now work properly in iframes."

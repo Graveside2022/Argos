@@ -9,7 +9,7 @@ PROJECT_DIR="/home/pi/projects/Argos"
 
 # Load configuration
 if [ ! -f "${AGENTS_DIR}/coordination/deployment-status.json" ]; then
-    echo "❌ ERROR: Agent environment not initialized. Run parallel-agent-init.sh first"
+    echo "[ERROR] ERROR: Agent environment not initialized. Run parallel-agent-init.sh first"
     exit 1
 fi
 
@@ -17,12 +17,12 @@ DEPLOYMENT_ID=$(jq -r '.deployment_id' "${AGENTS_DIR}/coordination/deployment-st
 
 # Command functions
 cmd_status() {
-    echo "📊 PARALLEL AGENT STATUS - Deployment: ${DEPLOYMENT_ID}"
+    echo "[STATUS] PARALLEL AGENT STATUS - Deployment: ${DEPLOYMENT_ID}"
     echo "======================================================="
     
     # Overall deployment status
-    jq -r '"📋 Overall Status: " + .status' "${AGENTS_DIR}/coordination/deployment-status.json"
-    jq -r '"⏱️  Started: " + .start_time' "${AGENTS_DIR}/coordination/deployment-status.json"
+    jq -r '"[INFO] Overall Status: " + .status' "${AGENTS_DIR}/coordination/deployment-status.json"
+    jq -r '"[TIMER]  Started: " + .start_time' "${AGENTS_DIR}/coordination/deployment-status.json"
     echo ""
     
     # Agent summary
@@ -31,7 +31,7 @@ cmd_status() {
     BLOCKED=$(jq -r '.agents.blocked' "${AGENTS_DIR}/coordination/deployment-status.json")
     COMPLETE=$(jq -r '.agents.complete' "${AGENTS_DIR}/coordination/deployment-status.json")
     
-    echo "🤖 Agent Summary: Active($ACTIVE) Waiting($WAITING) Blocked($BLOCKED) Complete($COMPLETE)"
+    echo "[AUTO] Agent Summary: Active($ACTIVE) Waiting($WAITING) Blocked($BLOCKED) Complete($COMPLETE)"
     echo ""
     
     # Individual agent status
@@ -43,16 +43,16 @@ cmd_status() {
             local task=$(jq -r '.current_task // "idle"' "$STATUS_FILE")
             local conflicts=$(jq -r '.conflicts | length' "$STATUS_FILE")
             
-            local icon="🟢"
+            local icon="[ACTIVE]"
             case $status in
-                "blocked") icon="🔴" ;;
-                "waiting") icon="🟡" ;;
-                "complete") icon="✅" ;;
+                "blocked") icon="[CRIT]" ;;
+                "waiting") icon="[WARN]" ;;
+                "complete") icon="[OK]" ;;
             esac
             
             echo "${icon} Agent-${i}: ${status} (${progress}%) - ${task}"
             if [ "$conflicts" -gt 0 ]; then
-                echo "   ⚠️  Conflicts: $conflicts"
+                echo "   [WARN]  Conflicts: $conflicts"
             fi
         fi
     done
@@ -73,9 +73,9 @@ cmd_deploy() {
         agent_count=10
     fi
     
-    echo "🚀 DEPLOYING PARALLEL AGENTS - Type: $task_type ($agent_count agents)"
-    echo "📋 Task: $task_description"
-    echo "🔒 BINDING PROTOCOL: Mandatory parallel execution enforced"
+    echo "[START] DEPLOYING PARALLEL AGENTS - Type: $task_type ($agent_count agents)"
+    echo "[INFO] Task: $task_description"
+    echo "[LOCK] BINDING PROTOCOL: Mandatory parallel execution enforced"
     echo ""
     
     # Update deployment status
@@ -95,9 +95,9 @@ cmd_deploy() {
     fi
     
     # Deploy agents in parallel
-    echo "⚡ Deploying ${#agents[@]} agents in parallel..."
+    echo "[ACTIVE] Deploying ${#agents[@]} agents in parallel..."
     for agent_id in "${agents[@]}"; do
-        echo "🤖 Activating Agent-${agent_id}..."
+        echo "[AUTO] Activating Agent-${agent_id}..."
         
         # Update agent status to active
         jq --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -107,9 +107,9 @@ cmd_deploy() {
         mv /tmp/agent-status.tmp "${AGENTS_DIR}/coordination/agent-${agent_id}-status.json"
     done
     
-    echo "✅ All agents deployed in parallel"
-    echo "📊 Monitor with: $0 status"
-    echo "🛑 Emergency stop: $0 emergency-stop"
+    echo "[OK] All agents deployed in parallel"
+    echo "[STATUS] Monitor with: $0 status"
+    echo "[STOP] Emergency stop: $0 emergency-stop"
 }
 
 cmd_sync() {
@@ -127,24 +127,24 @@ cmd_sync() {
         required_agents="01,02,03,04,05,06,07,08,09,10"
     fi
     
-    echo "🔄 SYNCHRONIZATION CHECKPOINT: $checkpoint"
-    echo "👥 Required agents: $required_agents"
+    echo "[RETRY] SYNCHRONIZATION CHECKPOINT: $checkpoint"
+    echo "[AGENTS] Required agents: $required_agents"
     
     # Check sync status
     if "${AGENTS_DIR}/scripts/check-sync.sh" "$checkpoint" "$required_agents"; then
-        echo "✅ Synchronization complete for checkpoint: $checkpoint"
+        echo "[OK] Synchronization complete for checkpoint: $checkpoint"
         
         # Log sync completion
         echo "SYNC_COMPLETE $checkpoint $(date -u +%Y-%m-%dT%H:%M:%SZ) agents:$required_agents" >> \
              "${AGENTS_DIR}/coordination/checkpoints.log"
     else
-        echo "⏳ Waiting for agents to reach checkpoint: $checkpoint"
-        echo "💡 Agents can signal readiness with: echo 'CHECKPOINT_REACHED agent-XX $checkpoint \$(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ${AGENTS_DIR}/coordination/checkpoints.log"
+        echo "[WAIT] Waiting for agents to reach checkpoint: $checkpoint"
+        echo "[TIP] Agents can signal readiness with: echo 'CHECKPOINT_REACHED agent-XX $checkpoint \$(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ${AGENTS_DIR}/coordination/checkpoints.log"
     fi
 }
 
 cmd_conflicts() {
-    echo "🔍 CONFLICT DETECTION AND RESOLUTION"
+    echo "[SEARCH] CONFLICT DETECTION AND RESOLUTION"
     echo "===================================="
     
     # Run conflict detection
@@ -153,14 +153,14 @@ cmd_conflicts() {
     # Check for escalations
     if [ -f "${AGENTS_DIR}/coordination/escalations.log" ] && [ -s "${AGENTS_DIR}/coordination/escalations.log" ]; then
         echo ""
-        echo "🚨 ESCALATIONS DETECTED:"
+        echo "[ALERT] ESCALATIONS DETECTED:"
         tail -5 "${AGENTS_DIR}/coordination/escalations.log"
     fi
     
     # Check for emergency stops
     if [ -f "${AGENTS_DIR}/coordination/emergency.log" ] && [ -s "${AGENTS_DIR}/coordination/emergency.log" ]; then
         echo ""
-        echo "🛑 EMERGENCY EVENTS:"
+        echo "[STOP] EMERGENCY EVENTS:"
         tail -3 "${AGENTS_DIR}/coordination/emergency.log"
     fi
 }
@@ -176,8 +176,8 @@ cmd_handoff() {
     fi
     
     local handoff_id="handoff-$(date +%s)"
-    echo "🔄 TASK HANDOFF: $from_agent → $to_agent"
-    echo "📋 Task ID: $task_id"
+    echo "[RETRY] TASK HANDOFF: $from_agent → $to_agent"
+    echo "[INFO] Task ID: $task_id"
     echo "🆔 Handoff ID: $handoff_id"
     
     # Create handoff record
@@ -198,11 +198,11 @@ EOF
     echo "HANDOFF_INITIATED $from_agent $to_agent $handoff_id $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> \
          "${AGENTS_DIR}/coordination/handoffs.log"
     
-    echo "✅ Handoff initiated. Waiting for agent acknowledgment."
+    echo "[OK] Handoff initiated. Waiting for agent acknowledgment."
 }
 
 cmd_emergency_stop() {
-    echo "🛑 EMERGENCY STOP - TERMINATING ALL AGENTS"
+    echo "[STOP] EMERGENCY STOP - TERMINATING ALL AGENTS"
     echo "=========================================="
     
     # Log emergency stop
@@ -223,33 +223,33 @@ cmd_emergency_stop() {
        "${AGENTS_DIR}/coordination/deployment-status.json" > /tmp/emergency-status.tmp
     mv /tmp/emergency-status.tmp "${AGENTS_DIR}/coordination/deployment-status.json"
     
-    echo "🔴 All agents stopped"
-    echo "📊 Final status saved to coordination files"
+    echo "[CRIT] All agents stopped"
+    echo "[STATUS] Final status saved to coordination files"
 }
 
 cmd_cleanup() {
-    echo "🧹 CLEANING UP PARALLEL AGENT ENVIRONMENT"
+    echo "[CLEANUP] CLEANING UP PARALLEL AGENT ENVIRONMENT"
     echo "========================================="
     
     # Archive logs first
     local archive_name="deployment-${DEPLOYMENT_ID}-$(date +%s).tar.gz"
-    echo "📦 Archiving logs to: /tmp/${archive_name}"
+    echo "[PKG] Archiving logs to: /tmp/${archive_name}"
     tar -czf "/tmp/${archive_name}" -C /tmp argos-agents/
     
     # Remove git worktrees
-    echo "🌳 Removing git worktrees..."
+    echo "[TREE] Removing git worktrees..."
     cd "$PROJECT_DIR"
     git worktree list | grep "agent-" | awk '{print $1}' | while read workspace; do
-        echo "  🗑️  Removing: $workspace"
+        echo "  [DELETE]  Removing: $workspace"
         git worktree remove "$workspace" --force
     done
     
     # Clean up temporary files
-    echo "🗑️  Removing temporary files..."
+    echo "[DELETE]  Removing temporary files..."
     rm -rf "$AGENTS_DIR"
     
-    echo "✅ Cleanup complete"
-    echo "📦 Logs archived to: /tmp/${archive_name}"
+    echo "[OK] Cleanup complete"
+    echo "[PKG] Logs archived to: /tmp/${archive_name}"
 }
 
 # Main command dispatcher
@@ -277,7 +277,7 @@ case "${1:-help}" in
         ;;
     "help"|*)
         cat << 'EOF'
-🤖 PARALLEL AGENT COORDINATOR
+[AUTO] PARALLEL AGENT COORDINATOR
 
 BINDING PROTOCOL ENFORCEMENT:
 - Mandatory parallel execution (NEVER sequential)

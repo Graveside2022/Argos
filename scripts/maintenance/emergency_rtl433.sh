@@ -46,12 +46,12 @@ echo "RTL_433 started with PID: $RTL_PID"
 sleep 5
 
 if ps -p $RTL_PID > /dev/null; then
-    echo "✅ RTL_433 is running successfully"
-    echo "✅ Monitoring 868 MHz"
-    echo "✅ Output: tail -f /tmp/rtl433_emergency.log"
-    echo "✅ PID: $RTL_PID"
+    echo "[OK] RTL_433 is running successfully"
+    echo "[OK] Monitoring 868 MHz"
+    echo "[OK] Output: tail -f /tmp/rtl433_emergency.log"
+    echo "[OK] PID: $RTL_PID"
 else
-    echo "❌ RTL_433 failed to start"
+    echo "[ERROR] RTL_433 failed to start"
     exit 1
 fi
 

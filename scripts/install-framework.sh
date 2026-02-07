@@ -8,7 +8,7 @@
 
 set -e  # Exit on any error
 
-echo "🛡️  Installing Feature Creep Prevention Framework"
+echo "[SECURE]  Installing Feature Creep Prevention Framework"
 echo "=================================================="
 
 # Colors for output
@@ -19,10 +19,10 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Function to print colored output
-info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
-success() { echo -e "${GREEN}✅ $1${NC}"; }
-warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
-error() { echo -e "${RED}❌ $1${NC}"; }
+info() { echo -e "${BLUE}[INFO]  $1${NC}"; }
+success() { echo -e "${GREEN}[OK] $1${NC}"; }
+warning() { echo -e "${YELLOW}[WARN]  $1${NC}"; }
+error() { echo -e "${RED}[ERROR] $1${NC}"; }
 
 # Check if we're in the project root
 if [ ! -f "package.json" ] || [ ! -d "src" ]; then
@@ -33,7 +33,7 @@ fi
 info "Installing in: $(pwd)"
 
 # 1. INSTALL REQUIRED DEPENDENCIES
-echo -e "\n📦 Installing required dependencies..."
+echo -e "\n[PKG] Installing required dependencies..."
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
@@ -52,7 +52,7 @@ npm install --save-dev css-tree postcss
 success "Dependencies installed successfully"
 
 # 2. CREATE DIRECTORY STRUCTURE
-echo -e "\n📁 Creating framework directory structure..."
+echo -e "\n[FILE] Creating framework directory structure..."
 
 FRAMEWORK_DIRS=(
     "visual-baselines"
@@ -90,7 +90,7 @@ else
 fi
 
 # 4. GENERATE INITIAL BASELINES
-echo -e "\n📋 Generating initial baselines..."
+echo -e "\n[INFO] Generating initial baselines..."
 
 info "Generating CSS integrity baselines..."
 if node scripts/css-integrity-check.js --generate-baselines; then
@@ -112,7 +112,7 @@ echo "   npm run dev  # In one terminal"
 echo "   node scripts/visual-regression-check.js --generate-baseline  # In another"
 
 # 5. CREATE NPM SCRIPTS
-echo -e "\n📜 Adding NPM scripts..."
+echo -e "\n[SCRIPT] Adding NPM scripts..."
 
 # Check if package.json has the scripts section
 if ! grep -q '"scripts"' package.json; then
@@ -137,7 +137,7 @@ info "Framework NPM scripts ready for manual addition to package.json"
 success "See /tmp/framework-scripts.json for script definitions"
 
 # 6. CREATE CONFIGURATION FILE
-echo -e "\n⚙️  Creating framework configuration..."
+echo -e "\n[CONFIG]  Creating framework configuration..."
 
 cat > framework-config.json << 'EOF'
 {
@@ -190,7 +190,7 @@ sed -i "s/DATE_PLACEHOLDER/$(date -u +"%Y-%m-%dT%H:%M:%SZ")/g" framework-config.
 success "Framework configuration created: framework-config.json"
 
 # 7. CREATE .gitignore ENTRIES
-echo -e "\n📝 Updating .gitignore..."
+echo -e "\n[LOG] Updating .gitignore..."
 
 GITIGNORE_ENTRIES=(
     "# Feature Creep Prevention Framework"
@@ -212,7 +212,7 @@ done
 success ".gitignore updated"
 
 # 8. CREATE DOCUMENTATION SYMLINKS
-echo -e "\n🔗 Creating documentation links..."
+echo -e "\n[LINK] Creating documentation links..."
 
 if [ ! -f "docs/FEATURE_CREEP_PREVENTION.md" ]; then
     mkdir -p docs
@@ -221,7 +221,7 @@ if [ ! -f "docs/FEATURE_CREEP_PREVENTION.md" ]; then
 fi
 
 # 9. VALIDATE INSTALLATION
-echo -e "\n🔍 Validating installation..."
+echo -e "\n[SEARCH] Validating installation..."
 
 VALIDATION_CHECKS=(
     "scripts/css-integrity-check.js"
@@ -235,9 +235,9 @@ VALIDATION_CHECKS=(
 ALL_VALID=true
 for file in "${VALIDATION_CHECKS[@]}"; do
     if [ -f "$file" ]; then
-        info "✓ $file"
+        info "[PASS] $file"
     else
-        error "✗ $file (missing)"
+        error "[FAIL] $file (missing)"
         ALL_VALID=false
     fi
 done
@@ -252,7 +252,7 @@ EXECUTABLE_SCRIPTS=(
 
 for script in "${EXECUTABLE_SCRIPTS[@]}"; do
     if [ -x "$script" ]; then
-        info "✓ $script (executable)"
+        info "[PASS] $script (executable)"
     else
         warning "Making $script executable..."
         chmod +x "$script"
@@ -262,35 +262,35 @@ done
 # 10. FINAL SUMMARY
 echo -e "\n" + "="*60
 if [ "$ALL_VALID" = true ]; then
-    success "🎉 Feature Creep Prevention Framework installed successfully!"
+    success "[DONE] Feature Creep Prevention Framework installed successfully!"
 else
-    error "❌ Installation completed with some issues"
+    error "[ERROR] Installation completed with some issues"
 fi
 echo "="*60
 
-echo -e "\n📋 NEXT STEPS:"
+echo -e "\n[INFO] NEXT STEPS:"
 echo "1. Add the framework NPM scripts to package.json (see /tmp/framework-scripts.json)"
 echo "2. Start development server: npm run dev"
 echo "3. Generate visual baselines: npm run framework:generate-visual-baselines"
 echo "4. Run initial validation: npm run framework:validate-all"
 echo "5. Commit the framework setup"
 
-echo -e "\n🛡️  FRAMEWORK COMMANDS:"
+echo -e "\n[SECURE]  FRAMEWORK COMMANDS:"
 echo "• npm run framework:check-css          - Validate CSS integrity"
 echo "• npm run framework:check-html         - Validate HTML structure"  
 echo "• npm run framework:check-visual       - Run visual regression tests"
 echo "• npm run framework:validate-all       - Run all validation checks"
 echo "• npm run framework:full-check         - Complete framework validation"
 
-echo -e "\n📚 DOCUMENTATION:"
+echo -e "\n[LIB] DOCUMENTATION:"
 echo "• FEATURE_CREEP_PREVENTION_FRAMEWORK.md - Complete framework documentation"
 echo "• framework-config.json                 - Framework configuration"
 echo "• Pre-commit hook automatically prevents violations"
 
-echo -e "\n⚠️  IMPORTANT REMINDERS:"
+echo -e "\n[WARN]  IMPORTANT REMINDERS:"
 echo "• All CSS modifications are FORBIDDEN without authorization"
 echo "• HTML structure must be preserved exactly"
 echo "• Visual changes trigger automatic rollback"
 echo "• Framework rules are BINDING and mandatory"
 
-echo -e "\n${GREEN}✅ Framework is now active and protecting against feature creep!${NC}"
+echo -e "\n${GREEN}[OK] Framework is now active and protecting against feature creep!${NC}"

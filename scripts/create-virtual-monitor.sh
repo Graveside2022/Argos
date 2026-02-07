@@ -34,14 +34,14 @@ echo "Using $PHY for monitor interface"
 # Create monitor interface
 if sudo iw phy $PHY interface add $MONITOR_IFACE type monitor; then
     sudo ip link set $MONITOR_IFACE up
-    echo "✓ Created monitor interface: $MONITOR_IFACE"
+    echo "[PASS] Created monitor interface: $MONITOR_IFACE"
     
     # Add to Kismet if running
     if systemctl is-active kismet >/dev/null 2>&1; then
         sleep 2
         curl -s -X POST http://localhost:2501/datasource/add_source.json \
              -d "json={\"source\":\"${MONITOR_IFACE}:type=linuxwifi\"}" || true
-        echo "✓ Added $MONITOR_IFACE to Kismet"
+        echo "[PASS] Added $MONITOR_IFACE to Kismet"
     fi
 else
     echo "Could not create monitor interface"

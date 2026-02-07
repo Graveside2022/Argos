@@ -60,7 +60,7 @@ export class UsrpSweepManager extends EventEmitter {
 		this.bufferManager = new BufferManager();
 		
 		this._setupEventHandlers();
-		logInfo('📡 USRP SweepManager instance created');
+		logInfo('[RF] USRP SweepManager instance created');
 	}
 
 	/**
@@ -78,12 +78,12 @@ export class UsrpSweepManager extends EventEmitter {
 	 */
 	async initialize(): Promise<void> {
 		if (this.isInitialized) {
-			logInfo('📡 USRP SweepManager already initialized');
+			logInfo('[RF] USRP SweepManager already initialized');
 			return;
 		}
 
 		if (this.initializationPromise) {
-			logInfo('📡 USRP SweepManager initialization already in progress');
+			logInfo('[RF] USRP SweepManager initialization already in progress');
 			return this.initializationPromise;
 		}
 
@@ -93,7 +93,7 @@ export class UsrpSweepManager extends EventEmitter {
 
 	private async _performInitialization(): Promise<void> {
 		try {
-			logInfo('🚀 Initializing USRP SweepManager...');
+			logInfo('[START] Initializing USRP SweepManager...');
 
 			// Clean up any existing processes
 			await this.processManager.forceCleanupAll();
@@ -104,7 +104,7 @@ export class UsrpSweepManager extends EventEmitter {
 				throw new Error(`USRP not available: ${availability.reason}`);
 			}
 
-			logInfo('✅ USRP device available', { deviceInfo: availability.deviceInfo });
+			logInfo('[OK] USRP device available', { deviceInfo: availability.deviceInfo });
 
 			this.isInitialized = true;
 			this._emitEvent('initialized', { deviceInfo: availability.deviceInfo });
@@ -155,7 +155,7 @@ export class UsrpSweepManager extends EventEmitter {
 			// Build command arguments for USRP spectrum scanning
 			const args = this._buildSweepArgs(settings);
 			
-			logInfo('🚀 Starting USRP sweep', { settings, args });
+			logInfo('[START] Starting USRP sweep', { settings, args });
 
 			// Clear buffer before starting
 			this.bufferManager.clearBuffer();
@@ -198,7 +198,7 @@ export class UsrpSweepManager extends EventEmitter {
 		}
 
 		try {
-			logInfo('🛑 Stopping USRP sweep...');
+			logInfo('[STOP] Stopping USRP sweep...');
 			
 			const processState = this.processManager.getProcessState();
 			if (processState.sweepProcess) {
@@ -212,7 +212,7 @@ export class UsrpSweepManager extends EventEmitter {
 			this._emitEvent('status', this.status);
 			this._emitEvent('stopped');
 			
-			logInfo('✅ USRP sweep stopped');
+			logInfo('[OK] USRP sweep stopped');
 
 		} catch (error) {
 			logError('Error stopping sweep', { error });
@@ -228,7 +228,7 @@ export class UsrpSweepManager extends EventEmitter {
 	 * Emergency stop - forcefully terminate all operations
 	 */
 	async emergencyStop(): Promise<void> {
-		logWarn('🚨 USRP Emergency stop initiated');
+		logWarn('[ALERT] USRP Emergency stop initiated');
 		
 		try {
 			// Force kill the process immediately
@@ -243,7 +243,7 @@ export class UsrpSweepManager extends EventEmitter {
 			this._emitEvent('status', this.status);
 			this._emitEvent('emergency_stopped');
 			
-			logWarn('🚨 USRP Emergency stop completed');
+			logWarn('[ALERT] USRP Emergency stop completed');
 		} catch (error) {
 			logError('Error during emergency stop', { error });
 			// Even if there's an error, make sure we reset the state
@@ -267,7 +267,7 @@ export class UsrpSweepManager extends EventEmitter {
 			return false;
 		}
 
-		logInfo(`📻 Frequency range set to ${range.label}`, { range });
+		logInfo(`[RADIO] Frequency range set to ${range.label}`, { range });
 		return true;
 	}
 
@@ -339,7 +339,7 @@ export class UsrpSweepManager extends EventEmitter {
 				
 				// Log periodically
 				if (Math.random() < 0.01) { // 1% of lines
-					logDebug('📡 USRP spectrum data', { 
+					logDebug('[RF] USRP spectrum data', { 
 						frequency: parsedLine.data.frequency,
 						power: parsedLine.data.power 
 					});
@@ -414,7 +414,7 @@ export class UsrpSweepManager extends EventEmitter {
 			await this.processManager.cleanup();
 			this.bufferManager.cleanup();
 			this.removeAllListeners();
-			logInfo('🧹 USRP SweepManager cleanup completed');
+			logInfo('[CLEANUP] USRP SweepManager cleanup completed');
 		} catch (error) {
 			logError('Error during cleanup', { error });
 		}

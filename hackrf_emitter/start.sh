@@ -15,12 +15,12 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Emojis for better UX
-CHECK="✅"
-CROSS="❌"
-WARNING="⚠️"
-ROCKET="🚀"
-GEAR="⚙️"
-GLOBE="🌐"
+CHECK="[OK]"
+CROSS="[ERROR]"
+WARNING="[WARN]"
+ROCKET="[START]"
+GEAR="[CONFIG]"
+GLOBE="[NET]"
 
 echo -e "${PURPLE}${ROCKET} HackRF Emitter Quick Start Script${NC}"
 echo -e "${CYAN}Setting up your complete RF signal generation platform...${NC}"
@@ -447,7 +447,7 @@ for i in {1..15}; do
 done
 
 # Success message and browser opening
-print_section "🎉 Setup Complete!"
+print_section "[DONE] Setup Complete!"
 
 echo -e "${GREEN}${ROCKET} HackRF Emitter is now running successfully!${NC}\n"
 
@@ -457,15 +457,15 @@ echo -e "  ${CHECK} Frontend UI: http://localhost:3000"
 echo -e "  ${CHECK} WebSocket: ws://localhost:5000"
 
 echo -e "\n${CYAN}Live Logs:${NC}"
-echo -e "  📄 Backend and Frontend logs are displayed in real-time above"
-echo -e "  📊 Any errors or status messages will appear immediately"
+echo -e "  [LOG] Backend and Frontend logs are displayed in real-time above"
+echo -e "  [STATUS] Any errors or status messages will appear immediately"
 
 echo -e "\n${CYAN}Quick Start Guide:${NC}"
-echo -e "  1. 🌐 Open http://localhost:3000 in your browser"
-echo -e "  2. 📡 Connect your HackRF device (or use simulation mode)"
-echo -e "  3. 🔧 Select a workflow from the library"
-echo -e "  4. ⚙️  Configure parameters as needed"
-echo -e "  5. 🚀 Click 'Configure & Launch' to start transmission"
+echo -e "  1. [NET] Open http://localhost:3000 in your browser"
+echo -e "  2. [RF] Connect your HackRF device (or use simulation mode)"
+echo -e "  3. [FIX] Select a workflow from the library"
+echo -e "  4. [CONFIG]  Configure parameters as needed"
+echo -e "  5. [START] Click 'Configure & Launch' to start transmission"
 
 echo -e "\n${YELLOW}${WARNING} Safety Reminder:${NC}"
 echo -e "  Ensure compliance with local RF regulations"

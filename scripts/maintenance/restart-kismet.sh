@@ -2,15 +2,15 @@
 # Kismet Clean Restart Script
 # Fixes the "works after reboot but not after restart" issue
 
-echo "🔄 Stopping Kismet cleanly..."
+echo "[RETRY] Stopping Kismet cleanly..."
 sudo pkill -TERM kismet
 sleep 3
 sudo pkill -KILL kismet
 
-echo "🗑️  Removing monitor interface..."
+echo "[DELETE]  Removing monitor interface..."
 sudo iw dev kismon0 del 2>/dev/null || true
 
-echo "🔧 Resetting USB wireless adapter..."
+echo "[FIX] Resetting USB wireless adapter..."
 # Reset the MT7612U USB adapter
 sudo ip link set wlx00c0caadcedb down
 sleep 2
@@ -33,8 +33,8 @@ echo "⬆️  Bringing interface back up..."
 sudo ip link set wlx00c0caadcedb up
 sleep 2
 
-echo "🚀 Starting Kismet..."
+echo "[START] Starting Kismet..."
 sudo kismet --no-ncurses-wrapper &
 
-echo "✅ Kismet restart complete!"
+echo "[OK] Kismet restart complete!"
 echo "Monitor interface should be recreated as kismon0"

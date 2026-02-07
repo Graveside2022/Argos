@@ -16,11 +16,11 @@ FRAME_COUNT=$(sudo timeout 5 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l)
 echo "GSMTAP frames in 5 seconds: $FRAME_COUNT"
 
 if [ "$FRAME_COUNT" -gt 10 ]; then
-    echo "✓ Good frame flow - GSM decoding is working"
+    echo "[PASS] Good frame flow - GSM decoding is working"
 elif [ "$FRAME_COUNT" -gt 0 ]; then
-    echo "⚠ Low frame count - weak signal or intermittent"
+    echo "[WARN] Low frame count - weak signal or intermittent"
 else
-    echo "✗ No GSMTAP frames - grgsm_livemon may not be working"
+    echo "[FAIL] No GSMTAP frames - grgsm_livemon may not be working"
 fi
 
 echo ""
@@ -45,9 +45,9 @@ echo ""
 echo "6. Test GSM Evil web interface:"
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ 2>/dev/null)
 if [ "$RESPONSE" = "200" ]; then
-    echo "✓ GSM Evil web interface responding"
+    echo "[PASS] GSM Evil web interface responding"
 else
-    echo "✗ GSM Evil web interface not responding (HTTP $RESPONSE)"
+    echo "[FAIL] GSM Evil web interface not responding (HTTP $RESPONSE)"
 fi
 
 echo ""

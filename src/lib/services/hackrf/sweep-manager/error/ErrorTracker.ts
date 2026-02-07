@@ -63,7 +63,7 @@ export class ErrorTracker {
 	constructor(config: RecoveryConfig = {}) {
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
 		
-		logInfo('🔍 ErrorTracker initialized', {
+		logInfo('[SEARCH] ErrorTracker initialized', {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
 			maxRecoveryAttempts: this.recoveryConfig.maxRecoveryAttempts
@@ -82,7 +82,7 @@ export class ErrorTracker {
 		this.recoveryAttempts = 0;
 		this.isRecovering = false;
 
-		logInfo('✅ Operation successful - error counters reset');
+		logInfo('[OK] Operation successful - error counters reset');
 	}
 
 	/**
@@ -113,7 +113,7 @@ export class ErrorTracker {
 		// Update device state based on error type
 		this.updateDeviceState(analysis);
 
-		logError('❌ Error recorded and analyzed', {
+		logError('[ERROR] Error recorded and analyzed', {
 			error: errorMessage,
 			context,
 			analysis,
@@ -290,7 +290,7 @@ export class ErrorTracker {
 			this.deviceState.recoveryState = 'retrying';
 		}
 
-		logWarn('🔄 Recovery process started', {
+		logWarn('[RETRY] Recovery process started', {
 			attempt: this.recoveryAttempts,
 			maxAttempts: this.recoveryConfig.maxRecoveryAttempts,
 			deviceStatus: this.deviceState.status,
@@ -306,10 +306,10 @@ export class ErrorTracker {
 
 		if (successful) {
 			this.recordSuccess();
-			logInfo('✅ Recovery completed successfully');
+			logInfo('[OK] Recovery completed successfully');
 		} else {
 			this.deviceState.recoveryState = 'cooling_down';
-			logWarn('❌ Recovery attempt failed', {
+			logWarn('[ERROR] Recovery attempt failed', {
 				attempt: this.recoveryAttempts,
 				nextAction: this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3) 
 					? 'Give up' 
@@ -398,7 +398,7 @@ export class ErrorTracker {
 	 */
 	resetFrequencyErrors(frequency: number): void {
 		this.errorState.frequencyErrors.delete(frequency);
-		logInfo('🧹 Frequency error count reset', { frequency });
+		logInfo('[CLEANUP] Frequency error count reset', { frequency });
 	}
 
 	/**
@@ -415,7 +415,7 @@ export class ErrorTracker {
 		this.isRecovering = false;
 		this.lastRecoveryAttempt = null;
 
-		logInfo('🧹 All error tracking reset');
+		logInfo('[CLEANUP] All error tracking reset');
 	}
 
 	/**
@@ -431,7 +431,7 @@ export class ErrorTracker {
 
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
 
-		logInfo('⚙️ ErrorTracker configuration updated', {
+		logInfo('[CONFIG] ErrorTracker configuration updated', {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
 			recoveryConfig: this.recoveryConfig
@@ -453,6 +453,6 @@ export class ErrorTracker {
 	 */
 	cleanup(): void {
 		this.resetErrorTracking();
-		logInfo('🧹 ErrorTracker cleanup completed');
+		logInfo('[CLEANUP] ErrorTracker cleanup completed');
 	}
 }

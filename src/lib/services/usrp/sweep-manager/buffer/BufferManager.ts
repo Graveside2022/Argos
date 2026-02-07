@@ -43,7 +43,7 @@ export class BufferManager {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
 		
-		logInfo('📊 USRP BufferManager initialized', {
+		logInfo('[STATUS] USRP BufferManager initialized', {
 			maxBufferSize: this.bufferState.maxBufferSize,
 			maxLineLength: this.maxLineLength
 		});
@@ -88,7 +88,7 @@ export class BufferManager {
 
 				// Log processing stats periodically
 				if (this.bufferState.lineCount % 1000 === 0) {
-					logDebug('📊 USRP Buffer processing stats', {
+					logDebug('[STATUS] USRP Buffer processing stats', {
 						linesProcessed: this.bufferState.lineCount,
 						bytesProcessed: this.bufferState.totalBytesProcessed,
 						bufferSize: this.bufferState.stdoutBuffer.length,
@@ -132,7 +132,7 @@ export class BufferManager {
 
 			// Log potential data lines for debugging
 			if ((trimmedLine.includes(',') || trimmedLine.includes(':')) && trimmedLine.length > 20) {
-				logInfo('🔍 USRP POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
+				logInfo('[SEARCH] USRP POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
 			}
 
 			// Parse spectrum data based on format
@@ -326,7 +326,7 @@ export class BufferManager {
 	private handleBufferOverflow(): void {
 		this.bufferState.bufferOverflowCount++;
 		
-		logWarn('📊 USRP Buffer overflow detected', {
+		logWarn('[STATUS] USRP Buffer overflow detected', {
 			bufferSize: this.bufferState.stdoutBuffer.length,
 			maxSize: this.bufferState.maxBufferSize,
 			overflowCount: this.bufferState.bufferOverflowCount
@@ -338,7 +338,7 @@ export class BufferManager {
 
 		// Log warning if too many overflows
 		if (this.bufferState.bufferOverflowCount >= this.overflowThreshold) {
-			logError('⚠️ Excessive USRP buffer overflows detected', {
+			logError('[WARN] Excessive USRP buffer overflows detected', {
 				overflowCount: this.bufferState.bufferOverflowCount,
 				threshold: this.overflowThreshold,
 				recommendation: 'Consider increasing buffer size or reducing data rate'
@@ -379,7 +379,7 @@ export class BufferManager {
 		this.bufferState.lineCount = 0;
 		this.bufferState.totalBytesProcessed = 0;
 
-		logInfo('🧹 USRP Buffer cleared', {
+		logInfo('[CLEANUP] USRP Buffer cleared', {
 			previousStats: {
 				lineCount: oldStats.lineCount,
 				totalBytes: oldStats.totalBytesProcessed,
@@ -396,7 +396,7 @@ export class BufferManager {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
 
-		logInfo('⚙️ USRP Buffer configuration updated', {
+		logInfo('[CONFIG] USRP Buffer configuration updated', {
 			maxBufferSize: this.bufferState.maxBufferSize
 		});
 	}
@@ -500,6 +500,6 @@ export class BufferManager {
 	 */
 	cleanup(): void {
 		this.clearBuffer();
-		logInfo('🧹 USRP BufferManager cleanup completed');
+		logInfo('[CLEANUP] USRP BufferManager cleanup completed');
 	}
 }

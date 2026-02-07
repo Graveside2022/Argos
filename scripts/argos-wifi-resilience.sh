@@ -320,16 +320,16 @@ print_status() {
     echo
     
     if is_ethernet_connected; then
-        echo "Ethernet: Connected ✓"
+        echo "Ethernet: Connected [OK]"
     else
-        echo "Ethernet: Disconnected ✗"
+        echo "Ethernet: Disconnected [FAIL]"
     fi
     
     if is_wifi_connected; then
         local signal=$(get_wifi_signal)
-        echo "WiFi: Connected ✓ (Signal: $signal)"
+        echo "WiFi: Connected [PASS] (Signal: $signal)"
     else
-        echo "WiFi: Disconnected ✗"
+        echo "WiFi: Disconnected [FAIL]"
     fi
     
     if is_kismet_using_wifi; then

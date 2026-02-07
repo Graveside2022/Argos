@@ -51,7 +51,7 @@ source venv/bin/activate
 echo "Installing Python requirements..."
 pip install -r requirements.txt
 
-echo -e "${GREEN}✓ Python dependencies installed${NC}"
+echo -e "${GREEN}[PASS] Python dependencies installed${NC}"
 echo
 
 echo -e "${YELLOW}Step 2: Setting up configuration${NC}"
@@ -74,7 +74,7 @@ EOF
     fi
 fi
 
-echo -e "${GREEN}✓ Configuration file ready${NC}"
+echo -e "${GREEN}[PASS] Configuration file ready${NC}"
 echo
 
 echo -e "${YELLOW}Step 3: Building frontend${NC}"
@@ -82,7 +82,7 @@ echo -e "${YELLOW}Step 3: Building frontend${NC}"
 if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
     echo "Building frontend with Docker..."
     docker-compose up build-frontend
-    echo -e "${GREEN}✓ Frontend built${NC}"
+    echo -e "${GREEN}[PASS] Frontend built${NC}"
 else
     echo -e "${YELLOW}Warning: Docker not found, skipping frontend build${NC}"
     echo "Install Docker to build the RemoteIDReceiver frontend"

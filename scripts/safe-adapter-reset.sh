@@ -2,7 +2,7 @@
 
 # SAFE adapter reset - ONLY touches USB adapter, protects wlan0
 echo "=== SAFE MT76x2u Adapter Reset ==="
-echo "⚠️  This script will NOT touch wlan0 (your SSH connection)"
+echo "[WARN]  This script will NOT touch wlan0 (your SSH connection)"
 echo ""
 
 # First, check what interfaces we have
@@ -11,12 +11,12 @@ ip link show | grep -E "^[0-9]+: " | grep -v "lo:" | awk '{print $2}' | tr -d ':
 
 # SAFETY CHECK - make sure wlan0 is not affected
 if ! ip link show wlan0 | grep -q "UP"; then
-    echo "❌ ERROR: wlan0 is not UP. Aborting for safety!"
+    echo "[ERROR] ERROR: wlan0 is not UP. Aborting for safety!"
     exit 1
 fi
 
 echo ""
-echo "✓ wlan0 is safe and active"
+echo "[PASS] wlan0 is safe and active"
 echo ""
 
 # Only work with the USB adapter
@@ -24,11 +24,11 @@ ADAPTER="wlx00c0caadcedb"
 
 echo "1. Checking USB adapter status..."
 if ! lsusb | grep -q "0e8d:7612"; then
-    echo "❌ MediaTek USB adapter not found!"
+    echo "[ERROR] MediaTek USB adapter not found!"
     exit 1
 fi
 
-echo "✓ USB adapter found"
+echo "[PASS] USB adapter found"
 
 # Stop Kismet only
 echo ""
@@ -49,9 +49,9 @@ sleep 1
 echo ""
 echo "4. Checking adapter status..."
 if ip link show $ADAPTER 2>/dev/null | grep -q "state UP"; then
-    echo "✓ Adapter is UP"
+    echo "[PASS] Adapter is UP"
 else
-    echo "⚠️  Adapter is still DOWN"
+    echo "[WARN]  Adapter is still DOWN"
     
     # Try one more time with ifconfig
     sudo ifconfig $ADAPTER up 2>/dev/null
@@ -67,9 +67,9 @@ iwconfig $ADAPTER 2>/dev/null | head -5 || echo "No wireless extensions"
 echo ""
 echo "6. Checking web server on port 5173..."
 if netstat -tln | grep -q ":5173"; then
-    echo "✓ Web server is running on port 5173"
+    echo "[PASS] Web server is running on port 5173"
 else
-    echo "❌ Web server is NOT running on port 5173"
+    echo "[ERROR] Web server is NOT running on port 5173"
     echo "   You may need to restart your development server:"
     echo "   cd /home/ubuntu/projects/Argos && npm run dev"
 fi

@@ -210,9 +210,9 @@ class UniversalSignalCache:
                 for key, data in metadata.items():
                     self.cached_signals[key] = CachedSignal(**data)
                     
-                logger.info(f"📁 Loaded {len(self.cached_signals)} cached signals from disk")
+                logger.info(f"[FILE] Loaded {len(self.cached_signals)} cached signals from disk")
             except Exception as e:
-                logger.error(f"❌ Error loading cache metadata: {e}")
+                logger.error(f"[ERROR] Error loading cache metadata: {e}")
                 self.cached_signals = {}
     
     def save_cache_metadata(self) -> None:
@@ -236,7 +236,7 @@ class UniversalSignalCache:
                 json.dump(metadata, f, indent=2)
                 
         except Exception as e:
-            logger.error(f"❌ Error saving cache metadata: {e}")
+            logger.error(f"[ERROR] Error saving cache metadata: {e}")
     
     def get_cached_signal(self, signal_type: str, protocol: str, parameters: Dict[str, Any]) -> Optional[str]:
         """Get cached signal file path if available"""
@@ -308,7 +308,7 @@ class UniversalSignalCache:
             self.cached_signals[cache_key] = cached_signal
             self.save_cache_metadata()
             
-            logger.info(f"✅ Cached {signal_type}/{protocol} signal: {filename} ({file_size_mb:.1f} MB)")
+            logger.info(f"[OK] Cached {signal_type}/{protocol} signal: {filename} ({file_size_mb:.1f} MB)")
             
             return file_path
     
@@ -325,11 +325,11 @@ class UniversalSignalCache:
             return cached_path, sample_rate
         
         # Generate signal
-        logger.info(f"🔧 Generating {signal_type}/{protocol} signal...")
+        logger.info(f"[FIX] Generating {signal_type}/{protocol} signal...")
         start_time = time.time()
         signal_data, sample_rate = generator_func(**parameters)
         generation_time = time.time() - start_time
-        logger.info(f"⏱️  Generated in {generation_time:.2f}s")
+        logger.info(f"[TIMER]  Generated in {generation_time:.2f}s")
         
         # Cache the signal
         cached_path = self.cache_signal(signal_type, protocol, parameters, signal_data, sample_rate)
@@ -339,7 +339,7 @@ class UniversalSignalCache:
     def pregenerate_all_signals(self, progress_callback: Optional[Any] = None) -> None:
         """Pre-generate ALL signals for instant transmission"""
         total_configs = len(self.signal_configs)
-        logger.info(f"🚀 Pre-generating {total_configs} signal configurations...")
+        logger.info(f"[START] Pre-generating {total_configs} signal configurations...")
         
         start_time = time.time()
         total_size_mb = 0
@@ -382,7 +382,7 @@ class UniversalSignalCache:
                     progress_callback(i + 1, total_configs, "Skipped (already cached)")
                 continue
             
-            logger.info(f"🔨 [{i+1}/{total_configs}] Generating {signal_type}/{protocol}...")
+            logger.info(f"[BUILD] [{i+1}/{total_configs}] Generating {signal_type}/{protocol}...")
             
             try:
                 # Generate signal based on type
@@ -398,12 +398,12 @@ class UniversalSignalCache:
                     progress_callback(i + 1, total_configs, f"Generated {file_size_mb:.1f} MB")
                     
             except Exception as e:
-                logger.error(f"❌ Failed to generate {signal_type}/{protocol}: {e}")
+                logger.error(f"[ERROR] Failed to generate {signal_type}/{protocol}: {e}")
                 if progress_callback:
                     progress_callback(i + 1, total_configs, f"Failed: {str(e)}")
         
         total_time = time.time() - start_time
-        logger.info(f"\n✅ Pre-generation complete!")
+        logger.info(f"\n[OK] Pre-generation complete!")
         logger.info(f"   Generated: {generated_count} new signals")
         logger.info(f"   Skipped: {skipped_count} existing signals")
         logger.info(f"   Total cache: {len(self.cached_signals)} signals")
@@ -565,10 +565,10 @@ class UniversalSignalCache:
             # Clear in-memory cache
             self.cached_signals.clear()
             
-            logger.info("🗑️  Cache cleared successfully")
+            logger.info("[DELETE]  Cache cleared successfully")
             
         except Exception as e:
-            logger.error(f"❌ Error clearing cache: {e}")
+            logger.error(f"[ERROR] Error clearing cache: {e}")
 
 
 # Global cache instance
@@ -589,19 +589,19 @@ def initialize_universal_cache(force_regenerate: bool = False) -> None:
     # Check if we need to pre-generate
     status = cache.get_cache_status()
     
-    logger.info(f"📊 Cache status: {status['existing_files']}/{status['total_configs']} signals cached")
+    logger.info(f"[STATUS] Cache status: {status['existing_files']}/{status['total_configs']} signals cached")
     
     if force_regenerate or status['existing_files'] < status['total_configs']:
-        logger.info("🚀 Initializing universal signal cache...")
+        logger.info("[START] Initializing universal signal cache...")
         cache.pregenerate_all_signals()
     else:
-        logger.info(f"✅ Signal cache ready: {status['existing_files']} files, {status['total_size_mb']:.1f} MB")
+        logger.info(f"[OK] Signal cache ready: {status['existing_files']} files, {status['total_size_mb']:.1f} MB")
         logger.info(f"   Signal types: {status['type_counts']}")
 
 
 if __name__ == "__main__":
     # Test the universal cache system
-    print("🎯 Testing Universal Signal Cache System")
+    print("[TARGET] Testing Universal Signal Cache System")
     print("=" * 50)
     
     cache = UniversalSignalCache()

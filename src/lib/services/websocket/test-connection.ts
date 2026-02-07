@@ -21,12 +21,12 @@ export async function testWebSocketConnections() {
     
     // Set up HackRF event listeners
     hackrfClient.on(WebSocketEventEnum.Open, () => {
-        // console.info('✓ HackRF WebSocket connected');
+        // console.info('[PASS] HackRF WebSocket connected');
         // console.info('Connection status:', get(hackrfConnection));
     });
     
     hackrfClient.on(WebSocketEventEnum.Error, (event) => {
-        console.error('✗ HackRF WebSocket error:', event.error);
+        console.error('[FAIL] HackRF WebSocket error:', event.error);
     });
     
     hackrfClient.on(WebSocketEventEnum.Close, (_event) => {
@@ -50,7 +50,7 @@ export async function testWebSocketConnections() {
     
     // Set up Kismet event listeners
     kismetClient.on(WebSocketEventEnum.Open, () => {
-        // console.info('✓ Kismet WebSocket connected');
+        // console.info('[PASS] Kismet WebSocket connected');
         // console.info('Connection status:', get(kismetConnection));
         
         // Test API methods
@@ -62,7 +62,7 @@ export async function testWebSocketConnections() {
     });
     
     kismetClient.on(WebSocketEventEnum.Error, (event) => {
-        console.error('✗ Kismet WebSocket error:', event.error);
+        console.error('[FAIL] Kismet WebSocket error:', event.error);
     });
     
     kismetClient.on(WebSocketEventEnum.Close, (_event) => {

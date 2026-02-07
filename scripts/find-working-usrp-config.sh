@@ -71,7 +71,7 @@ for CONFIG in "${CONFIGS[@]}"; do
             
             # If we found good config, test more thoroughly
             if [ $PACKETS -gt 10 ]; then
-                echo "  ★ GOOD CONFIG FOUND! Testing longer..."
+                echo "  * GOOD CONFIG FOUND! Testing longer..."
                 eval "$CMD >/dev/null 2>&1 &"
                 PID=$!
                 sleep 3
@@ -87,13 +87,13 @@ done
 echo
 echo "=== RESULTS ==="
 if [ $BEST_PACKETS -gt 0 ]; then
-    echo "✓ Best configuration: $BEST_CONFIG"
+    echo "[PASS] Best configuration: $BEST_CONFIG"
     echo "  Captured $BEST_PACKETS packets"
     echo
     echo "Use this command:"
     echo "  sudo grgsm_livemon_headless $BEST_CONFIG -f [FREQ]M"
 else
-    echo "✗ No working configuration found"
+    echo "[FAIL] No working configuration found"
     echo
     echo "Troubleshooting:"
     echo "1. Check antenna is connected to RX port"

@@ -354,15 +354,15 @@ def initialize_cache_after_startup():
             return
         
         time.sleep(3)  # Let Flask fully start
-        logger.info("🚀 Starting background cache initialization...")
+        logger.info("[START] Starting background cache initialization...")
         try:
             initialize_universal_cache(force_regenerate=False)
             _cache_initialized = True
-            logger.info("✅ Universal Signal Cache ready - all signals pre-generated!")
+            logger.info("[OK] Universal Signal Cache ready - all signals pre-generated!")
             # Emit WebSocket update
             socketio.emit('cache_ready', {'status': 'complete'})
         except Exception as e:
-            logger.warning(f"⚠️ Cache initialization failed: {e}")
+            logger.warning(f"[WARN] Cache initialization failed: {e}")
             logger.info("   Signals will be generated on-demand (slower first transmission)")
             socketio.emit('cache_status', {'status': 'failed', 'error': str(e)})
 
@@ -395,7 +395,7 @@ if __name__ == '__main__':
     try:
         # Temporarily disable cache auto-initialization for stability
         # Cache will initialize on first workflow request
-        logger.info("📅 Cache initialization disabled for production stability")
+        logger.info("[SCHED] Cache initialization disabled for production stability")
         
         # Start Flask server in production mode (no debug reloader)
         socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True) 

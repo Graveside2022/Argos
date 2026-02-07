@@ -110,14 +110,14 @@ def scan_frequency(freq_mhz, gain=50):
     try:
         power = measure_power_gnu_radio(freq_mhz, gain)
         if power > -99:  # Valid measurement
-            print(f"✓ Measured {power:.1f} dBm at {freq_mhz} MHz", file=sys.stderr)
+            print(f"[PASS] Measured {power:.1f} dBm at {freq_mhz} MHz", file=sys.stderr)
             return power
     except Exception as e:
         print(f"Measurement failed: {e}", file=sys.stderr)
     
     # Fallback: simulate realistic power for demonstration
     power = simulate_realistic_power(freq_mhz)
-    print(f"⚠ Simulated {power:.1f} dBm at {freq_mhz} MHz", file=sys.stderr)
+    print(f"[WARN] Simulated {power:.1f} dBm at {freq_mhz} MHz", file=sys.stderr)
     return power
 
 def main():

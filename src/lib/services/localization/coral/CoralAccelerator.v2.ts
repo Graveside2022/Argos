@@ -269,10 +269,10 @@ export async function createCoralAccelerator(modelPath?: string): Promise<CoralA
       // Could emit event to UI to show TPU unavailable
     });
     
-    console.log('✅ Coral TPU accelerator initialized successfully');
+    console.log('[OK] Coral TPU accelerator initialized successfully');
     return accelerator;
   } catch (error) {
-    console.warn('⚠️ Coral TPU not available, will use CPU fallback:', error);
+    console.warn('[WARN] Coral TPU not available, will use CPU fallback:', error);
     return null;
   }
 }

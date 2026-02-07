@@ -2,7 +2,7 @@
 
 # SAFE Alfa card fix - NEVER touches wlan0 or other interfaces
 echo "=== Fixing ONLY Alfa card (wlx00c0caadcedb) ==="
-echo "✓ wlan0 will NOT be touched"
+echo "[PASS] wlan0 will NOT be touched"
 
 # 1. Stop Kismet
 echo "1. Stopping Kismet..."
@@ -15,7 +15,7 @@ echo "2. Finding Alfa USB device..."
 ALFA_USB=$(lsusb | grep "0e8d:7612" | awk '{print "/dev/bus/usb/" $2 "/" $4}' | tr -d ':')
 
 if [ -z "$ALFA_USB" ]; then
-    echo "⚠️  Alfa card not found in USB devices"
+    echo "[WARN]  Alfa card not found in USB devices"
     echo "Please unplug and replug the Alfa adapter"
     exit 1
 fi
@@ -68,7 +68,7 @@ sleep 3
 echo "4. Waiting for wlx00c0caadcedb..."
 for i in {1..10}; do
     if ip link show wlx00c0caadcedb 2>/dev/null; then
-        echo "✓ Alfa interface detected!"
+        echo "[PASS] Alfa interface detected!"
         break
     fi
     echo -n "."
@@ -90,4 +90,4 @@ echo ""
 echo "wlan0 status (should be unchanged):"
 iwconfig wlan0 2>/dev/null | grep -E "ESSID|Signal"
 echo ""
-echo "✓ Safe recovery complete - wlan0 untouched!"
+echo "[PASS] Safe recovery complete - wlan0 untouched!"

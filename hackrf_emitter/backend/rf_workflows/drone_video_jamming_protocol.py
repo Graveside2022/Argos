@@ -159,7 +159,7 @@ class DroneVideoJammingProtocol:
         # This requires high sample rate and proper spectral shaping
         num_samples = int(duration * sample_rate)
         
-        print(f"🎯 Generating WIDEBAND noise: {sample_rate/1e6:.1f} MHz sample rate for {bandwidth/1e6:.1f} MHz bandwidth")
+        print(f"[TARGET] Generating WIDEBAND noise: {sample_rate/1e6:.1f} MHz sample rate for {bandwidth/1e6:.1f} MHz bandwidth")
         print(f"   Signal size: {num_samples} samples ({num_samples * 2 / 1e6:.1f}M I/Q samples)")
         
         # Generate complex wideband white noise
@@ -216,7 +216,7 @@ class DroneVideoJammingProtocol:
         print(f"- Channels: {len(config.channels)}")
         print(f"- Power: {config.power_level} dBm")
         print(f"- Duration: {duration}s")
-        print(f"🎥 Targeting drone video transmissions @ 47dBm")
+        print(f"[VIDEO] Targeting drone video transmissions @ 47dBm")
         
         # Start transmission in separate thread
         def jammer_thread():
@@ -232,7 +232,7 @@ class DroneVideoJammingProtocol:
         print(f"- RAPID barrage through {len(config.channels)} video channels")
         print(f"- Power per channel: {config.power_level} dBm")
         print(f"- Duration: {duration}s")
-        print(f"🎥 Starting TRUE video link barrage jamming...")
+        print(f"[VIDEO] Starting TRUE video link barrage jamming...")
         
         # Set barrage pattern
         config.sweep_pattern = 'barrage'
@@ -255,7 +255,7 @@ class DroneVideoJammingProtocol:
         print(f"- Power: {power_level} dBm")
         print(f"- Duration: {duration}s")
         print(f"- Jamming type: white noise")
-        print(f"🎯 Targeting specific video channel @ {power_level}dBm")
+        print(f"[TARGET] Targeting specific video channel @ {power_level}dBm")
         
         # Start transmission in separate thread
         def single_channel_thread():
@@ -268,7 +268,7 @@ class DroneVideoJammingProtocol:
     def _transmit_video_jamming_sequence(self, config: DroneVideoJammingConfig, duration: float) -> None:
         """Transmit video jamming with frequency hopping"""
         if self.hackrf is None:
-            print(f"🎥 Simulating MAX POWER video jamming: {duration}s @ 47dBm")
+            print(f"[VIDEO] Simulating MAX POWER video jamming: {duration}s @ 47dBm")
             time.sleep(duration)
             return
         
@@ -279,7 +279,7 @@ class DroneVideoJammingProtocol:
                 dwell_time = 0.1  # 100ms per channel - faster than ELRS for video
                 cycles_needed = int(duration / (len(config.channels) * dwell_time))
                 hop_sequence = list(range(len(config.channels))) * cycles_needed
-                print(f"⚡ VIDEO BARRAGE: {cycles_needed} cycles, {len(config.channels) * dwell_time:.1f}s per sweep")
+                print(f"[ACTIVE] VIDEO BARRAGE: {cycles_needed} cycles, {len(config.channels) * dwell_time:.1f}s per sweep")
             else:
                 # Standard video jamming
                 dwell_time = max(0.2, config.dwell_time)  # Minimum 200ms for video
@@ -288,8 +288,8 @@ class DroneVideoJammingProtocol:
                 hops_needed = int(duration / dwell_time)
                 hop_sequence = [sequence[i % len(sequence)] for i in range(hops_needed)]
             
-            print(f"🎥 Starting video link frequency hopping @ 47dBm")
-            print(f"📡 Hopping across {len(config.channels)} video channels")
+            print(f"[VIDEO] Starting video link frequency hopping @ 47dBm")
+            print(f"[RF] Hopping across {len(config.channels)} video channels")
             
             # Pre-generate jamming signal
             i_signal, q_signal = self.generate_video_jamming_signal(
@@ -346,14 +346,14 @@ class DroneVideoJammingProtocol:
                     if config.sweep_pattern == 'barrage' and hop_count % 10 == 0:
                         elapsed = time.time() - start_time
                         remaining = duration - elapsed
-                        print(f"🎥 BARRAGE: {hop_count} hops, {remaining:.1f}s remaining")
+                        print(f"[VIDEO] BARRAGE: {hop_count} hops, {remaining:.1f}s remaining")
                 else:
-                    print(f"❌ Failed to transmit on {frequency/1e6:.1f} MHz")
+                    print(f"[ERROR] Failed to transmit on {frequency/1e6:.1f} MHz")
             
-            print(f"✅ Video jamming complete: {hop_count} hops over {time.time() - start_time:.1f}s")
+            print(f"[OK] Video jamming complete: {hop_count} hops over {time.time() - start_time:.1f}s")
             
         except Exception as e:
-            print(f"❌ Video jamming error: {e}")
+            print(f"[ERROR] Video jamming error: {e}")
         finally:
             if self.hackrf:
                 self.hackrf.stop_transmission()
@@ -365,7 +365,7 @@ class DroneVideoJammingProtocol:
             # Use cached signal for instant transmission
             max_signal_duration = min(30.0, duration)  # Max 30 seconds cached
             
-            print(f"🎯 Loading CACHED wideband signal for {frequency/1e6:.1f} MHz...")
+            print(f"[TARGET] Loading CACHED wideband signal for {frequency/1e6:.1f} MHz...")
             print(f"   Target bandwidth: {bandwidth/1e6:.1f} MHz")
             print(f"   Pattern duration: {max_signal_duration}s")
             
@@ -377,33 +377,33 @@ class DroneVideoJammingProtocol:
                 'duration': max_signal_duration,
                 'jamming_type': jamming_type
             }
-            print(f"🔍 Looking for cached signal with params: {params}")
+            print(f"[SEARCH] Looking for cached signal with params: {params}")
             signal_file_path = cache.get_cached_signal('jamming', 'drone_video', params)
             if not signal_file_path:
-                print(f"❌ No cached signal found for {bandwidth/1e6:.1f} MHz, {max_signal_duration}s")
+                print(f"[ERROR] No cached signal found for {bandwidth/1e6:.1f} MHz, {max_signal_duration}s")
                 # Debug: check what's actually in cache
                 cache_key = cache.get_cache_key('jamming', 'drone_video', params)
-                print(f"🔍 Cache key: {cache_key}")
-                print(f"🔍 Key exists: {cache_key in cache.cached_signals}")
+                print(f"[SEARCH] Cache key: {cache_key}")
+                print(f"[SEARCH] Key exists: {cache_key in cache.cached_signals}")
                 return
             # Get sample rate from metadata
             cache_key = cache.get_cache_key('jamming', 'drone_video', params)
             sample_rate = cache.cached_signals[cache_key].sample_rate
             
             # Load cached signal
-            print(f"🎯 Loading cached signal from: {signal_file_path}")
+            print(f"[TARGET] Loading cached signal from: {signal_file_path}")
             with open(signal_file_path, 'rb') as f:
                 signal_bytes = f.read()
             
             signal_size_mb = len(signal_bytes) / 1e6
             
-            print(f"✅ Cached signal loaded instantly!")
+            print(f"[OK] Cached signal loaded instantly!")
             print(f"   File size: {signal_size_mb:.1f} MB")
             print(f"   Sample rate: {sample_rate/1e6:.1f} MHz")
             
             # Use the HackRF controller from enhanced workflows (passed via constructor)
             if self.hackrf is None:
-                print(f"❌ No HackRF controller available - cannot transmit")
+                print(f"[ERROR] No HackRF controller available - cannot transmit")
                 return
             
             # Configure HackRF 
@@ -411,7 +411,7 @@ class DroneVideoJammingProtocol:
             self.hackrf.set_gain(power_level)
             self.hackrf.set_frequency(int(frequency))
             
-            print(f"🎯 Starting INSTANT WIDEBAND transmission:")
+            print(f"[TARGET] Starting INSTANT WIDEBAND transmission:")
             print(f"   Frequency: {frequency/1e6:.1f} MHz")
             print(f"   Bandwidth: {bandwidth/1e6:.1f} MHz")
             print(f"   Sample Rate: {sample_rate/1e6:.1f} MHz")
@@ -419,14 +419,14 @@ class DroneVideoJammingProtocol:
             print(f"   Duration: {duration}s")
             
             if duration > max_signal_duration:
-                print(f"🔄 {max_signal_duration}s pattern will loop for full {duration}s duration")
+                print(f"[RETRY] {max_signal_duration}s pattern will loop for full {duration}s duration")
             
             # Start transmission immediately with cached file
             start_time = time.time()
             success = self.hackrf.start_transmission(signal_bytes, int(frequency), int(sample_rate), power_level, duration)
             
             if success:
-                print(f"🔴 INSTANT TRANSMISSION STARTED - HackRF LED should be RED NOW!")
+                print(f"[CRIT] INSTANT TRANSMISSION STARTED - HackRF LED should be RED NOW!")
                 print(f"   Pre-cached file ready: {signal_size_mb:.1f}MB")
                 print(f"   No generation delay - immediate transmission")
                 print(f"   Transmitting {bandwidth/1e6:.1f} MHz noise on {frequency/1e6:.1f} MHz")
@@ -436,12 +436,12 @@ class DroneVideoJammingProtocol:
                     time.sleep(0.1)
                 
                 total_time = time.time() - start_time
-                print(f"✅ INSTANT WIDEBAND jamming complete: {frequency/1e6:.1f} MHz for {total_time:.1f}s")
+                print(f"[OK] INSTANT WIDEBAND jamming complete: {frequency/1e6:.1f} MHz for {total_time:.1f}s")
             else:
-                print(f"❌ Failed to start transmission on {frequency/1e6:.1f} MHz")
+                print(f"[ERROR] Failed to start transmission on {frequency/1e6:.1f} MHz")
                 
         except Exception as e:
-            print(f"❌ Cached wideband jamming error: {e}")
+            print(f"[ERROR] Cached wideband jamming error: {e}")
             import traceback
             traceback.print_exc()
             # Only stop transmission on error
@@ -453,7 +453,7 @@ class DroneVideoJammingProtocol:
         self.stop_flag.set()
         if self.hackrf:
             self.hackrf.stop_transmission()
-        print("🛑 Video jamming stopped")
+        print("[STOP] Video jamming stopped")
     
     def get_band_info(self) -> Dict[str, Any]:
         """Get information about current video band configuration"""

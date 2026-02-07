@@ -16,10 +16,10 @@ timeout 2 uhd_rx_cfile -f 947.2e6 -r 2e6 -g 40 -N 2000000 /tmp/test.dat 2>&1 | g
 
 if [ -f /tmp/test.dat ]; then
     SIZE=$(ls -lh /tmp/test.dat | awk '{print $5}')
-    echo "   ✓ Received data file: $SIZE"
+    echo "   [PASS] Received data file: $SIZE"
     rm /tmp/test.dat
 else
-    echo "   ✗ No data received"
+    echo "   [FAIL] No data received"
 fi
 
 # Test 3: gr-gsm with verbose output

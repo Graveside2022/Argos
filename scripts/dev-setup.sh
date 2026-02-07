@@ -7,12 +7,12 @@ echo ""
 # 1. Check for multiple vite instances
 VITE_COUNT=$(ps aux | grep -E "vite.*Argos" | grep -v grep | wc -l)
 if [ $VITE_COUNT -gt 0 ]; then
-    echo "⚠️  Found $VITE_COUNT vite instance(s) running"
+    echo "[WARN]  Found $VITE_COUNT vite instance(s) running"
     read -p "Kill all existing vite processes? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         ps aux | grep -E "vite.*Argos" | grep -v grep | awk '{print $2}' | xargs -r kill -9
-        echo "✓ Killed existing vite processes"
+        echo "[PASS] Killed existing vite processes"
     fi
 fi
 
@@ -24,7 +24,7 @@ for logfile in /tmp/hackrf-sweeper.log /tmp/hackrf-*.log; do
         SIZE=$(du -h "$logfile" 2>/dev/null | cut -f1)
         echo "  $logfile: $SIZE"
         if [ $(stat -c%s "$logfile" 2>/dev/null || echo "0") -gt 10485760 ]; then
-            echo "  ⚠️  Large log file detected, rotating..."
+            echo "  [WARN]  Large log file detected, rotating..."
             ./scripts/log-rotation.sh >/dev/null 2>&1
         fi
     fi
@@ -41,7 +41,7 @@ echo "Setting development environment..."
 export NODE_ENV=development
 export LOG_LEVEL=warn
 export VITE_LOG_LEVEL=warn
-echo "✓ Environment configured for development"
+echo "[PASS] Environment configured for development"
 
 # 5. Recommendations
 echo ""

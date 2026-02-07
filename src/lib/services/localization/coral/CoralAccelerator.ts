@@ -149,10 +149,10 @@ export async function createCoralAccelerator(modelPath?: string): Promise<CoralA
   try {
     const accelerator = new CoralAccelerator(modelPath);
     await accelerator.initialize();
-    console.log('✅ Coral TPU accelerator initialized successfully');
+    console.log('[OK] Coral TPU accelerator initialized successfully');
     return accelerator;
   } catch (error) {
-    console.warn('⚠️ Coral TPU not available, falling back to CPU:', error);
+    console.warn('[WARN] Coral TPU not available, falling back to CPU:', error);
     return null;
   }
 }

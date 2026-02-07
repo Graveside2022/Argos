@@ -7,10 +7,10 @@ echo
 # Check if USRP is detected
 echo "1. Checking for USRP B205 Mini..."
 if uhd_find_devices 2>/dev/null | grep -q "B205"; then
-    echo "✓ USRP B205 Mini detected!"
+    echo "[PASS] USRP B205 Mini detected!"
     uhd_find_devices 2>&1 | grep -A5 "B205"
 else
-    echo "✗ No USRP B205 Mini found"
+    echo "[FAIL] No USRP B205 Mini found"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ for gain in "${GAINS[@]}"; do
         
         # Check if process is still running
         if ! ps -p $PID > /dev/null; then
-            echo "✗ grgsm_livemon_headless failed to start"
+            echo "[FAIL] grgsm_livemon_headless failed to start"
             continue
         fi
         
@@ -53,7 +53,7 @@ for gain in "${GAINS[@]}"; do
         
         # If we got good results, note it
         if [ $PACKETS -gt 50 ]; then
-            echo "★ GOOD RESULT: $freq MHz with gain $gain = $PACKETS frames"
+            echo "* GOOD RESULT: $freq MHz with gain $gain = $PACKETS frames"
         fi
     done
 done

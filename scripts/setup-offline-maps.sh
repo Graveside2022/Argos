@@ -3,17 +3,17 @@
 # Setup script for offline map tiles
 set -e
 
-echo "🗺️  Argos Offline Maps Setup"
+echo "[MAP]  Argos Offline Maps Setup"
 echo "=========================="
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first."
+    echo "[ERROR] Docker is not installed. Please install Docker first."
     exit 1
 fi
 
 # Create directories
-echo "📁 Creating map data directories..."
+echo "[FILE] Creating map data directories..."
 mkdir -p map-data/{tiles,config,styles,fonts}
 
 # Function to download map tiles
@@ -21,13 +21,13 @@ download_tiles() {
     local REGION=$1
     local OUTPUT=$2
     
-    echo "📥 Downloading $REGION tiles..."
+    echo "[DOWNLOAD] Downloading $REGION tiles..."
     
     # Option 1: Download from Geofabrik (OSM extracts)
     # Smaller regions available: https://download.geofabrik.de/
     case $REGION in
         "world")
-            echo "⚠️  World map is very large (~50GB). Consider downloading a specific region instead."
+            echo "[WARN]  World map is very large (~50GB). Consider downloading a specific region instead."
             echo "Available regions:"
             echo "  - north-america"
             echo "  - europe"
@@ -50,7 +50,7 @@ convert_to_mbtiles() {
     local INPUT=$1
     local OUTPUT=$2
     
-    echo "🔄 Converting to MBTiles format..."
+    echo "[RETRY] Converting to MBTiles format..."
     
     # Use tippecanoe in Docker
     docker run --rm \
@@ -65,7 +65,7 @@ convert_to_mbtiles() {
 
 # Function to download pre-made MBTiles
 download_premade_mbtiles() {
-    echo "📥 Downloading pre-made MBTiles..."
+    echo "[DOWNLOAD] Downloading pre-made MBTiles..."
     echo ""
     echo "Option 1: OpenMapTiles (Commercial, has free tier)"
     echo "  Visit: https://data.maptiler.com/downloads/"
@@ -92,7 +92,7 @@ read -p "Enter choice (1-4): " choice
 case $choice in
     1)
         download_tiles "test" "luxembourg"
-        echo "✅ Test tiles downloaded"
+        echo "[OK] Test tiles downloaded"
         ;;
     2)
         echo "Enter region (e.g., 'europe/germany', 'north-america/us/california'):"
@@ -106,12 +106,12 @@ case $choice in
         exit 0
         ;;
     4)
-        echo "📋 Assuming you have tiles in map-data/tiles/"
+        echo "[INFO] Assuming you have tiles in map-data/tiles/"
         ;;
 esac
 
 # Download styles
-echo "🎨 Downloading map styles..."
+echo "[STYLE] Downloading map styles..."
 mkdir -p map-data/styles/{osm-bright,dark-matter}
 
 # Download OSM Bright style
@@ -125,13 +125,13 @@ unzip -o map-data/styles/dark-matter-style.zip -d map-data/styles/dark-matter/
 rm map-data/styles/dark-matter-style.zip
 
 # Download fonts
-echo "🔤 Downloading fonts..."
+echo "[FONT] Downloading fonts..."
 wget -O map-data/fonts/fonts.zip https://github.com/openmaptiles/fonts/releases/latest/download/v2.0.zip
 unzip -o map-data/fonts/fonts.zip -d map-data/fonts/
 rm map-data/fonts/fonts.zip
 
 # Update tactical map to use local tiles
-echo "🔧 Updating tactical map configuration..."
+echo "[FIX] Updating tactical map configuration..."
 cat > src/lib/config/mapConfig.ts << 'EOF'
 // Map configuration for offline tiles
 export const MAP_CONFIG = {
@@ -158,14 +158,14 @@ EOF
 
 # Start tile server
 echo ""
-echo "🚀 Starting tile server..."
+echo "[START] Starting tile server..."
 docker-compose -f docker-compose.tiles.yml up -d
 
 echo ""
-echo "✅ Setup complete!"
+echo "[OK] Setup complete!"
 echo ""
-echo "📍 Tile server running at: http://localhost:8088"
-echo "🗺️  View available styles at: http://localhost:8088/styles"
+echo "[GPS] Tile server running at: http://localhost:8088"
+echo "[MAP]  View available styles at: http://localhost:8088/styles"
 echo ""
 echo "Next steps:"
 echo "1. If you need more map data, download MBTiles for your region"

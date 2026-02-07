@@ -34,9 +34,9 @@ kill_by_pid_file() {
             fi
             
             if ! ps -p $PID > /dev/null 2>&1; then
-                echo -e "${GREEN}✓ $service_name stopped${NC}"
+                echo -e "${GREEN}[PASS] $service_name stopped${NC}"
             else
-                echo -e "${RED}✗ Failed to stop $service_name${NC}"
+                echo -e "${RED}[FAIL] Failed to stop $service_name${NC}"
             fi
         else
             echo -e "${YELLOW}$service_name PID file exists but process not running${NC}"
@@ -59,7 +59,7 @@ if [ -n "$GSMEVIL_PIDS" ]; then
     echo -e "${YELLOW}Found additional GSMEvil2 processes, killing...${NC}"
     for PID in $GSMEVIL_PIDS; do
         kill $PID 2>/dev/null
-        echo -e "${GREEN}✓ Killed GSMEvil2 process $PID${NC}"
+        echo -e "${GREEN}[PASS] Killed GSMEvil2 process $PID${NC}"
     done
     sleep 1
     # Force kill any remaining
@@ -78,7 +78,7 @@ if [ -n "$GRGSM_PIDS" ]; then
     echo -e "${YELLOW}Found additional gr-gsm processes, killing...${NC}"
     for PID in $GRGSM_PIDS; do
         kill $PID 2>/dev/null
-        echo -e "${GREEN}✓ Killed gr-gsm process $PID${NC}"
+        echo -e "${GREEN}[PASS] Killed gr-gsm process $PID${NC}"
     done
     sleep 1
     # Force kill any remaining
@@ -95,9 +95,9 @@ if [ -n "$PORT_PID" ]; then
     if lsof -ti:8080 > /dev/null 2>&1; then
         kill -9 $PORT_PID 2>/dev/null
     fi
-    echo -e "${GREEN}✓ Port 8080 cleared${NC}"
+    echo -e "${GREEN}[PASS] Port 8080 cleared${NC}"
 else
-    echo -e "${GREEN}✓ Port 8080 is already free${NC}"
+    echo -e "${GREEN}[PASS] Port 8080 is already free${NC}"
 fi
 
 # Step 4: Clean up any remaining processes
@@ -121,29 +121,29 @@ ALL_CLEAR=true
 
 # Check for GSMEvil processes
 if pgrep -f "GsmEvil.py" > /dev/null; then
-    echo -e "${RED}✗ GSMEvil2 processes still running!${NC}"
+    echo -e "${RED}[FAIL] GSMEvil2 processes still running!${NC}"
     pgrep -af "GsmEvil.py"
     ALL_CLEAR=false
 else
-    echo -e "${GREEN}✓ No GSMEvil2 processes found${NC}"
+    echo -e "${GREEN}[PASS] No GSMEvil2 processes found${NC}"
 fi
 
 # Check for gr-gsm processes
 if pgrep -f "grgsm_livemon" > /dev/null; then
-    echo -e "${RED}✗ gr-gsm processes still running!${NC}"
+    echo -e "${RED}[FAIL] gr-gsm processes still running!${NC}"
     pgrep -af "grgsm_livemon"
     ALL_CLEAR=false
 else
-    echo -e "${GREEN}✓ No gr-gsm processes found${NC}"
+    echo -e "${GREEN}[PASS] No gr-gsm processes found${NC}"
 fi
 
 # Check port 8080
 if lsof -ti:8080 > /dev/null 2>&1; then
-    echo -e "${RED}✗ Port 8080 is still in use!${NC}"
+    echo -e "${RED}[FAIL] Port 8080 is still in use!${NC}"
     lsof -i:8080
     ALL_CLEAR=false
 else
-    echo -e "${GREEN}✓ Port 8080 is free${NC}"
+    echo -e "${GREEN}[PASS] Port 8080 is free${NC}"
 fi
 
 if [ "$ALL_CLEAR" = true ]; then

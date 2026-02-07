@@ -9,7 +9,7 @@ echo ""
 
 # Safety check
 echo "Safety check: wlan0 status"
-ip link show wlan0 | grep UP && echo "✓ wlan0 is SAFE" || echo "⚠️ wlan0 issue detected"
+ip link show wlan0 | grep UP && echo "[PASS] wlan0 is SAFE" || echo "[WARN] wlan0 issue detected"
 echo ""
 
 # Method 1: USB Unbind/Bind via sysfs
@@ -19,7 +19,7 @@ echo "Finding USB device path..."
 # Get the USB device path
 USB_PATH=$(find /sys/bus/usb/devices/ -name "idVendor" -exec grep -l "0e8d" {} \; 2>/dev/null | head -1 | xargs dirname)
 if [ -z "$USB_PATH" ]; then
-    echo "❌ Cannot find MediaTek USB device"
+    echo "[ERROR] Cannot find MediaTek USB device"
 else
     USB_DEVICE=$(basename "$USB_PATH")
     echo "Found device: $USB_DEVICE"
@@ -36,9 +36,9 @@ else
     
     # Check if it worked
     if lsusb | grep -q "0e8d:7612"; then
-        echo "✓ USB device reappeared!"
+        echo "[PASS] USB device reappeared!"
     else
-        echo "⚠️ Method 1 failed, trying next..."
+        echo "[WARN] Method 1 failed, trying next..."
     fi
 fi
 echo ""
@@ -73,10 +73,10 @@ sleep 3
 
 # Check if interface appears
 if ip link show | grep -q "wlx00c0caadcedb"; then
-    echo "✓ Interface reappeared!"
+    echo "[PASS] Interface reappeared!"
     ip link show wlx00c0caadcedb
 else
-    echo "⚠️ Method 2 failed, trying next..."
+    echo "[WARN] Method 2 failed, trying next..."
 fi
 echo ""
 
@@ -138,7 +138,7 @@ if [ -f /tmp/usbreset ]; then
         
         # Check result
         if lsusb | grep -q "0e8d:7612"; then
-            echo "✓ USB reset successful!"
+            echo "[PASS] USB reset successful!"
         fi
     fi
 fi
@@ -162,10 +162,10 @@ fi
 echo ""
 echo "=== Final Status Check ==="
 if lsusb | grep -q "0e8d:7612"; then
-    echo "✓ USB device present"
+    echo "[PASS] USB device present"
     
     if ip link show | grep -q "wlx00c0caadcedb"; then
-        echo "✓ Network interface exists"
+        echo "[PASS] Network interface exists"
         
         # Try to bring it up
         sudo ip link set wlx00c0caadcedb up 2>/dev/null
@@ -176,20 +176,20 @@ if lsusb | grep -q "0e8d:7612"; then
         
         if [ "$STATE" = "UP" ]; then
             echo ""
-            echo "✅ SUCCESS! Adapter is recovered"
+            echo "[OK] SUCCESS! Adapter is recovered"
             echo "You can now start Kismet from the web interface"
         else
             echo ""
-            echo "⚠️ Interface exists but won't come up"
+            echo "[WARN] Interface exists but won't come up"
             echo "Try: sudo ifconfig wlx00c0caadcedb up"
         fi
     else
-        echo "❌ Interface missing - driver issue persists"
+        echo "[ERROR] Interface missing - driver issue persists"
     fi
 else
-    echo "❌ USB device not responding to any reset method"
+    echo "[ERROR] USB device not responding to any reset method"
     echo "Physical unplug/replug is required"
 fi
 
 echo ""
-echo "✓ wlan0 remains safe throughout all operations"
+echo "[PASS] wlan0 remains safe throughout all operations"

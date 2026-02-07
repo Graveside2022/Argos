@@ -374,10 +374,10 @@ export function getClusterIcon(cluster: SignalCluster): {
 	});
 
 	// Get icon for signal type
-	let icon = '📡'; // Default
-	if (dominantType === 'wifi') icon = '📶';
-	else if (dominantType === 'bluetooth') icon = '🔷';
-	else if (dominantType === 'cellular') icon = '📱';
+	let icon = '[RF]'; // Default
+	if (dominantType === 'wifi') icon = '[SIGNAL]';
+	else if (dominantType === 'bluetooth') icon = '[BT]';
+	else if (dominantType === 'cellular') icon = '[DEVICE]';
 
 	return {
 		html: `

@@ -33,7 +33,7 @@ const initialGPSState: GPSState = {
 		fixType: 'No',
 		heading: null,
 		speed: null,
-		currentCountry: { name: 'Unknown', flag: '🌍' },
+		currentCountry: { name: 'Unknown', flag: '[GLOBE]' },
 		formattedCoords: { lat: '0.000000°N', lon: '0.000000°E' },
 		mgrsCoord: 'Invalid'
 	}
