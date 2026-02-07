@@ -8,7 +8,7 @@ sleep 2
 
 # Start the development server with increased memory and error handling
 echo "Starting Fusion development server..."
-export NODE_OPTIONS="--max-old-space-size=3072"
+export NODE_OPTIONS="--max-old-space-size=1024"
 
 # Start in background with proper error handling
 npm run dev > fusion-dev.log 2>&1 &

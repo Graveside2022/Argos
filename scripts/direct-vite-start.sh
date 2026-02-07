@@ -23,4 +23,4 @@ node src/lib/server/validate-env.js
 
 # Start Vite directly
 echo "Starting Vite on port $PORT..."
-NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port $PORT --host
+NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port $PORT --host
