@@ -166,7 +166,7 @@ function createGSMEvilStore() {
 			update((state) => {
 				const newState = {
 					...state,
-					scanProgress: [...state.scanProgress, message]
+					scanProgress: [...state.scanProgress, message].slice(-500)
 				};
 				persistState(newState);
 				return newState;
@@ -232,10 +232,11 @@ function createGSMEvilStore() {
 
 		addCapturedIMSI: (imsi: any) =>
 			update((state) => {
+				const cappedIMSIs = [...state.capturedIMSIs, imsi].slice(-1000);
 				const newState = {
 					...state,
-					capturedIMSIs: [...state.capturedIMSIs, imsi],
-					totalIMSIs: state.capturedIMSIs.length + 1
+					capturedIMSIs: cappedIMSIs,
+					totalIMSIs: state.totalIMSIs + 1
 				};
 				persistState(newState);
 				return newState;

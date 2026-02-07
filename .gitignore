@@ -394,5 +394,8 @@ tools/
 utils/debug/
 utils/python/
 
+# Core dump files
+core.*
+
 # Stale report directories
 completed/

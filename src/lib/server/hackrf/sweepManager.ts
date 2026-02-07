@@ -354,7 +354,9 @@ export class SweepManager extends EventEmitter {
 				return true;
 			} catch (runError: unknown) {
 				const error = runError as Error;
-				logError('[ERROR] Error in _runNextFrequency:', { error: (error as Error).message });
+				logError('[ERROR] Error in _runNextFrequency:', {
+					error: (error as Error).message
+				});
 				if (error.stack) {
 					logError('Stack:', { stack: error.stack });
 				}
@@ -1339,8 +1341,14 @@ export class SweepManager extends EventEmitter {
 	}
 }
 
-// Singleton instance
-export const sweepManager = new SweepManager();
+// Singleton instance — persisted via globalThis to survive Vite HMR reloads.
+// Without this, each HMR re-evaluation creates a new SweepManager with a new
+// 30s health check interval, orphaning the old instance and leaking timers.
+const SWEEP_MANAGER_KEY = '__argos_sweepManager';
+export const sweepManager: SweepManager =
+	((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] as SweepManager) ??
+	(((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] =
+		new SweepManager()) as SweepManager);
 
 // Export getter function for consistency
 export function getSweepManager(): SweepManager {

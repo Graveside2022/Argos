@@ -66,6 +66,7 @@ export class WebSocketManager extends EventEmitter {
 	private static instance: WebSocketManager;
 	private clients = new Map<WebSocket, Subscription>();
 	private pollingInterval?: ReturnType<typeof setInterval>;
+	private cacheCleanupInterval: ReturnType<typeof setInterval> | null = null;
 	private deviceCache = new Map<string, CachedDevice>();
 	private lastPollTime = 0;
 	private isPolling = false;
@@ -85,16 +86,27 @@ export class WebSocketManager extends EventEmitter {
 		super();
 		this.startPolling();
 
-		// Cleanup stale cache periodically
-		setInterval(() => this.cleanupCache(), 60000); // Every minute
+		// Cleanup stale cache periodically — stored so destroy() can clear it
+		this.cacheCleanupInterval = setInterval(() => this.cleanupCache(), 60000);
 	}
 
 	/**
-	 * Get singleton instance
+	 * Get singleton instance — persisted via globalThis to survive Vite HMR
+	 * reloads. Without this, each HMR re-evaluation creates a new singleton
+	 * with a new 60s cache cleanup interval, orphaning the old instance.
 	 */
+	private static readonly INSTANCE_KEY = '__argos_wsManager';
 	static getInstance(): WebSocketManager {
+		const existing = (globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] as
+			| WebSocketManager
+			| undefined;
+		if (existing) {
+			this.instance = existing;
+			return existing;
+		}
 		if (!this.instance) {
 			this.instance = new WebSocketManager();
+			(globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] = this.instance;
 		}
 		return this.instance;
 	}
@@ -175,7 +187,8 @@ export class WebSocketManager extends EventEmitter {
 		if (!deviceKey || !macAddr) return;
 
 		// Transform to our device format
-		const signalStrength = kismetDevice['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] || 0;
+		const signalStrength =
+			kismetDevice['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] || 0;
 		const device: KismetDevice = {
 			mac: macAddr,
 			ssid: kismetDevice['kismet.device.base.name'] || '',
@@ -254,11 +267,11 @@ export class WebSocketManager extends EventEmitter {
 
 		const lat = location['kismet.common.location.lat'];
 		const lon = location['kismet.common.location.lon'];
-		
+
 		if (typeof lat !== 'number' || typeof lon !== 'number') {
 			return undefined;
 		}
-		
+
 		return {
 			latitude: lat,
 			longitude: lon,
@@ -554,6 +567,11 @@ export class WebSocketManager extends EventEmitter {
 		if (this.pollingInterval) {
 			clearInterval(this.pollingInterval);
 			this.pollingInterval = undefined;
+		}
+
+		if (this.cacheCleanupInterval) {
+			clearInterval(this.cacheCleanupInterval);
+			this.cacheCleanupInterval = null;
 		}
 
 		this.clients.forEach((_, client) => {
