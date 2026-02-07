@@ -24,6 +24,18 @@ export class USRPAPI {
 	isReconnecting: boolean = false;
 	visibilityHandler: (() => void) | null = null;
 
+	// Store listener references for proper cleanup (prevents memory leaks)
+	private eventListeners: Map<string, (event: Event) => void> = new Map();
+
+	/**
+	 * Add event listener with automatic cleanup tracking
+	 */
+	private addTrackedListener(eventName: string, handler: (event: Event) => void) {
+		if (!this.eventSource) return;
+		this.eventSource.addEventListener(eventName, handler);
+		this.eventListeners.set(eventName, handler);
+	}
+
 	async getStatus(): Promise<HackRFStatus> {
 		const response = await fetch('/api/rf/status?device=usrp');
 		if (!response.ok) throw new Error('Failed to get USRP status');
@@ -99,7 +111,10 @@ export class USRPAPI {
 		// Since auto_sweep.sh outputs through the hackrf pipeline, connect to hackrf data stream
 		this.eventSource = new EventSource('/api/hackrf/data-stream');
 
-		this.eventSource.addEventListener('connected', (_event) => {
+		// Clear any existing listeners from previous connections
+		this.eventListeners.clear();
+
+		this.addTrackedListener('connected', (_event) => {
 			logInfo('[USRPAPI] Connected to data stream');
 			updateConnectionStatus({ connected: true, connecting: false, error: null });
 			this.lastDataTimestamp = Date.now();
@@ -121,7 +136,7 @@ export class USRPAPI {
 			this.setupVisibilityHandler();
 		});
 
-		this.eventSource.addEventListener('sweep_data', (event) => {
+		this.addTrackedListener('sweep_data', (event) => {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const rawData = JSON.parse(event.data as string) as any;
 			this.lastDataTimestamp = Date.now();
@@ -151,7 +166,7 @@ export class USRPAPI {
 			updateSpectrumData(spectrumData);
 		});
 
-		this.eventSource.addEventListener('status', (event) => {
+		this.addTrackedListener('status', (event) => {
 			const status = JSON.parse(event.data as string) as {
 				state?: string;
 				startFrequency?: number;
@@ -194,7 +209,7 @@ export class USRPAPI {
 			}
 		});
 
-		this.eventSource.addEventListener('cycle_config', (event) => {
+		this.addTrackedListener('cycle_config', (event) => {
 			const config = JSON.parse(event.data as string) as Record<string, unknown>;
 			updateCycleStatus({
 				...config,
@@ -202,7 +217,7 @@ export class USRPAPI {
 			});
 		});
 
-		this.eventSource.addEventListener('status_change', (event) => {
+		this.addTrackedListener('status_change', (event) => {
 			const change = JSON.parse(event.data as string) as {
 				isSweping?: boolean;
 				status?: string;
@@ -218,7 +233,7 @@ export class USRPAPI {
 		});
 
 		// Heartbeat event - critical for connection health
-		this.eventSource.addEventListener('heartbeat', (event) => {
+		this.addTrackedListener('heartbeat', (event) => {
 			this.lastDataTimestamp = Date.now();
 			const _data = JSON.parse(event.data as string) as {
 				uptime: number;
@@ -231,7 +246,7 @@ export class USRPAPI {
 		});
 
 		// Recovery events
-		this.eventSource.addEventListener('recovery_start', (event) => {
+		this.addTrackedListener('recovery_start', (event) => {
 			const recoveryData = JSON.parse(event.data as string) as {
 				reason: string;
 				attempt: number;
@@ -244,7 +259,7 @@ export class USRPAPI {
 			});
 		});
 
-		this.eventSource.addEventListener('recovery_complete', (_event) => {
+		this.addTrackedListener('recovery_complete', (_event) => {
 			updateConnectionStatus({
 				connected: true,
 				connecting: false,
@@ -252,7 +267,7 @@ export class USRPAPI {
 			});
 		});
 
-		this.eventSource.addEventListener('error', (_event) => {
+		this.addTrackedListener('error', (_event) => {
 			const errorData = { message: 'Connection error' };
 			// Don't disconnect on recovery errors
 			if (this.eventSource?.readyState === EventSource.CLOSED) {
@@ -320,6 +335,12 @@ export class USRPAPI {
 		this.cleanupVisibilityHandler();
 
 		if (this.eventSource) {
+			// Remove all event listeners before closing (prevents memory leak)
+			this.eventListeners.forEach((handler, eventName) => {
+				this.eventSource?.removeEventListener(eventName, handler);
+			});
+			this.eventListeners.clear();
+
 			this.eventSource.close();
 			this.eventSource = null;
 		}
