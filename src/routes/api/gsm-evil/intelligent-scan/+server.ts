@@ -1,16 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/hostExec';
-
-interface FrequencyTestResult {
-	frequency: string;
-	power: number;
-	frameCount: number;
-	hasGsmActivity: boolean;
-	strength: string;
-	channelType?: string;
-	controlChannel?: boolean;
-}
+import type { FrequencyTestResult } from '$lib/types/gsm';
 
 export const POST: RequestHandler = async () => {
 	try {
