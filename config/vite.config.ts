@@ -1,1 +1,1 @@
-build/vite.config.ts
+../vite.config.ts

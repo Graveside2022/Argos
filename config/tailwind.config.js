@@ -1,1 +1,1 @@
-build/tailwind.config.js
+../tailwind.config.js
