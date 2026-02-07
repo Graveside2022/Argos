@@ -575,19 +575,19 @@ print_test_summary() {
     for test_name in "${!TEST_RESULTS[@]}"; do
         local result="${TEST_RESULTS[$test_name]}"
         if [[ "$result" == "PASS" ]]; then
-            echo -e "  ✅ $test_name"
+            echo -e "  [OK] $test_name"
         else
-            echo -e "  ❌ $test_name"
+            echo -e "  [ERROR] $test_name"
         fi
     done
     echo ""
     
     if [[ $FAILED_TESTS -eq 0 ]]; then
-        echo -e "${GREEN}🎉 All tests passed! Your Argos deployment is ready for use.${NC}"
+        echo -e "${GREEN}[DONE] All tests passed! Your Argos deployment is ready for use.${NC}"
     elif [[ $FAILED_TESTS -le 3 ]]; then
-        echo -e "${YELLOW}⚠️  Some tests failed, but deployment may still be functional.${NC}"
+        echo -e "${YELLOW}[WARN]  Some tests failed, but deployment may still be functional.${NC}"
     else
-        echo -e "${RED}❌ Multiple critical tests failed. Deployment needs attention.${NC}"
+        echo -e "${RED}[ERROR] Multiple critical tests failed. Deployment needs attention.${NC}"
     fi
     echo ""
     

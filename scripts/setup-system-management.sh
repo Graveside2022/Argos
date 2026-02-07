@@ -197,25 +197,25 @@ test_services() {
     
     # Test WiFi resilience
     if "${BIN_DIR}/argos-wifi-resilience.sh" status &>/dev/null; then
-        test_results+=("WiFi Resilience: ✓")
+        test_results+=("WiFi Resilience: [OK]")
     else
-        test_results+=("WiFi Resilience: ✗")
+        test_results+=("WiFi Resilience: [FAIL]")
     fi
     
     # Test CPU protector
     if "${BIN_DIR}/argos-cpu-protector.sh" --help &>/dev/null; then
-        test_results+=("CPU Protector: ✓")
+        test_results+=("CPU Protector: [OK]")
     else
-        test_results+=("CPU Protector: ✗")
+        test_results+=("CPU Protector: [FAIL]")
     fi
     
     # Test service status
     local services=("argos-wifi-resilience" "argos-cpu-protector" "argos-process-manager")
     for service in "${services[@]}"; do
         if systemctl is-active --quiet "${service}.service"; then
-            test_results+=("${service} service: ✓")
+            test_results+=("${service} service: [OK]")
         else
-            test_results+=("${service} service: ✗")
+            test_results+=("${service} service: [FAIL]")
         fi
     done
     

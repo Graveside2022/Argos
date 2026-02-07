@@ -10,7 +10,7 @@ echo ""
 
 # Verify safety
 echo "Safety verification:"
-ip link show wlan0 | grep UP && echo "✓ wlan0 is SAFE" || exit 1
+ip link show wlan0 | grep UP && echo "[PASS] wlan0 is SAFE" || exit 1
 echo ""
 
 echo "Phase 1: Complete driver purge"
@@ -113,13 +113,13 @@ sleep 3
 echo ""
 echo "=== Final Check ==="
 if lsusb | grep -q "0e8d:7612"; then
-    echo "✓ USB device detected"
+    echo "[PASS] USB device detected"
     
     # Wait for interface
     COUNTER=0
     while [ $COUNTER -lt 10 ]; do
         if ip link show 2>/dev/null | grep -q "wlx00c0caadcedb"; then
-            echo "✓ Interface appeared!"
+            echo "[PASS] Interface appeared!"
             
             # Configure it
             sudo ip link set wlx00c0caadcedb down 2>/dev/null
@@ -130,7 +130,7 @@ if lsusb | grep -q "0e8d:7612"; then
             ip link show wlx00c0caadcedb
             
             echo ""
-            echo "✅ Recovery complete! Try Kismet now."
+            echo "[OK] Recovery complete! Try Kismet now."
             break
         fi
         echo -n "."
@@ -138,7 +138,7 @@ if lsusb | grep -q "0e8d:7612"; then
         COUNTER=$((COUNTER + 1))
     done
 else
-    echo "❌ USB device still not responding"
+    echo "[ERROR] USB device still not responding"
     echo ""
     echo "=== HARDWARE FAILURE ==="
     echo "The adapter is in a hardware fault state that requires physical intervention."
@@ -149,4 +149,4 @@ else
 fi
 
 echo ""
-echo "✓ wlan0 remained safe throughout the process"
+echo "[PASS] wlan0 remained safe throughout the process"

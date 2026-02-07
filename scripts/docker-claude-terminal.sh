@@ -7,16 +7,16 @@ TMUX_SESSION="argos-claude"
 
 # Check if Docker container is running
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    echo "❌ Error: Docker container '${CONTAINER_NAME}' is not running"
+    echo "[ERROR] Error: Docker container '${CONTAINER_NAME}' is not running"
     echo "Start it with: docker compose -f docker/docker-compose.portainer-dev.yml up -d"
     exit 1
 fi
 
 # Check if tmux is installed in container
 if ! docker exec "${CONTAINER_NAME}" which tmux &>/dev/null; then
-    echo "⚠️  Installing tmux in container..."
+    echo "[WARN]  Installing tmux in container..."
     docker exec "${CONTAINER_NAME}" bash -c "apt-get update -qq && apt-get install -y -qq tmux" || {
-        echo "❌ Failed to install tmux"
+        echo "[ERROR] Failed to install tmux"
         exit 1
     }
 fi

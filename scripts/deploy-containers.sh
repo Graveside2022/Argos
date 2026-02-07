@@ -179,9 +179,9 @@ verify_deployment() {
 
     for container in argos-dev hackrf-backend-dev openwebrx-hackrf; do
         if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
-            success "✓ $container is running"
+            success "[PASS] $container is running"
         else
-            error "✗ $container is not running"
+            error "[FAIL] $container is not running"
             all_running=false
         fi
     done
@@ -192,15 +192,15 @@ verify_deployment() {
         success "All containers deployed successfully!"
         echo ""
         info "Access your services:"
-        echo "  🌐 Argos Dashboard: http://localhost:5173"
-        echo "  📡 OpenWebRX: http://localhost:8073"
-        echo "  🔧 HackRF API: http://localhost:8092"
+        echo "  [NET] Argos Dashboard: http://localhost:5173"
+        echo "  [RF] OpenWebRX: http://localhost:8073"
+        echo "  [FIX] HackRF API: http://localhost:8092"
         echo ""
         info "OpenWebRX Preset Profiles:"
-        echo "  📻 FM Broadcast, AM Radio"
-        echo "  ✈️  Aviation, Weather, Marine VHF"
-        echo "  📡 Ham Radio (2m, 70cm), Shortwave"
-        echo "  🚨 Public Safety, ISM 433, PMR446, GMRS/FRS"
+        echo "  [RADIO] FM Broadcast, AM Radio"
+        echo "  [AIR]  Aviation, Weather, Marine VHF"
+        echo "  [RF] Ham Radio (2m, 70cm), Shortwave"
+        echo "  [ALERT] Public Safety, ISM 433, PMR446, GMRS/FRS"
         echo ""
     else
         error "Some containers failed to deploy. Check logs with: docker logs <container-name>"

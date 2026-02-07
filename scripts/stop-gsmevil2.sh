@@ -9,7 +9,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${RED}🛑 Stopping GSMEvil2 and related processes...${NC}"
+echo -e "${RED}[STOP] Stopping GSMEvil2 and related processes...${NC}"
 
 # Function to kill process by PID file
 kill_by_pidfile() {
@@ -88,10 +88,10 @@ REMAINING_GRGSM=$(pgrep -f "grgsm_livemon" | wc -l)
 PORT_CHECK=$(lsof -ti:8080 2>/dev/null | wc -l)
 
 if [ $REMAINING_GSMEVIL -eq 0 ] && [ $REMAINING_GRGSM -eq 0 ] && [ $PORT_CHECK -eq 0 ]; then
-    echo -e "${GREEN}✓ All GSMEvil2 processes stopped successfully!${NC}"
+    echo -e "${GREEN}[PASS] All GSMEvil2 processes stopped successfully!${NC}"
     exit 0
 else
-    echo -e "${RED}⚠ Warning: Some processes may still be running${NC}"
+    echo -e "${RED}[WARN] Warning: Some processes may still be running${NC}"
     [ $REMAINING_GSMEVIL -gt 0 ] && echo -e "${RED}  - $REMAINING_GSMEVIL GSMEvil2 processes still running${NC}"
     [ $REMAINING_GRGSM -gt 0 ] && echo -e "${RED}  - $REMAINING_GRGSM grgsm processes still running${NC}"
     [ $PORT_CHECK -gt 0 ] && echo -e "${RED}  - Port 8080 still in use${NC}"

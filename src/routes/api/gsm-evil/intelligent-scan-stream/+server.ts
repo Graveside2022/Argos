@@ -318,24 +318,24 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 							// Check what we captured
 							if (cellMcc && cellLac && cellCi) {
 								sendUpdate(
-									`[FREQ ${i + 1}/${checkFreqs.length}] ✓ Complete cell identity captured!`
+									`[FREQ ${i + 1}/${checkFreqs.length}] [PASS] Complete cell identity captured!`
 								);
 							} else if (cellLac && cellCi) {
 								sendUpdate(
-									`[FREQ ${i + 1}/${checkFreqs.length}] ⚠ Partial: LAC/CI captured but no MCC/MNC (need IMSI packet)`
+									`[FREQ ${i + 1}/${checkFreqs.length}] [WARN] Partial: LAC/CI captured but no MCC/MNC (need IMSI packet)`
 								);
 							} else if (cellMcc) {
 								sendUpdate(
-									`[FREQ ${i + 1}/${checkFreqs.length}] ⚠ Partial: MCC/MNC captured but no LAC/CI (need Cell Identity packet)`
+									`[FREQ ${i + 1}/${checkFreqs.length}] [WARN] Partial: MCC/MNC captured but no LAC/CI (need Cell Identity packet)`
 								);
 							} else {
 								sendUpdate(
-									`[FREQ ${i + 1}/${checkFreqs.length}] ⚠ Cell identity incomplete (MCC=${cellMcc || 'missing'}, LAC=${cellLac || 'missing'}, CI=${cellCi || 'missing'})`
+									`[FREQ ${i + 1}/${checkFreqs.length}] [WARN] Cell identity incomplete (MCC=${cellMcc || 'missing'}, LAC=${cellLac || 'missing'}, CI=${cellCi || 'missing'})`
 								);
 							}
 						} else {
 							sendUpdate(
-								`[FREQ ${i + 1}/${checkFreqs.length}] ⚠ No cell identity data captured`
+								`[FREQ ${i + 1}/${checkFreqs.length}] [WARN] No cell identity data captured`
 							);
 						}
 
@@ -400,14 +400,14 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 
 						if (cellMcc && cellLac && cellCi) {
 							sendUpdate(
-								`[FREQ ${i + 1}/${checkFreqs.length}] 📡 Cell Tower Identified: MCC=${cellMcc} MNC=${cellMnc || 'N/A'} LAC=${cellLac} CI=${cellCi}`
+								`[FREQ ${i + 1}/${checkFreqs.length}] [RF] Cell Tower Identified: MCC=${cellMcc} MNC=${cellMnc || 'N/A'} LAC=${cellLac} CI=${cellCi}`
 							);
 						} else if (frameCount > 0) {
 							sendUpdate(
-								`[FREQ ${i + 1}/${checkFreqs.length}] ⚠ ${channelType || 'Unknown'} channel detected but no cell identity captured`
+								`[FREQ ${i + 1}/${checkFreqs.length}] [WARN] ${channelType || 'Unknown'} channel detected but no cell identity captured`
 							);
 							sendUpdate(
-								`[FREQ ${i + 1}/${checkFreqs.length}] 💡 TIP: Cell identity (MCC/LAC/CI) requires BCCH channel with System Information messages`
+								`[FREQ ${i + 1}/${checkFreqs.length}] [TIP] TIP: Cell identity (MCC/LAC/CI) requires BCCH channel with System Information messages`
 							);
 						}
 

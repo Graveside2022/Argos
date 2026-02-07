@@ -28,7 +28,7 @@ def on_status(data):
     print(f"Status update: {data}")
     if 'imsi_sniffer' in data:
         if data['imsi_sniffer'] == 'on':
-            print("✓ IMSI sniffer is now ENABLED")
+            print("[PASS] IMSI sniffer is now ENABLED")
             sio.disconnect()
             sys.exit(0)
 

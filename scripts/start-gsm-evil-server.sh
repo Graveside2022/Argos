@@ -14,7 +14,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${RED}🔥 GSM Evil Web Server 🔥${NC}"
+echo -e "${RED}[CRITICAL] GSM Evil Web Server [CRITICAL]${NC}"
 
 # Check if server is already running
 if [ -f "$PID_FILE" ]; then
@@ -69,12 +69,12 @@ sleep 2
 
 # Check if server started successfully
 if ps -p $SERVER_PID > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ GSM Evil server started successfully!${NC}"
+    echo -e "${GREEN}[PASS] GSM Evil server started successfully!${NC}"
     echo -e "${GREEN}  PID: $SERVER_PID${NC}"
     echo -e "${GREEN}  URL: http://localhost:$PORT${NC}"
     echo -e "${GREEN}  Logs: $LOG_FILE${NC}"
 else
-    echo -e "${RED}✗ Failed to start GSM Evil server${NC}"
+    echo -e "${RED}[FAIL] Failed to start GSM Evil server${NC}"
     echo "Check logs at: $LOG_FILE"
     exit 1
 fi

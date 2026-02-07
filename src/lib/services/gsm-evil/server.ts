@@ -101,7 +101,7 @@ class GSMEvilServer extends EventEmitter {
             </style>
           </head>
           <body>
-            <h1>🔥 GSM Evil Monitor 🔥</h1>
+            <h1>[CRITICAL] GSM Evil Monitor [CRITICAL]</h1>
             <div id="status">Connecting...</div>
             <div id="stats">
               <div class="stat-box">
@@ -128,7 +128,7 @@ class GSMEvilServer extends EventEmitter {
               const activeCells = new Set();
               
               ws.onopen = () => {
-                statusDiv.textContent = '✓ Connected to GSM Evil Server';
+                statusDiv.textContent = '[PASS] Connected to GSM Evil Server';
                 statusDiv.style.color = '#00ff00';
               };
               
@@ -200,12 +200,12 @@ class GSMEvilServer extends EventEmitter {
               };
               
               ws.onclose = () => {
-                statusDiv.textContent = '✗ Disconnected from server';
+                statusDiv.textContent = '[FAIL] Disconnected from server';
                 statusDiv.style.color = '#ff0000';
               };
               
               ws.onerror = (error) => {
-                statusDiv.textContent = '✗ Connection error';
+                statusDiv.textContent = '[FAIL] Connection error';
                 statusDiv.style.color = '#ff0000';
               };
             </script>

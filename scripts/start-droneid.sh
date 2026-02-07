@@ -24,7 +24,7 @@ sudo ip link set $ALFA_INTERFACE up
 
 # Verify monitor mode
 if iw dev $ALFA_INTERFACE info | grep -q "type monitor"; then
-    echo "✓ $ALFA_INTERFACE is now in monitor mode"
+    echo "[PASS] $ALFA_INTERFACE is now in monitor mode"
 else
     echo "Error: Failed to set monitor mode"
     exit 1

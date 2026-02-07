@@ -134,7 +134,7 @@ export const POST: RequestHandler = async () => {
 		// Format results message - show all results
 		const summaryLines = results.map(
 			(r) =>
-				`${r.frequency} MHz: ${r.power.toFixed(1)} dB (${r.strength}) - ${r.frameCount} frames${r.hasGsmActivity ? ' ✓' : ''}`
+				`${r.frequency} MHz: ${r.power.toFixed(1)} dB (${r.strength}) - ${r.frameCount} frames${r.hasGsmActivity ? ' [OK]' : ''}`
 		);
 
 		return json({

@@ -66,7 +66,7 @@ export class CellTowerService {
 					<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));">
 						<path fill="${iconColor}" d="M12,2A3,3 0 0,1 15,5V9A3,3 0 0,1 12,12A3,3 0 0,1 9,9V5A3,3 0 0,1 12,2M19,18A1,1 0 0,1 20,19A1,1 0 0,1 19,20C18.5,20 18.12,19.65 18,19.22L15.78,17C15.65,17.12 15.5,17.18 15.33,17.22L16.5,22H7.5L8.67,17.22C8.5,17.18 8.35,17.12 8.22,17L6,19.22C5.88,19.65 5.5,20 5,20A1,1 0 0,1 4,19A1,1 0 0,1 5,18C5.5,18 5.88,18.35 6,18.78L8.22,16.56C8.08,16.4 8,16.21 8,16V12.83C8.59,12.93 9.19,13 9.8,13H14.2C14.81,13 15.41,12.93 16,12.83V16C16,16.21 15.92,16.4 15.78,16.56L18,18.78C18.12,18.35 18.5,18 19,18M12,14A1,1 0 0,0 11,15A1,1 0 0,0 12,16A1,1 0 0,0 13,15A1,1 0 0,0 12,14Z"/>
 					</svg>
-					${tower.status === 'fake' ? '<div style="position: absolute; top: -5px; right: -5px; color: red; font-weight: bold; font-size: 16px;">⚠️</div>' : ''}
+					${tower.status === 'fake' ? '<div style="position: absolute; top: -5px; right: -5px; color: red; font-weight: bold; font-size: 16px;">[WARN]</div>' : ''}
 				</div>
 			`,
 			iconSize: [30, 30],

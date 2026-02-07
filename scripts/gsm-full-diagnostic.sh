@@ -165,7 +165,7 @@ echo "Best frame count: $BEST_COUNT"
 echo
 echo "TROUBLESHOOTING:"
 if [ $BEST_COUNT -le 1 ]; then
-    echo "✗ Very low or no GSM activity detected"
+    echo "[FAIL] Very low or no GSM activity detected"
     echo
     echo "Possible causes:"
     echo "1. No GSM coverage in your area (networks may be shutting down GSM)"
@@ -181,7 +181,7 @@ if [ $BEST_COUNT -le 1 ]; then
     echo "- Try 2G/GSM mode on phone and check signal"
     echo "- Consider that many carriers are shutting down 2G/GSM"
 else
-    echo "✓ GSM activity detected!"
+    echo "[PASS] GSM activity detected!"
     echo "- Best frequency: $BEST_FREQ MHz"
     echo "- Frame count: $BEST_COUNT"
     echo "- Try this frequency in the web UI"

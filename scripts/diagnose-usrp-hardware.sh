@@ -21,13 +21,13 @@ uhd_rx_cfile -f 947.2e6 -r 2e6 -g 50 -N 4000000 --args="type=b200" /tmp/usrp_tes
 
 if [ -f /tmp/usrp_test.dat ]; then
     SIZE=$(stat -c%s /tmp/usrp_test.dat)
-    echo "   ✓ Received $SIZE bytes"
+    echo "   [PASS] Received $SIZE bytes"
     
     # Check if data contains actual signal (not just zeros)
     hexdump -n 1000 /tmp/usrp_test.dat | head -5
     rm /tmp/usrp_test.dat
 else
-    echo "   ✗ No data received - hardware issue!"
+    echo "   [FAIL] No data received - hardware issue!"
 fi
 
 # 4. Test with osmocom source (different driver path)
@@ -57,7 +57,7 @@ try:
     print(f'   Actual gain: {usrp.get_gain(0)} dB')
     
 except Exception as e:
-    print(f'   ✗ Error: {e}')
+    print(f'   [FAIL] Error: {e}')
 " 2>&1
 
 # 5. Test different clock rates
@@ -73,7 +73,7 @@ done
 # 6. Check if gr-gsm was built with UHD support
 echo
 echo "6. Checking gr-gsm UHD support:"
-ldd $(which grgsm_livemon_headless) 2>/dev/null | grep -i uhd || echo "   ✗ gr-gsm may not be linked with UHD!"
+ldd $(which grgsm_livemon_headless) 2>/dev/null | grep -i uhd || echo "   [FAIL] gr-gsm may not be linked with UHD!"
 
 # 7. Test grgsm_scanner (different tool)
 echo
@@ -100,12 +100,12 @@ try:
     # Try to import the source block
     try:
         from grgsm import gsm_input
-        print('   ✓ gsm_input available')
+        print('   [PASS] gsm_input available')
     except:
-        print('   ✗ gsm_input not available - may need rebuild')
+        print('   [FAIL] gsm_input not available - may need rebuild')
         
 except Exception as e:
-    print(f'   ✗ Error: {e}')
+    print(f'   [FAIL] Error: {e}')
 " 2>&1
 
 echo

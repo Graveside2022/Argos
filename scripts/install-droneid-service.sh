@@ -21,7 +21,7 @@ systemctl daemon-reload
 # Enable service to start on boot
 systemctl enable argos-droneid.service
 
-echo "✓ DroneID service installed"
+echo "[PASS] DroneID service installed"
 echo ""
 echo "Commands:"
 echo "  Start:   sudo systemctl start argos-droneid"

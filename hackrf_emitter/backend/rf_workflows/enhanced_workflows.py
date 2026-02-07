@@ -66,7 +66,7 @@ class EnhancedWorkflows:
     def _ensure_cache_initialized(self):
         """Ensure cache is initialized before use"""
         if not self._cache_initialized:
-            print("🚀 Initializing universal signal cache (lazy loading)...")
+            print("[START] Initializing universal signal cache (lazy loading)...")
             initialize_universal_cache()
             self._cache_initialized = True
     
@@ -908,7 +908,7 @@ class EnhancedWorkflows:
         # Wait for jamming duration with cleaner status updates
         start_time = time.time()
         last_status_time = 0
-        print(f"🔥 MAX POWER jamming started on {len(band_info['channels'])} channels @ 47dBm")
+        print(f"[CRITICAL] MAX POWER jamming started on {len(band_info['channels'])} channels @ 47dBm")
         
         while time.time() - start_time < duration and not self.stop_flag.is_set():
             time.sleep(1.0)  # Check every second
@@ -1007,7 +1007,7 @@ class EnhancedWorkflows:
         
         # Wait for jamming duration
         start_time = time.time()
-        print(f"🎥 MAX POWER video jamming started on {len(band_info['channels'])} channels @ 47dBm")
+        print(f"[VIDEO] MAX POWER video jamming started on {len(band_info['channels'])} channels @ 47dBm")
         
         while time.time() - start_time < duration and not self.stop_flag.is_set():
             time.sleep(1.0)  # Check every second
@@ -1016,11 +1016,11 @@ class EnhancedWorkflows:
             elapsed = time.time() - start_time
             if elapsed > 0 and int(elapsed) % 10 == 0:
                 remaining = duration - elapsed
-                print(f"🎥 Video jamming progress: {elapsed:.0f}s elapsed, {remaining:.0f}s remaining")
+                print(f"[VIDEO] Video jamming progress: {elapsed:.0f}s elapsed, {remaining:.0f}s remaining")
         
         # Don't call stop_jamming() here - let the protocol manage its own duration
         # The protocol will stop automatically when its duration is complete
-        print(f"✅ Drone video jamming complete after {time.time() - start_time:.1f}s")
+        print(f"[OK] Drone video jamming complete after {time.time() - start_time:.1f}s")
     
     def _run_enhanced_gps(self, workflow_name: str, parameters: Dict[str, Any]) -> None:
         """Run enhanced GPS constellation workflow using cached signals"""
@@ -1209,7 +1209,7 @@ class EnhancedWorkflows:
         with open(cached_path, 'rb') as f:
             signal_bytes = f.read()
         
-        print(f"✅ Cached radar signal loaded instantly!")
+        print(f"[OK] Cached radar signal loaded instantly!")
         print(f"   File size: {len(signal_bytes)/1e6:.1f} MB")
         print(f"   Sample rate: {sample_rate/1e6:.1f} MHz")
         

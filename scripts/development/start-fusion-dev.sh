@@ -22,11 +22,11 @@ sleep 5
 
 # Check if server is running
 if ps -p $DEV_PID > /dev/null; then
-    echo "✅ Server is running at http://100.79.154.94:5173"
+    echo "[OK] Server is running at http://100.79.154.94:5173"
     echo ""
     echo "To view logs: tail -f fusion-dev.log"
     echo "To stop: kill $DEV_PID"
 else
-    echo "❌ Server failed to start. Check fusion-dev.log for errors"
+    echo "[ERROR] Server failed to start. Check fusion-dev.log for errors"
     tail -20 fusion-dev.log
 fi

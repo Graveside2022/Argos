@@ -31,7 +31,7 @@ fi
 
 # Test if Python bindings work
 if python3 -c "import uhd; print('UHD Python bindings OK')" 2>/dev/null; then
-    echo "✓ UHD Python bindings working"
+    echo "[PASS] UHD Python bindings working"
 else
     echo "Installing UHD Python bindings..."
     sudo apt-get install -y python3-uhd || pip3 install uhd

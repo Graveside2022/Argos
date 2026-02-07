@@ -38,7 +38,7 @@ export class ProcessManager {
 	): Promise<ProcessState> {
 		return new Promise((resolve, reject) => {
 			try {
-				logInfo(`🚀 Spawning USRP process: ${command} ${args.join(' ')}`);
+				logInfo(`[START] Spawning USRP process: ${command} ${args.join(' ')}`);
 
 				// Use unbuffered output for real-time data
 				const modifiedConfig = {
@@ -61,7 +61,7 @@ export class ProcessManager {
 				}
 
 				logInfo(
-					`✅ USRP process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
+					`[OK] USRP process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
 				);
 
 				// Attach event handlers to the process
@@ -348,7 +348,7 @@ export class ProcessManager {
 		// Force cleanup all USRP processes
 		await this.forceCleanupAll();
 
-		logInfo('✅ Force process kill completed');
+		logInfo('[OK] Force process kill completed');
 	}
 
 	/**

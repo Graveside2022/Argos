@@ -67,7 +67,7 @@ def main():
                 best_freq = freq
             
             if frames > 10:
-                print(f"✓ FOUND GSM SIGNAL: {freq} MHz with {frames} frames!")
+                print(f"[PASS] FOUND GSM SIGNAL: {freq} MHz with {frames} frames!")
             
             time.sleep(1)
     

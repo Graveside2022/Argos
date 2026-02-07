@@ -14,11 +14,11 @@ SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:c0:ca:b6:84:a
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:c0:ca:b6:82:35", NAME="wlan_monitor"
 EOF
 
-echo "✓ Created udev rules for interface renaming"
+echo "[PASS] Created udev rules for interface renaming"
 
 # Reload udev rules
 sudo udevadm control --reload-rules
-echo "✓ Reloaded udev rules"
+echo "[PASS] Reloaded udev rules"
 
 echo ""
 echo "Interface naming setup complete!"

@@ -13,7 +13,7 @@ MACAddress=be:e1:d6:9f:a8:11
 Alias=wlan1_kismet
 EOF
 
-echo "✓ Permanent alias configuration created"
+echo "[PASS] Permanent alias configuration created"
 echo ""
 echo "To apply:"
 echo "1. Restart networking: sudo systemctl restart systemd-networkd"

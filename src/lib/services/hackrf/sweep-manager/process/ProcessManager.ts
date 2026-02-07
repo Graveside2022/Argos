@@ -41,7 +41,7 @@ export class ProcessManager {
 			try {
 				// Event handlers are set, proceeding with spawn
 
-				logInfo(`🚀 Spawning real hackrf_sweep with args: ${args.join(' ')}`);
+				logInfo(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
 
 				// Use unbuffered output for real-time data
 				const modifiedConfig = {
@@ -59,7 +59,7 @@ export class ProcessManager {
 				const __dirname = dirname(__filename);
 				const scriptPath = join(__dirname, 'auto_sweep.sh');
 
-				logInfo(`📁 Script path resolved to: ${scriptPath}`);
+				logInfo(`[FILE] Script path resolved to: ${scriptPath}`);
 
 				// Spawning process with modified config
 
@@ -77,7 +77,7 @@ export class ProcessManager {
 				}
 
 				logInfo(
-					`✅ Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
+					`[OK] Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
 				);
 
 				// Attach event handlers to the process
@@ -401,7 +401,7 @@ export class ProcessManager {
 		// Force cleanup all hackrf processes
 		await this.forceCleanupAll();
 
-		logInfo('✅ Force process kill completed');
+		logInfo('[OK] Force process kill completed');
 	}
 
 	/**

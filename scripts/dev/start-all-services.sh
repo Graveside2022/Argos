@@ -29,20 +29,20 @@ log() {
 }
 
 success() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] ✅ $1${NC}"
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] [OK] $1${NC}"
 }
 
 warning() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] ⚠️  $1${NC}"
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] [WARN]  $1${NC}"
 }
 
 error() {
-    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ❌ $1${NC}"
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1${NC}"
 }
 
 # Cleanup function
 cleanup() {
-    echo -e "\n${YELLOW}🛑 Shutting down all services...${NC}"
+    echo -e "\n${YELLOW}[STOP] Shutting down all services...${NC}"
     
     if [ ! -z "$ARGOS_PID" ]; then
         kill $ARGOS_PID 2>/dev/null && success "Argos main app stopped"
@@ -61,7 +61,7 @@ cleanup() {
     pkill -f "python.*app.py" 2>/dev/null || true
     pkill -f "npm.*start.*3000" 2>/dev/null || true
     
-    echo -e "${PURPLE}Thanks for using Argos + HackRF Emitter! 🚀${NC}"
+    echo -e "${PURPLE}Thanks for using Argos + HackRF Emitter! [START]${NC}"
     exit 0
 }
 
@@ -201,12 +201,12 @@ start_argos_app() {
 show_status() {
     echo ""
     echo "==========================================="
-    echo "  🚀 Argos + HackRF Emitter System Status"
+    echo "  [START] Argos + HackRF Emitter System Status"
     echo "==========================================="
     echo ""
-    echo "✅ Main Argos App:     http://100.79.154.94:5173"
-    echo "✅ HackRF Frontend:    http://100.79.154.94:3000"
-    echo "✅ HackRF Backend:     http://100.79.154.94:5000"
+    echo "[OK] Main Argos App:     http://100.79.154.94:5173"
+    echo "[OK] HackRF Frontend:    http://100.79.154.94:3000"
+    echo "[OK] HackRF Backend:     http://100.79.154.94:5000"
     echo ""
     echo "Process IDs:"
     echo "  Argos:            $ARGOS_PID"
@@ -218,7 +218,7 @@ show_status() {
     echo "  HackRF Backend:   $HACKRF_BACKEND_DIR/backend_startup.log"
     echo "  HackRF Frontend:  $HACKRF_FRONTEND_DIR/frontend_startup.log"
     echo ""
-    echo "🎯 Quick Access:"
+    echo "[TARGET] Quick Access:"
     echo "  - Navigate to http://100.79.154.94:5173 for main dashboard"
     echo "  - Click 'RF Emitter' to open HackRF interface"
     echo "  - All services will stay running until you press Ctrl+C"
@@ -227,7 +227,7 @@ show_status() {
 
 # Main execution
 main() {
-    echo -e "${PURPLE}🚀 Starting Argos + HackRF Emitter System${NC}"
+    echo -e "${PURPLE}[START] Starting Argos + HackRF Emitter System${NC}"
     echo -e "${BLUE}Complete RF Analysis and Signal Generation Platform${NC}"
     echo ""
     
@@ -241,7 +241,7 @@ main() {
     
     show_status
     
-    success "🎉 All services started successfully!"
+    success "[DONE] All services started successfully!"
     echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
     echo ""
     

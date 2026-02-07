@@ -53,10 +53,10 @@ echo "Testing configuration..."
 
 # Check if Kismet can parse the config (with timeout to prevent hanging)
 if sudo timeout 5 kismet --check-config 2>&1 | grep -q "ERROR"; then
-    echo "⚠️  Configuration error detected!"
+    echo "[WARN]  Configuration error detected!"
     sudo timeout 5 kismet --check-config 2>&1 | grep "ERROR"
 else
-    echo "✓ Configuration is valid"
+    echo "[PASS] Configuration is valid"
 fi
 
 echo ""

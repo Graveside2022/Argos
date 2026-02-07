@@ -44,7 +44,7 @@ timeout 3 uhd_rx_cfile -f 947.2e6 -r 2e6 -g 60 -N 2000000 --ant="RX2" /tmp/test_
 
 if [ -f /tmp/test_rx2.dat ]; then
     SIZE=$(ls -lh /tmp/test_rx2.dat | awk '{print $5}')
-    echo "✓ Received $SIZE on RX2 antenna"
+    echo "[PASS] Received $SIZE on RX2 antenna"
     rm /tmp/test_rx2.dat
 fi
 

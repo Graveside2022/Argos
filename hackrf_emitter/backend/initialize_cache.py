@@ -23,7 +23,7 @@ def check_venv():
         # Try to activate the virtual environment
         venv_python = os.path.join(venv_path, 'bin', 'python3')
         if os.path.exists(venv_python):
-            print("⚠️  Virtual environment detected but not activated.")
+            print("[WARN]  Virtual environment detected but not activated.")
             print("   Please run this script using: ./run_cache_init.sh")
             print("   Or activate the virtual environment manually:")
             print(f"   source {venv_path}/bin/activate")
@@ -40,14 +40,14 @@ from rf_workflows.universal_signal_cache import initialize_universal_cache, get_
 
 def main():
     """Initialize the universal signal cache"""
-    print("🚀 HackRF Emitter - Universal Signal Cache Initialization")
+    print("[START] HackRF Emitter - Universal Signal Cache Initialization")
     print("=" * 60)
     
     # Check if force regeneration is requested
     force_regenerate = '--force' in sys.argv or '-f' in sys.argv
     
     if force_regenerate:
-        print("⚠️  Force regeneration requested - all cached signals will be regenerated")
+        print("[WARN]  Force regeneration requested - all cached signals will be regenerated")
         response = input("Are you sure you want to regenerate all signals? (y/N): ")
         if response.lower() != 'y':
             print("Cancelled.")
@@ -61,18 +61,18 @@ def main():
         cache = get_universal_cache()
         initial_status = cache.get_cache_status()
         
-        print(f"\n📊 Initial Cache Status:")
+        print(f"\n[STATUS] Initial Cache Status:")
         print(f"   Cached signals: {initial_status['existing_files']}/{initial_status['total_configs']}")
         print(f"   Cache size: {initial_status['total_size_mb']:.1f} MB")
         print(f"   Cache directory: {initial_status['cache_dir']}")
         
         if initial_status['existing_files'] == initial_status['total_configs'] and not force_regenerate:
-            print("\n✅ All signals already cached! Ready for instant transmission.")
+            print("\n[OK] All signals already cached! Ready for instant transmission.")
             print(f"   Signal types: {initial_status['type_counts']}")
             return 0
         
         # Initialize with pre-generation
-        print("\n🔨 Pre-generating RF signals for instant transmission...")
+        print("\n[BUILD] Pre-generating RF signals for instant transmission...")
         print("   This may take several minutes on first run.")
         print("   Progress will be shown below:\n")
         
@@ -93,7 +93,7 @@ def main():
         final_status = cache.get_cache_status()
         total_time = time.time() - start_time
         
-        print(f"\n✅ Cache initialization complete!")
+        print(f"\n[OK] Cache initialization complete!")
         print(f"   Total signals: {final_status['existing_files']}")
         print(f"   Total size: {final_status['total_size_mb']:.1f} MB")
         print(f"   Time taken: {total_time:.1f} seconds")
@@ -101,17 +101,17 @@ def main():
         for signal_type, count in final_status['type_counts'].items():
             print(f"     - {signal_type}: {count} signals")
         
-        print(f"\n🎯 HackRF Emitter is ready for instant transmission!")
+        print(f"\n[TARGET] HackRF Emitter is ready for instant transmission!")
         print(f"   All signals are pre-generated and cached.")
         print(f"   Transmissions will start immediately when triggered.")
         
         return 0
         
     except KeyboardInterrupt:
-        print("\n\n⚠️  Cache initialization interrupted by user.")
+        print("\n\n[WARN]  Cache initialization interrupted by user.")
         return 1
     except Exception as e:
-        print(f"\n❌ Error during cache initialization: {e}")
+        print(f"\n[ERROR] Error during cache initialization: {e}")
         import traceback
         traceback.print_exc()
         return 1

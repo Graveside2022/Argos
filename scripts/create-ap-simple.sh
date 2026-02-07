@@ -45,11 +45,11 @@ sleep 3
 
 # Check if running
 if pgrep -f create_ap > /dev/null; then
-    echo "✓ Argos AP is running!"
+    echo "[PASS] Argos AP is running!"
     echo "SSID: Argos"
     echo "Password: password"
     echo "Connect and SSH to: 192.168.12.1"
 else
-    echo "✗ Failed to start AP"
+    echo "[FAIL] Failed to start AP"
     echo "Check logs: /var/log/argos-ap.log"
 fi

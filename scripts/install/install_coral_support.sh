@@ -4,10 +4,10 @@
 
 set -e
 
-echo "🚀 Installing Coral TPU Support for RSSI Localization"
+echo "[START] Installing Coral TPU Support for RSSI Localization"
 
 # 1. Install Python 3.9 (required for Coral libraries)
-echo "📦 Installing Python 3.9..."
+echo "[PKG] Installing Python 3.9..."
 sudo apt-get update
 sudo apt-get install -y software-properties-common
 sudo add-apt-repository -y ppa:deadsnakes/ppa
@@ -15,27 +15,27 @@ sudo apt-get update
 sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
 
 # 2. Create Coral virtual environment
-echo "🐍 Creating Python environment for Coral..."
+echo "[PYTHON] Creating Python environment for Coral..."
 python3.9 -m venv /home/ubuntu/projects/Argos/.coral_env
 
 # 3. Install Coral libraries
-echo "📚 Installing Coral libraries..."
+echo "[LIB] Installing Coral libraries..."
 source /home/ubuntu/projects/Argos/.coral_env/bin/activate
 pip install --upgrade pip wheel
 pip install numpy pillow
 pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0 tflite-runtime~=2.5
 
 # 4. Set up udev rules for non-root access
-echo "⚙️ Setting up device permissions..."
+echo "[CONFIG] Setting up device permissions..."
 sudo bash -c 'echo "SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"1a6e\", MODE=\"0666\"" > /etc/udev/rules.d/99-coral.rules'
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
 # 5. Create model directory
-echo "📁 Creating model directory..."
+echo "[FILE] Creating model directory..."
 mkdir -p /home/ubuntu/projects/Argos/models
 
 # 6. Create a simple test model (placeholder)
-echo "🧠 Creating placeholder model..."
+echo "[AI] Creating placeholder model..."
 cat > /home/ubuntu/projects/Argos/models/README.md << 'EOF'
 # RSSI Prediction Models
 
@@ -50,12 +50,12 @@ For testing, the system will use the mock predictor if no model is found.
 EOF
 
 # 7. Test the installation
-echo "🧪 Testing Coral setup..."
+echo "[TEST] Testing Coral setup..."
 source /home/ubuntu/projects/Argos/.coral_env/bin/activate
-python3 -c "import pycoral; import tflite_runtime; print('✅ Coral libraries installed successfully')"
+python3 -c "import pycoral; import tflite_runtime; print('[OK] Coral libraries installed successfully')"
 
 # 8. Create systemd service (optional, for production)
-echo "📋 Creating systemd service template..."
+echo "[INFO] Creating systemd service template..."
 cat > /home/ubuntu/projects/Argos/coral-worker.service << 'EOF'
 [Unit]
 Description=Coral TPU Worker for RSSI Localization
@@ -74,7 +74,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-echo "✅ Coral TPU support installed!"
+echo "[OK] Coral TPU support installed!"
 echo ""
 echo "Next steps:"
 echo "1. Plug in your Coral USB Accelerator"

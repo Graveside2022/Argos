@@ -7,11 +7,11 @@ echo ""
 # Check if grgsm_livemon is running
 echo "1. Checking grgsm_livemon process..."
 if pgrep -f grgsm_livemon > /dev/null; then
-    echo "   ✓ grgsm_livemon is running"
+    echo "   [PASS] grgsm_livemon is running"
     FREQ=$(ps aux | grep -E "grgsm_livemon.*-f" | grep -v grep | sed -n 's/.*-f \([0-9.]*\).*/\1/p')
     echo "   Current frequency: $FREQ"
 else
-    echo "   ✗ grgsm_livemon is NOT running"
+    echo "   [FAIL] grgsm_livemon is NOT running"
 fi
 echo ""
 
@@ -19,10 +19,10 @@ echo ""
 echo "2. Checking GSMTAP interface..."
 GSMTAP_PACKETS=$(sudo timeout 2 tcpdump -i lo -c 10 port 4729 2>&1 | grep -c "127.0.0.1.4729")
 if [ $GSMTAP_PACKETS -gt 0 ]; then
-    echo "   ✓ GSMTAP packets detected on localhost:4729"
+    echo "   [PASS] GSMTAP packets detected on localhost:4729"
     echo "   Packets in 2 seconds: $GSMTAP_PACKETS"
 else
-    echo "   ✗ No GSMTAP packets detected"
+    echo "   [FAIL] No GSMTAP packets detected"
 fi
 echo ""
 
@@ -94,20 +94,20 @@ echo "6. Recommendations:"
 echo "   Based on the analysis:"
 
 if [ $TOTAL_PACKETS -eq 0 ]; then
-    echo "   ✗ No GSM packets detected - check if grgsm_livemon is running"
-    echo "   ✗ Try different frequencies or check your antenna"
+    echo "   [FAIL] No GSM packets detected - check if grgsm_livemon is running"
+    echo "   [FAIL] Try different frequencies or check your antenna"
 elif [ $IMSI_COUNT -eq 0 ]; then
-    echo "   ⚠ GSM traffic detected but no IMSIs captured"
+    echo "   [WARN] GSM traffic detected but no IMSIs captured"
     echo "   - This is normal if no phones are actively connecting"
     echo "   - Try during busy hours when phones are more active"
     echo "   - Consider trying different frequencies"
     echo "   - Identity Requests are needed to capture IMSIs"
     
     if [ $PAGING_COUNT -gt 0 ]; then
-        echo "   ✓ Paging requests detected - the channel is active"
+        echo "   [PASS] Paging requests detected - the channel is active"
     fi
 else
-    echo "   ✓ System is working correctly - IMSIs are being captured"
+    echo "   [PASS] System is working correctly - IMSIs are being captured"
 fi
 
 echo ""

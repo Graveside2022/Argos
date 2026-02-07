@@ -8,7 +8,7 @@ echo "Auto-starting Kismet..."
 
 # Check if Kismet is already running
 if pgrep -f "kismet" > /dev/null; then
-    echo "✅ Kismet is already running"
+    echo "[OK] Kismet is already running"
     echo "   Web interface: http://localhost:2501"
     exit 0
 fi
@@ -21,10 +21,10 @@ sleep 3
 
 # Verify Kismet is running
 if pgrep -f "kismet" > /dev/null; then
-    echo "✅ Kismet started successfully"
+    echo "[OK] Kismet started successfully"
     echo "   Web interface: http://localhost:2501"
     echo "   Configure data sources via web interface"
 else
-    echo "❌ Failed to start Kismet"
+    echo "[ERROR] Failed to start Kismet"
     exit 1
 fi

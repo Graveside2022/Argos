@@ -92,23 +92,23 @@ sleep 15
 # Verify the setup
 echo "4. Verifying setup..."
 if curl -s http://localhost:8073 > /dev/null; then
-    echo "✅ OpenWebRX is accessible at http://localhost:8073"
+    echo "[OK] OpenWebRX is accessible at http://localhost:8073"
 else
-    echo "❌ OpenWebRX is not accessible"
+    echo "[ERROR] OpenWebRX is not accessible"
     exit 1
 fi
 
 if curl -s http://localhost:5173/viewspectrum > /dev/null; then
-    echo "✅ Argos spectrum viewer is accessible at http://localhost:5173/viewspectrum"
+    echo "[OK] Argos spectrum viewer is accessible at http://localhost:5173/viewspectrum"
 else
-    echo "❌ Argos spectrum viewer is not accessible"
+    echo "[ERROR] Argos spectrum viewer is not accessible"
     exit 1
 fi
 
 echo
 echo "=== Setup Complete! ==="
-echo "🎯 Mission Card URL Ready: http://100.79.154.94:5173/viewspectrum"
-echo "🔑 Admin Access: admin/admin at http://localhost:8073/admin"
-echo "📡 USRP B205 Mini: Configured and ready for immediate operation"
-echo "🚀 Click the mission card - it should start listening immediately!"
+echo "[TARGET] Mission Card URL Ready: http://100.79.154.94:5173/viewspectrum"
+echo "[KEY] Admin Access: admin/admin at http://localhost:8073/admin"
+echo "[RF] USRP B205 Mini: Configured and ready for immediate operation"
+echo "[START] Click the mission card - it should start listening immediately!"
 echo

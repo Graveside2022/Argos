@@ -37,7 +37,7 @@ export async function initializeServices(options: InitializationOptions = {}): P
     enableRecovery = true
   } = options;
   
-  // 🚀 Initializing services...
+  // [START] Initializing services...
   
   try {
     // Initialize error recovery first

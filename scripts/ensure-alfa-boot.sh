@@ -19,7 +19,7 @@ mt792x_usb
 mt7921_common
 mt7921u
 EOF
-echo "✓ Kernel modules configured"
+echo "[PASS] Kernel modules configured"
 
 # 2. Create modprobe configuration for module options
 echo ""
@@ -31,7 +31,7 @@ options mt76_usb disable_usb_sg=1
 # Disable power management for stability
 options mt7921_common power_save=0
 EOF
-echo "✓ Module parameters set"
+echo "[PASS] Module parameters set"
 
 # 3. Create udev rule for adapter detection
 echo ""
@@ -48,7 +48,7 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="0e8d", ATTRS{idProduct}=="7961", RUN+="/usr/
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0e8d", ATTRS{idProduct}=="7961", TEST=="power/control", ATTR{power/control}="on"
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0e8d", ATTRS{idProduct}=="7961", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
 EOF
-echo "✓ Udev rules created"
+echo "[PASS] Udev rules created"
 
 # 4. Create detection scripts
 echo ""
@@ -79,7 +79,7 @@ fi
 EOF
 sudo chmod +x /usr/local/bin/alfa-usb-detected.sh
 
-echo "✓ Detection scripts created"
+echo "[PASS] Detection scripts created"
 
 # 5. Create systemd service for boot-time verification
 echo ""
@@ -156,7 +156,7 @@ exit 1
 EOF
 sudo chmod +x /usr/local/bin/verify-alfa-boot.sh
 
-echo "✓ Boot verification service created"
+echo "[PASS] Boot verification service created"
 
 # 6. Create NetworkManager configuration to ignore the adapter
 echo ""
@@ -167,7 +167,7 @@ sudo tee /etc/NetworkManager/conf.d/99-alfa-unmanaged.conf > /dev/null << 'EOF'
 # Ignore ALFA adapter - let Kismet manage it
 unmanaged-devices=mac:be:e1:d6:9f:a8:11
 EOF
-echo "✓ NetworkManager configured"
+echo "[PASS] NetworkManager configured"
 
 # 7. Ensure USB autosuspend is disabled globally
 echo ""
@@ -177,9 +177,9 @@ echo "Step 7: Disabling USB autosuspend..."
 if ! grep -q "usbcore.autosuspend=-1" /boot/firmware/cmdline.txt 2>/dev/null; then
     sudo cp /boot/firmware/cmdline.txt /boot/firmware/cmdline.txt.backup
     sudo sed -i 's/$/ usbcore.autosuspend=-1/' /boot/firmware/cmdline.txt
-    echo "✓ Added kernel parameter (requires reboot)"
+    echo "[PASS] Added kernel parameter (requires reboot)"
 else
-    echo "✓ Kernel parameter already set"
+    echo "[PASS] Kernel parameter already set"
 fi
 
 # 8. Create fallback reset script
@@ -223,7 +223,7 @@ fi
 EOF
 sudo chmod +x /usr/local/bin/alfa-emergency-reset.sh
 
-echo "✓ Emergency reset script created"
+echo "[PASS] Emergency reset script created"
 
 # 9. Enable and reload services
 echo ""
@@ -233,20 +233,20 @@ sudo systemctl daemon-reload
 sudo systemctl enable alfa-boot-verify.service
 sudo udevadm control --reload-rules
 
-echo "✓ Services enabled"
+echo "[PASS] Services enabled"
 
 # 10. Summary
 echo ""
 echo "=== CONFIGURATION COMPLETE ==="
 echo ""
 echo "Boot reliability measures implemented:"
-echo "1. ✓ Kernel modules load at boot (/etc/modules-load.d/mt7921u.conf)"
-echo "2. ✓ Module parameters optimized (/etc/modprobe.d/mt7921u-options.conf)"
-echo "3. ✓ Udev rules for detection (/etc/udev/rules.d/90-alfa-mt7921u.rules)"
-echo "4. ✓ Boot verification service (alfa-boot-verify.service)"
-echo "5. ✓ NetworkManager exclusion"
-echo "6. ✓ USB autosuspend disabled"
-echo "7. ✓ Emergency reset script (/usr/local/bin/alfa-emergency-reset.sh)"
+echo "1. [PASS] Kernel modules load at boot (/etc/modules-load.d/mt7921u.conf)"
+echo "2. [PASS] Module parameters optimized (/etc/modprobe.d/mt7921u-options.conf)"
+echo "3. [PASS] Udev rules for detection (/etc/udev/rules.d/90-alfa-mt7921u.rules)"
+echo "4. [PASS] Boot verification service (alfa-boot-verify.service)"
+echo "5. [PASS] NetworkManager exclusion"
+echo "6. [PASS] USB autosuspend disabled"
+echo "7. [PASS] Emergency reset script (/usr/local/bin/alfa-emergency-reset.sh)"
 echo ""
 echo "The ALFA adapter will now:"
 echo "• Load required modules at boot"

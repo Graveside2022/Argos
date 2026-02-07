@@ -61,11 +61,11 @@ sleep 3
 
 # Check if services are running
 if ps -p $GRGSM_PID > /dev/null 2>&1 && ps -p $GSMEVIL_PID > /dev/null 2>&1; then
-    echo "✓ GSM Evil started with IMSI sniffer AUTO-ENABLED on port 8080!"
+    echo "[PASS] GSM Evil started with IMSI sniffer AUTO-ENABLED on port 8080!"
     echo "  Access from: http://$(hostname -I | awk '{print $1}'):8080"
     exit 0
 else
-    echo "✗ Failed to start GSM Evil services"
+    echo "[FAIL] Failed to start GSM Evil services"
     # Clean up if failed
     kill $GRGSM_PID 2>/dev/null || true
     kill $GSMEVIL_PID 2>/dev/null || true

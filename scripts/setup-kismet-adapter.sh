@@ -47,7 +47,7 @@ sudo ip link set "$ADAPTER" up
 
 # Check status
 if ip link show "$ADAPTER" | grep -q "UP"; then
-    echo "✓ Adapter $ADAPTER is ready for Kismet"
+    echo "[PASS] Adapter $ADAPTER is ready for Kismet"
     
     # Add to Kismet if running
     if systemctl is-active kismet >/dev/null 2>&1; then
@@ -56,7 +56,7 @@ if ip link show "$ADAPTER" | grep -q "UP"; then
              -d "json={\"source\":\"${ADAPTER}:type=linuxwifi\"}" || true
     fi
 else
-    echo "✗ Failed to bring up adapter"
+    echo "[FAIL] Failed to bring up adapter"
     exit 1
 fi
 

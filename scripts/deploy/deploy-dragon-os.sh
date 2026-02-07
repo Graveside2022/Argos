@@ -491,7 +491,7 @@ print_summary() {
     echo ""
     echo -e "${GREEN}Ready for SDR operations on Dragon OS!${NC}"
     echo ""
-    echo -e "${YELLOW}⚠️  IMPORTANT: You may need to logout/reboot for group permissions to take effect${NC}"
+    echo -e "${YELLOW}[WARN]  IMPORTANT: You may need to logout/reboot for group permissions to take effect${NC}"
     echo ""
 }
 

@@ -148,9 +148,9 @@
   <!-- Connection Status -->
   <div class="status-bar" class:connected={$allConnected}>
     {#if $allConnected}
-      <span>✓ All systems connected</span>
+      <span>[PASS] All systems connected</span>
     {:else}
-      <span>⚠ Connection issues</span>
+      <span>[WARN] Connection issues</span>
       {#each $connectionErrors as error}
         <p class="error">{error}</p>
       {/each}

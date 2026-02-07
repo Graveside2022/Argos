@@ -25,7 +25,7 @@ if ! ps -p $GRGSM_PID > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "✓ grgsm_livemon is running (PID: $GRGSM_PID)"
+echo "[PASS] grgsm_livemon is running (PID: $GRGSM_PID)"
 
 # Step 2: Change to GSMEvil2 directory
 cd /usr/src/gsmevil2 || {

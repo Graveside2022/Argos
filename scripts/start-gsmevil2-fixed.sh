@@ -93,7 +93,7 @@ if ! ps -p $GRGSM_PID > /dev/null 2>&1; then
     exit 1
 fi
 
-echo -e "${GREEN}✓ gr-gsm_livemon started (PID: $GRGSM_PID)${NC}"
+echo -e "${GREEN}[PASS] gr-gsm_livemon started (PID: $GRGSM_PID)${NC}"
 
 # Step 7: Start GSMEvil2 (following YouTube tutorial)
 echo -e "${GREEN}Starting GSMEvil2 web interface...${NC}"
@@ -123,17 +123,17 @@ echo -e "${YELLOW}Verifying services...${NC}"
 
 # Check gr-gsm
 if ps -p $GRGSM_PID > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ gr-gsm_livemon is running${NC}"
+    echo -e "${GREEN}[PASS] gr-gsm_livemon is running${NC}"
 else
-    echo -e "${RED}✗ gr-gsm_livemon failed to start${NC}"
+    echo -e "${RED}[FAIL] gr-gsm_livemon failed to start${NC}"
 fi
 
 # Check GSMEvil2
 if ps -p $GSMEVIL_PID > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ GSMEvil2 is running${NC}"
-    echo -e "${GREEN}✓ Web interface available at: http://$(hostname -I | awk '{print $1}'):${PORT}${NC}"
+    echo -e "${GREEN}[PASS] GSMEvil2 is running${NC}"
+    echo -e "${GREEN}[PASS] Web interface available at: http://$(hostname -I | awk '{print $1}'):${PORT}${NC}"
 else
-    echo -e "${RED}✗ GSMEvil2 failed to start${NC}"
+    echo -e "${RED}[FAIL] GSMEvil2 failed to start${NC}"
     echo "Check logs at: $LOG_DIR/gsmevil2.log"
     tail -10 "$LOG_DIR/gsmevil2.log"
     exit 1

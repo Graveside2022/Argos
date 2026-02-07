@@ -48,14 +48,14 @@ echo $GSMEVIL_PID | sudo tee /tmp/gsmevil.pid >/dev/null
 
 sleep 3
 
-echo "✓ GSM Evil started with IMSI sniffer AUTO-ENABLED!"
+echo "[PASS] GSM Evil started with IMSI sniffer AUTO-ENABLED!"
 echo "  Access from: http://100.79.154.94/gsm-evil"
 echo "  Direct access: http://100.79.154.94:80"
 echo "  IMSI sniffer: ENABLED by default"
 echo ""
 echo "Checking database..."
 if [ -f "/usr/src/gsmevil2/database/imsi.db" ]; then
-    echo "  ✓ IMSI database exists"
+    echo "  [PASS] IMSI database exists"
 else
-    echo "  ⚠ IMSI database will be created when first IMSI is captured"
+    echo "  [WARN] IMSI database will be created when first IMSI is captured"
 fi

@@ -41,7 +41,7 @@ export class KismetRSSIService {
         // Try to use Coral-accelerated localizer
         this.localizer = new HybridRSSILocalizer();
         await this.localizer.initialize();
-        console.log('✅ RSSI Localization initialized with Coral TPU acceleration');
+        console.log('[OK] RSSI Localization initialized with Coral TPU acceleration');
       } catch (error) {
         console.warn('Failed to initialize Coral TPU, falling back to CPU:', error);
         this.config.useCoralTPU = false;

@@ -13,13 +13,13 @@ if [ -d "/sys/class/net/wlan0" ]; then
     if [ -f "/sys/class/net/wlan0/operstate" ]; then
         STATE=$(cat /sys/class/net/wlan0/operstate)
         if [ "$STATE" = "up" ]; then
-            echo "✓ wlan0 is UP and SAFE (will NOT be touched)"
+            echo "[PASS] wlan0 is UP and SAFE (will NOT be touched)"
         else
-            echo "⚠️  WARNING: wlan0 appears down - be careful!"
+            echo "[WARN]  WARNING: wlan0 appears down - be careful!"
         fi
     fi
 else
-    echo "ℹ️  wlan0 not present"
+    echo "[INFO]  wlan0 not present"
 fi
 echo ""
 
@@ -31,7 +31,7 @@ if [ -f "/workspace/scripts/detect-alfa-adapter.sh" ]; then
     /workspace/scripts/detect-alfa-adapter.sh
     ALFA_DETECTED=$?
 else
-    echo "❌ Alfa detection script not found!"
+    echo "[ERROR] Alfa detection script not found!"
     ALFA_DETECTED=1
 fi
 
@@ -40,7 +40,7 @@ if [ $ALFA_DETECTED -eq 0 ] && [ -n "$ALFA_INTERFACE" ]; then
     echo ""
     echo "3. Interface Status for $ALFA_INTERFACE:"
     if [ -d "/sys/class/net/$ALFA_INTERFACE" ]; then
-        echo "✓ Interface $ALFA_INTERFACE exists"
+        echo "[PASS] Interface $ALFA_INTERFACE exists"
         if [ -f "/sys/class/net/$ALFA_INTERFACE/operstate" ]; then
             STATE=$(cat /sys/class/net/$ALFA_INTERFACE/operstate)
             echo "   State: $STATE"
@@ -52,11 +52,11 @@ echo ""
 # 4. Check for monitor interface
 echo "4. Monitor Interface Check:"
 if ip link show | grep -q "kismon0"; then
-    echo "⚠️  Found leftover monitor interface kismon0"
+    echo "[WARN]  Found leftover monitor interface kismon0"
     echo "   This may cause issues - consider removing with:"
     echo "   sudo iw dev kismon0 del"
 else
-    echo "✓ No leftover monitor interfaces"
+    echo "[PASS] No leftover monitor interfaces"
 fi
 echo ""
 
@@ -71,10 +71,10 @@ if [ -f /sys/bus/usb/devices/2-2/power/control ]; then
     POWER=$(cat /sys/bus/usb/devices/2-2/power/control)
     echo "   Power control: $POWER"
     if [ "$POWER" = "auto" ]; then
-        echo "   ⚠️  Auto-suspend is enabled (may cause disconnects)"
+        echo "   [WARN]  Auto-suspend is enabled (may cause disconnects)"
         echo "   Fix with: echo 'on' | sudo tee /sys/bus/usb/devices/2-2/power/control"
     else
-        echo "   ✓ Auto-suspend is disabled"
+        echo "   [PASS] Auto-suspend is disabled"
     fi
 fi
 echo ""
@@ -82,21 +82,21 @@ echo ""
 # 7. Driver module status
 echo "7. Driver Status:"
 if lsmod | grep -q "mt76x2u"; then
-    echo "✓ mt76x2u driver loaded"
+    echo "[PASS] mt76x2u driver loaded"
     USAGE=$(lsmod | grep mt76x2u | awk '{print $3}')
     echo "   Usage count: $USAGE"
 else
-    echo "❌ mt76x2u driver NOT loaded!"
+    echo "[ERROR] mt76x2u driver NOT loaded!"
 fi
 echo ""
 
 # 8. Kismet process check
 echo "8. Kismet Status:"
 if pgrep kismet > /dev/null; then
-    echo "⚠️  Kismet is running (PID: $(pgrep kismet))"
+    echo "[WARN]  Kismet is running (PID: $(pgrep kismet))"
     echo "   Consider stopping it before adapter reset"
 else
-    echo "✓ Kismet is not running"
+    echo "[PASS] Kismet is not running"
 fi
 echo ""
 
@@ -108,4 +108,4 @@ echo "3. Reset the adapter: sudo ifconfig $IFACE down && sleep 2 && sudo ifconfi
 echo "4. If still failing, try unplugging and replugging the USB adapter"
 echo "5. Check USB port - try a different port if available"
 echo ""
-echo "⚠️  NEVER run commands that affect wlan0!"
+echo "[WARN]  NEVER run commands that affect wlan0!"

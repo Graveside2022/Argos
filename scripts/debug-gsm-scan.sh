@@ -5,7 +5,7 @@ echo
 
 # Check which device we're using
 if uhd_find_devices 2>&1 | grep -q "B205"; then
-    echo "✓ USRP B205 Mini detected"
+    echo "[PASS] USRP B205 Mini detected"
     DEVICE="USRP"
     ARGS='--args="type=b200"'
 else
@@ -29,9 +29,9 @@ sleep 5
 
 # Check if it's still running
 if ps -p $PID > /dev/null; then
-    echo "✓ Process is running (PID: $PID)"
+    echo "[PASS] Process is running (PID: $PID)"
 else
-    echo "✗ Process died - checking error output:"
+    echo "[FAIL] Process died - checking error output:"
     sudo grgsm_livemon_headless $ARGS -f 947.2M -g 50 2>&1 | head -50
     exit 1
 fi

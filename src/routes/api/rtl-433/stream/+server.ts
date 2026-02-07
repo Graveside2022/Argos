@@ -41,7 +41,7 @@ export const GET: RequestHandler = async () => {
 				const rtlPid = lines[0].trim().split(/\s+/)[1];
 				controller.enqueue(
 					encoder.encode(
-						`data: {"type":"console","message":"🔥 RTL_433 Active (PID: ${rtlPid}) - Live Signal Feed"}\n\n`
+						`data: {"type":"console","message":"[CRITICAL] RTL_433 Active (PID: ${rtlPid}) - Live Signal Feed"}\n\n`
 					)
 				);
 
@@ -64,7 +64,7 @@ export const GET: RequestHandler = async () => {
 				if (!activeLogFile) {
 					controller.enqueue(
 						encoder.encode(
-							'data: {"type":"console","message":"⚠️ No RTL_433 log file found. Output not available."}\n\n'
+							'data: {"type":"console","message":"[WARN] No RTL_433 log file found. Output not available."}\n\n'
 						)
 					);
 					controller.close();
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async () => {
 
 				controller.enqueue(
 					encoder.encode(
-						`data: {"type":"console","message":"📡 Streaming from: ${activeLogFile}"}\n\n`
+						`data: {"type":"console","message":"[RF] Streaming from: ${activeLogFile}"}\n\n`
 					)
 				);
 

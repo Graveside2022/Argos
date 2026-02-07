@@ -36,6 +36,6 @@ EOF
 # Set proper permissions
 chmod 0440 /etc/sudoers.d/argos-droneid
 
-echo "✓ Sudoers configured for DroneID control"
+echo "[PASS] Sudoers configured for DroneID control"
 echo ""
 echo "The web interface should now be able to start/stop DroneID"

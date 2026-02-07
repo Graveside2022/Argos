@@ -38,20 +38,20 @@ sleep 3
 
 # Verify services are running
 if ps -p $GRGSM_PID >/dev/null 2>&1; then
-    echo "✓ GSM monitor is running"
+    echo "[PASS] GSM monitor is running"
 else
-    echo "✗ GSM monitor failed to start"
+    echo "[FAIL] GSM monitor failed to start"
     exit 1
 fi
 
 # Check if port 80 is listening (GSM Evil might take a moment)
 for i in {1..5}; do
     if sudo lsof -i :80 | grep -q LISTEN; then
-        echo "✓ GSM Evil web interface is running on port 80"
+        echo "[PASS] GSM Evil web interface is running on port 80"
         break
     else
         if [ $i -eq 5 ]; then
-            echo "✗ GSM Evil web interface failed to start"
+            echo "[FAIL] GSM Evil web interface failed to start"
             # Try to see what went wrong
             echo "Checking GSM Evil process..."
             ps aux | grep -i gsmevil | grep -v grep

@@ -31,16 +31,16 @@ for freq in "${frequencies[@]}"; do
     sudo pkill -f "grgsm_livemon" 2>/dev/null
     
     if [ $CCCH -gt 0 ]; then
-        echo "✓ $freq MHz: ACTIVE - Total: $TOTAL pkts, CCCH: $CCCH, Paging: $PAGING"
+        echo "[PASS] $freq MHz: ACTIVE - Total: $TOTAL pkts, CCCH: $CCCH, Paging: $PAGING"
         echo "  ^ Good for IMSI capture!"
     elif [ $TOTAL -gt 0 ]; then
-        echo "✗ $freq MHz: Broadcast only - Total: $TOTAL pkts, No CCCH"
+        echo "[FAIL] $freq MHz: Broadcast only - Total: $TOTAL pkts, No CCCH"
     else
-        echo "✗ $freq MHz: No activity detected"
+        echo "[FAIL] $freq MHz: No activity detected"
     fi
     
     sleep 1
 done
 
 echo -e "\n================================================"
-echo "Recommendation: Use frequencies marked with ✓ for IMSI capture"
+echo "Recommendation: Use frequencies marked with [PASS] for IMSI capture"

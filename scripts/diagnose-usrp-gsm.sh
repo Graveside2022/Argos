@@ -24,7 +24,7 @@ sleep 3
 
 # Check if process is running
 if ps -p $PID > /dev/null; then
-    echo "   ✓ Process is running (PID: $PID)"
+    echo "   [PASS] Process is running (PID: $PID)"
     
     # Try to capture packets
     echo "   Capturing packets for 5 seconds..."
@@ -37,7 +37,7 @@ if ps -p $PID > /dev/null; then
         sudo timeout 3 tshark -i lo -f "port 4729" -c 10 2>&1 | head -10
     fi
 else
-    echo "   ✗ Process failed to start"
+    echo "   [FAIL] Process failed to start"
     echo "   Checking error output..."
     sudo grgsm_livemon_headless --args=type=b200 -f 947.2M -g 55 2>&1 | head -20
 fi

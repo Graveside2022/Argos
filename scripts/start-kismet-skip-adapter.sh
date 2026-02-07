@@ -17,7 +17,7 @@ ready=false
 for i in {1..20}; do
     if curl -s http://localhost:2501/ 2>/dev/null | grep -q "Kismet"; then
         ready=true
-        echo "✓ Kismet is running!"
+        echo "[PASS] Kismet is running!"
         break
     fi
     echo -n "."
@@ -26,7 +26,7 @@ done
 echo ""
 
 if [ "$ready" = false ]; then
-    echo "❌ Kismet failed to start"
+    echo "[ERROR] Kismet failed to start"
     echo "Checking status..."
     sudo systemctl status kismet-auto-wlan1 --no-pager | head -10
     exit 1
@@ -36,7 +36,7 @@ fi
 echo ""
 echo "=== Adapter Status ==="
 if ip link show wlan1 2>/dev/null; then
-    echo "✓ Adapter is present"
+    echo "[PASS] Adapter is present"
     echo ""
     echo "To add the adapter manually:"
     echo "1. Open Kismet at http://$(hostname -I | cut -d' ' -f1):2501"
@@ -44,7 +44,7 @@ if ip link show wlan1 2>/dev/null; then
     echo "3. Add source: wlan1"
     echo "4. Type: linuxwifi"
 else
-    echo "❌ Adapter not found"
+    echo "[ERROR] Adapter not found"
 fi
 
 echo ""

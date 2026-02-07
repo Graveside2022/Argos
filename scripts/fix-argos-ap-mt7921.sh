@@ -81,15 +81,15 @@ sleep 3
 
 if systemctl is-active --quiet hostapd; then
     echo ""
-    echo "✓ SUCCESS! Argos AP is running"
-    echo "✓ SSID: Argos"
-    echo "✓ Password: password"
-    echo "✓ IP: 192.168.50.1"
+    echo "[PASS] SUCCESS! Argos AP is running"
+    echo "[PASS] SSID: Argos"
+    echo "[PASS] Password: password"
+    echo "[PASS] IP: 192.168.50.1"
     echo ""
     echo "Interface status:"
     iwconfig wlan_ap 2>/dev/null | head -3
 else
     echo ""
-    echo "✗ Failed to start AP. Check logs:"
+    echo "[FAIL] Failed to start AP. Check logs:"
     echo "  sudo journalctl -u hostapd -n 20"
 fi

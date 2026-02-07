@@ -18,9 +18,9 @@ export class HybridRSSILocalizer extends RSSILocalizer {
     this.coral = await createCoralAccelerator();
     
     if (this.coral) {
-      console.log('🚀 Hybrid localizer using Coral TPU acceleration');
+      console.log('[START] Hybrid localizer using Coral TPU acceleration');
     } else {
-      console.log('⚡ Hybrid localizer using CPU only');
+      console.log('[ACTIVE] Hybrid localizer using CPU only');
     }
   }
   

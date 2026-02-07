@@ -10,16 +10,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🔍 GSM Evil Stop Mechanism Verification${NC}"
+echo -e "${BLUE}[SEARCH] GSM Evil Stop Mechanism Verification${NC}"
 echo "Testing bulletproof stop functionality..."
 echo
 
 # Test 1: Basic functionality test
 echo -e "${YELLOW}=== TEST 1: Basic Functionality ===${NC}"
 if [ -x "./scripts/gsm-evil-stop.sh" ]; then
-    echo -e "${GREEN}✓ Stop script exists and is executable${NC}"
+    echo -e "${GREEN}[PASS] Stop script exists and is executable${NC}"
 else
-    echo -e "${RED}✗ Stop script missing or not executable${NC}"
+    echo -e "${RED}[FAIL] Stop script missing or not executable${NC}"
     exit 1
 fi
 
@@ -65,9 +65,9 @@ DETECTED_GRGSM=$(ps aux | grep -E "Mock grgsm_livemon" | grep -v grep | wc -l)
 DETECTED_GSMEVIL=$(ps aux | grep -E "Mock GsmEvil" | grep -v grep | wc -l)
 
 if [ "$DETECTED_GRGSM" -eq 1 ] && [ "$DETECTED_GSMEVIL" -eq 1 ]; then
-    echo -e "${GREEN}✓ Mock processes created and detected${NC}"
+    echo -e "${GREEN}[PASS] Mock processes created and detected${NC}"
 else
-    echo -e "${RED}✗ Process detection failed (GRGSM: $DETECTED_GRGSM, GSMEvil: $DETECTED_GSMEVIL)${NC}"
+    echo -e "${RED}[FAIL] Process detection failed (GRGSM: $DETECTED_GRGSM, GSMEvil: $DETECTED_GSMEVIL)${NC}"
 fi
 
 # Test 3: Stop script execution
@@ -86,9 +86,9 @@ REMAINING_GRGSM=$(ps aux | grep -E "Mock grgsm_livemon" | grep -v grep | wc -l)
 REMAINING_GSMEVIL=$(ps aux | grep -E "Mock GsmEvil" | grep -v grep | wc -l)
 
 if [ "$REMAINING_GRGSM" -eq 0 ] && [ "$REMAINING_GSMEVIL" -eq 0 ]; then
-    echo -e "${GREEN}✓ All mock processes successfully terminated${NC}"
+    echo -e "${GREEN}[PASS] All mock processes successfully terminated${NC}"
 else
-    echo -e "${RED}✗ Some processes still running (GRGSM: $REMAINING_GRGSM, GSMEvil: $REMAINING_GSMEVIL)${NC}"
+    echo -e "${RED}[FAIL] Some processes still running (GRGSM: $REMAINING_GRGSM, GSMEvil: $REMAINING_GSMEVIL)${NC}"
     # Cleanup any remaining mock processes
     kill -9 $MOCK_GRGSM_PID 2>/dev/null || true
     kill -9 $MOCK_GSMEVIL_PID 2>/dev/null || true
@@ -97,9 +97,9 @@ fi
 # Test 5: PID file cleanup verification
 echo -e "\n${YELLOW}=== TEST 5: PID File Cleanup ===${NC}"
 if [ ! -f "/tmp/grgsm.pid" ] && [ ! -f "/tmp/gsmevil.pid" ]; then
-    echo -e "${GREEN}✓ PID files properly cleaned up${NC}"
+    echo -e "${GREEN}[PASS] PID files properly cleaned up${NC}"
 else
-    echo -e "${RED}✗ PID files not cleaned up${NC}"
+    echo -e "${RED}[FAIL] PID files not cleaned up${NC}"
     ls -la /tmp/*gsm*.pid 2>/dev/null || true
     rm -f /tmp/grgsm.pid /tmp/gsmevil.pid 2>/dev/null || true
 fi
@@ -138,44 +138,44 @@ if lsof -i :8080 >/dev/null 2>&1; then
     
     # Verify port is freed
     if ! lsof -i :8080 >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Port cleanup functionality working${NC}"
+        echo -e "${GREEN}[PASS] Port cleanup functionality working${NC}"
     else
-        echo -e "${RED}✗ Port cleanup failed${NC}"
+        echo -e "${RED}[FAIL] Port cleanup failed${NC}"
     fi
 else
-    echo -e "${RED}✗ Could not start mock HTTP server${NC}"
+    echo -e "${RED}[FAIL] Could not start mock HTTP server${NC}"
     kill -9 $HTTP_SERVER_PID 2>/dev/null || true
 fi
 
 # Test 7: Permission handling test
 echo -e "\n${YELLOW}=== TEST 7: Permission Handling ===${NC}"
 if sudo -n true 2>/dev/null; then
-    echo -e "${GREEN}✓ Passwordless sudo available - enhanced capabilities enabled${NC}"
+    echo -e "${GREEN}[PASS] Passwordless sudo available - enhanced capabilities enabled${NC}"
 else
-    echo -e "${YELLOW}⚠ Passwordless sudo not available - using fallback methods${NC}"
+    echo -e "${YELLOW}[WARN] Passwordless sudo not available - using fallback methods${NC}"
     echo "  This is expected behavior in most environments"
 fi
 
 # Test 8: API integration test
 echo -e "\n${YELLOW}=== TEST 8: API Integration Test ===${NC}"
 if [ -f "src/routes/api/gsm-evil/control/+server.ts" ]; then
-    echo -e "${GREEN}✓ API endpoint exists${NC}"
+    echo -e "${GREEN}[PASS] API endpoint exists${NC}"
     
     # Check if health endpoint was created
     if [ -f "src/routes/api/gsm-evil/health/+server.ts" ]; then
-        echo -e "${GREEN}✓ Health check endpoint exists${NC}"
+        echo -e "${GREEN}[PASS] Health check endpoint exists${NC}"
     else
-        echo -e "${YELLOW}⚠ Health check endpoint missing${NC}"
+        echo -e "${YELLOW}[WARN] Health check endpoint missing${NC}"
     fi
     
     # Check if database path resolver exists
     if [ -f "src/lib/server/gsm-database-path.ts" ]; then
-        echo -e "${GREEN}✓ Database path resolver exists${NC}"
+        echo -e "${GREEN}[PASS] Database path resolver exists${NC}"
     else
-        echo -e "${YELLOW}⚠ Database path resolver missing${NC}"
+        echo -e "${YELLOW}[WARN] Database path resolver missing${NC}"
     fi
 else
-    echo -e "${RED}✗ API endpoint missing${NC}"
+    echo -e "${RED}[FAIL] API endpoint missing${NC}"
 fi
 
 # Test 9: Error handling and resilience
@@ -187,9 +187,9 @@ echo -e "${YELLOW}Testing stop script with no processes running...${NC}"
 STOP_EXIT_CODE=$?
 
 if [ $STOP_EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}✓ Stop script handles 'no processes' scenario gracefully${NC}"
+    echo -e "${GREEN}[PASS] Stop script handles 'no processes' scenario gracefully${NC}"
 else
-    echo -e "${RED}✗ Stop script failed when no processes running (exit code: $STOP_EXIT_CODE)${NC}"
+    echo -e "${RED}[FAIL] Stop script failed when no processes running (exit code: $STOP_EXIT_CODE)${NC}"
 fi
 
 # Final cleanup
@@ -209,7 +209,7 @@ echo "• API integration components"
 echo "• Error handling and edge cases"
 echo "• Graceful handling of 'nothing to stop' scenarios"
 echo
-echo -e "${GREEN}✅ GSM Evil Bulletproof Stop Mechanism Ready for Production${NC}"
+echo -e "${GREEN}[OK] GSM Evil Bulletproof Stop Mechanism Ready for Production${NC}"
 echo
 echo "Usage:"
 echo "  Direct: ./scripts/gsm-evil-stop.sh"

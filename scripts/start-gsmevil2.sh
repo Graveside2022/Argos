@@ -15,7 +15,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${RED}🔥 Starting GSMEvil2 IMSI/SMS Catcher 🔥${NC}"
+echo -e "${RED}[CRITICAL] Starting GSMEvil2 IMSI/SMS Catcher [CRITICAL]${NC}"
 
 # Check if GSMEvil2 is already running
 if [ -f "$PID_FILE" ]; then
@@ -82,11 +82,11 @@ if ! pgrep -f "grgsm_livemon" > /dev/null; then
     # Wait and verify it started
     sleep 3
     if ! ps -p $GRGSM_PID > /dev/null 2>&1; then
-        echo -e "${RED}✗ Failed to start grgsm_livemon_headless${NC}"
+        echo -e "${RED}[FAIL] Failed to start grgsm_livemon_headless${NC}"
         echo "Check /tmp/grgsm.log for errors"
         tail -10 /tmp/grgsm.log
     else
-        echo -e "${GREEN}✓ grgsm_livemon_headless started (PID: $GRGSM_PID)${NC}"
+        echo -e "${GREEN}[PASS] grgsm_livemon_headless started (PID: $GRGSM_PID)${NC}"
     fi
     
     # Reactivate virtual environment for GSMEvil2
@@ -112,13 +112,13 @@ sleep 3
 
 # Check if GSMEvil2 started successfully
 if ps -p $GSMEVIL_PID > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ GSMEvil2 started successfully!${NC}"
+    echo -e "${GREEN}[PASS] GSMEvil2 started successfully!${NC}"
     echo -e "${GREEN}  PID: $GSMEVIL_PID${NC}"
     echo -e "${GREEN}  URL: http://0.0.0.0:$PORT (accessible from any interface)${NC}"
     echo -e "${GREEN}  Logs: $LOG_FILE${NC}"
     echo -e "${YELLOW}  Note: Make sure gr-gsm is capturing on the correct frequency${NC}"
 else
-    echo -e "${RED}✗ Failed to start GSMEvil2${NC}"
+    echo -e "${RED}[FAIL] Failed to start GSMEvil2${NC}"
     echo "Check logs at: $LOG_FILE"
     tail -20 "$LOG_FILE"
     exit 1

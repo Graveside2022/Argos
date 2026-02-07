@@ -47,9 +47,9 @@ log_error() { log "ERROR" "$@"; }
 # GRADE A+ DEPLOYMENT EXECUTION
 # ============================================================================
 
-echo "🚀 Argos Grade A+ One-Button Deployment Starting..."
-echo "📡 Tesla Orchestrator Prime with $TESLA_AGENTS parallel agents"
-echo "🎯 Target: Complete Argos + OpenWebRX-HackRF deployment"
+echo "[START] Argos Grade A+ One-Button Deployment Starting..."
+echo "[RF] Tesla Orchestrator Prime with $TESLA_AGENTS parallel agents"
+echo "[TARGET] Target: Complete Argos + OpenWebRX-HackRF deployment"
 echo ""
 
 # Phase 1: System Preparation
@@ -118,15 +118,15 @@ log_info "Phase 6: Health Verification"
 sleep 10
 
 echo ""
-echo "🎉 Grade A+ Deployment Complete!"
+echo "[DONE] Grade A+ Deployment Complete!"
 echo ""
 echo "Services Available:"
-echo "  🌐 Argos Console: http://$(hostname -I | awk '{print $1}'):3000"
-echo "  📡 OpenWebRX SDR: http://$(hostname -I | awk '{print $1}'):8073"
-echo "  🔧 HackRF API: http://$(hostname -I | awk '{print $1}'):8092"
-echo "  🛡️ Kismet: http://$(hostname -I | awk '{print $1}'):2501"
+echo "  [NET] Argos Console: http://$(hostname -I | awk '{print $1}'):3000"
+echo "  [RF] OpenWebRX SDR: http://$(hostname -I | awk '{print $1}'):8073"
+echo "  [FIX] HackRF API: http://$(hostname -I | awk '{print $1}'):8092"
+echo "  [SECURE] Kismet: http://$(hostname -I | awk '{print $1}'):2501"
 echo ""
-echo "✅ Access your Argos system at: http://$(hostname -I | awk '{print $1}'):3000"
+echo "[OK] Access your Argos system at: http://$(hostname -I | awk '{print $1}'):3000"
 echo ""
 
 log_success "Grade A+ deployment completed successfully!"

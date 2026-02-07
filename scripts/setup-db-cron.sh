@@ -14,10 +14,10 @@ add_cron_job() {
     local description="$2"
     
     if crontab -l 2>/dev/null | grep -q "$description"; then
-        echo "✓ $description already exists"
+        echo "[PASS] $description already exists"
     else
         (crontab -l 2>/dev/null; echo "# $description"; echo "$job") | crontab -
-        echo "✓ Added: $description"
+        echo "[PASS] Added: $description"
     fi
 }
 

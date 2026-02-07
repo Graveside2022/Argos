@@ -24,7 +24,7 @@ echo "Checking if wrapper exists and is executable:"
 ls -la /home/ubuntu/projects/Argos/scripts/grgsm_livemon_wrapper
 
 if [ -x "/home/ubuntu/projects/Argos/scripts/grgsm_livemon_wrapper" ]; then
-    echo "✓ Wrapper script is executable"
+    echo "[PASS] Wrapper script is executable"
     
     echo "Testing wrapper command:"
     echo "sudo /home/ubuntu/projects/Argos/scripts/grgsm_livemon_wrapper --args='type=b200' -s 2e6 -f 947.4M -g 70"
@@ -39,7 +39,7 @@ if [ -x "/home/ubuntu/projects/Argos/scripts/grgsm_livemon_wrapper" ]; then
     
     sudo kill $WRAPPER_PID 2>/dev/null
 else
-    echo "✗ Wrapper script not executable or missing"
+    echo "[FAIL] Wrapper script not executable or missing"
 fi
 
 echo ""
@@ -48,12 +48,12 @@ echo "Direct grgsm_livemon_headless: $FRAME_COUNT_DIRECT frames"
 echo "Wrapper script: $FRAME_COUNT_WRAPPER frames"
 
 if [ "$FRAME_COUNT_DIRECT" -gt 50 ] && [ "$FRAME_COUNT_WRAPPER" -lt 10 ]; then
-    echo "⚠ PROBLEM: Wrapper script is not working properly"
+    echo "[WARN] PROBLEM: Wrapper script is not working properly"
     echo "The web scanner uses the wrapper, but direct command works fine"
     echo "Need to fix the wrapper script"
 elif [ "$FRAME_COUNT_DIRECT" -lt 10 ]; then
-    echo "⚠ PROBLEM: GSM signal may be intermittent"
+    echo "[WARN] PROBLEM: GSM signal may be intermittent"
     echo "Try different times or check antenna connection"
 else
-    echo "✓ Both methods working similarly"
+    echo "[PASS] Both methods working similarly"
 fi

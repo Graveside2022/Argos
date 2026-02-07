@@ -39,19 +39,19 @@ sleep 5
 
 # Verify it's running
 if pgrep -f kismet >/dev/null; then
-    echo "✓ Kismet started successfully"
-    echo "✓ Web interface available at: http://$(hostname -I | awk '{print $1}'):$PORT"
-    echo "✓ GPS configuration loaded from /etc/kismet/kismet_site.conf"
-    echo "✓ Interface $INTERFACE in use"
+    echo "[PASS] Kismet started successfully"
+    echo "[PASS] Web interface available at: http://$(hostname -I | awk '{print $1}'):$PORT"
+    echo "[PASS] GPS configuration loaded from /etc/kismet/kismet_site.conf"
+    echo "[PASS] Interface $INTERFACE in use"
     
     # Check if port is listening
     if netstat -tln | grep ":$PORT " >/dev/null; then
-        echo "✓ Port $PORT is listening"
+        echo "[PASS] Port $PORT is listening"
     else
-        echo "⚠ Warning: Port $PORT not yet listening"
+        echo "[WARN] Warning: Port $PORT not yet listening"
     fi
 else
-    echo "❌ Failed to start Kismet"
+    echo "[ERROR] Failed to start Kismet"
     exit 1
 fi
 

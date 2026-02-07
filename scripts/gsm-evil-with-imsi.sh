@@ -30,7 +30,7 @@ sleep 10
 echo "Enabling IMSI sniffer..."
 curl -s -X GET "http://localhost/imsi" >/dev/null 2>&1
 
-echo "✓ GSM Evil started with IMSI sniffer enabled!"
+echo "[PASS] GSM Evil started with IMSI sniffer enabled!"
 echo "  Access from: http://100.79.154.94/gsm-evil"
 echo "  Direct access: http://100.79.154.94:80"
 echo "  IMSI data: http://100.79.154.94/imsi"

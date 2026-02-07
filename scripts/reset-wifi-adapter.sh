@@ -14,7 +14,7 @@ PRODUCT_ID="7612"
 # Get the USB bus and device path
 USB_INFO=$(lsusb | grep "$VENDOR_ID:$PRODUCT_ID")
 if [ -z "$USB_INFO" ]; then
-    echo "❌ MediaTek adapter not found!"
+    echo "[ERROR] MediaTek adapter not found!"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ sudo modprobe mt76x2u
 echo "Waiting for interface to reappear..."
 for i in {1..10}; do
     if ip link show | grep -q "wlx00c0caadcedb"; then
-        echo "✓ Interface detected"
+        echo "[PASS] Interface detected"
         break
     fi
     sleep 1
@@ -50,10 +50,10 @@ sudo ifconfig wlx00c0caadcedb up
 
 # Check status
 if ip link show wlx00c0caadcedb | grep -q "UP"; then
-    echo "✓ Adapter reset successfully"
+    echo "[PASS] Adapter reset successfully"
     iwconfig wlx00c0caadcedb 2>/dev/null | head -5
 else
-    echo "⚠️  Adapter is still down, checking kernel logs..."
+    echo "[WARN]  Adapter is still down, checking kernel logs..."
     sudo dmesg | grep -E "(mt76|wlx00c0caadcedb)" | tail -10
 fi
 

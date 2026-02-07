@@ -28,9 +28,9 @@ sudo ip link set wlx00c0caadcedb up 2>/dev/null
 # 6. Check result
 sleep 2
 if ip link show wlx00c0caadcedb 2>/dev/null | grep -q "state UP"; then
-    echo "✓ Adapter is UP!"
+    echo "[PASS] Adapter is UP!"
 else
-    echo "⚠️  Adapter still having issues"
+    echo "[WARN]  Adapter still having issues"
     echo ""
     echo "=== Manual USB Reset Required ==="
     echo "The adapter needs a physical reset:"
@@ -42,4 +42,4 @@ else
 fi
 
 echo ""
-echo "✓ wlan0 remains untouched and safe for SSH"
+echo "[PASS] wlan0 remains untouched and safe for SSH"

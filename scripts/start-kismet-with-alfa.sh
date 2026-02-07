@@ -10,7 +10,7 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DETECT_SCRIPT="$SCRIPT_DIR/detect-alfa-adapter.sh"
 if [ ! -f "$DETECT_SCRIPT" ]; then
-    echo "❌ Alfa detection script not found at: $DETECT_SCRIPT"
+    echo "[ERROR] Alfa detection script not found at: $DETECT_SCRIPT"
     exit 1
 fi
 
@@ -23,7 +23,7 @@ echo "$DETECT_OUTPUT"
 
 if [ $DETECT_RESULT -ne 0 ]; then
     echo ""
-    echo "❌ No Alfa adapter detected. Cannot start Kismet."
+    echo "[ERROR] No Alfa adapter detected. Cannot start Kismet."
     echo "   Please connect an Alfa WiFi adapter and try again."
     exit 1
 fi
@@ -32,16 +32,16 @@ fi
 ALFA_INTERFACE=$(echo "$DETECT_OUTPUT" | grep "Primary interface selected:" | cut -d' ' -f4)
 
 if [ -z "$ALFA_INTERFACE" ]; then
-    echo "❌ Could not determine Alfa interface name"
+    echo "[ERROR] Could not determine Alfa interface name"
     exit 1
 fi
 
 echo ""
-echo "✓ Will use interface: $ALFA_INTERFACE"
+echo "[PASS] Will use interface: $ALFA_INTERFACE"
 
 # Check if Kismet is already running
 if pgrep -x "kismet" > /dev/null; then
-    echo "⚠️  Kismet is already running. Stopping it first..."
+    echo "[WARN]  Kismet is already running. Stopping it first..."
     pkill kismet 2>/dev/null || echo "Note: Could not stop existing Kismet (may need sudo)"
     sleep 2
 fi
@@ -60,9 +60,9 @@ if [ ! -f "$KISMET_SITE_CONF" ] || ! grep -q "gps=gpsd" "$KISMET_SITE_CONF" 2>/d
     echo "Configuring Kismet GPS integration..."
     if [ -w "$KISMET_CONF_DIR" ] || [ "$(id -u)" = "0" ]; then
         echo "gps=gpsd:host=localhost,port=2947" >> "$KISMET_SITE_CONF"
-        echo "✓ GPS configuration added to $KISMET_SITE_CONF"
+        echo "[PASS] GPS configuration added to $KISMET_SITE_CONF"
     else
-        echo "⚠️  Cannot write to $KISMET_SITE_CONF (need root)"
+        echo "[WARN]  Cannot write to $KISMET_SITE_CONF (need root)"
         echo "   GPS may show 'Unknown' - run with sudo or add config manually"
     fi
 fi
@@ -91,11 +91,11 @@ sleep 2
 
 # Check if Kismet started successfully
 if kill -0 $KISMET_PID 2>/dev/null; then
-    echo "✓ Kismet started successfully (PID: $KISMET_PID)"
+    echo "[PASS] Kismet started successfully (PID: $KISMET_PID)"
     echo "   Logs: /tmp/kismet.log"
     exit 0
 else
-    echo "❌ Kismet failed to start"
+    echo "[ERROR] Kismet failed to start"
     echo "   Check logs at /tmp/kismet.log"
     exit 1
 fi

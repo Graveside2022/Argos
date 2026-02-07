@@ -108,7 +108,7 @@ sleep 2
 echo "6. Waiting for interface..."
 for i in {1..15}; do
     if ip link show 2>/dev/null | grep -q "wlx00c0caadcedb"; then
-        echo "✓ Interface detected!"
+        echo "[PASS] Interface detected!"
         
         # Try to configure it
         echo "7. Configuring interface..."
@@ -124,7 +124,7 @@ for i in {1..15}; do
         
         # Check status
         if iwconfig wlx00c0caadcedb 2>/dev/null | grep -q "Mode:"; then
-            echo "✓ Adapter is responding!"
+            echo "[PASS] Adapter is responding!"
             iwconfig wlx00c0caadcedb 2>/dev/null | head -5
             
             # Test scanning
@@ -132,7 +132,7 @@ for i in {1..15}; do
             echo "8. Testing WiFi scanning..."
             sudo iw dev wlx00c0caadcedb scan 2>&1 | head -5 || echo "Scanning failed, but adapter is up"
         else
-            echo "⚠️  Adapter not fully functional"
+            echo "[WARN]  Adapter not fully functional"
         fi
         
         break

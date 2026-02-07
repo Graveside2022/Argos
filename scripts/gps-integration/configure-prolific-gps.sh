@@ -16,13 +16,13 @@ if [ -z "$PROLIFIC_DEVICE" ]; then
 fi
 
 if [ -z "$PROLIFIC_DEVICE" ]; then
-    echo "❌ ERROR: No USB serial device found!"
+    echo "[ERROR] ERROR: No USB serial device found!"
     echo "Please ensure the Prolific GPS adapter is connected."
     lsusb | grep -i prolific
     exit 1
 fi
 
-echo "✓ Found device: $PROLIFIC_DEVICE"
+echo "[PASS] Found device: $PROLIFIC_DEVICE"
 
 # Step 2: Test if device is readable and outputting NMEA data
 echo ""
@@ -30,10 +30,10 @@ echo "Step 2: Testing GPS device for NMEA data..."
 echo "Attempting to read from $PROLIFIC_DEVICE (5 second test)..."
 
 if sudo timeout 5 cat "$PROLIFIC_DEVICE" 2>/dev/null | head -5 | grep -q '$GP'; then
-    echo "✓ GPS device is outputting NMEA data!"
+    echo "[PASS] GPS device is outputting NMEA data!"
     sudo timeout 2 cat "$PROLIFIC_DEVICE" 2>/dev/null | head -5
 else
-    echo "⚠️  No NMEA data detected. GPS may need clear sky view or time to acquire satellites."
+    echo "[WARN]  No NMEA data detected. GPS may need clear sky view or time to acquire satellites."
 fi
 
 # Step 3: Configure GPSD with the device
@@ -63,7 +63,7 @@ START_DAEMON="true"
 GPSD_SOCKET="/var/run/gpsd.sock"
 EOF
 
-echo "✓ GPSD configured with device: $PROLIFIC_DEVICE"
+echo "[PASS] GPSD configured with device: $PROLIFIC_DEVICE"
 
 # Step 4: Set permissions for GPS device
 echo ""
@@ -71,14 +71,14 @@ echo "Step 4: Setting device permissions..."
 sudo chmod 666 "$PROLIFIC_DEVICE" 2>/dev/null
 sudo usermod -a -G dialout gpsd 2>/dev/null
 sudo usermod -a -G dialout $USER 2>/dev/null
-echo "✓ Permissions set"
+echo "[PASS] Permissions set"
 
 # Step 5: Enable GPSD services at boot
 echo ""
 echo "Step 5: Enabling GPSD auto-start at boot..."
 sudo systemctl enable gpsd.socket
 sudo systemctl enable gpsd.service
-echo "✓ GPSD will start automatically at boot"
+echo "[PASS] GPSD will start automatically at boot"
 
 # Step 6: Restart GPSD with new configuration
 echo ""
@@ -87,7 +87,7 @@ sudo systemctl stop gpsd.socket gpsd.service
 sleep 2
 sudo systemctl start gpsd.socket gpsd.service
 sleep 3
-echo "✓ GPSD restarted"
+echo "[PASS] GPSD restarted"
 
 # Step 7: Configure Kismet for GPS
 echo ""
@@ -120,7 +120,7 @@ gps_accuracy=10
 gps_poll_interval=1
 EOF
 
-echo "✓ Kismet GPS configuration created"
+echo "[PASS] Kismet GPS configuration created"
 
 # Step 8: Test GPS data flow
 echo ""
@@ -128,12 +128,12 @@ echo "Step 8: Testing GPS data flow..."
 echo "Waiting for GPS fix (10 seconds)..."
 
 if timeout 10 gpspipe -w -n 5 2>/dev/null | grep -q '"lat"'; then
-    echo "✓ GPS is providing location data!"
+    echo "[PASS] GPS is providing location data!"
     echo ""
     echo "Current GPS Status:"
     timeout 2 gpspipe -w -n 1 2>/dev/null | python3 -m json.tool 2>/dev/null | grep -E '"lat"|"lon"|"satellites_used"' | head -6
 else
-    echo "⚠️  No GPS fix yet. This is normal indoors or without clear sky view."
+    echo "[WARN]  No GPS fix yet. This is normal indoors or without clear sky view."
     echo "The GPS will continue trying to acquire satellites."
 fi
 
@@ -158,7 +158,7 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable gps-device-setup.service
-echo "✓ GPS device setup service created and enabled"
+echo "[PASS] GPS device setup service created and enabled"
 
 # Step 10: Final status check
 echo ""
@@ -169,30 +169,30 @@ echo "-------------"
 
 # Check GPSD
 if systemctl is-active --quiet gpsd.service; then
-    echo "✓ GPSD: Running"
+    echo "[PASS] GPSD: Running"
 else
-    echo "❌ GPSD: Not running"
+    echo "[ERROR] GPSD: Not running"
 fi
 
 # Check if GPSD has the device
 if timeout 2 gpsctl 2>&1 | grep -q "$PROLIFIC_DEVICE"; then
-    echo "✓ GPSD: Has device $PROLIFIC_DEVICE"
+    echo "[PASS] GPSD: Has device $PROLIFIC_DEVICE"
 else
-    echo "⚠️  GPSD: Device not yet recognized (may need time)"
+    echo "[WARN]  GPSD: Device not yet recognized (may need time)"
 fi
 
 # Check Kismet config
 if [ -f /etc/kismet/kismet_site.conf ]; then
-    echo "✓ Kismet: GPS configured"
+    echo "[PASS] Kismet: GPS configured"
 else
-    echo "❌ Kismet: GPS not configured"
+    echo "[ERROR] Kismet: GPS not configured"
 fi
 
 # Check boot persistence
 if systemctl is-enabled --quiet gpsd.service; then
-    echo "✓ Boot: GPSD will auto-start"
+    echo "[PASS] Boot: GPSD will auto-start"
 else
-    echo "❌ Boot: GPSD won't auto-start"
+    echo "[ERROR] Boot: GPSD won't auto-start"
 fi
 
 echo ""

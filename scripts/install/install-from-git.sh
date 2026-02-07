@@ -568,10 +568,10 @@ print_completion_summary() {
     echo -e "  • OpenCellID: ${YELLOW}${PROJECT_DIR}/config/opencellid.json${NC}"
     echo -e "  • Logs: ${YELLOW}${LOG_FILE}${NC}"
     echo ""
-    echo -e "${GREEN}🎉 Your Argos system is ready for SDR operations!${NC}"
+    echo -e "${GREEN}[DONE] Your Argos system is ready for SDR operations!${NC}"
     echo ""
-    echo -e "${YELLOW}⚠️  IMPORTANT: You may need to logout/login for group permissions to take effect${NC}"
-    echo -e "${YELLOW}⚠️  Connect your hardware (HackRF, GPS, WiFi adapter) and test functionality${NC}"
+    echo -e "${YELLOW}[WARN]  IMPORTANT: You may need to logout/login for group permissions to take effect${NC}"
+    echo -e "${YELLOW}[WARN]  Connect your hardware (HackRF, GPS, WiFi adapter) and test functionality${NC}"
     echo ""
 }
 

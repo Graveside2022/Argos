@@ -29,8 +29,8 @@ sleep 3
 
 # Verify
 if ps -p $GRGSM_PID >/dev/null && ps -p $GSMEVIL_PID >/dev/null; then
-    echo "✓ GSM Evil started successfully!"
+    echo "[PASS] GSM Evil started successfully!"
     echo "  Web interface: http://localhost:80"
 else
-    echo "✗ Failed to start GSM Evil"
+    echo "[FAIL] Failed to start GSM Evil"
 fi

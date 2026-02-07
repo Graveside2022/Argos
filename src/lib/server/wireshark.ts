@@ -110,7 +110,7 @@ export class WiresharkController extends EventEmitter {
 			this.setupPacketStream();
 			this.setupProcessHandlers();
 			
-			console.log(`✅ Wireshark started on interface ${this.interface}`);
+			console.log(`[OK] Wireshark started on interface ${this.interface}`);
 			this.emit('started', { interface: this.interface });
 			
 			return true;
@@ -230,13 +230,13 @@ export class WiresharkController extends EventEmitter {
 			
 			// Debug: Log raw data for troubleshooting (only if substantial)
 			if (dataStr.length > 5) {
-				console.log('📥 Wireshark raw data:', dataStr.substring(0, 200));
+				console.log('[DOWNLOAD] Wireshark raw data:', dataStr.substring(0, 200));
 			}
 			
 			// Check if we've accumulated enough data to detect JSON array start
 			if (buffer.includes('[')) {
 				expectingArray = true;
-				console.log('🔍 Detected JSON array start, buffer length:', buffer.length);
+				console.log('[SEARCH] Detected JSON array start, buffer length:', buffer.length);
 			}
 			
 			if (expectingArray) {
@@ -244,10 +244,10 @@ export class WiresharkController extends EventEmitter {
 				const arrayMatch = buffer.match(/\[[\s\S]*?\]/);
 				if (arrayMatch) {
 					try {
-						console.log('🔍 Parsing JSON array:', arrayMatch[0].substring(0, 200));
+						console.log('[SEARCH] Parsing JSON array:', arrayMatch[0].substring(0, 200));
 						const packets = JSON.parse(arrayMatch[0]);
 						if (Array.isArray(packets)) {
-							console.log(`📊 Processing ${packets.length} packets`);
+							console.log(`[STATUS] Processing ${packets.length} packets`);
 							for (const packetData of packets) {
 								const packet = this.parsePacket(packetData);
 								if (packet) {
@@ -255,7 +255,7 @@ export class WiresharkController extends EventEmitter {
 									this.lastPacketTime = new Date();
 									this.updatePacketRate();
 									this.emit('packet', packet);
-									console.log('✅ Packet processed:', packet.src_ip, '->', packet.dst_ip);
+									console.log('[OK] Packet processed:', packet.src_ip, '->', packet.dst_ip);
 								}
 							}
 						}
@@ -267,8 +267,8 @@ export class WiresharkController extends EventEmitter {
 					} catch (error) {
 						// JSON array not complete yet, keep accumulating
 						if (buffer.includes(']')) {
-							console.log('⚠️ Array parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
-							console.log('🔤 Buffer content:', buffer.substring(0, 200));
+							console.log('[WARN] Array parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
+							console.log('[FONT] Buffer content:', buffer.substring(0, 200));
 							buffer = ''; // Reset on error
 							expectingArray = false;
 						}
@@ -295,7 +295,7 @@ export class WiresharkController extends EventEmitter {
 								cleanJson = cleanJson.slice(0, -1);
 							}
 							
-							console.log('🔍 Parsing individual JSON object:', cleanJson.substring(0, 100));
+							console.log('[SEARCH] Parsing individual JSON object:', cleanJson.substring(0, 100));
 							const packetData = JSON.parse(cleanJson);
 							const packet = this.parsePacket(packetData);
 							if (packet) {
@@ -303,12 +303,12 @@ export class WiresharkController extends EventEmitter {
 								this.lastPacketTime = new Date();
 								this.updatePacketRate();
 								this.emit('packet', packet);
-								console.log('✅ Individual packet processed:', packet.src_ip, '->', packet.dst_ip);
+								console.log('[OK] Individual packet processed:', packet.src_ip, '->', packet.dst_ip);
 							}
 						} catch (error) {
 							// Skip logging minor JSON errors - focus on successful packets
 							if (trimmed.length > 100 && !(error instanceof Error && (error as Error).message.includes('Unexpected end of JSON input'))) {
-								console.log('⚠️ JSON parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
+								console.log('[WARN] JSON parse error:', (error instanceof Error ? (error as Error).message : String(error)).substring(0, 50));
 							}
 						}
 					}
@@ -336,7 +336,7 @@ export class WiresharkController extends EventEmitter {
 			
 			// If we're still supposed to be running, restart the process
 			// This handles the case where tshark exits after capturing the batch
-			console.log('🔄 Restarting tshark for continuous capture...');
+			console.log('[RETRY] Restarting tshark for continuous capture...');
 			this.process = null;
 			
 			// Brief delay before restart
@@ -360,7 +360,7 @@ export class WiresharkController extends EventEmitter {
 			// tshark outputs Elasticsearch-style JSON with _source.layers structure
 			const layers = data._source?.layers;
 			if (!layers) {
-				console.log('❌ No layers found in packet data:', JSON.stringify(data).substring(0, 100));
+				console.log('[ERROR] No layers found in packet data:', JSON.stringify(data).substring(0, 100));
 				return null;
 			}
 			
@@ -373,7 +373,7 @@ export class WiresharkController extends EventEmitter {
 			
 			// Validate required fields
 			if (srcIp === 'unknown' || dstIp === 'unknown') {
-				console.log('❌ Missing IP addresses in packet');
+				console.log('[ERROR] Missing IP addresses in packet');
 				return null;
 			}
 			
@@ -391,7 +391,7 @@ export class WiresharkController extends EventEmitter {
 				info: frameInfo
 			};
 			
-			console.log('✅ Successfully parsed packet:', packet.src_ip, '->', packet.dst_ip, packet.protocol);
+			console.log('[OK] Successfully parsed packet:', packet.src_ip, '->', packet.dst_ip, packet.protocol);
 			return packet;
 			
 		} catch (error) {

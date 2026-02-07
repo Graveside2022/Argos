@@ -54,7 +54,7 @@ ACTION=="add", SUBSYSTEM=="net", KERNELS=="3-2:1.0", NAME="alfa_test"
 #ACTION=="add", SUBSYSTEM=="net", ENV{ID_SERIAL_SHORT}=="87654321", NAME="alfa_unit2"
 EOF
 
-echo "✓ UDEV rules created"
+echo "[PASS] UDEV rules created"
 echo ""
 
 # Create a label mapping file for reference
@@ -87,7 +87,7 @@ ADAPTER 4 - "TEST":
   - Purpose: Development/testing
 EOF
 
-echo "✓ Label mapping saved to alfa-labels.conf"
+echo "[PASS] Label mapping saved to alfa-labels.conf"
 echo ""
 
 # Create helper script to identify adapters
@@ -118,7 +118,7 @@ done
 SCRIPT
 chmod +x /home/ubuntu/projects/identify-alfa.sh
 
-echo "✓ Helper script created"
+echo "[PASS] Helper script created"
 echo ""
 
 # Show how to apply changes

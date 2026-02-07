@@ -77,11 +77,11 @@ for iface_path in /sys/class/net/*; do
         
         # Check if it's protected
         if [[ " ${protected_interfaces[@]} " =~ " ${iface} " ]]; then
-            echo "   ⚠️  PROTECTED: This interface is reserved for system use"
+            echo "   [WARN]  PROTECTED: This interface is reserved for system use"
         else
             # Check monitor mode support
             if supports_monitor_mode "$iface"; then
-                echo "   ✓ Monitor mode capable"
+                echo "   [PASS] Monitor mode capable"
             fi
             found_adapters+=("$iface")
         fi
@@ -95,11 +95,11 @@ echo "Summary:"
 echo ""
 
 if [ ${#found_adapters[@]} -eq 0 ]; then
-    echo "❌ No available WiFi adapters found for monitoring"
+    echo "[ERROR] No available WiFi adapters found for monitoring"
     echo "   (wlan0 is protected for SSH access)"
     exit 1
 else
-    echo "✓ Found ${#found_adapters[@]} available WiFi adapter(s):"
+    echo "[PASS] Found ${#found_adapters[@]} available WiFi adapter(s):"
     for adapter in "${found_adapters[@]}"; do
         echo "   - $adapter"
     done

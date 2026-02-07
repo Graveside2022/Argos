@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🔥 GSM Evil Bulletproof Stop - Comprehensive Process Termination${NC}"
+echo -e "${BLUE}[CRITICAL] GSM Evil Bulletproof Stop - Comprehensive Process Termination${NC}"
 
 # Enhanced function to handle both sudo and non-sudo kills
 try_kill_enhanced() {
@@ -208,10 +208,10 @@ echo -e "\n${BLUE}=== FINAL STATUS REPORT ===${NC}"
 
 # Process verification
 if ps aux | grep -E "(grgsm_livemon|GsmEvil)" | grep -v grep >/dev/null; then
-    echo -e "${RED}✗ Some processes may still be running${NC}"
+    echo -e "${RED}[FAIL] Some processes may still be running${NC}"
     ps aux | grep -E "(grgsm_livemon|GsmEvil)" | grep -v grep
 else
-    echo -e "${GREEN}✓ All GSM Evil processes terminated${NC}"
+    echo -e "${GREEN}[PASS] All GSM Evil processes terminated${NC}"
 fi
 
 # Port verification
@@ -223,19 +223,19 @@ for port in 80 8080 4729 2775; do
 done
 
 if [ -n "$ports_in_use" ]; then
-    echo -e "${RED}✗ Ports still in use:$ports_in_use${NC}"
+    echo -e "${RED}[FAIL] Ports still in use:$ports_in_use${NC}"
     for port in $ports_in_use; do
         lsof -i:$port 2>/dev/null || true
     done
 else
-    echo -e "${GREEN}✓ All GSM Evil ports are free${NC}"
+    echo -e "${GREEN}[PASS] All GSM Evil ports are free${NC}"
 fi
 
 # USRP status
 if lsusb | grep -q "2500:0022"; then
-    echo -e "${GREEN}✓ USRP B205 Mini device available${NC}"
+    echo -e "${GREEN}[PASS] USRP B205 Mini device available${NC}"
 else
-    echo -e "${YELLOW}ℹ USRP B205 Mini not detected${NC}"
+    echo -e "${YELLOW}[INFO] USRP B205 Mini not detected${NC}"
 fi
 
-echo -e "${GREEN}🔥 GSM Evil Bulletproof Stop completed!${NC}"
+echo -e "${GREEN}[CRITICAL] GSM Evil Bulletproof Stop completed!${NC}"
