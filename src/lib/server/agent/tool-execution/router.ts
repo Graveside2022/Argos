@@ -168,7 +168,7 @@ export class ToolRouter {
 	 */
 	private validateParameters(
 		tool: ToolDefinition,
-		parameters: Record<string, any>
+		parameters: Record<string, unknown>
 	): string | null {
 		// Check required parameters
 		for (const required of tool.requiredParameters) {
@@ -219,7 +219,7 @@ export class ToolRouter {
 		error: string,
 		duration: number,
 		backend?: BackendType,
-		errorDetails?: any
+		errorDetails?: Record<string, unknown>
 	): ToolExecutionResult {
 		return {
 			status,

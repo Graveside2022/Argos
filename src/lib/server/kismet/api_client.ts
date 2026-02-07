@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { logInfo, logError, logWarn, logDebug } from '$lib/utils/logger';
-import type { KismetConfig } from './types';
+import type { KismetConfig, KismetEventStreamMessage, KismetSystemStatus, KismetChannelUsage, KismetAlert, GeoLocation, RawKismetDevice } from './types';
 
 /**
  * Kismet REST API client for device discovery and monitoring
@@ -16,7 +16,7 @@ export class KismetAPIClient extends EventEmitter {
 	private reconnectDelay = 5000;
 	private websocket: WebSocket | null = null;
 	private eventStream: EventSource | null = null;
-	private requestCache = new Map<string, { data: any; timestamp: number }>();
+	private requestCache = new Map<string, { data: unknown; timestamp: number }>();
 	private cacheTimeout = 30000; // 30 seconds
 
 	constructor(config: KismetConfig) {
@@ -96,17 +96,17 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get all discovered devices
 	 */
-	async getDevices(): Promise<any[]> {
+	async getDevices(): Promise<RawKismetDevice[]> {
 		try {
 			const cacheKey = 'devices';
 			const cached = this.getFromCache(cacheKey);
 
 			if (cached) {
-				return cached;
+				return cached as RawKismetDevice[];
 			}
 
 			// Try multiple endpoints for device data
-			let devices: any[] = [];
+			let devices: RawKismetDevice[] = [];
 
 			// Method 1: Recent devices (last 5 minutes for live tactical view)
 			try {
@@ -164,7 +164,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get device details by MAC address
 	 */
-	async getDeviceDetails(mac: string): Promise<any> {
+	async getDeviceDetails(mac: string): Promise<RawKismetDevice | null> {
 		try {
 			const deviceKey = mac.replace(/:/g, '');
 			const response = await this.makeRequest(
@@ -181,7 +181,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get system status
 	 */
-	async getSystemStatus(): Promise<any> {
+	async getSystemStatus(): Promise<KismetSystemStatus | null> {
 		try {
 			const response = await this.makeRequest('GET', '/system/status.json');
 			return response;
@@ -194,7 +194,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get channel usage statistics
 	 */
-	async getChannelUsage(): Promise<any> {
+	async getChannelUsage(): Promise<KismetChannelUsage | null> {
 		try {
 			const response = await this.makeRequest('GET', '/channels/channels.json');
 			return response;
@@ -207,7 +207,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get alerts from Kismet
 	 */
-	async getAlerts(): Promise<any[]> {
+	async getAlerts(): Promise<KismetAlert[]> {
 		try {
 			const response = await this.makeRequest('GET', '/alerts/all_alerts.json');
 			return Array.isArray(response) ? response : [];
@@ -220,7 +220,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get GPS location data
 	 */
-	async getGPSLocation(): Promise<any> {
+	async getGPSLocation(): Promise<GeoLocation | null> {
 		try {
 			const response = await this.makeRequest('GET', '/gps/location.json');
 			return response;
@@ -288,7 +288,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Handle incoming event stream messages
 	 */
-	private handleEventStreamMessage(data: any): void {
+	private handleEventStreamMessage(data: KismetEventStreamMessage): void {
 		try {
 			// Handle different event types
 			switch (data.type) {
@@ -385,7 +385,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Make HTTP request to Kismet API
 	 */
-	private async makeRequest(method: string, endpoint: string, data?: any): Promise<any> {
+	private async makeRequest(method: string, endpoint: string, data?: Record<string, unknown>): Promise<unknown> {
 		try {
 			const url = `${this.baseUrl}${endpoint}`;
 
@@ -434,7 +434,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Get data from cache if available and not expired
 	 */
-	private getFromCache(key: string): any | null {
+	private getFromCache(key: string): unknown | null {
 		const cached = this.requestCache.get(key);
 
 		if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
@@ -447,7 +447,7 @@ export class KismetAPIClient extends EventEmitter {
 	/**
 	 * Set data in cache
 	 */
-	private setCache(key: string, data: any): void {
+	private setCache(key: string, data: unknown): void {
 		this.requestCache.set(key, {
 			data,
 			timestamp: Date.now()
