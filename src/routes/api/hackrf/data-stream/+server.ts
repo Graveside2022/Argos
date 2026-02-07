@@ -41,14 +41,27 @@ const startCleanupInterval = () => {
 };
 
 export const GET: RequestHandler = () => {
+	// Shared state between start() and cancel() — hoisted so cancel() can
+	// properly clean up EventEmitter listeners and intervals on disconnect.
+	// ReadableStream.start() return value is ignored by the Web Streams spec;
+	// cancel() is the correct cleanup hook.
+	let isConnectionClosed = false;
+	let connectionId = '';
+	let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+	let onSpectrum: ((data: SpectrumData) => void) | null = null;
+	let onSpectrumData: ((data: unknown) => void) | null = null;
+	let onStatus: ((status: unknown) => void) | null = null;
+	let onError: ((error: unknown) => void) | null = null;
+	let onCycleConfig: ((config: unknown) => void) | null = null;
+	let onStatusChange: ((change: unknown) => void) | null = null;
+
 	// Create a readable stream for Server-Sent Events
 	const stream = new ReadableStream({
 		start(controller) {
 			const encoder = new TextEncoder();
-			const connectionId = getConnectionId();
+			connectionId = getConnectionId();
 
 			// Helper function to send SSE messages
-			let isConnectionClosed = false;
 			const sendEvent = (event: string, data: unknown) => {
 				if (isConnectionClosed) return;
 
@@ -118,8 +131,9 @@ export const GET: RequestHandler = () => {
 			let lastSpectrumTime = 0;
 			const SPECTRUM_THROTTLE = 50; // Min 50ms between updates (20Hz max)
 
-			// Subscribe to sweep manager events
-			const onSpectrum = (data: SpectrumData) => {
+			// Subscribe to sweep manager events — assigned to hoisted variables
+			// so cancel() can unsubscribe using the exact same function references
+			onSpectrum = (data: SpectrumData) => {
 				const now = Date.now();
 				if (now - lastSpectrumTime >= SPECTRUM_THROTTLE) {
 					// Transform data to frontend format
@@ -146,20 +160,19 @@ export const GET: RequestHandler = () => {
 					lastSpectrumTime = now;
 				}
 			};
-			const onStatus = (status: unknown) => sendEvent('status', status);
-			const onError = (error: unknown) => sendEvent('error', error);
-			const onCycleConfig = (config: unknown) => sendEvent('cycle_config', config);
-			const onStatusChange = (change: unknown) => sendEvent('status_change', change);
+			onStatus = (s: unknown) => sendEvent('status', s);
+			onError = (e: unknown) => sendEvent('error', e);
+			onCycleConfig = (config: unknown) => sendEvent('cycle_config', config);
+			onStatusChange = (change: unknown) => sendEvent('status_change', change);
 
 			// Wrapper for spectrum_data events that extracts nested data.
-			// IMPORTANT: Assigned to a named const so it can be properly unregistered
-			// on connection close. Previously this was an anonymous function, causing
-			// a listener leak on every SSE reconnection.
-			const onSpectrumData = (data: unknown) => {
+			// Assigned to a named reference so it can be properly unregistered
+			// on connection close in cancel().
+			onSpectrumData = (data: unknown) => {
 				if (data && typeof data === 'object' && 'data' in data) {
-					onSpectrum((data as { data: unknown }).data);
+					onSpectrum!((data as { data: unknown }).data);
 				} else {
-					onSpectrum(data);
+					onSpectrum!(data);
 				}
 			};
 
@@ -172,41 +185,46 @@ export const GET: RequestHandler = () => {
 			sweepManager.on('status_change', onStatusChange);
 
 			// Keep-alive heartbeat - more frequent to prevent timeouts
-			const heartbeat = setInterval(() => {
+			heartbeatTimer = setInterval(() => {
 				sendEvent('heartbeat', {
 					timestamp: new Date().toISOString(),
 					connectionId,
 					uptime: Date.now() - connectionInfo.connectedAt.getTime()
 				});
 			}, 10000); // Every 10 seconds (very frequent to ensure stable connection)
+		},
+		cancel() {
+			// Called by Web Streams API when reader is cancelled (SvelteKit
+			// cancels the reader on HTTP client disconnect via res.on('close')).
+			// Previously this cleanup was in a return value from start() which
+			// is ignored by the spec — this is the correct location.
+			isConnectionClosed = true;
 
-			// Cleanup on close
-			return () => {
-				isConnectionClosed = true;
+			// Remove from active connections
+			activeConnections.delete(connectionId);
+			logInfo(`SSE connection closed: ${connectionId}`, {
+				remainingConnections: activeConnections.size
+			});
 
-				// Remove from active connections
-				activeConnections.delete(connectionId);
-				logInfo(`SSE connection closed: ${connectionId}`, {
-					remainingConnections: activeConnections.size
-				});
+			// If last connection, clear SSE emitter
+			if (activeConnections.size === 0) {
+				sweepManager.setSseEmitter(null);
+				logDebug('All SSE connections closed, clearing emitter');
+			}
 
-				// If last connection, clear SSE emitter
-				if (activeConnections.size === 0) {
-					sweepManager.setSseEmitter(null);
-					logDebug('All SSE connections closed, clearing emitter');
-				}
+			// Unsubscribe from events (must use the exact same function references)
+			if (onSpectrum) sweepManager.off('spectrum', onSpectrum);
+			if (onSpectrumData) sweepManager.off('spectrum_data', onSpectrumData);
+			if (onStatus) sweepManager.off('status', onStatus);
+			if (onError) sweepManager.off('error', onError);
+			if (onCycleConfig) sweepManager.off('cycle_config', onCycleConfig);
+			if (onStatusChange) sweepManager.off('status_change', onStatusChange);
 
-				// Unsubscribe from events (must use the exact same function references)
-				sweepManager.off('spectrum', onSpectrum);
-				sweepManager.off('spectrum_data', onSpectrumData);
-				sweepManager.off('status', onStatus);
-				sweepManager.off('error', onError);
-				sweepManager.off('cycle_config', onCycleConfig);
-				sweepManager.off('status_change', onStatusChange);
-
-				// Clear heartbeat
-				clearInterval(heartbeat);
-			};
+			// Clear heartbeat
+			if (heartbeatTimer) {
+				clearInterval(heartbeatTimer);
+				heartbeatTimer = null;
+			}
 		}
 	});
 

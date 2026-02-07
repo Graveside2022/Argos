@@ -153,9 +153,14 @@ export const handleError: HandleServerError = ({ error, event }) => {
 	};
 };
 
-// Graceful shutdown
+// Graceful shutdown — guarded via globalThis to prevent listener accumulation
+// on Vite HMR reloads. A module-level boolean would be reset on each reload,
+// so we use globalThis which persists across module re-evaluations.
+// Docker logs confirmed 11+ SIGINT listeners without this guard.
+const SHUTDOWN_KEY = '__argos_hooks_shutdown_registered';
 if (dev) {
-	if (typeof process !== 'undefined') {
+	if (typeof process !== 'undefined' && !(globalThis as Record<string, unknown>)[SHUTDOWN_KEY]) {
+		(globalThis as Record<string, unknown>)[SHUTDOWN_KEY] = true;
 		process.on('SIGINT', () => {
 			logger.info('Shutting down WebSocket server...');
 			wsManager.destroy();

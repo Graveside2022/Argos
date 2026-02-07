@@ -332,19 +332,25 @@ export function getRFDatabase(): RFDatabase {
 	return dbInstance;
 }
 
-// Cleanup on process termination
-process.on('SIGTERM', () => {
-	logInfo('SIGTERM received, closing database', {}, 'sigterm-database-close');
-	if (dbInstance) {
-		dbInstance.close();
-		dbInstance = null;
-	}
-});
+// Cleanup on process termination — guarded via globalThis to prevent listener
+// accumulation on Vite HMR reloads. Each re-evaluation of this module would
+// otherwise add duplicate SIGTERM/SIGINT handlers to process.
+const DB_SHUTDOWN_KEY = '__argos_db_shutdown_registered';
+if (!(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY]) {
+	(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY] = true;
+	process.on('SIGTERM', () => {
+		logInfo('SIGTERM received, closing database', {}, 'sigterm-database-close');
+		if (dbInstance) {
+			dbInstance.close();
+			dbInstance = null;
+		}
+	});
 
-process.on('SIGINT', () => {
-	logInfo('SIGINT received, closing database', {}, 'sigint-database-close');
-	if (dbInstance) {
-		dbInstance.close();
-		dbInstance = null;
-	}
-});
+	process.on('SIGINT', () => {
+		logInfo('SIGINT received, closing database', {}, 'sigint-database-close');
+		if (dbInstance) {
+			dbInstance.close();
+			dbInstance = null;
+		}
+	});
+}

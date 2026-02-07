@@ -312,8 +312,9 @@ export class DatabaseCleanupService {
 
 			cleanup();
 
-			// Run VACUUM if significant data was deleted
-			if (stats.signals + stats.devices > 1000) {
+			// Run VACUUM if significant data was deleted (threshold raised to
+			// avoid frequent full-table rewrites on RPi storage)
+			if (stats.signals + stats.devices > 10000) {
 				this.db.exec('VACUUM');
 			}
 
