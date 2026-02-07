@@ -213,28 +213,35 @@ export class DatabaseCleanupService {
 	start() {
 		if (this.isRunning) return;
 
-		// Ensure service is initialized before starting
-		if (this.statements.size === 0) {
-			this.initialize();
-		}
+		try {
+			// Ensure service is initialized before starting
+			if (this.statements.size === 0) {
+				this.initialize();
+			}
 
-		this.isRunning = true;
+			this.isRunning = true;
 
-		// Run initial cleanup
-		void this.runCleanup();
-		void this.runAggregation();
-
-		// Schedule periodic cleanup
-		this.cleanupTimer = setInterval(() => {
+			// Run initial cleanup
 			void this.runCleanup();
-		}, this.config.cleanupInterval);
-
-		// Schedule periodic aggregation
-		this.aggregateTimer = setInterval(() => {
 			void this.runAggregation();
-		}, this.config.aggregateInterval);
 
-		logInfo('Database cleanup service started', {}, 'cleanup-service-started');
+			// Schedule periodic cleanup
+			this.cleanupTimer = setInterval(() => {
+				void this.runCleanup();
+			}, this.config.cleanupInterval);
+
+			// Schedule periodic aggregation
+			this.aggregateTimer = setInterval(() => {
+				void this.runAggregation();
+			}, this.config.aggregateInterval);
+
+			logInfo('Database cleanup service started', {}, 'cleanup-service-started');
+		} catch (error) {
+			logError('Error starting cleanup service', { error }, 'cleanup-service-start-error');
+			// Ensure cleanup if initialization fails (prevents timer orphaning)
+			this.stop();
+			throw error;
+		}
 	}
 
 	/**

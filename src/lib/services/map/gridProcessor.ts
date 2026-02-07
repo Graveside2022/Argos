@@ -75,6 +75,8 @@ export class GridProcessor {
 		(result: GridProcessResult | GridStatsResult | { error: string }) => void
 	>();
 	private requestId = 0;
+	private messageHandler: ((event: MessageEvent) => void) | null = null;
+	private errorHandler: ((event: ErrorEvent) => void) | null = null;
 
 	constructor() {
 		if (typeof Worker !== 'undefined') {
@@ -86,7 +88,8 @@ export class GridProcessor {
 		try {
 			this.worker = new Worker('/workers/gridProcessor.js');
 
-			this.worker.addEventListener('message', (event) => {
+			// Store listener reference for cleanup
+			this.messageHandler = (event) => {
 				const { type, data, error, requestId } = event.data as {
 					type: string;
 					data: unknown;
@@ -126,11 +129,15 @@ export class GridProcessor {
 					}
 					this.pendingCallbacks.delete(requestId);
 				}
-			});
+			};
 
-			this.worker.addEventListener('error', (error) => {
+			// Store error handler reference for cleanup
+			this.errorHandler = (error) => {
 				console.error('Grid processor worker error:', error);
-			});
+			};
+
+			this.worker.addEventListener('message', this.messageHandler);
+			this.worker.addEventListener('error', this.errorHandler);
 		} catch (error) {
 			console.error('Failed to initialize grid processor worker:', error);
 		}
