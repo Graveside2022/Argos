@@ -27,7 +27,7 @@ export interface ToolParameter {
 	type: string;
 	description: string;
 	required?: boolean;
-	default?: any;
+	default?: string | number | boolean;
 	enum?: string[];
 	properties?: Record<string, ToolParameter>;
 }
@@ -167,7 +167,7 @@ export interface ToolExecutionRequest {
 	toolName: string;
 
 	/** Input parameters */
-	parameters: Record<string, any>;
+	parameters: Record<string, unknown>;
 
 	/** Execution context (user, workflow, etc.) */
 	context?: ExecutionContext;
@@ -196,7 +196,7 @@ export interface ExecutionContext {
 	};
 
 	/** Additional context data */
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 /**
@@ -210,13 +210,13 @@ export interface ToolExecutionResult {
 	toolName: string;
 
 	/** Result data (if successful) */
-	data?: any;
+	data?: Record<string, unknown>;
 
 	/** Error message (if failed) */
 	error?: string;
 
 	/** Error details */
-	errorDetails?: any;
+	errorDetails?: Record<string, unknown>;
 
 	/** Execution duration in milliseconds */
 	duration: number;
@@ -261,7 +261,7 @@ export interface ToolBackendAdapter {
 	/** Execute a tool */
 	execute(
 		tool: ToolDefinition,
-		parameters: Record<string, any>,
+		parameters: Record<string, unknown>,
 		context?: ExecutionContext
 	): Promise<ToolExecutionResult>;
 

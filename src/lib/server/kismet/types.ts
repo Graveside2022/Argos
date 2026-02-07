@@ -58,7 +58,7 @@ export interface DeviceClassification {
 export interface DeviceFingerprint {
     macOUI: string;
     capabilities: string[];
-    signalCharacteristics: any;
+    signalCharacteristics: Record<string, number | string>;
     behaviorSignature: string;
     protocolFingerprint: string;
     vendorElements: string[];
@@ -117,7 +117,7 @@ export interface VulnerabilityReport {
     totalDevices: number;
     vulnerableDevices: number;
     averageSecurityScore: number;
-    vulnerabilities: any[];
+    vulnerabilities: Array<{ type: string; severity: string; description: string }>;
     threatDistribution: Record<string, number>;
     riskLevel: 'low' | 'medium' | 'high' | 'critical' | 'unknown';
     recommendations: string[];
@@ -153,7 +153,7 @@ export interface KismetStatus {
     uptime: number;
     deviceCount: number;
     monitorInterfaces: MonitorInterface[];
-    metrics: any;
+    metrics: Record<string, number | string>;
     config: KismetConfig;
 }
 
@@ -299,14 +299,63 @@ export interface KismetAPIResponse<T> {
  */
 export interface WebSocketMessage {
     type: 'device_discovered' | 'device_updated' | 'device_lost' | 'security_threat' | 'correlation_found' | 'status_update' | 'device_update' | 'status_change' | 'error';
-    data: any;
+    data: Record<string, unknown>;
     timestamp: string;
+}
+
+/**
+ * Kismet event stream message from EventSource
+ */
+export interface KismetEventStreamMessage {
+    type: 'NEWDEVICE' | 'UPDATEDEVICE' | 'LOSTDEVICE' | 'ALERT' | 'PACKET' | string;
+    device?: Record<string, unknown>;
+    alert?: Record<string, unknown>;
+    packet?: Record<string, unknown>;
+}
+
+/**
+ * Kismet system status response
+ */
+export interface KismetSystemStatus {
+    kismet_version?: string;
+    kismet_git_revision?: string;
+    system_name?: string;
+    system_description?: string;
+    timestamp_sec?: number;
+    timestamp_usec?: number;
+    memory_kb?: number;
+    devices_count?: number;
+}
+
+/**
+ * Kismet channel usage data
+ */
+export interface KismetChannelUsage {
+    channels?: Array<{
+        channel: string;
+        frequency: number;
+        devices: number;
+        packets: number;
+    }>;
+}
+
+/**
+ * Kismet alert entry
+ */
+export interface KismetAlert {
+    id?: string;
+    type: string;
+    severity: string;
+    text: string;
+    timestamp: number;
+    source_mac?: string;
+    dest_mac?: string;
 }
 
 /**
  * Kismet event types
  */
-export type KismetEventType = 
+export type KismetEventType =
     | 'started'
     | 'stopped'
     | 'device_discovered'
@@ -345,7 +394,7 @@ export type FusionEventType =
 export interface SSEEventData {
     type: FusionEventType;
     tool: 'wireshark' | 'gnuradio' | 'kismet';
-    data: any;
+    data: Record<string, unknown>;
     timestamp: string;
 }
 
@@ -435,12 +484,12 @@ export interface SignalAnalysis {
 export interface BehaviorAnalysis {
     mac: string;
     patterns: {
-        connection: any;
-        signal: any;
-        mobility: any;
-        activity: any;
-        probe: any;
-        temporal: any;
+        connection: Record<string, number | string>;
+        signal: Record<string, number | string>;
+        mobility: Record<string, number | string>;
+        activity: Record<string, number | string>;
+        probe: Record<string, number | string>;
+        temporal: Record<string, number | string>;
     };
     anomalies: string[];
     riskScore: number;
