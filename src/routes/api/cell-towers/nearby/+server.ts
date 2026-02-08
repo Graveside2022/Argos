@@ -3,8 +3,9 @@ import { json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
-const OPENCELLID_API_KEY = 'pk.d6291c07a2907c915cd8994fb22bc189';
+const OPENCELLID_API_KEY = process.env.OPENCELLID_API_KEY;
 
 // OpenCellID getInArea limits bbox to 4 km² (~2km x 2km).
 // We tile a larger radius into ~1.5km x 1.5km tiles and fetch in parallel.
@@ -30,12 +31,21 @@ interface CellTower {
  * Tries local OpenCellID database first, falls back to tiled API area queries.
  */
 export const GET: RequestHandler = async ({ url }) => {
-	const lat = parseFloat(url.searchParams.get('lat') || '0');
-	const lon = parseFloat(url.searchParams.get('lon') || '0');
-	const radiusKm = Math.min(parseFloat(url.searchParams.get('radius') || '5'), 20);
-
-	if (lat === 0 && lon === 0) {
-		return json({ success: false, towers: [], message: 'No GPS position provided' });
+	// Validate lat/lon/radius as numeric before they reach SQL queries or external API URLs
+	let lat: number, lon: number, radiusKm: number;
+	try {
+		lat = validateNumericParam(url.searchParams.get('lat'), 'latitude', -90, 90);
+		lon = validateNumericParam(url.searchParams.get('lon'), 'longitude', -180, 180);
+		radiusKm = validateNumericParam(url.searchParams.get('radius') || '5', 'radius', 0.1, 50);
+	} catch (validationError) {
+		return json(
+			{
+				success: false,
+				towers: [],
+				message: `Invalid parameter: ${(validationError as Error).message}`
+			},
+			{ status: 400 }
+		);
 	}
 
 	// Convert km to approximate degree deltas for bounding box
@@ -93,6 +103,14 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Fallback: OpenCellID getInArea API with tiled requests
 	// The API limits each request to 4 km² (~2km x 2km bbox).
 	// We break the full radius into small tiles and fetch them in parallel.
+	if (!OPENCELLID_API_KEY) {
+		// No API key configured, skip API fallback
+		return json({
+			success: false,
+			towers: [],
+			message: 'No cell tower database found and OPENCELLID_API_KEY not configured'
+		});
+	}
 	try {
 		const south = lat - latDelta;
 		const north = lat + latDelta;
