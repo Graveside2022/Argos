@@ -45,6 +45,17 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (action === 'start') {
 			try {
+				const owrxPassword = process.env.OPENWEBRX_PASSWORD;
+				if (!owrxPassword) {
+					return json(
+						{
+							success: false,
+							message: 'OPENWEBRX_PASSWORD environment variable is not set'
+						},
+						{ status: 503 }
+					);
+				}
+
 				// Check if OpenWebRX is already running
 				const alreadyRunning = await isContainerRunning();
 				if (alreadyRunning) {
@@ -95,7 +106,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							`-p 8073:8073 ` +
 							`-v /dev/bus/usb:/dev/bus/usb ` +
 							`-e OPENWEBRX_ADMIN_USER=admin ` +
-							`-e OPENWEBRX_ADMIN_PASSWORD=admin ` +
+							`-e OPENWEBRX_ADMIN_PASSWORD=${owrxPassword} ` +
 							`--restart no ` +
 							`slechev/openwebrxplus:latest 2>&1`
 					);

@@ -3,6 +3,9 @@
 
 set -e
 
+# Read credentials from environment (fail if not set)
+OPENWEBRX_PASSWORD="${OPENWEBRX_PASSWORD:?Error: OPENWEBRX_PASSWORD not set. Set in .env or export before running.}"
+
 echo "=== Configuring OpenWebRX for USRP B205 Mini ==="
 
 # Wait for OpenWebRX to be fully ready
@@ -13,22 +16,23 @@ sleep 15
 echo "2. Checking OpenWebRX admin interface..."
 if ! curl -s http://localhost:8073/admin >/dev/null; then
     echo "Warning: Admin interface not accessible. Creating admin user..."
-    
+
     # Create admin user inside container
-    docker exec openwebrx-usrp python3 -c "
+    docker exec -e OPENWEBRX_PASSWORD="$OPENWEBRX_PASSWORD" openwebrx-usrp python3 -c "
 import os
+owrx_pass = os.environ.get('OPENWEBRX_PASSWORD', '')
 os.environ['OWRX_ADMIN_USER'] = 'admin'
-os.environ['OWRX_ADMIN_PASSWORD'] = 'argos123'
+os.environ['OWRX_ADMIN_PASSWORD'] = owrx_pass
 from owrx.users import UserList
 from owrx.config import Config
 userlist = UserList()
 if 'admin' not in userlist:
-    userlist.addUser('admin', 'argos123')
-    print('Admin user created: admin/argos123')
+    userlist.addUser('admin', owrx_pass)
+    print('Admin user created: admin/<from OPENWEBRX_PASSWORD env var>')
 else:
     print('Admin user already exists')
 "
-    
+
     # Restart container to apply changes
     echo "3. Restarting container to apply admin user..."
     docker restart openwebrx-usrp
@@ -132,12 +136,12 @@ echo
 echo "=== Configuration Complete ==="
 echo "OpenWebRX is now configured for USRP B205 Mini"
 echo
-echo "Admin credentials: admin / argos123"
+echo "Admin credentials: admin / (set via OPENWEBRX_PASSWORD env var)"
 echo "Web interface: http://localhost:8073"
 echo "Admin interface: http://localhost:8073/admin"
 echo
 echo "Available profiles:"
 echo "  - FM Broadcast (88-108 MHz)"
-echo "  - VHF Airband (118-137 MHz)"  
+echo "  - VHF Airband (118-137 MHz)"
 echo "  - UHF (430-450 MHz)"
 echo

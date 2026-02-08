@@ -250,7 +250,7 @@ print_summary() {
     echo -e "${GREEN}#######################################################################################${NC}"
     echo ""
     echo -e "${BLUE}Container Services:${NC}"
-    echo -e "  • HackRF OpenWebRX:   ${YELLOW}http://localhost:${OPENWEBRX_PORT}${NC} (admin/hackrf)"
+    echo -e "  • HackRF OpenWebRX:   ${YELLOW}http://localhost:${OPENWEBRX_PORT}${NC} (admin/<from OPENWEBRX_PASSWORD env var>)"
     echo -e "  • HackRF Sweep API:   ${YELLOW}http://localhost:${HACKRF_SWEEP_PORT}${NC}"
     echo ""
     echo -e "${BLUE}Container Management:${NC}"

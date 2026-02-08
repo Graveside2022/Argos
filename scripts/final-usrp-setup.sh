@@ -3,18 +3,21 @@
 
 set -e
 
+# Read credentials from environment (fail if not set)
+OPENWEBRX_PASSWORD="${OPENWEBRX_PASSWORD:?Error: OPENWEBRX_PASSWORD not set. Set in .env or export before running.}"
+
 echo "[FIX] Final USRP B205 Mini Setup for OpenWebRX"
 echo "=============================================="
 
 # Create a working configuration that OpenWebRX Plus can use
-cat > /tmp/config_webrx.py << 'EOF'
+cat > /tmp/config_webrx.py << EOF
 # OpenWebRX Configuration for USRP B205 Mini
 # Working configuration for immediate startup
 
 sdrs = {
     "usrp": {
         "name": "USRP B205 Mini",
-        "type": "uhd", 
+        "type": "uhd",
         "device": "type=b200",
         "enabled": True,
         "samp_rate": 10000000,
@@ -42,7 +45,7 @@ start_mod = "wfm"
 # Admin user
 users = {
     "admin": {
-        "password": "admin",  
+        "password": "${OPENWEBRX_PASSWORD}",
         "enabled": True,
         "admin": True
     }
@@ -74,7 +77,7 @@ else
 fi
 
 if curl -s http://100.79.154.94:5173/viewspectrum > /dev/null; then
-    echo "   [OK] Mission card URL is accessible"  
+    echo "   [OK] Mission card URL is accessible"
 else
     echo "   [ERROR] Mission card URL failed"
     exit 1
@@ -92,7 +95,7 @@ echo
 echo "[TARGET] SETUP COMPLETE!"
 echo "===================="
 echo "Mission Card URL: http://100.79.154.94:5173/viewspectrum"
-echo "Admin Interface: http://localhost:8073/admin (admin/admin)"
+echo "Admin Interface: http://localhost:8073/admin (admin/[from env])"
 echo "Direct OpenWebRX: http://localhost:8073"
 echo
 echo "[RF] USRP B205 Mini Status:"

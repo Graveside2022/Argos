@@ -39,7 +39,7 @@ services:
       - KISMET_INTERFACE=wlan1
       # Kismet API credentials
       - KISMET_USER=admin
-      - KISMET_PASSWORD=password
+      - KISMET_PASSWORD=${KISMET_PASSWORD:?Set KISMET_PASSWORD in .env}
     # USB device access for ALFA WiFi adapter
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
@@ -120,7 +120,7 @@ services:
       - "8073:8073"
     environment:
       - OPENWEBRX_ADMIN_USER=admin
-      - OPENWEBRX_ADMIN_PASSWORD=${OPENWEBRX_PASSWORD:-hackrf}
+      - OPENWEBRX_ADMIN_PASSWORD=${OPENWEBRX_PASSWORD:?Set OPENWEBRX_PASSWORD in .env}
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
     privileged: true
@@ -155,7 +155,7 @@ services:
       - NET_RAW
     environment:
       - BETTERCAP_API_USER=${BETTERCAP_USER:-admin}
-      - BETTERCAP_API_PASSWORD=${BETTERCAP_PASSWORD:-argos}
+      - BETTERCAP_API_PASSWORD=${BETTERCAP_PASSWORD:?Set BETTERCAP_PASSWORD in .env}
     command: bettercap -api-rest-address 0.0.0.0 -api-rest-port 8081
     restart: "no"
     logging:

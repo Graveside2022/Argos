@@ -1,6 +1,9 @@
 #!/bin/bash
 # Simple AP creation using create_ap tool which handles MT7921U better
 
+# Read credentials from environment (fail if not set)
+AP_PASSWORD="${AP_PASSWORD:?Error: AP_PASSWORD not set. Export AP_PASSWORD before running.}"
+
 echo "=== Setting up Argos AP with create_ap ==="
 
 # Install create_ap if not present
@@ -39,7 +42,7 @@ sudo create_ap -n \
     --no-virt \
     --daemon \
     --logfile /var/log/argos-ap.log \
-    $IFACE eth0 Argos password
+    $IFACE eth0 Argos "$AP_PASSWORD"
 
 sleep 3
 
@@ -47,7 +50,7 @@ sleep 3
 if pgrep -f create_ap > /dev/null; then
     echo "[PASS] Argos AP is running!"
     echo "SSID: Argos"
-    echo "Password: password"
+    echo "Password: (set via AP_PASSWORD env var)"
     echo "Connect and SSH to: 192.168.12.1"
 else
     echo "[FAIL] Failed to start AP"

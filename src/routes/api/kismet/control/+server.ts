@@ -136,11 +136,19 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 				// Set up auth credentials if this is a first-time start
 				try {
-					const { stdout: authCheck } = await hostExec(
-						'curl -s -m 3 -X POST -d "username=admin&password=password" http://localhost:2501/session/set_password 2>/dev/null || true'
-					);
-					if (authCheck.includes('Login configured')) {
-						console.warn('[kismet] Initial credentials set (admin/password)');
+					const kismetUser = process.env.KISMET_USER || 'admin';
+					const kismetPass = process.env.KISMET_PASSWORD;
+					if (!kismetPass) {
+						console.warn(
+							'[kismet] KISMET_PASSWORD not set, skipping initial credential setup'
+						);
+					} else {
+						const { stdout: authCheck } = await hostExec(
+							`curl -s -m 3 -X POST -d "username=${kismetUser}&password=${kismetPass}" http://localhost:2501/session/set_password 2>/dev/null || true`
+						);
+						if (authCheck.includes('Login configured')) {
+							console.warn('[kismet] Initial credentials set');
+						}
 					}
 				} catch (_error: unknown) {
 					// Already configured or not yet ready — either is fine

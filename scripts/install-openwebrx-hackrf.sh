@@ -9,6 +9,9 @@
 
 set -e  # Exit on any error
 
+# Read credentials from environment (fail if not set)
+OPENWEBRX_PASSWORD="${OPENWEBRX_PASSWORD:?Error: OPENWEBRX_PASSWORD not set. Set in .env or export before running.}"
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -207,7 +210,7 @@ configure_openwebrx() {
 [webadmin]
 enabled = true
 admin_user = admin
-admin_password = hackrf
+admin_password = ${OPENWEBRX_PASSWORD}
 
 [web]
 port = $OPENWEBRX_PORT
@@ -364,7 +367,7 @@ display_final_info() {
     echo "==============================================="
     echo ""
     echo "Access OpenWebRX at: http://$(hostname -I | awk '{print $1}'):$OPENWEBRX_PORT"
-    echo "Default credentials: admin/hackrf"
+    echo "Default credentials: admin/(set via OPENWEBRX_PASSWORD env var)"
     echo ""
     echo "Service management:"
     echo "  Start:   sudo systemctl start openwebrx"

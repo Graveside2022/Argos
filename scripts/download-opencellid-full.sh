@@ -3,7 +3,7 @@
 # Download full OpenCellID database
 # Note: Only 2 downloads per day are allowed
 
-API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"
+API_KEY="${OPENCELLID_API_KEY:?Error: OPENCELLID_API_KEY not set. Set in .env or export before running.}"
 DB_DIR="/home/ubuntu/projects/Argos/data/celltowers"
 
 echo "OpenCellID Database Downloader"

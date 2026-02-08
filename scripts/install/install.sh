@@ -375,7 +375,7 @@ print_summary() {
     echo ""
     echo -e "${BLUE}Access Points:${NC}"
     echo -e "  • Main Console:      ${YELLOW}http://localhost:${ARGOS_PORT}${NC}"
-    echo -e "  • Spectrum Analyzer: ${YELLOW}http://localhost:${OPENWEBRX_PORT}${NC} (admin/hackrf)"
+    echo -e "  • Spectrum Analyzer: ${YELLOW}http://localhost:${OPENWEBRX_PORT}${NC} (admin/<from OPENWEBRX_PASSWORD env var>)"
     echo -e "  • Project Directory: ${YELLOW}${PROJECT_DIR}${NC}"
     echo ""
     echo -e "${BLUE}System Management:${NC}"
