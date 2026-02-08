@@ -10,7 +10,7 @@
 | Author           | Alex Thompson (Quantum Software Architect)                          |
 | Date             | 2026-02-08                                                          |
 | Risk Level       | MEDIUM-HIGH (service files control runtime, CI changes gate merges) |
-| Estimated Effort | 20-30 hours                                                         |
+| Estimated Effort | 25-35 hours                                                         |
 | Dependencies     | None (standalone, but deploy AFTER Phase 2.1 security fixes)        |
 
 ---
@@ -23,46 +23,44 @@ Prior audit documents stated "63 errors." Current verified count (2026-02-08):
 
 ```bash
 npx eslint . --config config/eslint.config.js 2>&1 | grep "problems"
-# Result: 813 problems (100 errors, 713 warnings)
+# Result (src/ only): 580 problems (25 errors, 555 warnings)
+# Result (full project): 676 problems (61 errors, 615 warnings)
 ```
 
-The 100 error count is the CI-blocking number. The prior "63 errors" figure was stale.
+The 25 error count (src/ scope) is the CI-blocking number. The prior "63 errors" figure was stale, and the intermediate "100 errors" figure was also incorrect.
 
 #### ESLint Error Root Cause Analysis
 
-The 100 ESLint errors are NOT 100 individual code defects. Breakdown:
+**CORRECTION (Independent Audit 2026-02-08):** The original claim that "~85 of 100 errors are config-only fixable by a single config change" was **FALSE**. The ESLint flat config at `config/eslint.config.js` ALREADY includes `globals.browser`, `globals.node`, and `globals.es2022` via the `globals` npm package. There is no missing env configuration.
 
-| Error Rule              | Count | Root Cause                                                    | Fix                           |
-| ----------------------- | ----- | ------------------------------------------------------------- | ----------------------------- |
-| `no-undef` (console)    | ~80   | Missing `env: { browser: true, node: true }` in ESLint config | **Single config line change** |
-| `no-undef` (setTimeout) | ~5    | Same missing env declaration                                  | Same fix                      |
-| Other                   | ~15   | Actual code issues                                            | Individual fixes              |
+All 25 errors are real code issues requiring individual fixes:
 
-**Effort estimate**: The single ESLint env config fix resolves ~85 of 100 errors. This is a 5-minute config change, not days of code refactoring. The remaining ~15 errors require individual attention.
+| Error Rule                          | Count | Root Cause                       | Fix                     |
+| ----------------------------------- | ----- | -------------------------------- | ----------------------- |
+| `@typescript-eslint/no-unused-vars` | 22    | Unused variables/imports in code | Remove or use them      |
+| `no-undef`                          | 1     | Genuinely undefined variable     | Define or import it     |
+| `no-async-promise-executor`         | 1     | Async function in Promise()      | Refactor to async/await |
+| `no-useless-escape`                 | 1     | Unnecessary escape character     | Remove backslash        |
 
-**Exact fix** (add to `.eslintrc.cjs` or `eslint.config.js`):
+The `no-console` rule is configured as `warn` (not `error`), so the ~271 console statements in source files generate **warnings**, not errors. They do not block CI.
 
-```js
-env: {
-  browser: true,
-  node: true,
-  es2022: true
-}
-```
+**Effort estimate**: All 25 errors require individual code fixes. Most are trivial (remove unused import), but each must be verified to not break functionality. Estimated 1-2 hours.
 
-**Verification**: `npm run lint 2>&1 | grep -c 'error'` should drop from 100 to ~15 after the config fix.
+**Note**: The ESLint flat config already contains the functional equivalent of `env: { browser: true, node: true, es2022: true }` via the `globals` package. No config change is needed.
 
 ### 1.2 Hardcoded Path Count Reconciliation
 
 Prior memory stated "25 hardcoded path refs in 16 TypeScript production source files." Verified breakdown:
 
-| User Path    | TypeScript Source Occurrences | Files | Svelte Occurrences | Svelte Files |
-| ------------ | ----------------------------- | ----- | ------------------ | ------------ |
-| /home/ubuntu | 10                            | 6     | 0                  | 0            |
-| /home/pi     | 8                             | 4     | 2                  | 1            |
-| **Total**    | **18**                        | **8** | **2**              | **1**        |
+| User Path    | TypeScript Source Occurrences | Files  | Svelte Occurrences | Svelte Files |
+| ------------ | ----------------------------- | ------ | ------------------ | ------------ |
+| /home/ubuntu | 10                            | 6      | 0                  | 0            |
+| /home/pi     | 8                             | 4      | 2                  | 1            |
+| **Total**    | **18**                        | **10** | **2**              | **1**        |
 
-**Corrected total: 20 hardcoded paths across 9 files (18 in 8 TypeScript files + 2 in 1 Svelte file).**
+**Corrected total: 20 hardcoded paths across 11 files (18 across 10 TypeScript files + 2 in 1 Svelte file) for `/home/ubuntu` + `/home/pi` only.**
+
+**ADDITIONAL FINDING (Independent Audit 2026-02-08):** 7 `/home/kali` hardcoded paths across 6 TypeScript files were not included in the original audit. These represent partially-migrated paths that will break on any non-kali deployment. True total: **27 hardcoded path occurrences across 15 unique files.**
 
 The Svelte file missed in prior counts:
 
@@ -73,7 +71,7 @@ The Svelte file missed in prior counts:
 
 These 2 Svelte instances must be included in the `paths.ts` centralization scope (Task 6.3.3).
 
-The prior "25 in 16 files" figure included Svelte and config files. This plan separates TypeScript + Svelte source (20 in 9 files), shell scripts (147 in 64 files), and service/config files (23 in 12 files) into distinct tasks.
+The prior "25 in 16 files" figure included Svelte and config files. This plan separates TypeScript + Svelte source (20 in 11 files for /home/ubuntu + /home/pi; 27 in 15 files including /home/kali), shell scripts (147 in 64 files), and service/config files (23 in 12 files) into distinct tasks.
 
 ### 1.3 Service File Count
 
@@ -90,18 +88,19 @@ Verified with: `diff config/systemd/coral-worker.service deployment/systemd/cora
 
 Every task in this phase produces changes that can be independently reverted.
 
-| Task   | Rollback Method                                                                                              |
-| ------ | ------------------------------------------------------------------------------------------------------------ |
-| 6.3.1  | `git checkout HEAD -- deployment/ config/systemd/ scripts/*.service`                                         |
-| 6.3.2  | Same as 6.3.1; service files are not installed until manual `systemctl daemon-reload`                        |
-| 6.3.3  | `git checkout HEAD -- src/` for each affected TypeScript file                                                |
-| 6.3.4  | `git checkout HEAD -- scripts/` for each affected shell script                                               |
-| 6.3.5  | `git checkout HEAD -- deployment/ config/systemd/`                                                           |
-| 6.3.6  | Restore original `vm.swappiness` line in 3 scripts; remove NODE_OPTIONS from 2 services                      |
-| 6.3.7  | `git checkout HEAD -- .github/workflows/ci.yml package.json svelte.config.js src/lib/server/validate-env.js` |
-| 6.3.8  | `git rm` new workflow files; `git checkout HEAD -- .github/`                                                 |
-| 6.3.9  | `git rm CODEOWNERS SECURITY.md`; remove branch protection via `gh api`                                       |
-| 6.3.10 | `git checkout HEAD -- svelte.config.js docker/`; `npm remove @sveltejs/adapter-node`                         |
+| Task   | Rollback Method                                                                                                                            |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 6.3.1  | `git checkout HEAD -- deployment/ config/systemd/ scripts/*.service`                                                                       |
+| 6.3.2  | Same as 6.3.1; service files are not installed until manual `systemctl daemon-reload`                                                      |
+| 6.3.3  | `git checkout HEAD -- src/` for each affected TypeScript file                                                                              |
+| 6.3.4  | `git checkout HEAD -- scripts/` for each affected shell script                                                                             |
+| 6.3.5  | `git checkout HEAD -- deployment/ config/systemd/`                                                                                         |
+| 6.3.6  | Restore original `vm.swappiness` line in 3 scripts; remove NODE_OPTIONS from 2 services                                                    |
+| 6.3.6b | `git checkout HEAD -- src/routes/api/` for each affected API route file                                                                    |
+| 6.3.7  | `git checkout HEAD -- .github/workflows/ci.yml .github/workflows/release.yml package.json svelte.config.js src/lib/server/validate-env.js` |
+| 6.3.8  | `git rm` new workflow files; `git checkout HEAD -- .github/`                                                                               |
+| 6.3.9  | `git rm CODEOWNERS SECURITY.md`; remove branch protection via `gh api`                                                                     |
+| 6.3.10 | `git checkout HEAD -- svelte.config.js docker/`; `npm remove @sveltejs/adapter-node`                                                       |
 
 Critical: No task in this phase modifies the running system. Service files must be manually installed with `sudo cp` and `sudo systemctl daemon-reload`. CI changes take effect only on push to GitHub.
 
@@ -222,12 +221,86 @@ ls deployment/generated/*.service | wc -l
 
 Of the 11 service files:
 
-- 2 run as `root` with zero security hardening (argos-droneid.service, wifi-keepalive.service)
+- **3 run as root with zero sandboxing** (argos-droneid.service, gsmevil-patch.service, wifi-keepalive.service)
+- **8 of 11 services have ZERO security hardening directives** (no ProtectSystem, no ProtectHome, no CapabilityBoundingSet)
+- **0 services have ProtectSystem, ProtectHome, or CapabilityBoundingSet** in any form
 - 0 have `MemoryMax` or `CPUQuota` resource limits
 - argos-droneid.service binds to privileged port 80 as root with no `CapabilityBoundingSet`
 - wifi-keepalive.service sets `StartLimitIntervalSec=0` and `StartLimitBurst=0`, which disables systemd's restart throttle entirely, enabling infinite restart storms that consume CPU and fill journal logs
 - argos-dev.service and argos-final.service lack NODE_OPTIONS, allowing V8 to allocate up to ~1.5GB on a 64-bit system (8GB total RAM, multiple services competing)
 - Only argos-final.service, argos-cpu-protector.service, argos-process-manager.service, and argos-wifi-resilience.service have `NoNewPrivileges=true`
+
+#### BEFORE State: Current Security Directives per Service (verified 2026-02-08)
+
+| Service               | User            | NoNewPrivileges | PrivateTmp | ProtectSystem | ProtectHome | CapabilityBoundingSet | MemoryMax | CPUQuota |
+| --------------------- | --------------- | --------------- | ---------- | ------------- | ----------- | --------------------- | --------- | -------- |
+| argos-dev             | pi              | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| argos-final           | pi              | YES             | YES        | NO            | NO          | NO                    | NO        | NO       |
+| argos-cpu-protector   | pi              | YES             | YES        | NO            | NO          | NO                    | NO        | NO       |
+| argos-process-manager | pi              | YES             | YES        | NO            | NO          | NO                    | NO        | NO       |
+| argos-wifi-resilience | pi              | YES             | YES        | NO            | NO          | NO                    | NO        | NO       |
+| argos-droneid         | **root**        | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| gsmevil-patch         | **(none=root)** | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| coral-worker          | ubuntu          | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| dev-server-keepalive  | pi              | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| simple-keepalive      | pi              | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+| wifi-keepalive        | **root**        | NO              | NO         | NO            | NO          | NO                    | NO        | NO       |
+
+**Verification command used:** `grep -E '(NoNewPrivileges|PrivateTmp|ProtectSystem|ProtectHome|CapabilityBoundingSet|MemoryMax|CPUQuota)' deployment/*.service deployment/systemd/*.service scripts/*.service`
+
+#### AFTER State: All Templates Must Have (post-6.3.2)
+
+| Service Template      | User           | NoNewPrivileges | PrivateTmp | ProtectSystem | ProtectHome | CapabilityBoundingSet            | MemoryMax | CPUQuota |
+| --------------------- | -------------- | --------------- | ---------- | ------------- | ----------- | -------------------------------- | --------- | -------- |
+| argos-dev             | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 1536M     | 150%     |
+| argos-final           | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 1536M     | 150%     |
+| argos-cpu-protector   | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 128M      | 25%      |
+| argos-process-manager | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 128M      | 25%      |
+| argos-wifi-resilience | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 128M      | 25%      |
+| argos-droneid         | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | CAP_NET_BIND_SERVICE CAP_NET_RAW | 512M      | 50%      |
+| gsmevil-patch         | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 64M       | 10%      |
+| coral-worker          | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 512M      | 50%      |
+| dev-server-keepalive  | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 1536M     | 150%     |
+| simple-keepalive      | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | (empty -- no caps needed)        | 1536M     | 150%     |
+| wifi-keepalive        | @@ARGOS_USER@@ | YES             | YES        | strict        | read-only   | CAP_NET_RAW                      | 128M      | 25%      |
+
+#### 4.2.1a Root-Running Service Remediation (per-service subtasks)
+
+**Subtask A: argos-droneid.service (CRITICAL -- runs as root to bind port 80)**
+
+Current: `User=root`, no security directives, binds port 80, hardcoded `/home/ubuntu` paths.
+
+Fix:
+
+1. Change `User=root` to `User=@@ARGOS_USER@@`
+2. Add `AmbientCapabilities=CAP_NET_BIND_SERVICE` so non-root can bind port 80
+3. Add `CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_NET_RAW` (restricts to only needed caps)
+4. Add full security hardening block (see 4.2.2)
+5. Add `ReadWritePaths=@@ARGOS_DIR@@` for log/pid file writes
+
+**Subtask B: gsmevil-patch.service (CRITICAL -- implicit root, no User= directive)**
+
+Current: No `User=` directive (defaults to root), no `WorkingDirectory=`, no security directives. This is a one-shot script that patches GSM Evil configuration.
+
+Fix:
+
+1. Add `User=@@ARGOS_USER@@` and `Group=@@ARGOS_GROUP@@`
+2. Add `WorkingDirectory=@@ARGOS_DIR@@`
+3. Add full security hardening block (see 4.2.2)
+4. The script requires write access to GSM Evil config: add `ReadWritePaths=/usr/src/gsmevil2`
+
+**Subtask C: wifi-keepalive.service (CRITICAL -- explicit root, no sandboxing)**
+
+Current: `User=root`, no `WorkingDirectory=`, `StartLimitIntervalSec=0` / `StartLimitBurst=0` (infinite restart).
+
+Fix:
+
+1. Change `User=root` to `User=@@ARGOS_USER@@`
+2. Add `AmbientCapabilities=CAP_NET_RAW` (needed for WiFi interface management via `ip link`)
+3. Add `CapabilityBoundingSet=CAP_NET_RAW`
+4. Add `WorkingDirectory=@@ARGOS_DIR@@`
+5. Add full security hardening block (see 4.2.2)
+6. Fix restart storm: `StartLimitIntervalSec=300`, `StartLimitBurst=5`
 
 ### 4.2.2 Security Baseline for All Templates
 
@@ -356,7 +429,7 @@ done
 
 ### 5.3.1 Problem Statement
 
-20 hardcoded path references exist across 9 files (18 in 8 TypeScript files + 2 in 1 Svelte file). These paths reference users (ubuntu, pi) that do not exist on the deployment target. Every file import or spawn that uses these paths will fail at runtime.
+20 hardcoded `/home/ubuntu` and `/home/pi` path references exist across 11 files (18 across 10 TypeScript files + 2 in 1 Svelte file). An additional 7 `/home/kali` references exist across 6 TypeScript files (see Appendix). These paths reference users (ubuntu, pi) that do not exist on the deployment target, or hardcode the current user (kali) preventing portability. Every file import or spawn that uses these paths will fail at runtime on a differently-configured system.
 
 ### 5.3.2 Inventory (verified 2026-02-08)
 
@@ -393,6 +466,28 @@ done
 | `src/lib/components/wigletotak/directory/DirectoryCard.svelte` | 14      | `/home/pi/kismet_ops` | Default value for directory prop |
 | `src/lib/components/wigletotak/directory/DirectoryCard.svelte` | 106     | `/home/pi/kismet_ops` | UI placeholder text              |
 
+**Files referencing /home/kali (7 occurrences in 6 files -- NOT in original plan):**
+
+These represent partially-migrated paths that will break on any non-kali deployment. They were missed by the original audit because the original scope only searched for `/home/ubuntu` and `/home/pi`.
+
+| File                                                               | Line(s) | Hardcoded Path                                               | Purpose                         |
+| ------------------------------------------------------------------ | ------- | ------------------------------------------------------------ | ------------------------------- |
+| `src/lib/server/agent/tool-execution/detection/binary-detector.ts` | 44      | `/home/kali/.local/bin/${binaryName}`                        | Binary search path              |
+| `src/routes/api/kismet/control/+server.ts`                         | 91, 93  | `/home/kali` (cd target for kismet startup)                  | Kismet working directory        |
+| `src/routes/api/gsm-evil/imsi-data/+server.ts`                     | 9       | `/home/kali/gsmevil-user/database/imsi.db`                   | IMSI database fallback path     |
+| `src/routes/api/gsm-evil/imsi/+server.ts`                          | 9       | `/home/kali/gsmevil-user/database/imsi.db`                   | IMSI database fallback path     |
+| `src/routes/api/cell-towers/nearby/+server.ts`                     | 49      | `/home/kali/Documents/Argos/Argos/data/celltowers/towers.db` | Cell tower DB absolute path     |
+| `src/routes/api/gsm-evil/control/+server.ts`                       | 79      | `/home/kali/gsmevil-user`                                    | GSM Evil installation directory |
+
+**Verification of /home/kali paths (run 2026-02-08):**
+
+```bash
+grep -rn '/home/kali' --include='*.ts' --include='*.svelte' src/ | grep -v 'node_modules'
+# Returns: 7 matches across 6 files (kismet/control has 2 lines: comment + code)
+```
+
+These 6 files must be updated in Task 6.3.3 Action B to import from `PATHS.*` constants, bringing the total scope from 11 files to **17 files** (10 TS ubuntu/pi + 1 Svelte pi + 6 TS kali).
+
 ### 5.3.3 Solution: Centralized Path Configuration
 
 **Action A: Create `src/lib/server/paths.ts`**
@@ -400,64 +495,81 @@ done
 This module resolves all filesystem paths from environment variables with sensible defaults derived from the project root.
 
 ```typescript
-import { env } from '$env/dynamic/private';
-import { resolve, join } from 'path';
+import { env } from "$env/dynamic/private";
+import { resolve, join } from "path";
 
 // Project root: derived from import.meta.url or env override
-const PROJECT_ROOT = env.ARGOS_DIR || resolve(new URL('.', import.meta.url).pathname, '../../..');
+const PROJECT_ROOT =
+	env.ARGOS_DIR ||
+	resolve(new URL(".", import.meta.url).pathname, "../../..");
 
 // User home: derived from env or process
-const USER_HOME = env.HOME || env.ARGOS_USER_HOME || '/home/kali';
+const USER_HOME = env.HOME || env.ARGOS_USER_HOME || "/home/kali";
 
 export const PATHS = {
 	projectRoot: PROJECT_ROOT,
 
 	// DroneID
-	droneidDir: env.DRONEID_DIR || join(PROJECT_ROOT, 'RemoteIDReceiver/Receiver'),
-	droneidPid: env.DRONEID_PID || join(PROJECT_ROOT, 'droneid.pid'),
-	droneidLog: env.DRONEID_LOG || join(PROJECT_ROOT, 'droneid.log'),
+	droneidDir:
+		env.DRONEID_DIR || join(PROJECT_ROOT, "RemoteIDReceiver/Receiver"),
+	droneidPid: env.DRONEID_PID || join(PROJECT_ROOT, "droneid.pid"),
+	droneidLog: env.DRONEID_LOG || join(PROJECT_ROOT, "droneid.log"),
 
 	// Cell Tower Database
-	cellTowerDb: env.CELLTOWER_DB_PATH || join(PROJECT_ROOT, 'data/celltowers/towers.db'),
+	cellTowerDb:
+		env.CELLTOWER_DB_PATH ||
+		join(PROJECT_ROOT, "data/celltowers/towers.db"),
 
 	// GSM Evil
-	gsmImsiDb: env.GSM_IMSI_DB || join(USER_HOME, 'gsmevil-user/database/imsi.db'),
+	gsmImsiDb:
+		env.GSM_IMSI_DB || join(USER_HOME, "gsmevil-user/database/imsi.db"),
 
 	// Coral TPU
-	coralPython: env.CORAL_PYTHON_BIN || join(PROJECT_ROOT, '.coral_env/bin/python'),
+	coralPython:
+		env.CORAL_PYTHON_BIN || join(PROJECT_ROOT, ".coral_env/bin/python"),
 	coralWorkerScript:
 		env.CORAL_WORKER_SCRIPT ||
-		join(PROJECT_ROOT, 'src/lib/services/localization/coral/coral_worker.py'),
+		join(
+			PROJECT_ROOT,
+			"src/lib/services/localization/coral/coral_worker.py",
+		),
 
 	// Kismet
-	kismetStartScript: env.KISMET_START_SCRIPT || join(USER_HOME, 'Scripts/start_kismet.sh'),
-	kismetPidFile: env.KISMET_PID_FILE || join(USER_HOME, 'tmp/kismet.pid'),
-	kismetLogFile: env.KISMET_LOG_FILE || join(USER_HOME, 'tmp/kismet.log'),
-	kismetScriptsDir: env.KISMET_SCRIPTS_DIR || join(USER_HOME, 'Scripts'),
-	kismetSecondaryDir: env.KISMET_SECONDARY_DIR || join(USER_HOME, 'stinky'),
-	kismetLogDir: env.KISMET_LOG_DIR || join(USER_HOME, 'tmp'),
+	kismetStartScript:
+		env.KISMET_START_SCRIPT || join(USER_HOME, "Scripts/start_kismet.sh"),
+	kismetPidFile: env.KISMET_PID_FILE || join(USER_HOME, "tmp/kismet.pid"),
+	kismetLogFile: env.KISMET_LOG_FILE || join(USER_HOME, "tmp/kismet.log"),
+	kismetScriptsDir: env.KISMET_SCRIPTS_DIR || join(USER_HOME, "Scripts"),
+	kismetSecondaryDir: env.KISMET_SECONDARY_DIR || join(USER_HOME, "stinky"),
+	kismetLogDir: env.KISMET_LOG_DIR || join(USER_HOME, "tmp"),
 
 	// WiGLE
-	wigleDirectory: env.WIGLE_DIR || join(USER_HOME, 'kismet_ops')
+	wigleDirectory: env.WIGLE_DIR || join(USER_HOME, "kismet_ops"),
+
+	// Binary detection (for agent tool execution)
+	localBinDir: env.LOCAL_BIN_DIR || join(USER_HOME, ".local/bin"),
+
+	// GSM Evil installation
+	gsmEvilDir: env.GSMEVIL_DIR || join(USER_HOME, "gsmevil-user"),
 } as const;
 ```
 
 **Action B: Replace hardcoded paths in each file**
 
-For each of the 9 files listed in 5.3.2 (8 TypeScript + 1 Svelte), replace the hardcoded string literal with the corresponding `PATHS.*` constant or `VITE_*` env variable. Example for `src/routes/api/droneid/+server.ts`:
+For each of the 11 files listed in 5.3.2 (10 TypeScript + 1 Svelte), plus the 6 files with `/home/kali` paths (see Appendix), replace the hardcoded string literal with the corresponding `PATHS.*` constant or `VITE_*` env variable. Example for `src/routes/api/droneid/+server.ts`:
 
 Before (lines 8-10):
 
 ```typescript
-const DRONEID_DIR = '/home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver';
-const PID_FILE = '/home/ubuntu/projects/Argos/droneid.pid';
-const LOG_FILE = '/home/ubuntu/projects/Argos/droneid.log';
+const DRONEID_DIR = "/home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver";
+const PID_FILE = "/home/ubuntu/projects/Argos/droneid.pid";
+const LOG_FILE = "/home/ubuntu/projects/Argos/droneid.log";
 ```
 
 After:
 
 ```typescript
-import { PATHS } from '$lib/server/paths';
+import { PATHS } from "$lib/server/paths";
 const DRONEID_DIR = PATHS.droneidDir;
 const PID_FILE = PATHS.droneidPid;
 const LOG_FILE = PATHS.droneidLog;
@@ -499,11 +611,15 @@ placeholder={import.meta.env.VITE_WIGLE_DIR || '/home/kali/kismet_ops'}
 grep -rn '/home/ubuntu\|/home/pi' --include='*.ts' --include='*.svelte' src/
 # Expected: no output
 
+# 1b. Verify /home/kali paths also centralized (from Appendix findings)
+grep -rn '/home/kali' --include='*.ts' --include='*.svelte' src/ | grep -v 'node_modules'
+# Expected: no output (all replaced with PATHS.* constants)
+
 # 2. Verify PATHS module exists and exports expected constants
 grep -c 'export const PATHS' src/lib/server/paths.ts
 # Expected: 1
 
-# 3. Verify all 9 files updated (8 TS import PATHS, 1 Svelte uses VITE_WIGLE_DIR)
+# 3. Verify all 17 files updated (16 TS import PATHS, 1 Svelte uses VITE_WIGLE_DIR)
 for f in \
   src/routes/api/droneid/+server.ts \
   src/routes/api/cell-towers/nearby/+server.ts \
@@ -513,7 +629,12 @@ for f in \
   src/lib/services/localization/coral/CoralAccelerator.v2.ts \
   src/routes/api/kismet/scripts/execute/+server.ts \
   src/lib/server/kismet/serviceManager.ts \
-  src/lib/server/kismet/scriptManager.ts; do
+  src/lib/server/kismet/scriptManager.ts \
+  src/lib/server/agent/tool-execution/detection/binary-detector.ts \
+  src/routes/api/kismet/control/+server.ts \
+  src/routes/api/gsm-evil/imsi-data/+server.ts \
+  src/routes/api/gsm-evil/imsi/+server.ts \
+  src/routes/api/gsm-evil/control/+server.ts; do
   grep -q 'PATHS' "$f" || echo "MISSING IMPORT: $f"
 done
 # Expected: no output
@@ -703,13 +824,83 @@ grep -l 'NODE_OPTIONS' deployment/templates/*.service.template | wc -l
 
 ---
 
+## 8b. Task 6.3.6b -- Debug Console Statements in API Routes
+
+### 8b.1 Problem Statement
+
+**50 `console.log/debug/trace()` calls exist across 14 API route files.** These are debug-time artifacts that should not exist in production API endpoints. They pollute journal logs when running under systemd, interfere with structured logging, and leak internal state information.
+
+The GSM Evil scan route alone has 16 console statements -- evidence of debugging sessions that were never cleaned up.
+
+**Detection command:**
+
+```bash
+grep -rn 'console\.\(log\|debug\|trace\)' src/routes/api/ --include='*.ts' | wc -l
+# Result: 50
+```
+
+### 8b.2 Per-File Breakdown (verified 2026-02-08)
+
+| File                                                     | console.log/debug/trace Count |
+| -------------------------------------------------------- | ----------------------------- |
+| `src/routes/api/gsm-evil/scan/+server.ts`                | 16                            |
+| `src/routes/api/gsm-evil/tower-location/+server.ts`      | 6                             |
+| `src/routes/api/kismet/stop/+server.ts`                  | 6                             |
+| `src/routes/api/agent/stream/+server.ts`                 | 4                             |
+| `src/routes/api/rf/usrp-power/+server.ts`                | 4                             |
+| `src/routes/api/agent/tools/+server.ts`                  | 3                             |
+| `src/routes/api/gsm-evil/intelligent-scan/+server.ts`    | 3                             |
+| `src/routes/api/droneid/+server.ts`                      | 2                             |
+| `src/routes/api/cell-towers/nearby/+server.ts`           | 1                             |
+| `src/routes/api/hardware/scan/+server.ts`                | 1                             |
+| `src/routes/api/hardware/status/[hardwareId]/+server.ts` | 1                             |
+| `src/routes/api/kismet/start-with-adapter/+server.ts`    | 1                             |
+| `src/routes/api/tools/execute/+server.ts`                | 1                             |
+| `src/routes/api/tools/scan/+server.ts`                   | 1                             |
+| **Total**                                                | **50**                        |
+
+### 8b.3 Fix Strategy
+
+Replace each `console.log/debug/trace()` with one of:
+
+1. **Delete**: If the statement was purely for debugging and provides no operational value.
+2. **Replace with `logger.debug()`**: If the information is useful for troubleshooting but should be controlled by log level. The structured logger is already available at `src/lib/server/logger.ts` (imported by 44 files).
+3. **Replace with `logger.info()`**: If the statement logs an operationally significant event (e.g., "GSM scan started on frequency X").
+
+**Priority**: Start with the GSM Evil scan route (16 statements) since it is the worst offender and a security-sensitive endpoint.
+
+Note: `console.warn` and `console.error` calls (154 additional occurrences across API routes) are excluded from this task. These serve a legitimate purpose for warning/error reporting and should be migrated to the structured logger in a separate pass.
+
+### 8b.4 Verification
+
+```bash
+# 1. Verify zero console.log/debug/trace in API routes
+grep -rn 'console\.\(log\|debug\|trace\)' src/routes/api/ --include='*.ts' | wc -l
+# Expected: 0
+
+# 2. Verify logger is imported in files that replaced console statements
+for f in \
+  src/routes/api/gsm-evil/scan/+server.ts \
+  src/routes/api/gsm-evil/tower-location/+server.ts \
+  src/routes/api/kismet/stop/+server.ts; do
+  grep -q 'import.*logger' "$f" || echo "MISSING LOGGER: $f"
+done
+# Expected: no output (all files import logger)
+
+# 3. Verify ESLint no-console warnings decreased
+npx eslint src/routes/api/ --config config/eslint.config.js 2>&1 | grep "no-console" | wc -l
+# Expected: significantly less than current count
+```
+
+---
+
 ## 9. Task 6.3.7 -- CI/CD Pipeline Repair
 
 ### 9.3.7.1 Problem Statement
 
 The CI pipeline (`.github/workflows/ci.yml`) has never passed. Every run on the `main` branch has failed. Three root causes have been identified:
 
-1. **ESLint exits non-zero:** 813 problems (100 errors, 713 warnings). The CI step `npm run lint` exits with code 1.
+1. **ESLint exits non-zero:** 580 problems on src/ (25 errors, 555 warnings). The CI step `npm run lint` exits with code 1 due to 25 real code errors.
 2. **validate:env blocks build:** `npm run build` calls `npm run validate:env` first (line 18 of package.json). The Zod schema in `src/lib/server/validate-env.js` requires `KISMET_API_URL` as a non-optional URL. This variable is not available on GitHub Actions runners.
 3. **adapter-auto cannot produce a standalone server:** `svelte.config.js` uses `@sveltejs/adapter-auto`, which auto-detects the deployment platform. On a bare GitHub Actions ubuntu-latest runner with no platform detected, it falls back to a static build. The `npm run preview` command in `argos-final.service` depends on Vite's preview server, not a standalone Node.js server.
 
@@ -722,7 +913,7 @@ Replace the lint step in `.github/workflows/ci.yml`:
 Before:
 
 ```yaml
-- name: 'Run Linting, Formatting, and Type Checks'
+- name: "Run Linting, Formatting, and Type Checks"
   run: |
       npm run lint
       npm run format:check
@@ -732,14 +923,14 @@ Before:
 After:
 
 ```yaml
-- name: 'Run Linting (non-blocking)'
+- name: "Run Linting (non-blocking)"
   run: npm run lint || true
   continue-on-error: true
 
-- name: 'Check Formatting'
+- name: "Check Formatting"
   run: npm run format:check
 
-- name: 'Run TypeScript Type Checks'
+- name: "Run TypeScript Type Checks"
   run: npm run typecheck
 ```
 
@@ -768,7 +959,7 @@ This preserves validation (must be a URL if set) while providing a safe default 
 **Option B (if Option A is rejected):** Set the variable in CI:
 
 ```yaml
-- name: 'Verify Production Build'
+- name: "Verify Production Build"
   run: npm run build
   env:
       KISMET_API_URL: http://localhost:2501
@@ -800,13 +991,13 @@ npm remove @sveltejs/adapter-auto
 Before:
 
 ```javascript
-import adapter from '@sveltejs/adapter-auto';
+import adapter from "@sveltejs/adapter-auto";
 ```
 
 After:
 
 ```javascript
-import adapter from '@sveltejs/adapter-node';
+import adapter from "@sveltejs/adapter-node";
 ```
 
 4. Update `argos-final.service` template: Replace `npm run preview` with `node build` (the output of adapter-node is a standalone Node.js server at `build/index.js`):
@@ -862,6 +1053,214 @@ Both `ci.yml` and `release.yml` use `runs-on: ubuntu-latest` (x86_64). The deplo
 - ARM matrix build: `strategy: matrix: arch: [x64, arm64]`
   **Recommendation**: Start with QEMU emulation. Add self-hosted runner when available.
 
+### 9.3.7.6 Fix 4: Fix All 25 ESLint Errors to Unbreak CI
+
+The 25 ESLint errors must be fixed individually. They cannot be resolved by config changes. Breakdown and fix strategy per error category:
+
+**Category A: `@typescript-eslint/no-unused-vars` (22 errors)**
+
+These are unused imports or variable declarations. Each requires inspection to determine if the variable was intended to be used (fix the usage) or is genuinely dead (remove the import/variable).
+
+Detection:
+
+```bash
+npx eslint src/ --config config/eslint.config.js -f json 2>/dev/null | \
+  python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data:
+    for m in f.get('messages', []):
+        if m.get('severity') == 2 and m.get('ruleId') == '@typescript-eslint/no-unused-vars':
+            print(f\"{f['filePath']}:{m['line']}:{m['column']} - {m['message']}\")
+"
+```
+
+Fix: For each hit, either:
+
+1. Remove the unused import/variable line entirely, OR
+2. Prefix with underscore (`_unusedVar`) if it is a required function parameter (e.g., `(_req, res) => ...`)
+
+**Category B: `no-undef` (1 error)**
+
+A variable is referenced that is not defined in scope. This is a genuine bug or missing import.
+
+Detection:
+
+```bash
+npx eslint src/ --config config/eslint.config.js -f json 2>/dev/null | \
+  python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data:
+    for m in f.get('messages', []):
+        if m.get('severity') == 2 and m.get('ruleId') == 'no-undef':
+            print(f\"{f['filePath']}:{m['line']}:{m['column']} - {m['message']}\")
+"
+```
+
+Fix: Add the missing import or declare the variable.
+
+**Category C: `no-async-promise-executor` (1 error)**
+
+An async function is used as the executor of `new Promise()`. This is an anti-pattern because errors thrown inside an async executor are silently swallowed.
+
+Fix: Refactor from `new Promise(async (resolve, reject) => { ... })` to a plain `async function` that directly returns or throws.
+
+**Category D: `no-useless-escape` (1 error)**
+
+An unnecessary backslash escape in a string or regex. Fix: Remove the backslash.
+
+**Effort**: 1-2 hours for all 25 errors. Each fix is mechanical but must be verified to not break functionality.
+
+**Verification:**
+
+```bash
+# After fixing all 25 errors:
+npx eslint src/ --config config/eslint.config.js 2>&1 | grep "problems"
+# Expected: "X problems (0 errors, Y warnings)" -- zero errors
+```
+
+### 9.3.7.7 Fix 5: Add Quality Gates to release.yml
+
+**CRITICAL FINDING**: The current `release.yml` has **ZERO quality gates**. It builds and publishes a release artifact without running lint, typecheck, or tests. A tagged release can ship broken code.
+
+Current release.yml flow (verified):
+
+1. Checkout
+2. Setup Node.js
+3. npm ci
+4. npm run build
+5. Package into tarball
+6. Upload to GitHub Releases
+
+**Missing steps**: No lint, no typecheck, no test. If a developer tags and pushes `v1.0.0`, a broken release is published automatically.
+
+**Fix**: Add quality gate steps BEFORE the build step in `.github/workflows/release.yml`:
+
+```yaml
+- name: "Run Lint Check"
+  run: npm run lint
+
+- name: "Run TypeScript Type Checks"
+  run: npm run typecheck
+
+- name: "Run Unit Tests"
+  run: npm run test:unit
+```
+
+These three steps must be inserted between the `npm ci` step and the `npm run build` step. If any gate fails, the release is not published.
+
+**Updated release.yml** (showing only the jobs section):
+
+```yaml
+jobs:
+    build-and-release:
+        name: "Build and Package Application"
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: "Checkout Code"
+              uses: actions/checkout@v4
+
+            - name: "Setup Node.js v20"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20.x"
+                  cache: "npm"
+
+            - name: "Install All Dependencies for Build"
+              run: npm ci
+
+            # === Quality Gates (must pass before build) ===
+            - name: "Quality Gate: Lint"
+              run: npm run lint
+
+            - name: "Quality Gate: TypeScript Type Check"
+              run: npm run typecheck
+
+            - name: "Quality Gate: Unit Tests"
+              run: npm run test:unit
+
+            # === Build and Package ===
+            - name: "Build Application for Production"
+              run: npm run build
+
+            - name: "Assemble Clean Production Package"
+              run: |
+                  mkdir release
+                  cp -r build/ release/
+                  cp package.json release/
+                  cp package-lock.json release/
+                  cp -r deployment/templates/ release/deployment/templates/
+                  cp deployment/generate-services.sh release/deployment/
+                  cd release
+                  npm ci --omit=dev
+                  cd ..
+
+            - name: "Create Compressed Release Tarball"
+              run: tar -czvf argos-final-${{ github.ref_name }}.tar.gz release
+
+            - name: "Create GitHub Release and Upload Artifact"
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: argos-final-${{ github.ref_name }}.tar.gz
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**Verification:**
+
+```bash
+# 1. Verify quality gates exist in release.yml
+grep -c 'Quality Gate' .github/workflows/release.yml
+# Expected: 3
+
+# 2. Verify lint step is present
+grep 'npm run lint' .github/workflows/release.yml
+# Expected: found
+
+# 3. Verify typecheck step is present
+grep 'npm run typecheck' .github/workflows/release.yml
+# Expected: found
+
+# 4. Verify test:unit step is present
+grep 'npm run test:unit' .github/workflows/release.yml
+# Expected: found
+```
+
+### 9.3.7.8 ARM Architecture Testing: Documented Gap and Remediation Path
+
+**Current state**: Both `ci.yml` and `release.yml` use `runs-on: ubuntu-latest`, which provisions x86_64 runners. The deployment target is RPi 5 (aarch64/ARM Cortex-A76).
+
+**What this means in practice:**
+
+- `better-sqlite3` compiles native C++ addons via node-gyp. The x86_64 `.node` binary produced in CI will NOT run on aarch64.
+- The release tarball contains x86_64 native modules that crash on the RPi 5 with `Error: ... invalid ELF header`.
+- Any architecture-specific behavior (memory layout, endianness edge cases) is untested.
+
+**Why the current release.yml tarball is broken on RPi 5:**
+The `npm ci --omit=dev` step inside the release workflow compiles `better-sqlite3` for x86_64. When this tarball is deployed to the RPi 5, Node.js cannot load the native module.
+
+**Remediation options (future work, not in this phase):**
+
+1. **QEMU emulation** (recommended first step):
+
+    ```yaml
+    - uses: docker/setup-qemu-action@v3
+      with:
+          platforms: arm64
+    - uses: docker/setup-buildx-action@v3
+    # Then run build in an arm64 container
+    ```
+
+2. **Self-hosted ARM runner** (recommended long-term):
+   Register the RPi 5 itself (or a spare RPi) as a GitHub Actions self-hosted runner. This provides native ARM compilation and accurate testing.
+
+3. **Cross-compilation workaround** (interim):
+   Skip native module compilation in CI; require `npm ci` on the RPi 5 after tarball extraction. This is what `deploy-to-pi.sh` already does (`npm ci --omit=dev` runs on the Pi).
+
+**For this phase**: Document the gap. The deployment script (`deploy-to-pi.sh` from Task 6.3.10) runs `npm ci` on the Pi, which correctly compiles native modules for aarch64. The release tarball should include `package.json` and `package-lock.json` but NOT `node_modules/`, allowing the Pi to compile its own native modules.
+
 ---
 
 ## 10. Task 6.3.8 -- CI/CD Security Tooling
@@ -877,40 +1276,40 @@ Create `.github/dependabot.yml`:
 ```yaml
 version: 2
 updates:
-    - package-ecosystem: 'npm'
-      directory: '/'
+    - package-ecosystem: "npm"
+      directory: "/"
       schedule:
-          interval: 'weekly'
-          day: 'monday'
+          interval: "weekly"
+          day: "monday"
       open-pull-requests-limit: 10
       reviewers:
-          - 'Graveside2022'
+          - "Graveside2022"
       labels:
-          - 'dependencies'
+          - "dependencies"
       groups:
           development:
-              dependency-type: 'development'
+              dependency-type: "development"
               update-types:
-                  - 'minor'
-                  - 'patch'
+                  - "minor"
+                  - "patch"
           production:
-              dependency-type: 'production'
+              dependency-type: "production"
               update-types:
-                  - 'patch'
+                  - "patch"
 
-    - package-ecosystem: 'github-actions'
-      directory: '/'
+    - package-ecosystem: "github-actions"
+      directory: "/"
       schedule:
-          interval: 'weekly'
+          interval: "weekly"
       labels:
-          - 'ci'
+          - "ci"
 
-    - package-ecosystem: 'docker'
-      directory: '/docker'
+    - package-ecosystem: "docker"
+      directory: "/docker"
       schedule:
-          interval: 'weekly'
+          interval: "weekly"
       labels:
-          - 'docker'
+          - "docker"
 ```
 
 ### 10.3.8.3 Action B: Add Security Scanning Workflow
@@ -918,7 +1317,7 @@ updates:
 Create `.github/workflows/security.yml`:
 
 ```yaml
-name: 'Security Scanning'
+name: "Security Scanning"
 
 on:
     push:
@@ -926,27 +1325,27 @@ on:
     pull_request:
         branches: [main]
     schedule:
-        - cron: '0 6 * * 1' # Weekly Monday 0600 UTC
+        - cron: "0 6 * * 1" # Weekly Monday 0600 UTC
 
 jobs:
     npm-audit:
-        name: 'NPM Vulnerability Audit'
+        name: "NPM Vulnerability Audit"
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: '20.x'
-                  cache: 'npm'
+                  node-version: "20.x"
+                  cache: "npm"
             - run: npm ci
-            - name: 'Run npm audit'
+            - name: "Run npm audit"
               run: npm audit --audit-level=high
               continue-on-error: true
-            - name: 'Run npm audit (strict)'
+            - name: "Run npm audit (strict)"
               run: npm audit --audit-level=critical
 
     secret-scanning:
-        name: 'Secret Detection (gitleaks)'
+        name: "Secret Detection (gitleaks)"
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -958,7 +1357,7 @@ jobs:
                   GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
     sast:
-        name: 'Static Analysis (CodeQL)'
+        name: "Static Analysis (CodeQL)"
         runs-on: ubuntu-latest
         permissions:
             actions: read
@@ -1230,7 +1629,7 @@ The current `release.yml` copies `build/` and runs `npm ci --omit=dev`. With ada
 Update the assembly step:
 
 ```yaml
-- name: 'Assemble Clean Production Package'
+- name: "Assemble Clean Production Package"
   run: |
       mkdir release
       cp -r build/ release/
@@ -1298,6 +1697,14 @@ This checklist covers all tasks. Every line must pass before the phase is consid
 | 23  | Pre-push hook exists                           | `test -x .husky/pre-push`                                                               | Exit 0             |
 | 24  | engines field in package.json                  | `node -e "require('./package.json').engines.node"`                                      | Truthy             |
 | 25  | Typecheck passes                               | `npm run typecheck`                                                                     | Exit 0             |
+| 26  | No hardcoded /home/kali in src/_.ts,_.svelte   | `grep -rn '/home/kali' --include='*.ts' --include='*.svelte' src/`                      | No output          |
+| 27  | All templates have ProtectSystem=strict        | `grep -cL 'ProtectSystem=strict' deployment/templates/*.template`                       | No output          |
+| 28  | All templates have ProtectHome=read-only       | `grep -cL 'ProtectHome=read-only' deployment/templates/*.template`                      | No output          |
+| 29  | Zero console.log/debug/trace in API routes     | `grep -rn 'console\.\(log\|debug\|trace\)' src/routes/api/ --include='*.ts' \| wc -l`   | 0                  |
+| 30  | release.yml has quality gates                  | `grep -c 'Quality Gate' .github/workflows/release.yml`                                  | 3                  |
+| 31  | ESLint errors = 0 (src/ scope)                 | `npx eslint src/ --config config/eslint.config.js 2>&1 \| grep '0 errors'`              | Found              |
+| 32  | argos-env.sh exists and is sourceable          | `bash -n scripts/lib/argos-env.sh`                                                      | Exit 0             |
+| 33  | paths.ts exports PATHS constant                | `grep -c 'export const PATHS' src/lib/server/paths.ts`                                  | 1                  |
 
 ---
 
@@ -1305,42 +1712,51 @@ This checklist covers all tasks. Every line must pass before the phase is consid
 
 Every finding from the audit evidence maps to exactly one task. No finding is left unaddressed.
 
-| Finding                                               | Task                                                           | Status   |
-| ----------------------------------------------------- | -------------------------------------------------------------- | -------- |
-| 11 service files with wrong User/paths                | 6.3.1                                                          | PLANNED  |
-| Duplicate coral-worker.service                        | 6.3.1 Action C                                                 | PLANNED  |
-| No MemoryMax/CPUQuota on any service                  | 6.3.2                                                          | PLANNED  |
-| argos-droneid runs as root on port 80                 | 6.3.2.4                                                        | PLANNED  |
-| argos-droneid has no security hardening               | 6.3.2.2                                                        | PLANNED  |
-| wifi-keepalive infinite restart storm                 | 6.3.2.5                                                        | PLANNED  |
-| argos-dev/final missing NODE_OPTIONS                  | 6.3.2.6                                                        | PLANNED  |
-| 20 hardcoded paths in 9 files (18 TS + 2 Svelte)      | 6.3.3                                                          | PLANNED  |
-| 147 hardcoded paths in 64 shell scripts               | 6.3.4                                                          | PLANNED  |
-| 23 hardcoded paths in 12 service files                | 6.3.5 (via 6.3.1)                                              | PLANNED  |
-| vm.swappiness=10 conflicts with zram (3 scripts)      | 6.3.6.1                                                        | PLANNED  |
-| NODE_OPTIONS missing in 2 services                    | 6.3.6.2 (via 6.3.2)                                            | PLANNED  |
-| CI has never passed (100% failure rate)               | 6.3.7                                                          | PLANNED  |
-| ESLint 100 errors block CI                            | 6.3.7.2                                                        | PLANNED  |
-| validate:env requires KISMET_API_URL                  | 6.3.7.3                                                        | PLANNED  |
-| adapter-auto cannot produce standalone server         | 6.3.7.4                                                        | PLANNED  |
-| argos-final.service runs npm preview (not production) | 6.3.7.4, 6.3.10                                                | PLANNED  |
-| No Dependabot                                         | 6.3.8.2                                                        | PLANNED  |
-| No SAST/CodeQL                                        | 6.3.8.3                                                        | PLANNED  |
-| No secret scanning                                    | 6.3.8.3                                                        | PLANNED  |
-| No SBOM generation                                    | 6.3.8 (deferred)                                               | PLANNED  |
-| No container scanning                                 | 6.3.8 (deferred; needs Trivy integration with Docker workflow) | PLANNED  |
-| 19 npm vulnerabilities (14 high)                      | 6.3.8.4                                                        | PLANNED  |
-| No SECURITY.md                                        | 6.3.8.5                                                        | PLANNED  |
-| No branch protection on main                          | 6.3.9.4                                                        | PLANNED  |
-| Broken git submodule (RemoteIDReceiver)               | 6.3.9.2                                                        | PLANNED  |
-| No CODEOWNERS                                         | 6.3.9.3                                                        | PLANNED  |
-| Pre-commit hook routinely bypassed                    | 6.3.9.5                                                        | PLANNED  |
-| No pre-push hook                                      | 6.3.9.5                                                        | PLANNED  |
-| Package version 0.0.1 / no engines field              | 6.3.10.3                                                       | PLANNED  |
-| No deployment automation script                       | 6.3.10.4                                                       | PLANNED  |
-| release.yml produces non-runnable tarball             | 6.3.10.5                                                       | PLANNED  |
-| User identity crisis (pi/ubuntu/root/kali)            | 6.3.1 (via templating)                                         | PLANNED  |
-| Docker passwords hardcoded in compose                 | 6.3.8 (noted; requires secrets management -- separate phase)   | DEFERRED |
+| Finding                                                | Task                                                           | Status   |
+| ------------------------------------------------------ | -------------------------------------------------------------- | -------- |
+| 11 service files with wrong User/paths                 | 6.3.1                                                          | PLANNED  |
+| Duplicate coral-worker.service                         | 6.3.1 Action C                                                 | PLANNED  |
+| No MemoryMax/CPUQuota on any service                   | 6.3.2                                                          | PLANNED  |
+| argos-droneid runs as root on port 80                  | 6.3.2.4                                                        | PLANNED  |
+| argos-droneid has no security hardening                | 6.3.2.2                                                        | PLANNED  |
+| wifi-keepalive infinite restart storm                  | 6.3.2.5                                                        | PLANNED  |
+| argos-dev/final missing NODE_OPTIONS                   | 6.3.2.6                                                        | PLANNED  |
+| 27 hardcoded paths in 15 files (20 ubuntu/pi + 7 kali) | 6.3.3                                                          | PLANNED  |
+| 147 hardcoded paths in 64 shell scripts                | 6.3.4                                                          | PLANNED  |
+| 23 hardcoded paths in 12 service files                 | 6.3.5 (via 6.3.1)                                              | PLANNED  |
+| vm.swappiness=10 conflicts with zram (3 scripts)       | 6.3.6.1                                                        | PLANNED  |
+| NODE_OPTIONS missing in 2 services                     | 6.3.6.2 (via 6.3.2)                                            | PLANNED  |
+| CI will fail: 25 ESLint errors cause exit code 1       | 6.3.7                                                          | PLANNED  |
+| ESLint 25 errors block CI                              | 6.3.7.2                                                        | PLANNED  |
+| validate:env requires KISMET_API_URL                   | 6.3.7.3                                                        | PLANNED  |
+| adapter-auto cannot produce standalone server          | 6.3.7.4                                                        | PLANNED  |
+| argos-final.service runs npm preview (not production)  | 6.3.7.4, 6.3.10                                                | PLANNED  |
+| No Dependabot                                          | 6.3.8.2                                                        | PLANNED  |
+| No SAST/CodeQL                                         | 6.3.8.3                                                        | PLANNED  |
+| No secret scanning                                     | 6.3.8.3                                                        | PLANNED  |
+| No SBOM generation                                     | 6.3.8 (deferred)                                               | PLANNED  |
+| No container scanning                                  | 6.3.8 (deferred; needs Trivy integration with Docker workflow) | PLANNED  |
+| 19 npm vulnerabilities (14 high)                       | 6.3.8.4                                                        | PLANNED  |
+| No SECURITY.md                                         | 6.3.8.5                                                        | PLANNED  |
+| No branch protection on main                           | 6.3.9.4                                                        | PLANNED  |
+| Broken git submodule (RemoteIDReceiver)                | 6.3.9.2                                                        | PLANNED  |
+| No CODEOWNERS                                          | 6.3.9.3                                                        | PLANNED  |
+| Pre-commit hook routinely bypassed                     | 6.3.9.5                                                        | PLANNED  |
+| No pre-push hook                                       | 6.3.9.5                                                        | PLANNED  |
+| Package version 0.0.1 / no engines field               | 6.3.10.3                                                       | PLANNED  |
+| No deployment automation script                        | 6.3.10.4                                                       | PLANNED  |
+| release.yml produces non-runnable tarball              | 6.3.10.5                                                       | PLANNED  |
+| User identity crisis (pi/ubuntu/root/kali)             | 6.3.1 (via templating)                                         | PLANNED  |
+| 8 of 11 services have ZERO security hardening          | 6.3.2 (BEFORE/AFTER table + per-service subtasks)              | PLANNED  |
+| 3 services run as root with no sandboxing              | 6.3.2.1a (Subtasks A, B, C for droneid/gsmevil/wifi-keepalive) | PLANNED  |
+| 0 services have ProtectSystem/ProtectHome/CapBoundSet  | 6.3.2.2 (mandatory security block for all templates)           | PLANNED  |
+| 7 /home/kali hardcoded paths in 6 TS files             | 6.3.3 (Action B, expanded from 11 to 17 files)                 | PLANNED  |
+| 50 console.log/debug/trace in 14 API route files       | 6.3.6b (new task: replace with structured logger)              | PLANNED  |
+| release.yml has ZERO quality gates                     | 6.3.7.7 (add lint/typecheck/test before build)                 | PLANNED  |
+| ARM arch mismatch (x86_64 CI vs aarch64 target)        | 6.3.7.8 (documented gap, deploy script workaround)             | PLANNED  |
+| 25 ESLint errors require individual code fixes         | 6.3.7.6 (per-category fix commands and verification)           | PLANNED  |
+| Circular dependency between 6.3.1 and 6.3.3            | Section 15 (resolved: argos-env.sh FIRST, then paths.ts)       | PLANNED  |
+| Docker passwords hardcoded in compose                  | 6.3.8 (noted; requires secrets management -- separate phase)   | DEFERRED |
 
 ### Deferred Items
 
@@ -1355,41 +1771,65 @@ Two findings require capabilities beyond this phase:
 ## 15. Execution Order and Dependencies
 
 ```
-Task 6.3.1 (Service templating) -----> Task 6.3.2 (Security hardening on templates)
-                                  \--> Task 6.3.5 (Config path verification)
-
-Task 6.3.3 (TS path elimination) -----> Independent (can run in parallel with 6.3.1)
+                              +--> Task 6.3.2 (Security hardening on templates)
+Task 6.3.1 (Service templating) --+--> Task 6.3.5 (Config path verification)
+                                  |
+Task 6.3.3 (TS path elimination) --+--> Independent (can run in parallel with 6.3.1)
 Task 6.3.4 (Shell path elimination) --> Independent (can run in parallel)
 Task 6.3.6 (Config conflicts) -------> Independent (can run in parallel)
+Task 6.3.6b (Console cleanup) -------> Independent (can run in parallel)
 
-Task 6.3.7 (CI repair) --------------> Task 6.3.8 (Security tooling, depends on working CI)
-                                  \--> Task 6.3.9 (Branch protection, depends on CI passing)
-                                  \--> Task 6.3.10 (Build automation, depends on adapter-node)
+Task 6.3.7 (CI repair) -----+--> Task 6.3.8 (Security tooling, depends on working CI)
+                             +--> Task 6.3.9 (Branch protection, depends on CI passing)
+                             +--> Task 6.3.10 (Build automation, depends on adapter-node)
 ```
 
-Critical path: 6.3.1 -> 6.3.2 -> 6.3.7 -> 6.3.9
+Critical path: 6.3.1a (argos-env.sh) -> 6.3.3 (paths.ts) -> 6.3.1b (templates) -> 6.3.2 -> 6.3.7 -> 6.3.9
 
-#### Cross-Task Dependency Warning
+#### Cross-Task Circular Dependency: Tasks 6.3.1 and 6.3.3
 
 Task 6.3.1 (service template creation) and Task 6.3.3 (hardcoded path elimination in TypeScript) have a circular dependency:
 
-- Service templates need to reference the canonical path variables from `argos-env.sh`
+- Service templates (6.3.1) need to reference the canonical path variables from `argos-env.sh`
 - `argos-env.sh` path values must be determined before templates can be written
-- TypeScript `paths.ts` must use the same path values as `argos-env.sh`
+- TypeScript `paths.ts` (6.3.3) must use the same path variable names and defaults as `argos-env.sh`
+- But `paths.ts` is part of Task 6.3.3, and service templates are part of Task 6.3.1
 
-**Resolution**: Execute in this order:
+**Resolution -- Split Task 6.3.1 into 6.3.1a and 6.3.1b**: Create `argos-env.sh` FIRST as the canonical source of truth for path variable names and defaults. Then create `paths.ts` to mirror those same variables. Then create service templates that reference `argos-env.sh`.
 
-1. **First**: Define the canonical path variables (ARGOS_HOME, ARGOS_DATA, etc.) as a specification document
-2. **Second**: Create `argos-env.sh` using those defined values
-3. **Third**: Create `paths.ts` using the same values
-4. **Fourth**: Create service templates referencing `argos-env.sh` variables
-5. **Last**: Update TypeScript files to import from `paths.ts`
+Execution order (linearized):
 
-Recommended parallel tracks:
+1. **Step 1 (6.3.1a)**: Create `scripts/lib/argos-env.sh` with canonical path variable definitions:
+    - `ARGOS_DIR`, `ARGOS_USER`, `ARGOS_GROUP`, `ARGOS_HOME`
+    - This is the "contract" that both `paths.ts` and service templates will follow
+    - Includes auto-detection logic (walk up to find package.json)
 
-- Track A: 6.3.1 + 6.3.2 + 6.3.5 (service infrastructure)
-- Track B: 6.3.3 + 6.3.4 + 6.3.6 (path and config cleanup)
-- Track C: 6.3.7 + 6.3.8 + 6.3.9 + 6.3.10 (CI/CD pipeline)
+2. **Step 2 (6.3.3a)**: Create `src/lib/server/paths.ts` using the SAME variable names:
+    - `env.ARGOS_DIR` maps to shell `$ARGOS_DIR`
+    - `env.HOME` maps to shell `$ARGOS_HOME`
+    - All defaults must match between the two files
+
+3. **Step 3 (6.3.3b)**: Update all 17 TypeScript/Svelte files to import from `paths.ts`
+
+4. **Step 4 (6.3.1b)**: Create `deployment/templates/*.service.template` files referencing `@@ARGOS_*@@` tokens
+    - Token names must match `argos-env.sh` variable names (e.g., `@@ARGOS_DIR@@` = `$ARGOS_DIR`)
+
+5. **Step 5 (6.3.1c)**: Create `deployment/generate-services.sh` that sources `argos-env.sh` and performs `sed` substitution of `@@` tokens
+
+**Variable name contract** (must be identical across all three files):
+
+| Shell Variable (`argos-env.sh`) | TypeScript Env (`paths.ts`) | Template Token (`.service.template`) |
+| ------------------------------- | --------------------------- | ------------------------------------ |
+| `ARGOS_DIR`                     | `env.ARGOS_DIR`             | `@@ARGOS_DIR@@`                      |
+| `ARGOS_USER`                    | N/A (server-only)           | `@@ARGOS_USER@@`                     |
+| `ARGOS_GROUP`                   | N/A (server-only)           | `@@ARGOS_GROUP@@`                    |
+| `ARGOS_HOME` / `HOME`           | `env.HOME`                  | N/A (derived from User=)             |
+
+Recommended parallel tracks (after resolving the circular dependency):
+
+- Track A: 6.3.1a -> 6.3.3 -> 6.3.1b -> 6.3.2 -> 6.3.5 (path definition -> path usage -> templates -> hardening -> verification)
+- Track B: 6.3.4 + 6.3.6 + 6.3.6b (shell paths, config conflicts, console cleanup -- all independent)
+- Track C: 6.3.7 + 6.3.8 + 6.3.9 + 6.3.10 (CI/CD pipeline -- independent of Tracks A/B)
 
 ---
 
@@ -1406,4 +1846,63 @@ Recommended parallel tracks:
 
 ---
 
-_End of Phase 6.3 Plan_
+_End of Phase 6.3 Plan (Rev 2)_
+
+---
+
+## Revision History
+
+| Rev | Date       | Author        | Changes                                                                                                    |
+| --- | ---------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | 2026-02-08 | Alex Thompson | Initial plan: 10 tasks, 25 verification checks                                                             |
+| 2   | 2026-02-08 | Alex Thompson | Audit response: Added BEFORE/AFTER security table (4.2.1), root-service subtasks (4.2.1a), console.log     |
+|     |            |               | cleanup task (6.3.6b), release.yml quality gates (9.3.7.7), ESLint fix breakdown (9.3.7.6), ARM gap        |
+|     |            |               | documentation (9.3.7.8), /home/kali file list inline (5.3.2), circular dependency resolution (Section 15), |
+|     |            |               | 8 new verification checks (26-33), corrected console count (45->50, 11->14 files)                          |
+
+---
+
+## APPENDIX: Independent Audit Findings (2026-02-08)
+
+### SystemD Security Hardening Gaps
+
+**CRITICAL: 8 of 11 unique services have ZERO security hardening directives.**
+
+| Service               | NoNewPrivileges | PrivateTmp | Runs As           |
+| --------------------- | --------------- | ---------- | ----------------- |
+| argos-final           | YES             | YES        | pi                |
+| argos-cpu-protector   | YES             | YES        | pi                |
+| argos-wifi-resilience | YES             | YES        | pi                |
+| argos-process-manager | YES             | YES        | pi                |
+| argos-dev             | NO              | NO         | pi                |
+| argos-droneid         | NO              | NO         | **root**          |
+| gsmevil-patch         | NO              | NO         | **implicit root** |
+| wifi-keepalive        | NO              | NO         | **root**          |
+| simple-keepalive      | NO              | NO         | pi                |
+| dev-server-keepalive  | NO              | NO         | pi                |
+| coral-worker          | NO              | NO         | ubuntu            |
+
+**3 services run as root with zero sandboxing.** No service uses ProtectSystem, ProtectHome, CapabilityBoundingSet, or ReadOnlyPaths.
+
+**All 11 services reference incorrect usernames for the current `kali` deployment environment.** Zero services would start without modification.
+
+### /home/kali Hardcoded Paths (Not in Original Plan)
+
+| File                                                               | Line  | Content                                                      |
+| ------------------------------------------------------------------ | ----- | ------------------------------------------------------------ |
+| `src/lib/server/agent/tool-execution/detection/binary-detector.ts` | 44    | `/home/kali/.local/bin/${binaryName}`                        |
+| `src/routes/api/kismet/control/+server.ts`                         | 91,93 | `cd /home/kali && kismet -c ...`                             |
+| `src/routes/api/gsm-evil/imsi-data/+server.ts`                     | 9     | `/home/kali/gsmevil-user/database/imsi.db`                   |
+| `src/routes/api/gsm-evil/imsi/+server.ts`                          | 9     | `/home/kali/gsmevil-user/database/imsi.db`                   |
+| `src/routes/api/cell-towers/nearby/+server.ts`                     | 49    | `/home/kali/Documents/Argos/Argos/data/celltowers/towers.db` |
+| `src/routes/api/gsm-evil/control/+server.ts`                       | 79    | `/home/kali/gsmevil-user`                                    |
+
+### CI/CD Pipeline Findings
+
+1. **CI pipeline is broken**: 25 ESLint errors cause `npm run lint` to exit code 1. Any push to `main` or PR will fail.
+2. **Release pipeline has zero quality gates**: `release.yml` builds and publishes without running lint, typecheck, or tests.
+3. **Architecture mismatch**: Both `ci.yml` and `release.yml` use `runs-on: ubuntu-latest` (x86_64) for an aarch64 target.
+
+### Debug Code in Production API Routes
+
+**CORRECTED (2026-02-08):** 50 `console.log/debug/trace()` calls across 14 API route files (original claim was 45 across 11 -- undercounted). The GSM Evil scan route alone has 16 console statements. These should be replaced with the structured logger. Full per-file breakdown is in Task 6.3.6b (Section 8b).

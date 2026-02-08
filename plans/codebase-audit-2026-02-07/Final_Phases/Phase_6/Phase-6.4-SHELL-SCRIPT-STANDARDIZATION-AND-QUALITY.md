@@ -7,7 +7,7 @@ Phase:           6.4 of Codebase Audit 2026-02-07
 Scope:           Shell script quality, safety, and maintainability standards
 Author:          Alex Thompson, Principal Software Architect
 Date:            2026-02-08
-Revision:        1.1 FINAL (CORRECTED)
+Revision:        1.3 FINAL (SECURITY REMEDIATION + AUDIT RESPONSE)
 Standards:       CERT Secure Coding (SH), MISRA (adapted), NASA/JPL Rule Set (adapted)
 Prerequisite:    Phase 6.2 (Shell Script Consolidation) MUST be complete
 Target Corpus:   ~75-80 active scripts surviving Phase 6.2 consolidation
@@ -33,8 +33,10 @@ Target Corpus:   ~75-80 active scripts surviving Phase 6.2 consolidation
 14. [Task 6.4.10: Exit Code Conventions](#task-6410-exit-code-conventions)
 15. [Task 6.4.11: Shared Library Creation](#task-6411-shared-library-creation)
 16. [Task 6.4.12: CI Integration](#task-6412-ci-integration)
-17. [Verification Checklist](#17-verification-checklist)
-18. [Traceability Matrix](#18-traceability-matrix)
+17. [Task 6.4.13: Security-Critical Pattern Remediation](#task-6413-security-critical-pattern-remediation)
+18. [ShellCheck Blind Spots: Manual Audit Requirements](#18-shellcheck-blind-spots-manual-audit-requirements)
+19. [Verification Checklist](#19-verification-checklist)
+20. [Traceability Matrix](#20-traceability-matrix)
 
 ---
 
@@ -46,16 +48,16 @@ The Argos `scripts/` directory contains 202 shell scripts. Phase 6.2 consolidate
 
 | Metric                                   | Count | Percentage |
 | ---------------------------------------- | ----- | ---------- |
-| Shebang `#!/bin/bash` (hardcoded)        | 200   | 99.0%      |
+| Shebang `#!/bin/bash` (hardcoded)        | 201   | 99.5%      |
 | Shebang `#!/usr/bin/env bash` (portable) | 0     | 0%         |
-| Malformed shebang (`#\!/bin/bash`)       | 1     | 0.5%       |
+| Malformed shebang (`#\!/bin/bash`)       | 0     | 0%         |
 | Missing shebang entirely (SC2148)        | 1     | 0.5%       |
 | `set -euo pipefail` (full strict mode)   | 31    | 15.3%      |
 | `set -e` only (partial, no pipefail)     | 34    | 16.8%      |
-| `trap` only (no `set -e`)                | 3     | 1.5%       |
-| No error handling whatsoever             | 134   | 66.3%      |
+| `trap` only (no `set -e`)                | 6     | 3.0%       |
+| No error handling whatsoever             | 131   | 64.9%      |
 | Trap handlers present                    | 31    | 15.3%      |
-| `--help` flag support                    | 8     | 3.96%      |
+| `--help` flag support                    | 9     | 4.46%      |
 | `--dry-run` flag support                 | 0     | 0%         |
 | Documentation header (Purpose/Usage)     | 19    | 9.4%       |
 | Accept parameters (`$1`, `$@`)           | 81    | 40.1%      |
@@ -146,7 +148,7 @@ sha256sum "${BACKUP_DIR}"/scripts/*.sh >> "${BACKUP_DIR}/MANIFEST.txt"
 
 ### 3.2 Per-Task Commits
 
-Each task (6.4.1 through 6.4.12) MUST be committed as a separate, atomic Git commit. Commit message format:
+Each task (6.4.1 through 6.4.13) MUST be committed as a separate, atomic Git commit. Task 6.4.13 may be split into multiple commits (one per subtask 13.1-13.10) due to its breadth. Commit message format:
 
 ```
 refactor(scripts): Phase 6.4.N - <task title>
@@ -179,7 +181,7 @@ Immediate rollback if:
 
 ## 4. Baseline Evidence
 
-All metrics in this document were captured on 2026-02-08 against commit `f300b8f` on the `main` branch. The following commands reproduce the baseline:
+All metrics in this document were captured on 2026-02-08 against commit `b682267` on the `dev_branch` branch. The following commands reproduce the baseline:
 
 ```bash
 cd /home/kali/Documents/Argos/Argos
@@ -190,7 +192,8 @@ find scripts/ -name "*.sh" -type f | wc -l
 
 # Shebang distribution
 find scripts/ -name "*.sh" -type f -exec head -1 {} \; | sort | uniq -c | sort -rn
-# Result: 200 #!/bin/bash, 1 #\!/bin/bash, 1 missing shebang entirely
+# Result: 201 #!/bin/bash, 1 missing shebang entirely
+# NOTE: setup-system-management.sh has a valid #!/bin/bash (confirmed via hex dump), not malformed
 
 # Strict mode
 grep -rl "set -euo pipefail" scripts/ --include="*.sh" | wc -l
@@ -198,8 +201,8 @@ grep -rl "set -euo pipefail" scripts/ --include="*.sh" | wc -l
 
 # No error handling (zero set -e, zero trap, zero || exit)
 grep -rL "set -e\|trap\||| exit\||| return" scripts/ --include="*.sh" | wc -l
-# Result: 134
-# NOTE: 31 full strict mode + 34 partial (set -e only) + 3 trap-only + 134 none = 202
+# Result: 131
+# NOTE: 31 full strict mode + 34 partial (set -e only) + 6 trap-only + 131 none = 202
 
 # ShellCheck error-severity files
 find scripts/ -name "*.sh" -type f -exec sh -c \
@@ -227,12 +230,13 @@ Replace all hardcoded `#!/bin/bash` shebangs with the portable `#!/usr/bin/env b
 2. **Container compatibility**: Alpine Linux and minimal Docker images may install bash at non-standard paths.
 3. **NASA/JPL Rule 1 (adapted)**: All source files SHALL have a deterministic, unambiguous execution entry point.
 
-Two broken shebangs must also be corrected:
+One broken shebang must also be corrected:
 
-1. `scripts/setup-system-management.sh`: Contains `#\!/bin/bash` (escaped exclamation mark)
-2. `scripts/development/start-usrp-service.sh`: Has NO shebang at all (ShellCheck SC2148)
+1. `scripts/development/start-usrp-service.sh`: Has NO shebang at all (ShellCheck SC2148)
 
-Both scripts will produce `Exec format error` when invoked directly via `./script.sh`.
+**Note:** `scripts/setup-system-management.sh` was previously reported as having a malformed `#\!/bin/bash` shebang, but hex dump verification confirmed it has a valid `#!/bin/bash` shebang. It is NOT broken.
+
+This script will produce `Exec format error` when invoked directly via `./script.sh`.
 
 ### Scope
 
@@ -301,7 +305,6 @@ find scripts/ -name "*.sh" -type f -exec bash -n {} \;
 - [ ] Every `.sh` file in `scripts/` has `#!/usr/bin/env bash` as its first line
 - [ ] Every `.sh` file in `hackrf_emitter/` and `tests/` has `#!/usr/bin/env bash` as its first line
 - [ ] `bash -n` passes on all modified files
-- [ ] The malformed `#\!/bin/bash` shebang (`scripts/setup-system-management.sh`) no longer exists anywhere in the repository
 - [ ] The missing-shebang file (`scripts/development/start-usrp-service.sh`) has been given a proper shebang
 
 ---
@@ -964,7 +967,7 @@ grep -r "^trap " scripts/ --include="*.sh" | grep -v "EXIT" | grep -v "cleanup E
 
 All scripts that perform destructive, stateful, or service-affecting operations MUST support `--help` and `--dry-run` flags. This enables operators to understand script behavior before execution and to preview changes without committing them.
 
-**Current state:** 8 scripts (3.96%) support `--help`. 0 scripts support `--dry-run`.
+**Current state:** 9 scripts (4.46%) support `--help`. 0 scripts support `--dry-run`.
 
 ### Scope
 
@@ -1215,6 +1218,28 @@ All three scripts MUST be updated to use `vm.swappiness=60` to match the product
 - `scripts/setup-host-complete.sh:324` -- change `vm.swappiness = 10` to `vm.swappiness = 60`
 - `scripts/install-system-dependencies.sh:307` -- change `vm.swappiness = 10` to `vm.swappiness = 60`
 - `scripts/setup-swap.sh:116` -- change `vm.swappiness=10` to `vm.swappiness=60`
+
+**Exact remediation commands:**
+
+```bash
+# Fix all three scripts in a single pass
+sed -i 's/vm\.swappiness.*=.*10/vm.swappiness = 60/' \
+    scripts/setup-host-complete.sh \
+    scripts/install-system-dependencies.sh
+
+# setup-swap.sh uses no-space format
+sed -i 's/vm\.swappiness=10/vm.swappiness=60/' \
+    scripts/setup-swap.sh
+
+# Verification: all three files now reference 60
+grep -n "vm.swappiness" \
+    scripts/setup-host-complete.sh \
+    scripts/install-system-dependencies.sh \
+    scripts/setup-swap.sh
+# Expected: all lines show =60 or = 60
+```
+
+**Rationale:** `vm.swappiness=60` is correct for zram (compressed memory swap). The value `10` is only appropriate for spinning disk swap partitions where the cost of page-out is high. With zram, swap I/O is CPU-bound compression into RAM, so a higher swappiness allows the kernel to reclaim anonymous pages more aggressively, which is desirable on the 8GB RPi 5 running multiple containers.
 
 ### 8.4: Package Installation Idempotency
 
@@ -1840,17 +1865,76 @@ make_temp_dir() {
 
 #### Library Decomposition (Single Responsibility Principle)
 
-The shared library should be decomposed into focused modules rather than a single monolithic file:
+The monolithic `common.sh` shown above MUST be decomposed into four focused modules, each independently sourceable, plus a convenience wrapper that sources all four. This enables lightweight scripts (e.g., a diagnostic script that only needs logging) to avoid loading argument parsing and cleanup logic.
 
-| Module                   | Responsibility                         | Functions                                        |
-| ------------------------ | -------------------------------------- | ------------------------------------------------ |
-| `scripts/lib/log.sh`     | Logging and output formatting          | `log_info`, `log_warn`, `log_error`, `log_debug` |
-| `scripts/lib/args.sh`    | Argument parsing and --help/--dry-run  | `parse_args`, `show_help`, `require_arg`         |
-| `scripts/lib/cleanup.sh` | Trap handlers, temp dir, lock files    | `setup_trap`, `create_temp`, `acquire_lock`      |
-| `scripts/lib/paths.sh`   | Path resolution (sources argos-env.sh) | `resolve_path`, `require_dir`, `require_file`    |
+| Module                   | Responsibility                                    | Exported Functions                                                                                               | Approx. Lines |
+| ------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- |
+| `scripts/lib/log.sh`     | Logging, color detection, log-level filtering     | `_log`, `log_debug`, `log_info`, `log_warn`, `log_error`, `log_fatal`                                            | ~80           |
+| `scripts/lib/args.sh`    | Argument parsing, `--help`/`--dry-run` generation | `parse_common_args`, `show_usage`, `require_arg`, `run_cmd`                                                      | ~70           |
+| `scripts/lib/cleanup.sh` | Trap handlers, temp dir management, lock files    | `setup_cleanup_trap`, `make_temp_dir`, `acquire_lock`                                                            | ~60           |
+| `scripts/lib/paths.sh`   | Path resolution, dependency/file/dir checks       | `detect_project_root`, `detect_lib_dir`, `require_cmd`, `require_root`, `require_file`, `require_dir`, `safe_cd` | ~80           |
 
-Each module should be independently sourceable: `source scripts/lib/log.sh`
-A convenience wrapper can source all: `source scripts/lib/common.sh` (which sources each module)
+**`scripts/lib/common.sh` -- Convenience wrapper (sources all 4 modules):**
+
+```bash
+#!/usr/bin/env bash
+# -------------------------------------------------------------------
+# Script:        lib/common.sh
+# Purpose:       Convenience wrapper that sources all Argos shared library modules
+# Usage:         source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# Prerequisites: bash 4.4+
+# Exit Codes:    N/A (library, not standalone)
+# -------------------------------------------------------------------
+
+# Guard against double-sourcing
+if [[ -n "${_ARGOS_COMMON_LOADED:-}" ]]; then
+    return 0
+fi
+readonly _ARGOS_COMMON_LOADED=1
+
+# Resolve lib directory
+_ARGOS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Exit code constants (available to all modules)
+readonly EXIT_SUCCESS=0
+readonly EXIT_ERROR=1
+readonly EXIT_USAGE=2
+readonly EXIT_MISSING_DEP=3
+readonly EXIT_CONFIG=4
+readonly EXIT_PARTIAL=5
+
+# Source all modules in dependency order
+source "${_ARGOS_LIB_DIR}/log.sh"
+source "${_ARGOS_LIB_DIR}/paths.sh"
+source "${_ARGOS_LIB_DIR}/cleanup.sh"
+source "${_ARGOS_LIB_DIR}/args.sh"
+```
+
+**Each module MUST have its own double-source guard** (e.g., `_ARGOS_LOG_LOADED`), so that a script can safely do both `source lib/log.sh` and `source lib/common.sh` without conflict.
+
+**Verification of decomposition:**
+
+```bash
+# All 4 modules + common.sh exist
+for f in log.sh args.sh cleanup.sh paths.sh common.sh; do
+    test -f "scripts/lib/${f}" || echo "MISSING: scripts/lib/${f}"
+done
+# Expected: no output
+
+# Each module passes bash -n independently
+for f in scripts/lib/*.sh; do
+    bash -n "${f}" || echo "SYNTAX ERROR: ${f}"
+done
+
+# Each module passes shellcheck independently
+for f in scripts/lib/*.sh; do
+    shellcheck --severity=warning "${f}" || echo "SC FAIL: ${f}"
+done
+
+# common.sh loads all modules (functional test)
+bash -c 'source scripts/lib/common.sh; log_info "test"; require_cmd bash; echo OK' 2>/dev/null
+# Expected: OK
+```
 
 ### Source Pattern for Scripts in `scripts/`
 
@@ -1939,23 +2023,23 @@ Add the following job to `.github/workflows/ci.yml`:
 
 ```yaml
 validate-shell:
-    name: 'Validate Shell Scripts'
+    name: "Validate Shell Scripts"
     runs-on: ubuntu-latest
     steps:
-        - name: 'Checkout Code'
+        - name: "Checkout Code"
           uses: actions/checkout@v4
 
-        - name: 'Install ShellCheck'
+        - name: "Install ShellCheck"
           run: sudo apt-get update && sudo apt-get install -y shellcheck
 
-        - name: 'Verify ShellCheck Version'
+        - name: "Verify ShellCheck Version"
           run: |
               shellcheck --version
               # Require 0.9.0+ for full bash 5.x support
               VERSION=$(shellcheck --version | grep "version:" | awk '{print $2}')
               echo "ShellCheck version: ${VERSION}"
 
-        - name: 'Bash Syntax Check (bash -n)'
+        - name: "Bash Syntax Check (bash -n)"
           run: |
               ERRORS=0
               while IFS= read -r -d '' script; do
@@ -1968,7 +2052,7 @@ validate-shell:
               echo "Syntax errors found: ${ERRORS}"
               exit "${ERRORS}"
 
-        - name: 'ShellCheck Analysis (severity=warning)'
+        - name: "ShellCheck Analysis (severity=warning)"
           run: |
               FINDINGS=0
               while IFS= read -r -d '' script; do
@@ -1983,7 +2067,7 @@ validate-shell:
                 exit 1
               fi
 
-        - name: 'Verify Shebang Standardization'
+        - name: "Verify Shebang Standardization"
           run: |
               VIOLATIONS=0
               while IFS= read -r -d '' script; do
@@ -1996,7 +2080,7 @@ validate-shell:
               echo "Shebang violations: ${VIOLATIONS}"
               exit "${VIOLATIONS}"
 
-        - name: 'Verify Strict Mode'
+        - name: "Verify Strict Mode"
           run: |
               VIOLATIONS=0
               while IFS= read -r -d '' script; do
@@ -2009,7 +2093,7 @@ validate-shell:
               echo "Strict mode violations: ${VIOLATIONS}"
               exit "${VIOLATIONS}"
 
-        - name: 'Verify common.sh Sourcing'
+        - name: "Verify common.sh Sourcing"
           run: |
               VIOLATIONS=0
               while IFS= read -r -d '' script; do
@@ -2072,7 +2156,620 @@ find scripts/ -name "*.sh" -type f -print0 | \
 
 ---
 
-## 17. Verification Checklist
+## Task 6.4.13: Security-Critical Pattern Remediation
+
+### Description
+
+Tasks 6.4.1 through 6.4.12 address structural quality (ShellCheck compliance, strict mode, headers, etc.). This task addresses **security-critical patterns** that ShellCheck either does not detect or flags only at informational severity. These patterns represent actual attack surfaces in a field-deployed EW training platform where scripts run with elevated privileges.
+
+**This task is the #1 security priority for the shell script corpus.** Without it, the Phase 6.4 standardization is structurally clean but leaves exploitable vulnerabilities in place.
+
+### Execution Order
+
+Task 6.4.13 SHOULD execute after Task 6.4.5 (variable quoting) because many security fixes overlap with quoting fixes. However, subtask 13.1 (SC2086 unquoted variables) is also tracked as Task 6.4.5 -- the two tasks share verification but differ in scope: 6.4.5 addresses ShellCheck compliance; 6.4.13.1 addresses the security implications of unquoted variables specifically.
+
+---
+
+### 13.1: SC2086 Unquoted Variables -- Injection Vector Remediation (Priority 1)
+
+**Description:** SC2086 (220 instances across the corpus) flags unquoted variable expansions that enable word splitting and glob injection. In scripts running as root (122 of 202 scripts invoke `sudo`), an unquoted variable containing spaces or glob characters can cause arbitrary file operations, directory traversal, or command injection.
+
+**Risk Level:** HIGH -- CWE-78 (OS Command Injection), CERT STR02-C (Sanitize data passed to complex subsystems)
+
+**Detection:**
+
+```bash
+# Count total SC2086 instances
+find scripts/ -name "*.sh" -type f -exec shellcheck --include=SC2086 -f gcc {} \; 2>/dev/null | wc -l
+# Baseline: 220
+
+# List affected files with counts
+find scripts/ -name "*.sh" -type f -exec sh -c \
+  'count=$(shellcheck --include=SC2086 -f gcc "$1" 2>/dev/null | wc -l); \
+   [ "$count" -gt 0 ] && echo "$count $1"' _ {} \; | sort -rn
+```
+
+**Instance Count:** 220 across ~70 files
+
+**Remediation Approach:**
+
+Every `$VAR`, `${VAR}`, and `$(cmd)` MUST be double-quoted unless:
+
+1. It appears inside `[[ ]]` (no word splitting in bash conditional)
+2. It appears inside `$(( ))` (arithmetic context)
+3. Intentional word splitting is required and documented with `# shellcheck disable=SC2086 -- <reason>`
+
+```bash
+# Before (vulnerable):
+cp $SOURCE_FILE $DEST_DIR/
+rm -rf $CLEANUP_PATH
+docker exec $CONTAINER_ID cmd
+
+# After (safe):
+cp "${SOURCE_FILE}" "${DEST_DIR}/"
+rm -rf "${CLEANUP_PATH}"
+docker exec "${CONTAINER_ID}" cmd
+```
+
+**Verification:**
+
+```bash
+find scripts/ -name "*.sh" -type f -exec shellcheck --include=SC2086 -f gcc {} \; 2>/dev/null | wc -l
+# MUST return: 0
+```
+
+---
+
+### 13.2: eval Usage -- Arbitrary Code Execution
+
+**Description:** `eval` interprets its arguments as shell commands, enabling arbitrary code execution if any argument contains unsanitized input. The corpus contains 13 instances across 7 files, of which 3 evaluate user-controlled or dynamically-constructed variables.
+
+**Risk Level:** CRITICAL -- CWE-94 (Code Injection), CWE-78 (OS Command Injection), CERT STR02-C
+
+**Detection:**
+
+```bash
+# Find all eval usage (excluding comments)
+grep -rn '\beval\b' scripts/ --include='*.sh' | grep -v '^\s*#'
+# Baseline: 13 instances across 7 files
+```
+
+**Instance Count:** 13 across 7 files (3 CRITICAL: evaluate user/dynamic input; 10 LOW: evaluate static strings)
+
+**Remediation Approach:**
+
+| Pattern                   | Risk     | Replacement                                                                                  |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `eval "$user_input"`      | CRITICAL | Remove entirely; use `case` dispatch or allowlist                                            |
+| `eval "$(build_cmd)"`     | CRITICAL | Replace with array-based command construction: `cmd=("prog" "--flag" "${val}"); "${cmd[@]}"` |
+| `eval "export VAR=value"` | LOW      | Replace with `export VAR="value"` (no eval needed)                                           |
+| `eval "$(ssh-agent)"`     | LOW      | Safe -- output is controlled by ssh-agent binary; add comment documenting safety             |
+
+**Before (vulnerable):**
+
+```bash
+# Constructs command string and evaluates it
+CMD="docker exec ${CONTAINER} ${USER_COMMAND}"
+eval "${CMD}"
+```
+
+**After (safe):**
+
+```bash
+# Use array-based command execution (no shell interpretation)
+docker exec "${CONTAINER}" "${USER_COMMAND}"
+# Or, if USER_COMMAND must contain flags:
+IFS=' ' read -ra CMD_PARTS <<< "${USER_COMMAND}"
+docker exec "${CONTAINER}" "${CMD_PARTS[@]}"
+```
+
+**Verification:**
+
+```bash
+# Zero eval instances with variable expansion (static eval is tolerable with comment)
+grep -rn '\beval\b.*\$' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+
+# All remaining eval instances have shellcheck disable + justification
+grep -B1 '\beval\b' scripts/ --include='*.sh' | grep -c 'shellcheck disable'
+# MUST match the count of remaining eval instances
+```
+
+---
+
+### 13.3: Backtick Command Substitution with Unvalidated Input
+
+**Description:** Backtick command substitution (`` `cmd` ``) is harder to nest, harder to read, and cannot be escaped correctly in all contexts. More critically, when combined with unvalidated input, it creates injection vectors that are harder to spot than `$(cmd)` equivalents.
+
+**Risk Level:** MEDIUM -- CWE-78 (OS Command Injection), CERT STR02-C
+
+**Detection:**
+
+```bash
+# Find backtick usage (excluding comments)
+grep -rn '`[^`]*\$' scripts/ --include='*.sh' | grep -v '^\s*#'
+# Also find ALL backtick usage for modernization
+grep -rn '`' scripts/ --include='*.sh' | grep -v '^\s*#' | grep -v 'shellcheck'
+```
+
+**Remediation Approach:**
+
+Replace ALL backtick substitutions with `$(...)` syntax, regardless of whether they contain variables. This is a blanket modernization that eliminates the risk class entirely.
+
+```bash
+# Before:
+RESULT=`docker ps -q`
+PID=`cat /var/run/service.pid`
+
+# After:
+RESULT=$(docker ps -q)
+PID=$(cat /var/run/service.pid)
+```
+
+**Verification:**
+
+```bash
+# Zero backtick command substitutions (excluding comments and strings)
+grep -rn '`[^`]*`' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+```
+
+---
+
+### 13.4: rm -rf with Unquoted or Unvalidated Variables
+
+**Description:** `rm -rf $VAR` where `$VAR` is unquoted, empty, or attacker-controlled can result in catastrophic file deletion. If `$VAR` expands to empty, `rm -rf` operates on the current directory. If `$VAR` contains spaces, it deletes multiple paths via word splitting.
+
+**Risk Level:** CRITICAL -- CWE-22 (Path Traversal), CWE-73 (External Control of File Name), NASA/JPL Rule 1
+
+**Detection:**
+
+```bash
+# Find rm -rf with variable expansion (quoted or unquoted)
+grep -rn 'rm -rf.*\$' scripts/ --include='*.sh' | grep -v '^\s*#'
+# Also check for rm -rf with potentially empty variables
+grep -rn 'rm -rf' scripts/ --include='*.sh' | grep -v '^\s*#'
+```
+
+**Remediation Approach:**
+
+Every `rm -rf` that references a variable MUST:
+
+1. Quote the variable: `rm -rf "${VAR}"`
+2. Guard against empty expansion: `[[ -n "${VAR}" ]] && rm -rf "${VAR}"`
+3. Validate the path is within an expected directory:
+
+```bash
+# Before (dangerous):
+rm -rf $CLEANUP_DIR
+
+# After (safe):
+if [[ -z "${CLEANUP_DIR:-}" ]]; then
+    log_error "CLEANUP_DIR is empty; refusing to rm -rf"
+    exit "${EXIT_ERROR}"
+fi
+if [[ "${CLEANUP_DIR}" != /tmp/* && "${CLEANUP_DIR}" != /home/kali/* ]]; then
+    log_error "CLEANUP_DIR '${CLEANUP_DIR}' is outside allowed paths; refusing to rm -rf"
+    exit "${EXIT_ERROR}"
+fi
+rm -rf "${CLEANUP_DIR}"
+```
+
+**Verification:**
+
+```bash
+# Zero unquoted rm -rf with variables
+grep -rn 'rm -rf \$' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+
+# All rm -rf with variables have a preceding guard check
+for f in $(grep -rl 'rm -rf.*\$' scripts/ --include='*.sh'); do
+    grep -B5 'rm -rf' "${f}" | grep -q '\-z\|\-n\|if \[' || echo "UNGUARDED rm -rf: ${f}"
+done
+# Expected: no output
+```
+
+---
+
+### 13.5: curl|bash / wget|sh Patterns -- Supply Chain Attack Vector
+
+**Description:** Piping downloaded content directly to a shell interpreter (`curl URL | bash`, `wget -qO- URL | sh`) executes arbitrary remote code without verification. A MITM attack, DNS poisoning, or compromised server delivers malicious payloads that execute with the privileges of the running script (often root).
+
+**Risk Level:** CRITICAL -- CWE-494 (Download of Code Without Integrity Check), CERT MSC33-C (Do not pass invalid data to the asctime function -- adapted: do not execute unverified downloads)
+
+**Detection:**
+
+```bash
+# Find curl-pipe-shell patterns
+grep -rn 'curl.*|.*\(bash\|sh\)\|wget.*|.*\(bash\|sh\)' scripts/ --include='*.sh' | grep -v '^\s*#'
+# Baseline: 22 instances across 14 files
+```
+
+**Instance Count:** 22 across 14 files
+
+**Remediation Approach:**
+
+Replace every `curl|bash` with a download-verify-execute pattern:
+
+```bash
+# Before (vulnerable):
+curl -fsSL https://get.docker.com | sh
+
+# After (safe):
+INSTALLER=$(mktemp /tmp/docker-install-XXXXXX.sh)
+curl -fsSL -o "${INSTALLER}" https://get.docker.com
+
+# Verify download succeeded and is non-empty
+if [[ ! -s "${INSTALLER}" ]]; then
+    log_error "Download failed or empty: https://get.docker.com"
+    rm -f "${INSTALLER}"
+    exit "${EXIT_ERROR}"
+fi
+
+# Optional: verify checksum if published by vendor
+# EXPECTED_SHA256="abc123..."
+# ACTUAL_SHA256=$(sha256sum "${INSTALLER}" | awk '{print $1}')
+# if [[ "${ACTUAL_SHA256}" != "${EXPECTED_SHA256}" ]]; then
+#     log_error "Checksum mismatch for docker installer"
+#     rm -f "${INSTALLER}"
+#     exit "${EXIT_ERROR}"
+# fi
+
+log_info "Executing downloaded installer: ${INSTALLER}"
+bash "${INSTALLER}"
+rm -f "${INSTALLER}"
+```
+
+**Where checksum verification is not possible** (vendor does not publish checksums), the download-to-file pattern still provides:
+
+1. Ability to inspect the file before execution
+2. Atomic failure detection (empty/truncated download caught)
+3. Audit trail (the file existed on disk, potentially logged)
+4. Prevention of partial execution (a truncated pipe can execute partial content)
+
+**Verification:**
+
+```bash
+# Zero curl-pipe-shell patterns
+grep -rn 'curl.*|.*\(bash\|sh\)\|wget.*|.*\(bash\|sh\)' scripts/ --include='*.sh' | \
+  grep -v '^\s*#' | wc -l
+# MUST return: 0
+```
+
+---
+
+### 13.6: chmod 777 / World-Writable File Permissions
+
+**Description:** `chmod 777` grants read, write, and execute permissions to all users. On a multi-user system or when containers share mount points, this allows any process to modify executable files, inject code, or read sensitive data.
+
+**Risk Level:** HIGH -- CWE-732 (Incorrect Permission Assignment), CERT FIO06-C (Create files with appropriate access permissions)
+
+**Detection:**
+
+```bash
+# Find overly permissive chmod patterns
+grep -rn 'chmod 777\|chmod.*a+w\|chmod 666' scripts/ --include='*.sh' | grep -v '^\s*#'
+```
+
+**Remediation Approach:**
+
+| Current Permission | Correct Permission | Use Case                                |
+| ------------------ | ------------------ | --------------------------------------- |
+| `chmod 777`        | `chmod 755`        | Executables (owner rwx, group+other rx) |
+| `chmod 777`        | `chmod 700`        | Scripts with secrets (owner only)       |
+| `chmod 666`        | `chmod 644`        | Config files (owner rw, group+other r)  |
+| `chmod 666`        | `chmod 660`        | Device files shared with a group        |
+| `chmod a+w`        | `chmod g+w`        | Group-writable (if group access needed) |
+
+```bash
+# Before:
+chmod 777 /opt/argos/scripts/*.sh
+chmod 666 /dev/ttyUSB0
+
+# After:
+chmod 755 /opt/argos/scripts/*.sh
+chmod 660 /dev/ttyUSB0  # group 'dialout' has access
+```
+
+**Verification:**
+
+```bash
+# Zero chmod 777 or chmod 666 instances
+grep -rn 'chmod 777\|chmod 666' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+
+# Zero world-writable permission grants
+grep -rn 'chmod.*a+w' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+```
+
+---
+
+### 13.7: sudo Without Full Path Validation
+
+**Description:** When scripts invoke `sudo cmd` without specifying the full path to `cmd`, a PATH hijacking attack can substitute a malicious binary. The corpus contains 1,017 sudo invocations across 122 files (60% of all scripts). While converting all 1,017 to full paths is impractical, the highest-risk patterns (sudo with user-controlled arguments or in installation scripts) must be hardened.
+
+**Risk Level:** MEDIUM -- CWE-426 (Untrusted Search Path), CERT ENV03-C (Sanitize the environment when invoking external programs)
+
+**Detection:**
+
+```bash
+# Find sudo with relative command names (not full paths)
+grep -rn 'sudo [^/]' scripts/ --include='*.sh' | grep -v '^\s*#' | grep -v 'sudo -' | head -20
+# Count total
+grep -rn 'sudo ' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# Baseline: ~1,017
+```
+
+**Instance Count:** ~1,017 across 122 files
+
+**Remediation Approach (tiered):**
+
+**Tier 1 (MUST -- all installation/setup scripts):** Use full paths for commands invoked via sudo in scripts that install software, modify system configuration, or run as systemd services:
+
+```bash
+# Before:
+sudo apt-get install -y package
+sudo systemctl restart kismet
+
+# After:
+sudo /usr/bin/apt-get install -y package
+sudo /usr/bin/systemctl restart kismet
+```
+
+**Tier 2 (SHOULD -- service management scripts):** Use full paths for critical commands (`kill`, `rm`, `cp`, `mv`, `mount`, `iptables`):
+
+```bash
+# Before:
+sudo kill -9 $PID
+sudo rm -rf /tmp/old-data
+
+# After:
+sudo /usr/bin/kill -9 "${PID}"
+sudo /usr/bin/rm -rf "${CLEANUP_DIR}"
+```
+
+**Tier 3 (MAY -- diagnostic/monitoring scripts):** Document that sudo is used and ensure PATH is set at script start:
+
+```bash
+# At top of script, after strict mode:
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+```
+
+**Verification:**
+
+```bash
+# All installation scripts use full paths with sudo
+for f in scripts/install-*.sh scripts/setup-*.sh; do
+    VIOLATIONS=$(grep -n 'sudo [a-z]' "${f}" 2>/dev/null | grep -v 'sudo /' | grep -v '^\s*#' | wc -l)
+    [[ "${VIOLATIONS}" -gt 0 ]] && echo "RELATIVE sudo: ${f} (${VIOLATIONS} instances)"
+done
+# Expected: no output for Tier 1 scripts
+```
+
+---
+
+### 13.8: Hardcoded Credentials Removal
+
+**Description:** The independent security audit identified 5 hardcoded credentials across 4 shell scripts, including API tokens and admin passwords in plaintext source code.
+
+**Risk Level:** CRITICAL -- CWE-798 (Use of Hard-Coded Credentials), CWE-259 (Use of Hard-Coded Password)
+
+**Detection:**
+
+```bash
+# Find potential hardcoded credentials
+grep -rn 'password=\|PASSWORD=\|api_key=\|API_KEY=\|token=\|TOKEN=\|secret=' \
+    scripts/ --include='*.sh' | grep -v '^\s*#' | grep -v 'PASSWORD="\$' | grep -v 'read -'
+# Also check for specific known patterns from the security audit
+grep -rn 'kismet\|admin:' scripts/ --include='*.sh' | grep -i 'pass'
+```
+
+**Instance Count:** 5 across 4 files
+
+**Remediation Approach:**
+
+1. Move all credentials to environment variables or a secrets file (`/etc/argos/secrets.env`) with `chmod 600` permissions
+2. Source the secrets file at runtime: `source /etc/argos/secrets.env`
+3. Validate that required credentials are set:
+
+```bash
+# Before (vulnerable):
+KISMET_PASSWORD="kismet"
+curl -u "admin:password" http://localhost:2501/...
+
+# After (safe):
+if [[ -f /etc/argos/secrets.env ]]; then
+    source /etc/argos/secrets.env
+fi
+if [[ -z "${KISMET_PASSWORD:-}" ]]; then
+    log_error "KISMET_PASSWORD not set. Configure in /etc/argos/secrets.env"
+    exit "${EXIT_CONFIG}"
+fi
+curl -u "admin:${KISMET_PASSWORD}" http://localhost:2501/...
+```
+
+4. Add `/etc/argos/secrets.env` to `.gitignore`
+5. Provide a template file: `/etc/argos/secrets.env.example` with placeholder values
+
+**Verification:**
+
+```bash
+# Zero hardcoded passwords (excluding variable references and comments)
+grep -rn 'password=.*[a-zA-Z]' scripts/ --include='*.sh' | \
+  grep -vi '\${\|read \|prompt\|^\s*#\|example\|template' | wc -l
+# MUST return: 0
+
+# secrets.env.example exists
+test -f /etc/argos/secrets.env.example || echo "MISSING: secrets.env.example"
+```
+
+---
+
+### 13.9: NOPASSWD Sudoers Restriction
+
+**Description:** The corpus contains 2 instances in 1 file that configure `NOPASSWD: /bin/kill *` in sudoers, allowing unrestricted process termination without authentication. A compromised web service could kill any process on the system.
+
+**Risk Level:** CRITICAL -- CWE-269 (Improper Privilege Management), CWE-250 (Execution with Unnecessary Privileges)
+
+**Detection:**
+
+```bash
+grep -rn 'NOPASSWD' scripts/ --include='*.sh' | grep -v '^\s*#'
+```
+
+**Instance Count:** 2 in 1 file
+
+**Remediation Approach:**
+
+Restrict NOPASSWD entries to specific commands with specific arguments (no wildcards):
+
+```bash
+# Before (dangerous):
+echo "argos ALL=(ALL) NOPASSWD: /bin/kill *" | sudo tee /etc/sudoers.d/argos
+
+# After (safe):
+cat > /tmp/argos-sudoers <<'SUDOERS'
+# Argos platform: restricted sudo access
+# Only allow killing specific services by PID file
+argos ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop kismet
+argos ALL=(ALL) NOPASSWD: /usr/bin/systemctl start kismet
+argos ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart kismet
+argos ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop argos-dev
+argos ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-dev
+SUDOERS
+# Validate sudoers syntax before installing
+if visudo -c -f /tmp/argos-sudoers; then
+    sudo cp /tmp/argos-sudoers /etc/sudoers.d/argos
+    sudo chmod 440 /etc/sudoers.d/argos
+else
+    log_error "Invalid sudoers syntax"
+    exit "${EXIT_ERROR}"
+fi
+rm -f /tmp/argos-sudoers
+```
+
+**Verification:**
+
+```bash
+# Zero wildcard NOPASSWD entries
+grep -rn 'NOPASSWD.*\*' scripts/ --include='*.sh' | grep -v '^\s*#' | wc -l
+# MUST return: 0
+
+# All NOPASSWD entries specify full command paths
+grep -rn 'NOPASSWD' scripts/ --include='*.sh' | grep -v '^\s*#' | grep -v 'NOPASSWD: /usr/' | wc -l
+# MUST return: 0
+```
+
+---
+
+### 13.10: Unsafe /tmp Usage -- Symlink Attack Prevention
+
+**Description:** 185 lines reference `/tmp/` directly (hardcoded temp paths) versus only 3 using `mktemp`. Hardcoded temp paths are vulnerable to symlink attacks (CWE-377): an attacker creates a symlink at the expected path pointing to a sensitive file, and the script overwrites the target.
+
+**Risk Level:** HIGH -- CWE-377 (Insecure Temporary File), CWE-367 (TOCTOU Race Condition), CERT FIO21-C
+
+**Detection:**
+
+```bash
+# Find hardcoded /tmp/ paths (not mktemp)
+grep -rn '/tmp/' scripts/ --include='*.sh' | grep -v 'mktemp' | grep -v '^\s*#' | wc -l
+# Baseline: ~185
+
+# Find proper mktemp usage
+grep -rn 'mktemp' scripts/ --include='*.sh' | wc -l
+```
+
+**Instance Count:** ~185 hardcoded vs 3 proper mktemp
+
+**Remediation Approach:**
+
+Replace all hardcoded `/tmp/filename` patterns with `mktemp`:
+
+```bash
+# Before (vulnerable):
+LOG_FILE="/tmp/argos-install.log"
+echo "Starting..." > "${LOG_FILE}"
+
+# After (safe):
+LOG_FILE=$(mktemp /tmp/argos-install-XXXXXX.log)
+echo "Starting..." > "${LOG_FILE}"
+```
+
+For directories:
+
+```bash
+# Before:
+WORK_DIR="/tmp/argos-build"
+mkdir -p "${WORK_DIR}"
+
+# After:
+WORK_DIR=$(mktemp -d /tmp/argos-build-XXXXXX)
+# Cleanup registered via trap (Task 6.4.6)
+```
+
+**Verification:**
+
+```bash
+# Hardcoded /tmp/ paths reduced to near-zero (some read-only references are acceptable)
+WRITE_TO_TMP=$(grep -rn '/tmp/' scripts/ --include='*.sh' | grep -v 'mktemp' | \
+  grep -v '^\s*#' | grep -E '>\s*/tmp/|echo.*>/tmp/|cat.*>/tmp/|cp.*\s/tmp/' | wc -l)
+echo "Write-to-hardcoded-tmp: ${WRITE_TO_TMP}"
+# MUST return: 0
+```
+
+---
+
+### Task 6.4.13 Acceptance Criteria (Aggregate)
+
+- [ ] Zero SC2086 (unquoted variable) instances from ShellCheck
+- [ ] Zero `eval` with variable expansion (static eval requires documented justification)
+- [ ] Zero backtick command substitutions
+- [ ] Zero unquoted `rm -rf $VAR` patterns; all `rm -rf` with variables have empty-check guards
+- [ ] Zero `curl|bash` or `wget|sh` patterns (all use download-verify-execute)
+- [ ] Zero `chmod 777` or `chmod 666` instances
+- [ ] All installation/setup scripts use full paths with `sudo`
+- [ ] Zero hardcoded credentials in script source
+- [ ] Zero wildcard NOPASSWD sudoers entries
+- [ ] All temp file creation uses `mktemp` (zero writes to hardcoded `/tmp/` paths)
+
+---
+
+## 18. ShellCheck Blind Spots: Manual Audit Requirements
+
+ShellCheck is a static analysis tool focused on shell syntax and common pitfalls. It has significant blind spots that require manual review or complementary tooling. The following table documents what ShellCheck **cannot detect** and the corresponding manual audit procedures.
+
+| Category                                      | ShellCheck Detection        | Why ShellCheck Misses It                                                                                 | Manual Audit Procedure                                                                                                 | Risk Level |
+| --------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
+| **Hardcoded credentials**                     | Never detected              | ShellCheck analyzes syntax, not semantics; it cannot distinguish `PASSWORD="hunter2"` from `COLOR="red"` | `grep -rn 'password\|secret\|token\|api.key' scripts/ --include='*.sh' -i \| grep -v '^\s*#' \| grep '='`              | CRITICAL   |
+| **Logic errors in privilege management**      | Never detected              | ShellCheck does not model sudo privilege scope or escalation chains                                      | Manual review of all `sudo` invocations; verify least-privilege principle                                              | HIGH       |
+| **Race conditions (TOCTOU)**                  | Never detected              | ShellCheck does not model filesystem state between operations                                            | Identify `test -f` / `[ -f ]` followed by operations on the tested path; replace with atomic operations where possible | MEDIUM     |
+| **Hardcoded IP addresses / network topology** | Never detected              | ShellCheck does not analyze string values for network semantics                                          | `grep -rn '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' scripts/ --include='*.sh'`                          | MEDIUM     |
+| **Symlink following in file operations**      | Never detected              | ShellCheck does not model filesystem state                                                               | Review all `cp`, `mv`, `ln`, `rm` operations on user-controlled paths; use `-P` (no-follow) where appropriate          | MEDIUM     |
+| **Correct use of cryptographic operations**   | Never detected              | ShellCheck does not validate cryptographic correctness                                                   | Review all `openssl`, `gpg`, `sha256sum` invocations for correct parameters                                            | HIGH       |
+| **Environment variable injection**            | Partially detected (SC2086) | ShellCheck flags unquoted vars but does not trace data flow from env to command                          | Map all `${ENV_VAR}` uses that flow into `sudo`, `exec`, `eval`, or `bash -c`                                          | HIGH       |
+| **Denial-of-service via resource exhaustion** | Partially detected (SC2071) | ShellCheck flags some infinite loops but not resource-bound issues                                       | Review all `while true` loops for exit conditions, sleep intervals, and resource limits                                | MEDIUM     |
+| **File descriptor leaks**                     | Never detected              | ShellCheck does not track file descriptor lifecycle                                                      | Review all explicit `exec N>file` redirections for corresponding close operations                                      | LOW        |
+| **Signal handler correctness**                | Never detected              | ShellCheck validates trap syntax but not handler semantics                                               | Verify that trap handlers preserve `$?`, clean up all resources, and do not create race conditions                     | MEDIUM     |
+| **Correct sudo tee patterns**                 | Flagged as SC2024 (info)    | ShellCheck suggests `tee` but does not verify the replacement is correct                                 | Review all `sudo cmd > file` patterns (73 instances flagged as SC2024) for correct `tee` usage                         | LOW        |
+| **Secrets in command-line arguments**         | Never detected              | ShellCheck does not analyze argument values for sensitivity                                              | `grep -rn 'curl.*-u\|curl.*--user\|wget.*--password' scripts/ --include='*.sh'` -- credentials visible in `ps aux`     | HIGH       |
+
+### Complementary Static Analysis Tools
+
+For patterns ShellCheck cannot detect, the following tools provide additional coverage:
+
+| Tool              | Coverage Gap Filled                 | Installation             | Usage                              |
+| ----------------- | ----------------------------------- | ------------------------ | ---------------------------------- |
+| `trufflehog`      | Hardcoded secrets detection         | `pip install trufflehog` | `trufflehog filesystem scripts/`   |
+| `gitleaks`        | Git history secret scanning         | `apt install gitleaks`   | `gitleaks detect --source .`       |
+| `semgrep`         | Semantic analysis of shell patterns | `pip install semgrep`    | `semgrep --config=r/bash scripts/` |
+| `bandit` (Python) | For mixed-language scripts          | `pip install bandit`     | `bandit -r hackrf_emitter/`        |
+
+**Recommendation:** Run `gitleaks` as part of CI (Task 6.4.12) to prevent future credential commits. Run `trufflehog` as a one-time sweep before Phase 6.4 completion.
+
+---
+
+## 19. Verification Checklist
 
 This checklist is the phase gate. ALL items MUST pass before Phase 6.4 is marked complete.
 
@@ -2162,6 +2859,28 @@ check "All scripts source common.sh" \
 check "CI workflow contains validate-shell job" \
     'grep -q "validate-shell" .github/workflows/ci.yml'
 
+# 6.4.13: Security-critical patterns
+check "No eval with variable expansion" \
+    '[ "$(grep -rn "eval.*\\\$" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No backtick command substitution" \
+    '[ "$(grep -rn "\`[^\`]*\`" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No curl|bash or wget|sh patterns" \
+    '[ "$(grep -rn "curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No chmod 777 or chmod 666" \
+    '[ "$(grep -rn "chmod 777\|chmod 666" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No unquoted rm -rf with variables" \
+    '[ "$(grep -rn "rm -rf \\\$" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No wildcard NOPASSWD sudoers entries" \
+    '[ "$(grep -rn "NOPASSWD.*\*" scripts/ --include="*.sh" 2>/dev/null | grep -v "^\s*#" | wc -l)" -eq 0 ]'
+
+check "No hardcoded passwords in scripts" \
+    '[ "$(grep -rn "password=.*[a-zA-Z]" scripts/ --include="*.sh" -i 2>/dev/null | grep -vi "\\\${\|read \|prompt\|^\s*#\|example\|template" | wc -l)" -eq 0 ]'
+
 # Syntax check all scripts
 check "All scripts pass bash -n" \
     'find scripts/ -name "*.sh" -type f -exec bash -n {} \;'
@@ -2192,27 +2911,31 @@ These cannot be fully automated and require human review:
 | MV-4 | Log output is parseable by standard tools | Pipe log output through `awk -F'[][]' '{print $4}'` to extract levels          |
 | MV-5 | Exit codes match documentation            | Trigger each exit path, verify code matches header comment                     |
 | MV-6 | All shellcheck suppressions are justified | `grep -B1 "shellcheck disable" scripts/` and review justification comments     |
+| MV-7 | No secrets in script source code          | Run `gitleaks detect --source .` and `trufflehog filesystem scripts/`          |
+| MV-8 | All `eval` usage is justified and safe    | Manual review of each remaining `eval` instance with security justification    |
+| MV-9 | All `sudo` in install scripts use paths   | Verify `grep 'sudo [a-z]' scripts/install-*.sh scripts/setup-*.sh` returns 0   |
 
 ---
 
-## 18. Traceability Matrix
+## 20. Traceability Matrix
 
 This matrix maps every task to the deficiency it remediates, the standard it satisfies, and the verification that confirms compliance.
 
-| Task   | Deficiency                                                                               | Standard                             | Files Affected                 | Verification Command                                                              |
-| ------ | ---------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------- |
-| 6.4.1  | 200 hardcoded `#!/bin/bash` + 1 malformed + 1 missing shebang                            | NASA/JPL Rule 1 (adapted)            | All ~75-80 scripts             | `find scripts/ -name "*.sh" -exec head -1 {} \; \| sort -u`                       |
-| 6.4.2  | 134 scripts with no error handling (plus 34 partial, 3 trap-only)                        | CERT SH-01, SH-02, SH-03             | All ~75-80 scripts             | `grep -c "set -euo pipefail" <(find scripts/ -name "*.sh" -exec sed -n 2p {} \;)` |
-| 6.4.3  | 183 scripts with no documentation header                                                 | NASA/JPL Rule 3 (adapted)            | All ~75-80 scripts             | `grep -rl "# Purpose:" scripts/ --include="*.sh" \| wc -l`                        |
-| 6.4.4  | 767 total shellcheck findings (6 error, 336 warning, 402 info, 23 style) across 84 files | CERT SH (all)                        | 84 files (pre-consolidation)   | `shellcheck --severity=warning scripts/*.sh 2>/dev/null \| wc -l`                 |
-| 6.4.5  | Unquoted variables, no input validation                                                  | CERT SH-05, OWASP Cmd Injection      | 81 parameter-accepting scripts | `shellcheck --include=SC2086 scripts/*.sh \| wc -l`                               |
-| 6.4.6  | 57 mktemp users without cleanup traps                                                    | CERT MEM-01 (adapted)                | 60 temp-file scripts           | See Task 6.4.6 verification                                                       |
-| 6.4.7  | 0 scripts with --dry-run support                                                         | Operational safety                   | ~30 service management scripts | `grep -rl "\-\-dry-run" scripts/ --include="*.sh" \| wc -l`                       |
-| 6.4.8  | 4 non-idempotent config append patterns                                                  | Ansible/Terraform best practice      | 3 setup/install scripts        | `grep -rn "cat >>" scripts/ \| grep sysctl \| wc -l`                              |
-| 6.4.9  | 6+ inconsistent logging formats                                                          | NASA/JPL Rule 2 (adapted)            | All ~75-80 scripts             | `grep -rl "RED=.*033" scripts/ --include="*.sh" \| wc -l`                         |
-| 6.4.10 | 2 scripts use non-standard exit codes                                                    | POSIX exit code convention           | All ~75-80 scripts             | `grep -rn "exit [6-9]\|exit [1-9][0-9]" scripts/ --include="*.sh" \| wc -l`       |
-| 6.4.11 | 49 duplicate color definitions, 5+ log function sets                                     | DRY principle                        | New: `scripts/lib/common.sh`   | `bash -n scripts/lib/common.sh && shellcheck scripts/lib/common.sh`               |
-| 6.4.12 | Shell scripts not validated in CI                                                        | Continuous integration best practice | `.github/workflows/ci.yml`     | `grep -q "validate-shell" .github/workflows/ci.yml`                               |
+| Task   | Deficiency                                                                               | Standard                               | Files Affected                         | Verification Command                                                              |
+| ------ | ---------------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| 6.4.1  | 201 hardcoded `#!/bin/bash` + 1 missing shebang                                          | NASA/JPL Rule 1 (adapted)              | All ~75-80 scripts                     | `find scripts/ -name "*.sh" -exec head -1 {} \; \| sort -u`                       |
+| 6.4.2  | 131 scripts with no error handling (plus 34 partial, 6 trap-only)                        | CERT SH-01, SH-02, SH-03               | All ~75-80 scripts                     | `grep -c "set -euo pipefail" <(find scripts/ -name "*.sh" -exec sed -n 2p {} \;)` |
+| 6.4.3  | 183 scripts with no documentation header                                                 | NASA/JPL Rule 3 (adapted)              | All ~75-80 scripts                     | `grep -rl "# Purpose:" scripts/ --include="*.sh" \| wc -l`                        |
+| 6.4.4  | 767 total shellcheck findings (6 error, 336 warning, 402 info, 23 style) across 84 files | CERT SH (all)                          | 84 files (pre-consolidation)           | `shellcheck --severity=warning scripts/*.sh 2>/dev/null \| wc -l`                 |
+| 6.4.5  | Unquoted variables, no input validation                                                  | CERT SH-05, OWASP Cmd Injection        | 81 parameter-accepting scripts         | `shellcheck --include=SC2086 scripts/*.sh \| wc -l`                               |
+| 6.4.6  | 57 mktemp users without cleanup traps                                                    | CERT MEM-01 (adapted)                  | 60 temp-file scripts                   | See Task 6.4.6 verification                                                       |
+| 6.4.7  | 0 scripts with --dry-run support                                                         | Operational safety                     | ~30 service management scripts         | `grep -rl "\-\-dry-run" scripts/ --include="*.sh" \| wc -l`                       |
+| 6.4.8  | 4 non-idempotent config append patterns                                                  | Ansible/Terraform best practice        | 3 setup/install scripts                | `grep -rn "cat >>" scripts/ \| grep sysctl \| wc -l`                              |
+| 6.4.9  | 6+ inconsistent logging formats                                                          | NASA/JPL Rule 2 (adapted)              | All ~75-80 scripts                     | `grep -rl "RED=.*033" scripts/ --include="*.sh" \| wc -l`                         |
+| 6.4.10 | 2 scripts use non-standard exit codes                                                    | POSIX exit code convention             | All ~75-80 scripts                     | `grep -rn "exit [6-9]\|exit [1-9][0-9]" scripts/ --include="*.sh" \| wc -l`       |
+| 6.4.11 | 49 duplicate color definitions, 5+ log function sets                                     | DRY principle                          | New: `scripts/lib/common.sh`           | `bash -n scripts/lib/common.sh && shellcheck scripts/lib/common.sh`               |
+| 6.4.12 | Shell scripts not validated in CI                                                        | Continuous integration best practice   | `.github/workflows/ci.yml`             | `grep -q "validate-shell" .github/workflows/ci.yml`                               |
+| 6.4.13 | Security-critical patterns not covered by ShellCheck (eval, curl\|bash, chmod 777, etc.) | CERT STR02-C, CWE-78, CWE-494, CWE-798 | All scripts (manual + automated audit) | See Task 6.4.13 per-subtask verification commands                                 |
 
 ---
 
@@ -2251,14 +2974,17 @@ This matrix maps every task to the deficiency it remediates, the standard it sat
 6.4.10 (exit codes) <-- Depends on 6.4.11 (uses common.sh constants)
   |
   v
-6.4.12 (CI) <-- MUST be last: validates all preceding tasks
+6.4.13 (security remediation) <-- Depends on 6.4.5 (quoting overlaps with 13.1)
+  |                                 Must run BEFORE CI enforcement
+  v
+6.4.12 (CI) <-- MUST be last: validates all preceding tasks including 6.4.13
 ```
 
 > **WARNING**: The original ordering placed 6.4.2 (strict mode) and 6.4.6 (traps/error audit) as parallel. This is INCORRECT and will cause cascading breakage. `set -euo pipefail` added to scripts containing `grep` (exit 1 on no match), `diff` (exit 1 on differences), or `cd` to potentially-missing directories will cause immediate termination. Task 6.4.6 must audit and guard these patterns FIRST.
 
-**Critical path:** 6.4.11 -> 6.4.1 -> 6.4.6 -> 6.4.2 -> 6.4.3 -> 6.4.4 -> 6.4.5 -> 6.4.9 -> 6.4.10 -> 6.4.12
+**Critical path:** 6.4.11 -> 6.4.1 -> 6.4.6 -> 6.4.2 -> 6.4.3 -> 6.4.4 -> 6.4.5 -> 6.4.9 -> 6.4.10 -> 6.4.13 -> 6.4.12
 
-**Estimated effort:** 16-24 engineer-hours for an operator familiar with the codebase.
+**Estimated effort:** 24-36 engineer-hours for an operator familiar with the codebase (increased from 16-24 due to Task 6.4.13 security remediation scope).
 
 ---
 
@@ -2272,6 +2998,9 @@ This matrix maps every task to the deficiency it remediates, the standard it sat
 | ShellCheck suppressions mask real bugs                          | LOW         | MEDIUM | Require justifying comments; cap total suppressions; review in phase gate                     |
 | CI validation blocks legitimate PRs                             | MEDIUM      | LOW    | CI is advisory (branch protection not yet enforced per CI audit)                              |
 | Logging to stderr breaks scripts that capture stderr            | LOW         | LOW    | Audit all `2>&1` redirections before converting echo to log functions                         |
+| Removing `curl\|bash` breaks installation scripts               | HIGH        | HIGH   | Test every installation script in a disposable container before committing                    |
+| Credential externalization breaks scripts run in CI/Docker      | MEDIUM      | HIGH   | Provide `/etc/argos/secrets.env.example` template; document in README                         |
+| `sudo` full-path conversion breaks on non-standard distros      | LOW         | LOW    | Use `command -v` to resolve paths at runtime; hardcode only for Kali 2025.4 target            |
 
 ---
 
@@ -2296,22 +3025,70 @@ This matrix maps every task to the deficiency it remediates, the standard it sat
 
 The following corrections were applied based on the Phase 6 audit review:
 
-| #   | Section                             | Original Value                          | Corrected Value                                                             | Reason                                                                         |
-| --- | ----------------------------------- | --------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1   | Executive Summary, ShellCheck table | 342 warnings, 2 severity rows           | 336 warnings + 402 info + 23 style = 767 total, 5 severity rows             | Original omitted 425 findings at info/style level                              |
-| 2   | Executive Summary, Top violations   | SC2155 ranked #1 (149 instances)        | SC2086 ranked #1 (220 instances)                                            | SC2086 is the most dangerous (injection vector); SC2155 is a correctness issue |
-| 3   | Executive Summary + Baseline        | SC2024 count = 65                       | SC2024 count = 73                                                           | Verified recount                                                               |
-| 4   | Executive Summary + Baseline        | No error handling = 131 (64.9%)         | No error handling = 134 (66.3%), added partial (34) and trap-only (3) tiers | Original only had two-tier breakdown                                           |
-| 5   | Executive Summary + Task 6.4.7      | --help support = 9 (4.5%)               | --help support = 8 (3.96%)                                                  | Verified recount                                                               |
-| 6   | Executive Summary + Task 6.4.1      | 1 malformed shebang                     | 2 broken shebangs (1 malformed + 1 missing)                                 | `start-usrp-service.sh` has no shebang (SC2148)                                |
-| 7   | Task 6.4.2 + Appendix A             | 6.4.2 (strict mode) parallel with 6.4.1 | 6.4.6 MUST execute BEFORE 6.4.2                                             | Strict mode causes cascading failures in scripts with grep/diff/cd             |
-| 8   | Task 6.4.4                          | No mention of ShellCheck blind spots    | Added "Security-Critical Patterns Not Covered by ShellCheck" table          | eval, curl\|sh, chmod 777, rm -rf $UNQUOTED not detectable by static analysis  |
-| 9   | Task 6.4.11                         | Single monolithic common.sh             | Added library decomposition into log.sh, args.sh, cleanup.sh, paths.sh      | Single Responsibility Principle                                                |
+| #   | Section                             | Original Value                              | Corrected Value                                                             | Reason                                                                                                     |
+| --- | ----------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | Executive Summary, ShellCheck table | 342 warnings, 2 severity rows               | 336 warnings + 402 info + 23 style = 767 total, 5 severity rows             | Original omitted 425 findings at info/style level                                                          |
+| 2   | Executive Summary, Top violations   | SC2155 ranked #1 (149 instances)            | SC2086 ranked #1 (220 instances)                                            | SC2086 is the most dangerous (injection vector); SC2155 is a correctness issue                             |
+| 3   | Executive Summary + Baseline        | SC2024 count = 65                           | SC2024 count = 73                                                           | Verified recount                                                                                           |
+| 4   | Executive Summary + Baseline        | No error handling = 134 (66.3%)             | No error handling = 131 (64.9%), added partial (34) and trap-only (6) tiers | Independent audit confirmed 131 correct; 3 trap-only scripts reclassified to 6                             |
+| 5   | Executive Summary + Task 6.4.7      | --help support = 8 (3.96%)                  | --help support = 9 (4.46%)                                                  | Independent audit confirmed 9 correct                                                                      |
+| 6   | Executive Summary + Task 6.4.1      | 2 broken shebangs (1 malformed + 1 missing) | 1 broken shebang (1 missing only)                                           | `setup-system-management.sh` has valid shebang (hex dump verified); only `start-usrp-service.sh` is broken |
+| 7   | Task 6.4.2 + Appendix A             | 6.4.2 (strict mode) parallel with 6.4.1     | 6.4.6 MUST execute BEFORE 6.4.2                                             | Strict mode causes cascading failures in scripts with grep/diff/cd                                         |
+| 8   | Task 6.4.4                          | No mention of ShellCheck blind spots        | Added "Security-Critical Patterns Not Covered by ShellCheck" table          | eval, curl\|sh, chmod 777, rm -rf $UNQUOTED not detectable by static analysis                              |
+| 9   | Task 6.4.11                         | Single monolithic common.sh                 | Added library decomposition into log.sh, args.sh, cleanup.sh, paths.sh      | Single Responsibility Principle                                                                            |
+
+### Revision 1.3 Changes (2026-02-08, Security Remediation)
+
+| #   | Section                     | Change Description                                                                                                   | Reason                                                                     |
+| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 10  | New Task 6.4.13             | Added full task with 10 subtasks for security-critical pattern remediation                                           | Independent audit scored 5.3/10; security remediation was the primary gap  |
+| 11  | New Section 18              | Added "ShellCheck Blind Spots" table documenting 12 categories ShellCheck cannot detect                              | Plan relied exclusively on ShellCheck; manual audit gaps were undocumented |
+| 12  | Task 6.4.8, Section 8.3     | Added explicit `sed` commands for vm.swappiness fix across 3 named scripts                                           | Resolution was described but not executable without exact commands         |
+| 13  | Task 6.4.11                 | Expanded library decomposition: explicit `common.sh` wrapper code, per-module guard requirements, verification steps | Decomposition was listed as a table but lacked implementation specifics    |
+| 14  | Table of Contents           | Renumbered sections 17-18 to 19-20; added entries for 6.4.13 and ShellCheck Blind Spots                              | New sections required TOC update                                           |
+| 15  | Verification Checklist      | Added 7 automated checks for Task 6.4.13 security patterns                                                           | Security patterns were not verified by the automated verification script   |
+| 16  | Manual Verification         | Added MV-7 (secrets scan), MV-8 (eval audit), MV-9 (sudo paths) items                                                | Security manual review items were missing from the phase gate              |
+| 17  | Traceability Matrix         | Added row for Task 6.4.13 with CERT/CWE references                                                                   | New task required traceability entry                                       |
+| 18  | Appendix A: Execution Order | Inserted 6.4.13 between 6.4.10 and 6.4.12 in critical path                                                           | New task must execute before CI enforcement                                |
+| 19  | Appendix B: Risk Assessment | Added 3 new risk entries for credential externalization, curl\|bash removal, and sudo path conversion                | New task introduces new risks                                              |
+| 20  | Estimated Effort            | Increased from 16-24 to 24-36 engineer-hours                                                                         | Task 6.4.13 adds ~8-12 hours of security remediation effort                |
+
+---
+
+## APPENDIX: Independent Audit Security Findings (2026-02-08)
+
+The following security patterns were identified by the independent verification audit and are NOT adequately covered by ShellCheck analysis alone. These must be addressed during script standardization.
+
+### Patterns Requiring Manual Audit (Not Detectable by ShellCheck)
+
+| Pattern                          | Instances               | Risk Level | Description                                                   |
+| -------------------------------- | ----------------------- | ---------- | ------------------------------------------------------------- |
+| `eval` usage                     | 13 across 7 files       | HIGH       | 3 instances evaluate user-controlled or constructed variables |
+| `curl\|bash` / `wget\|sh`        | 22 across 14 files      | CRITICAL   | Remote code execution via supply chain compromise             |
+| `chmod 666` on devices           | 3 in 2 files            | MEDIUM     | World-readable/writable serial devices                        |
+| `kill -9` without PID validation | 56 across scripts       | MEDIUM     | Race condition, could kill wrong process                      |
+| Hardcoded credentials            | 5 across 4 files        | CRITICAL   | API tokens and admin passwords in source                      |
+| `NOPASSWD: /bin/kill *`          | 2 in 1 file             | CRITICAL   | Unrestricted process termination without auth                 |
+| Unsafe `/tmp` usage              | 185 lines vs 3 `mktemp` | HIGH       | Symlink attack vector (CWE-377)                               |
+| `sudo` invocations               | 1,017 across 122 files  | MEDIUM     | 60% of scripts invoke sudo with no centralized policy         |
+
+### Remediation Priority
+
+1. **IMMEDIATE**: Remove hardcoded API tokens and passwords (5 instances)
+2. **IMMEDIATE**: Restrict NOPASSWD sudoers entries (2 instances)
+3. **HIGH**: Replace curl|bash with download-verify-execute pattern (22 instances)
+4. **HIGH**: Replace /tmp usage with mktemp (185 instances)
+5. **MEDIUM**: Add PID validation before kill -9 (56 instances)
+6. **MEDIUM**: Audit and restrict eval usage (13 instances)
 
 ```
 END OF DOCUMENT
 Phase:     6.4
-Status:    FINAL (CORRECTED)
-Revision:  1.1
+Status:    FINAL (SECURITY REMEDIATION + AUDIT RESPONSE)
+Revision:  1.3
 Date:      2026-02-08
+Changes:   Added Task 6.4.13 (10 security subtasks), ShellCheck Blind Spots table,
+           explicit vm.swappiness sed commands, expanded library decomposition,
+           updated verification checklist and traceability matrix.
+           Addresses independent audit score of 5.3/10 -> target 9.0+.
 ```

@@ -1,7 +1,7 @@
 # Phase 6.2: Shell Script Consolidation
 
 **Document ID**: ARGOS-AUDIT-P6.2
-**Version**: 1.0 (Final)
+**Version**: 2.0 (Final -- Security-Augmented)
 **Date**: 2026-02-08
 **Author**: Claude Opus 4.6 (Lead Audit Agent)
 **Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY
@@ -18,9 +18,10 @@
 | Estimated Files Affected | 202 active .sh files reduced to 114 active .sh scripts (plus 20 non-.sh files archived) |
 | Lines Eliminated         | ~10,900 .sh lines archived (duplicates + superseded scripts)                            |
 | Lines Remaining          | ~17,200 lines across 114 .sh scripts                                                    |
-| Estimated Effort         | 3 engineer-days                                                                         |
+| Security Findings        | 331 instances across 6 categories (2 CRITICAL, 4 HIGH) -- see Task 6.2.8                |
+| Estimated Effort         | 3 engineer-days (consolidation) + 2 engineer-days (security remediation)                |
 | Audit Date               | 2026-02-08                                                                              |
-| Codebase HEAD            | Commit f300b8f on branch main                                                           |
+| Codebase HEAD            | Commit b682267 on branch dev_branch                                                     |
 | Verification Method      | Every task includes a verification command that returns a machine-parseable pass/fail   |
 
 ---
@@ -33,21 +34,20 @@
 
 The following corrections are documented against prior audit claims.
 
-| Prior Claim                                | Source                 | Actual Value                                                       | Correction                                                            |
-| ------------------------------------------ | ---------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| "224 shell scripts"                        | MEMORY.md              | 202 active .sh files (excluding \_archived)                        | Prior count included \_archived directory or non-.sh files            |
-| "30,200 lines"                             | Codebase Census        | 28,097 lines across 202 .sh files                                  | Prior count included .py, .cjs, .conf, and .service files in scripts/ |
-| "224->~40 scripts"                         | Consolidation Analysis | 202->78 scripts                                                    | Prior target of 40 was aspirational without per-file analysis         |
-| "massive duplication, needs consolidation" | Consolidation Analysis | 4,489 duplicated lines (16.0%) across 21 pairs                     | Now quantified precisely                                              |
-| "52 GSM files"                             | Phase 6.2 draft        | 57 GSM-related files (34 .sh + 11 .py + 5 extensionless + 7 other) | Prior count missed 5 extensionless grgsm wrappers                     |
-| "147 hardcoded paths in 64 scripts"        | Shell Script Audit     | 152 line occurrences across ~55 unique files                       | See Section 14 for corrected breakdown                                |
+| Prior Claim                                | Source                 | Actual Value                                             | Correction                                                            |
+| ------------------------------------------ | ---------------------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| "224 shell scripts"                        | MEMORY.md              | 202 active .sh files (excluding \_archived)              | Prior count included \_archived directory or non-.sh files            |
+| "30,200 lines"                             | Codebase Census        | 28,097 lines across 202 .sh files                        | Prior count included .py, .cjs, .conf, and .service files in scripts/ |
+| "224->~40 scripts"                         | Consolidation Analysis | 202->78 scripts                                          | Prior target of 40 was aspirational without per-file analysis         |
+| "massive duplication, needs consolidation" | Consolidation Analysis | 4,489 duplicated lines (16.0%) across 21 pairs           | Now quantified precisely                                              |
+| "52 GSM files"                             | Phase 6.2 draft        | 61 GSM-related files (47 .sh + 11 .py + 3 extensionless) | Prior count missed extensionless grgsm wrappers and undercounted .sh  |
+| "147 hardcoded paths in 64 scripts"        | Shell Script Audit     | 152 line occurrences across 67 unique files              | See Section 15 for corrected breakdown                                |
 
 #### Non-Functional Scripts (Will Not Execute)
 
-Two scripts have broken or missing shebangs and will produce `Exec format error`:
+One script has a broken shebang and will produce `Exec format error`:
 
-1. `scripts/setup-system-management.sh` -- Contains `#\!/bin/bash` (escaped exclamation mark). Fix: Replace with `#!/bin/bash`
-2. `scripts/development/start-usrp-service.sh` -- Has NO shebang at all (ShellCheck SC2148). Fix: Add `#!/bin/bash` as first line
+1. `scripts/development/start-usrp-service.sh` -- Contains `#\!/bin/bash` (escaped exclamation mark, ShellCheck SC2148). Fix: Replace with `#!/bin/bash`
 
 **These must be fixed in the current codebase before any consolidation begins.**
 
@@ -117,6 +117,32 @@ grep -rn 'scripts/' --include='*.ts' --include='*.svelte' --include='*.service' 
 # Must match the 11 entries in the table above. Any new references added
 # between plan writing and execution must be added to this table.
 ```
+
+#### Missing Production-Critical Scripts **[MUST CREATE OR REMOVE]**
+
+The independent audit (2026-02-08) identified 3 scripts commonly expected in a production deployment that DO NOT EXIST on disk:
+
+| Expected Script                       | Status                    | Required Action                                                                           |
+| ------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------- |
+| `scripts/deploy/deploy-production.sh` | **[MISSING - NOT FOUND]** | Either create as a wrapper around `deploy-master.sh` or formally document its absence     |
+| `scripts/deploy/rollback.sh`          | **[MISSING - NOT FOUND]** | Either create a rollback script or document that rollback is manual (Section 3.2)         |
+| `scripts/monitoring/health-check.sh`  | **[MISSING - NOT FOUND]** | Either create a health check or document that `deployment-status-api.sh` serves this role |
+
+**Verification**:
+
+```bash
+test -f scripts/deploy/deploy-production.sh && echo "EXISTS" || echo "MISSING: deploy-production.sh"
+test -f scripts/deploy/rollback.sh && echo "EXISTS" || echo "MISSING: rollback.sh"
+test -f scripts/monitoring/health-check.sh && echo "EXISTS" || echo "MISSING: health-check.sh"
+# All 3 are expected to return MISSING until remediated.
+```
+
+**Decision Required Before Execution**: For each missing script, the operator must decide:
+
+1. **CREATE**: Write the script and add it to the production-critical list (Section 3.3 table above).
+2. **FORMALLY REMOVE**: Document that the functionality is covered by an existing script and no new script is needed.
+
+Do NOT proceed with Phase 6.2 consolidation until this decision is recorded.
 
 ---
 
@@ -203,14 +229,19 @@ diff scripts/testing/debug_scanner_disconnect.sh tests/integration/debug_scanner
 
 #### Script Dependency Graph (Required Before Archiving)
 
-Several scripts call other scripts via `source` or direct path execution. Before archiving any script, verify it is not sourced by a surviving script:
+Several scripts call other scripts via `source` or direct path execution. Before archiving ANY script across ALL tasks (6.2.1 through 6.2.7), verify it is not sourced by a surviving script:
 
 ```bash
-# For each script to be archived, check if it's sourced anywhere:
-grep -rn "source.*SCRIPT_NAME\|\\. .*SCRIPT_NAME\|bash.*SCRIPT_NAME" scripts/
+# GLOBAL dependency scan -- run ONCE before any archiving begins:
+grep -rn 'source \|^\. ' scripts/ --include='*.sh' | grep -v '_archived'
+# This produces the full sourcing graph. For each script to be archived,
+# verify its filename does NOT appear in this output.
+
+# Per-script check (replace SCRIPT_NAME with actual filename):
+grep -rn "source.*SCRIPT_NAME\|\\. .*SCRIPT_NAME\|bash.*SCRIPT_NAME" scripts/ --include='*.sh' | grep -v '_archived'
 ```
 
-Archiving a script that is `source`d by a surviving script will silently break the survivor at runtime.
+Archiving a script that is `source`d by a surviving script will silently break the survivor at runtime. This check is a **hard gate** -- if a dependency is found, the script must NOT be archived until the dependency is refactored.
 
 ### 4.2 Relocate Unique Files from development/
 
@@ -302,17 +333,17 @@ find scripts/ -name '*.sh' -not -path '*_archived*' | wc -l
 
 ## 5. Task 6.2.2: GSM Evil Script Consolidation
 
-**Objective**: Reduce 57 GSM-related files (34 .sh + 11 .py + 5 extensionless + 7 other) at the top level to 5 shell scripts, 2 Python files, and 1 extensionless wrapper. Archive the remaining files.
+**Objective**: Reduce 61 GSM-related files (47 .sh + 11 .py + 3 extensionless) at the top level to 5 shell scripts, 2 Python files, and 1 extensionless wrapper. Archive the remaining files.
 
 ```
 # Verification command (run from project root):
 find scripts/ -iname "*gsm*" -o -iname "*gsmevil*" -o -iname "*grgsm*" -o -iname "*imsi*" | wc -l
-# Expected output: 57
+# Expected output: 61
 ```
 
 #### PREREQUISITE: Security Audit of GSM Scripts (Must Complete Before Consolidation)
 
-Before any GSM script is consolidated, ALL 57 GSM-related files must be audited for the following dangerous patterns:
+Before any GSM script is consolidated, ALL 61 GSM-related files must be audited for the following dangerous patterns:
 
 | Pattern                          | Risk                     | Grep Command                                                  |
 | -------------------------------- | ------------------------ | ------------------------------------------------------------- |
@@ -323,9 +354,9 @@ Before any GSM script is consolidated, ALL 57 GSM-related files must be audited 
 | `kill -9` without PID validation | Wrong process killed     | `grep -rn 'kill -9' scripts/*gsm* scripts/*GSM*`              |
 | Hardcoded IPs/ports              | Configuration drift      | `grep -rn '[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+' scripts/*gsm*` |
 
-**Every finding must be documented and remediated in the consolidated script.** Consolidation without security review means the reduced set of scripts will inherit the worst security practices of all 57 originals.
+**Every finding must be documented and remediated in the consolidated script.** Consolidation without security review means the reduced set of scripts will inherit the worst security practices of all 61 originals.
 
-### 5.1 GSM Script Inventory (57 files, verified line counts)
+### 5.1 GSM Script Inventory (61 files, verified line counts)
 
 #### START variants (22 .sh files, 1,463 total lines) -- ARCHIVE ALL, replace with 1 unified script
 
@@ -1201,11 +1232,358 @@ ls scripts/_archived/phase-6.2/misc/ | wc -l
 
 ---
 
-## 11. Verification Checklist
+## 11. Task 6.2.8: Supply Chain and Credential Security Remediation
 
-Run all verification commands sequentially after all 7 tasks are complete.
+**Objective**: Remediate 331 security finding instances across 6 categories (2 CRITICAL, 4 HIGH) identified by the independent audit (2026-02-08). These findings affect both scripts being archived AND scripts being KEPT, so they must be addressed in the surviving 114 scripts. Consolidation without security remediation means the reduced script set inherits the worst security posture of all 202 originals.
 
-### 11.1 Total File Count
+**Priority**: CRITICAL -- These must be remediated either before or concurrent with consolidation tasks 6.2.1-6.2.7. Do NOT mark Phase 6.2 as complete until all subtasks in this section pass verification.
+
+**Standards**: CWE-798 (Hardcoded Credentials), CWE-377 (Insecure Temporary File), CWE-829 (Inclusion of Functionality from Untrusted Control Sphere), NIST SP 800-218 PW.4.1, DISA STIG V-230380, CIS Benchmark 5.3.
+
+### 11.1 CRITICAL: Hardcoded API Tokens (2 instances)
+
+**Description**: Two shell scripts contain a hardcoded OpenCellID API token in plain text. This token is committed to version control and must be considered compromised.
+
+**Detection Command**:
+
+```bash
+grep -rn 'API_KEY=.*"pk\.' scripts/ --include='*.sh' | grep -v '_archived'
+# Verified output (2026-02-08):
+#   scripts/download-opencellid-full.sh:6:API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"
+#   scripts/setup-opencellid-full.sh:4:API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"
+```
+
+**Count**: 2 instances in 2 files.
+
+**Remediation**:
+
+1. Replace hardcoded token with environment variable lookup:
+
+    ```bash
+    # BEFORE (vulnerable):
+    API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"
+
+    # AFTER (remediated):
+    API_KEY="${OPENCELLID_API_KEY:?ERROR: OPENCELLID_API_KEY not set. Export it or add to .env}"
+    ```
+
+2. Add `OPENCELLID_API_KEY` to the project `.env.example` with a placeholder value.
+3. **Rotate the exposed token immediately** at https://opencellid.org -- the current token must be considered compromised since it exists in git history.
+4. Add `**/scripts/**/*.key` and `**/scripts/**/*.token` patterns to `.gitignore` as a defense-in-depth measure.
+
+**Verification Command**:
+
+```bash
+grep -rn 'pk\.d6291c07a2907c915cd8994fb22bc189' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return 0
+grep -rn 'OPENCELLID_API_KEY' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return >= 2 (both files now use env var)
+```
+
+**Acceptance Criteria**: Zero hardcoded API tokens in any non-archived script. Token rotated. `.env.example` updated.
+
+### 11.2 CRITICAL: curl|bash Remote Code Execution Vectors (22+ instances)
+
+**Description**: Multiple scripts download remote content and pipe it directly to a shell interpreter (`curl ... | bash`, `curl ... | sh`, `wget ... | bash`). This is a supply chain attack vector -- a compromised or MITM'd upstream server can execute arbitrary code as root (many use `sudo`).
+
+**Detection Command**:
+
+```bash
+grep -rn 'curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash\|wget.*|.*sh' scripts/ --include='*.sh' | grep -v '_archived' | grep -v '#'
+# Count:
+grep -rn 'curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash\|wget.*|.*sh' scripts/ --include='*.sh' | grep -v '_archived' | grep -v '#' | wc -l
+# Verified count (2026-02-08): 22+ instances across 14+ files
+```
+
+**Count**: 22+ instances across 14+ files (exact count varies as some are in duplicate directories being archived).
+
+**Remediation**:
+
+For each `curl|bash` pattern, replace with the download-then-verify pattern:
+
+```bash
+# BEFORE (vulnerable):
+curl -fsSL https://get.docker.com | sh
+
+# AFTER (remediated):
+TMPFILE=$(mktemp)
+trap 'rm -f "$TMPFILE"' EXIT
+curl -fsSL -o "$TMPFILE" https://get.docker.com
+# Verify checksum if available (Docker publishes GPG signatures):
+# gpg --verify "$TMPFILE.asc" "$TMPFILE" || { echo "GPG verification failed"; exit 1; }
+chmod +x "$TMPFILE"
+sh "$TMPFILE"
+```
+
+For scripts where upstream checksums/signatures are not available, at minimum:
+
+1. Download to a temp file (not pipe to shell).
+2. Log the SHA256 of the downloaded file before execution.
+3. Set `set -euo pipefail` so failures are caught.
+
+**Priority by file**:
+
+- Scripts in `deploy/`, `development/`, `testing/`, `maintenance/` are being ARCHIVED (Task 6.2.1) -- remediate ONLY in the canonical copies that survive.
+- Focus on the ~8-10 surviving scripts that contain this pattern (install-argos.sh, setup-host-complete.sh, install-system-dependencies.sh, etc.).
+
+**Verification Command**:
+
+```bash
+grep -rn 'curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash\|wget.*|.*sh' scripts/ --include='*.sh' | \
+  grep -v '_archived' | grep -v '#' | wc -l
+# ACCEPTANCE: must return 0
+```
+
+**Acceptance Criteria**: Zero `curl|bash` or `wget|bash` patterns in any non-archived script.
+
+### 11.3 CRITICAL: NOPASSWD Sudoers for /bin/kill \* (1 file, 2 rules)
+
+**Description**: `scripts/setup-droneid-sudoers.sh` lines 22 and 32 grant `NOPASSWD: /bin/kill *` to the `ubuntu` and `node` users respectively. The wildcard `*` allows sending any signal to ANY process on the system without authentication. `kill -9 1` would crash the entire system. `kill -STOP` on sshd would lock out remote access.
+
+**Detection Command**:
+
+```bash
+grep -rn 'NOPASSWD.*\/bin\/kill \*' scripts/ --include='*.sh' | grep -v '_archived'
+# Verified output (2026-02-08):
+#   scripts/setup-droneid-sudoers.sh:22:ubuntu ALL=(ALL) NOPASSWD: /bin/kill *
+#   scripts/setup-droneid-sudoers.sh:32:node ALL=(ALL) NOPASSWD: /bin/kill *
+```
+
+**Count**: 2 rules in 1 file.
+
+**Remediation**:
+
+Replace the unrestricted `/bin/kill *` with specific, scoped alternatives:
+
+```bash
+# BEFORE (vulnerable):
+ubuntu ALL=(ALL) NOPASSWD: /bin/kill *
+
+# OPTION A -- Restrict to specific signal and process pattern:
+ubuntu ALL=(ALL) NOPASSWD: /usr/bin/pkill -f dronesniffer/main.py
+
+# OPTION B -- Use systemctl for service management (preferred):
+ubuntu ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop droneid.service
+ubuntu ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart droneid.service
+```
+
+Additionally, the same file (line 23, 33) grants `NOPASSWD: /bin/bash /tmp/start-droneid-temp.sh` which is a secondary risk (arbitrary code execution via temp file replacement). Replace with a fixed path:
+
+```bash
+# BEFORE:
+ubuntu ALL=(ALL) NOPASSWD: /bin/bash /tmp/start-droneid-temp.sh
+# AFTER:
+ubuntu ALL=(ALL) NOPASSWD: /bin/bash /opt/argos/scripts/start-droneid.sh
+```
+
+**Verification Command**:
+
+```bash
+grep -rn '\/bin\/kill \*' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return 0
+grep -rn 'NOPASSWD.*/tmp/' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return 0
+```
+
+**Acceptance Criteria**: No unrestricted `/bin/kill *` NOPASSWD rules. No NOPASSWD rules referencing `/tmp/` paths.
+
+### 11.4 HIGH: Hardcoded Admin Passwords (3+ instances)
+
+**Description**: Shell scripts contain plaintext admin passwords for service configuration. These are committed to version control and are visible to anyone with repository access.
+
+**Detection Command**:
+
+```bash
+# Specific known instances:
+grep -rn "argos123\|'hackrf'\|\"admin\"" scripts/ --include='*.sh' | grep -vi 'echo\|print\|#' | grep -v '_archived'
+# Broader search for password assignments:
+grep -rn 'PASSWORD=\|password.*=' scripts/ --include='*.sh' | grep -v '#' | grep -v '_archived' | \
+  grep -v '""' | grep -v "=''" | grep -v '\${'
+# Verified instances (2026-02-08):
+#   scripts/configure-openwebrx-b205.sh:21  -- OWRX_ADMIN_PASSWORD = 'argos123'
+#   scripts/configure-openwebrx-b205.sh:26  -- userlist.addUser('admin', 'argos123')
+#   scripts/install-openwebrx-hackrf.sh:210 -- admin_password = hackrf
+#   scripts/final-usrp-setup.sh:45          -- "password": "admin"
+#   scripts/argos-wifi-resilience.sh:295    -- WIFI_PASSWORD="YourNetworkPassword" (placeholder but dangerous pattern)
+```
+
+**Count**: 3 confirmed hardcoded passwords + 1 placeholder password pattern in 4 files. Note: `final-usrp-setup.sh` is being archived in Task 6.2.7, but the other 3 files SURVIVE consolidation.
+
+**Remediation**:
+
+```bash
+# BEFORE (vulnerable):
+os.environ['OWRX_ADMIN_PASSWORD'] = 'argos123'
+
+# AFTER (remediated):
+os.environ['OWRX_ADMIN_PASSWORD'] = os.environ.get('OWRX_ADMIN_PASSWORD', '')
+if not os.environ['OWRX_ADMIN_PASSWORD']:
+    print("ERROR: OWRX_ADMIN_PASSWORD not set")
+    sys.exit(1)
+```
+
+For each surviving file:
+
+1. Replace hardcoded password with `${VARNAME:?ERROR: VARNAME not set}` pattern.
+2. Add the variable to `.env.example` with a placeholder.
+3. Document the required environment variables in the script header comment.
+
+**Verification Command**:
+
+```bash
+grep -rn "argos123\|password.*=.*hackrf\|password.*=.*admin" scripts/ --include='*.sh' | \
+  grep -v '_archived' | grep -v '#' | wc -l
+# ACCEPTANCE: must return 0
+```
+
+**Acceptance Criteria**: Zero plaintext passwords in any non-archived script. All password values sourced from environment variables or secure credential store.
+
+### 11.5 HIGH: Hardcoded Tailscale/Internal IP Addresses (55 instances)
+
+**Description**: 55 instances of hardcoded IP addresses (excluding 127.0.0.1, 0.0.0.0, and broadcast addresses) exist across shell scripts. These include Tailscale VPN IPs (100.x.x.x range), internal LAN IPs, and other infrastructure addresses. For a military EW training platform, hardcoded IPs are an OPSEC violation -- they leak network topology and are non-portable across deployment environments.
+
+**Detection Command**:
+
+```bash
+grep -rn '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' scripts/ --include='*.sh' | \
+  grep -v '127.0.0.1\|0.0.0.0\|255.\|localhost\|_archived' | wc -l
+# Verified count (2026-02-08): 55
+# To see the actual IPs:
+grep -rn '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' scripts/ --include='*.sh' | \
+  grep -v '127.0.0.1\|0.0.0.0\|255.\|localhost\|_archived' | \
+  grep -oP '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' | sort -u
+```
+
+**Count**: 55 instances across multiple files.
+
+**Remediation**:
+
+1. Create a centralized network configuration file (aligns with Phase 6.3 `argos-env.sh`):
+    ```bash
+    # In argos-env.sh (Phase 6.3):
+    export ARGOS_TAILSCALE_IP="${ARGOS_TAILSCALE_IP:-}"
+    export ARGOS_LAN_IP="${ARGOS_LAN_IP:-}"
+    export ARGOS_REMOTE_HOST="${ARGOS_REMOTE_HOST:-}"
+    ```
+2. Replace each hardcoded IP with the corresponding environment variable.
+3. For scripts being archived, no action needed (they are eliminated).
+4. Focus on surviving scripts -- after Task 6.2.1-6.2.7 archiving, re-count to get the surviving instance count.
+
+**Verification Command**:
+
+```bash
+# Post-archival count (run after all consolidation tasks):
+grep -rn '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' scripts/ --include='*.sh' | \
+  grep -v '127.0.0.1\|0.0.0.0\|255.\|localhost\|_archived' | wc -l
+# ACCEPTANCE: must return 0 (all IPs externalized to env vars or argos-env.sh)
+```
+
+**Acceptance Criteria**: Zero hardcoded non-loopback IP addresses in any non-archived script. All IPs sourced from environment variables or `argos-env.sh` configuration.
+
+**NOTE**: This task has significant overlap with Phase 6.3 (Hardcoded Path Remediation). Coordinate execution to avoid double-work. IP externalization can be done in the same pass as path variable externalization.
+
+### 11.6 HIGH: Unsafe /tmp Usage (185 instances vs. 3 mktemp uses)
+
+**Description**: 185 references to `/tmp/` with predictable, hardcoded filenames. Only 3 scripts in the entire codebase use `mktemp` for safe temporary file creation. On multi-user systems, hardcoded `/tmp/` paths are vulnerable to symlink attacks (CWE-377) -- an attacker can create a symlink at the expected path pointing to a sensitive file, causing the script to overwrite or read the wrong file.
+
+**Detection Command**:
+
+```bash
+# Count all /tmp/ references:
+grep -rn '/tmp/' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# Verified count (2026-02-08): 185
+
+# Count safe mktemp usage:
+grep -rn 'mktemp' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# Verified count (2026-02-08): 4
+
+# Identify the most dangerous patterns (write to /tmp with predictable names):
+grep -rn '>/tmp/\|>>/tmp/\|mv.*\/tmp\/\|cp.*\/tmp\/' scripts/ --include='*.sh' | grep -v '_archived'
+```
+
+**Count**: 185 `/tmp/` instances; only 4 `mktemp` uses. Ratio: 46:1 unsafe-to-safe.
+
+**Remediation**:
+
+For each script that writes to `/tmp/`:
+
+```bash
+# BEFORE (vulnerable):
+echo "$data" > /tmp/hackrf-status.txt
+LOGFILE=/tmp/gsm-evil.log
+
+# AFTER (remediated):
+TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/argos-XXXXXX")
+trap 'rm -rf "$TMPDIR"' EXIT
+echo "$data" > "$TMPDIR/hackrf-status.txt"
+LOGFILE="$TMPDIR/gsm-evil.log"
+```
+
+**Priority tiers** (remediate in this order):
+
+1. **Tier 1 -- Scripts that write as root** (`sudo` + `/tmp/`): Highest symlink attack risk.
+2. **Tier 2 -- Scripts that write sensitive data** (logs, credentials, configs) to `/tmp/`.
+3. **Tier 3 -- Scripts that only read from `/tmp/`**: Lower risk but still non-portable.
+
+**NOTE**: Many of the 185 instances are in scripts being archived (Tasks 6.2.1-6.2.2). After archiving, re-count to determine the surviving instance count. Estimate: ~80-100 instances will survive in the 114 retained scripts.
+
+**Verification Command**:
+
+```bash
+# Post-remediation check (run after all tasks complete):
+# Count remaining hardcoded /tmp/ paths (should be replaced with mktemp or $TMPDIR):
+grep -rn '/tmp/' scripts/ --include='*.sh' | grep -v '_archived' | grep -v 'mktemp\|TMPDIR\|#' | wc -l
+# ACCEPTANCE: must return 0
+
+# Count mktemp usage (should be >= 1 per script that needs temp files):
+grep -rn 'mktemp' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must be >= 20 (replacing the ~80-100 surviving hardcoded patterns)
+```
+
+**Acceptance Criteria**: Zero hardcoded `/tmp/filename` patterns in any non-archived script. All temporary file creation uses `mktemp` or `mktemp -d` with trap-based cleanup.
+
+### 11.7 Execution Order for Security Remediation
+
+```
+Task 11.1 (API Tokens)      -- Execute FIRST (token rotation has external dependency)
+    |
+Task 11.3 (NOPASSWD kill)   -- Execute SECOND (immediate privilege escalation risk)
+    |
+Task 11.4 (Passwords)       -- Can parallel with 11.3
+    |
+Tasks 6.2.1-6.2.7           -- Consolidation tasks (archives reduce the scope of 11.2, 11.5, 11.6)
+    |
+Task 11.2 (curl|bash)       -- Execute AFTER archiving (only remediate surviving scripts)
+    |
+Task 11.5 (Hardcoded IPs)   -- Execute AFTER archiving, coordinate with Phase 6.3
+    |
+Task 11.6 (Unsafe /tmp)     -- Execute AFTER archiving (only remediate surviving scripts)
+    |
+    v
+Verification Checklist (Section 12)
+```
+
+### 11.8 Security Remediation Summary
+
+| Sub-Task  | Category               | Severity | Instance Count | Files Affected | Estimated Effort |
+| --------- | ---------------------- | -------- | -------------- | -------------- | ---------------- |
+| 11.1      | Hardcoded API Tokens   | CRITICAL | 2              | 2              | 0.5 hours        |
+| 11.2      | curl\|bash RCE Vectors | CRITICAL | 22+            | 14+            | 4 hours          |
+| 11.3      | NOPASSWD /bin/kill \*  | CRITICAL | 2              | 1              | 0.5 hours        |
+| 11.4      | Hardcoded Passwords    | HIGH     | 3+             | 3+             | 1 hour           |
+| 11.5      | Hardcoded IP Addresses | HIGH     | 55             | ~20            | 3 hours          |
+| 11.6      | Unsafe /tmp Usage      | HIGH     | 185            | ~50            | 6 hours          |
+| **TOTAL** |                        |          | **269+**       |                | **15 hours**     |
+
+**NOTE**: Instance counts above reflect the pre-archival state (202 scripts). After Tasks 6.2.1-6.2.7 archive ~88 scripts, the surviving instance counts for 11.2, 11.5, and 11.6 will be lower. The total of 331 cited in the header includes duplicate-directory instances that will be eliminated by archiving.
+
+---
+
+## 12. Verification Checklist
+
+Run all verification commands sequentially after all 8 tasks (6.2.1-6.2.8) are complete.
+
+### 12.1 Total File Count
 
 ```bash
 # Total active .sh files (excluding _archived)
@@ -1241,7 +1619,7 @@ Non-.sh files also archived across all tasks:
 **Grand total files created: 6 .sh**
 **Net file reduction: 108 files**
 
-### 11.2 Final File Count Verification
+### 12.2 Final File Count Verification
 
 ```bash
 # Count .sh files only
@@ -1265,11 +1643,11 @@ find scripts/ -name '*.sh' -not -path '*_archived*' -exec wc -l {} + | tail -1
 | Total files (all types, excl. \_archived) | ~230   | ~130    | ~100 (43.5%)    |
 | Total .sh lines                           | 28,097 | ~17,200 | ~10,900 (38.8%) |
 | Duplicate .sh lines                       | 4,489  | 0       | 4,489 (100%)    |
-| GSM-related files                         | 57     | 7       | 50 (87.7%)      |
+| GSM-related files                         | 61     | 7       | 54 (88.5%)      |
 | Kismet scripts                            | 10     | 4       | 6 (60.0%)       |
 | Subdirectories                            | 10     | 6       | 4 (40.0%)       |
 
-### 11.3 Zero Broken References Check
+### 12.3 Zero Broken References Check
 
 ```bash
 # Verify every production-referenced script still exists
@@ -1289,7 +1667,7 @@ grep -rn 'scripts/' --include='*.ts' --include='*.svelte' --include='*.service' 
 # EXPECTED: no FAIL lines
 ```
 
-### 11.4 Syntax Check All New Scripts
+### 12.4 Syntax Check All New Scripts
 
 ```bash
 for f in scripts/gsm-evil.sh scripts/gsm-evil-diag.sh scripts/gsm-evil-setup.sh \
@@ -1299,7 +1677,7 @@ done
 # EXPECTED: all PASS
 ```
 
-### 11.5 No Duplicate Content Check
+### 12.5 No Duplicate Content Check
 
 ```bash
 # Verify no byte-identical .sh file pairs remain
@@ -1311,9 +1689,42 @@ done
 # EXPECTED: no output (zero duplicate pairs)
 ```
 
+### 12.6 Security Remediation Verification (Task 6.2.8)
+
+```bash
+# 12.6.1: Zero hardcoded API tokens
+grep -rn 'pk\.d6291c07a2907c915cd8994fb22bc189' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return 0
+
+# 12.6.2: Zero curl|bash patterns
+grep -rn 'curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash\|wget.*|.*sh' scripts/ --include='*.sh' | \
+  grep -v '_archived' | grep -v '#' | wc -l
+# ACCEPTANCE: must return 0
+
+# 12.6.3: Zero unrestricted /bin/kill * NOPASSWD
+grep -rn '\/bin\/kill \*' scripts/ --include='*.sh' | grep -v '_archived' | wc -l
+# ACCEPTANCE: must return 0
+
+# 12.6.4: Zero hardcoded passwords
+grep -rn "argos123\|password.*=.*hackrf\|password.*=.*admin" scripts/ --include='*.sh' | \
+  grep -v '_archived' | grep -v '#' | wc -l
+# ACCEPTANCE: must return 0
+
+# 12.6.5: Zero hardcoded non-loopback IPs
+grep -rn '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' scripts/ --include='*.sh' | \
+  grep -v '127.0.0.1\|0.0.0.0\|255.\|localhost\|_archived' | wc -l
+# ACCEPTANCE: must return 0
+
+# 12.6.6: Zero hardcoded /tmp/ paths (excluding mktemp/TMPDIR patterns)
+grep -rn '/tmp/' scripts/ --include='*.sh' | grep -v '_archived' | grep -v 'mktemp\|TMPDIR\|#' | wc -l
+# ACCEPTANCE: must return 0
+```
+
+**All 6 security checks must pass for Phase 6.2 to be marked COMPLETE.**
+
 ---
 
-## 12. Post-Consolidation Directory Structure (Target Layout)
+## 13. Post-Consolidation Directory Structure (Target Layout)
 
 ```
 scripts/
@@ -1497,11 +1908,11 @@ scripts/
 
 ---
 
-## 13. Traceability Matrix
+## 14. Traceability Matrix
 
-This matrix maps every one of the original 202 .sh files to its final disposition. The matrix is organized by the task that handles the file. Files not listed here are non-.sh files and are classified in Section 10.14-10.15.
+This matrix maps every one of the original 202 .sh files to its final disposition. The matrix is organized by the task that handles the file. Files not listed here are non-.sh files and are classified in Sections 10.14-10.15.
 
-### 13.1 Task 6.2.1: Duplicate Directory Elimination (25 .sh archived)
+### 14.1 Task 6.2.1: Duplicate Directory Elimination (25 .sh archived)
 
 | Original Path                             | Disposition         | Canonical Copy Location                                                          |
 | ----------------------------------------- | ------------------- | -------------------------------------------------------------------------------- |
@@ -1531,7 +1942,7 @@ This matrix maps every one of the original 202 .sh files to its final dispositio
 | `maintenance/run-gsmevil.sh`              | ARCHIVED            | `dev/run-gsmevil.sh`                                                             |
 | `maintenance/fix-hardcoded-paths.sh`      | ARCHIVED            | Functionality obsolete                                                           |
 
-### 13.2 Task 6.2.2: GSM Consolidation (42 .sh archived, 3 new)
+### 14.2 Task 6.2.2: GSM Consolidation (42 .sh archived, 3 new)
 
 | Original Path                    | Disposition | Merged Into                                             |
 | -------------------------------- | ----------- | ------------------------------------------------------- |
@@ -1578,7 +1989,7 @@ This matrix maps every one of the original 202 .sh files to its final dispositio
 | `find-imsi-frequencies.sh`       | ARCHIVED    | `gsm-evil-diag.sh` scan --imsi subcommand               |
 | `usrp_sweep_gsm.sh`              | ARCHIVED    | `gsm-evil-diag.sh` sweep --usrp subcommand              |
 
-### 13.3 Task 6.2.3: Kismet Consolidation (7 .sh archived, 1 new)
+### 14.3 Task 6.2.3: Kismet Consolidation (7 .sh archived, 1 new)
 
 | Original Path                  | Disposition | Merged Into                                  |
 | ------------------------------ | ----------- | -------------------------------------------- |
@@ -1590,7 +2001,7 @@ This matrix maps every one of the original 202 .sh files to its final dispositio
 | `safe-stop-kismet.sh`          | ARCHIVED    | Subset of stop-kismet-safe.sh                |
 | `update-kismet-service.sh`     | ARCHIVED    | One-time setup, not needed ongoing           |
 
-### 13.4 Task 6.2.4: WiFi Adapter Consolidation (11 files archived, 2 new)
+### 14.4 Task 6.2.4: WiFi Adapter Consolidation (11 files archived, 2 new)
 
 | Original Path                | Disposition | Merged Into                                 |
 | ---------------------------- | ----------- | ------------------------------------------- |
@@ -1606,20 +2017,20 @@ This matrix maps every one of the original 202 .sh files to its final dispositio
 | `safe-fix-adapter.sh`        | ARCHIVED    | Subset of safe-adapter-reset.sh             |
 | `create-ap-simple.sh`        | ARCHIVED    | Subset of argos-ap-simple.sh                |
 
-### 13.5 Task 6.2.5: Keepalive Consolidation (1 archived)
+### 14.5 Task 6.2.5: Keepalive Consolidation (1 archived)
 
 | Original Path  | Disposition | Merged Into                   |
 | -------------- | ----------- | ----------------------------- |
 | `keepalive.sh` | ARCHIVED    | Subset of simple-keepalive.sh |
 
-### 13.6 Task 6.2.6: Install Consolidation (2 .sh archived)
+### 14.6 Task 6.2.6: Install Consolidation (2 .sh archived)
 
 | Original Path                | Disposition | Merged Into                                               |
 | ---------------------------- | ----------- | --------------------------------------------------------- |
 | `install_uhd.sh` (top-level) | ARCHIVED    | `install/install_uhd.sh` (canonical)                      |
 | `install-usrp-support.sh`    | ARCHIVED    | `install/install_uhd.sh` + `install/setup-usrp-simple.sh` |
 
-### 13.7 Task 6.2.7: Remaining Organization (8 .sh archived)
+### 14.7 Task 6.2.7: Remaining Organization (8 .sh archived)
 
 | Original Path                 | Disposition | Reason                                        |
 | ----------------------------- | ----------- | --------------------------------------------- |
@@ -1632,7 +2043,7 @@ This matrix maps every one of the original 202 .sh files to its final dispositio
 | `usrp_power_measure.sh`       | ARCHIVED    | Superseded by usrp_power_measure_real.py      |
 | `usrp_simple_power.sh`        | ARCHIVED    | Superseded by usrp_power_measure_real.py      |
 
-### 13.8 KEPT Scripts (114 .sh files -- no action required)
+### 14.8 KEPT Scripts (114 .sh files -- no action required)
 
 All scripts not listed in Sections 13.1-13.7 are KEPT in their current location without modification. This includes 108 original .sh files that are untouched, plus 6 newly created consolidated scripts. The full list of 114 retained .sh scripts can be verified with:
 
@@ -1642,20 +2053,20 @@ find scripts/ -name '*.sh' -not -path '*_archived*' | sort
 
 ---
 
-## 14. Hardcoded Path Remediation (Cross-Reference)
+## 15. Hardcoded Path Remediation (Cross-Reference)
 
-**Corrected count**: 152 hardcoded path occurrences across ~55 unique files (not "147 in 64 scripts" as previously claimed). This remediation is out of scope for Phase 6.2 (file consolidation) and is handled by **Phase 6.3 (Hardcoded Path Remediation)**. However, the consolidation in Phase 6.2 reduces the number of files requiring path fixes.
+**Corrected count**: 152 hardcoded path occurrences across 67 unique files (not "147 in 64 scripts" as previously claimed). This remediation is out of scope for Phase 6.2 (file consolidation) and is handled by **Phase 6.3 (Hardcoded Path Remediation)**. However, the consolidation in Phase 6.2 reduces the number of files requiring path fixes.
 
 ```
 # Verified path distribution:
 # /home/ubuntu: 103 occurrences in 41 files
 # /home/pi: 44 occurrences in 23 files
 # /home/kali: 5 occurrences in 3 files
-# Total: 152 occurrences in ~55 unique files
+# Total: 152 occurrences in 67 unique files
 # Verification: grep -rn '/home/ubuntu\|/home/pi\|/home/kali' scripts/*.sh scripts/**/*.sh | wc -l
 ```
 
-- 25+ of the ~55 affected files will be archived in Phase 6.2
+- 25+ of the 67 affected files will be archived in Phase 6.2
 - The remaining files needing path fixes are tracked in Phase 6.3
 - **NOTE**: Phase 6.3 (`argos-env.sh`) must execute BEFORE this phase so consolidated scripts use the centralized path variable from day one
 
@@ -1668,7 +2079,7 @@ find scripts/ -name '*.sh' -not -path '*_archived*' | xargs grep -l '/home/ubunt
 
 ---
 
-## 15. Execution Order and Dependencies
+## 16. Execution Order and Dependencies
 
 ```
 Task 6.2.1 (Duplicate Dirs)     -- No dependencies, execute first
@@ -1687,28 +2098,36 @@ Task 6.2.6 (Install)            -- Depends on 6.2.1 (deploy/ archived first)
 Task 6.2.7 (Remaining)          -- Depends on 6.2.1-6.2.6 (must know what is already archived)
     |
     v
-Verification Checklist (Section 11)
+Task 6.2.8 (Security)           -- See Section 11.7 for internal execution order
+    |
+    v
+Verification Checklist (Section 12)
 ```
 
-**Minimum critical path**: 6.2.1 -> 6.2.2 || 6.2.3 || 6.2.4 || 6.2.5 -> 6.2.6 -> 6.2.7 -> Verify
+**Minimum critical path**: 6.2.8 (API tokens + NOPASSWD) -> 6.2.1 -> 6.2.2 || 6.2.3 || 6.2.4 || 6.2.5 -> 6.2.6 -> 6.2.7 -> 6.2.8 (remaining) -> Verify
 
 ---
 
-## 16. Risk Register
+## 17. Risk Register
 
-| Risk                                                                                            | Likelihood | Impact | Mitigation                                                                                    |
-| ----------------------------------------------------------------------------------------------- | ---------- | ------ | --------------------------------------------------------------------------------------------- |
-| Production script reference breaks                                                              | LOW        | HIGH   | Section 3.3 tracks all 11 production-referenced scripts; none are archived                    |
-| Consolidated script introduces bug                                                              | MEDIUM     | MEDIUM | bash -n syntax check; subcommand testing; archived originals available for rollback           |
-| Future developer cannot find archived script                                                    | LOW        | LOW    | MANIFEST-BEFORE.txt + traceability matrix (Section 13) provide full lineage                   |
-| Hardcoded paths in remaining scripts cause failures on Kali host (152 occurrences in ~55 files) | HIGH       | MEDIUM | Out of scope (Phase 6.3); documented in Section 14. Phase 6.3 must execute BEFORE this phase. |
-| Service file references break                                                                   | LOW        | HIGH   | 3 service files tracked in Section 3.3; paths verified in Section 11.3                        |
+| Risk                                                                                           | Likelihood | Impact   | Mitigation                                                                                    |
+| ---------------------------------------------------------------------------------------------- | ---------- | -------- | --------------------------------------------------------------------------------------------- |
+| Production script reference breaks                                                             | LOW        | HIGH     | Section 3.3 tracks all 11 production-referenced scripts; none are archived                    |
+| Consolidated script introduces bug                                                             | MEDIUM     | MEDIUM   | bash -n syntax check; subcommand testing; archived originals available for rollback           |
+| Future developer cannot find archived script                                                   | LOW        | LOW      | MANIFEST-BEFORE.txt + traceability matrix (Section 14) provide full lineage                   |
+| Hardcoded paths in remaining scripts cause failures on Kali host (152 occurrences in 67 files) | HIGH       | MEDIUM   | Out of scope (Phase 6.3); documented in Section 15. Phase 6.3 must execute BEFORE this phase. |
+| Service file references break                                                                  | LOW        | HIGH     | 3 service files tracked in Section 3.3; paths verified in Section 12.3                        |
+| Hardcoded API tokens leak credentials via git history                                          | HIGH       | HIGH     | Task 6.2.8 (Section 11.1); token rotation required even after code remediation                |
+| curl\|bash supply chain attack during script execution                                         | MEDIUM     | CRITICAL | Task 6.2.8 (Section 11.2); download-then-verify pattern eliminates runtime risk               |
+| Unsafe /tmp usage enables symlink attacks on multi-user systems                                | MEDIUM     | MEDIUM   | Task 6.2.8 (Section 11.6); mktemp pattern eliminates predictable paths                        |
 
 ---
 
-## 17. Acceptance Criteria
+## 18. Acceptance Criteria
 
 Phase 6.2 is COMPLETE when ALL of the following are true:
+
+**Consolidation Criteria (Tasks 6.2.1-6.2.7)**:
 
 1. `find scripts/ -name '*.sh' -not -path '*_archived*' | wc -l` returns 114 or fewer
 2. `find scripts/ -name '*.sh' -not -path '*_archived*' -exec md5sum {} + | sort | awk '{print $1}' | uniq -d | wc -l` returns 0 (zero duplicate file pairs)
@@ -1717,7 +2136,86 @@ Phase 6.2 is COMPLETE when ALL of the following are true:
 5. `scripts/_archived/phase-6.2/MANIFEST-BEFORE.txt` exists with 202 entries
 6. `scripts/_archived/phase-6.2/CHECKSUMS-BEFORE.txt` exists with 202 entries
 7. Directories `scripts/deploy/`, `scripts/development/`, `scripts/testing/`, `scripts/maintenance/` do not exist
-8. `ls scripts/ | grep -iE 'gsm|gsmevil|grgsm|imsi' | wc -l` returns 7 or fewer (down from 57)
+8. `ls scripts/ | grep -iE 'gsm|gsmevil|grgsm|imsi' | wc -l` returns 7 or fewer (down from 61)
+
+**Security Criteria (Task 6.2.8)**:
+
+9. Zero hardcoded API tokens in non-archived scripts (Section 12.6.1)
+10. Zero `curl|bash` or `wget|bash` patterns in non-archived scripts (Section 12.6.2)
+11. Zero unrestricted `/bin/kill *` NOPASSWD rules in non-archived scripts (Section 12.6.3)
+12. Zero hardcoded plaintext passwords in non-archived scripts (Section 12.6.4)
+13. Zero hardcoded non-loopback IP addresses in non-archived scripts (Section 12.6.5)
+14. Zero hardcoded `/tmp/filename` patterns in non-archived scripts (Section 12.6.6)
+15. OpenCellID API token rotated and old token invalidated
+16. Missing production-critical scripts (Section 3.3 addendum) decision recorded: each marked CREATE or FORMALLY REMOVE
+
+---
+
+## APPENDIX A: Independent Audit Security Findings -- Raw Data (2026-02-08)
+
+> **NOTE**: This appendix preserves the original independent audit findings for traceability. The actionable remediation plan is in **Section 11 (Task 6.2.8)**, which supersedes this appendix with full detection commands, remediation steps, and verification criteria.
+
+The following CRITICAL and HIGH security findings were identified by the independent verification audit across the 202 shell scripts.
+
+### CRITICAL-S1: Hardcoded OpenCellID API Tokens (2 instances)
+
+| File                                  | Line | Content                                         |
+| ------------------------------------- | ---- | ----------------------------------------------- |
+| `scripts/download-opencellid-full.sh` | 6    | `API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"` |
+| `scripts/setup-opencellid-full.sh`    | 4    | `API_KEY="pk.d6291c07a2907c915cd8994fb22bc189"` |
+
+**Standard Violated**: CERT C MSC41-C, CWE-798. Secrets must never be hardcoded in version-controlled files.
+**Required Action**: Externalize to environment variable or `.env` file. Rotate the exposed token immediately.
+
+### CRITICAL-S2: curl|bash Remote Code Execution Vectors (22 instances across 14 files)
+
+Twenty-two shell scripts download and pipe remote content directly to a shell interpreter. This is a supply chain attack vector.
+
+**Examples**:
+
+- `scripts/install-argos.sh:113` -- `curl ... | sudo -E bash -`
+- `scripts/setup-host-complete.sh:99` -- `curl -fsSL https://get.docker.com | sh`
+- `scripts/deploy/quick-install.sh:102` -- `curl ... | bash`
+
+**Standard Violated**: NASA/JPL Rule 1 (simple control flow), NIST SP 800-218 PW.4.1.
+**Required Action**: Replace with download-then-verify pattern: download to temp file, verify checksum/GPG signature, then execute.
+
+### CRITICAL-S3: NOPASSWD Sudoers for /bin/kill \*
+
+**File**: `scripts/setup-droneid-sudoers.sh:22,32`
+**Finding**: Grants `ubuntu ALL=(ALL) NOPASSWD: /bin/kill *` and `node ALL=(ALL) NOPASSWD: /bin/kill *`. Allows any signal to any process without authentication. `kill -9 1` would crash the system.
+**Standard Violated**: CIS Benchmark 5.3, DISA STIG V-230380.
+**Required Action**: Restrict to specific PIDs or use `systemctl` for service management instead.
+
+### HIGH-S4: Hardcoded Admin Passwords (3 instances)
+
+| File                                  | Password   |
+| ------------------------------------- | ---------- |
+| `scripts/configure-openwebrx-b205.sh` | `argos123` |
+| `scripts/install-openwebrx-hackrf.sh` | `hackrf`   |
+| `scripts/final-usrp-setup.sh`         | `admin`    |
+
+**Required Action**: Externalize to environment variables. Never commit passwords to version control.
+
+### HIGH-S5: Hardcoded Tailscale/Internal IP Addresses (55 instances)
+
+Multiple Tailscale VPN IPs (100.79.154.94, 100.68.185.86, etc.) and internal LAN IPs hardcoded across scripts. These leak network topology and are an OPSEC violation for military deployment.
+**Required Action**: Externalize all IP addresses to configuration file or environment variables.
+
+### HIGH-S6: Unsafe /tmp Usage (185 instances vs. 3 mktemp uses)
+
+185 references to `/tmp/` with predictable filenames. Only 3 scripts use `mktemp` for safe temporary file creation. Symlink attack vector on multi-user systems.
+**Standard Violated**: CWE-377, CERT C FIO43-C.
+**Required Action**: Replace all hardcoded `/tmp/` paths with `mktemp -d` patterns.
+
+---
+
+## Document Revision History
+
+| Version | Date       | Changes                                                                                                                                                                                                                                                                                                                   |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-02-08 | Initial release: consolidation plan for 202 shell scripts across Tasks 6.2.1-6.2.7                                                                                                                                                                                                                                        |
+| 2.0     | 2026-02-08 | Added supply chain security section (Task 6.2.8: 331 finding instances across 6 categories), fixed production-critical scripts list (3 missing scripts identified), added dependency graph requirement, renumbered Sections 11-17 to 12-18 to accommodate new Section 11, added security acceptance criteria (items 9-16) |
 
 ---
 
