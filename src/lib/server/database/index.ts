@@ -1,3 +1,5 @@
+// Database connection factory and barrel exports for schema and repository modules
+
 import Database from 'better-sqlite3';
 import { env } from '$lib/server/env';
 import { logInfo, logDebug } from '$lib/utils/logger';
@@ -19,3 +21,9 @@ export const db = new Database(env.DATABASE_PATH, {
 });
 db.pragma('journal_mode = WAL');
 logger.info('Database connection established successfully.');
+
+// schema
+export type { Device, Signal } from './schema';
+
+// signals.repository
+export { signalsRepository } from './signals.repository';

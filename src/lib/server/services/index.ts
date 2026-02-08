@@ -1,7 +1,9 @@
-/**
- * Service layer exports
- * Central location for all business logic services
- */
+// Service layer: business logic services for external tool integrations
 
-export { KismetService } from './kismet.service';
-export type { KismetDevice, GPSPosition, DevicesResponse } from './kismet.service';
+// kismet.service
+export { KismetService } from "./kismet.service";
+export type {
+	DevicesResponse,
+	GPSPosition,
+	KismetDevice,
+} from "./kismet.service";

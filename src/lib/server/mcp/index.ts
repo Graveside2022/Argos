@@ -1,39 +1,43 @@
-/**
- * MCP (Model Context Protocol) Integration
- * Auto-generates and manages MCP servers for Context B/C
- */
+// MCP (Model Context Protocol) integration: dynamic server, config generation, and tool registry
 
-// Dynamic MCP Server
-export { ArgosMCPServer, startArgosMCPServer } from './dynamic-server';
-
-// Configuration Generation
+// config-generator
 export {
+	generateArgosMCPServer,
 	generateContextBConfig,
 	generateContextCConfig,
+	generateMCPConfigContent,
+	getInstallationInstructions,
 	installContextBConfig,
 	installContextCConfig,
-	generateMCPConfigContent,
 	updateExistingConfig,
-	getInstallationInstructions
-} from './config-generator';
+} from "./config-generator";
 
-// Registry Integration
+// dynamic-server
+export { ArgosMCPServer } from "./dynamic-server";
+
+// registry-integration
 export {
-	registryEvents,
-	enableToolRegistryEvents,
 	enableHardwareRegistryEvents,
+	enableToolRegistryEvents,
+	initializeMCPIntegration,
+	registryEvents,
 	setupMCPRegistryListeners,
-	initializeMCPIntegration
-} from './registry-integration';
+} from "./registry-integration";
 
-// Types
+// server
+export { createMCPServer, startMCPServer } from "./server";
+
+// tools (re-export from subdirectory barrel)
+export { ALL_TOOLS, executeTool as executeMCPTool } from "./tools";
+
+// types
 export type {
-	MCPTool,
+	MCPConfiguration,
 	MCPResource,
 	MCPServerConfig,
-	MCPToolResult,
 	MCPServerDefinition,
-	MCPConfiguration,
+	MCPTool,
+	MCPToolResult,
 	RegistryChangeEvent,
-	RegistryChangeListener
-} from './types';
+	RegistryChangeListener,
+} from "./types";
