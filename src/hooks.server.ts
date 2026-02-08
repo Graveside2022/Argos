@@ -14,6 +14,7 @@ import {
 	getSessionCookieHeader
 } from '$lib/server/auth/auth-middleware';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
+import { RateLimiter } from '$lib/server/security/rate-limiter';
 
 // Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit
@@ -59,6 +60,19 @@ scanAllHardware()
 	.catch((error) => {
 		logger.error('Failed to scan hardware', { error });
 	});
+
+// Singleton rate limiter (globalThis for HMR persistence) - Phase 2.2.5
+const rateLimiter =
+	((globalThis as Record<string, unknown>).__rateLimiter as RateLimiter) ?? new RateLimiter();
+(globalThis as Record<string, unknown>).__rateLimiter = rateLimiter;
+
+// Cleanup interval (globalThis guard for HMR) - Phase 2.2.5
+if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
+	(globalThis as Record<string, unknown>).__rateLimiterCleanup = setInterval(
+		() => rateLimiter.cleanup(),
+		300_000 // 5 minutes
+	);
+}
 
 // Handle WebSocket connections (Phase 2.1.6: authentication enforced here
 // because noServer mode does not support the verifyClient callback).
@@ -210,6 +224,51 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
+	// Rate limiting -- runs after auth, before route processing (Phase 2.2.5)
+	const path = event.url.pathname;
+	const clientIp = event.getClientAddress();
+
+	// Skip rate limiting for streaming/SSE endpoints
+	if (!path.includes('data-stream') && !path.includes('/stream') && !path.endsWith('/sse')) {
+		if (isHardwareControlPath(path)) {
+			// Hardware control: 10 requests/minute (0.167 tokens/second)
+			if (!rateLimiter.check(`hw:${clientIp}`, 10, 10 / 60)) {
+				logAuthEvent({
+					eventType: 'RATE_LIMIT_EXCEEDED',
+					ip: clientIp,
+					method: event.request.method,
+					path,
+					reason: 'Hardware control rate limit exceeded (10 req/min)'
+				});
+				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': '60'
+					}
+				});
+			}
+		} else if (path.startsWith('/api/')) {
+			// Data queries: 60 requests/minute (1 token/second)
+			if (!rateLimiter.check(`api:${clientIp}`, 60, 1)) {
+				logAuthEvent({
+					eventType: 'RATE_LIMIT_EXCEEDED',
+					ip: clientIp,
+					method: event.request.method,
+					path,
+					reason: 'API rate limit exceeded (60 req/min)'
+				});
+				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': '10'
+					}
+				});
+			}
+		}
+	}
+
 	// Body size limit check -- runs after auth, before route processing (Phase 2.1.7)
 	// Two-tier limits: 64KB for hardware control endpoints, 10MB for general endpoints.
 	// Content-Length is checked before body buffering to prevent memory allocation.
@@ -280,6 +339,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return response;
 };
+
+/**
+ * Check if a path is a hardware control endpoint.
+ * Hardware control endpoints have stricter rate limits (10 req/min).
+ */
+function isHardwareControlPath(path: string): boolean {
+	const hwPatterns = [
+		'/api/hackrf/',
+		'/api/kismet/control/',
+		'/api/gsm-evil/',
+		'/api/droneid/',
+		'/api/rf/',
+		'/api/openwebrx/control/'
+	];
+	return hwPatterns.some((p) => path.startsWith(p));
+}
 
 /**
  * Global error handler for unhandled server-side errors
