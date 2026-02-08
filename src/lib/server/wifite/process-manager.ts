@@ -76,7 +76,12 @@ class WifiteProcessManager extends EventEmitter {
 		if (!kismetRunning) {
 			try {
 				const { stdout } = await execAsync(hostExec('pgrep -x kismet 2>/dev/null')).catch(
-					() => ({ stdout: '' })
+					(error: unknown) => {
+						console.warn('[wifite] Kismet process check (pgrep) failed', {
+							error: String(error)
+						});
+						return { stdout: '' };
+					}
 				);
 				kismetRunning = stdout.trim().length > 0;
 				if (kismetRunning)
@@ -166,7 +171,12 @@ class WifiteProcessManager extends EventEmitter {
 			// Log interface state for debugging
 			try {
 				const { stdout: ifState } = await execAsync(hostExec('iw dev 2>/dev/null')).catch(
-					() => ({ stdout: 'unavailable' })
+					(error: unknown) => {
+						console.warn('[wifite] Interface state check (iw dev) failed', {
+							error: String(error)
+						});
+						return { stdout: 'unavailable' };
+					}
 				);
 				console.log(`[wifite] Interface state after cleanup:\n${ifState}`);
 			} catch (_error: unknown) {
@@ -197,7 +207,12 @@ class WifiteProcessManager extends EventEmitter {
 			// Pre-flight: log interface state so we can debug scanning issues
 			try {
 				const { stdout: preFlight } = await execAsync(hostExec('iw dev 2>/dev/null')).catch(
-					() => ({ stdout: 'unavailable' })
+					(error: unknown) => {
+						console.warn('[wifite] Pre-flight interface state check (iw dev) failed', {
+							error: String(error)
+						});
+						return { stdout: 'unavailable' };
+					}
 				);
 				console.log(`[wifite] Pre-flight interface state:\n${preFlight}`);
 			} catch (_error: unknown) {

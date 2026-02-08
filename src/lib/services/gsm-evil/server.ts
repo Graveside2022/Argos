@@ -6,41 +6,65 @@ import cors from 'cors';
 import { EventEmitter } from 'events';
 
 interface GSMData {
-  timestamp: Date;
-  frequency: number;
-  channel: number;
-  cell_id?: string;
-  lai?: string;
-  mcc?: string;
-  mnc?: string;
-  signal_strength?: number;
-  data: string;
+	timestamp: Date;
+	frequency: number;
+	channel: number;
+	cell_id?: string;
+	lai?: string;
+	mcc?: string;
+	mnc?: string;
+	signal_strength?: number;
+	data: string;
 }
 
 class GSMEvilServer extends EventEmitter {
-  private app: express.Application;
-  private server: ReturnType<typeof createServer>;
-  private wss: WebSocketServer;
-  private grgsm_process: ChildProcess | null = null;
-  private capturedData: GSMData[] = [];
-  private maxDataPoints = 1000;
-  
-  constructor() {
-    super();
-    this.app = express();
-    this.setupRoutes();
-    this.server = createServer(this.app);
-    this.wss = new WebSocketServer({ server: this.server });
-    this.setupWebSocket();
-  }
+	private app: express.Application;
+	private server: ReturnType<typeof createServer>;
+	private wss: WebSocketServer;
+	private grgsm_process: ChildProcess | null = null;
+	private capturedData: GSMData[] = [];
+	private maxDataPoints = 1000;
 
-  private setupRoutes() {
-    this.app.use(cors());
-    this.app.use(express.json());
-    
-    // Serve static HTML for the GSM Evil interface
-    this.app.get('/', (req: Request, res: Response) => {
-      res.send(`
+	constructor() {
+		super();
+		this.app = express();
+		this.setupRoutes();
+		this.server = createServer(this.app);
+		this.wss = new WebSocketServer({ server: this.server });
+		this.setupWebSocket();
+	}
+
+	private setupRoutes() {
+		// CORS configuration with origin allowlist
+		const allowedOrigins = [
+			'http://localhost:5173',
+			'http://127.0.0.1:5173',
+			'http://localhost:3000',
+			'http://127.0.0.1:3000'
+		];
+
+		this.app.use(
+			cors({
+				origin: (origin, callback) => {
+					// Allow requests with no origin (e.g., mobile apps, Postman)
+					if (!origin) {
+						return callback(null, true);
+					}
+
+					if (allowedOrigins.includes(origin)) {
+						callback(null, true);
+					} else {
+						callback(new Error('Not allowed by CORS'));
+					}
+				},
+				credentials: true
+			})
+		);
+		this.app.use(express.json());
+
+		// Serve static HTML for the GSM Evil interface
+		this.app.get('/', (req: Request, res: Response) => {
+			res.send(`
         <!DOCTYPE html>
         <html>
           <head>
@@ -212,146 +236,150 @@ class GSMEvilServer extends EventEmitter {
           </body>
         </html>
       `);
-    });
-    
-    // API endpoints
-    this.app.get('/api/status', (req: Request, res: Response) => {
-      res.json({
-        running: this.grgsm_process !== null,
-        dataPoints: this.capturedData.length,
-        connected_clients: this.wss.clients.size
-      });
-    });
-    
-    this.app.get('/api/data', (req: Request, res: Response) => {
-      res.json(this.capturedData.slice(-100)); // Last 100 data points
-    });
-  }
+		});
 
-  private setupWebSocket() {
-    this.wss.on('connection', (ws) => {
-      // Send recent data to new client
-      this.capturedData.slice(-20).forEach(data => {
-        ws.send(JSON.stringify({ type: 'gsm_data', ...data }));
-      });
+		// API endpoints
+		this.app.get('/api/status', (req: Request, res: Response) => {
+			res.json({
+				running: this.grgsm_process !== null,
+				dataPoints: this.capturedData.length,
+				connected_clients: this.wss.clients.size
+			});
+		});
 
-      ws.on('close', () => {
-        // Client disconnected
-      });
-    });
-  }
+		this.app.get('/api/data', (req: Request, res: Response) => {
+			res.json(this.capturedData.slice(-100)); // Last 100 data points
+		});
+	}
 
-  public startCapture(frequency: number = 935.2e6, sampleRate: number = 2e6, gain: number = 40) {
-    if (this.grgsm_process) {
-      return;
-    }
+	private setupWebSocket() {
+		this.wss.on('connection', (ws) => {
+			// Send recent data to new client
+			this.capturedData.slice(-20).forEach((data) => {
+				ws.send(JSON.stringify({ type: 'gsm_data', ...data }));
+			});
 
-    // Auto-detect device and start grgsm_livemon_headless
-    let adjustedGain = gain;
-    let adjustedSampleRate = sampleRate;
+			ws.on('close', () => {
+				// Client disconnected
+			});
+		});
+	}
 
-    // Check if USRP B205 Mini is available
-    let deviceArgs: string[] = [];
-    try {
-      execSync('uhd_find_devices 2>/dev/null | grep -q "B205"');
-      // USRP found, adjust parameters
-      deviceArgs = ['--args', 'type=b200'];
-      adjustedGain = Math.min(gain + 10, 60); // USRP needs higher gain
-      adjustedSampleRate = 2e6; // B205 Mini works best at 2 MSPS for GSM
-    } catch (_error) {
-      // Using HackRF for GSM capture (default)
-    }
-    
-    const args = [
-      ...deviceArgs,
-      '-f', frequency.toString(),
-      '-s', adjustedSampleRate.toString(),
-      '-g', adjustedGain.toString()
-    ];
-    
-    this.grgsm_process = spawn('grgsm_livemon_headless', args);
+	public startCapture(frequency: number = 935.2e6, sampleRate: number = 2e6, gain: number = 40) {
+		if (this.grgsm_process) {
+			return;
+		}
 
-    this.grgsm_process.stdout?.on('data', (data) => {
-      const output = data.toString();
-      this.parseGSMData(output, frequency);
-    });
+		// Auto-detect device and start grgsm_livemon_headless
+		let adjustedGain = gain;
+		let adjustedSampleRate = sampleRate;
 
-    this.grgsm_process.stderr?.on('data', (data) => {
-      console.error('grgsm_livemon error:', data.toString());
-    });
+		// Check if USRP B205 Mini is available
+		let deviceArgs: string[] = [];
+		try {
+			execSync('uhd_find_devices 2>/dev/null | grep -q "B205"');
+			// USRP found, adjust parameters
+			deviceArgs = ['--args', 'type=b200'];
+			adjustedGain = Math.min(gain + 10, 60); // USRP needs higher gain
+			adjustedSampleRate = 2e6; // B205 Mini works best at 2 MSPS for GSM
+		} catch (_error) {
+			// Using HackRF for GSM capture (default)
+		}
 
-    this.grgsm_process.on('close', (_code) => {
-      this.grgsm_process = null;
-    });
+		const args = [
+			...deviceArgs,
+			'-f',
+			frequency.toString(),
+			'-s',
+			adjustedSampleRate.toString(),
+			'-g',
+			adjustedGain.toString()
+		];
 
-    // Also monitor UDP packets if possible (future enhancement)
-    // This would require setting up a UDP listener on port 4729
-  }
+		this.grgsm_process = spawn('grgsm_livemon_headless', args);
 
-  private parseGSMData(output: string, frequency: number) {
-    // Parse the output from grgsm_livemon_headless
-    // This is a simplified parser - actual format depends on gr-gsm output
-    const lines = output.split('\n');
-    
-    lines.forEach(line => {
-      if (line.trim()) {
-        const gsmData: GSMData = {
-          timestamp: new Date(),
-          frequency: frequency,
-          channel: 0,
-          data: line.trim()
-        };
+		this.grgsm_process.stdout?.on('data', (data) => {
+			const output = data.toString();
+			this.parseGSMData(output, frequency);
+		});
 
-        // Try to extract specific GSM information from the line
-        // This would need to be adapted based on actual gr-gsm output format
-        const cellMatch = line.match(/Cell ID: (\w+)/);
-        if (cellMatch) {
-          gsmData.cell_id = cellMatch[1];
-        }
+		this.grgsm_process.stderr?.on('data', (data) => {
+			console.error('grgsm_livemon error:', data.toString());
+		});
 
-        const signalMatch = line.match(/Signal: ([-\d.]+)/);
-        if (signalMatch) {
-          gsmData.signal_strength = parseFloat(signalMatch[1]);
-        }
+		this.grgsm_process.on('close', (_code) => {
+			this.grgsm_process = null;
+		});
 
-        this.capturedData.push(gsmData);
-        
-        // Maintain max data points
-        if (this.capturedData.length > this.maxDataPoints) {
-          this.capturedData.shift();
-        }
+		// Also monitor UDP packets if possible (future enhancement)
+		// This would require setting up a UDP listener on port 4729
+	}
 
-        // Broadcast to all connected WebSocket clients
-        this.broadcast({ type: 'gsm_data', ...gsmData });
-      }
-    });
-  }
+	private parseGSMData(output: string, frequency: number) {
+		// Parse the output from grgsm_livemon_headless
+		// This is a simplified parser - actual format depends on gr-gsm output
+		const lines = output.split('\n');
 
-  private broadcast(data: Record<string, unknown>) {
-    const message = JSON.stringify(data);
-    this.wss.clients.forEach(client => {
-      if (client.readyState === 1) { // WebSocket.OPEN
-        client.send(message);
-      }
-    });
-  }
+		lines.forEach((line) => {
+			if (line.trim()) {
+				const gsmData: GSMData = {
+					timestamp: new Date(),
+					frequency: frequency,
+					channel: 0,
+					data: line.trim()
+				};
 
-  public stopCapture() {
-    if (this.grgsm_process) {
-      this.grgsm_process.kill();
-      this.grgsm_process = null;
-    }
-  }
+				// Try to extract specific GSM information from the line
+				// This would need to be adapted based on actual gr-gsm output format
+				const cellMatch = line.match(/Cell ID: (\w+)/);
+				if (cellMatch) {
+					gsmData.cell_id = cellMatch[1];
+				}
 
-  public start(port: number = 8080) {
-    this.server.listen(port);
-  }
+				const signalMatch = line.match(/Signal: ([-\d.]+)/);
+				if (signalMatch) {
+					gsmData.signal_strength = parseFloat(signalMatch[1]);
+				}
 
-  public stop() {
-    this.stopCapture();
-    this.server.close();
-    this.wss.close();
-  }
+				this.capturedData.push(gsmData);
+
+				// Maintain max data points
+				if (this.capturedData.length > this.maxDataPoints) {
+					this.capturedData.shift();
+				}
+
+				// Broadcast to all connected WebSocket clients
+				this.broadcast({ type: 'gsm_data', ...gsmData });
+			}
+		});
+	}
+
+	private broadcast(data: Record<string, unknown>) {
+		const message = JSON.stringify(data);
+		this.wss.clients.forEach((client) => {
+			if (client.readyState === 1) {
+				// WebSocket.OPEN
+				client.send(message);
+			}
+		});
+	}
+
+	public stopCapture() {
+		if (this.grgsm_process) {
+			this.grgsm_process.kill();
+			this.grgsm_process = null;
+		}
+	}
+
+	public start(port: number = 8080) {
+		this.server.listen(port);
+	}
+
+	public stop() {
+		this.stopCapture();
+		this.server.close();
+		this.wss.close();
+	}
 }
 
 export default GSMEvilServer;

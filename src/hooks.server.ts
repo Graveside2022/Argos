@@ -13,6 +13,7 @@ import {
 	validateSecurityConfig,
 	getSessionCookieHeader
 } from '$lib/server/auth/auth-middleware';
+import { logAuthEvent } from '$lib/server/security/auth-audit';
 
 // Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit
@@ -90,14 +91,23 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
 	}
 
 	if (!authenticated) {
-		logger.warn('WebSocket connection rejected: invalid API key', {
-			ip: request.socket.remoteAddress
+		logAuthEvent({
+			eventType: 'WS_AUTH_FAILURE',
+			ip: request.socket.remoteAddress || 'unknown',
+			method: 'WS',
+			path: url.pathname,
+			reason: 'Invalid or missing API key on WebSocket connection'
 		});
 		ws.close(1008, 'Unauthorized'); // 1008 = Policy Violation
 		return;
 	}
 
-	logger.info('New WebSocket connection (authenticated)', { from: request.socket.remoteAddress });
+	logAuthEvent({
+		eventType: 'WS_AUTH_SUCCESS',
+		ip: request.socket.remoteAddress || 'unknown',
+		method: 'WS',
+		path: url.pathname
+	});
 
 	// Parse URL for subscription preferences
 	const types: string[] | undefined = url.searchParams.get('types')?.split(',') || undefined;
@@ -142,6 +152,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 
 		if (!wsAuthenticated) {
+			logAuthEvent({
+				eventType: 'WS_AUTH_FAILURE',
+				ip: event.getClientAddress(),
+				method: event.request.method,
+				path: event.url.pathname,
+				userAgent: event.request.headers.get('user-agent') || undefined,
+				reason: 'WebSocket upgrade rejected: invalid or missing credentials'
+			});
 			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
@@ -161,11 +179,35 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// All other API routes require a valid X-API-Key header or session cookie.
 	if (event.url.pathname.startsWith('/api/') && event.url.pathname !== '/api/health') {
 		if (!validateApiKey(event.request)) {
+			// Determine if credentials were missing vs invalid
+			const hasApiKeyHeader = !!event.request.headers.get('X-API-Key');
+			const hasCookie = !!event.request.headers.get('cookie');
+			const eventType = hasApiKeyHeader || hasCookie ? 'AUTH_FAILURE' : 'AUTH_MISSING';
+
+			logAuthEvent({
+				eventType,
+				ip: event.getClientAddress(),
+				method: event.request.method,
+				path: event.url.pathname,
+				userAgent: event.request.headers.get('user-agent') || undefined,
+				reason:
+					eventType === 'AUTH_MISSING'
+						? 'No credentials provided'
+						: 'Invalid API key or session cookie'
+			});
 			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
 			});
 		}
+
+		logAuthEvent({
+			eventType: 'AUTH_SUCCESS',
+			ip: event.getClientAddress(),
+			method: event.request.method,
+			path: event.url.pathname,
+			userAgent: event.request.headers.get('user-agent') || undefined
+		});
 	}
 
 	// Body size limit check -- runs after auth, before route processing (Phase 2.1.7)
@@ -193,6 +235,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Path=/api/ limits the cookie to API requests only.
 	if (!event.url.pathname.startsWith('/api/')) {
 		response.headers.append('Set-Cookie', getSessionCookieHeader());
+		logAuthEvent({
+			eventType: 'SESSION_CREATED',
+			ip: event.getClientAddress(),
+			method: event.request.method,
+			path: event.url.pathname,
+			userAgent: event.request.headers.get('user-agent') || undefined
+		});
 	}
 
 	// Add security headers with cache busting for development

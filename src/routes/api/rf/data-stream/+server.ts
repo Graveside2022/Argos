@@ -1,13 +1,16 @@
 import type { RequestHandler } from './$types';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
+import { getCorsHeaders } from '$lib/server/security/cors';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	const origin = request.headers.get('origin');
+	const corsHeaders = getCorsHeaders(origin);
 	const headers = {
 		'Content-Type': 'text/event-stream',
 		'Cache-Control': 'no-cache',
 		Connection: 'keep-alive',
-		'Access-Control-Allow-Origin': '*'
+		...corsHeaders
 	};
 
 	const deviceType = url.searchParams.get('device') || 'auto';
@@ -182,12 +185,10 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 // Add CORS headers for OPTIONS
-export function OPTIONS() {
+export const OPTIONS: RequestHandler = ({ request }) => {
+	const origin = request.headers.get('origin');
 	return new Response(null, {
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
-		}
+		status: 204,
+		headers: getCorsHeaders(origin)
 	});
-}
+};

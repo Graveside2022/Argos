@@ -291,8 +291,8 @@ class SystemHealthMonitor {
 	 */
 	private async checkWebSocketHealth(): Promise<ServiceHealth> {
 		try {
-			// Check if WebSocket server is responding
-			const response = await fetch('/api/test');
+			// Check if the server is responding via the auth-exempt health endpoint
+			const response = await fetch('/api/health');
 
 			return {
 				name: 'WebSocket Server',
