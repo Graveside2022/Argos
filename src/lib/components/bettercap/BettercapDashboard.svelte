@@ -9,7 +9,7 @@
 		sendCommand
 	} from '$lib/stores/bettercapStore';
 	import { hardwareStatus } from '$lib/stores/hardwareStore';
-	import HardwareConflictModal from '$lib/components/hardware/HardwareConflictModal.svelte';
+	import HardwareConflictModal from '$lib/components/shared/HardwareConflictModal.svelte';
 
 	let state: any = $state({
 		mode: null as string | null,
