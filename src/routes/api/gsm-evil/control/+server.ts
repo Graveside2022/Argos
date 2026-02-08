@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -74,7 +75,14 @@ export const POST: RequestHandler = async ({ request }) => {
 					}
 				}
 
-				const freq = frequency || '947.2';
+				// Validate frequency — prevents shell injection via hostExec template literal
+				const validatedFreq = validateNumericParam(
+					frequency || '947.2',
+					'frequency',
+					800,
+					1000
+				);
+				const freq = String(validatedFreq);
 				const gain = '40';
 				const gsmDir = '/home/kali/gsmevil-user';
 				console.warn(`[gsm-evil] Starting on ${freq} MHz...`);

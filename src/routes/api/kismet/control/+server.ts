@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/host-exec';
+import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
@@ -56,12 +57,14 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				let alfaInterface = '';
 				for (const iface of ifaceList.trim().split(/\s+/)) {
 					if (iface === 'lo' || iface === 'eth0' || iface === 'wlan0' || !iface) continue;
+					// Validate interface name before using in shell command
+					const validIface = validateInterfaceName(iface);
 					// Check if it's a wireless interface
 					const { stdout: isWireless } = await hostExec(
-						`test -d /sys/class/net/${iface}/wireless && echo yes || true`
+						`test -d /sys/class/net/${validIface}/wireless && echo yes || true`
 					);
 					if (isWireless.trim() === 'yes') {
-						alfaInterface = iface;
+						alfaInterface = validIface;
 						break;
 					}
 				}
@@ -122,11 +125,14 @@ export const POST: RequestHandler = async ({ request, url }) => {
 					);
 				}
 
+				// Validate PID before using in shell command
+				const validPid = validateNumericParam(parseInt(verifyPid, 10), 'pid', 1, 4194304);
+
 				// Verify running as non-root
 				const { stdout: userCheck } = await hostExec(
-					`ps -p ${verifyPid} -o user= 2>/dev/null || true`
+					`ps -p ${validPid} -o user= 2>/dev/null || true`
 				);
-				console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${verifyPid}`);
+				console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${validPid}`);
 
 				// Set up auth credentials if this is a first-time start
 				try {
@@ -143,8 +149,8 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				return json({
 					success: true,
 					message: 'Kismet started successfully',
-					details: `Running as ${userCheck.trim() || 'kali'} (PID: ${verifyPid}) on ${alfaInterface}`,
-					pid: verifyPid
+					details: `Running as ${userCheck.trim() || 'kali'} (PID: ${validPid}) on ${alfaInterface}`,
+					pid: validPid
 				});
 			} catch (error: unknown) {
 				console.error('[kismet] Start error:', error);

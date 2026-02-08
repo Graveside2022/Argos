@@ -19,8 +19,8 @@ ubuntu ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlx* down
 ubuntu ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlx* up
 ubuntu ALL=(ALL) NOPASSWD: /usr/sbin/iw dev wlx* set type monitor
 ubuntu ALL=(ALL) NOPASSWD: /usr/sbin/iw dev wlx* set type managed
-ubuntu ALL=(ALL) NOPASSWD: /bin/kill *
-ubuntu ALL=(ALL) NOPASSWD: /bin/bash /tmp/start-droneid-temp.sh
+ubuntu ALL=(ALL) NOPASSWD: /usr/bin/pkill -f droneid
+ubuntu ALL=(ALL) NOPASSWD: /bin/bash /usr/local/bin/start-droneid.sh
 ubuntu ALL=(ALL) NOPASSWD: /usr/bin/python3 /home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver/backend/dronesniffer/main.py *
 
 # Also allow node user if running as different user
@@ -29,8 +29,8 @@ node ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlx* down
 node ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlx* up
 node ALL=(ALL) NOPASSWD: /usr/sbin/iw dev wlx* set type monitor
 node ALL=(ALL) NOPASSWD: /usr/sbin/iw dev wlx* set type managed
-node ALL=(ALL) NOPASSWD: /bin/kill *
-node ALL=(ALL) NOPASSWD: /bin/bash /tmp/start-droneid-temp.sh
+node ALL=(ALL) NOPASSWD: /usr/bin/pkill -f droneid
+node ALL=(ALL) NOPASSWD: /bin/bash /usr/local/bin/start-droneid.sh
 EOF
 
 # Set proper permissions
