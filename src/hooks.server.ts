@@ -8,6 +8,16 @@ import type { IncomingMessage } from 'http';
 import { logger } from '$lib/utils/logger';
 import { initializeToolExecutionFramework } from '$lib/server/agent/tool-execution/init';
 import { scanAllHardware, globalHardwareMonitor } from '$lib/server/hardware';
+import {
+	validateApiKey,
+	validateSecurityConfig,
+	getSessionCookieHeader
+} from '$lib/server/auth/auth-middleware';
+
+// FAIL-CLOSED: Halt startup if ARGOS_API_KEY is not configured or too short.
+// This runs at module load time, before the server accepts any connections.
+// If the key is missing, the process exits with a FATAL error. (Phase 2.1.1)
+validateSecurityConfig();
 
 // Create WebSocket server
 const wss = new WebSocketServer({ noServer: true });
@@ -74,8 +84,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
+	// API Authentication gate — all /api/ routes except /api/health (Phase 2.1.1)
+	// /api/health is exempt to support monitoring infrastructure without credentials.
+	// All other API routes require a valid X-API-Key header or session cookie.
+	if (event.url.pathname.startsWith('/api/') && event.url.pathname !== '/api/health') {
+		if (!validateApiKey(event.request)) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+	}
+
 	// For non-WebSocket requests, continue with normal handling
 	const response = await resolve(event);
+
+	// Set session cookie for browser clients on page requests.
+	// The cookie contains an HMAC-derived token (not the raw API key).
+	// HttpOnly prevents XSS access; SameSite=Strict prevents CSRF;
+	// Path=/api/ limits the cookie to API requests only.
+	if (!event.url.pathname.startsWith('/api/')) {
+		response.headers.append('Set-Cookie', getSessionCookieHeader());
+	}
 
 	// Add security headers with cache busting for development
 	response.headers.set(

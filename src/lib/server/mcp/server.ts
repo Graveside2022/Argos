@@ -49,10 +49,12 @@ async function executeTool(toolName: string, args: Record<string, unknown>) {
 	});
 
 	// Make API request
+	const apiKey = process.env.ARGOS_API_KEY || '';
 	const fetchOptions: globalThis.RequestInit = {
 		method,
 		headers: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(apiKey ? { 'X-API-Key': apiKey } : {})
 		}
 	};
 
