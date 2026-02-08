@@ -244,7 +244,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	// Add security headers with cache busting for development
+	// Content Security Policy (Phase 2.2.3)
+	response.headers.set(
+		'Content-Security-Policy',
+		[
+			"default-src 'self'",
+			"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
+			"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
+			"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles from OSM
+			"connect-src 'self' ws://localhost:* wss://localhost:*", // WebSocket connections
+			"font-src 'self'",
+			"object-src 'none'",
+			"frame-ancestors 'none'",
+			"base-uri 'self'",
+			"form-action 'self'"
+		].join('; ')
+	);
+
+	// Additional security headers (Phase 2.2.3)
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-XSS-Protection', '0'); // Disabled per OWASP recommendation
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	response.headers.set(
 		'Permissions-Policy',
 		'geolocation=(self), microphone=(), camera=(), payment=(), usb=()'
