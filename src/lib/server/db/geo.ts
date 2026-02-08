@@ -4,7 +4,7 @@
  */
 
 import { GEO } from '$lib/constants/limits';
-import type { SignalMarker } from '$lib/stores/map/signals';
+import type { SignalMarker } from '$lib/types/signals';
 import type { DbSignal } from './types';
 
 /** Meters per degree of latitude (approximate constant) */

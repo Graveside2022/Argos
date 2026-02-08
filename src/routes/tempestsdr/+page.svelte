@@ -1,6 +1,6 @@
 <script lang="ts">
 	import HardwareStatusBar from '$lib/components/hardware/HardwareStatusBar.svelte';
-	import CompanionLauncher from '$lib/components/companion/CompanionLauncher.svelte';
+	import CompanionLauncher from '$lib/components/shared/CompanionLauncher.svelte';
 </script>
 
 <svelte:head>

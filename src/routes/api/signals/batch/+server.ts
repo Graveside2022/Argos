@@ -1,16 +1,16 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getRFDatabase } from '$lib/server/db/database';
-import type { SignalMarker } from '$lib/stores/map/signals';
+import type { SignalMarker } from '$lib/types/signals';
 import { SignalSource } from '$lib/types/enums';
 
 function normalizeSignalSource(source: string): SignalSource {
 	const sourceMap: Record<string, SignalSource> = {
-		'hackrf': SignalSource.HackRF,
-		'kismet': SignalSource.Kismet,
-		'manual': SignalSource.Manual,
+		hackrf: SignalSource.HackRF,
+		kismet: SignalSource.Kismet,
+		manual: SignalSource.Manual,
 		'rtl-sdr': SignalSource.RtlSdr,
-		'other': SignalSource.Other
+		other: SignalSource.Other
 	};
 	return sourceMap[source?.toLowerCase()] || SignalSource.HackRF;
 }

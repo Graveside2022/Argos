@@ -1,7 +1,5 @@
 // Root component barrel — re-exports all component modules
-export { BettercapDashboard } from "./bettercap";
-
-export { CompanionLauncher } from "./companion";
+export { BettercapDashboard } from './bettercap';
 
 export {
 	AgentChatPanel,
@@ -27,8 +25,8 @@ export {
 	ToolViewWrapper,
 	TopStatusBar,
 	type FrontendToolCall,
-	type FrontendToolResult,
-} from "./dashboard";
+	type FrontendToolResult
+} from './dashboard';
 
 export {
 	AnalysisTools,
@@ -44,12 +42,12 @@ export {
 	SweepControl,
 	TimeFilterDemo,
 	TimeWindowControl,
-	TimedSignalDisplay,
-} from "./hackrf";
+	TimedSignalDisplay
+} from './hackrf';
 
-export { HardwareStatusBar } from "./hardware";
+export { HardwareStatusBar } from './hardware';
 
-export { GPSStatusButton, MapView, ServiceControl } from "./kismet";
+export { GPSStatusButton, MapView, ServiceControl } from './kismet';
 
 export {
 	AirSignalOverlay,
@@ -60,16 +58,12 @@ export {
 	KismetDashboardOverlay,
 	RSSILocalizationControls,
 	SignalStrengthMeter,
-	SignalTypeIndicator,
-} from "./map";
+	SignalTypeIndicator
+} from './map';
 
-export { HardwareConflictModal } from "./shared";
+export { CompanionLauncher, HardwareConflictModal } from './shared';
 
-export {
-	DeviceManager,
-	KismetController,
-	SignalProcessor,
-} from "./tactical-map";
+export { DeviceManager, KismetController, SignalProcessor } from './tactical-map';
 
 export {
 	AnalysisModeCard,
@@ -77,5 +71,5 @@ export {
 	BlacklistCard,
 	DirectoryCard,
 	TAKSettingsCard,
-	WhitelistCard,
-} from "./wigletotak";
+	WhitelistCard
+} from './wigletotak';

@@ -3,8 +3,8 @@
  * Uses IndexedDB for browser-based storage with spatial indexing
  */
 
-import type { SignalMarker } from '$lib/stores/map/signals';
-import type { NetworkEdge } from '$lib/services/map/network-analyzer';
+import type { SignalMarker } from '$lib/types/signals';
+import type { NetworkEdge } from '$lib/types/network';
 import type { SignalSource, DeviceRecord as SharedDeviceRecord } from '$lib/types/shared';
 import { SignalSource as SignalSourceEnum } from '$lib/types/enums';
 
@@ -497,11 +497,11 @@ class SignalDatabase {
 	private normalizeSignalSource(source: string): SignalSource {
 		// Map string values to enum values
 		const sourceMap: Record<string, SignalSource> = {
-			'hackrf': SignalSourceEnum.HackRF,
-			'kismet': SignalSourceEnum.Kismet,
-			'manual': SignalSourceEnum.Manual,
+			hackrf: SignalSourceEnum.HackRF,
+			kismet: SignalSourceEnum.Kismet,
+			manual: SignalSourceEnum.Manual,
 			'rtl-sdr': SignalSourceEnum.RtlSdr,
-			'other': SignalSourceEnum.Other
+			other: SignalSourceEnum.Other
 		};
 		return sourceMap[source.toLowerCase()] || SignalSourceEnum.Other;
 	}

@@ -14,8 +14,8 @@
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { SignalMarker } from '$lib/stores/map/signals';
-import type { NetworkNode, NetworkEdge } from '$lib/services/map/network-analyzer';
+import type { SignalMarker } from '$lib/types/signals';
+import type { NetworkNode, NetworkEdge } from '$lib/types/network';
 import { DatabaseCleanupService } from './cleanup-service';
 import { runMigrations } from './migrations/run-migrations';
 import { logError, logWarn, logInfo } from '$lib/utils/logger';

@@ -3,7 +3,7 @@
  * Implements marker clustering and signal aggregation with Grade A+ mathematical precision
  */
 
-import type { SignalMarker } from '$lib/stores/map/signals';
+import type { SignalMarker } from '$lib/types/signals';
 
 // Mathematical precision constants for Grade A+ compliance
 const PRECISION = {

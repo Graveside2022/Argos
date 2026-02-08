@@ -7,29 +7,8 @@ export interface BettercapDevice {
 	lastSeen: string;
 }
 
-export interface BettercapWiFiAP {
-	bssid: string;
-	essid: string;
-	channel: number;
-	encryption: string;
-	rssi: number;
-	clients: number;
-	firstSeen: string;
-	lastSeen: string;
-	handshake: boolean;
-}
-
-export interface BettercapBLEDevice {
-	mac: string;
-	name: string;
-	vendor: string;
-	rssi: number;
-	connectable: boolean;
-	services: string[];
-	lastSeen: string;
-}
-
-export type BettercapMode = 'wifi-recon' | 'ble-recon' | 'net-recon';
+// Re-export canonical types from $lib/types/bettercap (Phase 0.6.2 backward compat)
+export type { BettercapWiFiAP, BettercapBLEDevice, BettercapMode } from '$lib/types/bettercap';
 
 export interface BettercapSession {
 	started: boolean;

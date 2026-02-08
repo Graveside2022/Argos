@@ -1,1 +1,5 @@
-config/.lintstagedrc.json
+{
+	"*.{js,ts,svelte}": ["eslint --config config/eslint.config.js --fix", "prettier --write"],
+	"*.{json,md,css,postcss,html}": ["prettier --write"],
+	"package.json": ["prettier --write"]
+}

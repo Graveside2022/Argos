@@ -1,4 +1,4 @@
-import type { SignalMarker } from '$lib/stores/map/signals';
+import type { SignalMarker } from '$lib/types/signals';
 
 // Define Leaflet types
 interface LeafletIcon {

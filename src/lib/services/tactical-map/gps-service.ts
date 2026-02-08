@@ -1,26 +1,10 @@
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
+import type { GPSApiResponse } from '$lib/types/gps';
 
-export interface GPSPositionData {
-	latitude: number;
-	longitude: number;
-	altitude?: number | null;
-	speed?: number | null;
-	heading?: number | null;
-	accuracy?: number;
-	satellites?: number;
-	fix?: number;
-	time?: string;
-}
-
-export interface GPSApiResponse {
-	success: boolean;
-	data?: GPSPositionData;
-	error?: string;
-	mode?: number;
-	details?: string;
-}
+// Re-export for backward compatibility (barrel and consumers that import from this module)
+export type { GPSPositionData, GPSApiResponse } from '$lib/types/gps';
 
 export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;
