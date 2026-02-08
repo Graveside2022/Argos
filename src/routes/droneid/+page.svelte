@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type { Map as LeafletMap } from 'leaflet';
 	import { browser } from '$app/environment';
-	import { MAP_CONFIG } from '$lib/config/mapConfig';
+	import { MAP_CONFIG } from '$lib/config/map-config';
 
 	let map: LeafletMap | undefined;
 	let mapContainer: HTMLDivElement;

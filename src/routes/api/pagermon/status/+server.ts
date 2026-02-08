@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { pagermonManager } from '$lib/server/pagermon/processManager';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { pagermonManager } from '$lib/server/pagermon/process-manager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 
 export const GET: RequestHandler = async () => {
 	const status = pagermonManager.getStatus();

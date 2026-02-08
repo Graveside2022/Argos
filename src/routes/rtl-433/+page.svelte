@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { rtl433Store } from '$lib/stores/rtl433Store';
+	import { rtl433Store } from '$lib/stores/rtl433-store';
 	import { goto } from '$app/navigation';
 
 	// Store subscriptions

@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { btleManager } from '$lib/server/btle/processManager';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { btleManager } from '$lib/server/btle/process-manager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 
 export const GET: RequestHandler = async () => {
 	const status = btleManager.getStatus();

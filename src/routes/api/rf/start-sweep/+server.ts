@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { sweepManager } from '$lib/server/hackrf/sweepManager';
+import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

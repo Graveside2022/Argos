@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { kismetRSSIService } from '$lib/services/map/kismetRSSIService';
+	import { kismetRSSIService } from '$lib/services/map/kismet-rssi-service';
 
 	interface Props {
 		selectedDevice?: string | null;

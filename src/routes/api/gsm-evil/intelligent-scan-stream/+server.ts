@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { hostExec, isDockerContainer } from '$lib/server/hostExec';
+import { hostExec, isDockerContainer } from '$lib/server/host-exec';
 import { validateGain, sanitizeGainForShell } from '$lib/validators/gsm';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import {
@@ -9,7 +9,7 @@ import {
 	analyzeGsmFrames,
 	classifySignalStrength,
 	determineChannelType
-} from '$lib/services/gsm/protocolParser';
+} from '$lib/services/gsm/protocol-parser';
 
 export const POST: RequestHandler = async ({ request: _request }) => {
 	const encoder = new TextEncoder();

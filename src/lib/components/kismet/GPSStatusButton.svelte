@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
-	import { GPSService } from '$lib/services/tactical-map/gpsService';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import { GPSService } from '$lib/services/tactical-map/gps-service';
 	import { onMount } from 'svelte';
 
 	const gpsService = new GPSService();

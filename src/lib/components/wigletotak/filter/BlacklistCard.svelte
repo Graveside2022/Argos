@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { wigleService } from '$lib/services/wigletotak/wigleService';
+	import { wigleService } from '$lib/services/wigletotak/wigle-service';
 	import { logInfo, logError } from '$lib/utils/logger';
 
 	// Local form state

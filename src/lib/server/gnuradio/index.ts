@@ -1,2 +1,2 @@
-export * from './spectrum_analyzer.js';
+export * from './spectrum-analyzer.js';
 export * from './types.js';

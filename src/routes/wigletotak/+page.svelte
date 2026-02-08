@@ -28,8 +28,8 @@
 	onMount(async () => {
 		if (browser) {
 			// Dynamic imports to prevent SSR issues
-			const { wigleStore: ws } = await import('$lib/stores/wigletotak/wigleStore');
-			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigleService');
+			const { wigleStore: ws } = await import('$lib/stores/wigletotak/wigle-store');
+			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigle-service');
 
 			wigleStore = ws;
 			wigleService = wserv;

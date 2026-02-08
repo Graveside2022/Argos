@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { ToolCategory } from '$lib/types/tools';
-	import { navigateToCategory } from '$lib/stores/dashboard/toolsStore';
-	import { countTools } from '$lib/data/toolHierarchy';
-	import { uiIcons } from '$lib/data/toolIcons';
+	import { navigateToCategory } from '$lib/stores/dashboard/tools-store';
+	import { countTools } from '$lib/data/tool-hierarchy';
+	import { uiIcons } from '$lib/data/tool-icons';
 
 	interface Props {
 		category: ToolCategory;

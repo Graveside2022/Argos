@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { forceReleaseDevice } from '$lib/stores/hardwareStore';
+	import { forceReleaseDevice } from '$lib/stores/hardware-store';
 
 	interface Props {
 		show?: boolean;

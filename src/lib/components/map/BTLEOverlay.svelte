@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { btleState, startBtlePolling, stopBtlePolling } from '$lib/stores/btleStore';
+	import { btleState, startBtlePolling, stopBtlePolling } from '$lib/stores/btle-store';
 
 	interface Props {
 		isOpen?: boolean;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { timeWindowFilter, getAgeColor } from '$lib/services/hackrf/timeWindowFilter';
+	import { timeWindowFilter, getAgeColor } from '$lib/services/hackrf/time-window-filter';
 	import { onMount } from 'svelte';
 
 	const { signals: _signals, stats } = timeWindowFilter;

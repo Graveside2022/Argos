@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { setContext } from 'svelte';
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
-	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
-	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboardStore';
-	import { selectDevice } from '$lib/stores/dashboard/agentContextStore';
-	import { getSignalHex, getSignalBandKey } from '$lib/utils/signalUtils';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboard-store';
+	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
+	import { getSignalHex, getSignalBandKey } from '$lib/utils/signal-utils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import {
 		MapLibre,

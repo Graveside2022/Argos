@@ -8,7 +8,7 @@
 		stopBtlePolling,
 		startBtle,
 		stopBtle
-	} from '$lib/stores/btleStore';
+	} from '$lib/stores/btle-store';
 
 	let state = {
 		running: false,

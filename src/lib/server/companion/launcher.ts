@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'child_process';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import type { CompanionApp, CompanionStatus } from './types';
 
 const execAsync = promisify(exec);

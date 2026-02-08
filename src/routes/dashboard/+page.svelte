@@ -9,16 +9,16 @@
 		bottomPanelHeight,
 		setBottomPanelHeight,
 		closeBottomPanel
-	} from '$lib/stores/dashboard/dashboardStore';
+	} from '$lib/stores/dashboard/dashboard-store';
 	import {
 		terminalPanelState,
 		toggleTerminalPanel,
 		createSession,
 		nextTab,
 		previousTab
-	} from '$lib/stores/dashboard/terminalStore';
-	import { GPSService } from '$lib/services/tactical-map/gpsService';
-	import { KismetService } from '$lib/services/tactical-map/kismetService';
+	} from '$lib/stores/dashboard/terminal-store';
+	import { GPSService } from '$lib/services/tactical-map/gps-service';
+	import { KismetService } from '$lib/services/tactical-map/kismet-service';
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';
 

@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { wifiteManager } from '$lib/server/wifite/processManager';
+import { wifiteManager } from '$lib/server/wifite/process-manager';
 import type { AttackMode } from '$lib/server/wifite/types';
 
 export const POST: RequestHandler = async ({ request }) => {

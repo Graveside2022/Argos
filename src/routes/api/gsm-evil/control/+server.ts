@@ -1,8 +1,8 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { timeWindowFilter } from '$lib/services/hackrf/timeWindowFilter';
+	import { timeWindowFilter } from '$lib/services/hackrf/time-window-filter';
 	import type { SignalDetection } from '$lib/services/api/hackrf';
 
 	// Demo signal generation

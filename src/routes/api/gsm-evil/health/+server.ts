@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
 
 // Comprehensive health check for GSM Evil pipeline
 const performHealthCheck = async () => {

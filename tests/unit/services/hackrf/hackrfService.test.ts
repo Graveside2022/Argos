@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { HackRFService } from '$lib/services/hackrf/hackrfService';
+import { HackRFService } from '$lib/services/hackrf/hackrf-service';
 import type { HackRFStatus, HackRFConfig, SpectrumData, SignalDetection, SweepResult } from '$lib/services/api/hackrf';
 
 // Mock WebSocket for testing

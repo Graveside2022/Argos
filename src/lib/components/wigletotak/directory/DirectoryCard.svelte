@@ -29,9 +29,9 @@
 		if (browser) {
 			// Dynamic imports to prevent SSR issues
 			const { wigleStore: ws, wigleActions: wa } = await import(
-				'$lib/stores/wigletotak/wigleStore'
+				'$lib/stores/wigletotak/wigle-store'
 			);
-			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigleService');
+			const { wigleService: wserv } = await import('$lib/services/wigletotak/wigle-service');
 			const { logInfo: li, logError: le } = await import('$lib/utils/logger');
 
 			wigleStore = ws;

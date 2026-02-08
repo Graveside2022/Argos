@@ -4,7 +4,7 @@
 		formatAge as _formatAge,
 		getAgeColor as _getAgeColor,
 		type TimeWindowConfig
-	} from '$lib/services/hackrf/timeWindowFilter';
+	} from '$lib/services/hackrf/time-window-filter';
 	import { onMount } from 'svelte';
 
 	// Get stores from the filter

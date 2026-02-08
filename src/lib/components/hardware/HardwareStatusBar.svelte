@@ -5,7 +5,7 @@
 		startPolling,
 		stopPolling,
 		forceReleaseDevice
-	} from '$lib/stores/hardwareStore';
+	} from '$lib/stores/hardware-store';
 
 	let status = $state({
 		hackrf: { available: true, owner: null as string | null, detected: false },

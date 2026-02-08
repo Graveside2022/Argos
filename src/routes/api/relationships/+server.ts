@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getRFDatabase } from '$lib/server/db/database';
-import type { NetworkEdge } from '$lib/services/map/networkAnalyzer';
+import type { NetworkEdge } from '$lib/services/map/network-analyzer';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {

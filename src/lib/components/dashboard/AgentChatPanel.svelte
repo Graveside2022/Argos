@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { get } from 'svelte/store';
-	import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agentContextStore';
+	import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agent-context-store';
 
 	// Props are no longer needed - context comes from store
 	interface Props {
