@@ -66,6 +66,17 @@ export function detectDeviceType(freq: number): string {
  * Convert a database signal row to a SignalMarker for the frontend.
  */
 export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
+	let metadata: Record<string, unknown> = {};
+	if (dbSignal.metadata) {
+		try {
+			metadata = JSON.parse(dbSignal.metadata) as Record<string, unknown>;
+		} catch (_error) {
+			console.warn('[geo] Invalid metadata JSON in database', {
+				signal_id: dbSignal.signal_id
+			});
+		}
+	}
+
 	return {
 		id: dbSignal.signal_id,
 		lat: dbSignal.latitude,
@@ -74,9 +85,7 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 		frequency: dbSignal.frequency,
 		timestamp: dbSignal.timestamp,
 		source: dbSignal.source as SignalMarker['source'],
-		metadata: dbSignal.metadata
-			? (JSON.parse(dbSignal.metadata) as Record<string, unknown>)
-			: {}
+		metadata
 	};
 }
 
@@ -85,11 +94,19 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
  * Uses signal type, frequency, and power band as a composite key.
  */
 export function generateDeviceId(signal: SignalMarker): string {
-	const metadata = signal.metadata
-		? typeof signal.metadata === 'string'
-			? JSON.parse(signal.metadata)
-			: signal.metadata
-		: {};
+	let metadata: Record<string, unknown> = {};
+	if (signal.metadata) {
+		if (typeof signal.metadata === 'string') {
+			try {
+				metadata = JSON.parse(signal.metadata);
+			} catch (_error) {
+				console.warn('[geo] Invalid metadata JSON in generateDeviceId');
+				metadata = {};
+			}
+		} else {
+			metadata = signal.metadata;
+		}
+	}
 	const signalType = metadata.signalType || metadata.type || 'unknown';
 	return `${signalType}_${Math.floor(signal.frequency)}_${Math.floor(signal.power / 10) * 10}`;
 }

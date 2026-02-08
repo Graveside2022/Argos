@@ -126,7 +126,7 @@ export class HackRFAPI {
 		});
 
 		this.addTrackedListener('sweep_data', (event) => {
-			const rawData = JSON.parse(event.data as string) as HackRFData & {
+			let rawData: HackRFData & {
 				binData?: number[];
 				metadata?: {
 					frequencyRange?: { low?: number; high?: number; center?: number };
@@ -134,6 +134,12 @@ export class HackRFAPI {
 				};
 				sweepId?: string;
 			};
+			try {
+				rawData = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in sweep_data event', error);
+				return;
+			}
 			this.lastDataTimestamp = Date.now();
 
 			// Convert SSE data format to SpectrumData format
@@ -168,7 +174,7 @@ export class HackRFAPI {
 		});
 
 		this.addTrackedListener('status', (event) => {
-			const status = JSON.parse(event.data as string) as {
+			let status: {
 				state?: string;
 				startFrequency?: number;
 				endFrequency?: number;
@@ -179,11 +185,18 @@ export class HackRFAPI {
 				cycleTime?: number;
 				startTime?: number;
 			};
+			try {
+				status = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in status event', error);
+				return;
+			}
 			logDebug('[EventSource] Status event received:', { status });
 
 			// Update sweep status
 			const newStatus = {
-				active: status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
+				active:
+					status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
 				startFreq: status.startFrequency || 0,
 				endFreq: status.endFrequency || 0,
 				currentFreq: status.currentFrequency || 0,
@@ -210,7 +223,13 @@ export class HackRFAPI {
 		});
 
 		this.addTrackedListener('cycle_config', (event) => {
-			const config = JSON.parse(event.data as string) as Record<string, unknown>;
+			let config: Record<string, unknown>;
+			try {
+				config = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in cycle_config event', error);
+				return;
+			}
 			updateCycleStatus({
 				...config,
 				active: true
@@ -218,10 +237,16 @@ export class HackRFAPI {
 		});
 
 		this.addTrackedListener('status_change', (event) => {
-			const change = JSON.parse(event.data as string) as {
+			let change: {
 				isSweping?: boolean;
 				status?: string;
 			};
+			try {
+				change = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in status_change event', error);
+				return;
+			}
 			logDebug('[EventSource] Status change event:', { change });
 			if (change.isSweping !== undefined) {
 				updateSweepStatus({ active: change.isSweping });
@@ -235,10 +260,16 @@ export class HackRFAPI {
 		// Heartbeat event - critical for connection health
 		this.addTrackedListener('heartbeat', (event) => {
 			this.lastDataTimestamp = Date.now();
-			const _data = JSON.parse(event.data as string) as {
+			let _data: {
 				uptime: number;
 				connectionId: string;
 			};
+			try {
+				_data = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in heartbeat event', error);
+				return;
+			}
 			logDebug('[HackRFAPI] Heartbeat received:', {
 				uptime: Math.floor(_data.uptime / 1000) + 's',
 				connectionId: _data.connectionId
@@ -247,11 +278,17 @@ export class HackRFAPI {
 
 		// Recovery events
 		this.addTrackedListener('recovery_start', (event) => {
-			const recoveryData = JSON.parse(event.data as string) as {
+			let recoveryData: {
 				reason: string;
 				attempt: number;
 				maxAttempts: number;
 			};
+			try {
+				recoveryData = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[HackRFAPI] Invalid JSON in recovery_start event', error);
+				return;
+			}
 			updateConnectionStatus({
 				connected: true,
 				connecting: false,
