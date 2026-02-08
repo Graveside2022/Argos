@@ -1,10 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
-import type {
-	BettercapWiFiAP,
-	BettercapBLEDevice,
-	BettercapMode
-} from '$lib/server/bettercap/types';
+import type { BettercapWiFiAP, BettercapBLEDevice, BettercapMode } from '$lib/types/bettercap';
 
 // Cap command history to prevent unbounded memory growth
 const MAX_COMMAND_HISTORY = 200;

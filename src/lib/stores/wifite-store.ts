@@ -1,6 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { AttackMode } from '$lib/server/wifite/types';
+import type { AttackMode } from '$lib/types/wifite';
 
 interface WifiteTarget {
 	bssid: string;

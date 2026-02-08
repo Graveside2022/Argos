@@ -15,7 +15,7 @@
 		startAttack,
 		stopAttack
 	} from '$lib/stores/wifite-store';
-	import type { AttackMode } from '$lib/server/wifite/types';
+	import type { AttackMode } from '$lib/types/wifite';
 
 	let state: any;
 	let loading = false;

@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { terminalPlugin } from './vite-plugin-terminal';
+import { terminalPlugin } from './config/vite-plugin-terminal';
 
 export default defineConfig({
 	plugins: [sveltekit(), terminalPlugin()],

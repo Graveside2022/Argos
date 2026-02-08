@@ -3,30 +3,9 @@ import { SignalSource } from '$lib/types/enums';
 
 type LatLngExpression = [number, number] | { lat: number; lng: number };
 
-export interface SignalMarker {
-	id: string;
-	lat: number;
-	lon: number;
-	frequency: number;
-	power: number;
-	timestamp: number;
-	altitude?: number; // Altitude in meters (for drone operations)
-	source: SignalSource;
-	metadata: {
-		ssid?: string;
-		mac?: string;
-		channel?: number;
-		encryption?: string;
-		vendor?: string;
-		signalType?: string;
-		bandwidth?: number;
-		modulation?: string;
-		velocity?: { speed: number; heading: number }; // For moving signals
-		flightPath?: { lat: number; lon: number; alt: number }[]; // Historical positions
-		type?: string; // Device type (AP, Client, Bridge, Unknown)
-		deviceId?: string; // Device identifier
-	};
-}
+// Re-export canonical SignalMarker from $lib/types/signals (Phase 0.6.1 backward compat)
+export type { SignalMarker } from '$lib/types/signals';
+import type { SignalMarker } from '$lib/types/signals';
 
 export interface MapConfig {
 	center: LatLngExpression;

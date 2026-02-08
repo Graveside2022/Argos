@@ -5,7 +5,7 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { SignalMarker } from '$lib/stores/map/signals';
+import type { SignalMarker } from '$lib/types/signals';
 import type { DbSignal, SpatialQuery, TimeQuery } from './types';
 import { calculateDistance, convertRadiusToGrid, dbSignalToMarker, generateDeviceId } from './geo';
 import { ensureDeviceExists, updateDeviceFromSignal } from './device-service';

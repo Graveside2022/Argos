@@ -1,35 +1,7 @@
 import { writable, type Writable } from 'svelte/store';
-
-export interface LeafletMap {
-	setView: (center: [number, number], zoom: number) => LeafletMap;
-	attributionControl: {
-		setPrefix: (prefix: string) => void;
-	};
-	addLayer: (layer: unknown) => void;
-	removeLayer: (layer: unknown) => void;
-	on: (event: string, callback: (e: unknown) => void) => void;
-}
-
-export interface LeafletMarker {
-	addTo: (map: LeafletMap) => LeafletMarker;
-	setLatLng: (latlng: [number, number]) => LeafletMarker;
-	bindPopup: (content: string) => LeafletMarker;
-	remove: () => void;
-}
-
-export interface LeafletCircle {
-	addTo: (map: LeafletMap) => LeafletCircle;
-	setLatLng: (latlng: [number, number]) => LeafletCircle;
-	setRadius: (radius: number) => LeafletCircle;
-	remove: () => void;
-}
-
-export interface LeafletCircleMarker {
-	addTo: (map: LeafletMap) => LeafletCircleMarker;
-	setLatLng: (latlng: [number, number]) => LeafletCircleMarker;
-	bindPopup: (content: string) => LeafletCircleMarker;
-	remove: () => void;
-}
+// Re-export canonical Leaflet types from $lib/types/map (Phase 0.6.2 backward compat)
+export type { LeafletMap, LeafletMarker, LeafletCircle, LeafletCircleMarker } from '$lib/types/map';
+import type { LeafletMap, LeafletMarker, LeafletCircle } from '$lib/types/map';
 
 export interface MapState {
 	map: LeafletMap | null;
@@ -48,13 +20,13 @@ const initialMapState: MapState = {
 export const mapStore: Writable<MapState> = writable(initialMapState);
 
 export const setMap = (map: LeafletMap) => {
-	mapStore.update(state => ({ ...state, map, isInitialized: true }));
+	mapStore.update((state) => ({ ...state, map, isInitialized: true }));
 };
 
 export const setUserMarker = (marker: LeafletMarker) => {
-	mapStore.update(state => ({ ...state, userMarker: marker }));
+	mapStore.update((state) => ({ ...state, userMarker: marker }));
 };
 
 export const setAccuracyCircle = (circle: LeafletCircle) => {
-	mapStore.update(state => ({ ...state, accuracyCircle: circle }));
+	mapStore.update((state) => ({ ...state, accuracyCircle: circle }));
 };
