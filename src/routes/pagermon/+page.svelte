@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import HardwareStatusBar from '$lib/components/hardware/HardwareStatusBar.svelte';
-	import HardwareConflictModal from '$lib/components/hardware/HardwareConflictModal.svelte';
+	import HardwareConflictModal from '$lib/components/shared/HardwareConflictModal.svelte';
 	import {
 		pagermonState,
 		startPagermonPolling,

@@ -3,7 +3,7 @@
 	import { browser } from '$app/environment';
 	import { hackrfAPI } from '$lib/services/hackrf/api';
 	import { spectrumData } from '$lib/stores/hackrf';
-	import { SignalAggregator } from './SignalAggregator';
+	import { SignalAggregator } from '$lib/services/map/signal-aggregator';
 	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
 	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
 	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
