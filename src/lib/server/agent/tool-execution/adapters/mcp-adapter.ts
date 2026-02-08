@@ -4,8 +4,8 @@
  * Executes tools by connecting to Model Context Protocol (MCP) servers
  */
 
-import { Client } from '@modelcontextprotocol/sdk/client';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type {
 	ToolBackendAdapter,
 	ToolDefinition,

@@ -399,3 +399,9 @@ core.*
 
 # Stale report directories
 completed/
+
+# Python virtual environments
+hackrf_emitter/backend/.venv/
+
+# HackRF wideband cache
+wideband_cache/

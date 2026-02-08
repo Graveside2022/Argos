@@ -47,14 +47,16 @@ export class KismetProxy {
 	private static readonly KISMET_PORT = process.env.KISMET_PORT || '2501';
 	private static readonly API_KEY = process.env.KISMET_API_KEY || '';
 	private static readonly KISMET_USER = process.env.KISMET_USER || 'admin';
-	private static readonly KISMET_PASSWORD = process.env.KISMET_PASSWORD;
 	private static readonly BASE_URL = `http://${KismetProxy.KISMET_HOST}:${KismetProxy.KISMET_PORT}`;
 
-	static {
-		// Validate required credentials are set
-		if (!KismetProxy.KISMET_PASSWORD) {
-			throw new Error('KISMET_PASSWORD environment variable must be set. See .env.example for configuration.');
+	private static getPassword(): string {
+		const pass = process.env.KISMET_PASSWORD;
+		if (!pass) {
+			throw new Error(
+				'KISMET_PASSWORD environment variable must be set. See .env.example for configuration.'
+			);
 		}
+		return pass;
 	}
 
 	/**
@@ -67,7 +69,7 @@ export class KismetProxy {
 		const url = `${this.BASE_URL}${endpoint}`;
 
 		// Create basic auth header
-		const auth = Buffer.from(`${this.KISMET_USER}:${this.KISMET_PASSWORD}`).toString('base64');
+		const auth = Buffer.from(`${this.KISMET_USER}:${this.getPassword()}`).toString('base64');
 
 		const headers: Record<string, string> = {
 			Authorization: `Basic ${auth}`,

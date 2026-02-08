@@ -1,0 +1,19 @@
+=== BASELINE Sun Feb  8 05:25:25 AM CET 2026 ===
+Typecheck:
+  Property 'createFallbackDevices' does not exist on type 'typeof KismetService'.
+tests/unit/server/services/kismet.service.test.ts(636,38): error TS7006: Parameter 'd' implicitly has an 'any' type.
+tests/unit/server/services/kismet.service.test.ts(648,20): error TS7053: Element implicitly has an 'any' type because expression of type '"createFallbackDevices"' can't be used to index type 'typeof KismetService'.
+  Property 'createFallbackDevices' does not exist on type 'typeof KismetService'.
+tests/unit/server/services/kismet.service.test.ts(651,21): error TS7006: Parameter 'device' implicitly has an 'any' type.
+Build:
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///home/kali/Documents/Argos/Argos/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio'
+}
+
+Node.js v22.22.0
+Lint warnings:
+✖ 813 problems (100 errors, 713 warnings)
+  0 errors and 16 warnings potentially fixable with the `--fix` option.
+
+LOC:
+ 106989 total

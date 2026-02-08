@@ -6,15 +6,18 @@ const execAsync = promisify(exec);
 
 const API_BASE = 'http://127.0.0.1:8081/api';
 const API_USER = process.env.BETTERCAP_USER || 'admin';
-const API_PASS = process.env.BETTERCAP_PASSWORD;
-
-// Validate required credentials are set
-if (!API_PASS) {
-	throw new Error('BETTERCAP_PASSWORD environment variable must be set. See .env.example for configuration.');
+function getApiPassword(): string {
+	const pass = process.env.BETTERCAP_PASSWORD;
+	if (!pass) {
+		throw new Error(
+			'BETTERCAP_PASSWORD environment variable must be set. See .env.example for configuration.'
+		);
+	}
+	return pass;
 }
 
 async function apiRequest(method: string, path: string, body?: string): Promise<unknown> {
-	const auth = Buffer.from(`${API_USER}:${API_PASS}`).toString('base64');
+	const auth = Buffer.from(`${API_USER}:${getApiPassword()}`).toString('base64');
 	const headers: Record<string, string> = {
 		Authorization: `Basic ${auth}`,
 		'Content-Type': 'application/json'
@@ -91,7 +94,7 @@ export async function startContainer(iface?: string): Promise<void> {
 			'--cap-add NET_ADMIN',
 			'--cap-add NET_RAW',
 			'-e BETTERCAP_API_USER=' + API_USER,
-			'-e BETTERCAP_API_PASSWORD=' + API_PASS,
+			'-e BETTERCAP_API_PASSWORD=' + getApiPassword(),
 			'bettercap/bettercap:latest',
 			`bettercap ${ifaceFlag} -api-rest-address 0.0.0.0 -api-rest-port 8081`
 		].join(' '),
