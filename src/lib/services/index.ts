@@ -16,9 +16,9 @@ export * from './hackrf';
 export * from './kismet';
 
 // Export Integration services
-export { systemHealthMonitor } from './monitoring/systemHealth';
-export { dataStreamManager } from './streaming/dataStreamManager';
-export { errorRecoveryService } from './recovery/errorRecovery';
+export { systemHealthMonitor } from './monitoring/system-health';
+export { dataStreamManager } from './streaming/data-stream-manager';
+export { errorRecoveryService } from './recovery/error-recovery';
 
 // Export service initialization
-export { initializeServices, shutdownServices } from './serviceInitializer';
+export { initializeServices, shutdownServices } from './service-initializer';

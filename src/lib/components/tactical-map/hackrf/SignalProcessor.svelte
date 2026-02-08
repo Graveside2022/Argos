@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { HackRFService } from '$lib/services/tactical-map/hackrfService';
-	import { MapService } from '$lib/services/tactical-map/mapService';
+	import { HackRFService } from '$lib/services/tactical-map/hackrf-service';
+	import { MapService } from '$lib/services/tactical-map/map-service';
 	import {
 		hackrfStore,
 		addSignal,
 		updateSignal,
 		addSignalMarker
-	} from '$lib/stores/tactical-map/hackrfStore';
-	import { mapStore } from '$lib/stores/tactical-map/mapStore';
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
-	import type { SimplifiedSignal } from '$lib/stores/tactical-map/hackrfStore';
+	} from '$lib/stores/tactical-map/hackrf-store';
+	import { mapStore } from '$lib/stores/tactical-map/map-store';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import type { SimplifiedSignal } from '$lib/stores/tactical-map/hackrf-store';
 
 	interface Props {
 		updateRate?: number;

@@ -2,8 +2,8 @@
  * Kismet Service Exports
  */
 
-export { kismetService } from './kismetService';
-export { deviceManager } from './deviceManager';
+export { kismetService } from './kismet-service';
+export { deviceManager } from './device-manager';
 
 // Re-export types
 export type {

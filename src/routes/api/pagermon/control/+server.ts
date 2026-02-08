@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { pagermonManager } from '$lib/server/pagermon/processManager';
+import { pagermonManager } from '$lib/server/pagermon/process-manager';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

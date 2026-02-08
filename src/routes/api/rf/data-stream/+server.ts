@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { sweepManager } from '$lib/server/hackrf/sweepManager';
-import { UsrpSweepManager } from '$lib/server/usrp/sweepManager';
+import { sweepManager } from '$lib/server/hackrf/sweep-manager';
+import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const headers = {

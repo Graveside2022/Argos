@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { getSweepManager } from '$lib/server/hackrf/sweepManager';
+import { getSweepManager } from '$lib/server/hackrf/sweep-manager';
 import { SystemStatus } from '$lib/types/enums';
 
 export const GET: RequestHandler = () => {

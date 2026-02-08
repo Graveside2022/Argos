@@ -14,7 +14,7 @@
 		dismissLastRun,
 		startAttack,
 		stopAttack
-	} from '$lib/stores/wifiteStore';
+	} from '$lib/stores/wifite-store';
 	import type { AttackMode } from '$lib/server/wifite/types';
 
 	let state: any;

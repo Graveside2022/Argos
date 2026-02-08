@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { btleManager } from '$lib/server/btle/processManager';
+import { btleManager } from '$lib/server/btle/process-manager';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

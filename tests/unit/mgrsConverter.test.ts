@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { latLonToMGRS } from '../../src/lib/utils/mgrsConverter';
+import { latLonToMGRS } from '../../src/lib/utils/mgrs-converter';
 
 describe('MGRS Coordinate Conversion Logic', () => {
 	it('should correctly convert a known Los Angeles coordinate', () => {

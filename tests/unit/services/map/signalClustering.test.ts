@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-// import { SignalClusteringService } from '$lib/services/map/signalClustering';
+// import { SignalClusteringService } from '$lib/services/map/signal-clustering';
 import type { SignalMarker, SignalCluster } from '$lib/types/signals';
 
 // Mock SignalClusteringService for testing

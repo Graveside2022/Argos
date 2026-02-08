@@ -4,7 +4,7 @@
 		formatAge,
 		getAgeColor,
 		getRelevanceIcon
-	} from '$lib/services/hackrf/timeWindowFilter';
+	} from '$lib/services/hackrf/time-window-filter';
 	import { onMount } from 'svelte';
 	import { scale as _scale } from 'svelte/transition';
 

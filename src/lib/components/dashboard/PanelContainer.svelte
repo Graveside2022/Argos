@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { activePanel } from '$lib/stores/dashboard/dashboardStore';
+	import { activePanel } from '$lib/stores/dashboard/dashboard-store';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
 	import ToolsPanel from './panels/ToolsPanel.svelte';
 	import DevicesPanel from './panels/DevicesPanel.svelte';

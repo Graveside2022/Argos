@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 
 export const POST: RequestHandler = async ({ request }) => {

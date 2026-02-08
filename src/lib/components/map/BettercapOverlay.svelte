@@ -4,7 +4,7 @@
 		bettercapState,
 		startBettercapPolling,
 		stopBettercapPolling
-	} from '$lib/stores/bettercapStore';
+	} from '$lib/stores/bettercap-store';
 
 	interface Props {
 		isOpen?: boolean;

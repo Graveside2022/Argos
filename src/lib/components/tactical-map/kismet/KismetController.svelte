@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { KismetService } from '$lib/services/tactical-map/kismetService';
-	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismetStore';
+	import { KismetService } from '$lib/services/tactical-map/kismet-service';
+	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
 
 	interface Props {
 		whitelistMAC?: string;

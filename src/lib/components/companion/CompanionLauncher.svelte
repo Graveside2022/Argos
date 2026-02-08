@@ -6,8 +6,8 @@
 		stopCompanionPolling,
 		launchApp,
 		stopApp
-	} from '$lib/stores/companionStore';
-	import { hardwareStatus, startPolling } from '$lib/stores/hardwareStore';
+	} from '$lib/stores/companion-store';
+	import { hardwareStatus, startPolling } from '$lib/stores/hardware-store';
 	import HardwareConflictModal from '$lib/components/shared/HardwareConflictModal.svelte';
 
 	interface Props {

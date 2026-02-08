@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { gsmEvilStore } from '$lib/stores/gsmEvilStore';
+	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 
 	let imsiCaptureActive = false;
 	let imsiPollInterval: ReturnType<typeof setInterval>;

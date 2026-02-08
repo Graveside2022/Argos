@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { KismetService } from '$lib/services/tactical-map/kismetService';
-	import { MapService } from '$lib/services/tactical-map/mapService';
+	import { KismetService } from '$lib/services/tactical-map/kismet-service';
+	import { MapService } from '$lib/services/tactical-map/map-service';
 	import {
 		kismetStore,
 		addKismetDeviceMarker,
 		removeKismetDeviceMarker
-	} from '$lib/stores/tactical-map/kismetStore';
-	import { mapStore } from '$lib/stores/tactical-map/mapStore';
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
+	} from '$lib/stores/tactical-map/kismet-store';
+	import { mapStore } from '$lib/stores/tactical-map/map-store';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import type { KismetDevice } from '$lib/types/kismet';
 
 	const _kismetService = new KismetService();

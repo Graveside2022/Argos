@@ -13,7 +13,7 @@
 		toggleMaximize,
 		splitTerminal,
 		unsplit
-	} from '$lib/stores/dashboard/terminalStore';
+	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
 	import TerminalTabContent from './TerminalTabContent.svelte';
 

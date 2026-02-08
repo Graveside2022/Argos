@@ -1,9 +1,9 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import * as bettercapClient from '$lib/server/bettercap/apiClient';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import * as bettercapClient from '$lib/server/bettercap/api-client';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import * as alfaMgr from '$lib/server/hardware/alfaManager';
+import * as alfaMgr from '$lib/server/hardware/alfa-manager';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

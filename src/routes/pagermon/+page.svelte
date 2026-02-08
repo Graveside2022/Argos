@@ -8,7 +8,7 @@
 		stopPagermonPolling,
 		startPagermon,
 		stopPagermon
-	} from '$lib/stores/pagermonStore';
+	} from '$lib/stores/pagermon-store';
 
 	let state = { running: false, frequency: 152000000, messages: [] as any[], messageCount: 0 };
 	let freqMHz = 152;

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
-	import { kismetStore } from '$lib/stores/tactical-map/kismetStore';
-	import { activeView, activePanel } from '$lib/stores/dashboard/dashboardStore';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
 
 	interface SystemInfo {
 		hostname: string;

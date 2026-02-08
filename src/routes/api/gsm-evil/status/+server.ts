@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
 import { logWarn } from '$lib/utils/logger';
 
 export const GET: RequestHandler = async () => {

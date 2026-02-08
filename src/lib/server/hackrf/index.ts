@@ -1,4 +1,4 @@
-export { sweepManager } from './sweepManager';
+export { sweepManager } from './sweep-manager';
 export type {
   SweepConfig,
   SweepStatus,

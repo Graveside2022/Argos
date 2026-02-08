@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismetStore';
-	import { getSignalBandKey, getSignalHex, signalBands } from '$lib/utils/signalUtils';
+	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
+	import { getSignalBandKey, getSignalHex, signalBands } from '$lib/utils/signal-utils';
 	import type { KismetDevice } from '$lib/types/kismet';
 
 	const dashboardMap = getContext<

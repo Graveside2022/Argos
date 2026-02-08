@@ -7,8 +7,8 @@
 		startRecon,
 		stopRecon,
 		sendCommand
-	} from '$lib/stores/bettercapStore';
-	import { hardwareStatus } from '$lib/stores/hardwareStore';
+	} from '$lib/stores/bettercap-store';
+	import { hardwareStatus } from '$lib/stores/hardware-store';
 	import HardwareConflictModal from '$lib/components/shared/HardwareConflictModal.svelte';
 
 	let state: any = $state({

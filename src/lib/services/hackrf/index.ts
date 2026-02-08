@@ -2,9 +2,9 @@
  * HackRF Service Exports
  */
 
-export { hackrfService } from './hackrfService';
-export { sweepAnalyzer } from './sweepAnalyzer';
-export { signalProcessor } from './signalProcessor';
+export { hackrfService } from './hackrf-service';
+export { sweepAnalyzer } from './sweep-analyzer';
+export { signalProcessor } from './signal-processor';
 
 // Re-export types
 export type {

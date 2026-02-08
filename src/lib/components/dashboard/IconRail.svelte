@@ -4,8 +4,8 @@
 		togglePanel,
 		activeBottomTab,
 		toggleBottomTab
-	} from '$lib/stores/dashboard/dashboardStore';
-	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminalStore';
+	} from '$lib/stores/dashboard/dashboard-store';
+	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminal-store';
 
 	const topIcons = [
 		{

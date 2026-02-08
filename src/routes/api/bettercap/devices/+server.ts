@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import * as bettercapClient from '$lib/server/bettercap/apiClient';
+import * as bettercapClient from '$lib/server/bettercap/api-client';
 
 export const GET: RequestHandler = async () => {
 	try {

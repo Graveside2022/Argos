@@ -4,9 +4,9 @@
 	import { hackrfAPI } from '$lib/services/hackrf/api';
 	import { spectrumData } from '$lib/stores/hackrf';
 	import { SignalAggregator } from '$lib/services/map/signal-aggregator';
-	import { detectCountry, formatCoordinates } from '$lib/utils/countryDetector';
-	import { latLonToMGRS } from '$lib/utils/mgrsConverter';
-	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/mapUtils';
+	import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
+	import { latLonToMGRS } from '$lib/utils/mgrs-converter';
+	import { estimateDistanceFromRSSI, formatDistanceEstimate } from '$lib/services/map/map-utils';
 	// AirSignalRFButton component replaced with design system button in sidebar Quick Actions (Plan 5)
 	import AirSignalOverlay from '$lib/components/map/AirSignalOverlay.svelte';
 	// KismetDashboardButton replaced with design system button in sidebar (Plan 3)
@@ -608,7 +608,7 @@
 	async function fetchCellTowers() {
 		try {
 			// Import gsmEvilStore to access tower data
-			const { gsmEvilStore } = await import('$lib/stores/gsmEvilStore');
+			const { gsmEvilStore } = await import('$lib/stores/gsm-evil-store');
 
 			// Get current store state
 			let storeState: any;

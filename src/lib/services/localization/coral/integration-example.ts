@@ -6,11 +6,11 @@
  */
 
 // OLD CODE (in your tactical-map-simple or similar):
-// import { RSSILocalizer } from '$lib/services/localization/RSSILocalizer';
+// import { RSSILocalizer } from '$lib/services/localization/rssi-localizer';
 // const localizer = new RSSILocalizer();
 
 // NEW CODE - Just change the import and class:
-import { HybridRSSILocalizer } from '$lib/services/localization/HybridRSSILocalizer';
+import { HybridRSSILocalizer } from '$lib/services/localization/hybrid-rssi-localizer';
 
 // In your component or service:
 export async function setupLocalizer() {

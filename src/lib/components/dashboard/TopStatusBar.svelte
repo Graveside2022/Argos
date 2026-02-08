@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { gpsStore } from '$lib/stores/tactical-map/gpsStore';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 
 	type DeviceState = 'active' | 'standby' | 'offline';
 

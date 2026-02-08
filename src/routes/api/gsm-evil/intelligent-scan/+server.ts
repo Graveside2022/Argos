@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 
 export const POST: RequestHandler = async () => {
