@@ -1,5 +1,5 @@
-import { logInfo, logError, logWarn, logDebug } from '$lib/utils/logger';
-import type { SpectrumData } from '$lib/server/hackrf/types';
+import { logInfo, logError, logWarn, logDebug } from "$lib/utils/logger";
+import type { SpectrumData } from "$lib/server/hackrf/types";
 
 export interface BufferState {
 	stdoutBuffer: string;
@@ -27,11 +27,11 @@ export interface ParsedLine {
  */
 export class BufferManager {
 	private bufferState: BufferState = {
-		stdoutBuffer: '',
+		stdoutBuffer: "",
 		maxBufferSize: 1024 * 1024, // 1MB default
 		bufferOverflowCount: 0,
 		lineCount: 0,
-		totalBytesProcessed: 0
+		totalBytesProcessed: 0,
 	};
 
 	private readonly maxLineLength = 10000; // Maximum line length
@@ -42,9 +42,9 @@ export class BufferManager {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
 
-		logInfo('[STATUS] BufferManager initialized', {
+		logInfo("[STATUS] BufferManager initialized", {
 			maxBufferSize: this.bufferState.maxBufferSize,
-			maxLineLength: this.maxLineLength
+			maxLineLength: this.maxLineLength,
 		});
 	}
 
@@ -53,16 +53,19 @@ export class BufferManager {
 	 */
 	processDataChunk(
 		data: Buffer | string,
-		onLineProcessed: (parsedLine: ParsedLine) => void
+		onLineProcessed: (parsedLine: ParsedLine) => void,
 	): void {
-		const chunk = typeof data === 'string' ? data : data.toString();
+		const chunk = typeof data === "string" ? data : data.toString();
 		this.bufferState.totalBytesProcessed += chunk.length;
 
 		// Add to buffer
 		this.bufferState.stdoutBuffer += chunk;
 
 		// Check buffer size
-		if (this.bufferState.stdoutBuffer.length > this.bufferState.maxBufferSize) {
+		if (
+			this.bufferState.stdoutBuffer.length >
+			this.bufferState.maxBufferSize
+		) {
 			this.handleBufferOverflow();
 		}
 
@@ -73,11 +76,13 @@ export class BufferManager {
 	/**
 	 * Process complete lines from buffer
 	 */
-	private processCompleteLines(onLineProcessed: (parsedLine: ParsedLine) => void): void {
-		const lines = this.bufferState.stdoutBuffer.split('\n');
+	private processCompleteLines(
+		onLineProcessed: (parsedLine: ParsedLine) => void,
+	): void {
+		const lines = this.bufferState.stdoutBuffer.split("\n");
 
 		// Keep the last incomplete line in buffer
-		this.bufferState.stdoutBuffer = lines.pop() || '';
+		this.bufferState.stdoutBuffer = lines.pop() || "";
 
 		for (const line of lines) {
 			if (line.trim()) {
@@ -87,11 +92,11 @@ export class BufferManager {
 
 				// Log processing stats periodically
 				if (this.bufferState.lineCount % 1000 === 0) {
-					logDebug('[STATUS] Buffer processing stats', {
+					logDebug("[STATUS] Buffer processing stats", {
 						linesProcessed: this.bufferState.lineCount,
 						bytesProcessed: this.bufferState.totalBytesProcessed,
 						bufferSize: this.bufferState.stdoutBuffer.length,
-						overflows: this.bufferState.bufferOverflowCount
+						overflows: this.bufferState.bufferOverflowCount,
 					});
 				}
 			}
@@ -106,15 +111,15 @@ export class BufferManager {
 
 		// Check line length
 		if (trimmedLine.length > this.maxLineLength) {
-			logWarn('Line too long, truncating', {
+			logWarn("Line too long, truncating", {
 				length: trimmedLine.length,
-				maxLength: this.maxLineLength
+				maxLength: this.maxLineLength,
 			});
 			return {
 				data: null,
 				isValid: false,
-				rawLine: trimmedLine.substring(0, 100) + '...',
-				parseError: 'Line too long'
+				rawLine: trimmedLine.substring(0, 100) + "...",
+				parseError: "Line too long",
 			};
 		}
 
@@ -125,13 +130,15 @@ export class BufferManager {
 					data: null,
 					isValid: false,
 					rawLine: trimmedLine,
-					parseError: 'Non-data line'
+					parseError: "Non-data line",
 				};
 			}
 
 			// Log potential data lines for debugging
-			if (trimmedLine.includes(',') && trimmedLine.length > 50) {
-				logInfo('[SEARCH] POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
+			if (trimmedLine.includes(",") && trimmedLine.length > 50) {
+				logInfo("[SEARCH] POTENTIAL DATA LINE:", {
+					preview: trimmedLine.substring(0, 200),
+				});
 			}
 
 			// Parse spectrum data
@@ -141,14 +148,14 @@ export class BufferManager {
 				return {
 					data: spectrumData,
 					isValid: true,
-					rawLine: trimmedLine
+					rawLine: trimmedLine,
 				};
 			} else {
 				return {
 					data: null,
 					isValid: false,
 					rawLine: trimmedLine,
-					parseError: 'Failed to parse spectrum data'
+					parseError: "Failed to parse spectrum data",
 				};
 			}
 		} catch (error) {
@@ -156,7 +163,8 @@ export class BufferManager {
 				data: null,
 				isValid: false,
 				rawLine: trimmedLine,
-				parseError: error instanceof Error ? error.message : String(error)
+				parseError:
+					error instanceof Error ? error.message : String(error),
 			};
 		}
 	}
@@ -185,7 +193,7 @@ export class BufferManager {
 			/^ERROR:/,
 			/^WARNING:/,
 			/^INFO:/,
-			/^DEBUG:/
+			/^DEBUG:/,
 		];
 
 		return nonDataPatterns.some((pattern) => pattern.test(line));
@@ -199,7 +207,7 @@ export class BufferManager {
 			// Real hackrf_sweep format: date, time, hz_low, hz_high, hz_bin_width, num_samples, dB, dB, dB...
 			// Example: 2023-11-20, 15:30:45, 2400000000, 2410000000, 20000, 512, -45.2, -46.1, -47.0, ...
 
-			const parts = line.split(',').map((part) => part.trim());
+			const parts = line.split(",").map((part) => part.trim());
 
 			// Check for minimum required fields (need at least 7 fields for hackrf_sweep format)
 			if (parts.length < 7) {
@@ -215,7 +223,7 @@ export class BufferManager {
 
 			// Try to determine format by checking if first field looks like a date
 			const firstPart = parts[0];
-			if (firstPart.includes('-') && firstPart.length >= 8) {
+			if (firstPart.includes("-") && firstPart.length >= 8) {
 				// Real hackrf_sweep format: date, time, hz_low, hz_high, hz_bin_width, num_samples, dB values...
 				if (parts.length < 7) {
 					return null; // Not enough data for hackrf_sweep format
@@ -239,7 +247,12 @@ export class BufferManager {
 				powerStartIndex = 4;
 			}
 
-			if (isNaN(startFreq) || isNaN(endFreq) || isNaN(binWidth) || isNaN(numSamples)) {
+			if (
+				isNaN(startFreq) ||
+				isNaN(endFreq) ||
+				isNaN(binWidth) ||
+				isNaN(numSamples)
+			) {
 				return null;
 			}
 
@@ -265,7 +278,7 @@ export class BufferManager {
 				timestamp: timestamp,
 				frequency: startFreqMHz + (endFreqMHz - startFreqMHz) / 2, // Center frequency in MHz
 				power: Math.max(...powerValues), // Peak power
-				unit: 'MHz',
+				unit: "MHz",
 				startFreq: startFreqMHz,
 				endFreq: endFreqMHz,
 				powerValues,
@@ -273,17 +286,19 @@ export class BufferManager {
 					sampleCount: powerValues.length,
 					minPower: Math.min(...powerValues),
 					maxPower: Math.max(...powerValues),
-					avgPower: powerValues.reduce((sum, val) => sum + val, 0) / powerValues.length,
+					avgPower:
+						powerValues.reduce((sum, val) => sum + val, 0) /
+						powerValues.length,
 					binWidth: binWidth,
-					numSamples: numSamples
-				}
+					numSamples: numSamples,
+				},
 			};
 
 			return spectrumData;
 		} catch (error) {
-			logError('Error parsing spectrum data', {
+			logError("Error parsing spectrum data", {
 				error: error instanceof Error ? error.message : String(error),
-				line: line.substring(0, 100) + (line.length > 100 ? '...' : '')
+				line: line.substring(0, 100) + (line.length > 100 ? "..." : ""),
 			});
 			return null;
 		}
@@ -315,22 +330,24 @@ export class BufferManager {
 	private handleBufferOverflow(): void {
 		this.bufferState.bufferOverflowCount++;
 
-		logWarn('[STATUS] Buffer overflow detected', {
+		logWarn("[STATUS] Buffer overflow detected", {
 			bufferSize: this.bufferState.stdoutBuffer.length,
 			maxSize: this.bufferState.maxBufferSize,
-			overflowCount: this.bufferState.bufferOverflowCount
+			overflowCount: this.bufferState.bufferOverflowCount,
 		});
 
 		// Keep only the last portion of the buffer
 		const keepSize = Math.floor(this.bufferState.maxBufferSize * 0.5);
-		this.bufferState.stdoutBuffer = this.bufferState.stdoutBuffer.slice(-keepSize);
+		this.bufferState.stdoutBuffer =
+			this.bufferState.stdoutBuffer.slice(-keepSize);
 
 		// Log warning if too many overflows
 		if (this.bufferState.bufferOverflowCount >= this.overflowThreshold) {
-			logError('[WARN] Excessive buffer overflows detected', {
+			logError("[WARN] Excessive buffer overflows detected", {
 				overflowCount: this.bufferState.bufferOverflowCount,
 				threshold: this.overflowThreshold,
-				recommendation: 'Consider increasing buffer size or reducing data rate'
+				recommendation:
+					"Consider increasing buffer size or reducing data rate",
 			});
 		}
 	}
@@ -344,17 +361,19 @@ export class BufferManager {
 		averageLineLength: number;
 	} {
 		const currentBufferLength = this.bufferState.stdoutBuffer.length;
-		const bufferUtilization = (currentBufferLength / this.bufferState.maxBufferSize) * 100;
+		const bufferUtilization =
+			(currentBufferLength / this.bufferState.maxBufferSize) * 100;
 		const averageLineLength =
 			this.bufferState.lineCount > 0
-				? this.bufferState.totalBytesProcessed / this.bufferState.lineCount
+				? this.bufferState.totalBytesProcessed /
+					this.bufferState.lineCount
 				: 0;
 
 		return {
 			...this.bufferState,
 			currentBufferLength,
 			bufferUtilization,
-			averageLineLength
+			averageLineLength,
 		};
 	}
 
@@ -364,17 +383,17 @@ export class BufferManager {
 	clearBuffer(): void {
 		const oldStats = this.getBufferStats();
 
-		this.bufferState.stdoutBuffer = '';
+		this.bufferState.stdoutBuffer = "";
 		this.bufferState.bufferOverflowCount = 0;
 		this.bufferState.lineCount = 0;
 		this.bufferState.totalBytesProcessed = 0;
 
-		logInfo('[CLEANUP] Buffer cleared', {
+		logInfo("[CLEANUP] Buffer cleared", {
 			previousStats: {
 				lineCount: oldStats.lineCount,
 				totalBytes: oldStats.totalBytesProcessed,
-				overflows: oldStats.bufferOverflowCount
-			}
+				overflows: oldStats.bufferOverflowCount,
+			},
 		});
 	}
 
@@ -386,8 +405,8 @@ export class BufferManager {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
 
-		logInfo('[CONFIG] Buffer configuration updated', {
-			maxBufferSize: this.bufferState.maxBufferSize
+		logInfo("[CONFIG] Buffer configuration updated", {
+			maxBufferSize: this.bufferState.maxBufferSize,
 		});
 	}
 
@@ -406,25 +425,31 @@ export class BufferManager {
 			data.endFreq !== undefined &&
 			data.startFreq >= data.endFreq
 		) {
-			issues.push('Invalid frequency range');
+			issues.push("Invalid frequency range");
 		}
 
 		// Check power values
 		if (data.powerValues && data.powerValues.length === 0) {
-			issues.push('No power values');
+			issues.push("No power values");
 		}
 
 		// Check for reasonable power values (-150 to +50 dBm)
 		if (data.powerValues) {
-			const unreasonablePowers = data.powerValues.filter((p) => p < -150 || p > 50);
+			const unreasonablePowers = data.powerValues.filter(
+				(p) => p < -150 || p > 50,
+			);
 			if (unreasonablePowers.length > 0) {
-				issues.push(`${unreasonablePowers.length} unreasonable power values`);
+				issues.push(
+					`${unreasonablePowers.length} unreasonable power values`,
+				);
 			}
 
 			// Check for too many identical values (potential stuck device)
 			const uniqueValues = new Set(data.powerValues);
 			if (uniqueValues.size === 1 && data.powerValues.length > 10) {
-				issues.push('All power values identical (possible stuck device)');
+				issues.push(
+					"All power values identical (possible stuck device)",
+				);
 			}
 		}
 
@@ -434,12 +459,12 @@ export class BufferManager {
 		const dataTime = data.timestamp.getTime();
 		if (Math.abs(now - dataTime) > 86400000) {
 			// More than 24 hours off
-			issues.push('Timestamp far from current time');
+			issues.push("Timestamp far from current time");
 		}
 
 		return {
 			isValid: issues.length === 0,
-			issues
+			issues,
 		};
 	}
 
@@ -447,7 +472,7 @@ export class BufferManager {
 	 * Get buffer health status
 	 */
 	getHealthStatus(): {
-		status: 'healthy' | 'warning' | 'critical';
+		status: "healthy" | "warning" | "critical";
 		issues: string[];
 		recommendations: string[];
 	} {
@@ -457,30 +482,30 @@ export class BufferManager {
 
 		// Check buffer utilization
 		if (stats.bufferUtilization > 90) {
-			issues.push('High buffer utilization');
-			recommendations.push('Increase buffer size or reduce data rate');
+			issues.push("High buffer utilization");
+			recommendations.push("Increase buffer size or reduce data rate");
 		}
 
 		// Check overflow count
 		if (stats.bufferOverflowCount > this.overflowThreshold) {
-			issues.push('Excessive buffer overflows');
-			recommendations.push('Increase buffer size');
+			issues.push("Excessive buffer overflows");
+			recommendations.push("Increase buffer size");
 		}
 
 		// Check processing rate
 		if (stats.lineCount > 0 && stats.averageLineLength > 1000) {
-			issues.push('Very long average line length');
-			recommendations.push('Check data format');
+			issues.push("Very long average line length");
+			recommendations.push("Check data format");
 		}
 
 		// Determine status
-		let status: 'healthy' | 'warning' | 'critical' = 'healthy';
+		let status: "healthy" | "warning" | "critical" = "healthy";
 		if (issues.length > 0) {
 			status =
 				stats.bufferUtilization > 95 ||
 				stats.bufferOverflowCount > this.overflowThreshold * 2
-					? 'critical'
-					: 'warning';
+					? "critical"
+					: "warning";
 		}
 
 		return { status, issues, recommendations };
@@ -498,6 +523,6 @@ export class BufferManager {
 	 */
 	cleanup(): void {
 		this.clearBuffer();
-		logInfo('[CLEANUP] BufferManager cleanup completed');
+		logInfo("[CLEANUP] BufferManager cleanup completed");
 	}
 }

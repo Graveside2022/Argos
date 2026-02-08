@@ -4,21 +4,24 @@
  */
 
 // Export API services
-export * from './api';
+export * from "./api";
 
 // Export WebSocket services
-export * from './websocket';
+export * from "./websocket";
 
 // Export HackRF services
-export * from './hackrf';
+export * from "./hackrf";
 
 // Export Kismet services
-export * from './kismet';
+export * from "./kismet";
 
 // Export Integration services
-export { systemHealthMonitor } from './monitoring/system-health';
-export { dataStreamManager } from './streaming/data-stream-manager';
-export { errorRecoveryService } from './recovery/error-recovery';
+export { systemHealthMonitor } from "./system/system-health";
+export { dataStreamManager } from "./websocket/data-stream-manager";
+export { errorRecoveryService } from "./system/error-recovery";
 
 // Export service initialization
-export { initializeServices, shutdownServices } from './service-initializer';
+export {
+	initializeServices,
+	shutdownServices,
+} from "./system/service-initializer";

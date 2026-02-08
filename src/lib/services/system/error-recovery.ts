@@ -3,16 +3,16 @@
  * Handles error detection, recovery strategies, and system resilience
  */
 
-import { writable, derived, type Readable } from 'svelte/store';
-import { logWarn, logInfo, logError } from '$lib/utils/logger';
-import { CircuitBreakerState } from '$lib/types/enums';
+import { writable, derived, type Readable } from "svelte/store";
+import { logWarn, logInfo, logError } from "$lib/utils/logger";
+import { CircuitBreakerState } from "$lib/types/enums";
 
 interface ErrorEvent {
 	id: string;
 	service: string;
 	error: Error | string;
 	timestamp: number;
-	severity: 'low' | 'medium' | 'high' | 'critical';
+	severity: "low" | "medium" | "high" | "critical";
 	context?: unknown;
 	stackTrace?: string;
 }
@@ -66,7 +66,7 @@ class ErrorRecoveryService {
 		activeRecoveries: new Map(),
 		errorCounts: new Map(),
 		lastRecovery: new Map(),
-		circuitBreakers: new Map()
+		circuitBreakers: new Map(),
 	});
 
 	private options: RecoveryOptions = {
@@ -74,7 +74,7 @@ class ErrorRecoveryService {
 		errorThreshold: 5,
 		circuitBreakerThreshold: 3,
 		circuitBreakerTimeout: 60000, // 1 minute
-		recoveryTimeout: 30000 // 30 seconds
+		recoveryTimeout: 30000, // 30 seconds
 	};
 
 	private strategies: RecoveryStrategy[] = [];
@@ -88,15 +88,21 @@ class ErrorRecoveryService {
 
 	constructor() {
 		this.errors = derived(this.state, ($state) => $state.errors);
-		this.activeRecoveries = derived(this.state, ($state) => $state.activeRecoveries.size);
+		this.activeRecoveries = derived(
+			this.state,
+			($state) => $state.activeRecoveries.size,
+		);
 		this.errorRate = derived(this.state, ($state) => {
 			const now = Date.now();
 			const recentErrors = $state.errors.filter(
-				(e) => now - e.timestamp < 60000 // Last minute
+				(e) => now - e.timestamp < 60000, // Last minute
 			);
 			return recentErrors.length;
 		});
-		this.circuitBreakers = derived(this.state, ($state) => $state.circuitBreakers);
+		this.circuitBreakers = derived(
+			this.state,
+			($state) => $state.circuitBreakers,
+		);
 
 		// Register default strategies
 		this.registerDefaultStrategies();
@@ -126,8 +132,8 @@ class ErrorRecoveryService {
 	async reportError(
 		service: string,
 		error: Error | string,
-		severity: ErrorEvent['severity'] = 'medium',
-		context?: unknown
+		severity: ErrorEvent["severity"] = "medium",
+		context?: unknown,
 	): Promise<void> {
 		const errorEvent: ErrorEvent = {
 			id: `error-${Date.now()}-${Math.random()}`,
@@ -136,12 +142,14 @@ class ErrorRecoveryService {
 			timestamp: Date.now(),
 			severity,
 			context,
-			stackTrace: error instanceof Error ? error.stack : undefined
+			stackTrace: error instanceof Error ? error.stack : undefined,
 		};
 
 		// Check circuit breaker
 		if (this.isCircuitOpen(service)) {
-			logWarn(`Circuit breaker open for ${service}, skipping error handling`);
+			logWarn(
+				`Circuit breaker open for ${service}, skipping error handling`,
+			);
 			return;
 		}
 
@@ -151,7 +159,9 @@ class ErrorRecoveryService {
 
 			// Trim error history
 			if (state.errors.length > this.options.maxErrorHistory) {
-				state.errors = state.errors.slice(-this.options.maxErrorHistory);
+				state.errors = state.errors.slice(
+					-this.options.maxErrorHistory,
+				);
 			}
 
 			// Update error counts
@@ -164,7 +174,7 @@ class ErrorRecoveryService {
 					state: CircuitBreakerState.Open,
 					failures: count,
 					lastFailure: Date.now(),
-					nextRetry: Date.now() + this.options.circuitBreakerTimeout
+					nextRetry: Date.now() + this.options.circuitBreakerTimeout,
 				};
 				state.circuitBreakers.set(service, breaker);
 			}
@@ -178,7 +188,7 @@ class ErrorRecoveryService {
 			try {
 				handler(errorEvent);
 			} catch (e) {
-				logError('Error handler failed:', { error: e });
+				logError("Error handler failed:", { error: e });
 			}
 		}
 
@@ -202,7 +212,10 @@ class ErrorRecoveryService {
 	/**
 	 * Register an error handler for a service
 	 */
-	registerErrorHandler(service: string, handler: (error: ErrorEvent) => void): void {
+	registerErrorHandler(
+		service: string,
+		handler: (error: ErrorEvent) => void,
+	): void {
 		this.errorHandlers.set(service, handler);
 	}
 
@@ -217,7 +230,9 @@ class ErrorRecoveryService {
 		}
 
 		// Find applicable strategies
-		const applicableStrategies = this.strategies.filter((s) => s.applicable(error));
+		const applicableStrategies = this.strategies.filter((s) =>
+			s.applicable(error),
+		);
 
 		if (applicableStrategies.length === 0) {
 			logInfo(`No recovery strategies for ${error.service}`);
@@ -241,26 +256,38 @@ class ErrorRecoveryService {
 			}
 
 			// Check cooldown
-			const lastAttempt = this.getLastRecoveryTime(error.service, strategy.name);
+			const lastAttempt = this.getLastRecoveryTime(
+				error.service,
+				strategy.name,
+			);
 			if (lastAttempt && Date.now() - lastAttempt < strategy.cooldownMs) {
 				continue;
 			}
 
 			try {
-				logInfo(`Attempting recovery: ${strategy.name} for ${error.service}`);
+				logInfo(
+					`Attempting recovery: ${strategy.name} for ${error.service}`,
+				);
 
 				// Execute recovery with timeout
 				const result = await this.executeWithTimeout(
 					strategy.execute(error),
-					this.options.recoveryTimeout
+					this.options.recoveryTimeout,
 				);
 
 				// Record attempt
-				this.recordRecoveryAttempt(error.id, strategy.name, attempts + 1, result);
+				this.recordRecoveryAttempt(
+					error.id,
+					strategy.name,
+					attempts + 1,
+					result,
+				);
 
 				if (result) {
 					recovered = true;
-					logInfo(`Recovery successful: ${strategy.name} for ${error.service}`);
+					logInfo(
+						`Recovery successful: ${strategy.name} for ${error.service}`,
+					);
 
 					// Reset error count on successful recovery
 					this.state.update((state) => {
@@ -271,8 +298,15 @@ class ErrorRecoveryService {
 					break;
 				}
 			} catch (e) {
-				logError(`Recovery strategy ${strategy.name} failed:`, { error: e });
-				this.recordRecoveryAttempt(error.id, strategy.name, attempts + 1, false);
+				logError(`Recovery strategy ${strategy.name} failed:`, {
+					error: e,
+				});
+				this.recordRecoveryAttempt(
+					error.id,
+					strategy.name,
+					attempts + 1,
+					false,
+				);
 			}
 		}
 
@@ -291,20 +325,27 @@ class ErrorRecoveryService {
 	private registerDefaultStrategies(): void {
 		// Service restart strategy
 		this.registerStrategy({
-			name: 'Service Restart',
-			description: 'Restart the failed service',
-			applicable: (error) => error.severity === 'high' || error.severity === 'critical',
+			name: "Service Restart",
+			description: "Restart the failed service",
+			applicable: (error) =>
+				error.severity === "high" || error.severity === "critical",
 			execute: async (error) => {
 				try {
-					if (error.service === 'HackRF') {
-						const response = await fetch('/api/hackrf/force-cleanup', {
-							method: 'POST'
-						});
+					if (error.service === "HackRF") {
+						const response = await fetch(
+							"/api/hackrf/force-cleanup",
+							{
+								method: "POST",
+							},
+						);
 						return response.ok;
-					} else if (error.service === 'Kismet') {
-						const response = await fetch('/api/kismet/service/restart', {
-							method: 'POST'
-						});
+					} else if (error.service === "Kismet") {
+						const response = await fetch(
+							"/api/kismet/service/restart",
+							{
+								method: "POST",
+							},
+						);
 						return response.ok;
 					}
 					return false;
@@ -313,25 +354,25 @@ class ErrorRecoveryService {
 				}
 			},
 			maxAttempts: 3,
-			cooldownMs: 30000
+			cooldownMs: 30000,
 		});
 
 		// Connection retry strategy
 		this.registerStrategy({
-			name: 'Connection Retry',
-			description: 'Retry connection to service',
+			name: "Connection Retry",
+			description: "Retry connection to service",
 			applicable: (error) => {
 				const errorStr = error.error.toString().toLowerCase();
 				return (
-					errorStr.includes('connection') ||
-					errorStr.includes('disconnected') ||
-					errorStr.includes('websocket')
+					errorStr.includes("connection") ||
+					errorStr.includes("disconnected") ||
+					errorStr.includes("websocket")
 				);
 			},
 			execute: (error) => {
 				try {
 					// Service-specific reconnection logic
-					if (error.service.includes('WebSocket')) {
+					if (error.service.includes("WebSocket")) {
 						// WebSocket reconnection is handled by the WebSocket classes
 						return Promise.resolve(true);
 					}
@@ -341,29 +382,32 @@ class ErrorRecoveryService {
 				}
 			},
 			maxAttempts: 5,
-			cooldownMs: 5000
+			cooldownMs: 5000,
 		});
 
 		// Clear and reset strategy
 		this.registerStrategy({
-			name: 'Clear and Reset',
-			description: 'Clear service state and reset',
+			name: "Clear and Reset",
+			description: "Clear service state and reset",
 			applicable: (error) => {
 				const errorStr = error.error.toString().toLowerCase();
 				return (
-					errorStr.includes('state') ||
-					errorStr.includes('corrupt') ||
-					errorStr.includes('invalid')
+					errorStr.includes("state") ||
+					errorStr.includes("corrupt") ||
+					errorStr.includes("invalid")
 				);
 			},
 			execute: async (error) => {
 				try {
 					// Clear service-specific state
-					if (error.service === 'HackRF') {
+					if (error.service === "HackRF") {
 						// Clear sweep data
-						const response = await fetch('/api/hackrf/emergency-stop', {
-							method: 'POST'
-						});
+						const response = await fetch(
+							"/api/hackrf/emergency-stop",
+							{
+								method: "POST",
+							},
+						);
 						return response.ok;
 					}
 					return false;
@@ -372,14 +416,14 @@ class ErrorRecoveryService {
 				}
 			},
 			maxAttempts: 2,
-			cooldownMs: 10000
+			cooldownMs: 10000,
 		});
 
 		// Fallback strategy
 		this.registerStrategy({
-			name: 'Fallback Mode',
-			description: 'Switch to fallback/degraded mode',
-			applicable: (error) => error.severity === 'critical',
+			name: "Fallback Mode",
+			description: "Switch to fallback/degraded mode",
+			applicable: (error) => error.severity === "critical",
 			execute: (_error) => {
 				try {
 					// Implement fallback logic
@@ -391,19 +435,25 @@ class ErrorRecoveryService {
 				}
 			},
 			maxAttempts: 1,
-			cooldownMs: 60000
+			cooldownMs: 60000,
 		});
 	}
 
 	/**
 	 * Execute with timeout
 	 */
-	private async executeWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+	private async executeWithTimeout<T>(
+		promise: Promise<T>,
+		timeoutMs: number,
+	): Promise<T> {
 		return Promise.race([
 			promise,
 			new Promise<T>((_, reject) =>
-				setTimeout(() => reject(new Error('Recovery timeout')), timeoutMs)
-			)
+				setTimeout(
+					() => reject(new Error("Recovery timeout")),
+					timeoutMs,
+				),
+			),
 		]);
 	}
 
@@ -437,7 +487,7 @@ class ErrorRecoveryService {
 		let attempts = 0;
 		this.state.subscribe((state) => {
 			attempts = state.recoveryAttempts.filter(
-				(a) => a.errorId === errorId && a.strategy === strategy
+				(a) => a.errorId === errorId && a.strategy === strategy,
 			).length;
 		})();
 		return attempts;
@@ -446,7 +496,10 @@ class ErrorRecoveryService {
 	/**
 	 * Get last recovery time
 	 */
-	private getLastRecoveryTime(service: string, strategy: string): number | null {
+	private getLastRecoveryTime(
+		service: string,
+		strategy: string,
+	): number | null {
 		let lastTime: number | null = null;
 		this.state.subscribe((state) => {
 			const key = `${service}-${strategy}`;
@@ -462,7 +515,7 @@ class ErrorRecoveryService {
 		errorId: string,
 		strategy: string,
 		attempt: number,
-		success: boolean
+		success: boolean,
 	): void {
 		this.state.update((state) => {
 			state.recoveryAttempts.push({
@@ -470,7 +523,7 @@ class ErrorRecoveryService {
 				strategy,
 				attempt,
 				timestamp: Date.now(),
-				success
+				success,
 			});
 
 			// Update last recovery time
@@ -492,7 +545,10 @@ class ErrorRecoveryService {
 			const now = Date.now();
 
 			state.circuitBreakers.forEach((breaker, service) => {
-				if (breaker.state === CircuitBreakerState.Open && now >= breaker.nextRetry) {
+				if (
+					breaker.state === CircuitBreakerState.Open &&
+					now >= breaker.nextRetry
+				) {
 					// Move to half-open state
 					breaker.state = CircuitBreakerState.HalfOpen;
 
@@ -505,12 +561,15 @@ class ErrorRecoveryService {
 					if (errorCount === 0) {
 						// Close circuit breaker
 						state.circuitBreakers.delete(service);
-					} else if (errorCount >= this.options.circuitBreakerThreshold) {
+					} else if (
+						errorCount >= this.options.circuitBreakerThreshold
+					) {
 						// Re-open circuit breaker
 						breaker.state = CircuitBreakerState.Open;
 						breaker.failures += errorCount;
 						breaker.lastFailure = now;
-						breaker.nextRetry = now + this.options.circuitBreakerTimeout;
+						breaker.nextRetry =
+							now + this.options.circuitBreakerTimeout;
 					}
 				}
 			});
@@ -530,7 +589,9 @@ class ErrorRecoveryService {
 			state.errors = state.errors.filter((e) => e.timestamp > cutoff);
 
 			// Clean old recovery attempts
-			state.recoveryAttempts = state.recoveryAttempts.filter((a) => a.timestamp > cutoff);
+			state.recoveryAttempts = state.recoveryAttempts.filter(
+				(a) => a.timestamp > cutoff,
+			);
 
 			// Reset error counts for services with no recent errors
 			const recentServices = new Set(state.errors.map((e) => e.service));
@@ -557,7 +618,7 @@ class ErrorRecoveryService {
 			total: 0,
 			byService: new Map<string, number>(),
 			bySeverity: new Map<string, number>(),
-			recoveryRate: 0
+			recoveryRate: 0,
 		};
 
 		this.state.subscribe((state) => {
@@ -574,8 +635,11 @@ class ErrorRecoveryService {
 
 			// Calculate recovery rate
 			const totalAttempts = state.recoveryAttempts.length;
-			const successfulAttempts = state.recoveryAttempts.filter((a) => a.success).length;
-			stats.recoveryRate = totalAttempts > 0 ? successfulAttempts / totalAttempts : 0;
+			const successfulAttempts = state.recoveryAttempts.filter(
+				(a) => a.success,
+			).length;
+			stats.recoveryRate =
+				totalAttempts > 0 ? successfulAttempts / totalAttempts : 0;
 		})();
 
 		return stats;
@@ -600,7 +664,7 @@ class ErrorRecoveryService {
 			...state,
 			errors: [],
 			recoveryAttempts: [],
-			errorCounts: new Map()
+			errorCounts: new Map(),
 		}));
 	}
 
@@ -615,7 +679,7 @@ class ErrorRecoveryService {
 			activeRecoveries: new Map(),
 			errorCounts: new Map(),
 			lastRecovery: new Map(),
-			circuitBreakers: new Map()
+			circuitBreakers: new Map(),
 		});
 	}
 }
