@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
+import { getCorsHeaders } from '$lib/server/security/cors';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -128,12 +129,10 @@ export const POST: RequestHandler = async ({ request }) => {
 };
 
 // Add CORS headers
-export function OPTIONS() {
+export const OPTIONS: RequestHandler = ({ request }) => {
+	const origin = request.headers.get('origin');
 	return new Response(null, {
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'POST, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
-		}
+		status: 204,
+		headers: getCorsHeaders(origin)
 	});
-}
+};

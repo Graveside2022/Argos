@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getCorsHeaders } from '$lib/server/security/cors';
 
 // Proxy selected HackRF API requests to the control backend.
 // SECURITY: Only explicitly listed paths are forwarded (SSRF mitigation).
@@ -49,7 +50,7 @@ export const GET: RequestHandler = async ({ params, url, request }) => {
 					'Content-Type': 'text/event-stream',
 					'Cache-Control': 'no-cache',
 					Connection: 'keep-alive',
-					'Access-Control-Allow-Origin': '*'
+					...getCorsHeaders(request.headers.get('Origin'))
 				}
 			});
 		}
@@ -66,7 +67,7 @@ export const GET: RequestHandler = async ({ params, url, request }) => {
 			status: response.status,
 			headers: {
 				'Content-Type': response.headers.get('Content-Type') || 'application/json',
-				'Access-Control-Allow-Origin': '*'
+				...getCorsHeaders(request.headers.get('Origin'))
 			}
 		});
 	} catch (error) {
@@ -75,7 +76,7 @@ export const GET: RequestHandler = async ({ params, url, request }) => {
 			status: 500,
 			headers: {
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*'
+				...getCorsHeaders(request.headers.get('Origin'))
 			}
 		});
 	}
@@ -108,7 +109,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			status: response.status,
 			headers: {
 				'Content-Type': response.headers.get('Content-Type') || 'application/json',
-				'Access-Control-Allow-Origin': '*'
+				...getCorsHeaders(request.headers.get('Origin'))
 			}
 		});
 	} catch (error) {
@@ -117,18 +118,14 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			status: 500,
 			headers: {
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*'
+				...getCorsHeaders(null)
 			}
 		});
 	}
 };
 
-export const OPTIONS: RequestHandler = () => {
+export const OPTIONS: RequestHandler = ({ request }) => {
 	return new Response(null, {
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
-		}
+		headers: getCorsHeaders(request.headers.get('Origin'))
 	});
 };

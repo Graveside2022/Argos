@@ -86,7 +86,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 				// Clean up stale monitor interfaces
 				await hostExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
-					() => {}
+					(error: unknown) => {
+						console.debug('[kismet] Cleanup: iw dev mon del failed (non-critical)', {
+							error: String(error)
+						});
+					}
 				);
 
 				// Start Kismet as kali user (NOT root) — capture helpers are suid

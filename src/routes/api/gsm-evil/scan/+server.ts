@@ -139,7 +139,12 @@ export const POST: RequestHandler = async ({ request }) => {
 						console.log('Log analysis found no frames, trying tcpdump fallback...');
 						const tcpdumpCommand = `sudo timeout 2 tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || echo 0`;
 						const { stdout: packetCount } = await hostExec(tcpdumpCommand).catch(
-							() => ({ stdout: '0' })
+							(error: unknown) => {
+								console.debug('[gsm-evil-scan] tcpdump fallback failed', {
+									error: String(error)
+								});
+								return { stdout: '0' };
+							}
 						);
 						const tcpdumpFrames = parseInt(packetCount.trim()) || 0;
 						console.log(`Tcpdump fallback: ${tcpdumpFrames} packets`);

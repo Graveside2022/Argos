@@ -251,10 +251,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			} finally {
 				// ALWAYS release HackRF — the stop was requested, so release the lock
 				// even if cleanup was partial. This prevents deadlocks.
-				await resourceManager.release('gsm-evil', HardwareDevice.HACKRF).catch(() => {
-					// If release fails (e.g., not owner), force-release as last resort
-					return resourceManager.forceRelease(HardwareDevice.HACKRF);
-				});
+				await resourceManager
+					.release('gsm-evil', HardwareDevice.HACKRF)
+					.catch((error: unknown) => {
+						console.warn('[gsm-evil] Graceful resource release failed, forcing.', {
+							error: String(error)
+						});
+						// If release fails (e.g., not owner), force-release as last resort
+						return resourceManager.forceRelease(HardwareDevice.HACKRF);
+					});
 			}
 			return stopResult!;
 		} else {

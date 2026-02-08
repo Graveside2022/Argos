@@ -2,10 +2,11 @@ import type { RequestHandler } from './$types';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
+import { getCorsHeaders } from '$lib/server/security/cors';
 
 const execAsync = promisify(exec);
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ request }) => {
 	const encoder = new TextEncoder();
 
 	const stream = new ReadableStream({
@@ -133,8 +134,7 @@ export const GET: RequestHandler = async () => {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
 			Connection: 'keep-alive',
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Headers': 'Content-Type'
+			...getCorsHeaders(request.headers.get('Origin'))
 		}
 	});
 };
