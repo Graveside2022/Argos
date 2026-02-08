@@ -32,6 +32,11 @@ class FusionKismetController {
 		}
 
 		try {
+			const kismetPassword = process.env.KISMET_PASSWORD;
+			if (!kismetPassword) {
+				throw new Error('KISMET_PASSWORD environment variable is not set');
+			}
+
 			// Try to detect any WiFi adapter (not just Alfa)
 			const { WiFiAdapterDetector } = await import('./wifi-adapter-detector');
 			const bestInterface = await WiFiAdapterDetector.getBestMonitorInterface();
@@ -43,7 +48,7 @@ class FusionKismetController {
 				hopRate: 5,
 				restPort: parseInt(process.env.KISMET_PORT || '2501', 10),
 				restUser: process.env.KISMET_USER || 'admin',
-				restPassword: process.env.KISMET_PASSWORD || '',
+				restPassword: kismetPassword,
 				logLevel: 'info',
 				enableGPS: true,
 				enableLogging: true,
