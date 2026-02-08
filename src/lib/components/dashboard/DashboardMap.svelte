@@ -596,7 +596,7 @@
 <div class="map-area">
 	<MapLibre
 		bind:map
-		style="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json?api_key=252362a2-df9a-4b94-a050-c8cf8d882a55"
+		style="/api/map-tiles/styles/alidade_smooth_dark.json"
 		center={[0, 0]}
 		zoom={3}
 		attributionControl={false}

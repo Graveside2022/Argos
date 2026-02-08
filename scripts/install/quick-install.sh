@@ -159,7 +159,7 @@ print_final_summary() {
     echo ""
     echo -e "${BLUE}[NET] Access Your Argos System:${NC}"
     echo -e "  • Main Console:      ${YELLOW}http://localhost:5173${NC}"
-    echo -e "  • Spectrum Analyzer: ${YELLOW}http://localhost:8073${NC} (admin/hackrf)"
+    echo -e "  • Spectrum Analyzer: ${YELLOW}http://localhost:8073${NC} (admin/<from OPENWEBRX_PASSWORD env var>)"
     echo -e "  • Project Location:  ${YELLOW}/home/$(whoami)/projects/Argos${NC}"
     echo ""
     echo -e "${BLUE}[FIX] System Management:${NC}"

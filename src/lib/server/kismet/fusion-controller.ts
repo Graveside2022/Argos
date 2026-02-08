@@ -43,7 +43,7 @@ class FusionKismetController {
 				hopRate: 5,
 				restPort: parseInt(process.env.KISMET_PORT || '2501', 10),
 				restUser: process.env.KISMET_USER || 'admin',
-				restPassword: process.env.KISMET_PASSWORD || 'password',
+				restPassword: process.env.KISMET_PASSWORD || '',
 				logLevel: 'info',
 				enableGPS: true,
 				enableLogging: true,

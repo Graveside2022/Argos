@@ -3,6 +3,9 @@
 
 set -e
 
+# Read credentials from environment (fail if not set)
+OPENWEBRX_PASSWORD="${OPENWEBRX_PASSWORD:?Error: OPENWEBRX_PASSWORD not set. Set in .env or export before running.}"
+
 echo "=== Configuring USRP B205 Mini for Immediate Operation ==="
 
 # Wait for OpenWebRX to be fully ready
@@ -11,20 +14,22 @@ sleep 10
 
 # Create admin user and configure USRP device
 echo "2. Setting up admin user and USRP device..."
-docker exec openwebrx-usrp python3 << 'EOF'
+docker exec -e OPENWEBRX_PASSWORD="$OPENWEBRX_PASSWORD" openwebrx-usrp python3 << 'EOF'
 import json
 import os
 import sys
 from owrx.users import UserList
 from owrx.config import Config
 
+owrx_pass = os.environ.get('OPENWEBRX_PASSWORD', '')
+
 # Create admin user
 print("Creating admin user...")
 try:
     userlist = UserList()
     if 'admin' not in userlist:
-        userlist.addUser('admin', 'admin')
-        print("Admin user created: admin/admin")
+        userlist.addUser('admin', owrx_pass)
+        print("Admin user created: admin/<from OPENWEBRX_PASSWORD env var>")
     else:
         print("Admin user already exists")
 except Exception as e:
@@ -34,11 +39,11 @@ except Exception as e:
 print("Configuring USRP B205 Mini...")
 try:
     config = Config.get()
-    
+
     # Add USRP SDR configuration
     if 'sdrs' not in config:
         config['sdrs'] = {}
-    
+
     config['sdrs']['usrp_b205'] = {
         "name": "USRP B205 Mini",
         "type": "soapy_connector",
@@ -61,22 +66,22 @@ try:
             }
         }
     }
-    
+
     # Set receiver info
     config['receiver_name'] = "Argos USRP B205 Mini"
     config['receiver_location'] = "Tactical Operations"
     config['receiver_admin'] = "admin"
     config['photo_title'] = "Argos Tactical SDR"
     config['photo_desc'] = "USRP B205 Mini Software Defined Radio"
-    
+
     # Set default frequency and mode
     config['start_freq'] = 100300000
     config['start_mod'] = "wfm"
-    
+
     # Save configuration
     config.store()
     print("USRP B205 Mini configured successfully!")
-    
+
 except Exception as e:
     print(f"Configuration error: {e}")
     sys.exit(1)
@@ -108,7 +113,7 @@ fi
 echo
 echo "=== Setup Complete! ==="
 echo "[TARGET] Mission Card URL Ready: http://100.79.154.94:5173/viewspectrum"
-echo "[KEY] Admin Access: admin/admin at http://localhost:8073/admin"
+echo "[KEY] Admin Access: admin/<from OPENWEBRX_PASSWORD env var> at http://localhost:8073/admin"
 echo "[RF] USRP B205 Mini: Configured and ready for immediate operation"
 echo "[START] Click the mission card - it should start listening immediately!"
 echo

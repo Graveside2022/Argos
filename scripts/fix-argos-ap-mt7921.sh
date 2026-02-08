@@ -83,7 +83,7 @@ if systemctl is-active --quiet hostapd; then
     echo ""
     echo "[PASS] SUCCESS! Argos AP is running"
     echo "[PASS] SSID: Argos"
-    echo "[PASS] Password: password"
+    echo "[PASS] Password: (set via AP_PASSWORD env var)"
     echo "[PASS] IP: 192.168.50.1"
     echo ""
     echo "Interface status:"

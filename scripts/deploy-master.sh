@@ -17,8 +17,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TESLA_ORCHESTRATOR="${PROJECT_ROOT}/bootstrap_tesla.sh"
 DEPLOYMENT_LOG="${PROJECT_ROOT}/deployment.log"
 STATUS_FILE="${PROJECT_ROOT}/deployment_status.json"
-API_PORT=8099
-PID_FILE="${PROJECT_ROOT}/deployment_api.pid"
+# REMOVED: API_PORT and PID_FILE (Phase 2.1.3 — netcat API server removed)
 
 # Tesla Orchestrator Integration
 TESLA_AGENTS=10
@@ -337,47 +336,10 @@ execute_deployment() {
     return 0
 }
 
-# ============================================================================
-# CURL API SERVER
-# ============================================================================
-
-start_api_server() {
-    log_info "Starting deployment API server on port $API_PORT"
-    
-    # Create API server using netcat
-    while true; do
-        {
-            echo "HTTP/1.1 200 OK"
-            echo "Content-Type: application/json"
-            echo "Access-Control-Allow-Origin: *"
-            echo ""
-            
-            # Check if deployment is already running
-            if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-                echo '{"status":"running","message":"Deployment already in progress"}'
-            else
-                # Start deployment in background
-                (
-                    execute_deployment "api_$(date +%s)" 2>&1 | tee -a "$DEPLOYMENT_LOG"
-                    echo $? > "${PROJECT_ROOT}/deployment_exit_code"
-                ) &
-                
-                echo $! > "$PID_FILE"
-                echo '{"status":"started","message":"Grade A+ deployment initiated","deployment_id":"'$(date +%s)'"}'
-            fi
-        } | nc -l -p "$API_PORT" -q 1
-        
-        sleep 1
-    done
-}
-
-get_deployment_status() {
-    if [[ -f "$STATUS_FILE" ]]; then
-        cat "$STATUS_FILE"
-    else
-        echo '{"status":"idle","message":"No deployment in progress"}'
-    fi
-}
+# REMOVED: Unauthenticated netcat API server (Phase 2.1.3 security hardening)
+# The start_api_server() and get_deployment_status() functions were removed
+# because they exposed an unauthenticated HTTP endpoint via netcat on port 8099.
+# Use 'deploy-master.sh deploy' directly instead.
 
 # ============================================================================
 # MAIN EXECUTION
@@ -388,30 +350,11 @@ main() {
         "deploy")
             execute_deployment
             ;;
-        "api")
-            start_api_server
-            ;;
-        "status")
-            get_deployment_status
-            ;;
-        "curl")
-            log_info "Starting curl API server for one-button deployment"
-            start_api_server
-            ;;
         *)
-            echo "Usage: $0 {deploy|api|status|curl}"
+            echo "Usage: $0 deploy"
             echo ""
             echo "Commands:"
             echo "  deploy  - Execute full deployment process"
-            echo "  api     - Start API server for curl access"
-            echo "  status  - Get current deployment status"
-            echo "  curl    - Start curl API server (alias for api)"
-            echo ""
-            echo "One-button deployment via curl:"
-            echo "  curl -X POST http://PI_IP:8099/"
-            echo ""
-            echo "Check deployment status:"
-            echo "  curl http://PI_IP:8099/status"
             exit 1
             ;;
     esac
