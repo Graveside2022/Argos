@@ -3,41 +3,9 @@ import type { RequestHandler } from './$types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as os from 'os';
+import type { SystemInfo } from '$lib/types/system';
 
 const execAsync = promisify(exec);
-
-interface SystemInfo {
-	hostname: string;
-	ip: string;
-	wifiInterfaces: Array<{
-		name: string;
-		ip: string;
-		mac: string;
-	}>;
-	cpu: {
-		usage: number;
-		model: string;
-		cores: number;
-	};
-	memory: {
-		total: number;
-		used: number;
-		free: number;
-		percentage: number;
-	};
-	storage: {
-		total: number;
-		used: number;
-		free: number;
-		percentage: number;
-	};
-	temperature: number;
-	uptime: number;
-	battery?: {
-		level: number;
-		charging: boolean;
-	};
-}
 
 async function getSystemInfo(): Promise<SystemInfo> {
 	try {

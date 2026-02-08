@@ -1,4 +1,5 @@
-export type AttackMode = 'auto' | 'handshake' | 'pmkid';
+export type { AttackMode } from '$lib/types/wifite';
+import type { AttackMode } from '$lib/types/wifite';
 
 export interface WifiteTarget {
 	bssid: string;

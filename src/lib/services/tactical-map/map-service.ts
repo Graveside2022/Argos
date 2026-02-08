@@ -1,4 +1,10 @@
-import { mapStore, setMap, setUserMarker, setAccuracyCircle, type LeafletMap, type LeafletMarker, type LeafletCircle } from '$lib/stores/tactical-map/map-store';
+import {
+	mapStore,
+	setMap,
+	setUserMarker,
+	setAccuracyCircle
+} from '$lib/stores/tactical-map/map-store';
+import type { LeafletMap, LeafletMarker, LeafletCircle } from '$lib/types/map';
 import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import { get } from 'svelte/store';
 
@@ -15,7 +21,7 @@ export class MapService {
 		if (typeof window !== 'undefined' && !this.L) {
 			// Dynamically import Leaflet on client side
 			this.L = (await import('leaflet')).default;
-			
+
 			// Fix default icon paths
 			delete this.L.Icon.Default.prototype._getIconUrl;
 			this.L.Icon.Default.mergeOptions({
@@ -28,15 +34,18 @@ export class MapService {
 
 	async initializeMap(mapContainer: HTMLDivElement): Promise<LeafletMap | null> {
 		await this.initializeLeaflet();
-		
+
 		const mapState = get(mapStore);
 		const gpsState = get(gpsStore);
-		
+
 		if (!mapContainer || mapState.map || !gpsState.status.hasGPSFix || !this.L) {
 			return null;
 		}
 
-		const map = this.L.map(mapContainer).setView([gpsState.position.lat, gpsState.position.lon], 15);
+		const map = this.L.map(mapContainer).setView(
+			[gpsState.position.lat, gpsState.position.lon],
+			15
+		);
 
 		// Add map tiles
 		this.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -51,7 +60,10 @@ export class MapService {
 		return map;
 	}
 
-	async createUserMarker(position: { lat: number; lon: number }, onClickHandler?: () => void): Promise<LeafletMarker | null> {
+	async createUserMarker(
+		position: { lat: number; lon: number },
+		onClickHandler?: () => void
+	): Promise<LeafletMarker | null> {
 		if (!this.L) return null;
 
 		const userIcon = this.L.divIcon({
@@ -86,7 +98,10 @@ export class MapService {
 		return marker;
 	}
 
-	async createAccuracyCircle(position: { lat: number; lon: number }, accuracy: number): Promise<LeafletCircle | null> {
+	async createAccuracyCircle(
+		position: { lat: number; lon: number },
+		accuracy: number
+	): Promise<LeafletCircle | null> {
 		if (!this.L || accuracy <= 0) return null;
 
 		const circle = this.L.circle([position.lat, position.lon], {

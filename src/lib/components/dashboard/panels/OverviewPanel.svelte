@@ -3,17 +3,7 @@
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
-
-	interface SystemInfo {
-		hostname: string;
-		ip: string;
-		wifiInterfaces: Array<{ name: string; ip: string; mac: string }>;
-		cpu: { usage: number; model: string; cores: number };
-		memory: { total: number; used: number; free: number; percentage: number };
-		storage: { total: number; used: number; free: number; percentage: number };
-		temperature: number | null;
-		uptime: number;
-	}
+	import type { SystemInfo } from '$lib/types/system';
 
 	interface DeviceState {
 		device: string;
