@@ -5,7 +5,10 @@
  * and generates execution parameters based on detected installation method
  */
 
-import type { ToolDefinition as ExecToolDef, CLIBackendConfig } from '../types';
+import type {
+	ToolDefinition as ExecToolDef,
+	CLIBackendConfig
+} from '$lib/server/agent/tool-execution/types';
 import type { ToolDefinition as UIToolDef } from '$lib/types/tools';
 import type { DockerContainer } from './docker-detector';
 import type { BinaryInfo } from './binary-detector';

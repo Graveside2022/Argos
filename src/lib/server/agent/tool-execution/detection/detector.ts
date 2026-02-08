@@ -11,8 +11,8 @@ import { checkService } from './service-detector';
 import { mapDetectedTools, type DetectedTool } from './tool-mapper';
 import { toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolDefinition as UIToolDef } from '$lib/types/tools';
-import type { ToolDefinition as ExecToolDef } from '../types';
-import { globalRegistry } from '../registry';
+import type { ToolDefinition as ExecToolDef } from '$lib/server/agent/tool-execution/types';
+import { globalRegistry } from '$lib/server/agent/tool-execution/registry';
 
 /**
  * Scan system for all installed tools from the tool hierarchy

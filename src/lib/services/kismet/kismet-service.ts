@@ -4,10 +4,10 @@
  */
 
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
-import { kismetAPI } from '../api';
-import { KismetWebSocketClient } from '../websocket/kismet';
+import { kismetAPI } from '$lib/services/api';
+import { KismetWebSocketClient } from '$lib/services/websocket/kismet';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
-import type { WebSocketEvent } from '../websocket/base';
+import type { WebSocketEvent } from '$lib/services/websocket/base';
 import type {
 	KismetStatus,
 	KismetDevice,
@@ -15,7 +15,7 @@ import type {
 	KismetStats,
 	KismetConfig,
 	DeviceFilter
-} from '../api/kismet';
+} from '$lib/services/api/kismet';
 
 interface KismetServiceState {
 	status: KismetStatus;
