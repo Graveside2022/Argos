@@ -89,9 +89,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				// 1. Kill existing processes (ignore errors - may not be running)
 				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
-					() => {}
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					}
 				);
-				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 
 				// 2. Start grgsm_livemon_headless (same pattern as working scan endpoint)
@@ -159,10 +169,26 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				// Kill processes directly (same pattern as working scan endpoint)
 				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
-					() => {}
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					}
 				);
-				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
-				await hostExec('sudo fuser -k 8080/tcp 2>/dev/null; true').catch(() => {});
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
+							error: String(error)
+						});
+					}
+				);
+				await hostExec('sudo fuser -k 8080/tcp 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: fuser kill port 8080 failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 
 				// Verify processes are stopped
@@ -174,8 +200,18 @@ export const POST: RequestHandler = async ({ request }) => {
 					// Force kill
 					await hostExec(
 						'sudo pkill -9 -f grgsm_livemon_headless 2>/dev/null; true'
-					).catch(() => {});
-					await hostExec('sudo pkill -9 -f GsmEvil 2>/dev/null; true').catch(() => {});
+					).catch((error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill -9 grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					});
+					await hostExec('sudo pkill -9 -f GsmEvil 2>/dev/null; true').catch(
+						(error: unknown) => {
+							console.warn('[gsm-evil] Cleanup: pkill -9 GsmEvil failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((resolve) => setTimeout(resolve, 500));
 				}
 

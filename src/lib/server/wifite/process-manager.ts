@@ -92,21 +92,41 @@ class WifiteProcessManager extends EventEmitter {
 			this.kismetWasRunning = true;
 			console.log('[wifite] Stopping Kismet to free ALFA adapter...');
 			try {
-				await execAsync(hostExec('pkill -x -TERM kismet 2>/dev/null')).catch(() => {});
+				await execAsync(hostExec('pkill -x -TERM kismet 2>/dev/null')).catch(
+					(error: unknown) => {
+						console.warn('[wifite] Cleanup: pkill -TERM kismet failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((r) => setTimeout(r, 3000));
 				// Check if still running, force kill
 				const { stdout: still } = await execAsync(
 					hostExec('pgrep -x kismet 2>/dev/null')
-				).catch(() => ({ stdout: '' }));
+				).catch((error: unknown) => {
+					console.debug('[wifite] Kismet process check failed', { error: String(error) });
+					return { stdout: '' };
+				});
 				if (still.trim()) {
 					console.log('[wifite] Kismet still running after SIGTERM, sending SIGKILL...');
-					await execAsync(hostExec('pkill -x -9 kismet 2>/dev/null')).catch(() => {});
+					await execAsync(hostExec('pkill -x -9 kismet 2>/dev/null')).catch(
+						(error: unknown) => {
+							console.warn('[wifite] Cleanup: pkill -9 kismet failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((r) => setTimeout(r, 2000));
 				}
 				// Verify Kismet is dead
 				const { stdout: verify } = await execAsync(
 					hostExec('pgrep -x kismet 2>/dev/null')
-				).catch(() => ({ stdout: '' }));
+				).catch((error: unknown) => {
+					console.debug('[wifite] Kismet verification check failed', {
+						error: String(error)
+					});
+					return { stdout: '' };
+				});
 				if (verify.trim()) {
 					console.error('[wifite] WARNING: Kismet still running after SIGKILL!');
 				} else {
@@ -122,10 +142,23 @@ class WifiteProcessManager extends EventEmitter {
 			console.log('[wifite] Cleaning up wireless interfaces...');
 			try {
 				// airmon-ng does driver-specific cleanup (preferred)
-				await execAsync(hostExec('airmon-ng stop wlan1mon 2>/dev/null')).catch(() => {});
+				await execAsync(hostExec('airmon-ng stop wlan1mon 2>/dev/null')).catch(
+					(error: unknown) => {
+						console.debug(
+							'[wifite] Cleanup: airmon-ng stop wlan1mon failed (non-critical)',
+							{
+								error: String(error)
+							}
+						);
+					}
+				);
 			} catch (_error: unknown) {
 				// Fallback: iw is available in the container with host network namespace
-				await execAsync('iw dev wlan1mon del 2>/dev/null').catch(() => {});
+				await execAsync('iw dev wlan1mon del 2>/dev/null').catch((error: unknown) => {
+					console.debug('[wifite] Cleanup: iw dev wlan1mon del failed (non-critical)', {
+						error: String(error)
+					});
+				});
 			}
 			await new Promise((r) => setTimeout(r, 2000));
 			console.log('[wifite] Monitor interface cleanup done');
@@ -341,7 +374,9 @@ class WifiteProcessManager extends EventEmitter {
 		this.running = false;
 		this.currentTarget = null;
 		await resourceManager.release('wifite', HardwareDevice.ALFA);
-		await execAsync(hostExec('pkill -f "wifite" 2>/dev/null')).catch(() => {});
+		await execAsync(hostExec('pkill -f "wifite" 2>/dev/null')).catch((error: unknown) => {
+			console.warn('[wifite] Cleanup: pkill wifite failed', { error: String(error) });
+		});
 
 		if (this.kismetWasRunning) {
 			await this.restartKismet();
@@ -364,9 +399,17 @@ class WifiteProcessManager extends EventEmitter {
 				const kismetCmd =
 					'nohup kismet -c wlan1:type=linuxwifi --no-ncurses --no-line-wrap > /tmp/kismet.log 2>&1 &';
 				if (IN_DOCKER) {
-					await execAsync(hostExec(kismetCmd)).catch(() => {});
+					await execAsync(hostExec(kismetCmd)).catch((error: unknown) => {
+						console.warn('[wifite] Cleanup: restart kismet (docker) failed', {
+							error: String(error)
+						});
+					});
 				} else {
-					await execAsync(kismetCmd).catch(() => {});
+					await execAsync(kismetCmd).catch((error: unknown) => {
+						console.warn('[wifite] Cleanup: restart kismet (native) failed', {
+							error: String(error)
+						});
+					});
 				}
 				console.log('[wifite] Kismet started via direct command');
 			} catch (_error: unknown) {

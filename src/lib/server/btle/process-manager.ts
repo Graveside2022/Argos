@@ -68,7 +68,9 @@ class BTLEProcessManager extends EventEmitter {
 		}
 		this.running = false;
 		await resourceManager.release('btle', HardwareDevice.HACKRF);
-		await execAsync('pkill -f "btle_rx" 2>/dev/null').catch(() => {});
+		await execAsync('pkill -f "btle_rx" 2>/dev/null').catch((error: unknown) => {
+			console.warn('[btle] Cleanup: pkill btle_rx failed', { error: String(error) });
+		});
 	}
 
 	private parseLine(line: string): BLEPacket | null {

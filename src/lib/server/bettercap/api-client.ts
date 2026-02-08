@@ -78,8 +78,12 @@ export async function isContainerRunning(): Promise<boolean> {
 export async function startContainer(iface?: string): Promise<void> {
 	// Always remove old container — restarting a stale container
 	// reuses whatever interface it had (possibly eth0).
-	await execAsync('docker stop bettercap 2>/dev/null').catch(() => {});
-	await execAsync('docker rm -f bettercap 2>/dev/null').catch(() => {});
+	await execAsync('docker stop bettercap 2>/dev/null').catch((error: unknown) => {
+		console.warn('[bettercap] Docker: stop bettercap failed', { error: String(error) });
+	});
+	await execAsync('docker rm -f bettercap 2>/dev/null').catch((error: unknown) => {
+		console.warn('[bettercap] Docker: rm -f bettercap failed', { error: String(error) });
+	});
 
 	// -iface flag tells bettercap which interface to bind to at startup.
 	// Without it, bettercap auto-selects the default route (eth0) and
@@ -103,7 +107,9 @@ export async function startContainer(iface?: string): Promise<void> {
 }
 
 export async function stopContainer(): Promise<void> {
-	await execAsync('docker stop bettercap 2>/dev/null').catch(() => {});
+	await execAsync('docker stop bettercap 2>/dev/null').catch((error: unknown) => {
+		console.warn('[bettercap] Docker: stop bettercap failed', { error: String(error) });
+	});
 }
 
 export async function waitForApi(timeoutMs: number = 15000): Promise<boolean> {

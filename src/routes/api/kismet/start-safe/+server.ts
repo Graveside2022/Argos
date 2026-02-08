@@ -8,7 +8,11 @@ const execAsync = promisify(exec);
 export async function POST() {
 	try {
 		// First, stop any existing Kismet instance
-		await execAsync('sudo systemctl stop kismet').catch(() => {});
+		await execAsync('sudo systemctl stop kismet').catch((error: unknown) => {
+			console.warn('[kismet] Service: systemctl stop kismet failed', {
+				error: String(error)
+			});
+		});
 
 		// Use the no-auto-source configuration
 		await execAsync(
@@ -23,9 +27,17 @@ export async function POST() {
 
 		if (adapter) {
 			validateInterfaceName(adapter);
-			await execAsync(`sudo ifconfig ${adapter} down`).catch(() => {});
+			await execAsync(`sudo ifconfig ${adapter} down`).catch((error: unknown) => {
+				console.warn(`[kismet] Cleanup: ifconfig ${adapter} down failed`, {
+					error: String(error)
+				});
+			});
 			await execAsync('sleep 1');
-			await execAsync(`sudo ifconfig ${adapter} up`).catch(() => {});
+			await execAsync(`sudo ifconfig ${adapter} up`).catch((error: unknown) => {
+				console.warn(`[kismet] Cleanup: ifconfig ${adapter} up failed`, {
+					error: String(error)
+				});
+			});
 		}
 
 		// Start Kismet

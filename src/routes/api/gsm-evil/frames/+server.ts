@@ -5,9 +5,10 @@ import { hostExec } from '$lib/server/host-exec';
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
-		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch(() => ({
-			stdout: ''
-		}));
+		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
+			console.debug('[gsm-evil-frames] GRGSM process check failed', { error: String(error) });
+			return { stdout: '' };
+		});
 		if (!grgsm.stdout.trim()) {
 			return json({
 				success: false,
@@ -21,7 +22,10 @@ export const GET: RequestHandler = async () => {
 		const { stdout: recentFrames } = await hostExec(
 			`tail -10 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s"`,
 			{ timeout: 2000 }
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.debug('[gsm-evil-frames] Frame log read failed', { error: String(error) });
+			return { stdout: '' };
+		});
 
 		let frames: string[] = [];
 

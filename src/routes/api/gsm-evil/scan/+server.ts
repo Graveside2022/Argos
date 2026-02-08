@@ -259,7 +259,13 @@ export const POST: RequestHandler = async ({ request }) => {
 						await hostExec(`sudo kill ${pid} 2>/dev/null`);
 					} catch (_error: unknown) {
 						console.log(`Warning: Failed to clean up process ${pid}`);
-						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(() => {});
+						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(
+							(error: unknown) => {
+								console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
+									error: String(error)
+								});
+							}
+						);
 					}
 				}
 			}

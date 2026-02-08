@@ -90,7 +90,13 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 
 				// Stop hackrf-backend container to free USB device
-				await execAsync('docker stop hackrf-backend-dev 2>/dev/null').catch(() => {});
+				await execAsync('docker stop hackrf-backend-dev 2>/dev/null').catch(
+					(error: unknown) => {
+						console.warn('[openwebrx] Docker: stop hackrf-backend-dev failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 
 				// Start OpenWebRX container
@@ -99,7 +105,13 @@ export const POST: RequestHandler = async ({ request }) => {
 					await execAsync(`docker start ${CONTAINER_NAME} 2>&1`);
 				} catch (_error: unknown) {
 					// Container doesn't exist - remove stale if any, then create fresh
-					await execAsync(`docker rm -f ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
+					await execAsync(`docker rm -f ${CONTAINER_NAME} 2>/dev/null`).catch(
+						(error: unknown) => {
+							console.warn('[openwebrx] Docker: rm -f openwebrx-hackrf failed', {
+								error: String(error)
+							});
+						}
+					);
 					await execAsync(
 						`docker run -d --name ${CONTAINER_NAME} ` +
 							`--privileged ` +
@@ -121,7 +133,13 @@ export const POST: RequestHandler = async ({ request }) => {
 					// Release on failure
 					await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
 					// Restart hackrf-backend
-					await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+					await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(
+						(error: unknown) => {
+							console.warn('[openwebrx] Docker: restart hackrf-backend-dev failed', {
+								error: String(error)
+							});
+						}
+					);
 
 					const hint = containerRunning
 						? 'Container is running but port 8073 not responding. Check docker logs openwebrx-hackrf'
@@ -143,7 +161,13 @@ export const POST: RequestHandler = async ({ request }) => {
 			} catch (error: unknown) {
 				await resourceManager.release('openwebrx', HardwareDevice.HACKRF);
 				// Restart hackrf-backend on failure
-				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(
+					(error: unknown) => {
+						console.warn('[openwebrx] Docker: restart hackrf-backend-dev failed', {
+							error: String(error)
+						});
+					}
+				);
 				const errMsg = (error as { stderr?: string })?.stderr || (error as Error).message;
 				return json(
 					{ success: false, message: `Failed to start OpenWebRX: ${errMsg}` },
@@ -153,19 +177,41 @@ export const POST: RequestHandler = async ({ request }) => {
 		} else if (action === 'stop') {
 			try {
 				// Stop the container
-				await execAsync(`docker stop ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
-				await execAsync('pkill -f soapy_connector 2>/dev/null').catch(() => {});
+				await execAsync(`docker stop ${CONTAINER_NAME} 2>/dev/null`).catch(
+					(error: unknown) => {
+						console.warn('[openwebrx] Docker: stop openwebrx-hackrf failed', {
+							error: String(error)
+						});
+					}
+				);
+				await execAsync('pkill -f soapy_connector 2>/dev/null').catch((error: unknown) => {
+					console.warn('[openwebrx] Cleanup: pkill soapy_connector failed', {
+						error: String(error)
+					});
+				});
 				await new Promise((resolve) => setTimeout(resolve, 3000));
 
 				// Verify stopped
 				const stillRunning = await isContainerRunning();
 				if (stillRunning) {
-					await execAsync(`docker kill ${CONTAINER_NAME} 2>/dev/null`).catch(() => {});
+					await execAsync(`docker kill ${CONTAINER_NAME} 2>/dev/null`).catch(
+						(error: unknown) => {
+							console.warn('[openwebrx] Docker: kill openwebrx-hackrf failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((resolve) => setTimeout(resolve, 2000));
 				}
 
 				// Restart hackrf-backend
-				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(() => {});
+				await execAsync('docker start hackrf-backend-dev 2>/dev/null').catch(
+					(error: unknown) => {
+						console.warn('[openwebrx] Docker: restart hackrf-backend-dev failed', {
+							error: String(error)
+						});
+					}
+				);
 
 				// Release HackRF — force release since ownership name may vary
 				await resourceManager.forceRelease(HardwareDevice.HACKRF);

@@ -4,7 +4,12 @@ import { json } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ fetch: svelteKitFetch }) => {
 	try {
 		// Get devices from Kismet
-		const kismetResponse = await svelteKitFetch('/api/kismet/devices').catch(() => null);
+		const kismetResponse = await svelteKitFetch('/api/kismet/devices').catch(
+			(error: unknown) => {
+				console.error('[wifite] Kismet devices fetch failed', { error: String(error) });
+				return null;
+			}
+		);
 		let devices: any[] = [];
 
 		if (kismetResponse?.ok) {
