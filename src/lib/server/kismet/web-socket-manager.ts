@@ -1,4 +1,10 @@
 // WebSocket management for Kismet real-time data
+//
+// Security note (Phase 2.1.6): This class does NOT create a WebSocket server.
+// It manages clients that are handed in via addClient() after the WS server in
+// hooks.server.ts has already authenticated the connection (verifyClient equivalent
+// + maxPayload: 262144 on the noServer WSS). No duplicate auth check is needed here
+// because the connection is rejected at the server level before it reaches addClient().
 import { WebSocket } from 'ws';
 import type { WebSocketMessage, KismetDevice } from './types';
 import { EventEmitter } from 'events';
