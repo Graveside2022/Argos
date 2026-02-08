@@ -51,9 +51,8 @@ export const registryEvents = new RegistryEventEmitter();
 /**
  * Wrap tool registry to emit events
  */
-export function enableToolRegistryEvents(): void {
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const { globalRegistry } = require('../agent/tool-execution');
+export async function enableToolRegistryEvents(): Promise<void> {
+	const { globalRegistry } = await import('$lib/server/agent/tool-execution');
 
 	// Wrap register method
 	const originalRegister = globalRegistry.register.bind(globalRegistry);
@@ -80,9 +79,8 @@ export function enableToolRegistryEvents(): void {
 /**
  * Wrap hardware registry to emit events
  */
-export function enableHardwareRegistryEvents(): void {
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const { globalHardwareRegistry } = require('../hardware');
+export async function enableHardwareRegistryEvents(): Promise<void> {
+	const { globalHardwareRegistry } = await import('$lib/server/hardware');
 
 	// Wrap register method
 	const originalRegister = globalHardwareRegistry.register.bind(globalHardwareRegistry);
@@ -138,12 +136,12 @@ export function setupMCPRegistryListeners(mcpServer: any): void {
 /**
  * Initialize full MCP integration
  */
-export function initializeMCPIntegration(mcpServer: any): void {
+export async function initializeMCPIntegration(mcpServer: any): Promise<void> {
 	console.log('[MCP Integration] Initializing...');
 
 	// Enable registry events
-	enableToolRegistryEvents();
-	enableHardwareRegistryEvents();
+	await enableToolRegistryEvents();
+	await enableHardwareRegistryEvents();
 
 	// Setup MCP listeners
 	setupMCPRegistryListeners(mcpServer);

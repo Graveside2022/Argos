@@ -10,7 +10,7 @@ import type {
 	ToolExecutionResult,
 	ExecutionContext,
 	InternalBackendConfig
-} from '../types';
+} from '$lib/server/agent/tool-execution/types';
 
 /**
  * Internal handler function signature

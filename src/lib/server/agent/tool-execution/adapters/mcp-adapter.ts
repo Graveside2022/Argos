@@ -12,7 +12,7 @@ import type {
 	ToolExecutionResult,
 	ExecutionContext,
 	MCPBackendConfig
-} from '../types';
+} from '$lib/server/agent/tool-execution/types';
 
 interface MCPServerConnection {
 	client: Client;

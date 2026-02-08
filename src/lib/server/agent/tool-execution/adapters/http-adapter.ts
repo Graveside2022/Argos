@@ -11,7 +11,7 @@ import type {
 	ToolExecutionResult,
 	ExecutionContext,
 	HTTPBackendConfig
-} from '../types';
+} from '$lib/server/agent/tool-execution/types';
 
 export class HTTPAdapter implements ToolBackendAdapter {
 	readonly type = 'http' as const;

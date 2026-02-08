@@ -3,11 +3,11 @@
  * Integrates Coral TPU acceleration for real-time device localization
  */
 
-import type { KismetDevice } from "$lib/types/kismet";
-import { HybridRSSILocalizer } from "../localization/hybrid-rssi-localizer";
-import type { HeatmapPoint } from "./heatmap-service";
-import { get } from "svelte/store";
-import { gpsStore } from "$lib/stores/tactical-map/gps-store";
+import type { KismetDevice } from '$lib/types/kismet';
+import { HybridRSSILocalizer } from '$lib/services/localization/hybrid-rssi-localizer';
+import type { HeatmapPoint } from './heatmap-service';
+import { get } from 'svelte/store';
+import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 
 export interface RSSILocalizationConfig {
 	enabled: boolean;
@@ -24,7 +24,7 @@ export class KismetRSSIService {
 		minMeasurements: 5,
 		heatmapResolution: 32,
 		updateInterval: 5000,
-		useCoralTPU: true,
+		useCoralTPU: true
 	};
 
 	private measurementHistory = new Map<
@@ -44,14 +44,9 @@ export class KismetRSSIService {
 				// Try to use Coral-accelerated localizer
 				this.localizer = new HybridRSSILocalizer();
 				await this.localizer.initialize();
-				console.log(
-					"[OK] RSSI Localization initialized with Coral TPU acceleration",
-				);
+				console.log('[OK] RSSI Localization initialized with Coral TPU acceleration');
 			} catch (error) {
-				console.warn(
-					"Failed to initialize Coral TPU, falling back to CPU:",
-					error,
-				);
+				console.warn('Failed to initialize Coral TPU, falling back to CPU:', error);
 				this.config.useCoralTPU = false;
 			}
 		}
@@ -82,11 +77,11 @@ export class KismetRSSIService {
 					lat: gps.position.lat,
 					lon: gps.position.lon,
 					altitude: 0, // GPS position doesn't include altitude
-					accuracy: gps.status.accuracy,
+					accuracy: gps.status.accuracy
 				},
 				deviceId: device.mac,
 				rssi: device.signal.last_signal,
-				frequency: device.frequency || 2437,
+				frequency: device.frequency || 2437
 			});
 
 			// Store in history for visualization
@@ -100,9 +95,9 @@ export class KismetRSSIService {
 				position: {
 					lat: gps.position.lat,
 					lon: gps.position.lon,
-					altitude: 0, // GPS position doesn't include altitude
+					altitude: 0 // GPS position doesn't include altitude
 				},
-				rssi: device.signal.last_signal,
+				rssi: device.signal.last_signal
 			});
 
 			// Keep only recent measurements (last 5 minutes)
@@ -117,24 +112,18 @@ export class KismetRSSIService {
 	 */
 	async generateHeatmapForDevice(
 		deviceId: string,
-		bounds: { north: number; south: number; east: number; west: number },
+		bounds: { north: number; south: number; east: number; west: number }
 	): Promise<HeatmapPoint[]> {
 		if (!this.localizer) return [];
 
 		const measurements = this.measurementHistory.get(deviceId);
-		if (
-			!measurements ||
-			measurements.length < this.config.minMeasurements
-		) {
+		if (!measurements || measurements.length < this.config.minMeasurements) {
 			return [];
 		}
 
 		try {
 			// Get prediction from localizer (uses Coral TPU if available)
-			const prediction = await this.localizer.predictForDevice(
-				deviceId,
-				bounds,
-			);
+			const prediction = await this.localizer.predictForDevice(deviceId, bounds);
 
 			// Convert prediction to heatmap points
 			const points: HeatmapPoint[] = [];
@@ -148,21 +137,14 @@ export class KismetRSSIService {
 
 					// Convert RSSI to intensity (0-1)
 					// -100 dBm = 0, -30 dBm = 1
-					const intensity = Math.max(
-						0,
-						Math.min(1, (rssi + 100) / 70),
-					);
+					const intensity = Math.max(0, Math.min(1, (rssi + 100) / 70));
 
 					// Skip very weak signals
 					if (intensity < 0.1) continue;
 
 					// Convert grid position to lat/lon
-					const lat =
-						bounds.south +
-						(y / gridSize) * (bounds.north - bounds.south);
-					const lon =
-						bounds.west +
-						(x / gridSize) * (bounds.east - bounds.west);
+					const lat = bounds.south + (y / gridSize) * (bounds.north - bounds.south);
+					const lon = bounds.west + (x / gridSize) * (bounds.east - bounds.west);
 
 					// Use variance to modulate intensity (higher confidence = stronger display)
 					const confidence = 1 / (1 + variance[idx] / 100);
@@ -171,14 +153,14 @@ export class KismetRSSIService {
 						lat,
 						lon,
 						intensity: intensity * confidence,
-						timestamp: Date.now(),
+						timestamp: Date.now()
 					});
 				}
 			}
 
 			return points;
 		} catch (error) {
-			console.error("Failed to generate heatmap:", error);
+			console.error('Failed to generate heatmap:', error);
 			return [];
 		}
 	}
@@ -194,17 +176,14 @@ export class KismetRSSIService {
 		if (!this.localizer) return null;
 
 		const measurements = this.measurementHistory.get(deviceId);
-		if (
-			!measurements ||
-			measurements.length < this.config.minMeasurements
-		) {
+		if (!measurements || measurements.length < this.config.minMeasurements) {
 			return null;
 		}
 
 		try {
 			return await this.localizer.estimateSourceLocation(deviceId);
 		} catch (error) {
-			console.error("Failed to estimate device location:", error);
+			console.error('Failed to estimate device location:', error);
 			return null;
 		}
 	}
@@ -238,7 +217,7 @@ export class KismetRSSIService {
 			enabled: this.config.enabled,
 			usingCoralTPU: this.config.useCoralTPU && !!this.localizer,
 			deviceCount: this.measurementHistory.size,
-			totalMeasurements,
+			totalMeasurements
 		};
 	}
 

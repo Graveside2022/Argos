@@ -11,7 +11,7 @@ import type {
 	ToolExecutionResult,
 	ExecutionContext,
 	WebSocketBackendConfig
-} from '../types';
+} from '$lib/server/agent/tool-execution/types';
 
 export class WebSocketAdapter implements ToolBackendAdapter {
 	readonly type = 'websocket' as const;

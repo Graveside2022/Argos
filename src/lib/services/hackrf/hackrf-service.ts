@@ -5,16 +5,16 @@
 
 import { writable, derived, type Readable, type Writable } from 'svelte/store';
 import { logWarn } from '$lib/utils/logger';
-import { hackrfAPI } from '../api';
-import { HackRFWebSocketClient } from '../websocket/hackrf';
+import { hackrfAPI } from '$lib/services/api';
+import { HackRFWebSocketClient } from '$lib/services/websocket/hackrf';
 import type {
 	HackRFStatus,
 	HackRFConfig,
 	SweepResult,
 	SignalDetection,
 	SpectrumData
-} from '../api/hackrf';
-import type { WebSocketEvent, WebSocketEventType } from '../websocket/base';
+} from '$lib/services/api/hackrf';
+import type { WebSocketEvent, WebSocketEventType } from '$lib/services/websocket/base';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 
 interface HackRFServiceState {

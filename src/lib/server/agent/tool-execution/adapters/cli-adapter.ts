@@ -11,7 +11,7 @@ import type {
 	ToolExecutionResult,
 	ExecutionContext,
 	CLIBackendConfig
-} from '../types';
+} from '$lib/server/agent/tool-execution/types';
 
 export class CLIAdapter implements ToolBackendAdapter {
 	readonly type = 'cli' as const;
