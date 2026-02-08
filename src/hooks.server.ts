@@ -14,13 +14,23 @@ import {
 	getSessionCookieHeader
 } from '$lib/server/auth/auth-middleware';
 
+// Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
+const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit
+const HARDWARE_BODY_LIMIT = 64 * 1024; // 64KB for hardware control endpoints
+
+// Hardware endpoint path pattern -- these control physical RF hardware
+const HARDWARE_PATH_PATTERN =
+	/^\/api\/(hackrf|kismet|gsm-evil|rf|droneid|openwebrx|bettercap|wifite)\//;
+
 // FAIL-CLOSED: Halt startup if ARGOS_API_KEY is not configured or too short.
 // This runs at module load time, before the server accepts any connections.
 // If the key is missing, the process exits with a FATAL error. (Phase 2.1.1)
 validateSecurityConfig();
 
-// Create WebSocket server
-const wss = new WebSocketServer({ noServer: true });
+// Create WebSocket server with payload limit (Phase 2.1.6).
+// noServer mode does not support verifyClient -- authentication is enforced
+// in the connection handler and in the SvelteKit handle() hook before upgrade.
+const wss = new WebSocketServer({ noServer: true, maxPayload: 262144 }); // 256KB
 
 // Initialize WebSocket manager
 const wsManager = WebSocketManager.getInstance();
@@ -49,12 +59,47 @@ scanAllHardware()
 		logger.error('Failed to scan hardware', { error });
 	});
 
-// Handle WebSocket connections
+// Handle WebSocket connections (Phase 2.1.6: authentication enforced here
+// because noServer mode does not support the verifyClient callback).
 wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
-	logger.info('New WebSocket connection', { from: request.socket.remoteAddress });
+	// --- Authentication (Phase 2.1.6) ---
+	// Extract API key from token query param or X-API-Key header.
+	// Token in query string is acceptable for WebSocket because the WS upgrade
+	// request is not logged like HTTP requests, and there is no Referer header
+	// leak. This is standard practice (Socket.IO, Phoenix Channels, Action Cable).
+	const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+	const apiKey = url.searchParams.get('token') || (request.headers['x-api-key'] as string);
+
+	// Build mock Request with API key header AND cookies (for browser session auth).
+	// validateApiKey checks X-API-Key header first, then falls back to session cookie.
+	const mockHeaders: Record<string, string> = {};
+	if (apiKey) {
+		mockHeaders['X-API-Key'] = apiKey;
+	}
+	const cookieHeader = request.headers.cookie;
+	if (cookieHeader) {
+		mockHeaders['cookie'] = cookieHeader;
+	}
+	const mockRequest = new Request('http://localhost', { headers: mockHeaders });
+
+	let authenticated = false;
+	try {
+		authenticated = validateApiKey(mockRequest);
+	} catch {
+		// validateApiKey throws if ARGOS_API_KEY is not configured -- fail closed
+	}
+
+	if (!authenticated) {
+		logger.warn('WebSocket connection rejected: invalid API key', {
+			ip: request.socket.remoteAddress
+		});
+		ws.close(1008, 'Unauthorized'); // 1008 = Policy Violation
+		return;
+	}
+
+	logger.info('New WebSocket connection (authenticated)', { from: request.socket.remoteAddress });
 
 	// Parse URL for subscription preferences
-	const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
 	const types: string[] | undefined = url.searchParams.get('types')?.split(',') || undefined;
 	const minSignal: string | null = url.searchParams.get('minSignal');
 	const deviceTypes: string[] | undefined = url.searchParams.get('deviceTypes')?.split(',');
@@ -70,13 +115,40 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
 });
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Handle WebSocket upgrade requests
+	// Handle WebSocket upgrade requests (Phase 2.1.6: authenticate before upgrade)
 	if (
 		event.url.pathname === '/api/kismet/ws' &&
 		event.request.headers.get('upgrade') === 'websocket'
 	) {
+		// Validate API key before allowing WebSocket upgrade.
+		// Accept token via query param (standard for WS), X-API-Key header, or session cookie.
+		const wsApiKey =
+			event.url.searchParams.get('token') || event.request.headers.get('X-API-Key');
+		const wsMockHeaders: Record<string, string> = {};
+		if (wsApiKey) {
+			wsMockHeaders['X-API-Key'] = wsApiKey;
+		}
+		const wsCookie = event.request.headers.get('cookie');
+		if (wsCookie) {
+			wsMockHeaders['cookie'] = wsCookie;
+		}
+		const wsMockRequest = new Request('http://localhost', { headers: wsMockHeaders });
+
+		let wsAuthenticated = false;
+		try {
+			wsAuthenticated = validateApiKey(wsMockRequest);
+		} catch {
+			// fail closed
+		}
+
+		if (!wsAuthenticated) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
 		// WebSocket upgrade handling requires platform-specific implementation
-		// This is a placeholder for the actual WebSocket upgrade logic
 		// In production, this would be handled by the deployment platform (e.g., Node.js adapter)
 		logger.warn('WebSocket upgrade requested but platform context not available', {
 			path: event.url.pathname,
@@ -91,6 +163,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (!validateApiKey(event.request)) {
 			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
 				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+	}
+
+	// Body size limit check -- runs after auth, before route processing (Phase 2.1.7)
+	// Two-tier limits: 64KB for hardware control endpoints, 10MB for general endpoints.
+	// Content-Length is checked before body buffering to prevent memory allocation.
+	if (event.request.method === 'POST' || event.request.method === 'PUT') {
+		const contentLength = parseInt(event.request.headers.get('content-length') || '0');
+		const isHardwareEndpoint = HARDWARE_PATH_PATTERN.test(event.url.pathname);
+		const limit = isHardwareEndpoint ? HARDWARE_BODY_LIMIT : MAX_BODY_SIZE;
+
+		if (contentLength > limit) {
+			return new Response(JSON.stringify({ error: 'Payload too large' }), {
+				status: 413,
 				headers: { 'Content-Type': 'application/json' }
 			});
 		}
