@@ -6,7 +6,7 @@
 		getRelevanceIcon
 	} from '$lib/services/hackrf/timeWindowFilter';
 	import { onMount } from 'svelte';
-	import { scale as _scale, fade as _fade } from 'svelte/transition';
+	import { scale as _scale } from 'svelte/transition';
 
 	// Get stores
 	const {

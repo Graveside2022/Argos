@@ -2,9 +2,6 @@
  * Example usage of WebSocket services in Svelte components
  */
 
-// Example usage - imports would be used in actual implementation
-// import { logError, logInfo } from '$lib/utils/logger';
-
 // Example 1: Using individual WebSocket clients in a Svelte component
 /*
 <script lang="ts">

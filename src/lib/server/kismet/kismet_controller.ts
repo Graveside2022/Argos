@@ -4,7 +4,6 @@ import { KismetAPIClient } from './api_client';
 import { DeviceTracker } from './device_tracker';
 import { SecurityAnalyzer } from './security_analyzer';
 import { DeviceIntelligence } from './device_intelligence';
-// import { FusionCorrelationEngine } from '../fusion/correlation_engine'; // Removed - file doesn't exist
 import { logInfo, logError, logWarn, logDebug } from '$lib/utils/logger';
 import type { WiFiDevice, KismetStatus, KismetConfig, MonitorInterface } from './types';
 
@@ -17,7 +16,6 @@ export class KismetController extends EventEmitter {
 	private deviceTracker: DeviceTracker;
 	private securityAnalyzer: SecurityAnalyzer;
 	private deviceIntelligence: DeviceIntelligence;
-	// private correlationEngine: FusionCorrelationEngine; // Removed
 
 	private kismetProcess: ChildProcess | null = null;
 	private isRunning = false;
@@ -208,7 +206,6 @@ export class KismetController extends EventEmitter {
 	 * Get cross-domain correlations
 	 */
 	async getCorrelations() {
-		// return await this.correlationEngine.getActiveCorrelations(); // Removed
 		return [];
 	}
 
