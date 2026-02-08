@@ -58,7 +58,9 @@ services:
       - argos-atuin-data:/root/.local/share/atuin
       # Claude Code config persistence
       - ${HOME}/.claude:/root/.claude:rw
-    command: npm run dev -- --host 0.0.0.0
+    # dev-sync.sh auto-installs deps when package-lock.json changes,
+    # preventing version skew between host and container Docker volumes.
+    command: sh -c "/app/docker/dev-sync.sh && exec npm run dev -- --host 0.0.0.0"
     mem_limit: 1536m
     memswap_limit: 2048m
     restart: unless-stopped
