@@ -90,7 +90,9 @@ class PagermonProcessManager extends EventEmitter {
 		this.running = false;
 		await resourceManager.release('pagermon', HardwareDevice.HACKRF);
 		// Also kill any lingering processes
-		await execAsync('pkill -f "multimon-ng" 2>/dev/null').catch(() => {});
+		await execAsync('pkill -f "multimon-ng" 2>/dev/null').catch((error: unknown) => {
+			console.warn('[pagermon] Cleanup: pkill multimon-ng failed', { error: String(error) });
+		});
 	}
 
 	private parseLine(line: string): PagerMessage | null {

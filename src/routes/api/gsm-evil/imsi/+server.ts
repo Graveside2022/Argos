@@ -7,7 +7,10 @@ export const GET: RequestHandler = async () => {
 		// Find the IMSI database on the host filesystem
 		const { stdout: dbFound } = await hostExec(
 			'for p in /usr/src/gsmevil2/database/imsi.db /home/kali/gsmevil-user/database/imsi.db; do [ -f "$p" ] && echo "$p" && break; done'
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.error('[gsm-evil-imsi] Database path search failed', { error: String(error) });
+			return { stdout: '' };
+		});
 
 		const dbPath = dbFound.trim();
 		if (!dbPath) {

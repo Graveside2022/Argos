@@ -185,13 +185,25 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				}
 
 				// Graceful termination
-				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(() => {});
+				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(
+					(error: unknown) => {
+						console.warn('[kismet] Cleanup: pkill -TERM kismet failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 3000));
 
 				// Force kill if still running
 				const { stdout: remaining } = await hostExec('pgrep -x kismet 2>/dev/null || true');
 				if (remaining.trim()) {
-					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(() => {});
+					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(
+						(error: unknown) => {
+							console.warn('[kismet] Cleanup: pkill -9 kismet failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				}
 

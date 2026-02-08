@@ -202,7 +202,11 @@ echo "Started with PID $(cat ${PID_FILE})" >> ${LOG_FILE}
 				// Force kill if still running
 				await execAsync(`sudo kill -9 ${pid} 2>/dev/null || true`);
 				await execAsync(`sudo pkill -9 -P ${pid} 2>/dev/null || true`);
-				await fs.unlink(PID_FILE).catch(() => {});
+				await fs.unlink(PID_FILE).catch((error: unknown) => {
+					console.debug('[droneid] Cleanup: unlink PID file failed (non-critical)', {
+						error: String(error)
+					});
+				});
 				stopped = true;
 			} catch (_error: unknown) {
 				// PID method failed, continue
