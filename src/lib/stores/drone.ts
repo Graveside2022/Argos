@@ -1,5 +1,7 @@
 import { writable, derived } from 'svelte/store';
-import type { SignalMarker } from './map/signals';
+import type { SignalMarker } from '$lib/types/signals';
+export type { AreaOfInterest, FlightPoint, SignalCapture } from '$lib/types/drone';
+import type { AreaOfInterest, FlightPoint, SignalCapture } from '$lib/types/drone';
 
 // Drone mission types
 export interface DroneMission {
@@ -30,39 +32,6 @@ export interface Waypoint {
 export interface WaypointAction {
 	type: 'scan' | 'photo' | 'video' | 'signal_sweep';
 	parameters?: Record<string, string | number | boolean>;
-}
-
-export interface AreaOfInterest {
-	id: string;
-	name: string;
-	type: 'polygon' | 'circle' | 'rectangle';
-	coordinates: [number, number][]; // [lat, lon]
-	center?: { lat: number; lon: number };
-	radius?: number; // for circle type
-	scanPattern?: 'grid' | 'spiral' | 'random';
-	flightAltitude: number;
-	overlap?: number; // percentage for grid patterns
-}
-
-export interface FlightPoint {
-	timestamp: number;
-	lat: number;
-	lon: number;
-	altitude: number;
-	heading: number;
-	speed: number;
-	signalStrength?: number; // aggregate signal strength at this point
-	battery?: number;
-}
-
-export interface SignalCapture {
-	id: string;
-	timestamp: number;
-	position: { lat: number; lon: number; altitude: number };
-	signals: SignalMarker[];
-	strongestSignal?: SignalMarker;
-	averagePower: number;
-	signalCount: number;
 }
 
 export interface MissionStatistics {

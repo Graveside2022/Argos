@@ -21,7 +21,7 @@ types to `$lib/types/`.
 | Category                   | Count                     | Phase 0.6 Action          |
 | -------------------------- | ------------------------- | ------------------------- |
 | Services -> Stores (VALUE) | 15 files, 26 import lines | DEFERRED                  |
-| Stores -> Services (VALUE) | 1 file, 1 import line     | FIXED (0.6.5 lazy import) |
+| Stores -> Services (VALUE) | 1 file, 1 import line     | DEFERRED (Phase 5)        |
 | Server -> Stores           | 0                         | ELIMINATED (0.6.1)        |
 | Stores -> Server           | 0                         | ELIMINATED (0.6.2)        |
 | Server -> Services (VALUE) | 2 files, 6 import lines   | DEFERRED                  |
@@ -147,13 +147,13 @@ layer, creating a downward dependency from the server layer into the service lay
 
 ---
 
-## Stores -> Services VALUE Import (1 file -- FIXED in Phase 0.6.5)
+## Stores -> Services VALUE Import (1 file -- DEFERRED to Phase 5)
 
 ### 1. `stores/usrp.ts`
 
 **Imports**: `usrpAPI` from `$lib/services/usrp/api`
-**Impact**: Store directly calls service API at module scope
-**Fix Applied**: Lazy dynamic import pattern (Phase 0.6.5)
+**Impact**: Store directly calls service API at module scope (lines 14-27 use usrpAPI for onData, getConnectionState, getLastError subscriptions)
+**Proposed Fix**: Lazy dynamic import pattern or initialization function to decouple module-scope side effects
 
 ---
 
