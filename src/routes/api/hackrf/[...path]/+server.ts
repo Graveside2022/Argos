@@ -16,7 +16,8 @@ const ALLOWED_PATHS = [
 	'emergency-stop', // Emergency halt (hackrf-service.ts, error-recovery.ts)
 	'force-cleanup', // Force resource cleanup (error-recovery.ts)
 	'device-info', // Device hardware info
-	'cycle-frequency' // Frequency cycling control
+	'cycle-frequency', // Frequency cycling control
+	'export' // Data export (hackrf-service.ts, AnalysisTools.svelte)
 ] as const;
 
 function isAllowedPath(path: string): boolean {
