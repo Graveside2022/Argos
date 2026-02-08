@@ -1,39 +1,54 @@
 /**
- * API Services Export
- * 
- * Central export point for all API client services
+ * API Services Module
+ *
+ * Central export point for all REST API client services: HackRF, Kismet,
+ * and System APIs with shared configuration, error handling, and retry logic.
  */
 
-// Export configuration utilities
-export * from './config';
+// --- config ---
+export {
+	API_BASE_URL,
+	API_ENDPOINTS,
+	APIError,
+	WS_ENDPOINTS,
+	buildQueryString,
+	defaultRequestOptions,
+	handleResponse,
+	retryRequest,
+	withTimeout,
+} from "./config";
+export type { RetryConfig } from "./config";
 
-// Export API client instances
-export { hackrfAPI } from './hackrf';
-export { kismetAPI } from './kismet';
-export { systemAPI } from './system';
-
-// Re-export types for convenience
+// --- hackrf ---
+export { hackrfAPI } from "./hackrf";
 export type {
-  HackRFStatus,
-  HackRFConfig,
-  SweepResult,
-  SignalDetection,
-  SpectrumData
-} from './hackrf';
+	HackRFConfig,
+	HackRFStatus,
+	SignalDetection,
+	SpectrumData,
+	SweepResult,
+} from "./hackrf";
 
+// --- kismet ---
+export { kismetAPI } from "./kismet";
 export type {
-  KismetStatus,
-  KismetDevice,
-  KismetScript,
-  KismetStats,
-  KismetConfig,
-  DeviceFilter
-} from './kismet';
+	DeviceFilter,
+	KismetConfig,
+	KismetDevice,
+	KismetScript,
+	KismetStats,
+	KismetStatus,
+} from "./kismet";
 
+// --- system ---
+export { systemAPI } from "./system";
 export type {
-  SystemInfo,
-  NetworkInterface,
-  ServiceStatus,
-  SystemHealth,
-  LogEntry
-} from './system';
+	LogEntry,
+	NetworkInterface,
+	ServiceStatus,
+	SystemHealth,
+	SystemInfo,
+} from "./system";
+
+// --- example-usage ---
+export { hackrfExample, kismetExample, systemExample } from "./example-usage";
