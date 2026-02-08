@@ -33,7 +33,7 @@ export const GET: RequestHandler = ({ url }) => {
 		return json({ signals });
 	} catch (err: unknown) {
 		console.error('Error querying signals:', err);
-		console.error('Stack trace:', (err as { stack?: string }).stack);
+		console.error('Signal query error:', err instanceof Error ? err.message : String(err));
 		return error(500, 'Failed to query signals');
 	}
 };

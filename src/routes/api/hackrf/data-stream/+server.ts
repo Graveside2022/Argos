@@ -86,7 +86,6 @@ export const GET: RequestHandler = () => {
 					) {
 						logDebug(`SSE connection ${connectionId} closed with error`, {
 							message: error.message,
-							stack: error.stack,
 							name: error.name
 						});
 					}
