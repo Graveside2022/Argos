@@ -167,8 +167,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json(
 			{
 				success: false,
-				message: 'Failed to lookup tower location',
-				error: (error as Error).message
+				message: 'Failed to lookup tower location'
 			},
 			{ status: 500 }
 		);
