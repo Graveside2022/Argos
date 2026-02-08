@@ -1,6 +1,23 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/host-exec';
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { z } from 'zod';
+
+// Zod schema for GSM Evil IMSI query result from Python subprocess
+const GsmEvilImsiResultSchema = z
+	.object({
+		success: z.boolean(),
+		total: z.number(),
+		imsis: z.array(
+			z.object({
+				imsi: z.string(),
+				count: z.number()
+			})
+		),
+		message: z.string().optional()
+	})
+	.passthrough();
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -51,8 +68,19 @@ except Exception as e:
 		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
 
 		// Parse and return the result
-		const result = JSON.parse(stdout);
-		return json(result);
+		const result = safeJsonParse(stdout, GsmEvilImsiResultSchema, 'gsm-evil-imsi');
+		if (!result.success) {
+			return json(
+				{
+					success: false,
+					imsis: [],
+					total: 0,
+					message: 'Failed to parse IMSI data from subprocess'
+				},
+				{ status: 500 }
+			);
+		}
+		return json(result.data);
 	} catch (error: unknown) {
 		console.error('IMSI fetch error:', error);
 		return json({

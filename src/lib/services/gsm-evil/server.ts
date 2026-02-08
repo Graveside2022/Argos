@@ -157,7 +157,13 @@ class GSMEvilServer extends EventEmitter {
               };
               
               ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
+                let data: any;
+                try {
+                  data = JSON.parse(event.data);
+                } catch (error) {
+                  console.warn('[GSM Evil] Invalid JSON in WebSocket message', error);
+                  return;
+                }
 
                 if (data.type === 'gsm_data') {
                   packetCount++;

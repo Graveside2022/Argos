@@ -138,7 +138,13 @@ export class USRPAPI {
 
 		this.addTrackedListener('sweep_data', (event) => {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const rawData = JSON.parse(event.data as string) as any;
+			let rawData: any;
+			try {
+				rawData = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in sweep_data event', error);
+				return;
+			}
 			this.lastDataTimestamp = Date.now();
 
 			// The SSE data already has the correct format, just pass it through
@@ -167,7 +173,7 @@ export class USRPAPI {
 		});
 
 		this.addTrackedListener('status', (event) => {
-			const status = JSON.parse(event.data as string) as {
+			let status: {
 				state?: string;
 				startFrequency?: number;
 				endFrequency?: number;
@@ -178,6 +184,12 @@ export class USRPAPI {
 				cycleTime?: number;
 				startTime?: number;
 			};
+			try {
+				status = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in status event', error);
+				return;
+			}
 			logDebug('[EventSource] Status event received:', { status });
 
 			// Update sweep status
@@ -210,7 +222,13 @@ export class USRPAPI {
 		});
 
 		this.addTrackedListener('cycle_config', (event) => {
-			const config = JSON.parse(event.data as string) as Record<string, unknown>;
+			let config: Record<string, unknown>;
+			try {
+				config = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in cycle_config event', error);
+				return;
+			}
 			updateCycleStatus({
 				...config,
 				active: true
@@ -218,10 +236,16 @@ export class USRPAPI {
 		});
 
 		this.addTrackedListener('status_change', (event) => {
-			const change = JSON.parse(event.data as string) as {
+			let change: {
 				isSweping?: boolean;
 				status?: string;
 			};
+			try {
+				change = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in status_change event', error);
+				return;
+			}
 			logDebug('[EventSource] Status change event:', { change });
 			if (change.isSweping !== undefined) {
 				updateSweepStatus({ active: change.isSweping });
@@ -235,10 +259,16 @@ export class USRPAPI {
 		// Heartbeat event - critical for connection health
 		this.addTrackedListener('heartbeat', (event) => {
 			this.lastDataTimestamp = Date.now();
-			const _data = JSON.parse(event.data as string) as {
+			let _data: {
 				uptime: number;
 				connectionId: string;
 			};
+			try {
+				_data = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in heartbeat event', error);
+				return;
+			}
 			logDebug('[USRPAPI] Heartbeat received:', {
 				uptime: Math.floor(_data.uptime / 1000) + 's',
 				connectionId: _data.connectionId
@@ -247,11 +277,17 @@ export class USRPAPI {
 
 		// Recovery events
 		this.addTrackedListener('recovery_start', (event) => {
-			const recoveryData = JSON.parse(event.data as string) as {
+			let recoveryData: {
 				reason: string;
 				attempt: number;
 				maxAttempts: number;
 			};
+			try {
+				recoveryData = JSON.parse(event.data as string);
+			} catch (error) {
+				console.warn('[USRPAPI] Invalid JSON in recovery_start event', error);
+				return;
+			}
 			updateConnectionStatus({
 				connected: true,
 				connecting: false,

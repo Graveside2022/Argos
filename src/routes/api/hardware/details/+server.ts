@@ -3,8 +3,29 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { readFile, readlink, readdir } from 'fs/promises';
 import { createConnection } from 'net';
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { z } from 'zod';
 
 const execAsync = promisify(exec);
+
+// Zod schema for gpsd JSON messages (VERSION, DEVICES, etc.)
+const GpsdDeviceMessageSchema = z
+	.object({
+		class: z.string(),
+		release: z.string().optional(),
+		devices: z
+			.array(
+				z
+					.object({
+						path: z.string().optional(),
+						driver: z.string().optional(),
+						bps: z.number().optional()
+					})
+					.passthrough()
+			)
+			.optional()
+	})
+	.passthrough();
 
 /** Run a shell command — uses iw which is available in the container */
 async function run(cmd: string): Promise<string> {
@@ -265,8 +286,14 @@ async function getGpsDetails(): Promise<GpsDetails | null> {
 	let gpsdVersion = '';
 
 	for (const line of gpsdOutput.trim().split('\n')) {
+		const result = safeJsonParse(line, GpsdDeviceMessageSchema, 'hardware-details-gpsd');
+		if (!result.success) {
+			console.warn('[hardware-details] Malformed gpsd data, skipping line');
+			continue;
+		}
+
 		try {
-			const parsed = JSON.parse(line) as Record<string, unknown>;
+			const parsed = result.data;
 			if (parsed.class === 'VERSION') {
 				gpsdVersion = (parsed.release as string) || '';
 			}

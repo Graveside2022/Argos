@@ -11,7 +11,17 @@ import { toolHierarchy, findByPath } from '$lib/data/tool-hierarchy';
 // Validate stored path against current hierarchy (handles structure changes)
 function getValidatedPath(): string[] {
 	if (!browser) return [];
-	const stored: string[] = JSON.parse(localStorage.getItem('toolNavigationPath') || '[]');
+	let stored: string[] = [];
+	try {
+		stored = JSON.parse(localStorage.getItem('toolNavigationPath') || '[]');
+	} catch (error) {
+		console.warn(
+			'[toolsStore] Corrupted toolNavigationPath in localStorage, using default',
+			error
+		);
+		localStorage.removeItem('toolNavigationPath');
+		return [];
+	}
 	if (stored.length === 0) return [];
 	const result = findByPath(stored, toolHierarchy.root);
 	if (result && 'children' in result) return stored;
@@ -25,9 +35,20 @@ function getValidatedPath(): string[] {
 export const toolNavigationPath = writable<string[]>(getValidatedPath());
 
 // Which categories are expanded (for collapsible sections)
-export const expandedCategories = writable<Set<string>>(
-	browser ? new Set(JSON.parse(localStorage.getItem('expandedCategories') || '[]')) : new Set()
-);
+function getExpandedCategories(): Set<string> {
+	if (!browser) return new Set();
+	try {
+		return new Set(JSON.parse(localStorage.getItem('expandedCategories') || '[]'));
+	} catch (error) {
+		console.warn(
+			'[toolsStore] Corrupted expandedCategories in localStorage, using default',
+			error
+		);
+		localStorage.removeItem('expandedCategories');
+		return new Set();
+	}
+}
+export const expandedCategories = writable<Set<string>>(getExpandedCategories());
 
 // Tool runtime states (overrides the static installed status)
 // Maps tool ID to current status

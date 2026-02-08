@@ -3,8 +3,31 @@ import { json } from '@sveltejs/kit';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { validateNumericParam, InputValidationError } from '$lib/server/security/input-sanitizer';
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { z } from 'zod';
 
 const execFileAsync = promisify(execFile);
+
+// Zod schema for cell tower query results from Python subprocess
+const CellTowerResultSchema = z
+	.object({
+		towers: z.array(
+			z.object({
+				radio: z.string(),
+				mcc: z.number(),
+				mnc: z.number(),
+				lac: z.number(),
+				ci: z.number(),
+				lat: z.number(),
+				lon: z.number(),
+				range: z.number().optional(),
+				samples: z.number().optional(),
+				updated: z.number().optional()
+			})
+		),
+		count: z.number()
+	})
+	.passthrough();
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -92,8 +115,19 @@ except Exception as e:
 		// execFile does NOT invoke a shell — immune to injection
 		const { stdout } = await execFileAsync('python3', args, { timeout: 15000 });
 
-		const result = JSON.parse(stdout);
-		return json(result);
+		const result = safeJsonParse(stdout, CellTowerResultSchema, 'cell-towers');
+		if (!result.success) {
+			return json(
+				{
+					success: false,
+					towers: [],
+					count: 0,
+					message: 'Failed to parse cell tower data'
+				},
+				{ status: 500 }
+			);
+		}
+		return json(result.data);
 	} catch (error: unknown) {
 		if (error instanceof InputValidationError) {
 			return json(
