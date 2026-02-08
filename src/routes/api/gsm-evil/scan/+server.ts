@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -81,6 +82,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 
 				pid = gsmPid.trim();
+				validateNumericParam(pid, 'pid', 1, 4194304);
 
 				// Validate process started
 				if (!pid || pid === '0') {

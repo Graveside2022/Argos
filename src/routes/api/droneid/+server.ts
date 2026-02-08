@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import { validateNumericParam, validateInterfaceName } from '$lib/server/security/input-sanitizer';
 
 const execAsync = promisify(exec);
 
@@ -17,7 +18,7 @@ export async function GET() {
 		try {
 			// Check if PID file exists
 			const pidData = await fs.readFile(PID_FILE, 'utf-8');
-			const pid = parseInt(pidData.trim());
+			const pid = validateNumericParam(parseInt(pidData.trim()), 'pid', 1, 4194304);
 
 			// Check if process is still running
 			await execAsync(`kill -0 ${pid}`);
@@ -34,8 +35,14 @@ export async function GET() {
 				const pids = stdout.trim();
 				if (pids) {
 					// Double check the process is actually the right one
+					const firstPid = validateNumericParam(
+						parseInt(pids.split('\n')[0], 10),
+						'pid',
+						1,
+						4194304
+					);
 					const { stdout: cmdline } = await execAsync(
-						`ps -p ${pids.split('\n')[0]} -o args= || echo ""`
+						`ps -p ${firstPid} -o args= || echo ""`
 					);
 					isRunning = cmdline.includes('dronesniffer/main.py');
 				} else {
@@ -72,7 +79,12 @@ export async function POST({ request }) {
 				const { stdout } = await execAsync('pgrep -f "dronesniffer/main.py" || true');
 				if (stdout.trim()) {
 					// Double check it's actually our process
-					const pid = stdout.trim().split('\n')[0];
+					const pid = validateNumericParam(
+						parseInt(stdout.trim().split('\n')[0], 10),
+						'pid',
+						1,
+						4194304
+					);
 					try {
 						const { stdout: cmdline } = await execAsync(
 							`ps -p ${pid} -o args= 2>/dev/null || echo ""`
@@ -95,6 +107,7 @@ export async function POST({ request }) {
 					'ip link show | grep -E "wlx[a-f0-9]{12}" | cut -d: -f2 | tr -d " " | head -n1'
 				);
 				alfaInterface = stdout.trim();
+				if (alfaInterface) validateInterfaceName(alfaInterface);
 			} catch (_error: unknown) {
 				/* expected */
 			}
@@ -179,7 +192,7 @@ echo "Started with PID $(cat ${PID_FILE})" >> ${LOG_FILE}
 			// Method 1: Kill by PID if available
 			try {
 				const pidData = await fs.readFile(PID_FILE, 'utf-8');
-				const pid = parseInt(pidData.trim());
+				const pid = validateNumericParam(parseInt(pidData.trim()), 'pid', 1, 4194304);
 				// First try graceful shutdown
 				await execAsync(`sudo kill ${pid} 2>/dev/null || true`);
 				// Also kill any child python processes
@@ -222,9 +235,10 @@ echo "Started with PID $(cat ${PID_FILE})" >> ${LOG_FILE}
 						.split('\n')
 						.filter((pid) => pid);
 					for (const pid of pids) {
-						await execAsync(`sudo kill ${pid} 2>/dev/null || true`);
+						const validPid = validateNumericParam(parseInt(pid, 10), 'pid', 1, 4194304);
+						await execAsync(`sudo kill ${validPid} 2>/dev/null || true`);
 						await new Promise((resolve) => setTimeout(resolve, 500));
-						await execAsync(`sudo kill -9 ${pid} 2>/dev/null || true`);
+						await execAsync(`sudo kill -9 ${validPid} 2>/dev/null || true`);
 					}
 				} catch (_error: unknown) {
 					// Ignore errors
@@ -245,6 +259,7 @@ echo "Started with PID $(cat ${PID_FILE})" >> ${LOG_FILE}
 				);
 				const alfaInterface = stdout.trim();
 				if (alfaInterface) {
+					validateInterfaceName(alfaInterface);
 					await execAsync(`sudo ip link set ${alfaInterface} down 2>/dev/null || true`);
 					await execAsync(
 						`sudo iw dev ${alfaInterface} set type managed 2>/dev/null || true`

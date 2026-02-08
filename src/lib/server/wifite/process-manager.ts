@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
+import { validateMacAddress } from '$lib/server/security/input-sanitizer';
 import type { WifiteResult, WifiteStatus, WifiteConfig, WifiteLastRun, AttackMode } from './types';
 
 const execAsync = promisify(exec);
@@ -325,6 +326,7 @@ class WifiteProcessManager extends EventEmitter {
 		}
 
 		for (const bssid of config.targets) {
+			validateMacAddress(bssid);
 			args.push('-b', bssid);
 		}
 

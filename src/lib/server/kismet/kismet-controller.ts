@@ -5,6 +5,7 @@ import { DeviceTracker } from './device-tracker';
 import { SecurityAnalyzer } from './security-analyzer';
 import { DeviceIntelligence } from './device-intelligence';
 import { logInfo, logError, logWarn, logDebug } from '$lib/utils/logger';
+import { validateInterfaceName } from '$lib/server/security/input-sanitizer';
 import type { WiFiDevice, KismetStatus, KismetConfig, MonitorInterface } from './types';
 
 /**
@@ -218,28 +219,29 @@ export class KismetController extends EventEmitter {
 		}
 
 		try {
-			logInfo(`Enabling monitor mode on ${this.config.interface}...`);
+			const iface = validateInterfaceName(this.config.interface);
+			logInfo(`Enabling monitor mode on ${iface}...`);
 
 			// Bring interface down
-			await this.executeCommand(`sudo ip link set ${this.config.interface} down`);
+			await this.executeCommand(`sudo ip link set ${iface} down`);
 
 			// Set monitor mode
-			await this.executeCommand(`sudo iw dev ${this.config.interface} set type monitor`);
+			await this.executeCommand(`sudo iw dev ${iface} set type monitor`);
 
 			// Bring interface up
-			await this.executeCommand(`sudo ip link set ${this.config.interface} up`);
+			await this.executeCommand(`sudo ip link set ${iface} up`);
 
-			this.currentInterface = this.config.interface;
+			this.currentInterface = iface;
 			this.monitorInterfaces = [
 				{
-					name: this.config.interface,
+					name: iface,
 					type: 'monitor',
 					channels: this.config.channels,
 					enabled: true
 				}
 			];
 
-			logInfo(`Monitor mode enabled on ${this.config.interface}`);
+			logInfo(`Monitor mode enabled on ${iface}`);
 		} catch (error) {
 			logError('Failed to enable monitor mode', {
 				interface: this.config.interface,
@@ -258,14 +260,15 @@ export class KismetController extends EventEmitter {
 		}
 
 		try {
-			logInfo(`Disabling monitor mode on ${this.currentInterface}...`);
+			const iface = validateInterfaceName(this.currentInterface);
+			logInfo(`Disabling monitor mode on ${iface}...`);
 
 			// Skip interface manipulation if it's a USB device to prevent SSH drops
-			const isUSBDevice = this.currentInterface.startsWith('wlx');
+			const isUSBDevice = iface.startsWith('wlx');
 
 			if (isUSBDevice) {
 				logInfo(
-					`Skipping interface reset for USB device ${this.currentInterface} to prevent network disruption`
+					`Skipping interface reset for USB device ${iface} to prevent network disruption`
 				);
 				// Just clear the tracking variables without touching the interface
 				this.currentInterface = null;
@@ -274,13 +277,13 @@ export class KismetController extends EventEmitter {
 			} else {
 				// Only manipulate non-USB interfaces
 				// Bring interface down
-				await this.executeCommand(`sudo ip link set ${this.currentInterface} down`);
+				await this.executeCommand(`sudo ip link set ${iface} down`);
 
 				// Set managed mode
-				await this.executeCommand(`sudo iw dev ${this.currentInterface} set type managed`);
+				await this.executeCommand(`sudo iw dev ${iface} set type managed`);
 
 				// Bring interface up
-				await this.executeCommand(`sudo ip link set ${this.currentInterface} up`);
+				await this.executeCommand(`sudo ip link set ${iface} up`);
 
 				this.currentInterface = null;
 				this.monitorInterfaces = [];

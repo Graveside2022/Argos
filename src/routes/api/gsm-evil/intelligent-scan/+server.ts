@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 
 export const POST: RequestHandler = async () => {
@@ -69,6 +70,7 @@ export const POST: RequestHandler = async () => {
 			);
 
 			const pid = gsmPid.trim();
+			validateNumericParam(pid, 'pid', 1, 4194304);
 
 			// Wait for initialization
 			await new Promise((resolve) => setTimeout(resolve, 2000));

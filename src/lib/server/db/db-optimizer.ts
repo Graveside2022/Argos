@@ -4,6 +4,7 @@
  */
 
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { validateSqlIdentifier } from '$lib/server/security/input-sanitizer';
 
 interface OptimizationConfig {
 	// Performance tuning
@@ -82,7 +83,10 @@ export class DatabaseOptimizer {
 		// Temporary storage
 		this.db.pragma(`temp_store = ${this.config.tempStore}`);
 		if (this.config.tempStoreDirectory) {
-			this.db.pragma(`temp_store_directory = '${this.config.tempStoreDirectory}'`);
+			// Use parameterized pragma to prevent injection via directory path
+			this.db.pragma(
+				`temp_store_directory = '${this.config.tempStoreDirectory.replace(/'/g, "''")}'`
+			);
 		}
 
 		// Memory limit
@@ -270,13 +274,14 @@ export class DatabaseOptimizer {
 	 * Optimize specific table
 	 */
 	optimizeTable(tableName: string) {
-		// Optimizing table: ${tableName}
+		// Validate table name — prevents SQL injection via template literal
+		const safeName = validateSqlIdentifier(tableName, 'tableName');
 
 		// Rebuild the table to defragment
-		this.db.exec(`VACUUM ${tableName}`);
+		this.db.exec(`VACUUM ${safeName}`);
 
 		// Update statistics
-		this.db.exec(`ANALYZE ${tableName}`);
+		this.db.exec(`ANALYZE ${safeName}`);
 
 		// Check and optimize indexes
 		const indexes = this.db
@@ -291,7 +296,8 @@ export class DatabaseOptimizer {
 			.all(tableName) as Array<{ name: string }>;
 
 		for (const index of indexes) {
-			this.db.exec(`REINDEX ${index.name}`);
+			const safeIndexName = validateSqlIdentifier(index.name, 'indexName');
+			this.db.exec(`REINDEX ${safeIndexName}`);
 		}
 
 		// Table ${tableName} optimized
@@ -428,8 +434,12 @@ export class DatabaseOptimizer {
 		// Add row counts
 		for (const table of tables) {
 			try {
+				const safeTableName = validateSqlIdentifier(
+					(table as { name: string }).name,
+					'tableName'
+				);
 				const count = this.db
-					.prepare(`SELECT COUNT(*) as count FROM ${(table as { name: string }).name}`)
+					.prepare(`SELECT COUNT(*) as count FROM ${safeTableName}`)
 					.get() as { count: number };
 				(table as { row_count: number }).row_count = count.count;
 			} catch (_error: unknown) {

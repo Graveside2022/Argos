@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { PagerMessage, PagermonStatus, PagermonConfig } from './types';
 
 const execAsync = promisify(exec);
@@ -29,12 +30,25 @@ class PagermonProcessManager extends EventEmitter {
 
 		try {
 			// Pipeline: hackrf_transfer -> multimon-ng
-			const freqHz = this.config.frequency;
+			// Validate numeric params before shell interpolation
+			const freqHz = validateNumericParam(
+				this.config.frequency,
+				'frequency',
+				100000,
+				2000000000
+			);
+			const validSampleRate = validateNumericParam(
+				this.config.sampleRate,
+				'sampleRate',
+				8000,
+				20000000
+			);
+			const validGain = validateNumericParam(this.config.gain, 'gain', 0, 62);
 			this.process = spawn(
 				'sh',
 				[
 					'-c',
-					`hackrf_transfer -r - -f ${freqHz} -s ${this.config.sampleRate * 48} -g ${this.config.gain} -l 32 | ` +
+					`hackrf_transfer -r - -f ${freqHz} -s ${validSampleRate * 48} -g ${validGain} -l 32 | ` +
 						`multimon-ng -t raw -a POCSAG512 -a POCSAG1200 -a POCSAG2400 -f alpha -`
 				],
 				{ stdio: ['ignore', 'pipe', 'pipe'] }

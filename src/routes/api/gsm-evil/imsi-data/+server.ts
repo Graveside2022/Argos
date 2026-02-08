@@ -18,6 +18,15 @@ export const GET: RequestHandler = async () => {
 			});
 		}
 
+		// Validate dbPath against known allowlist to prevent shell injection
+		const ALLOWED_IMSI_DB_PATHS = [
+			'/usr/src/gsmevil2/database/imsi.db',
+			'/home/kali/gsmevil-user/database/imsi.db'
+		] as const;
+		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
+			return json({ success: false, message: 'Invalid database path', data: [] });
+		}
+
 		// Run python on the host where the DB lives
 		const pythonScript = `
 import sqlite3, json
