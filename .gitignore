@@ -405,3 +405,6 @@ hackrf_emitter/backend/.venv/
 
 # HackRF wideband cache
 wideband_cache/
+
+# Claude Code artifacts
+.claude-container/
