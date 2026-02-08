@@ -1,4 +1,4 @@
-import { logInfo, logError, logWarn } from '$lib/utils/logger';
+import { logInfo, logError, logWarn } from "$lib/utils/logger";
 
 export interface ErrorState {
 	consecutiveErrors: number;
@@ -9,10 +9,10 @@ export interface ErrorState {
 }
 
 export interface DeviceState {
-	status: 'unknown' | 'available' | 'busy' | 'stuck' | 'disconnected';
+	status: "unknown" | "available" | "busy" | "stuck" | "disconnected";
 	lastSuccessfulOperation: Date | null;
 	consecutiveBusyErrors: number;
-	recoveryState: 'none' | 'retrying' | 'escalating' | 'cooling_down';
+	recoveryState: "none" | "retrying" | "escalating" | "cooling_down";
 }
 
 export interface RecoveryConfig {
@@ -23,8 +23,13 @@ export interface RecoveryConfig {
 }
 
 export interface ErrorAnalysis {
-	errorType: 'device_busy' | 'permission_denied' | 'device_not_found' | 'usb_error' | 'unknown';
-	severity: 'low' | 'medium' | 'high' | 'critical';
+	errorType:
+		| "device_busy"
+		| "permission_denied"
+		| "device_not_found"
+		| "usb_error"
+		| "unknown";
+	severity: "low" | "medium" | "high" | "critical";
 	isRecoverable: boolean;
 	recommendedAction: string;
 	requiresRestart: boolean;
@@ -39,21 +44,21 @@ export class ErrorTracker {
 		maxConsecutiveErrors: 8,
 		frequencyErrors: new Map<number, number>(),
 		recentFailures: [],
-		maxFailuresPerMinute: 5
+		maxFailuresPerMinute: 5,
 	};
 
 	private deviceState: DeviceState = {
-		status: 'unknown',
+		status: "unknown",
 		lastSuccessfulOperation: null,
 		consecutiveBusyErrors: 0,
-		recoveryState: 'none'
+		recoveryState: "none",
 	};
 
 	private recoveryConfig: RecoveryConfig = {
 		maxRecoveryAttempts: 3,
 		recoveryDelayMs: 2000,
 		escalationThreshold: 5,
-		cooldownPeriodMs: 30000
+		cooldownPeriodMs: 30000,
 	};
 
 	private recoveryAttempts = 0;
@@ -62,11 +67,11 @@ export class ErrorTracker {
 
 	constructor(config: RecoveryConfig = {}) {
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
-		
-		logInfo('[SEARCH] ErrorTracker initialized', {
+
+		logInfo("[SEARCH] ErrorTracker initialized", {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
-			maxRecoveryAttempts: this.recoveryConfig.maxRecoveryAttempts
+			maxRecoveryAttempts: this.recoveryConfig.maxRecoveryAttempts,
 		});
 	}
 
@@ -75,36 +80,41 @@ export class ErrorTracker {
 	 */
 	recordSuccess(): void {
 		this.errorState.consecutiveErrors = 0;
-		this.deviceState.status = 'available';
+		this.deviceState.status = "available";
 		this.deviceState.lastSuccessfulOperation = new Date();
 		this.deviceState.consecutiveBusyErrors = 0;
-		this.deviceState.recoveryState = 'none';
+		this.deviceState.recoveryState = "none";
 		this.recoveryAttempts = 0;
 		this.isRecovering = false;
 
-		logInfo('[OK] Operation successful - error counters reset');
+		logInfo("[OK] Operation successful - error counters reset");
 	}
 
 	/**
 	 * Record an error and analyze it
 	 */
 	recordError(
-		error: Error | string, 
-		context: { frequency?: number; operation?: string } = {}
+		error: Error | string,
+		context: { frequency?: number; operation?: string } = {},
 	): ErrorAnalysis {
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		
+		const errorMessage =
+			error instanceof Error ? error.message : String(error);
+
 		// Increment consecutive errors
 		this.errorState.consecutiveErrors++;
-		
+
 		// Add to recent failures
 		this.errorState.recentFailures.push(Date.now());
 		this.cleanupOldFailures();
 
 		// Track frequency-specific errors
 		if (context.frequency) {
-			const currentCount = this.errorState.frequencyErrors.get(context.frequency) || 0;
-			this.errorState.frequencyErrors.set(context.frequency, currentCount + 1);
+			const currentCount =
+				this.errorState.frequencyErrors.get(context.frequency) || 0;
+			this.errorState.frequencyErrors.set(
+				context.frequency,
+				currentCount + 1,
+			);
 		}
 
 		// Analyze the error
@@ -113,12 +123,12 @@ export class ErrorTracker {
 		// Update device state based on error type
 		this.updateDeviceState(analysis);
 
-		logError('[ERROR] Error recorded and analyzed', {
+		logError("[ERROR] Error recorded and analyzed", {
 			error: errorMessage,
 			context,
 			analysis,
 			consecutiveErrors: this.errorState.consecutiveErrors,
-			deviceStatus: this.deviceState.status
+			deviceStatus: this.deviceState.status,
 		});
 
 		return analysis;
@@ -131,61 +141,76 @@ export class ErrorTracker {
 		const lowerError = errorMessage.toLowerCase();
 
 		// Device busy errors
-		if (lowerError.includes('resource busy') || lowerError.includes('device busy')) {
+		if (
+			lowerError.includes("resource busy") ||
+			lowerError.includes("device busy")
+		) {
 			this.deviceState.consecutiveBusyErrors++;
 			return {
-				errorType: 'device_busy',
-				severity: this.deviceState.consecutiveBusyErrors > 3 ? 'high' : 'medium',
+				errorType: "device_busy",
+				severity:
+					this.deviceState.consecutiveBusyErrors > 3
+						? "high"
+						: "medium",
 				isRecoverable: true,
-				recommendedAction: 'Wait and retry with process cleanup',
-				requiresRestart: this.deviceState.consecutiveBusyErrors > 5
+				recommendedAction: "Wait and retry with process cleanup",
+				requiresRestart: this.deviceState.consecutiveBusyErrors > 5,
 			};
 		}
 
 		// Permission errors
-		if (lowerError.includes('permission denied') || lowerError.includes('access denied')) {
+		if (
+			lowerError.includes("permission denied") ||
+			lowerError.includes("access denied")
+		) {
 			return {
-				errorType: 'permission_denied',
-				severity: 'high',
+				errorType: "permission_denied",
+				severity: "high",
 				isRecoverable: false,
-				recommendedAction: 'Check user permissions and udev rules',
-				requiresRestart: false
+				recommendedAction: "Check user permissions and udev rules",
+				requiresRestart: false,
 			};
 		}
 
 		// Device not found
-		if (lowerError.includes('no hackrf boards found') || 
-		    lowerError.includes('hackrf_open() failed') ||
-		    lowerError.includes('device not found')) {
+		if (
+			lowerError.includes("no hackrf boards found") ||
+			lowerError.includes("hackrf_open() failed") ||
+			lowerError.includes("device not found")
+		) {
 			return {
-				errorType: 'device_not_found',
-				severity: 'critical',
+				errorType: "device_not_found",
+				severity: "critical",
 				isRecoverable: true,
-				recommendedAction: 'Check USB connection and device power',
-				requiresRestart: true
+				recommendedAction: "Check USB connection and device power",
+				requiresRestart: true,
 			};
 		}
 
 		// USB errors
-		if (lowerError.includes('libusb') || 
-		    lowerError.includes('usb error') ||
-		    lowerError.includes('usb_open() failed')) {
+		if (
+			lowerError.includes("libusb") ||
+			lowerError.includes("usb error") ||
+			lowerError.includes("usb_open() failed")
+		) {
 			return {
-				errorType: 'usb_error',
-				severity: 'high',
+				errorType: "usb_error",
+				severity: "high",
 				isRecoverable: true,
-				recommendedAction: 'Reset USB connection or restart device',
-				requiresRestart: true
+				recommendedAction: "Reset USB connection or restart device",
+				requiresRestart: true,
 			};
 		}
 
 		// Unknown error
 		return {
-			errorType: 'unknown',
-			severity: this.errorState.consecutiveErrors > 5 ? 'high' : 'medium',
+			errorType: "unknown",
+			severity: this.errorState.consecutiveErrors > 5 ? "high" : "medium",
 			isRecoverable: true,
-			recommendedAction: 'Generic retry with exponential backoff',
-			requiresRestart: this.errorState.consecutiveErrors > this.errorState.maxConsecutiveErrors
+			recommendedAction: "Generic retry with exponential backoff",
+			requiresRestart:
+				this.errorState.consecutiveErrors >
+				this.errorState.maxConsecutiveErrors,
 		};
 	}
 
@@ -194,21 +219,21 @@ export class ErrorTracker {
 	 */
 	private updateDeviceState(analysis: ErrorAnalysis): void {
 		switch (analysis.errorType) {
-			case 'device_busy':
-				this.deviceState.status = 'busy';
+			case "device_busy":
+				this.deviceState.status = "busy";
 				break;
-			case 'device_not_found':
-				this.deviceState.status = 'disconnected';
+			case "device_not_found":
+				this.deviceState.status = "disconnected";
 				break;
-			case 'permission_denied':
-				this.deviceState.status = 'disconnected';
+			case "permission_denied":
+				this.deviceState.status = "disconnected";
 				break;
-			case 'usb_error':
-				this.deviceState.status = 'stuck';
+			case "usb_error":
+				this.deviceState.status = "stuck";
 				break;
 			default:
 				if (this.errorState.consecutiveErrors > 3) {
-					this.deviceState.status = 'stuck';
+					this.deviceState.status = "stuck";
 				}
 		}
 	}
@@ -217,14 +242,20 @@ export class ErrorTracker {
 	 * Check if maximum consecutive errors reached
 	 */
 	hasMaxConsecutiveErrors(): boolean {
-		return this.errorState.consecutiveErrors >= this.errorState.maxConsecutiveErrors;
+		return (
+			this.errorState.consecutiveErrors >=
+			this.errorState.maxConsecutiveErrors
+		);
 	}
 
 	/**
 	 * Check if maximum failures per minute reached
 	 */
 	hasMaxFailuresPerMinute(): boolean {
-		return this.errorState.recentFailures.length >= this.errorState.maxFailuresPerMinute;
+		return (
+			this.errorState.recentFailures.length >=
+			this.errorState.maxFailuresPerMinute
+		);
 	}
 
 	/**
@@ -240,8 +271,11 @@ export class ErrorTracker {
 	 */
 	getFrequenciesToBlacklist(): number[] {
 		const toBlacklist: number[] = [];
-		
-		for (const [frequency, errorCount] of this.errorState.frequencyErrors.entries()) {
+
+		for (const [
+			frequency,
+			errorCount,
+		] of this.errorState.frequencyErrors.entries()) {
 			if (errorCount >= 3) {
 				toBlacklist.push(frequency);
 			}
@@ -258,22 +292,31 @@ export class ErrorTracker {
 			return false;
 		}
 
-		if (this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3)) {
+		if (
+			this.recoveryAttempts >=
+			(this.recoveryConfig.maxRecoveryAttempts || 3)
+		) {
 			return false;
 		}
 
 		// Check if enough time has passed since last recovery attempt
 		if (this.lastRecoveryAttempt) {
-			const timeSinceLastAttempt = Date.now() - this.lastRecoveryAttempt.getTime();
-			if (timeSinceLastAttempt < (this.recoveryConfig.recoveryDelayMs || 2000)) {
+			const timeSinceLastAttempt =
+				Date.now() - this.lastRecoveryAttempt.getTime();
+			if (
+				timeSinceLastAttempt <
+				(this.recoveryConfig.recoveryDelayMs || 2000)
+			) {
 				return false;
 			}
 		}
 
 		// Attempt recovery for certain error conditions
-		return this.errorState.consecutiveErrors >= 2 || 
-		       this.deviceState.status === 'busy' || 
-		       this.deviceState.status === 'stuck';
+		return (
+			this.errorState.consecutiveErrors >= 2 ||
+			this.deviceState.status === "busy" ||
+			this.deviceState.status === "stuck"
+		);
 	}
 
 	/**
@@ -284,17 +327,20 @@ export class ErrorTracker {
 		this.recoveryAttempts++;
 		this.lastRecoveryAttempt = new Date();
 
-		if (this.recoveryAttempts >= (this.recoveryConfig.escalationThreshold || 5)) {
-			this.deviceState.recoveryState = 'escalating';
+		if (
+			this.recoveryAttempts >=
+			(this.recoveryConfig.escalationThreshold || 5)
+		) {
+			this.deviceState.recoveryState = "escalating";
 		} else {
-			this.deviceState.recoveryState = 'retrying';
+			this.deviceState.recoveryState = "retrying";
 		}
 
-		logWarn('[RETRY] Recovery process started', {
+		logWarn("[RETRY] Recovery process started", {
 			attempt: this.recoveryAttempts,
 			maxAttempts: this.recoveryConfig.maxRecoveryAttempts,
 			deviceStatus: this.deviceState.status,
-			recoveryState: this.deviceState.recoveryState
+			recoveryState: this.deviceState.recoveryState,
 		});
 	}
 
@@ -306,14 +352,16 @@ export class ErrorTracker {
 
 		if (successful) {
 			this.recordSuccess();
-			logInfo('[OK] Recovery completed successfully');
+			logInfo("[OK] Recovery completed successfully");
 		} else {
-			this.deviceState.recoveryState = 'cooling_down';
-			logWarn('[ERROR] Recovery attempt failed', {
+			this.deviceState.recoveryState = "cooling_down";
+			logWarn("[ERROR] Recovery attempt failed", {
 				attempt: this.recoveryAttempts,
-				nextAction: this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3) 
-					? 'Give up' 
-					: 'Retry after delay'
+				nextAction:
+					this.recoveryAttempts >=
+					(this.recoveryConfig.maxRecoveryAttempts || 3)
+						? "Give up"
+						: "Retry after delay",
 			});
 		}
 	}
@@ -322,9 +370,9 @@ export class ErrorTracker {
 	 * Get current error state
 	 */
 	getErrorState(): ErrorState {
-		return { 
+		return {
 			...this.errorState,
-			frequencyErrors: new Map(this.errorState.frequencyErrors)
+			frequencyErrors: new Map(this.errorState.frequencyErrors),
 		};
 	}
 
@@ -350,7 +398,7 @@ export class ErrorTracker {
 			recoveryAttempts: this.recoveryAttempts,
 			maxRecoveryAttempts: this.recoveryConfig.maxRecoveryAttempts || 3,
 			lastRecoveryAttempt: this.lastRecoveryAttempt,
-			canAttemptRecovery: this.shouldAttemptRecovery()
+			canAttemptRecovery: this.shouldAttemptRecovery(),
 		};
 	}
 
@@ -366,22 +414,46 @@ export class ErrorTracker {
 		overallHealthScore: number;
 	} {
 		// Find most problematic frequency
-		let mostProblematicFrequency: { frequency: number; errors: number } | null = null;
-		for (const [frequency, errors] of this.errorState.frequencyErrors.entries()) {
-			if (!mostProblematicFrequency || errors > mostProblematicFrequency.errors) {
+		let mostProblematicFrequency: {
+			frequency: number;
+			errors: number;
+		} | null = null;
+		for (const [
+			frequency,
+			errors,
+		] of this.errorState.frequencyErrors.entries()) {
+			if (
+				!mostProblematicFrequency ||
+				errors > mostProblematicFrequency.errors
+			) {
 				mostProblematicFrequency = { frequency, errors };
 			}
 		}
 
 		// Calculate health score (0-100, higher is better)
 		const maxErrors = this.errorState.maxConsecutiveErrors;
-		const consecutiveErrorPenalty = (this.errorState.consecutiveErrors / maxErrors) * 40;
-		const recentFailurePenalty = (this.errorState.recentFailures.length / this.errorState.maxFailuresPerMinute) * 30;
-		const deviceStatusPenalty = this.deviceState.status === 'available' ? 0 : 
-		                           this.deviceState.status === 'busy' ? 20 :
-		                           this.deviceState.status === 'stuck' ? 30 : 40;
-		
-		const overallHealthScore = Math.max(0, 100 - consecutiveErrorPenalty - recentFailurePenalty - deviceStatusPenalty);
+		const consecutiveErrorPenalty =
+			(this.errorState.consecutiveErrors / maxErrors) * 40;
+		const recentFailurePenalty =
+			(this.errorState.recentFailures.length /
+				this.errorState.maxFailuresPerMinute) *
+			30;
+		const deviceStatusPenalty =
+			this.deviceState.status === "available"
+				? 0
+				: this.deviceState.status === "busy"
+					? 20
+					: this.deviceState.status === "stuck"
+						? 30
+						: 40;
+
+		const overallHealthScore = Math.max(
+			0,
+			100 -
+				consecutiveErrorPenalty -
+				recentFailurePenalty -
+				deviceStatusPenalty,
+		);
 
 		return {
 			consecutiveErrors: this.errorState.consecutiveErrors,
@@ -389,7 +461,7 @@ export class ErrorTracker {
 			frequencyErrorCount: this.errorState.frequencyErrors.size,
 			mostProblematicFrequency,
 			deviceStatus: this.deviceState.status,
-			overallHealthScore: Math.round(overallHealthScore)
+			overallHealthScore: Math.round(overallHealthScore),
 		};
 	}
 
@@ -398,7 +470,7 @@ export class ErrorTracker {
 	 */
 	resetFrequencyErrors(frequency: number): void {
 		this.errorState.frequencyErrors.delete(frequency);
-		logInfo('[CLEANUP] Frequency error count reset', { frequency });
+		logInfo("[CLEANUP] Frequency error count reset", { frequency });
 	}
 
 	/**
@@ -408,20 +480,27 @@ export class ErrorTracker {
 		this.errorState.consecutiveErrors = 0;
 		this.errorState.frequencyErrors.clear();
 		this.errorState.recentFailures = [];
-		this.deviceState.status = 'unknown';
+		this.deviceState.status = "unknown";
 		this.deviceState.consecutiveBusyErrors = 0;
-		this.deviceState.recoveryState = 'none';
+		this.deviceState.recoveryState = "none";
 		this.recoveryAttempts = 0;
 		this.isRecovering = false;
 		this.lastRecoveryAttempt = null;
 
-		logInfo('[CLEANUP] All error tracking reset');
+		logInfo("[CLEANUP] All error tracking reset");
 	}
 
 	/**
 	 * Update configuration
 	 */
-	updateConfig(config: Partial<RecoveryConfig & { maxConsecutiveErrors?: number; maxFailuresPerMinute?: number }>): void {
+	updateConfig(
+		config: Partial<
+			RecoveryConfig & {
+				maxConsecutiveErrors?: number;
+				maxFailuresPerMinute?: number;
+			}
+		>,
+	): void {
 		if (config.maxConsecutiveErrors !== undefined) {
 			this.errorState.maxConsecutiveErrors = config.maxConsecutiveErrors;
 		}
@@ -431,10 +510,10 @@ export class ErrorTracker {
 
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
 
-		logInfo('[CONFIG] ErrorTracker configuration updated', {
+		logInfo("[CONFIG] ErrorTracker configuration updated", {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
-			recoveryConfig: this.recoveryConfig
+			recoveryConfig: this.recoveryConfig,
 		});
 	}
 
@@ -444,7 +523,7 @@ export class ErrorTracker {
 	private cleanupOldFailures(): void {
 		const oneMinuteAgo = Date.now() - 60000;
 		this.errorState.recentFailures = this.errorState.recentFailures.filter(
-			timestamp => timestamp > oneMinuteAgo
+			(timestamp) => timestamp > oneMinuteAgo,
 		);
 	}
 
@@ -453,6 +532,6 @@ export class ErrorTracker {
 	 */
 	cleanup(): void {
 		this.resetErrorTracking();
-		logInfo('[CLEANUP] ErrorTracker cleanup completed');
+		logInfo("[CLEANUP] ErrorTracker cleanup completed");
 	}
 }

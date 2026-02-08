@@ -1,7 +1,7 @@
-import { spawn, exec, type ChildProcess } from 'child_process';
-import { logInfo, logError, logWarn } from '$lib/utils/logger';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { spawn, exec, type ChildProcess } from "child_process";
+import { logInfo, logError, logWarn } from "$lib/utils/logger";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 export interface ProcessState {
 	sweepProcess: ChildProcess | null;
@@ -12,7 +12,7 @@ export interface ProcessState {
 
 export interface ProcessConfig {
 	detached: boolean;
-	stdio: ('pipe' | 'inherit' | 'ignore')[];
+	stdio: ("pipe" | "inherit" | "ignore")[];
 	timeout?: number;
 	startupTimeoutMs?: number;
 }
@@ -23,7 +23,8 @@ export interface ProcessConfig {
  */
 export class ProcessManager {
 	private processRegistry = new Map<number, ChildProcess>();
-	private processMonitorInterval: ReturnType<typeof setInterval> | null = null;
+	private processMonitorInterval: ReturnType<typeof setInterval> | null =
+		null;
 	private eventHandlers: {
 		onStdout?: (data: Buffer) => void;
 		onStderr?: (data: Buffer) => void;
@@ -35,29 +36,34 @@ export class ProcessManager {
 	 */
 	async spawnSweepProcess(
 		args: string[],
-		config: ProcessConfig = { detached: true, stdio: ['ignore', 'pipe', 'pipe'] }
+		config: ProcessConfig = {
+			detached: true,
+			stdio: ["ignore", "pipe", "pipe"],
+		},
 	): Promise<ProcessState> {
 		return new Promise((resolve, reject) => {
 			try {
 				// Event handlers are set, proceeding with spawn
 
-				logInfo(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
+				logInfo(
+					`[START] Spawning real hackrf_sweep with args: ${args.join(" ")}`,
+				);
 
 				// Use unbuffered output for real-time data
 				const modifiedConfig = {
 					...config,
 					env: {
 						...process.env,
-						NODE_NO_READLINE: '1',
-						PYTHONUNBUFFERED: '1'
+						NODE_NO_READLINE: "1",
+						PYTHONUNBUFFERED: "1",
 						// Auto-detect device - auto_sweep.sh will check for HackRF or USRP
-					}
+					},
 				};
 				// Use auto_sweep.sh which detects HackRF or USRP B205 Mini
 				// Use proper ESM path resolution for Vite compatibility
 				const __filename = fileURLToPath(import.meta.url);
 				const __dirname = dirname(__filename);
-				const scriptPath = join(__dirname, 'auto_sweep.sh');
+				const scriptPath = join(__dirname, "auto_sweep.sh");
 
 				logInfo(`[FILE] Script path resolved to: ${scriptPath}`);
 
@@ -77,7 +83,7 @@ export class ProcessManager {
 				}
 
 				logInfo(
-					`[OK] Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
+					`[OK] Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`,
 				);
 
 				// Attach event handlers to the process
@@ -87,43 +93,45 @@ export class ProcessManager {
 					// Forward stdout data to handler without verbose logging.
 					// Previous implementation logged every data chunk with preview
 					// strings, creating significant GC pressure in the hot path.
-					sweepProcess.stdout.on('data', (data: Buffer) => {
+					sweepProcess.stdout.on("data", (data: Buffer) => {
 						if (stdoutHandler) {
 							stdoutHandler(data);
 						} else {
-							logError('Stdout handler disappeared unexpectedly');
+							logError("Stdout handler disappeared unexpectedly");
 						}
 					});
-					logInfo('Attached stdout handler to real process');
+					logInfo("Attached stdout handler to real process");
 				} else {
 					const error = {
 						hasStdout: !!sweepProcess.stdout,
-						hasHandler: !!this.eventHandlers.onStdout
+						hasHandler: !!this.eventHandlers.onStdout,
 					};
 					// Failed to attach stdout handler
-					logError('Failed to attach stdout handler', error);
+					logError("Failed to attach stdout handler", error);
 				}
 
 				if (sweepProcess.stderr && this.eventHandlers.onStderr) {
-					sweepProcess.stderr.on('data', this.eventHandlers.onStderr);
-					logInfo('Attached stderr handler to real process');
+					sweepProcess.stderr.on("data", this.eventHandlers.onStderr);
+					logInfo("Attached stderr handler to real process");
 				}
 
 				if (this.eventHandlers.onExit) {
-					sweepProcess.on('exit', this.eventHandlers.onExit);
-					logInfo('Attached exit handler to real process');
+					sweepProcess.on("exit", this.eventHandlers.onExit);
+					logInfo("Attached exit handler to real process");
 				}
 
 				const processState: ProcessState = {
 					sweepProcess,
 					sweepProcessPgid,
 					actualProcessPid,
-					processStartTime
+					processStartTime,
 				};
 
 				resolve(processState);
 			} catch (error) {
-				reject(error instanceof Error ? error : new Error(String(error)));
+				reject(
+					error instanceof Error ? error : new Error(String(error)),
+				);
 			}
 		});
 	}
@@ -137,26 +145,29 @@ export class ProcessManager {
 		}
 
 		logInfo(
-			'Stopping sweep process',
-			{ pid: processState.actualProcessPid, pgid: processState.sweepProcessPgid },
-			'process-stopping'
+			"Stopping sweep process",
+			{
+				pid: processState.actualProcessPid,
+				pgid: processState.sweepProcessPgid,
+			},
+			"process-stopping",
 		);
 
 		try {
 			// Try SIGTERM first for graceful shutdown
 			if (processState.actualProcessPid) {
 				try {
-					process.kill(processState.actualProcessPid, 'SIGTERM');
+					process.kill(processState.actualProcessPid, "SIGTERM");
 					logInfo(
-						'Sent SIGTERM to process',
+						"Sent SIGTERM to process",
 						{ pid: processState.actualProcessPid },
-						'process-sigterm-sent'
+						"process-sigterm-sent",
 					);
 				} catch (_error: unknown) {
 					logWarn(
-						'Process already dead or SIGTERM failed',
+						"Process already dead or SIGTERM failed",
 						{ pid: processState.actualProcessPid },
-						'process-sigterm-failed'
+						"process-sigterm-failed",
 					);
 				}
 
@@ -168,17 +179,17 @@ export class ProcessManager {
 					process.kill(processState.actualProcessPid, 0);
 					// Process still exists, force kill
 					logWarn(
-						'Process still alive, sending SIGKILL',
+						"Process still alive, sending SIGKILL",
 						{ pid: processState.actualProcessPid },
-						'process-sigkill-needed'
+						"process-sigkill-needed",
 					);
-					process.kill(processState.actualProcessPid, 'SIGKILL');
+					process.kill(processState.actualProcessPid, "SIGKILL");
 				} catch (_error: unknown) {
 					// Process is already dead
 					logInfo(
-						'Process terminated successfully',
+						"Process terminated successfully",
 						{ pid: processState.actualProcessPid },
-						'process-terminated'
+						"process-terminated",
 					);
 				}
 			}
@@ -189,23 +200,27 @@ export class ProcessManager {
 				processState.sweepProcessPgid !== processState.actualProcessPid
 			) {
 				try {
-					process.kill(-processState.sweepProcessPgid, 'SIGKILL');
+					process.kill(-processState.sweepProcessPgid, "SIGKILL");
 					logInfo(
-						'Killed process group',
+						"Killed process group",
 						{ pgid: processState.sweepProcessPgid },
-						'process-group-killed'
+						"process-group-killed",
 					);
 				} catch (e) {
 					// Process group might already be dead
 					logError(
-						'Process group kill failed',
+						"Process group kill failed",
 						{ error: e, pgid: processState.sweepProcessPgid },
-						'process-group-kill-failed'
+						"process-group-kill-failed",
 					);
 				}
 			}
 		} catch (error) {
-			logError('Error during process termination', { error }, 'process-termination-error');
+			logError(
+				"Error during process termination",
+				{ error },
+				"process-termination-error",
+			);
 		}
 
 		// Remove from registry
@@ -216,16 +231,16 @@ export class ProcessManager {
 		// Ensure hackrf_sweep is not running using system command as backup
 		try {
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -x hackrf_sweep', (error) => {
+				exec("pkill -9 -x hackrf_sweep", (error) => {
 					if (error && error.code !== 1) {
 						// Exit code 1 means no processes found
-						logError('pkill error', { error }, 'pkill-error');
+						logError("pkill error", { error }, "pkill-error");
 					}
 					resolve();
 				});
 			});
 		} catch (e) {
-			logError('Failed to run pkill', { error: e }, 'pkill-failed');
+			logError("Failed to run pkill", { error: e }, "pkill-failed");
 		}
 
 		// Wait for cleanup
@@ -236,22 +251,26 @@ export class ProcessManager {
 	 * Force cleanup all HackRF processes
 	 */
 	async forceCleanupAll(): Promise<void> {
-		logInfo('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
+		logInfo(
+			"Force cleaning up existing HackRF processes",
+			{},
+			"hackrf-cleanup-start",
+		);
 
 		try {
 			// Kill all hackrf_sweep processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -x hackrf_sweep', () => resolve());
+				exec("pkill -9 -x hackrf_sweep", () => resolve());
 			});
 
 			// Kill any hackrf_info processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f hackrf_info', () => resolve());
+				exec("pkill -9 -f hackrf_info", () => resolve());
 			});
 
 			// Kill any USRP spectrum scan processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f usrp_spectrum_scan.py', () => resolve());
+				exec("pkill -9 -f usrp_spectrum_scan.py", () => resolve());
 			});
 
 			// Kill any Python processes using UHD/USRP
@@ -261,12 +280,12 @@ export class ProcessManager {
 
 			// Kill any mock sweep processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f mock_sweep.sh', () => resolve());
+				exec("pkill -9 -f mock_sweep.sh", () => resolve());
 			});
 
 			// Kill any auto_sweep processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f auto_sweep.sh', () => resolve());
+				exec("pkill -9 -f auto_sweep.sh", () => resolve());
 			});
 
 			// Clear registry
@@ -275,9 +294,9 @@ export class ProcessManager {
 			// Wait for cleanup
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
-			logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
+			logInfo("Cleanup complete", {}, "hackrf-cleanup-complete");
 		} catch (error) {
-			logError('Cleanup failed', { error }, 'hackrf-cleanup-failed');
+			logError("Cleanup failed", { error }, "hackrf-cleanup-failed");
 		}
 	}
 
@@ -291,7 +310,7 @@ export class ProcessManager {
 	}): void {
 		// Store handlers for future spawned processes
 		this.eventHandlers = handlers;
-		logInfo('Process event handlers set for real hardware');
+		logInfo("Process event handlers set for real hardware");
 	}
 
 	/**
@@ -318,7 +337,7 @@ export class ProcessManager {
 			sweepProcessPgid: firstProcess?.pid || null,
 			actualProcessPid: firstProcess?.pid || null,
 			processStartTime,
-			isRunning
+			isRunning,
 		};
 	}
 
@@ -343,29 +362,36 @@ export class ProcessManager {
 		deviceInfo?: string;
 	}> {
 		return new Promise((resolve) => {
-			exec('timeout 3 hackrf_info', (error, stdout, stderr) => {
+			exec("timeout 3 hackrf_info", (error, stdout, stderr) => {
 				if (error) {
 					if (error.code === 124) {
-						resolve({ available: false, reason: 'Device check timeout' });
+						resolve({
+							available: false,
+							reason: "Device check timeout",
+						});
 					} else {
 						resolve({
 							available: false,
-							reason: `Device check failed: ${error.message}`
+							reason: `Device check failed: ${error.message}`,
 						});
 					}
-				} else if (stderr.includes('Resource busy')) {
-					resolve({ available: false, reason: 'Device busy' });
-				} else if (stderr.includes('No HackRF boards found')) {
-					resolve({ available: false, reason: 'No HackRF found' });
-				} else if (stdout.includes('Serial number')) {
+				} else if (stderr.includes("Resource busy")) {
+					resolve({ available: false, reason: "Device busy" });
+				} else if (stderr.includes("No HackRF boards found")) {
+					resolve({ available: false, reason: "No HackRF found" });
+				} else if (stdout.includes("Serial number")) {
 					// Extract device info
 					const deviceInfo = stdout
-						.split('\n')
+						.split("\n")
 						.filter((line) => line.trim())
-						.join(', ');
-					resolve({ available: true, reason: 'HackRF detected', deviceInfo });
+						.join(", ");
+					resolve({
+						available: true,
+						reason: "HackRF detected",
+						deviceInfo,
+					});
 				} else {
-					resolve({ available: false, reason: 'Unknown error' });
+					resolve({ available: false, reason: "Unknown error" });
 				}
 			});
 		});
@@ -381,17 +407,17 @@ export class ProcessManager {
 		for (const [pid, childProcess] of this.processRegistry) {
 			try {
 				if (childProcess && !childProcess.killed) {
-					childProcess.kill('SIGKILL');
+					childProcess.kill("SIGKILL");
 				}
 				// Also kill by PID directly
 				try {
-					process.kill(pid, 'SIGKILL');
+					process.kill(pid, "SIGKILL");
 					logInfo(`Force killed PID: ${pid}`);
 				} catch (_error: unknown) {
-					logInfo('Process already dead or kill failed');
+					logInfo("Process already dead or kill failed");
 				}
 			} catch (e) {
-				logError('Force kill failed', { error: e, pid }, 'force-kill');
+				logError("Force kill failed", { error: e, pid }, "force-kill");
 			}
 		}
 
@@ -401,7 +427,7 @@ export class ProcessManager {
 		// Force cleanup all hackrf processes
 		await this.forceCleanupAll();
 
-		logInfo('[OK] Force process kill completed');
+		logInfo("[OK] Force process kill completed");
 	}
 
 	/**

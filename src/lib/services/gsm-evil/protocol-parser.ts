@@ -41,7 +41,7 @@ const SYSTEM_INFO_MSG_TYPES = new Set([
 	0x1e, // System Information Type 3
 	0x02, // System Information Type 4
 	0x03, // System Information Type 5
-	0x07 // System Information Type 6
+	0x07, // System Information Type 6
 ]);
 
 const PAGING_MSG_TYPES = new Set([
@@ -49,7 +49,7 @@ const PAGING_MSG_TYPES = new Set([
 	0x22, // Paging Request Type 2
 	0x24, // Paging Request Type 3
 	0x3e, // Notification/NCH
-	0x3f // Notification Response
+	0x3f, // Notification Response
 ]);
 
 /**
@@ -66,9 +66,12 @@ const PAGING_MSG_TYPES = new Set([
  * @param frameCount - Total number of GSMTAP frames observed on the frequency.
  * @returns Channel type classification. Empty channelType if no frames.
  */
-export function analyzeGsmFrames(hexLines: string[], frameCount: number): ChannelAnalysis {
+export function analyzeGsmFrames(
+	hexLines: string[],
+	frameCount: number,
+): ChannelAnalysis {
 	if (hexLines.length === 0 || frameCount === 0) {
-		return { channelType: '', controlChannel: false };
+		return { channelType: "", controlChannel: false };
 	}
 
 	let hasSI = false;
@@ -77,7 +80,7 @@ export function analyzeGsmFrames(hexLines: string[], frameCount: number): Channe
 	for (const line of hexLines) {
 		const bytes = line.trim().split(/\s+/);
 		// L3 message: byte[1] is protocol discriminator, byte[2] is message type
-		if (bytes.length >= 3 && bytes[1] === '06') {
+		if (bytes.length >= 3 && bytes[1] === "06") {
 			const msgType = parseInt(bytes[2], 16);
 			if (SYSTEM_INFO_MSG_TYPES.has(msgType)) {
 				hasSI = true;
@@ -89,15 +92,15 @@ export function analyzeGsmFrames(hexLines: string[], frameCount: number): Channe
 	}
 
 	if (hasSI) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: "BCCH/CCCH", controlChannel: true };
 	}
 	if (hasPaging) {
-		return { channelType: 'CCCH', controlChannel: true };
+		return { channelType: "CCCH", controlChannel: true };
 	}
 	if (frameCount > 100) {
-		return { channelType: 'TCH', controlChannel: false };
+		return { channelType: "TCH", controlChannel: false };
 	}
-	return { channelType: 'SDCCH', controlChannel: false };
+	return { channelType: "SDCCH", controlChannel: false };
 }
 
 /**
@@ -115,7 +118,7 @@ export function analyzeGsmFrames(hexLines: string[], frameCount: number): Channe
  * @returns Parsed cell identity. Fields are empty strings if not captured.
  */
 export function parseCellIdentity(tsharkOutput: string): CellIdentity {
-	const result: CellIdentity = { mcc: '', mnc: '', lac: '', ci: '' };
+	const result: CellIdentity = { mcc: "", mnc: "", lac: "", ci: "" };
 
 	if (!tsharkOutput || !tsharkOutput.trim()) {
 		return result;
@@ -123,20 +126,20 @@ export function parseCellIdentity(tsharkOutput: string): CellIdentity {
 
 	const cellLines = tsharkOutput
 		.trim()
-		.split('\n')
+		.split("\n")
 		.filter((l: string) => l.trim() && !/^,*$/.test(l));
 
 	for (const line of cellLines) {
-		const parts = line.split(',');
+		const parts = line.split(",");
 		if (parts[0] && parts[0].trim()) result.mcc = parts[0].trim();
 		if (parts[1] && parts[1].trim()) result.mnc = parts[1].trim();
 		if (parts[2] && parts[2].trim()) {
 			const raw = parts[2].trim();
-			result.lac = raw.startsWith('0x') ? String(parseInt(raw, 16)) : raw;
+			result.lac = raw.startsWith("0x") ? String(parseInt(raw, 16)) : raw;
 		}
 		if (parts[3] && parts[3].trim()) {
 			const raw = parts[3].trim();
-			result.ci = raw.startsWith('0x') ? String(parseInt(raw, 16)) : raw;
+			result.ci = raw.startsWith("0x") ? String(parseInt(raw, 16)) : raw;
 		}
 	}
 
@@ -155,29 +158,32 @@ export function parseCellIdentity(tsharkOutput: string): CellIdentity {
  * @param frameCount - Number of GSMTAP frames captured.
  * @returns Human-readable strength label.
  */
-export function classifySignalStrength(power: number, frameCount: number): string {
+export function classifySignalStrength(
+	power: number,
+	frameCount: number,
+): string {
 	// Power-based classification (when real measurement available)
 	if (power > -100) {
-		if (power > -40) return 'Excellent';
-		if (power > -50) return 'Very Strong';
-		if (power > -60) return 'Strong';
-		if (power > -70) return 'Good';
-		if (power > -80) return 'Moderate';
-		if (power > -90) return 'Weak';
-		return 'No Signal';
+		if (power > -40) return "Excellent";
+		if (power > -50) return "Very Strong";
+		if (power > -60) return "Strong";
+		if (power > -70) return "Good";
+		if (power > -80) return "Moderate";
+		if (power > -90) return "Weak";
+		return "No Signal";
 	}
 
 	// Frame-count-based fallback (HackRF provides no power measurement)
 	if (frameCount > 0) {
-		if (frameCount > 200) return 'Excellent';
-		if (frameCount > 150) return 'Very Strong';
-		if (frameCount > 100) return 'Strong';
-		if (frameCount > 50) return 'Good';
-		if (frameCount > 10) return 'Moderate';
-		return 'Weak';
+		if (frameCount > 200) return "Excellent";
+		if (frameCount > 150) return "Very Strong";
+		if (frameCount > 100) return "Strong";
+		if (frameCount > 50) return "Good";
+		if (frameCount > 10) return "Moderate";
+		return "Weak";
 	}
 
-	return 'No Signal';
+	return "No Signal";
 }
 
 /**
@@ -200,15 +206,15 @@ export function classifySignalStrength(power: number, frameCount: number): strin
 export function determineChannelType(
 	cellIdentity: CellIdentity,
 	frameAnalysis: ChannelAnalysis | null,
-	frameCount: number
+	frameCount: number,
 ): ChannelAnalysis {
 	if (frameCount === 0) {
-		return { channelType: '', controlChannel: false };
+		return { channelType: "", controlChannel: false };
 	}
 
 	// Definitive: tshark decoded cell identity from SI3/SI4 = BCCH
 	if (cellIdentity.mcc && cellIdentity.lac && cellIdentity.ci) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: "BCCH/CCCH", controlChannel: true };
 	}
 
 	// Use hex frame analysis if available
@@ -218,7 +224,7 @@ export function determineChannelType(
 
 	// Fallback heuristic when hex log was unreadable
 	if (frameCount > 10) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: "BCCH/CCCH", controlChannel: true };
 	}
-	return { channelType: 'SDCCH', controlChannel: false };
+	return { channelType: "SDCCH", controlChannel: false };
 }

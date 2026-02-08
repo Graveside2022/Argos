@@ -3,7 +3,7 @@
  * Manages real-time data streaming between services
  */
 
-import { writable, type Writable, type Readable, derived } from 'svelte/store';
+import { writable, type Writable, type Readable, derived } from "svelte/store";
 // Import types are defined locally to avoid circular dependencies
 
 interface StreamSubscription {
@@ -48,10 +48,11 @@ class DataStreamManager {
 		bufferTimeout: 100,
 		enableRecording: false,
 		compressionEnabled: false,
-		latencyTracking: true
+		latencyTracking: true,
 	};
 
-	private bufferTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+	private bufferTimeouts: Map<string, ReturnType<typeof setTimeout>> =
+		new Map();
 	private latencyTrackers: Map<string, number[]> = new Map();
 
 	// Public readable stores
@@ -65,7 +66,7 @@ class DataStreamManager {
 			subscriptions: new Map(),
 			buffers: new Map(),
 			recording: new Map(),
-			recordings: new Map()
+			recordings: new Map(),
 		});
 
 		this.streamStats = derived(this.state, ($state) => $state.streams);
@@ -73,7 +74,7 @@ class DataStreamManager {
 			Array.from($state.streams.keys()).filter((key) => {
 				const stats = $state.streams.get(key);
 				return stats && Date.now() - stats.lastMessage < 5000;
-			})
+			}),
 		);
 		this.totalMessages = derived(this.state, ($state) => {
 			let total = 0;
@@ -89,11 +90,11 @@ class DataStreamManager {
 	 */
 	initialize(): void {
 		// Register default streams
-		this.registerStream('hackrf_spectrum');
-		this.registerStream('hackrf_signals');
-		this.registerStream('kismet_devices');
-		this.registerStream('kismet_status');
-		this.registerStream('system_health');
+		this.registerStream("hackrf_spectrum");
+		this.registerStream("hackrf_signals");
+		this.registerStream("kismet_devices");
+		this.registerStream("kismet_status");
+		this.registerStream("system_health");
 	}
 
 	/**
@@ -115,7 +116,7 @@ class DataStreamManager {
 					messagesDropped: 0,
 					bytesReceived: 0,
 					lastMessage: 0,
-					averageLatency: 0
+					averageLatency: 0,
 				});
 				state.buffers.set(streamName, []);
 				state.recording.set(streamName, false);
@@ -131,7 +132,7 @@ class DataStreamManager {
 	subscribe(
 		streamName: string,
 		callback: (data: unknown) => void,
-		filter?: (data: unknown) => boolean
+		filter?: (data: unknown) => boolean,
 	): string {
 		const subscriptionId = `sub-${Date.now()}-${Math.random()}`;
 
@@ -141,7 +142,7 @@ class DataStreamManager {
 				stream: streamName,
 				callback,
 				filter,
-				active: true
+				active: true,
 			});
 			return state;
 		});
@@ -177,17 +178,21 @@ class DataStreamManager {
 				if (
 					this.options.latencyTracking &&
 					data &&
-					typeof data === 'object' &&
-					'timestamp' in data
+					typeof data === "object" &&
+					"timestamp" in data
 				) {
-					const timestampValue = (data as { timestamp: unknown }).timestamp;
+					const timestampValue = (data as { timestamp: unknown })
+						.timestamp;
 					if (
 						timestampValue &&
-						(typeof timestampValue === 'string' || typeof timestampValue === 'number')
+						(typeof timestampValue === "string" ||
+							typeof timestampValue === "number")
 					) {
-						const latency = publishTime - new Date(timestampValue).getTime();
+						const latency =
+							publishTime - new Date(timestampValue).getTime();
 						this.updateLatency(streamName, latency);
-						stats.averageLatency = this.getAverageLatency(streamName);
+						stats.averageLatency =
+							this.getAverageLatency(streamName);
 					}
 				}
 			}
@@ -243,7 +248,7 @@ class DataStreamManager {
 
 		this.state.subscribe((state) => {
 			subscriptions = Array.from(state.subscriptions.values()).filter(
-				(sub) => sub.stream === streamName && sub.active
+				(sub) => sub.stream === streamName && sub.active,
 			);
 		})();
 
@@ -340,29 +345,40 @@ class DataStreamManager {
 	/**
 	 * Export stream recording
 	 */
-	exportRecording(streamName: string, format: 'json' | 'csv' = 'json'): string {
+	exportRecording(
+		streamName: string,
+		format: "json" | "csv" = "json",
+	): string {
 		const recording = this.stopRecording(streamName);
 
-		if (format === 'json') {
+		if (format === "json") {
 			return JSON.stringify(
 				{
 					stream: streamName,
 					recordedAt: new Date().toISOString(),
 					dataPoints: recording.length,
-					data: recording
+					data: recording,
 				},
 				null,
-				2
+				2,
 			);
 		} else {
 			// CSV format - simplified for general data
-			const headers = ['timestamp', 'data'];
+			const headers = ["timestamp", "data"];
 			const rows = recording.map((item: unknown) => {
-				const recordItem = item as { timestamp?: unknown; data?: unknown };
-				return [recordItem.timestamp || '', JSON.stringify(recordItem.data || '')];
+				const recordItem = item as {
+					timestamp?: unknown;
+					data?: unknown;
+				};
+				return [
+					recordItem.timestamp || "",
+					JSON.stringify(recordItem.data || ""),
+				];
 			});
 
-			return [headers, ...rows].map((row) => (row as string[]).join(',')).join('\n');
+			return [headers, ...rows]
+				.map((row) => (row as string[]).join(","))
+				.join("\n");
 		}
 	}
 
@@ -372,7 +388,7 @@ class DataStreamManager {
 	createFilteredStream(
 		sourceStream: string,
 		targetStream: string,
-		filter: (data: unknown) => boolean
+		filter: (data: unknown) => boolean,
 	): string {
 		this.registerStream(targetStream);
 
@@ -389,7 +405,7 @@ class DataStreamManager {
 	createTransformedStream<T, U>(
 		sourceStream: string,
 		targetStream: string,
-		transformer: (data: T) => U
+		transformer: (data: T) => U,
 	): string {
 		this.registerStream(targetStream);
 
@@ -398,7 +414,7 @@ class DataStreamManager {
 				const transformed = transformer(data as T);
 				this.publish(targetStream, transformed);
 			} catch (error) {
-				console.error('Transform error:', error);
+				console.error("Transform error:", error);
 			}
 		});
 	}
@@ -409,7 +425,7 @@ class DataStreamManager {
 	mergeStreams(
 		sourceStreams: string[],
 		targetStream: string,
-		merger?: (data: unknown[]) => unknown
+		merger?: (data: unknown[]) => unknown,
 	): string[] {
 		this.registerStream(targetStream);
 		const subscriptionIds: string[] = [];
@@ -520,7 +536,7 @@ class DataStreamManager {
 			subscriptions: new Map(),
 			buffers: new Map(),
 			recording: new Map(),
-			recordings: new Map()
+			recordings: new Map(),
 		});
 	}
 }
