@@ -1,7 +1,7 @@
 # Phase 6.1: Docker and Container Modernization
 
 **Document ID**: ARGOS-AUDIT-P6.1
-**Version**: 1.0 (Final)
+**Version**: 2.0 (Revised -- Independent Audit Findings Incorporated)
 **Date**: 2026-02-08
 **Author**: Claude Opus 4.6 (Lead Audit Agent)
 **Classification**: UNCLASSIFIED // FOR OFFICIAL USE ONLY
@@ -12,9 +12,9 @@
 
 ## 1. Purpose
 
-This document provides the complete, executable plan for modernizing the Docker infrastructure of the Argos SDR & Network Analysis Console. Every finding below was verified against the live system on 2026-02-08 at HEAD commit `f300b8f` on branch `main`. The target host is `scarmatrix-kali` (RPi 5 Model B Rev 1.0, Kali 2025.4, aarch64, 8GB RAM, Docker 27.5.1, Compose 2.32.4-3).
+This document provides the complete, executable plan for modernizing the Docker infrastructure of the Argos SDR & Network Analysis Console. Every finding below was verified against the live system on 2026-02-08 at HEAD commit `b682267` on branch `dev_branch`. The target host is `scarmatrix-kali` (RPi 5 Model B Rev 1.0, Kali 2025.4, aarch64, 8GB RAM, Docker 27.5.1, Compose 2.32.4-3).
 
-This phase addresses 27 discrete findings across security, performance, and operational categories in 10 tasks containing 41 subtasks.
+This phase addresses 38 discrete findings across security, performance, and operational categories in 11 tasks containing 34 subtasks.
 
 ---
 
@@ -39,7 +39,7 @@ The following corrections apply to claims made in earlier Phase 6 overview docum
 | Original Claim                                                                                              | Correction                                                                                                                                                                                                                                                                                                                                                            | Evidence                                                                                       |
 | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | "Ollama deploy.resources.limits.memory SILENTLY IGNORED by docker compose (needs Swarm or --compatibility)" | **FALSE**. Docker Compose v2.32.4 correctly translates `deploy.resources.limits.memory` to the `Memory` cgroup. Ollama container shows 2,147,483,648 bytes (2 GB) limit at runtime.                                                                                                                                                                                   | `docker inspect argos-ollama --format '{{json .HostConfig.Memory}}'` returns `2147483648`      |
-| "COPY . . copies 1.17 GB source tree into builder"                                                          | Partially correct. The .dockerignore excludes node_modules/, .git/, build/, tests/, _.md, and .env. However, it does NOT exclude `hackrf_emitter/backend/.venv/` (270 MB), `static/fonts/` (46 MB), `archive/` (752 KB), `plans/` (2.8 MB), `core._`(20 MB), or`rf_signals.db` (7.3 MB). Actual context sent to daemon after .dockerignore: approximately 350-400 MB. | `du -sh` on each excluded/included path                                                        |
+| "COPY . . copies 1.17 GB source tree into builder"                                                          | Partially correct. The .dockerignore excludes node*modules/, .git/, build/, tests/, *.md, and .env. However, it does NOT exclude `hackrf_emitter/backend/.venv/` (270 MB), `static/fonts/` (46 MB), `archive/` (752 KB), `plans/` (2.8 MB), `core._`(20 MB), or`rf_signals.db` (7.3 MB). Actual context sent to daemon after .dockerignore: approximately 350-400 MB. | `du -sh` on each excluded/included path                                                        |
 | "hackrf-backend uses privileged:true when only USB access needed"                                           | Correct as stated. The hackrf-backend Dockerfile creates a non-root user (L20-21) and sets `USER hackrf` (L41), but the compose override runs it `privileged: true`, negating the non-root user's restrictions.                                                                                                                                                       | `docker/docker-compose.portainer-dev.yml` L96, `hackrf_emitter/backend/Dockerfile` L20-21, L41 |
 | "8 ports exposed to all network interfaces"                                                                 | Correct. argos runs in host network mode (all ports on 0.0.0.0). hackrf-backend exposes 8092 on 0.0.0.0. portainer exposes 9000 and 9443 on 0.0.0.0. ollama exposes 11434 on 0.0.0.0. openwebrx (when active) exposes 8073 on 0.0.0.0. bettercap (when active) uses host network.                                                                                     | `docker inspect` `PortBindings` for each container                                             |
 
@@ -87,8 +87,8 @@ done
 | Files modified                    | 7                                                                                                                   |
 | Files deleted                     | 1                                                                                                                   |
 | Files created                     | 2                                                                                                                   |
-| Total tasks                       | 10                                                                                                                  |
-| Total subtasks                    | 41                                                                                                                  |
+| Total tasks                       | 11                                                                                                                  |
+| Total subtasks                    | 34                                                                                                                  |
 | Estimated image size reduction    | ~2.5 GB (argos:dev from 4 GB to ~1.5 GB)                                                                            |
 | Estimated disk reclamation        | ~24 GB (build cache + dangling images + orphaned volumes) -- projected; verify with `docker system df` before/after |
 | Estimated build context reduction | ~340 MB (from ~400 MB to ~60 MB)                                                                                    |
@@ -419,6 +419,18 @@ grep -r 'docker.sock\|dockerode\|Docker' src/lib/server/ src/routes/api/ --inclu
 - Any broken Docker-management features documented as follow-up tasks.
 
 ### Subtask 6.1.2.3: Remove pid:host Namespace Sharing
+
+> **WARNING -- PREREQUISITE CHECK REQUIRED BEFORE EXECUTION**
+>
+> Before executing this subtask, verify that ALL `hostExec()` call sites have been refactored:
+>
+> ```bash
+> grep -rn 'hostExec' src/ --include='*.ts' | wc -l
+> # MUST return 0. If >0, DO NOT proceed -- hostExec() uses nsenter -t 1 -m
+> # which requires pid:host. Removing pid:host will break all GSM-Evil
+> # functionality (20+ call sites in src/routes/api/gsm-evil/) and any other
+> # hostExec() consumers. See Subtask 6.1.11.2 for the full dependency analysis.
+> ```
 
 **Description**: Line 23 sets `pid: host` which allows the container to see and signal all host processes. The comment (L22) states this is "to manage Kismet processes" but Kismet runs inside the container, not on the host. The pid namespace sharing is unnecessary and dangerous: a compromised container process could kill any host process.
 
@@ -778,7 +790,7 @@ For portainer:
 
 ```yaml
 healthcheck:
-    test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:9000/api/status']
+    test: ["CMD", "wget", "--spider", "-q", "http://localhost:9000/api/status"]
     interval: 30s
     timeout: 5s
     retries: 3
@@ -789,7 +801,7 @@ For ollama:
 
 ```yaml
 healthcheck:
-    test: ['CMD', 'curl', '-sf', 'http://localhost:11434/api/tags']
+    test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
     interval: 60s
     timeout: 10s
     retries: 3
@@ -1594,34 +1606,386 @@ docker system df
 
 ---
 
+## Task 6.1.11: Independent Audit Security Remediations
+
+**Objective**: Address all 7 actionable findings (CRITICAL-D1, CRITICAL-D2, HIGH-D3, HIGH-D4, MEDIUM-D5, MEDIUM-D6, LOW-D8) from the independent verification audit dated 2026-02-08. These findings were identified as gaps in the original plan and are promoted here from the Appendix into proper subtasks with full specification.
+
+**Risk**: HIGH -- Includes two CRITICAL findings (credential exposure and silent breakage of GSM-Evil subsystem) and two HIGH findings (unmitigated privileged container, unbounded logging on constrained hardware).
+
+### Subtask 6.1.11.1: Mount ~/.claude Read-Only
+
+**Description**: The `~/.claude` directory (containing `.credentials.json` with Claude API tokens, `history.jsonl`, `settings.json`) is mounted read-write into the argos-dev container at line 60 of the compose file. Any process inside the privileged container has full access to read AND modify Claude API credentials. CIS Docker Benchmark 5.5 and DISA STIG V-235832 both require that host credential directories not be mounted writable into containers. Changing the mount to read-only prevents credential exfiltration or tampering from inside the container while preserving the Claude Code CLI's ability to read its configuration.
+
+**Files affected**:
+
+- `docker/docker-compose.portainer-dev.yml` -- Line 60
+
+**Changes**: Replace the volume mount:
+
+```yaml
+# Before:
+- ${HOME}/.claude:/root/.claude:rw
+# After:
+- ${HOME}/.claude:/root/.claude:ro
+```
+
+If Claude Code CLI requires write access to specific files (e.g., `history.jsonl`), create a named volume for writable state and mount it at `/root/.claude/history` separately, keeping the credential files read-only.
+
+**Verification commands**:
+
+```bash
+# Recreate container
+docker compose -f docker/docker-compose.portainer-dev.yml up -d argos
+
+# Verify mount is read-only
+docker inspect argos-dev --format '{{range .Mounts}}{{if eq .Destination "/root/.claude"}}{{.RW}}{{end}}{{end}}'
+# Expected: false
+
+# Verify Claude Code can still read config
+docker exec argos-dev ls /root/.claude/settings.json 2>/dev/null
+# Expected: file exists (readable)
+
+# Verify container cannot write to .claude
+docker exec argos-dev touch /root/.claude/test-write 2>&1
+# Expected: "Read-only file system" or "Permission denied"
+```
+
+**Acceptance criteria**:
+
+- `docker inspect` confirms mount is read-only (RW: false).
+- Claude Code CLI can read its configuration files inside the container.
+- No process inside the container can modify host `~/.claude` directory.
+- Container starts and health check passes.
+
+### Subtask 6.1.11.2: Document hostExec()/nsenter Dependency Before pid:host Removal
+
+**Description**: The `hostExec()` function in `src/lib/server/host-exec.ts` uses `nsenter -t 1 -m` to escape the container namespace and execute commands on the host. This mechanism requires `pid: host` (docker-compose.portainer-dev.yml L23) because `nsenter -t 1` targets PID 1, which is only the host init process when the container shares the host PID namespace. Subtask 6.1.2.3 proposes removing `pid: host` but does not account for the 20+ `hostExec()` call sites, primarily in `src/routes/api/gsm-evil/`. Removing `pid:host` without first refactoring these call sites will silently break all GSM-Evil functionality (IMSI capture, frequency scanning, cell tower monitoring).
+
+**Files affected**:
+
+- `src/lib/server/host-exec.ts` -- Primary hostExec() definition
+- `src/routes/api/gsm-evil/*.ts` -- 20+ files consuming hostExec()
+
+**Changes**:
+
+1. Add an explicit prerequisite to Subtask 6.1.2.3 (already done via the WARNING block above).
+2. Document ALL hostExec() call sites by running:
+
+```bash
+grep -rn 'hostExec' src/ --include='*.ts'
+```
+
+3. Create a migration plan (out of scope for this phase) that replaces `hostExec()` with one of:
+    - A host-side HTTP API that the container calls via localhost
+    - A Docker sidecar pattern where GSM tools run in their own container
+    - Direct device access via capabilities instead of host command execution
+
+4. Until hostExec() is fully refactored, `pid: host` MUST remain in the compose file. Update the Subtask 6.1.2.3 status to BLOCKED.
+
+**Verification commands**:
+
+```bash
+# Count all hostExec() consumers
+grep -rn 'hostExec' src/ --include='*.ts' | wc -l
+# Document the count -- this is the number of call sites that must be refactored
+# before Subtask 6.1.2.3 can proceed
+
+# List all files consuming hostExec()
+grep -rn 'hostExec' src/ --include='*.ts' -l
+# Document this list as the refactoring scope for Phase 7
+
+# Verify pid:host is still present (MUST NOT be removed yet)
+grep -n 'pid: host' docker/docker-compose.portainer-dev.yml
+# Expected: match found (pid:host still in place)
+```
+
+**Acceptance criteria**:
+
+- Complete enumeration of all `hostExec()` call sites documented in this subtask output.
+- Subtask 6.1.2.3 has a WARNING block noting the prerequisite (verified above).
+- `pid: host` remains in the compose file until all call sites are refactored.
+- Migration plan for hostExec() replacement documented as a Phase 7 follow-up item.
+
+### Subtask 6.1.11.3: Reduce openwebrx Privileges
+
+**Description**: The openwebrx service at line 124 of the compose file uses `privileged: true`. This is one of three services with full privileges, but Subtasks 6.1.2.1 and 6.1.2.4 only address argos and hackrf-backend. OpenWebRX requires USB device access for SDR hardware but does not need full host capabilities. The required access can be provided via `cap_add: [SYS_RAWIO]` with explicit device passthrough.
+
+**Files affected**:
+
+- `docker/docker-compose.portainer-dev.yml` -- Line 124 (openwebrx service)
+
+**Changes**: Replace:
+
+```yaml
+privileged: true
+```
+
+With:
+
+```yaml
+cap_add:
+    - SYS_RAWIO
+cap_drop:
+    - ALL
+security_opt:
+    - no-new-privileges:true
+devices:
+    - /dev/bus/usb:/dev/bus/usb
+```
+
+Note: The `devices:` block may already exist for openwebrx. If so, retain the existing device mapping and only replace the `privileged: true` line with the `cap_add`/`cap_drop`/`security_opt` block.
+
+**Verification commands**:
+
+```bash
+# Start openwebrx with tools profile
+docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d openwebrx-hackrf
+
+# Verify privileged is false
+docker inspect openwebrx-hackrf --format '{{.HostConfig.Privileged}}'
+# Expected: false
+
+# Verify capabilities
+docker inspect openwebrx-hackrf --format '{{json .HostConfig.CapAdd}}'
+# Expected: ["SYS_RAWIO"]
+
+docker inspect openwebrx-hackrf --format '{{json .HostConfig.CapDrop}}'
+# Expected: ["ALL"]
+
+# Verify USB device accessible
+docker exec openwebrx-hackrf lsusb 2>/dev/null | head -5
+# Expected: USB device listing (if SDR hardware connected)
+
+# Verify WebSDR UI loads
+curl -sf http://localhost:8073/ | head -1
+# Expected: HTML content
+```
+
+**Acceptance criteria**:
+
+- `docker inspect` shows `Privileged: false` for openwebrx.
+- `CapAdd` contains SYS_RAWIO.
+- `CapDrop` contains ALL.
+- `no-new-privileges` is true.
+- USB devices accessible via device passthrough.
+- OpenWebRX web UI loads on port 8073.
+
+### Subtask 6.1.11.4: Add Logging Limits to All Compose Services
+
+**Description**: The ollama, hackrf-backend, and portainer services have no `logging:` directive. Runtime confirms `LogConfig.Config: {}` (empty) for all three. On the 8 GB RPi 5 with a 500 GB NVMe, unbounded Docker JSON logging can exhaust disk space during extended field operations or degrade I/O performance when log files grow beyond several GB. The argos service already has no explicit logging config either, but uses `network_mode: host` which means its logs go to the Docker daemon's default. All services should have explicit logging limits.
+
+**Files affected**:
+
+- `docker/docker-compose.ollama.yml` -- ollama service (add after restart line)
+- `docker/docker-compose.portainer-dev.yml` -- hackrf-backend service (add after restart line)
+- `docker/docker-compose.portainer.yml` -- portainer service (add after restart line)
+- `docker/docker-compose.portainer-dev.yml` -- argos service (add after restart line)
+
+**Changes**: Add the following block to each service:
+
+```yaml
+logging:
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+This caps each service to 30 MB of log storage (3 files x 10 MB each). Total across 4 services: 120 MB maximum.
+
+**Verification commands**:
+
+```bash
+# Recreate all services
+docker compose -f docker/docker-compose.portainer-dev.yml up -d
+docker compose -f docker/docker-compose.portainer.yml up -d
+docker compose -f docker/docker-compose.ollama.yml up -d
+
+# Verify logging config for each service
+docker inspect argos-dev --format '{{json .HostConfig.LogConfig}}'
+# Expected: {"Type":"json-file","Config":{"max-file":"3","max-size":"10m"}}
+
+docker inspect hackrf-backend-dev --format '{{json .HostConfig.LogConfig}}'
+# Expected: {"Type":"json-file","Config":{"max-file":"3","max-size":"10m"}}
+
+docker inspect portainer --format '{{json .HostConfig.LogConfig}}'
+# Expected: {"Type":"json-file","Config":{"max-file":"3","max-size":"10m"}}
+
+docker inspect argos-ollama --format '{{json .HostConfig.LogConfig}}'
+# Expected: {"Type":"json-file","Config":{"max-file":"3","max-size":"10m"}}
+```
+
+**Acceptance criteria**:
+
+- All 4 active services have `logging.driver: json-file` with `max-size: 10m` and `max-file: 3`.
+- `docker inspect` confirms LogConfig for each service shows the configured limits.
+- No service uses unbounded logging.
+- Total log disk usage capped at 120 MB across all services.
+
+### Subtask 6.1.11.5: Remove PUBLIC_ENABLE_DEBUG=true
+
+**Description**: Line 37 of the compose file sets `PUBLIC_ENABLE_DEBUG=true`. SvelteKit's `PUBLIC_` prefix makes this environment variable accessible to client-side JavaScript via `$env/static/public`. If the frontend uses this flag to enable debug panels, verbose logging, or developer tools, it increases the client-side attack surface in production deployments. On a field-deployed military training system, debug interfaces should never be exposed to end users.
+
+**Files affected**:
+
+- `docker/docker-compose.portainer-dev.yml` -- Line 37
+
+**Changes**: Remove the line entirely:
+
+```yaml
+# Remove this line:
+- PUBLIC_ENABLE_DEBUG=true
+```
+
+If a debug mode is needed for development, it should be:
+
+1. Controlled via a non-PUBLIC variable (e.g., `ENABLE_DEBUG=true`) that stays server-side only.
+2. Or set only in a development-specific compose override file (e.g., `docker-compose.dev-debug.yml`).
+
+**Verification commands**:
+
+```bash
+# Recreate container
+docker compose -f docker/docker-compose.portainer-dev.yml up -d argos
+
+# Verify PUBLIC_ENABLE_DEBUG is not set
+docker exec argos-dev env | grep PUBLIC_ENABLE_DEBUG
+# Expected: no output (variable not present)
+
+# Verify compose file does not contain the variable
+grep -n 'PUBLIC_ENABLE_DEBUG' docker/docker-compose.portainer-dev.yml
+# Expected: no matches
+
+# Verify app still starts (no dependency on this flag for core functionality)
+curl -sf http://localhost:5173/ | head -1
+# Expected: HTML content
+```
+
+**Acceptance criteria**:
+
+- `PUBLIC_ENABLE_DEBUG` is not present in any compose file.
+- No environment variable with `PUBLIC_` prefix exposes debug flags.
+- Argos web UI loads and health check passes without the debug flag.
+
+### Subtask 6.1.11.6: Bind Bettercap API to Localhost
+
+**Description**: The bettercap service at line 157 of the compose file starts with `-api-rest-address 0.0.0.0`, which binds the Bettercap REST API to all network interfaces. Combined with `network_mode: host`, this exposes the full Bettercap API (which includes network reconnaissance, MITM attack capabilities, and packet injection) to every device on the tactical network. The Bettercap API should only be accessible from localhost, as the Argos UI proxies requests to it.
+
+**Files affected**:
+
+- `docker/docker-compose.portainer-dev.yml` -- Line 157 (bettercap command)
+
+**Changes**: Replace in the bettercap service command:
+
+```yaml
+# Before:
+-api-rest-address 0.0.0.0
+# After:
+-api-rest-address 127.0.0.1
+```
+
+**Verification commands**:
+
+```bash
+# Start bettercap with tools profile
+docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d bettercap
+
+# Verify the command uses 127.0.0.1
+docker inspect bettercap --format '{{json .Config.Cmd}}' | grep -o 'api-rest-address [0-9.]*'
+# Expected: api-rest-address 127.0.0.1
+
+# Verify API accessible from localhost
+curl -sf -u admin:${BETTERCAP_PASSWORD} http://127.0.0.1:8081/api/session 2>/dev/null | head -1
+# Expected: JSON response (if bettercap is running and credentials are correct)
+
+# Verify API NOT accessible from external interface
+# (Run from another machine on the network, or use a different interface)
+# curl -sf http://<device-ip>:8081/api/session
+# Expected: connection refused
+```
+
+**Acceptance criteria**:
+
+- Bettercap REST API binds to `127.0.0.1` only.
+- API accessible from localhost inside the host.
+- API not accessible from external network interfaces.
+- Argos UI can still communicate with Bettercap via localhost proxy.
+
+### Subtask 6.1.11.7: Audit Git History for Leaked Secrets
+
+**Description**: Subtask 6.1.5.1 moves hardcoded credentials from compose files to `docker/.env`. However, the credentials (`password`, `hackrf`, `argos`) have been committed to git history in the compose files. Additionally, if any `.env` file was ever accidentally committed, it may contain secrets in the git object store. Before considering credentials externalized, the git history must be audited to confirm no `.env` files with secrets exist in any historical commit.
+
+**Files affected**:
+
+- Git repository history (read-only audit, no file modifications)
+
+**Changes**: No file changes. This is an audit verification step.
+
+**Verification commands**:
+
+```bash
+# Check if any .env files exist in git history
+git log --all --full-history -- '*/.env' '*.env' --oneline
+# Expected: either empty (no .env ever committed) or only commits that
+# contain the single-line ARGOS_DIR= entry (no secrets)
+
+# Check for .env content in any historical commit
+git log --all --full-history -p -- '*/.env' '*.env' | grep -i 'password\|secret\|token\|api.key' | head -20
+# Expected: no matches containing actual secret values
+
+# Verify current compose files still have hardcoded passwords in git history
+git log --all --full-history -p -- 'docker/docker-compose.portainer-dev.yml' | grep 'KISMET_PASSWORD=password' | head -5
+# Expected: matches found (these are in history -- document but cannot easily remove)
+
+# Check .gitignore covers docker/.env
+git check-ignore docker/.env
+# Expected: docker/.env (confirms it is ignored going forward)
+```
+
+**Acceptance criteria**:
+
+- No `.env` file containing secrets exists in any git commit.
+- Historical commits containing hardcoded passwords in compose files are documented as accepted risk.
+- `.gitignore` prevents future `.env` commits (verified by `git check-ignore`).
+- If secrets are found in git history, document whether `git filter-branch` or `bfg` cleanup is needed (out of scope for this phase).
+
+---
+
 ## 6. Verification Checklist
 
 Execute after all tasks are complete:
 
-| #   | Check                    | Command                                                                                           | Expected Result                                        |
-| --- | ------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| V1  | All 4 containers running | `docker ps --format '{{.Names}}' \| sort`                                                         | argos-dev, argos-ollama, hackrf-backend-dev, portainer |
-| V2  | All containers healthy   | `docker ps --format '{{.Names}} {{.Status}}' \| grep -v healthy`                                  | Empty (all show healthy)                               |
-| V3  | Argos UI loads           | `curl -sf http://localhost:5173/ \| head -1`                                                      | HTML content                                           |
-| V4  | HackRF API responds      | `curl -sf http://localhost:8092/api/health`                                                       | JSON response                                          |
-| V5  | Portainer UI loads       | `curl -sf http://localhost:9000/`                                                                 | HTML or redirect                                       |
-| V6  | Ollama API responds      | `curl -sf http://localhost:11434/api/tags`                                                        | JSON response                                          |
-| V7  | argos not privileged     | `docker inspect argos-dev --format '{{.HostConfig.Privileged}}'`                                  | false                                                  |
-| V8  | hackrf not privileged    | `docker inspect hackrf-backend-dev --format '{{.HostConfig.Privileged}}'`                         | false                                                  |
-| V9  | No docker.sock mount     | `docker inspect argos-dev --format '{{range .Mounts}}{{.Source}} {{end}}' \| grep -c docker.sock` | 0                                                      |
-| V10 | No pid:host              | `docker inspect argos-dev --format '{{.HostConfig.PidMode}}'`                                     | "" (empty)                                             |
-| V11 | Ports bound to localhost | See Task 6.1.2.5 verification commands                                                            | All non-argos ports on 127.0.0.1                       |
-| V12 | Flask debug off          | `docker exec hackrf-backend-dev env \| grep FLASK_DEBUG`                                          | FLASK_DEBUG=0                                          |
-| V13 | CPU limits set           | `docker inspect argos-dev --format '{{.HostConfig.NanoCpus}}'`                                    | Non-zero value                                         |
-| V14 | PID limits set           | `docker inspect argos-dev --format '{{.HostConfig.PidsLimit}}'`                                   | Non-zero value                                         |
-| V15 | No hardcoded passwords   | `grep -n 'password\|hackrf\|argos' docker/docker-compose.portainer-dev.yml \| grep -iv '\${'`     | Only comments or non-credential strings                |
-| V16 | .env.example exists      | `ls docker/.env.example`                                                                          | File exists                                            |
-| V17 | docker/.env gitignored   | `git check-ignore docker/.env`                                                                    | docker/.env                                            |
-| V18 | setup-shell.sh deleted   | `ls docker/setup-shell.sh 2>&1`                                                                   | No such file or directory                              |
-| V19 | No version: in compose   | `grep -c '^version:' docker/docker-compose.*.yml`                                                 | 0                                                      |
-| V20 | Disk reclaimed           | `docker system df`                                                                                | Build Cache RECLAIMABLE < 500 MB                       |
-| V21 | Orphaned volumes gone    | `docker volume ls -q \| wc -l`                                                                    | 5 or 6                                                 |
-| V22 | .dockerignore updated    | `grep 'hackrf_emitter' config/.dockerignore`                                                      | Match found                                            |
+| #   | Check                            | Command                                                                                                            | Expected Result                                        |
+| --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| V1  | All 4 containers running         | `docker ps --format '{{.Names}}' \| sort`                                                                          | argos-dev, argos-ollama, hackrf-backend-dev, portainer |
+| V2  | All containers healthy           | `docker ps --format '{{.Names}} {{.Status}}' \| grep -v healthy`                                                   | Empty (all show healthy)                               |
+| V3  | Argos UI loads                   | `curl -sf http://localhost:5173/ \| head -1`                                                                       | HTML content                                           |
+| V4  | HackRF API responds              | `curl -sf http://localhost:8092/api/health`                                                                        | JSON response                                          |
+| V5  | Portainer UI loads               | `curl -sf http://localhost:9000/`                                                                                  | HTML or redirect                                       |
+| V6  | Ollama API responds              | `curl -sf http://localhost:11434/api/tags`                                                                         | JSON response                                          |
+| V7  | argos not privileged             | `docker inspect argos-dev --format '{{.HostConfig.Privileged}}'`                                                   | false                                                  |
+| V8  | hackrf not privileged            | `docker inspect hackrf-backend-dev --format '{{.HostConfig.Privileged}}'`                                          | false                                                  |
+| V9  | No docker.sock mount             | `docker inspect argos-dev --format '{{range .Mounts}}{{.Source}} {{end}}' \| grep -c docker.sock`                  | 0                                                      |
+| V10 | No pid:host                      | `docker inspect argos-dev --format '{{.HostConfig.PidMode}}'`                                                      | "" (empty)                                             |
+| V11 | Ports bound to localhost         | See Task 6.1.2.5 verification commands                                                                             | All non-argos ports on 127.0.0.1                       |
+| V12 | Flask debug off                  | `docker exec hackrf-backend-dev env \| grep FLASK_DEBUG`                                                           | FLASK_DEBUG=0                                          |
+| V13 | CPU limits set                   | `docker inspect argos-dev --format '{{.HostConfig.NanoCpus}}'`                                                     | Non-zero value                                         |
+| V14 | PID limits set                   | `docker inspect argos-dev --format '{{.HostConfig.PidsLimit}}'`                                                    | Non-zero value                                         |
+| V15 | No hardcoded passwords           | `grep -n 'password\|hackrf\|argos' docker/docker-compose.portainer-dev.yml \| grep -iv '\${'`                      | Only comments or non-credential strings                |
+| V16 | .env.example exists              | `ls docker/.env.example`                                                                                           | File exists                                            |
+| V17 | docker/.env gitignored           | `git check-ignore docker/.env`                                                                                     | docker/.env                                            |
+| V18 | setup-shell.sh deleted           | `ls docker/setup-shell.sh 2>&1`                                                                                    | No such file or directory                              |
+| V19 | No version: in compose           | `grep -c '^version:' docker/docker-compose.*.yml`                                                                  | 0                                                      |
+| V20 | Disk reclaimed                   | `docker system df`                                                                                                 | Build Cache RECLAIMABLE < 500 MB                       |
+| V21 | Orphaned volumes gone            | `docker volume ls -q \| wc -l`                                                                                     | 5 or 6                                                 |
+| V22 | .dockerignore updated            | `grep 'hackrf_emitter' config/.dockerignore`                                                                       | Match found                                            |
+| V23 | ~/.claude mount read-only        | `docker inspect argos-dev --format '{{range .Mounts}}{{if eq .Destination "/root/.claude"}}{{.RW}}{{end}}{{end}}'` | false                                                  |
+| V24 | hostExec() call sites documented | `grep -rn 'hostExec' src/ --include='*.ts' \| wc -l`                                                               | Documented count (>0 means 6.1.2.3 BLOCKED)            |
+| V25 | openwebrx not privileged         | `docker inspect openwebrx-hackrf --format '{{.HostConfig.Privileged}}'`                                            | false (when running)                                   |
+| V26 | Logging limits on all services   | `docker inspect argos-ollama --format '{{json .HostConfig.LogConfig.Config}}'`                                     | {"max-file":"3","max-size":"10m"}                      |
+| V27 | PUBLIC_ENABLE_DEBUG removed      | `grep -c 'PUBLIC_ENABLE_DEBUG' docker/docker-compose.portainer-dev.yml`                                            | 0                                                      |
+| V28 | Bettercap API on localhost       | `grep 'api-rest-address' docker/docker-compose.portainer-dev.yml`                                                  | 127.0.0.1                                              |
+| V29 | No .env secrets in git history   | `git log --all --full-history -p -- '*/.env' '*.env' \| grep -ic 'password\|secret\|token'`                        | 0 (or documented accepted risk)                        |
 
 ---
 
@@ -1662,6 +2026,13 @@ This matrix maps each finding from the audit evidence to the task and subtask th
 | F29 | No health checks for portainer or ollama                                                 | MEDIUM            | 6.1.3  | 6.1.3.2                              |
 | F30 | Portainer restart:always should be unless-stopped                                        | LOW               | 6.1.3  | 6.1.3.3                              |
 | F31 | No CPU or PIDs limits on any service                                                     | MEDIUM            | 6.1.3  | 6.1.3.1                              |
+| F32 | ~/.claude mounted read-write into container (API credentials exposed)                    | CRITICAL          | 6.1.11 | 6.1.11.1                             |
+| F33 | hostExec()/nsenter dependency on pid:host undocumented (GSM-Evil breakage risk)          | CRITICAL          | 6.1.11 | 6.1.11.2                             |
+| F34 | openwebrx privileged:true has no remediation subtask                                     | HIGH              | 6.1.11 | 6.1.11.3                             |
+| F35 | Ollama/hackrf-backend/portainer have no logging limits                                   | HIGH              | 6.1.11 | 6.1.11.4                             |
+| F36 | PUBLIC_ENABLE_DEBUG=true exposes debug flag to browser                                   | MEDIUM            | 6.1.11 | 6.1.11.5                             |
+| F37 | Bettercap API binds to 0.0.0.0 (network-exposed attack tools)                            | MEDIUM            | 6.1.11 | 6.1.11.6                             |
+| F38 | No git history audit for leaked .env secrets                                             | LOW               | 6.1.11 | 6.1.11.7                             |
 
 ---
 
@@ -1678,6 +2049,7 @@ Phase 1 (Parallel):
   6.1.5  (Credentials)       -- No dependencies
   6.1.9  (Dead files)        -- No dependencies
   6.1.10 (Disk reclamation)  -- No dependencies, verify with `docker system df` before/after
+  6.1.11 (Audit remediations) -- 6.1.11.1-6.1.11.7 parallel with above; 6.1.11.2 BLOCKS 6.1.2.3
 
 Phase 2 (Sequential, requires Phase 1):
   6.1.1  (Dockerfile stages) -- Requires 6.1.4 (updated .dockerignore for builds)
@@ -1706,13 +2078,75 @@ Total estimated execution time: 2-4 hours (including image rebuilds on ARM).
 | Pin base images (node:20-bookworm-slim) to digest               | Requires ongoing maintenance of digest updates                     | Phase 6.2 (CI/CD)                        |
 | Add Docker image scanning (Trivy/Grype) to CI                   | Requires CI pipeline (currently broken)                            | Phase 6.2 (CI/CD)                        |
 | Implement Docker secrets for credential management              | Requires Swarm mode or alternative secrets manager                 | Phase 6.2 (CI/CD)                        |
+| Refactor hostExec()/nsenter call sites (BLOCKS Subtask 6.1.2.3) | 20+ call sites in GSM-Evil routes require architectural change     | Phase 7 (Application)                    |
 
 ---
 
+---
+
+## APPENDIX: Independent Audit Findings (2026-02-08)
+
+> **NOTE**: All 7 actionable findings below have been PROMOTED into the main plan body as Task 6.1.11 (Subtasks 6.1.11.1 through 6.1.11.7) with full Description, Files affected, Changes, Verification commands, and Acceptance criteria. This appendix is retained as a reference to the original audit language. MEDIUM-D7 (.dockerignore) was already covered by Subtask 6.1.4.1 and is not duplicated in Task 6.1.11.
+
+The following findings were identified by the independent verification audit and were NOT in the original Phase 6.1 plan. They have been incorporated into execution planning as Task 6.1.11.
+
+### CRITICAL-D1: Claude API Credentials Mounted Read-Write into Container
+
+**File**: `docker/docker-compose.portainer-dev.yml:60`
+**Finding**: `${HOME}/.claude:/root/.claude:rw` mounts the host's `~/.claude` directory (containing `.credentials.json` with API tokens, `history.jsonl`, `settings.json`) into the container with read-write access. Any process inside the privileged argos-dev container has full access to Claude API credentials.
+**Standard Violated**: CIS Docker Benchmark 5.5, DISA STIG V-235832.
+**Required Action**: Change mount to read-only (`:ro`) or remove entirely. Credential files should not be accessible from inside the container.
+
+### CRITICAL-D2: hostExec()/nsenter Dependency on pid:host
+
+**File**: `src/lib/server/host-exec.ts`
+**Finding**: The `hostExec()` function uses `nsenter -t 1 -m` to execute commands on the host from inside the container. This requires `pid:host` (L23). Subtask 6.1.2.3 proposes removing `pid:host` but does NOT identify that doing so will break all GSM-Evil functionality (20+ call sites in `src/routes/api/gsm-evil/`).
+**Required Action**: Before removing `pid:host`, all `hostExec()` call sites must be refactored. Add this as an explicit dependency to Subtask 6.1.2.3.
+
+### HIGH-D3: openwebrx privileged:true Has No Remediation Subtask
+
+**File**: `docker/docker-compose.portainer-dev.yml:124`
+**Finding**: Three services use `privileged: true` but only two have remediation subtasks (argos in 6.1.2.1, hackrf-backend in 6.1.2.4). The openwebrx service at line 124 has no subtask.
+**Required Action**: Create Subtask 6.1.2.7 for openwebrx privilege reduction using `cap_add: [SYS_RAWIO]` with `devices: [/dev/bus/usb]`.
+
+### HIGH-D4: Ollama Container Has No Logging Limits
+
+**File**: `docker/docker-compose.ollama.yml`
+**Finding**: No `logging:` directive. Runtime confirms `LogConfig.Config: {}`. On a memory-constrained RPi 5, unbounded logging can exhaust disk or degrade I/O.
+**Required Action**: Add `logging: { driver: "json-file", options: { max-size: "10m", max-file: "3" } }`.
+
+### MEDIUM-D5: PUBLIC_ENABLE_DEBUG=true Exposes Debug Flag to Browser
+
+**File**: `docker/docker-compose.portainer-dev.yml:37`
+**Finding**: SvelteKit's `PUBLIC_` prefix makes this variable client-accessible. If frontend uses it for debug panels, it increases attack surface.
+**Required Action**: Remove from production compose or rename without `PUBLIC_` prefix.
+
+### MEDIUM-D6: Bettercap API Binds to 0.0.0.0
+
+**File**: `docker/docker-compose.portainer-dev.yml:157`
+**Finding**: `bettercap -api-rest-address 0.0.0.0 -api-rest-port 8081` with `network_mode: host` exposes the REST API to all network interfaces.
+**Required Action**: Change bind address to `127.0.0.1`.
+
+### MEDIUM-D7: .dockerignore Missing Critical Exclusions
+
+**File**: `config/.dockerignore` (73 lines)
+**Finding**: Missing exclusions for `hackrf_emitter/`, `plans/`, `rf_signals.db`, `core.*`, `__pycache__/`. The `rf_signals.db` file contains signal intelligence data that should never be in a container image.
+**Required Action**: Add the missing exclusions to `.dockerignore`.
+
+### LOW-D8: No Git History Check for .env Secrets
+
+**Finding**: No `.gitattributes` or pre-commit hook prevents `.env` files from being committed. If credentials are moved to `.env` per Subtask 6.1.5.1, historical commits should be audited.
+**Required Action**: Run `git log --all --full-history -- '*/.env' '*.env'` to verify no secrets in history.
+
 **END OF DOCUMENT**
 
-**Document size**: ~510 lines
-**Tasks**: 10 (6.1.1 through 6.1.10)
-**Subtasks**: 41
-**Findings addressed**: 31 (27 original + 4 corrections/verifications)
+**Document size**: ~2150 lines
+**Version**: 2.0 (Revised)
+**Tasks**: 11 (6.1.1 through 6.1.11)
+**Subtasks**: 34
+**Findings addressed**: 38 (31 original + 7 independent audit findings promoted from Appendix)
+**Traceability entries**: F1-F38
+**Verification checks**: V1-V29
 **Audit corrections applied**: F7 reclassified HIGH->CRITICAL(P0), privilege reduction validation checklist added, Docker userns-remap evaluation added, secrets management strategy added, health check inconsistency finding added, disk reclamation verification caveat added
+
+**Revision 2.0**: Incorporated all 8 independent audit findings (CRITICAL-D1, CRITICAL-D2, HIGH-D3, HIGH-D4, MEDIUM-D5, MEDIUM-D6, MEDIUM-D7, LOW-D8) as proper subtasks. MEDIUM-D7 was already covered by existing Subtask 6.1.4.1; the remaining 7 findings are promoted into new Task 6.1.11 (Subtasks 6.1.11.1 through 6.1.11.7) with full specification matching the format of all existing subtasks. WARNING block added to Subtask 6.1.2.3 requiring hostExec() refactoring verification before pid:host removal. Verification Checklist extended with V23-V29. Traceability Matrix extended with F32-F38. Execution Order updated to include 6.1.11 in Phase 1.
