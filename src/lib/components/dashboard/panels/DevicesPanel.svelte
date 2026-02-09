@@ -15,6 +15,7 @@
 	let sortDirection: 'asc' | 'desc' = $state('desc');
 	let selectedMAC: string | null = $state(null);
 	let hiddenBands = $state(new Set<string>());
+	let hideNoSignal = $state(true);
 
 	function toggleBand(key: string) {
 		if (hiddenBands.has(key)) {
@@ -64,8 +65,9 @@
 		return all
 			.filter((d) => {
 				// Kismet reports 0 dBm for devices with no signal data — treat as no-data
-				const rssi = d.signal?.last_signal || -100;
-				const band = getSignalBandKey(rssi);
+				const rssi = d.signal?.last_signal || 0;
+				if (hideNoSignal && !rssi) return false;
+				const band = getSignalBandKey(rssi || -100);
 				if (hiddenBands.has(band)) return false;
 				if (!q) return true;
 				const mac = (d.mac || '').toLowerCase();
@@ -79,10 +81,15 @@
 					cmp = (a.mac || '').localeCompare(b.mac || '');
 				} else if (sortColumn === 'rssi') {
 					// 0 dBm = no data, sort below real signals
-					cmp = (b.signal?.last_signal || -100) - (a.signal?.last_signal || -100);
+					cmp = (a.signal?.last_signal || -100) - (b.signal?.last_signal || -100);
 				} else if (sortColumn === 'type') {
-					const order: Record<string, number> = { ap: 0, client: 1 };
-					cmp = (order[a.type] ?? 2) - (order[b.type] ?? 2);
+					const order: Record<string, number> = {
+						AP: 0,
+						Client: 1,
+						Bridged: 2,
+						'Ad-Hoc': 3
+					};
+					cmp = (order[a.type] ?? 4) - (order[b.type] ?? 4);
 				}
 				return sortDirection === 'asc' ? cmp : -cmp;
 			});
@@ -122,6 +129,14 @@
 				<span class="band-dot" style="background: var({band.cssVar})"></span>
 			</button>
 		{/each}
+		<button
+			class="band-chip no-signal-chip"
+			class:hidden-band={hideNoSignal}
+			onclick={() => (hideNoSignal = !hideNoSignal)}
+			title={hideNoSignal ? 'Show devices without signal' : 'Hide devices without signal'}
+		>
+			<span class="no-signal-label">—</span>
+		</button>
 	</div>
 
 	<!-- Device table -->
@@ -292,6 +307,17 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
+	}
+
+	.no-signal-chip {
+		margin-left: auto;
+	}
+
+	.no-signal-label {
+		font-size: 10px;
+		font-weight: var(--font-weight-semibold);
+		color: var(--palantir-text-tertiary);
+		line-height: 1;
 	}
 
 	.table-scroll {
