@@ -2,240 +2,112 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+# Argos — SDR & Network Analysis Console
 
-Argos is a professional SDR & Network Analysis Console built with SvelteKit. It provides real-time spectrum analysis, WiFi network intelligence, GPS tracking, and tactical awareness for defense and research applications.
+Production-grade SvelteKit application for Army EW training, deployed on Raspberry Pi 5. Real-time RF spectrum analysis, WiFi intelligence, GPS tracking, and tactical mapping.
 
-## Development Commands
+## CRITICAL SECURITY RULES
 
-### Essential Commands
+**FAIL-CLOSED DESIGN — System refuses to start without proper security configuration.**
+
+1. **NEVER bypass authentication checks**. All `/api/*` routes protected except `/api/health`. Auth validated at [src/hooks.server.ts:27-30](src/hooks.server.ts#L27-L30) before server starts.
+
+2. **ALWAYS validate inputs before shell execution**. Use validators from [src/lib/server/security/input-sanitizer.ts](src/lib/server/security/input-sanitizer.ts). Never use `exec()` with string interpolation — use `execFile()` with array args.
+
+3. **NEVER commit secrets**. API keys live in `.env` (gitignored). Generate with: `openssl rand -hex 32`
+
+4. **ALWAYS use parameterized queries**. Never template SQL strings. SQLite injection is real.
+
+5. **Hardware endpoints MUST have rate limiting**. Pattern: `/api/(hackrf|kismet|gsm-evil|rf)/` — 64KB body limit enforced at [src/hooks.server.ts](src/hooks.server.ts).
+
+## Tech Stack
+
+TypeScript 5.8.3, SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 3.4.15, SQLite (better-sqlite3), Vite 7.0.3, Vitest 3.2.4, Playwright 1.53.2
+
+**Deployed on:** Raspberry Pi 5 (8GB RAM, NVMe SSD), Kali Linux 2025.4, Docker v27.5.1
+
+## Commands
+
 ```bash
 # Development
-npm run dev                  # Start dev server with auto-validation (port 5173)
-npm run dev:simple          # Start dev server without auto-start
-npm run dev:auto-kismet     # Start dev with auto-kismet initialization
-npm run dev:full            # Start all services (main app + supporting services)
-npm run dev:clean           # Kill existing processes and start fresh
+npm run dev                  # Start dev server (port 5173, auto-validates .env)
+npm run dev:clean            # Kill existing processes and start fresh
+npm run kill-all             # Emergency: kill all Node/Python processes
 
-# Build & Production
-npm run build               # Build production bundle
-npm run preview             # Preview production build
+# Testing & Quality
+npm run test                 # Run all tests (Vitest)
+npm run test:unit            # Unit tests only
+npm run test:e2e             # Playwright E2E tests
+npm run typecheck            # TypeScript validation
+npm run lint                 # ESLint check
+npm run lint:fix             # Auto-fix ESLint errors
 
-# Code Quality
-npm run lint                # Run ESLint with custom config
-npm run lint:fix            # Fix ESLint errors automatically
-npm run typecheck           # Run TypeScript type checking
-npm run format              # Format code with Prettier
-npm run format:check        # Check code formatting
-npm run check               # Run svelte-check
-npm run check:watch         # Run svelte-check in watch mode
+# Database
+npm run db:migrate           # Run migrations
+npm run db:rollback          # Rollback last migration
 
-# Testing
-npm run test                # Run all tests with Vitest
-npm run test:unit           # Run unit tests only
-npm run test:integration    # Run integration tests
-npm run test:visual         # Run visual regression tests
-npm run test:performance    # Run performance benchmarks
-npm run test:e2e            # Run Playwright E2E tests
-npm run test:smoke          # Run smoke tests only
-npm run test:coverage       # Generate test coverage report
-npm run test:ui             # Open Vitest UI
-npm run test:watch          # Run tests in watch mode
-npm run test:all            # Run all test suites
+# MCP Server
+npm run mcp:start            # Start standalone MCP server for Claude integration
 ```
 
-### Service Management
-```bash
-# Process Management
-npm run kill-dev            # Kill dev server on port 5173
-npm run kill-all            # Kill all Node/Python processes
+## Project Structure
 
-# Database Operations
-npm run db:migrate          # Run database migrations
-npm run db:rollback         # Rollback last migration
-
-# Framework Validation (CI/CD)
-npm run framework:check-css        # Validate CSS integrity
-npm run framework:check-html       # Validate HTML structure
-npm run framework:check-visual     # Run visual regression checks
-npm run framework:validate-all     # Run all framework validations
-npm run framework:full-check       # Complete framework validation suite
+```
+src/routes/api/              # REST API endpoints (feature-organized)
+  ├── hackrf/                # HackRF spectrum analysis
+  ├── kismet/                # WiFi scanning
+  ├── gsm-evil/              # GSM monitoring
+  └── agent/                 # Ollama agent
+src/lib/server/              # Server-only code (auth, security, WebSocket)
+  ├── security/              # Input sanitization, rate limiting, CORS
+  └── mcp/                   # MCP server implementation
+src/lib/stores/              # Svelte stores (reactive state)
+tests/                       # unit/, integration/, e2e/, visual/, performance/
 ```
 
-## Architecture Overview
+## Code Conventions
 
-### Technology Stack
-- **Frontend**: SvelteKit 2.22.3, Svelte 5.35.5, TypeScript 5.8.3
-- **Styling**: Tailwind CSS 3.4.15
-- **Backend**: SvelteKit API routes, WebSocket server
-- **Database**: SQLite with R-tree spatial indexing
-- **Testing**: Vitest, Playwright
-- **Build**: Vite 7.0.3
+**Svelte 5 Runes**: Use `$effect()` for reactive subscriptions, not manual `subscribe()`. Stores auto-cleanup.
 
-### Key Directories
-- `src/routes/` - SvelteKit pages and API endpoints
-  - `src/routes/api/` - REST API endpoints organized by feature
-  - `src/routes/{feature}/` - Feature-specific pages (hackrf, kismet, gsm-evil, etc.)
-- `src/lib/components/` - Reusable Svelte components organized by feature
-  - `src/lib/components/hackrf/` - HackRF spectrum analysis components
-  - `src/lib/components/kismet/` - WiFi scanning and device tracking
-  - `src/lib/components/tactical-map/` - GPS and mapping components
-  - `src/lib/components/fusion/` - Packet analysis and intelligence tools
-- `src/lib/stores/` - Svelte stores for state management
-- `src/lib/server/` - Server-side utilities and services
-  - `src/lib/server/websocket-server.ts` - Main WebSocket server
-  - `src/lib/server/db/` - Database layer with optimization
-- `src/lib/services/` - Business logic and service layers
-- `scripts/` - System management and deployment scripts
-- `hackrf_emitter/` - Python backend for HackRF control
-- `tests/` - Comprehensive test suites (unit, integration, e2e, visual, performance)
-- `config/` - Configuration files (ESLint, Playwright, etc.)
+**Service Layer Pattern**: Routes handle HTTP concerns only. Business logic lives in `src/lib/services/`. Database access in `src/lib/server/db/`.
 
-### Core Services Integration
-The application integrates with multiple hardware devices and external services:
+**Error Handling**: Always use `errorResponse()` from [src/lib/server/security/error-response.ts](src/lib/server/security/error-response.ts). Never swallow errors silently (Phase 2.2.1 eliminated all empty `catch {}` blocks).
 
-1. **HackRF Integration** (Port 8092)
-   - Real-time spectrum analysis
-   - Signal detection and monitoring
-   - WebSocket streaming of RF data
+**WebSocket Auth**: Extract token from query param (`?token=...`) or `X-API-Key` header. Auth happens in connection handler, not `verifyClient` (noServer mode). See [src/lib/server/websocket-server.ts:79-100](src/lib/server/websocket-server.ts#L79-L100).
 
-2. **Kismet Integration** (Port 2501)
-   - WiFi network scanning
-   - Device detection and tracking
-   - GPS data integration
+## Gotchas
 
-3. **GSM Evil Integration**
-   - GSM signal monitoring
-   - IMSI detection
-   - Frequency scanning
+**Memory Limit**: Node.js heap capped at 1024MB (`--max-old-space-size=1024`). Don't load entire database into memory — use pagination.
 
-4. **USRP Support**
-   - Alternative SDR hardware
-   - Wider frequency range support
+**Docker Context**: Container uses `~/.claude/mcp.json`, NOT `~/.claude.json` (host-only). Host networking (`network_mode: host`) required for USB hardware access.
 
-### WebSocket Architecture
-The application uses WebSocket connections for real-time data streaming:
-- Main WebSocket server in `src/lib/server/websocket-server.ts`
-- Store-based reactive updates in frontend
-- Automatic reconnection handling
+**R-tree Spatial Indexing**: For "find signals within N meters" queries, MUST use R-tree subquery. See [src/lib/server/db/](src/lib/server/db/) for patterns. Full table scans will OOM on large datasets.
 
-### Database Schema
-SQLite database (`rf_signals.db`) with spatial indexing:
-- Signal detection records with GPS coordinates
-- R-tree indexing for efficient spatial queries
-- Time-based filtering and aggregation
+**MCP Server Architecture**: Runs as standalone process via `npx tsx`, CANNOT import SvelteKit internals. Communicates via HTTP API to localhost:5173. See [src/lib/server/mcp/dynamic-server.ts](src/lib/server/mcp/dynamic-server.ts).
 
-## Important Development Notes
+**Environment Variables**: System WILL NOT START without `ARGOS_API_KEY` (min 32 chars) in `.env`. Validation enforced at [src/lib/server/env.ts](src/lib/server/env.ts).
 
-1. **Environment Validation**: The app automatically validates required environment variables on startup using `npm run validate:env`. Check `src/lib/server/validate-env.js` for requirements.
+## Reference Documentation
 
-2. **Port Configuration**: Main services use specific ports:
-   - 5173: Main Argos web interface
-   - 8092: HackRF spectrum analyzer API
-   - 2501: Kismet API
-   - 3002: HackRF control API
-   - 8073: Spectrum analyzer web interface
+For detailed context on specific topics, see:
 
-3. **Hardware Dependencies**: Features gracefully handle missing hardware (HackRF, USRP, GPS modules, WiFi adapters). The app includes diagnostic scripts in `scripts/` for hardware troubleshooting.
+- **Security Architecture**: @docs/security-architecture.md (auth, sanitization, rate limiting)
+- **Hardware Integration**: @docs/hardware-patterns.md (HackRF, Kismet, GPS, USB passthrough)
+- **WebSocket Architecture**: @docs/websocket-guide.md (real-time data flow, backpressure)
+- **Database Patterns**: @docs/database-guide.md (R-tree indexing, migrations, performance)
+- **Testing Strategies**: @docs/testing-guide.md (hardware mocking, test organization)
+- **Deployment Guide**: @docs/deployment.md (Raspberry Pi 5, Docker, OOM protection)
 
-4. **SystemD Services**: Production deployment uses SystemD services for process management. See `deployment/` directory for service files.
+## After Making Changes
 
-5. **Memory Management**: Node.js configured with `--max-old-space-size=2048` for handling large RF data streams and WebSocket connections.
+1. **Run tests**: `npm run test:unit` (fast feedback)
+2. **Type check**: `npm run typecheck` (catches type errors)
+3. **Lint**: `npm run lint:fix` (auto-fixes style issues)
+4. **For hardware APIs**: Verify input validation added, auth required, rate limiting considered
+5. **For security changes**: Check [src/hooks.server.ts](src/hooks.server.ts), verify no hardcoded secrets, test with invalid API key (should return 401)
 
-6. **WebSocket Performance**: WebSocket server uses compression and connection pooling for optimal performance with real-time data streams.
+---
 
-7. **Database Optimization**: SQLite database includes R-tree spatial indexing and automated cleanup strategies for performance.
-
-## Common Development Tasks
-
-### Adding a New RF Signal Source
-1. Create store in `src/lib/stores/`
-2. Add WebSocket handler in `src/lib/server/websocket-server.ts`
-3. Create UI component in `src/lib/components/`
-4. Add route in `src/routes/`
-
-### Modifying the Database Schema
-1. Create migration file in `src/lib/database/migrations/`
-2. Run `npm run db:migrate`
-3. Update TypeScript types in `src/lib/types/`
-
-### Testing Hardware Integration
-1. Use scripts in `scripts/dev/` for isolated testing
-2. Check `tests/integration/` for examples
-3. Monitor WebSocket connections in browser DevTools
-
-### Debugging Tips
-- **SystemD logs**: `journalctl -u argos-dev -f`
-- **WebSocket monitoring**: Use browser Network tab or DevTools
-- **Hardware diagnostics**: Use `scripts/diagnose-*.sh` and `scripts/emergency-*.sh` scripts
-- **Database location**: `/home/ubuntu/projects/Argos/rf_signals.db`
-- **Process debugging**: Use `npm run kill-all` to clean stuck processes
-- **Memory issues**: Monitor with `scripts/monitoring/monitor-memory.sh`
-- **Test isolation**: Use `npm run test:unit` for specific test suites
-
-## Code Architecture Patterns
-
-### Store-Based State Management
-- All reactive state managed through Svelte stores in `src/lib/stores/`
-- WebSocket data automatically updates stores
-- Components reactively update based on store changes
-
-### Service Layer Architecture
-- Business logic separated into services (`src/lib/services/`)
-- Database access layer in `src/lib/server/db/`
-- Hardware abstraction in device-specific services
-
-### API Route Organization
-- RESTful API endpoints in `src/routes/api/`
-- Feature-based grouping (hackrf, kismet, gsm-evil)
-- Consistent error handling and response formats
-
-### Component Structure
-- Feature-based component organization
-- Reusable components in appropriate subdirectories
-- TypeScript interfaces for all component props
-
-## Git Workflow & Branching Strategy
-
-### Branching Model
-- **main**: Production-ready code, protected branch
-- **branch1**: Current development branch 
-- **feature/****: Feature development branches
-- **agent/****: AI agent-generated changes (format: `agent/<agent-name>/<task-name>`)
-- **hotfix/****: Critical bug fixes
-
-### Commit Standards
-- Use conventional commit format: `type: description`
-- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-- Include scope when applicable: `feat(gsm-evil): add health monitoring`
-- AI agents must create atomic, logical commits with clear reasoning
-
-### Pull Request Process
-- All changes require PR review before merge to main
-- AI agents create feature branches and open PRs
-- Include verification steps and testing evidence
-- Document architectural decisions and trade-offs
-
-## AI Agent Ecosystem
-
-### Agent Directory Structure
-- `.claude/agents/` - Individual specialized agent definitions
-- `.claude/README.md` - Agent ecosystem documentation
-- `src/CLAUDE.md` - Source code context for agents
-- `scripts/CLAUDE.md` - Scripts and automation context
-- `tests/CLAUDE.md` - Testing infrastructure context
-
-### Agent Quality Standards
-Every AI agent embodies:
-- Senior-level expertise (10+ years equivalent) in their domain
-- Production-grade output quality and security practices
-- Comprehensive error handling and defensive programming
-- Git workflow compliance with branching and commit standards
-- Context awareness through persistent documentation
-
-### Agent Operational Principles
-- **Context Isolation**: Each agent operates with focused, minimal context
-- **Verification-First**: All outputs include verification plans
-- **Human Oversight**: Critical decisions flagged for human review
-- **Security Compliance**: No hardcoded secrets, OWASP guidelines followed
-- **Documentation**: All agent actions documented with reasoning
+**Security Model**: Fail-closed, defense-in-depth, OWASP compliant
+**Memory Model**: 1GB Node.js heap, OOM protection via earlyoom + zram
+**Deployment**: Raspberry Pi 5, Kali Linux 2025.4, Docker v27.5.1

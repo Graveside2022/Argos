@@ -26,6 +26,11 @@ jobs:
       - name: 'Install Dependencies'
         run: npm ci
 
+      - name: 'Security Audit - Check for Vulnerabilities'
+        run: npm audit --audit-level=high
+        # Fails CI if any high or critical vulnerabilities are found
+        # This is a mandatory security gate per Phase 2.2.6
+
       - name: 'Run Linting, Formatting, and Type Checks'
         run: |
           npm run lint
