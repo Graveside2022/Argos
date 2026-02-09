@@ -7,33 +7,22 @@
  */
 
 // --- api ---
-export { HackRFAPI, hackrfAPI } from "./api";
+export { HackRFAPI, hackrfAPI } from './api';
 
 // --- hackrf-service ---
-export { HackRFService, hackrfService } from "./hackrf-service";
-
-// --- signal-processor ---
-export { signalProcessor } from "./signal-processor";
-
-// --- sweep-analyzer ---
-export { sweepAnalyzer } from "./sweep-analyzer";
+export { HackRFService, hackrfService } from './hackrf-service';
 
 // --- time-window-filter ---
-export {
-	formatAge,
-	getAgeColor,
-	getRelevanceIcon,
-	timeWindowFilter,
-} from "./time-window-filter";
+export { formatAge, getAgeColor, getRelevanceIcon, timeWindowFilter } from './time-window-filter';
 export type {
 	TimedSignal,
 	TimeWindowConfig,
 	TimeWindowState,
-	TimeWindowStats,
-} from "./time-window-filter";
+	TimeWindowStats
+} from './time-window-filter';
 
 // --- usrp-api ---
-export { USRPAPI, usrpAPI } from "./usrp-api";
+export { USRPAPI, usrpAPI } from './usrp-api';
 
 // --- sweep-manager/ subdirectory (types only) ---
 // NOTE: Value re-exports (BufferManager, ErrorTracker, FrequencyCycler,
@@ -54,5 +43,5 @@ export type {
 	ParsedLine,
 	ProcessConfig,
 	ProcessState,
-	RecoveryConfig,
-} from "./sweep-manager";
+	RecoveryConfig
+} from './sweep-manager';
