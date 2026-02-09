@@ -50,21 +50,16 @@ export type {
 } from './api';
 
 // ---------------------------------------------------------------------------
-// WebSocket services (clients, manager, data-stream)
+// WebSocket services (clients)
 // ---------------------------------------------------------------------------
 export {
 	BaseWebSocket,
 	HackRFWebSocketClient,
 	KismetWebSocketClient,
-	WebSocketManager,
-	dataStreamManager,
 	destroyHackRFWebSocketClient,
 	destroyKismetWebSocketClient,
-	destroyWebSocketManager,
 	getHackRFWebSocketClient,
-	getKismetWebSocketClient,
-	getWebSocketManager,
-	testWebSocketConnections
+	getKismetWebSocketClient
 } from './websocket';
 export type {
 	BaseWebSocketConfig,
@@ -74,8 +69,7 @@ export type {
 	KismetWebSocketConfig,
 	WebSocketEvent,
 	WebSocketEventListener,
-	WebSocketEventType,
-	WebSocketManagerConfig
+	WebSocketEventType
 } from './websocket';
 
 // ---------------------------------------------------------------------------
