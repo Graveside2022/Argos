@@ -178,16 +178,16 @@ export class KismetProxy {
 			// Filter by signal strength
 			if (
 				filter.minSignal !== undefined &&
-				device.signal !== undefined &&
-				device.signal < filter.minSignal
+				device.signalStrength !== undefined &&
+				device.signalStrength < filter.minSignal
 			) {
 				return false;
 			}
 
 			if (
 				filter.maxSignal !== undefined &&
-				device.signal !== undefined &&
-				device.signal > filter.maxSignal
+				device.signalStrength !== undefined &&
+				device.signalStrength > filter.maxSignal
 			) {
 				return false;
 			}
@@ -286,7 +286,20 @@ export class KismetProxy {
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
 		const encryptionNumber = raw['kismet.device.base.crypt'];
 		const manufacturer = raw['kismet.device.base.manuf'] || 'Unknown';
-		const signal = raw['kismet.device.base.signal'] as any;
+		const signalRaw = raw['kismet.device.base.signal'] as any;
+		// Kismet returns signal as either a plain number or an object with nested fields
+		const lastSignal =
+			typeof signalRaw === 'number'
+				? signalRaw
+				: (signalRaw?.['kismet.common.signal.last_signal'] ?? -100);
+		const maxSignal =
+			typeof signalRaw === 'object' && signalRaw
+				? (signalRaw['kismet.common.signal.max_signal'] ?? lastSignal)
+				: lastSignal;
+		const minSignal =
+			typeof signalRaw === 'object' && signalRaw
+				? (signalRaw['kismet.common.signal.min_signal'] ?? lastSignal)
+				: lastSignal;
 
 		return {
 			mac: raw['kismet.device.base.macaddr'] || 'Unknown',
@@ -296,8 +309,8 @@ export class KismetProxy {
 			type,
 			channel: (raw['kismet.device.base.channel'] as unknown as number) || 0,
 			frequency: raw['kismet.device.base.frequency'] || 0,
-			signal: signal?.['kismet.common.signal.last_signal'] || -100,
-			signalStrength: signal?.['kismet.common.signal.last_signal'] || -100,
+			signal: { last_signal: lastSignal, max_signal: maxSignal, min_signal: minSignal },
+			signalStrength: lastSignal,
 			firstSeen: this.convertTimestamp(raw['kismet.device.base.first_time']),
 			lastSeen: this.convertTimestamp(raw['kismet.device.base.last_time']),
 			packets: raw['kismet.device.base.packets.total'] || 0,
@@ -309,16 +322,18 @@ export class KismetProxy {
 	}
 
 	/**
-	 * Map Kismet device type to our type
+	 * Map Kismet device type to display label.
+	 * Passes through ALL types Kismet reports — strips common prefixes for cleaner display.
 	 */
 	private static mapDeviceType(kismetType: string | undefined): KismetDevice['type'] {
 		if (!kismetType) return 'Unknown';
-		const typeMap: Record<string, KismetDevice['type']> = {
-			'Wi-Fi AP': 'AP',
-			'Wi-Fi Client': 'Client',
-			'Wi-Fi Bridge': 'Bridge'
-		};
-		return typeMap[kismetType] || 'Unknown';
+		// Strip common Kismet prefixes for cleaner display
+		if (kismetType.startsWith('Wi-Fi ')) return kismetType.slice(6);
+		if (kismetType.startsWith('Bluetooth ')) return kismetType.slice(10);
+		if (kismetType.startsWith('BTLE ')) return 'BLE ' + kismetType.slice(5);
+		if (kismetType.startsWith('RTL433 ')) return kismetType.slice(7);
+		if (kismetType.startsWith('UAV ')) return kismetType;
+		return kismetType;
 	}
 
 	/**

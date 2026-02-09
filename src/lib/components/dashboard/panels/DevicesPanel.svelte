@@ -63,7 +63,8 @@
 
 		return all
 			.filter((d) => {
-				const rssi = d.signal?.last_signal ?? -100;
+				// Kismet reports 0 dBm for devices with no signal data — treat as no-data
+				const rssi = d.signal?.last_signal || -100;
 				const band = getSignalBandKey(rssi);
 				if (hiddenBands.has(band)) return false;
 				if (!q) return true;
@@ -77,7 +78,8 @@
 				if (sortColumn === 'mac') {
 					cmp = (a.mac || '').localeCompare(b.mac || '');
 				} else if (sortColumn === 'rssi') {
-					cmp = (b.signal?.last_signal ?? -100) - (a.signal?.last_signal ?? -100);
+					// 0 dBm = no data, sort below real signals
+					cmp = (b.signal?.last_signal || -100) - (a.signal?.last_signal || -100);
 				} else if (sortColumn === 'type') {
 					const order: Record<string, number> = { ap: 0, client: 1 };
 					cmp = (order[a.type] ?? 2) - (order[b.type] ?? 2);
@@ -155,10 +157,14 @@
 								<span
 									class="signal-indicator"
 									style="background: {getSignalHex(
-										device.signal?.last_signal ?? -100
+										device.signal?.last_signal || -100
 									)}"
 								></span>
-								<span class="rssi-value">{device.signal?.last_signal ?? '-'}</span>
+								<span class="rssi-value"
+									>{device.signal?.last_signal
+										? device.signal.last_signal
+										: '-'}</span
+								>
 							</div>
 						</td>
 						<td>
