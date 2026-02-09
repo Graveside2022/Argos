@@ -1026,8 +1026,29 @@
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		console.log('[GSM] Component mounted');
+		// Check if GSM Evil is already running (e.g. user navigated away and back)
+		try {
+			const res = await fetch('/api/gsm-evil/status');
+			const data = await res.json();
+			if (data.status === 'running') {
+				console.log('[GSM] Detected running GSM Evil processes — restoring active state');
+				imsiCaptureActive = true;
+				if (imsiPollInterval) clearInterval(imsiPollInterval);
+				imsiPollInterval = setInterval(() => {
+					fetchIMSIs();
+					checkActivity();
+					fetchRealFrames();
+				}, 2000);
+				// Immediate fetch to populate UI
+				fetchIMSIs();
+				checkActivity();
+				fetchRealFrames();
+			}
+		} catch {
+			// Status check failed — page starts in default stopped state
+		}
 	});
 
 	onDestroy(() => {

@@ -142,7 +142,7 @@
 		}
 	}
 
-	/** Check initial status of Docker-based tools on mount */
+	/** Check initial status of tools on mount */
 	onMount(() => {
 		// Check OpenWebRX container status
 		const openwebrxEp = toolEndpoints['openwebrx'];
@@ -158,6 +158,14 @@
 				})
 				.catch(() => {});
 		}
+
+		// Check GSM Evil process status (uses dedicated GET endpoint)
+		fetch('/api/gsm-evil/status')
+			.then((r) => r.json())
+			.then((data) => {
+				if (data.status === 'running') setLocalStatus('gsm-evil', 'running');
+			})
+			.catch(() => {});
 	});
 </script>
 
