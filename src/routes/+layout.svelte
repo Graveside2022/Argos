@@ -3,7 +3,6 @@
 	import type { Snippet } from 'svelte';
 	import { markCSSLoaded } from '$lib/utils/css-loader';
 	import '../app.css';
-	import '../lib/styles/hackrf/custom-components-exact.css';
 
 	interface Props {
 		children: Snippet;

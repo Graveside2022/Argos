@@ -4,12 +4,10 @@
 @import './lib/styles/palantir-design-system.css';
 
 :root {
-	/* Palantir accent palette */
 	--neon-cyan: #4a9eff;
 	--neon-cyan-light: #6db3ff;
 }
 
-/* Custom component styles from the HackRF page */
 @layer components {
 	/* Glass effects */
 	.glass-panel {
@@ -47,67 +45,24 @@
 		color: rgb(var(--text-muted));
 	}
 
-	/* Saasfly components */
-	.saasfly-feature-card {
-		@apply rounded-2xl p-8 border backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300;
-		background: linear-gradient(
-			to bottom right,
-			color-mix(in srgb, rgb(var(--bg-card)) 80%, transparent),
-			color-mix(in srgb, rgb(var(--bg-card)) 60%, transparent),
-			color-mix(in srgb, rgb(var(--bg-card)) 40%, transparent)
-		);
-		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
-	}
-	.saasfly-feature-card:hover {
-		background: linear-gradient(
-			to bottom right,
-			color-mix(in srgb, rgb(var(--bg-card)) 90%, transparent),
-			color-mix(in srgb, rgb(var(--bg-card)) 70%, transparent),
-			color-mix(in srgb, rgb(var(--bg-card)) 50%, transparent)
-		);
-		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 30%, transparent);
-	}
-
-	.saasfly-button-primary {
-		@apply px-6 py-3 bg-accent-primary text-black font-semibold rounded-lg 
-           hover:bg-accent-hover hover:shadow-lg transition-all duration-200;
-	}
-
-	.saasfly-button-secondary {
-		@apply px-6 py-3 text-text-primary font-medium rounded-lg border border-border-primary hover:border-border-hover transition-all duration-200;
-		background-color: color-mix(in srgb, rgb(var(--bg-button)) 20%, transparent);
-	}
-	.saasfly-button-secondary:hover {
-		background-color: color-mix(in srgb, rgb(var(--bg-button)) 40%, transparent);
-	}
-
-	/* Navigation styles */
-	.nav-link {
-		@apply text-text-secondary hover:text-accent-primary transition-colors duration-200;
-	}
-
-	.nav-link.active {
-		@apply text-accent-primary font-semibold;
-	}
-
-	.mobile-nav-link {
-		@apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-text-secondary hover:text-accent-primary;
-	}
-	.mobile-nav-link:hover {
-		background-color: color-mix(in srgb, rgb(var(--bg-hover)) 20%, transparent);
-	}
-
-	.mobile-nav-link.active {
-		@apply text-accent-primary;
-		background-color: color-mix(in srgb, rgb(var(--bg-hover)) 20%, transparent);
-	}
-
 	/* Status indicators */
 	.status-indicator {
 		@apply w-2 h-2 rounded-full;
 	}
 
-	/* HackRF brand styles */
+	.status-connected {
+		@apply bg-green-500 animate-pulse;
+	}
+
+	.status-disconnected {
+		@apply bg-red-500;
+	}
+
+	.status-connecting {
+		@apply bg-yellow-500 animate-pulse;
+	}
+
+	/* Brand styles */
 	.hackrf-brand {
 		color: #f97316 !important;
 		text-shadow: none;
@@ -127,41 +82,6 @@
 		box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 	}
 
-	.status-connected {
-		@apply bg-green-500 animate-pulse;
-	}
-
-	.status-disconnected {
-		@apply bg-red-500;
-	}
-
-	.status-connecting {
-		@apply bg-yellow-500 animate-pulse;
-	}
-
-	/* Frequency components */
-	.frequency-item {
-		@apply flex items-center justify-between p-4 rounded-lg border border-border-primary transition-all duration-200;
-		background-color: color-mix(in srgb, rgb(var(--bg-input)) 50%, transparent);
-	}
-	.frequency-item:hover {
-		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 50%, transparent);
-	}
-
-	.frequency-config-icon {
-		@apply text-accent-primary;
-	}
-
-	.frequency-config-header {
-		@apply text-text-primary group-hover:text-accent-primary;
-	}
-
-	/* Sweep control styles */
-	.sweep-control-active {
-		@apply border-accent-primary;
-		background-color: color-mix(in srgb, rgb(var(--accent-primary)) 10%, transparent);
-	}
-
 	/* Spectrum display */
 	.spectrum-container {
 		@apply bg-bg-card rounded-xl border border-border-primary p-6;
@@ -170,139 +90,4 @@
 	.signal-strength-bar {
 		@apply h-full transition-all duration-300;
 	}
-
-	/* Error states */
-	.error-panel {
-		@apply bg-error-bg border border-error-border rounded-lg p-4;
-	}
-
-	.recovery-panel {
-		@apply bg-recovery-bg border border-recovery-border rounded-lg p-4;
-	}
-}
-
-/* Geometric background styles */
-.geometric-background {
-	@apply fixed inset-0 overflow-hidden pointer-events-none;
-	z-index: 0;
-}
-
-.depth-gradient {
-	@apply absolute inset-0;
-	background: radial-gradient(
-		ellipse at center,
-		rgba(14, 17, 22, 0) 0%,
-		rgba(14, 17, 22, 0.8) 100%
-	);
-}
-
-.floating-shapes {
-	@apply absolute inset-0;
-}
-
-.grid-pattern {
-	@apply absolute inset-0 opacity-5;
-	background-image:
-		linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-	background-size: 50px 50px;
-}
-
-.hexagon-overlay {
-	@apply absolute inset-0 opacity-10;
-	background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E");
-	background-size: 60px 60px;
-}
-
-.circuit-lines {
-	@apply absolute inset-0 opacity-5;
-	background-image:
-		linear-gradient(
-			45deg,
-			transparent 48%,
-			rgba(255, 255, 255, 0.1) 49%,
-			rgba(255, 255, 255, 0.1) 51%,
-			transparent 52%
-		),
-		linear-gradient(
-			-45deg,
-			transparent 48%,
-			rgba(255, 255, 255, 0.1) 49%,
-			rgba(255, 255, 255, 0.1) 51%,
-			transparent 52%
-		);
-	background-size: 20px 20px;
-}
-
-.accent-triangle {
-	@apply absolute w-0 h-0 opacity-5;
-	border-style: solid;
-}
-
-.triangle-1 {
-	top: 10%;
-	right: 15%;
-	border-width: 0 50px 86.6px 50px;
-	border-color: transparent transparent rgba(255, 255, 255, 0.1) transparent;
-	transform: rotate(15deg);
-}
-
-.triangle-2 {
-	bottom: 20%;
-	left: 10%;
-	border-width: 0 75px 129.9px 75px;
-	border-color: transparent transparent rgba(255, 255, 255, 0.05) transparent;
-	transform: rotate(-30deg);
-}
-
-.triangle-3 {
-	top: 50%;
-	left: 50%;
-	border-width: 0 40px 69.3px 40px;
-	border-color: transparent transparent rgba(163, 163, 163, 0.1) transparent;
-	transform: translate(-50%, -50%) rotate(45deg);
-}
-
-/* Animations */
-@keyframes scan {
-	0% {
-		transform: translateX(-100%);
-	}
-	100% {
-		transform: translateX(100%);
-	}
-}
-
-@keyframes neonPulse {
-	0%,
-	100% {
-		opacity: 0.8;
-	}
-	50% {
-		opacity: 1;
-	}
-}
-
-@keyframes scanLine {
-	0% {
-		transform: translateY(-100%);
-	}
-	100% {
-		transform: translateY(100%);
-	}
-}
-
-@keyframes activeFrequency {
-	0%,
-	100% {
-		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
-	}
-	50% {
-		box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4);
-	}
-}
-
-/* Header gradient */
-.header-gradient-sweep {
-	background: linear-gradient(180deg, rgba(14, 17, 22, 0.95) 0%, rgba(14, 17, 22, 0.85) 100%);
 }
