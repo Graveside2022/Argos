@@ -15,12 +15,6 @@ export {
 // dynamic-server
 export { ArgosMCPServer } from './dynamic-server';
 
-// server
-export { createMCPServer, startMCPServer } from './server';
-
-// tools (re-export from subdirectory barrel)
-export { ALL_TOOLS, executeTool as executeMCPTool } from './tools';
-
 // types
 export type {
 	MCPConfiguration,
