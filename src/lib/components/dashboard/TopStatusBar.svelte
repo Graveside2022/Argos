@@ -755,9 +755,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 var(--space-4);
-		z-index: 10;
+		z-index: 100;
 		position: relative;
-		overflow: hidden;
 	}
 
 	.status-group {
