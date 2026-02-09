@@ -31,6 +31,19 @@
 		</label>
 
 		<label class="toggle-row">
+			<span class="toggle-label">Connections</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.connectionLines}
+				onclick={() => toggleLayerVisibility('connectionLines')}
+				role="switch"
+				aria-checked={$layerVisibility.connectionLines}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+		<label class="toggle-row">
 			<span class="toggle-label">Cell Towers</span>
 			<button
 				class="toggle-switch"
@@ -79,6 +92,22 @@
 				</button>
 			</label>
 		{/each}
+
+		<label class="toggle-row">
+			<div class="band-label">
+				<span class="band-dot" style="background: #9a9a9a"></span>
+				<span class="toggle-label">No RSSI</span>
+			</div>
+			<button
+				class="toggle-switch"
+				class:on={$activeBands.has('none')}
+				onclick={() => toggleBand('none')}
+				role="switch"
+				aria-checked={$activeBands.has('none')}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
 	</section>
 </div>
 

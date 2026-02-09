@@ -207,7 +207,10 @@ class KismetServer extends BaseMCPServer {
 					found: true,
 					network_count: matches.length,
 					networks: matches.map((d: any) => {
-						const encryption = (d.encryption || d.crypt || 'None').toUpperCase();
+						const rawEnc = d.encryption || d.crypt || 'None';
+						const encryption = (
+							Array.isArray(rawEnc) ? rawEnc.join(', ') : String(rawEnc)
+						).toUpperCase();
 						const isOpen = encryption === 'NONE' || encryption === 'OPEN';
 						const isWEP = encryption.includes('WEP');
 						const isWPA3 = encryption.includes('WPA3') || encryption.includes('SAE');

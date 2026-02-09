@@ -64,6 +64,8 @@ export const signalBands: SignalBand[] = [
 
 /** Get the signal band key for an RSSI value */
 export function getSignalBandKey(rssi: number): string {
+	// 0 dBm means Kismet has no signal data — treat as "no signal"
+	if (rssi === 0) return 'none';
 	if (rssi > -50) return 'critical';
 	if (rssi > -60) return 'strong';
 	if (rssi > -70) return 'good';
@@ -80,6 +82,8 @@ export function getSignalColor(rssi: number): string {
 
 /** Get an inline hex color for contexts where CSS vars aren't available (e.g. Leaflet markers) */
 export function getSignalHex(rssi: number): string {
+	// 0 dBm means Kismet has no signal data — render as light grey (visible on dark map)
+	if (rssi === 0) return '#9a9a9a';
 	if (rssi > -50) return '#dc2626';
 	if (rssi > -60) return '#f97316';
 	if (rssi > -70) return '#fbbf24';

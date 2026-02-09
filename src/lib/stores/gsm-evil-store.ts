@@ -89,7 +89,9 @@ function createGSMEvilStore() {
 				}
 
 				// Merge with defaults to handle missing properties
-				const mergedState = { ...defaultState, ...parsedState };
+				// CRITICAL: scanAbortController cannot survive JSON serialization (becomes {} not null)
+				// Always reset it to null on load to prevent .abort() crashes
+				const mergedState = { ...defaultState, ...parsedState, scanAbortController: null };
 				set(mergedState);
 			}
 		} catch (error) {

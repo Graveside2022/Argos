@@ -2,7 +2,12 @@
 	import { setContext } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import { layerVisibility, activeBands } from '$lib/stores/dashboard/dashboard-store';
+	import {
+		layerVisibility,
+		activeBands,
+		isolateDevice,
+		isolatedDeviceMAC
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import { getSignalHex, getSignalBandKey } from '$lib/utils/signal-utils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -15,6 +20,7 @@
 		CircleLayer,
 		SymbolLayer,
 		FillLayer,
+		LineLayer,
 		CustomControl,
 		NavigationControl
 	} from 'svelte-maplibre-gl';
@@ -105,15 +111,123 @@
 		return { type: 'FeatureCollection' as const, features: rangeFeatures };
 	});
 
-	// Device derived state
+	// --- Radial spread: clients sharing AP's exact GPS get fanned out in a circle ---
+	// Deterministic angle from MAC so each client gets a stable unique position
+	function macToAngle(mac: string): number {
+		let hash = 0;
+		for (let i = 0; i < mac.length; i++) {
+			hash = (hash << 5) - hash + mac.charCodeAt(i);
+			hash |= 0;
+		}
+		return (Math.abs(hash) % 360) * (Math.PI / 180);
+	}
+
+	// Estimate distance from RSSI using log-distance path loss model
+	// PL(d) = 40 + 10·n·log₁₀(d), n=3.3 (suburban w/ buildings)
+	// Signal(d) = -12 - 33·log₁₀(d) → d = 10^((-12 - rssi) / 33)
+	// Clamped to [10m, 300m] to match detection range bands
+	function rssiToMeters(rssi: number): number {
+		if (rssi === 0 || rssi >= -12) return 40; // no-signal fallback
+		const d = Math.pow(10, (-12 - rssi) / 33);
+		return Math.max(10, Math.min(300, d));
+	}
+
+	// Returns [lon, lat] — offset if client shares AP's exact coords, otherwise original
+	// Uses RSSI-based distance estimation: strong signal → close, weak → far
+	function spreadClientPosition(
+		clientLon: number,
+		clientLat: number,
+		apLon: number,
+		apLat: number,
+		clientMac: string,
+		clientRssi: number
+	): [number, number] {
+		const samePos =
+			Math.abs(clientLat - apLat) < 0.00001 && Math.abs(clientLon - apLon) < 0.00001;
+		if (!samePos) return [clientLon, clientLat];
+		const distMeters = rssiToMeters(clientRssi);
+		const angle = macToAngle(clientMac);
+		const dLat = (distMeters * Math.cos(angle)) / 111320;
+		const dLon = (distMeters * Math.sin(angle)) / (111320 * Math.cos((apLat * Math.PI) / 180));
+		return [apLon + dLon, apLat + dLat];
+	}
+
+	// Quadratic bezier curve between two points (bows outward for visual separation)
+	function bezierArc(
+		start: [number, number],
+		end: [number, number],
+		steps = 16
+	): [number, number][] {
+		const dx = end[0] - start[0];
+		const dy = end[1] - start[1];
+		const dist = Math.sqrt(dx * dx + dy * dy);
+		if (dist < 1e-8) return [start, end];
+		// Control point: perpendicular offset at midpoint (15% of line length)
+		const mx = (start[0] + end[0]) / 2;
+		const my = (start[1] + end[1]) / 2;
+		const bow = dist * 0.15;
+		const cx = mx - (dy / dist) * bow;
+		const cy = my + (dx / dist) * bow;
+		const pts: [number, number][] = [];
+		for (let i = 0; i <= steps; i++) {
+			const t = i / steps;
+			const u = 1 - t;
+			pts.push([
+				u * u * start[0] + 2 * u * t * cx + t * t * end[0],
+				u * u * start[1] + 2 * u * t * cy + t * t * end[1]
+			]);
+		}
+		return pts;
+	}
+
+	// Device derived state — filters at data level for reliability (MapLibre expression filters
+	// don't work reliably on clustered sources, same pattern used for isolation filtering)
 	let deviceGeoJSON: FeatureCollection = $derived.by(() => {
 		const state = $kismetStore;
+		const isoMac = $isolatedDeviceMAC;
+		const bands = $activeBands;
 		const features: Feature[] = [];
+
+		// Build set of visible MACs when isolated
+		let visibleMACs: Set<string> | null = null;
+		if (isoMac) {
+			const ap = state.devices.get(isoMac);
+			visibleMACs = new Set([isoMac]);
+			if (ap?.clients?.length) {
+				for (const c of ap.clients) visibleMACs.add(c);
+			}
+		}
+
 		state.devices.forEach((device, mac) => {
-			const lat = device.location?.lat;
-			const lon = device.location?.lon;
+			// When isolated, only include the AP and its clients
+			if (visibleMACs && !visibleMACs.has(mac)) return;
+
+			let lat = device.location?.lat;
+			let lon = device.location?.lon;
 			if (!lat || !lon || (lat === 0 && lon === 0)) return;
-			const rssi = device.signal?.last_signal ?? -80;
+			const rssi = device.signal?.last_signal ?? 0;
+			const band = getSignalBandKey(rssi);
+
+			// Filter by active signal bands (skip devices whose band is toggled off)
+			if (!bands.has(band)) return;
+
+			// Radial spread: clients sharing AP's position get fanned out
+			if (device.parentAP) {
+				const ap = state.devices.get(device.parentAP);
+				if (ap?.location?.lat && ap?.location?.lon) {
+					const [sLon, sLat] = spreadClientPosition(
+						lon,
+						lat,
+						ap.location.lon,
+						ap.location.lat,
+						mac,
+						rssi
+					);
+					lon = sLon;
+					lat = sLat;
+				}
+			}
+
 			features.push({
 				type: 'Feature',
 				geometry: { type: 'Point', coordinates: [lon, lat] },
@@ -121,16 +235,61 @@
 					mac,
 					ssid: device.ssid || 'Unknown',
 					rssi,
-					band: getSignalBandKey(rssi),
+					band,
 					type: device.type || 'unknown',
 					color: getSignalHex(rssi),
 					manufacturer: device.manufacturer || device.manuf || 'Unknown',
 					channel: device.channel || 0,
 					frequency: device.frequency || 0,
 					packets: device.packets || 0,
-					last_seen: device.last_seen || 0
+					last_seen: device.last_seen || 0,
+					clientCount: device.clients?.length ?? 0,
+					parentAP: device.parentAP ?? ''
 				}
 			});
+		});
+		return { type: 'FeatureCollection' as const, features };
+	});
+
+	// AP-to-client connection arcs — curved lines for visual clarity
+	let connectionLinesGeoJSON: FeatureCollection = $derived.by(() => {
+		const state = $kismetStore;
+		const isoMac = $isolatedDeviceMAC;
+		const layerOn = $layerVisibility.connectionLines;
+		if (!isoMac && !layerOn) return { type: 'FeatureCollection' as const, features: [] };
+
+		const features: Feature[] = [];
+		state.devices.forEach((device) => {
+			if (!device.clients?.length) return;
+			if (isoMac && device.mac !== isoMac) return;
+			const apLat = device.location?.lat;
+			const apLon = device.location?.lon;
+			if (!apLat || !apLon) return;
+			const apColor = getSignalHex(device.signal?.last_signal ?? 0);
+			for (const clientMac of device.clients) {
+				const client = state.devices.get(clientMac);
+				if (!client?.location?.lat || !client?.location?.lon) continue;
+				// Use spread position for client end of the arc
+				const [cLon, cLat] = spreadClientPosition(
+					client.location.lon,
+					client.location.lat,
+					apLon,
+					apLat,
+					clientMac
+				);
+				features.push({
+					type: 'Feature',
+					geometry: {
+						type: 'LineString',
+						coordinates: bezierArc([apLon, apLat], [cLon, cLat])
+					},
+					properties: {
+						apMac: device.mac,
+						clientMac,
+						color: apColor
+					}
+				});
+			}
 		});
 		return { type: 'FeatureCollection' as const, features };
 	});
@@ -144,7 +303,7 @@
 	let lastTowerFetchLon = 0;
 
 	// Popup state
-	let popupLngLat: LngLatLike | null = $state(null);
+	let _popupLngLat: LngLatLike | null = $state(null);
 	let popupContent: {
 		ssid: string;
 		mac: string;
@@ -155,6 +314,8 @@
 		frequency: number;
 		packets: number;
 		last_seen: number;
+		clientCount: number;
+		parentAP: string;
 	} | null = $state(null);
 
 	// Cell tower popup state
@@ -358,6 +519,18 @@
 	function handleMapLoad() {
 		if (!map) return;
 
+		// Click on empty map background → dismiss overlay and clear isolation
+		map.on('click', (e) => {
+			const features = map!.queryRenderedFeatures(e.point, {
+				layers: ['device-circles', 'device-clusters', 'cell-tower-circles']
+			});
+			if (!features || features.length === 0) {
+				_popupLngLat = null;
+				popupContent = null;
+				isolateDevice(null);
+			}
+		});
+
 		// Enhanced building outlines (brighter than the subtle default)
 		map.addLayer(
 			{
@@ -450,14 +623,6 @@
 				}
 			}
 		}
-		if (map.getLayer('device-circles')) {
-			const bandList = Array.from($activeBands);
-			map.setFilter('device-circles', [
-				'all',
-				['!', ['has', 'point_count']],
-				['in', ['get', 'band'], ['literal', bandList]]
-			]);
-		}
 	}
 
 	function handleLocateClick() {
@@ -472,7 +637,7 @@
 			const props = features[0].properties;
 			const geom = features[0].geometry;
 			if (geom.type === 'Point') {
-				popupLngLat = geom.coordinates as [number, number];
+				_popupLngLat = geom.coordinates as [number, number];
 				popupContent = {
 					ssid: props?.ssid ?? 'Unknown',
 					mac: props?.mac ?? '',
@@ -482,11 +647,28 @@
 					channel: props?.channel ?? 0,
 					frequency: props?.frequency ?? 0,
 					packets: props?.packets ?? 0,
-					last_seen: props?.last_seen ?? 0
+					last_seen: props?.last_seen ?? 0,
+					clientCount: props?.clientCount ?? 0,
+					parentAP: props?.parentAP ?? ''
 				};
 
 				// Notify agent context store (AG-UI shared state bridge)
 				selectDevice(props?.mac ?? '', popupContent);
+
+				// Sync with devices table — isolate to show relationships
+				const mac = props?.mac ?? '';
+				const clientCount = props?.clientCount ?? 0;
+				const parentAP = props?.parentAP ?? '';
+				if (clientCount > 0) {
+					// This is an AP with clients — isolate to it
+					isolateDevice(mac);
+				} else if (parentAP) {
+					// This is a client — isolate to its parent AP
+					isolateDevice(parentAP);
+				} else {
+					// Standalone device — clear isolation
+					isolateDevice(null);
+				}
 			}
 		}
 	}
@@ -563,6 +745,7 @@
 	// Layer visibility — maps toggle keys to MapLibre layer IDs
 	const LAYER_MAP: Record<string, string[]> = {
 		deviceDots: ['device-clusters', 'device-cluster-count', 'device-circles'],
+		connectionLines: ['device-connection-lines'],
 		cellTowers: ['cell-tower-circles', 'cell-tower-labels'],
 		signalMarkers: ['detection-range-fill'],
 		accuracyCircle: ['accuracy-fill']
@@ -571,8 +754,13 @@
 	$effect(() => {
 		if (!map) return;
 		const vis = $layerVisibility;
+		const isoMac = $isolatedDeviceMAC;
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
-			const visible = vis[key] !== false;
+			// Connection lines: show when isolated OR when layer manually enabled
+			const visible =
+				key === 'connectionLines'
+					? vis[key] !== false || isoMac !== null
+					: vis[key] !== false;
 			for (const id of layerIds) {
 				if (map.getLayer(id)) {
 					map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
@@ -581,15 +769,37 @@
 		}
 	});
 
-	// Signal band filtering — update MapLibre filter on device-circles when bands change
+	// Isolation mode — hide clusters when viewing a single AP's relationships
 	$effect(() => {
-		if (!map || !map.getLayer('device-circles')) return;
-		const bandList = Array.from($activeBands);
-		map.setFilter('device-circles', [
-			'all',
-			['!', ['has', 'point_count']],
-			['in', ['get', 'band'], ['literal', bandList]]
-		]);
+		if (!map) return;
+		const isoMac = $isolatedDeviceMAC;
+		if (isoMac) {
+			// Hide clusters during isolation (only a few devices visible)
+			if (map.getLayer('device-clusters')) {
+				map.setLayoutProperty('device-clusters', 'visibility', 'none');
+			}
+			if (map.getLayer('device-cluster-count')) {
+				map.setLayoutProperty('device-cluster-count', 'visibility', 'none');
+			}
+		} else {
+			// Restore cluster visibility based on layer toggle
+			const vis = $layerVisibility;
+			const dotsVisible = vis.deviceDots !== false;
+			if (map.getLayer('device-clusters')) {
+				map.setLayoutProperty(
+					'device-clusters',
+					'visibility',
+					dotsVisible ? 'visible' : 'none'
+				);
+			}
+			if (map.getLayer('device-cluster-count')) {
+				map.setLayoutProperty(
+					'device-cluster-count',
+					'visibility',
+					dotsVisible ? 'visible' : 'none'
+				);
+			}
+		}
 	});
 </script>
 
@@ -699,6 +909,18 @@
 			/>
 		</GeoJSONSource>
 
+		<!-- AP-to-client connection lines -->
+		<GeoJSONSource id="connection-lines-src" data={connectionLinesGeoJSON}>
+			<LineLayer
+				id="device-connection-lines"
+				paint={{
+					'line-color': ['get', 'color'],
+					'line-width': 1.5,
+					'line-opacity': 0.7
+				}}
+			/>
+		</GeoJSONSource>
+
 		<!-- Device markers with zoom-aware clustering -->
 		<GeoJSONSource
 			id="devices-src"
@@ -737,72 +959,69 @@
 				}}
 			/>
 
-			<!-- Individual unclustered device dots -->
+			<!-- Individual unclustered device dots — APs with clients are bigger, zoom-aware -->
 			<CircleLayer
 				id="device-circles"
 				filter={['!', ['has', 'point_count']]}
 				paint={{
-					'circle-radius': 4,
+					'circle-radius': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						10,
+						[
+							'interpolate',
+							['linear'],
+							['get', 'clientCount'],
+							0,
+							3,
+							1,
+							4,
+							5,
+							5,
+							15,
+							7
+						],
+						14,
+						[
+							'interpolate',
+							['linear'],
+							['get', 'clientCount'],
+							0,
+							5,
+							1,
+							7,
+							5,
+							9,
+							15,
+							12
+						],
+						18,
+						[
+							'interpolate',
+							['linear'],
+							['get', 'clientCount'],
+							0,
+							6,
+							1,
+							9,
+							5,
+							12,
+							15,
+							16
+						]
+					],
 					'circle-color': ['get', 'color'],
-					'circle-opacity': 0.85,
-					'circle-stroke-width': 0.5,
+					'circle-opacity': 0.9,
+					'circle-stroke-width': ['case', ['>', ['get', 'clientCount'], 0], 1.5, 0.8],
 					'circle-stroke-color': ['get', 'color'],
-					'circle-stroke-opacity': 0.4
+					'circle-stroke-opacity': ['case', ['>', ['get', 'clientCount'], 0], 0.7, 0.5]
 				}}
 				onclick={handleDeviceClick}
 			/>
 		</GeoJSONSource>
 
-		<!-- Device popup -->
-		{#if popupLngLat && popupContent}
-			<Popup
-				lnglat={popupLngLat}
-				class="palantir-popup"
-				closeButton={true}
-				onclose={() => {
-					popupLngLat = null;
-					popupContent = null;
-				}}
-			>
-				<div class="map-popup">
-					<div class="popup-title">{popupContent.ssid}</div>
-					<div class="popup-row">
-						<span class="popup-label">MAC</span>
-						<span class="popup-value">{popupContent.mac}</span>
-					</div>
-					<div class="popup-row">
-						<span class="popup-label">VENDOR</span>
-						<span class="popup-value">{popupContent.manufacturer}</span>
-					</div>
-					<div class="popup-row">
-						<span class="popup-label">TYPE</span>
-						<span class="popup-value">{popupContent.type}</span>
-					</div>
-					<div class="popup-divider"></div>
-					<div class="popup-row">
-						<span class="popup-label">RSSI</span>
-						<span class="popup-value">{popupContent.rssi} dBm</span>
-					</div>
-					<div class="popup-row">
-						<span class="popup-label">CHANNEL</span>
-						<span class="popup-value">{popupContent.channel || '—'}</span>
-					</div>
-					<div class="popup-row">
-						<span class="popup-label">FREQ</span>
-						<span class="popup-value">{formatFrequency(popupContent.frequency)}</span>
-					</div>
-					<div class="popup-divider"></div>
-					<div class="popup-row">
-						<span class="popup-label">PACKETS</span>
-						<span class="popup-value">{popupContent.packets.toLocaleString()}</span>
-					</div>
-					<div class="popup-row">
-						<span class="popup-label">LAST SEEN</span>
-						<span class="popup-value">{formatTimeAgo(popupContent.last_seen)}</span>
-					</div>
-				</div>
-			</Popup>
-		{/if}
+		<!-- Device popup is rendered as fixed overlay outside MapLibre -->
 
 		<!-- Cell tower popup -->
 		{#if towerPopupLngLat && towerPopupContent}
@@ -883,6 +1102,86 @@
 			</Marker>
 		{/if}
 	</MapLibre>
+
+	<!-- Device info overlay — fixed in top-right corner -->
+	{#if popupContent}
+		<div class="device-overlay">
+			<button
+				class="overlay-close"
+				onclick={() => {
+					_popupLngLat = null;
+					popupContent = null;
+					isolateDevice(null);
+				}}
+			>
+				<svg
+					width="12"
+					height="12"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					><line x1="18" y1="6" x2="6" y2="18" /><line
+						x1="6"
+						y1="6"
+						x2="18"
+						y2="18"
+					/></svg
+				>
+			</button>
+			<div class="overlay-title">{popupContent.ssid}</div>
+			<div class="overlay-row">
+				<span class="overlay-label">MAC</span>
+				<span class="overlay-value">{popupContent.mac}</span>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">VENDOR</span>
+				<span class="overlay-value">{popupContent.manufacturer}</span>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">TYPE</span>
+				<span class="overlay-value">{popupContent.type}</span>
+			</div>
+			<div class="overlay-divider"></div>
+			<div class="overlay-row">
+				<span class="overlay-label">RSSI</span>
+				<span class="overlay-value"
+					>{popupContent.rssi !== 0 ? `${popupContent.rssi} dBm` : '—'}</span
+				>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">CH</span>
+				<span class="overlay-value">{popupContent.channel || '—'}</span>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">FREQ</span>
+				<span class="overlay-value">{formatFrequency(popupContent.frequency)}</span>
+			</div>
+			<div class="overlay-divider"></div>
+			<div class="overlay-row">
+				<span class="overlay-label">PKTS</span>
+				<span class="overlay-value">{popupContent.packets.toLocaleString()}</span>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">LAST</span>
+				<span class="overlay-value">{formatTimeAgo(popupContent.last_seen)}</span>
+			</div>
+			{#if popupContent.clientCount > 0}
+				<div class="overlay-divider"></div>
+				<div class="overlay-row">
+					<span class="overlay-label">CLIENTS</span>
+					<span class="overlay-value overlay-accent">{popupContent.clientCount}</span>
+				</div>
+			{/if}
+			{#if popupContent.parentAP}
+				<div class="overlay-divider"></div>
+				<div class="overlay-row">
+					<span class="overlay-label">PARENT</span>
+					<span class="overlay-value overlay-mono">{popupContent.parentAP}</span>
+				</div>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -1032,6 +1331,15 @@
 		font-family: monospace;
 	}
 
+	.popup-accent {
+		color: var(--palantir-accent, #4a90e2);
+	}
+
+	.popup-mono {
+		font-size: 10px;
+		word-break: break-all;
+	}
+
 	.popup-divider {
 		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
 		margin: 4px 0;
@@ -1049,5 +1357,79 @@
 		height: 8px;
 		border-radius: 50%;
 		flex-shrink: 0;
+	}
+
+	/* Device info overlay — fixed in top-right of map */
+	.device-overlay {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		z-index: 10;
+		background: rgba(20, 20, 32, 0.95);
+		border: 1px solid var(--palantir-border-default, #2a2a3e);
+		border-radius: 8px;
+		padding: 10px 12px;
+		min-width: 180px;
+		max-width: 220px;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+		backdrop-filter: blur(8px);
+		pointer-events: auto;
+	}
+
+	.overlay-close {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		background: none;
+		border: none;
+		color: var(--palantir-text-tertiary, #666);
+		cursor: pointer;
+		padding: 2px;
+		display: flex;
+		align-items: center;
+	}
+
+	.overlay-close:hover {
+		color: var(--palantir-text-primary, #e0e0e8);
+	}
+
+	.overlay-title {
+		font-weight: 600;
+		font-size: 13px;
+		margin-bottom: 6px;
+		padding-right: 16px;
+		color: var(--palantir-text-primary, #e0e0e8);
+	}
+
+	.overlay-row {
+		display: flex;
+		justify-content: space-between;
+		font-size: 11px;
+		padding: 1.5px 0;
+	}
+
+	.overlay-label {
+		color: var(--palantir-text-tertiary, #666);
+		letter-spacing: 0.05em;
+	}
+
+	.overlay-value {
+		color: var(--palantir-text-secondary, #aaa);
+		font-family: var(--font-mono, monospace);
+		font-size: 10px;
+	}
+
+	.overlay-accent {
+		color: var(--palantir-accent, #4a90e2);
+	}
+
+	.overlay-mono {
+		font-size: 9px;
+		word-break: break-all;
+	}
+
+	.overlay-divider {
+		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
+		margin: 3px 0;
 	}
 </style>

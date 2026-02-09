@@ -14,16 +14,17 @@
 			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
 		},
 		{
-			id: 'devices',
-			label: 'Devices',
-			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>`
-		},
-		{
 			id: 'tools',
 			label: 'Tools',
 			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
 		}
 	];
+
+	const devicesIcon = {
+		id: 'devices',
+		label: 'Devices',
+		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>`
+	};
 
 	const chatIcon = {
 		id: 'chat',
@@ -54,6 +55,8 @@
 			toggleTerminalPanel();
 		} else if (id === 'chat') {
 			toggleBottomTab('chat');
+		} else if (id === 'devices') {
+			toggleBottomTab('devices');
 		} else {
 			togglePanel(id);
 		}
@@ -62,18 +65,39 @@
 
 <nav class="icon-rail" aria-label="Dashboard navigation">
 	<div class="rail-top">
-		{#each topIcons as icon (icon.id)}
-			<button
-				class="rail-btn"
-				class:active={$activePanel === icon.id}
-				title={icon.label}
-				aria-label={icon.label}
-				aria-pressed={$activePanel === icon.id}
-				onclick={() => handleClick(icon.id)}
-			>
-				{@html icon.svg}
-			</button>
-		{/each}
+		<!-- Overview (home) -->
+		<button
+			class="rail-btn"
+			class:active={$activePanel === 'overview'}
+			title={topIcons[0].label}
+			aria-label={topIcons[0].label}
+			aria-pressed={$activePanel === 'overview'}
+			onclick={() => handleClick(topIcons[0].id)}
+		>
+			{@html topIcons[0].svg}
+		</button>
+		<!-- Devices (middle) -->
+		<button
+			class="rail-btn"
+			class:active={$activeBottomTab === 'devices'}
+			title={devicesIcon.label}
+			aria-label={devicesIcon.label}
+			aria-pressed={$activeBottomTab === 'devices'}
+			onclick={() => handleClick(devicesIcon.id)}
+		>
+			{@html devicesIcon.svg}
+		</button>
+		<!-- Tools (zap) -->
+		<button
+			class="rail-btn"
+			class:active={$activePanel === 'tools'}
+			title={topIcons[1].label}
+			aria-label={topIcons[1].label}
+			aria-pressed={$activePanel === 'tools'}
+			onclick={() => handleClick(topIcons[1].id)}
+		>
+			{@html topIcons[1].svg}
+		</button>
 	</div>
 
 	<div class="rail-spacer"></div>

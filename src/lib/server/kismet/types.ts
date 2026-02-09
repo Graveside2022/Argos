@@ -133,6 +133,7 @@ export interface KismetDevice {
 	dataSize: number;
 	dataPackets?: number;
 	clients?: string[];
+	parentAP?: string;
 	probeRequests?: string[];
 	macaddr: string; // Alias for mac
 }

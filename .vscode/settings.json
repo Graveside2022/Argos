@@ -1,0 +1,83 @@
+{
+	"claude-code.mcpServers": {
+		"grep": {
+			"type": "http",
+			"url": "https://mcp.grep.app"
+		},
+		"octocode": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["octocode-mcp@latest"],
+			"env": {}
+		},
+		"daisyui-blueprint": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "daisyui-blueprint@latest"],
+			"env": {
+				"LICENSE": "H5GAY-E06RQ-LUSUG-FW1TV-3B597",
+				"EMAIL": ""
+			}
+		},
+		"argos-tools": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/dynamic-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-hackrf": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/servers/hackrf-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-kismet": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/servers/kismet-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-gps": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/servers/gps-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-gsm-evil": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/servers/gsm-evil-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-system": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["tsx", "${workspaceFolder}/src/lib/server/mcp/servers/system-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		}
+	}
+}
