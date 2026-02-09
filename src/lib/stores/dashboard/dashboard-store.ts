@@ -7,18 +7,20 @@ export const activePanel = writable<string | null>(null);
 /** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
 const ACTIVE_BOTTOM_TAB_KEY = 'activeBottomTab';
 
-function getInitialBottomTab(): 'terminal' | 'chat' | null {
+type BottomTab = 'terminal' | 'chat' | 'devices' | null;
+
+function getInitialBottomTab(): BottomTab {
 	if (!browser) return null;
 	try {
 		const stored = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
-		if (stored === 'terminal' || stored === 'chat') return stored;
+		if (stored === 'terminal' || stored === 'chat' || stored === 'devices') return stored;
 	} catch {
 		/* use default */
 	}
 	return null;
 }
 
-export const activeBottomTab = writable<'terminal' | 'chat' | null>(getInitialBottomTab());
+export const activeBottomTab = writable<BottomTab>(getInitialBottomTab());
 
 /** Shared bottom panel height (persisted to localStorage) */
 const BOTTOM_PANEL_STORAGE_KEY = 'bottomPanelHeight';
@@ -46,7 +48,7 @@ if (browser) {
 		localStorage.setItem(BOTTOM_PANEL_STORAGE_KEY, String(h));
 	});
 
-	activeBottomTab.subscribe((tab) => {
+	activeBottomTab.subscribe((tab: BottomTab) => {
 		if (tab === null) {
 			localStorage.removeItem(ACTIVE_BOTTOM_TAB_KEY);
 		} else {
@@ -59,7 +61,7 @@ if (browser) {
 export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
-export function toggleBottomTab(tab: 'terminal' | 'chat'): void {
+export function toggleBottomTab(tab: 'terminal' | 'chat' | 'devices'): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }
 
@@ -89,8 +91,9 @@ export function togglePanel(panel: string): void {
 /** Map layer visibility — shared between LayersPanel and DashboardMap */
 export const layerVisibility = writable<Record<string, boolean>>({
 	deviceDots: true,
+	connectionLines: false,
 	cellTowers: false,
-	signalMarkers: true,
+	signalMarkers: false,
 	accuracyCircle: true
 });
 
@@ -99,8 +102,21 @@ export function toggleLayerVisibility(key: string): void {
 	layerVisibility.update((v) => ({ ...v, [key]: !v[key] }));
 }
 
+/** Shared isolated device MAC — when set, DevicesPanel shows only this AP + clients.
+ *  Set from DashboardMap on device click, read by DevicesPanel. */
+export const isolatedDeviceMAC = writable<string | null>(null);
+
+/** Isolate a device in the table (set from map click or table click) */
+export function isolateDevice(mac: string | null): void {
+	isolatedDeviceMAC.set(mac);
+	// Auto-open devices tab when isolating from map
+	if (mac !== null) {
+		activeBottomTab.update((current) => (current === 'devices' ? current : 'devices'));
+	}
+}
+
 /** Signal band filter — which RSSI bands are visible on the map */
-const ALL_BANDS = ['critical', 'strong', 'good', 'fair', 'weak'];
+const ALL_BANDS = ['critical', 'strong', 'good', 'fair', 'weak', 'none'];
 export const activeBands = writable<Set<string>>(new Set(ALL_BANDS));
 
 /** Toggle a signal strength band on/off */

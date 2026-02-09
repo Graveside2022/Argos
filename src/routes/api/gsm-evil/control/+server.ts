@@ -104,12 +104,13 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 
-				// 2. Start grgsm_livemon_headless (same pattern as working scan endpoint)
+				// 2. Start grgsm_livemon_headless with proper daemonization (like Kismet)
+				// Use setsid + nohup to detach from parent process so dev server restarts don't kill it
 				const { stdout: grgsmPid } = await hostExec(
-					`sudo grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729 >/dev/null 2>&1 & echo $!`,
+					`sudo setsid nohup grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729 >/dev/null 2>&1 & echo $!`,
 					{ timeout: 5000 }
 				);
-				console.warn(`[gsm-evil] grgsm started, PID: ${grgsmPid.trim()}`);
+				console.warn(`[gsm-evil] grgsm started (daemonized), PID: ${grgsmPid.trim()}`);
 
 				// 3. Ensure GsmEvil_auto.py exists with sniffers enabled
 				await hostExec(
@@ -117,11 +118,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				).catch(() => console.warn('[gsm-evil] GsmEvil_auto.py setup note'));
 
 				// 4. Start GsmEvil2 (needs root for pyshark/tshark capture permissions)
+				// Daemonize it so dev server restarts don't kill it
 				const { stdout: evilPid } = await hostExec(
-					`cd ${gsmDir} && sudo python3 GsmEvil_auto.py --host 0.0.0.0 --port 8080 >/tmp/gsmevil2.log 2>&1 & echo $!`,
+					`cd ${gsmDir} && sudo setsid nohup python3 GsmEvil_auto.py --host 0.0.0.0 --port 8080 >/tmp/gsmevil2.log 2>&1 & echo $!`,
 					{ timeout: 5000 }
 				);
-				console.warn(`[gsm-evil] GsmEvil2 started, PID: ${evilPid.trim()}`);
+				console.warn(`[gsm-evil] GsmEvil2 started (daemonized), PID: ${evilPid.trim()}`);
 
 				// 5. Wait for processes to initialize
 				await new Promise((resolve) => setTimeout(resolve, 3000));

@@ -11,8 +11,36 @@ const GsmEvilImsiResultSchema = z
 		total: z.number(),
 		imsis: z.array(
 			z.object({
+				id: z.number(),
 				imsi: z.string(),
-				count: z.number()
+				tmsi: z.string(),
+				mcc: z
+					.union([z.number(), z.string()])
+					.transform((val) => (typeof val === 'string' ? parseInt(val) || 0 : val)),
+				mnc: z
+					.union([z.number(), z.string()])
+					.transform((val) => (typeof val === 'string' ? parseInt(val) || 0 : val)),
+				lac: z
+					.union([z.number(), z.string()])
+					.transform((val) =>
+						typeof val === 'string' && val !== ''
+							? parseInt(val)
+							: typeof val === 'number'
+								? val
+								: 0
+					),
+				ci: z
+					.union([z.number(), z.string()])
+					.transform((val) =>
+						typeof val === 'string' && val !== ''
+							? parseInt(val)
+							: typeof val === 'number'
+								? val
+								: 0
+					),
+				timestamp: z.string(),
+				lat: z.union([z.number(), z.null()]),
+				lon: z.union([z.number(), z.null()])
 			})
 		),
 		message: z.string().optional()
@@ -65,17 +93,27 @@ except Exception as e:
     print(json.dumps({"success":False,"message":str(e),"imsis":[],"total":0}))
 `;
 
-		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
+		const { stdout, stderr } = await hostExec(
+			`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`
+		);
+
+		console.log('[gsm-evil-imsi] Python stdout length:', stdout.length);
+		console.log('[gsm-evil-imsi] Python stderr:', stderr);
+		if (stdout.length < 100) {
+			console.log('[gsm-evil-imsi] Full stdout:', stdout);
+		}
 
 		// Parse and return the result
 		const result = safeJsonParse(stdout, GsmEvilImsiResultSchema, 'gsm-evil-imsi');
 		if (!result.success) {
+			console.error('[gsm-evil-imsi] Parse failed. Raw stdout:', stdout.substring(0, 500));
 			return json(
 				{
 					success: false,
 					imsis: [],
 					total: 0,
-					message: 'Failed to parse IMSI data from subprocess'
+					message: 'Failed to parse IMSI data from subprocess',
+					debug: { stdout: stdout.substring(0, 200), stderr }
 				},
 				{ status: 500 }
 			);

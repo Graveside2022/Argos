@@ -2,7 +2,6 @@
 	import { activePanel } from '$lib/stores/dashboard/dashboard-store';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
 	import ToolsPanel from './panels/ToolsPanel.svelte';
-	import DevicesPanel from './panels/DevicesPanel.svelte';
 	import LayersPanel from './panels/LayersPanel.svelte';
 	import SettingsPanel from './panels/SettingsPanel.svelte';
 
@@ -16,8 +15,6 @@
 				<OverviewPanel />
 			{:else if $activePanel === 'tools'}
 				<ToolsPanel />
-			{:else if $activePanel === 'devices'}
-				<DevicesPanel />
 			{:else if $activePanel === 'layers'}
 				<LayersPanel />
 			{:else if $activePanel === 'settings'}

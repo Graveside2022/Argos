@@ -120,7 +120,8 @@ export class KismetProxy {
 				'kismet.device.base.packets.data',
 				'kismet.device.base.crypt',
 				'kismet.device.base.location',
-				'kismet.device.base.manuf'
+				'kismet.device.base.manuf',
+				'dot11.device'
 			];
 
 			// Build the JSON query
@@ -301,9 +302,32 @@ export class KismetProxy {
 				? (signalRaw['kismet.common.signal.min_signal'] ?? lastSignal)
 				: lastSignal;
 
+		// Extract dot11 association data (must fetch whole dot11.device object)
+		const dot11 = (raw as Record<string, unknown>)['dot11.device'] as
+			| Record<string, unknown>
+			| undefined;
+		const mac = raw['kismet.device.base.macaddr'] || 'Unknown';
+		let clients: string[] | undefined;
+		let parentAP: string | undefined;
+
+		if (dot11 && typeof dot11 === 'object') {
+			// AP → clients: extract MAC keys from associated_client_map
+			const clientMap = dot11['dot11.device.associated_client_map'];
+			if (clientMap && typeof clientMap === 'object') {
+				clients = Object.keys(clientMap as Record<string, unknown>);
+				if (clients.length === 0) clients = undefined;
+			}
+
+			// Client → parent AP: last_bssid (exclude self-reference and null)
+			const bssid = dot11['dot11.device.last_bssid'] as string | undefined;
+			if (bssid && bssid !== '00:00:00:00:00:00' && bssid !== mac) {
+				parentAP = bssid;
+			}
+		}
+
 		return {
-			mac: raw['kismet.device.base.macaddr'] || 'Unknown',
-			macaddr: raw['kismet.device.base.macaddr'] || 'Unknown', // Alias for mac
+			mac,
+			macaddr: mac, // Alias for mac
 			ssid: raw['kismet.device.base.name'] || undefined,
 			manufacturer: manufacturer,
 			type,
@@ -317,7 +341,9 @@ export class KismetProxy {
 			dataSize: raw['kismet.device.base.packets.data'] || 0,
 			encryptionType: this.parseEncryptionNumber(encryptionNumber),
 			encryption: this.parseEncryptionNumber(encryptionNumber), // Alias for encryptionType
-			location: this.extractLocationFromRaw(raw)
+			location: this.extractLocationFromRaw(raw),
+			clients,
+			parentAP
 		};
 	}
 

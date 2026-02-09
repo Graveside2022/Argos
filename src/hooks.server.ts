@@ -232,14 +232,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		!path.startsWith('/api/map-tiles/')
 	) {
 		if (isHardwareControlPath(path)) {
-			// Hardware control: 10 requests/minute (0.167 tokens/second)
-			if (!rateLimiter.check(`hw:${clientIp}`, 10, 10 / 60)) {
+			// Hardware control: 30 requests/minute (0.5 tokens/second) - increased for testing
+			if (!rateLimiter.check(`hw:${clientIp}`, 30, 30 / 60)) {
 				logAuthEvent({
 					eventType: 'RATE_LIMIT_EXCEEDED',
 					ip: clientIp,
 					method: event.request.method,
 					path,
-					reason: 'Hardware control rate limit exceeded (10 req/min)'
+					reason: 'Hardware control rate limit exceeded (30 req/min)'
 				});
 				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
 					status: 429,

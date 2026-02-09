@@ -46,8 +46,14 @@ npm run lint:fix             # Auto-fix ESLint errors
 npm run db:migrate           # Run migrations
 npm run db:rollback          # Rollback last migration
 
-# MCP Server
-npm run mcp:start            # Start standalone MCP server for Claude integration
+# MCP Servers (5 specialized servers)
+npm run mcp:hackrf           # HackRF SDR control
+npm run mcp:kismet           # WiFi scanning
+npm run mcp:gps              # GPS positioning
+npm run mcp:gsm-evil         # GSM monitoring
+npm run mcp:system           # System diagnostics
+npm run mcp:install-b        # Install all MCP servers (host)
+npm run mcp:install-c        # Install all MCP servers (container)
 ```
 
 ## Project Structure
@@ -91,6 +97,7 @@ tests/                       # unit/, integration/, e2e/, visual/, performance/
 
 For detailed context on specific topics, see:
 
+- **MCP Servers**: @docs/mcp-servers.md (5 modular servers, tools, configuration, Docker integration)
 - **Security Architecture**: @docs/security-architecture.md (auth, sanitization, rate limiting)
 - **Hardware Integration**: @docs/hardware-patterns.md (HackRF, Kismet, GPS, USB passthrough)
 - **WebSocket Architecture**: @docs/websocket-guide.md (real-time data flow, backpressure)
