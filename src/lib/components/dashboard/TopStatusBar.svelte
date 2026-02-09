@@ -913,7 +913,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		min-width: 0;
-		overflow: hidden;
+		overflow: visible;
 		white-space: nowrap;
 	}
 
