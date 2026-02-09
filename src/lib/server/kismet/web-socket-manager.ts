@@ -290,7 +290,7 @@ export class WebSocketManager extends EventEmitter {
 	 */
 	private hasDeviceChanged(oldDevice: KismetDevice, newDevice: KismetDevice): boolean {
 		return (
-			oldDevice.signal !== newDevice.signal ||
+			oldDevice.signalStrength !== newDevice.signalStrength ||
 			oldDevice.channel !== newDevice.channel ||
 			oldDevice.packets !== newDevice.packets ||
 			oldDevice.ssid !== newDevice.ssid ||
@@ -318,8 +318,8 @@ export class WebSocketManager extends EventEmitter {
 			if (sub.filters) {
 				if (
 					sub.filters.minSignal &&
-					device.signal &&
-					device.signal < sub.filters.minSignal
+					device.signalStrength &&
+					device.signalStrength < sub.filters.minSignal
 				) {
 					return false;
 				}
@@ -489,8 +489,8 @@ export class WebSocketManager extends EventEmitter {
 				if (sub.filters) {
 					if (
 						sub.filters.minSignal &&
-						device.signal &&
-						device.signal < sub.filters.minSignal
+						device.signalStrength &&
+						device.signalStrength < sub.filters.minSignal
 					) {
 						return false;
 					}
