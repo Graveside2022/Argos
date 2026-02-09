@@ -228,8 +228,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 	const clientIp = event.getClientAddress();
 
-	// Skip rate limiting for streaming/SSE endpoints
-	if (!path.includes('data-stream') && !path.includes('/stream') && !path.endsWith('/sse')) {
+	// Skip rate limiting for streaming/SSE endpoints and map tiles
+	// Map tiles can make 50+ requests during initial load (style, sprites, fonts, vector tiles)
+	if (
+		!path.includes('data-stream') &&
+		!path.includes('/stream') &&
+		!path.endsWith('/sse') &&
+		!path.startsWith('/api/map-tiles/')
+	) {
 		if (isHardwareControlPath(path)) {
 			// Hardware control: 10 requests/minute (0.167 tokens/second)
 			if (!rateLimiter.check(`hw:${clientIp}`, 10, 10 / 60)) {
@@ -304,14 +310,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// Content Security Policy (Phase 2.2.3)
+	// MapLibre GL JS creates Web Workers from blob: URLs (non-CSP build inlines worker code
+	// as a Blob and calls new Worker(URL.createObjectURL(blob))). Without worker-src blob:,
+	// the browser blocks Worker creation and the map renders an empty canvas.
 	response.headers.set(
 		'Content-Security-Policy',
 		[
 			"default-src 'self'",
 			"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
 			"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
-			"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles from OSM
+			"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles + decoded images
 			"connect-src 'self' ws://localhost:* wss://localhost:*", // WebSocket connections
+			"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
+			"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
 			"font-src 'self'",
 			"object-src 'none'",
 			"frame-ancestors 'none'",

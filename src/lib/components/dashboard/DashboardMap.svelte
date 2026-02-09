@@ -6,6 +6,7 @@
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import { getSignalHex, getSignalBandKey } from '$lib/utils/signal-utils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import maplibregl from 'maplibre-gl'; // Runtime import for MapLibre GL library
 	import {
 		MapLibre,
 		Marker,
@@ -17,7 +18,6 @@
 		CustomControl,
 		NavigationControl
 	} from 'svelte-maplibre-gl';
-	import type maplibregl from 'maplibre-gl';
 	import type { LngLatLike } from 'maplibre-gl';
 	import type { FeatureCollection, Feature } from 'geojson';
 

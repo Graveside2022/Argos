@@ -66,14 +66,19 @@ The CSP is crafted specifically for the Argos SvelteKit application's requiremen
 
 ```typescript
 // Content Security Policy
+// MapLibre GL JS creates Web Workers from blob: URLs (non-CSP build inlines worker code
+// as a Blob and calls new Worker(URL.createObjectURL(blob))). Without worker-src blob:,
+// the browser blocks Worker creation and the map renders an empty canvas.
 response.headers.set(
 	'Content-Security-Policy',
 	[
 		"default-src 'self'",
 		"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
 		"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
-		"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles from OSM
+		"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles + decoded images
 		"connect-src 'self' ws://localhost:* wss://localhost:*", // WebSocket connections
+		"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
+		"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
 		"font-src 'self'",
 		"object-src 'none'",
 		"frame-ancestors 'none'",
@@ -85,18 +90,20 @@ response.headers.set(
 
 **CSP directive rationale**:
 
-| Directive         | Value                                                 | Rationale                                                                                               |
-| ----------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `default-src`     | `'self'`                                              | Baseline: only load resources from same origin                                                          |
-| `script-src`      | `'self' 'unsafe-inline'`                              | SvelteKit hydration injects inline scripts; cannot use nonce without custom SSR                         |
-| `style-src`       | `'self' 'unsafe-inline'`                              | Tailwind CSS generates inline styles; cannot be removed without build changes                           |
-| `img-src`         | `'self' data: blob: https://*.tile.openstreetmap.org` | Map tile images from OpenStreetMap CDN; `data:` for inline SVG icons; `blob:` for generated map markers |
-| `connect-src`     | `'self' ws://localhost:* wss://localhost:*`           | WebSocket connections to local services (spectrum data, device tracking, GPS)                           |
-| `font-src`        | `'self'`                                              | All fonts served locally (Phase 1.1 eliminated CDN font references)                                     |
-| `object-src`      | `'none'`                                              | No Flash, Java, or other plugin content                                                                 |
-| `frame-ancestors` | `'none'`                                              | Prevent framing (clickjacking defense) -- stricter than X-Frame-Options                                 |
-| `base-uri`        | `'self'`                                              | Prevent base tag injection attacks                                                                      |
-| `form-action`     | `'self'`                                              | Prevent form submissions to external domains                                                            |
+| Directive         | Value                                                 | Rationale                                                                                            |
+| ----------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `default-src`     | `'self'`                                              | Baseline: only load resources from same origin                                                       |
+| `script-src`      | `'self' 'unsafe-inline'`                              | SvelteKit hydration injects inline scripts; cannot use nonce without custom SSR                      |
+| `style-src`       | `'self' 'unsafe-inline'`                              | Tailwind CSS generates inline styles; cannot be removed without build changes                        |
+| `img-src`         | `'self' data: blob: https://*.tile.openstreetmap.org` | Map tile images from OpenStreetMap CDN; `data:` for inline SVG icons; `blob:` for decoded map images |
+| `connect-src`     | `'self' ws://localhost:* wss://localhost:*`           | WebSocket connections to local services (spectrum data, device tracking, GPS)                        |
+| `worker-src`      | `'self' blob:`                                        | MapLibre GL JS Web Workers created via blob: URLs for vector tile parsing and rendering              |
+| `child-src`       | `'self' blob:`                                        | Fallback for older browsers that check child-src before worker-src (Worker creation)                 |
+| `font-src`        | `'self'`                                              | All fonts served locally (Phase 1.1 eliminated CDN font references)                                  |
+| `object-src`      | `'none'`                                              | No Flash, Java, or other plugin content                                                              |
+| `frame-ancestors` | `'none'`                                              | Prevent framing (clickjacking defense) -- stricter than X-Frame-Options                              |
+| `base-uri`        | `'self'`                                              | Prevent base tag injection attacks                                                                   |
+| `form-action`     | `'self'`                                              | Prevent form submissions to external domains                                                         |
 
 **Known limitation**: `'unsafe-inline'` for `script-src` and `style-src` weakens CSP against inline injection attacks. This is a SvelteKit framework requirement. To eliminate `'unsafe-inline'`, SvelteKit would need to be configured with CSP nonce support (`csp.mode: 'hash'` in `svelte.config.js`), which is a larger change appropriate for Phase 4 (Architecture Improvements).
 
@@ -148,6 +155,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
 
 	// Content Security Policy
+	// MapLibre GL JS creates Web Workers from blob: URLs (non-CSP build inlines worker code
+	// as a Blob and calls new Worker(URL.createObjectURL(blob))). Without worker-src blob:,
+	// the browser blocks Worker creation and the map renders an empty canvas.
 	response.headers.set(
 		'Content-Security-Policy',
 		[
@@ -156,6 +166,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https://*.tile.openstreetmap.org",
 			"connect-src 'self' ws://localhost:* wss://localhost:*",
+			"worker-src 'self' blob:",
+			"child-src 'self' blob:",
 			"font-src 'self'",
 			"object-src 'none'",
 			"frame-ancestors 'none'",
