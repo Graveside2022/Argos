@@ -29,9 +29,6 @@ export {
 } from './errors';
 export type { ApiError, BaseError, DatabaseError, ValidationError, WebSocketError } from './errors';
 
-// gsm.ts — GSM scanning types
-export type { FrequencyTestResult, ScanProgress, ScanResult } from './gsm';
-
 // kismet.ts — domain-level Kismet types
 export type {
 	KismetAlert,
@@ -118,12 +115,6 @@ export type {
 	ValidatedMessage
 } from './validation';
 
-// bettercap.ts — Bettercap device and mode types
-export type { BettercapBLEDevice, BettercapMode, BettercapWiFiAP } from './bettercap';
-
-// drone.ts — drone mission and flight types
-export type { AreaOfInterest, FlightPoint, SignalCapture } from './drone';
-
 // gps.ts — GPS position and response types
 export type { GPSApiResponse, GPSPositionData } from './gps';
 
@@ -146,9 +137,3 @@ export type { NetworkEdge, NetworkNode } from './network';
 
 // system.ts — system information types
 export type { SystemInfo } from './system';
-
-// wifite.ts — WiFi attack mode types
-export type { AttackMode } from './wifite';
-
-// wireshark.ts — packet capture types
-export type { NetworkPacket } from './wireshark';
