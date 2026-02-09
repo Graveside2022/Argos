@@ -8,7 +8,7 @@ import type { RequestHandler } from '@sveltejs/kit';
  * Standards: OWASP A05:2021 (Security Misconfiguration)
  * Phase 2.1.3 Subtask 2.1.3.2
  */
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const apiKey = process.env.STADIA_MAPS_API_KEY;
 	if (!apiKey) {
 		return new Response(JSON.stringify({ error: 'Map tile service not configured' }), {
@@ -40,13 +40,27 @@ export const GET: RequestHandler = async ({ params }) => {
 		const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
 		const body = await response.arrayBuffer();
 
-		// If this is a style JSON, rewrite tile URLs to go through our proxy
-		if (contentType.includes('json') && path.includes('style')) {
+		// Rewrite Stadia Maps URLs in ALL JSON responses (style JSON, TileJSON, etc.)
+		// to route through our proxy. This is critical for:
+		//   1. TileJSON (data/openmaptiles.json) — contains tile URL templates
+		//   2. Style JSON — contains source, sprite, and glyph URLs
+		// Without this, MapLibre fetches tiles directly from tiles.stadiamaps.com,
+		// which CSP connect-src 'self' blocks, AND leaks the paid API key to clients.
+		if (contentType.includes('json')) {
 			const text = new TextDecoder().decode(body);
-			const rewritten = text.replace(
+			const baseUrl = `${url.protocol}//${url.host}`;
+			let rewritten = text.replace(
 				/https:\/\/tiles\.stadiamaps\.com\//g,
-				'/api/map-tiles/'
+				`${baseUrl}/api/map-tiles/`
 			);
+			// Strip any api_key query params that leaked into the rewritten URLs.
+			// The upstream response embeds api_key in source URLs (e.g. openmaptiles.json?api_key=XXX).
+			// Our proxy injects the key server-side, so clients must not see it.
+			rewritten = rewritten.replace(/([?&])api_key=[^"&\s]+/g, (match, prefix) => {
+				// If api_key was the only param (?api_key=...), remove the ?
+				// If it followed another param (&api_key=...), remove the &
+				return prefix === '?' ? '' : '';
+			});
 			return new Response(rewritten, {
 				headers: {
 					'Content-Type': contentType,
