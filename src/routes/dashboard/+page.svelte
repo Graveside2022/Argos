@@ -29,6 +29,7 @@
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
+	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
 	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
@@ -106,56 +107,32 @@
 					<KismetView />
 				{:else if $activeView === 'openwebrx'}
 					<OpenWebRXView />
-				{:else if $activeView === 'hackrf'}
-					<ToolViewWrapper title="HackRF Spectrum Analyzer" onBack={goBackToMap}>
-						<iframe src="/hackrfsweep" title="HackRF Sweep" class="tool-iframe" />
-					</ToolViewWrapper>
-				{:else if $activeView === 'gsm-evil'}
-					<ToolViewWrapper title="GSM Evil" onBack={goBackToMap}>
-						<iframe src="/gsm-evil" title="GSM Evil" class="tool-iframe" />
-					</ToolViewWrapper>
-				{:else if $activeView === 'rtl-433'}
-					<ToolViewWrapper title="RTL-433 Decoder" onBack={goBackToMap}>
-						<iframe src="/rtl-433" title="RTL-433" class="tool-iframe" />
-					</ToolViewWrapper>
 				{:else if $activeView === 'bettercap'}
 					<ToolViewWrapper title="Bettercap" onBack={goBackToMap}>
 						<iframe src="http://localhost:80" title="Bettercap" class="tool-iframe" />
 					</ToolViewWrapper>
+				{:else if $activeView === 'hackrf'}
+					<ToolUnavailableView title="HackRF Spectrum Analyzer" />
+				{:else if $activeView === 'gsm-evil'}
+					<ToolUnavailableView title="GSM Evil" />
+				{:else if $activeView === 'rtl-433'}
+					<ToolUnavailableView title="RTL-433 Decoder" />
 				{:else if $activeView === 'btle'}
-					<ToolViewWrapper title="BTLE Scanner" onBack={goBackToMap}>
-						<iframe src="/btle" title="BTLE" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="BTLE Scanner" />
 				{:else if $activeView === 'droneid'}
-					<ToolViewWrapper title="Drone ID" onBack={goBackToMap}>
-						<iframe src="/droneid" title="Drone ID" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="Drone ID" />
 				{:else if $activeView === 'pagermon'}
-					<ToolViewWrapper title="Pagermon" onBack={goBackToMap}>
-						<iframe src="/pagermon" title="Pagermon" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="Pagermon" />
 				{:else if $activeView === 'rf-emitter'}
-					<ToolViewWrapper title="RF Emitter" onBack={goBackToMap}>
-						<iframe src="/hackrf" title="RF Emitter" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="RF Emitter" />
 				{:else if $activeView === 'rfsweep'}
-					<ToolViewWrapper title="RF Sweep" onBack={goBackToMap}>
-						<iframe src="/rfsweep" title="RF Sweep" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="RF Sweep" />
 				{:else if $activeView === 'wifite'}
-					<ToolViewWrapper title="Wifite2" onBack={goBackToMap}>
-						<iframe src="/wifite" title="Wifite2" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="Wifite2" />
 				{:else if $activeView === 'wigletotak'}
-					<ToolViewWrapper title="WigleToTAK" onBack={goBackToMap}>
-						<iframe src="/wigletotak" title="WigleToTAK" class="tool-iframe" />
-					</ToolViewWrapper>
+					<ToolUnavailableView title="WigleToTAK" />
 				{:else}
-					<ToolViewWrapper title={$activeView} onBack={goBackToMap}>
-						<div class="unknown-view">
-							<span>Unknown tool: {$activeView}</span>
-						</div>
-					</ToolViewWrapper>
+					<ToolUnavailableView title={$activeView} />
 				{/if}
 			</div>
 
@@ -269,15 +246,6 @@
 		height: 100%;
 		border: none;
 		background: var(--palantir-bg-app);
-	}
-
-	.unknown-view {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		height: 100%;
-		color: var(--palantir-text-tertiary);
-		font-size: var(--text-base);
 	}
 
 	/* Bottom panel tabs */

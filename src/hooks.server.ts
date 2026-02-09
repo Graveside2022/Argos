@@ -319,9 +319,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			"connect-src 'self' ws: wss:", // WebSocket connections (terminal on :3001, Kismet WS)
 			"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
 			"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
+			"frame-src 'self' http://*:2501 http://*:8073 http://*:80", // Kismet (:2501), OpenWebRX (:8073), Bettercap (:80)
 			"font-src 'self'",
 			"object-src 'none'",
-			"frame-ancestors 'none'",
+			"frame-ancestors 'self'",
 			"base-uri 'self'",
 			"form-action 'self'"
 		].join('; ')
@@ -329,7 +330,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Additional security headers (Phase 2.2.3)
 	response.headers.set('X-Content-Type-Options', 'nosniff');
-	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
 	response.headers.set('X-XSS-Protection', '0'); // Disabled per OWASP recommendation
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	response.headers.set(
