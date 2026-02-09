@@ -250,14 +250,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 				});
 			}
 		} else if (path.startsWith('/api/')) {
-			// Data queries: 60 requests/minute (1 token/second)
-			if (!rateLimiter.check(`api:${clientIp}`, 60, 1)) {
+			// Data queries: 200 requests/minute (~3.3 tokens/second)
+			// Dashboard makes 60+ API calls on initial load (polling endpoints)
+			if (!rateLimiter.check(`api:${clientIp}`, 200, 200 / 60)) {
 				logAuthEvent({
 					eventType: 'RATE_LIMIT_EXCEEDED',
 					ip: clientIp,
 					method: event.request.method,
 					path,
-					reason: 'API rate limit exceeded (60 req/min)'
+					reason: 'API rate limit exceeded (200 req/min)'
 				});
 				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
 					status: 429,
@@ -315,7 +316,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
 			"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
 			"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles + decoded images
-			"connect-src 'self' ws://localhost:* wss://localhost:*", // WebSocket connections
+			"connect-src 'self' ws: wss:", // WebSocket connections (terminal on :3001, Kismet WS)
 			"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
 			"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
 			"font-src 'self'",

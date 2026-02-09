@@ -6,7 +6,7 @@
  *
  * Policies:
  *   - Hardware control endpoints: 10 requests/minute
- *   - Data query endpoints: 60 requests/minute
+ *   - Data query endpoints: 200 requests/minute
  *   - Streaming endpoints: excluded (long-lived connections)
  *   - Health/status endpoints: unlimited
  *
