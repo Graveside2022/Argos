@@ -9,26 +9,17 @@ export {
 	getInstallationInstructions,
 	installContextBConfig,
 	installContextCConfig,
-	updateExistingConfig,
-} from "./config-generator";
+	updateExistingConfig
+} from './config-generator';
 
 // dynamic-server
-export { ArgosMCPServer } from "./dynamic-server";
-
-// registry-integration
-export {
-	enableHardwareRegistryEvents,
-	enableToolRegistryEvents,
-	initializeMCPIntegration,
-	registryEvents,
-	setupMCPRegistryListeners,
-} from "./registry-integration";
+export { ArgosMCPServer } from './dynamic-server';
 
 // server
-export { createMCPServer, startMCPServer } from "./server";
+export { createMCPServer, startMCPServer } from './server';
 
 // tools (re-export from subdirectory barrel)
-export { ALL_TOOLS, executeTool as executeMCPTool } from "./tools";
+export { ALL_TOOLS, executeTool as executeMCPTool } from './tools';
 
 // types
 export type {
@@ -37,7 +28,5 @@ export type {
 	MCPServerConfig,
 	MCPServerDefinition,
 	MCPTool,
-	MCPToolResult,
-	RegistryChangeEvent,
-	RegistryChangeListener,
-} from "./types";
+	MCPToolResult
+} from './types';

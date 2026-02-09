@@ -1,19 +1,10 @@
 /**
  * MCP Tools for Argos Agent
  * Provides agent with ability to query devices, signals, and tactical data
- *
- * NOTE: This file now integrates with the Tool Execution Framework.
- * Tools are dynamically loaded from the global registry instead of hardcoded.
  */
 
-import { globalRegistry } from '$lib/server/agent/tool-execution';
-import type { ToolDefinition } from '$lib/server/agent/tool-execution';
 import { getFrontendToolsForAgent } from '$lib/server/agent/frontend-tools';
 
-/**
- * Legacy hardcoded tools for backward compatibility
- * These will be merged with auto-detected tools from the framework
- */
 export const argosTools = [
 	{
 		name: 'get_device_details',
@@ -192,48 +183,11 @@ export const argosTools = [
 ];
 
 /**
- * Convert Tool Execution Framework tools to MCP format
- */
-function convertToMCPFormat(tool: ToolDefinition): {
-	name: string;
-	description: string;
-	input_schema: any;
-} {
-	return {
-		name: tool.name,
-		description: tool.description || 'No description available',
-		input_schema: {
-			type: 'object',
-			properties: tool.parameters || {},
-			required: tool.requiredParameters || []
-		}
-	};
-}
-
-/**
- * Get all available tools (legacy + framework)
- * Dynamically fetches tools from the execution framework registry
+ * Get all available tools (hardcoded + frontend)
  */
 export function getAllTools(): Array<{ name: string; description: string; input_schema: any }> {
-	// Get framework tools from registry
-	const frameworkTools = globalRegistry.getAll();
-
-	// Convert framework tools to MCP format
-	const convertedFrameworkTools = frameworkTools.map(convertToMCPFormat);
-
-	// Get frontend UI control tools
 	const frontendTools = getFrontendToolsForAgent();
-
-	// Merge all tools: legacy + framework + frontend (framework tools take priority)
-	const allTools = [...argosTools, ...convertedFrameworkTools, ...frontendTools];
-
-	// Deduplicate by name (keep first occurrence)
-	const seen = new Set<string>();
-	return allTools.filter((tool) => {
-		if (seen.has(tool.name)) return false;
-		seen.add(tool.name);
-		return true;
-	});
+	return [...argosTools, ...frontendTools];
 }
 
 /**

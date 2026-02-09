@@ -6,7 +6,7 @@ import { WebSocketManager } from '$lib/server/kismet';
 import { dev } from '$app/environment';
 import type { IncomingMessage } from 'http';
 import { logger } from '$lib/utils/logger';
-import { initializeToolExecutionFramework } from '$lib/server/agent/tool-execution/init';
+
 import { scanAllHardware, globalHardwareMonitor } from '$lib/server/hardware';
 import {
 	validateApiKey,
@@ -36,11 +36,6 @@ const wss = new WebSocketServer({ noServer: true, maxPayload: 262144 }); // 256K
 
 // Initialize WebSocket manager
 const wsManager = WebSocketManager.getInstance();
-
-// Initialize tool execution framework (auto-detect and register installed tools)
-initializeToolExecutionFramework().catch((error) => {
-	logger.error('Failed to initialize tool execution framework', { error });
-});
 
 // Initialize hardware detection system (auto-detect connected hardware)
 scanAllHardware()
