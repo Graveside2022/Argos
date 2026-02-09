@@ -21,7 +21,7 @@
 
 	const toolEndpoints: Record<string, ToolEndpoint> = {
 		'kismet-wifi': { startUrl: '/api/kismet/start', stopUrl: '/api/kismet/stop' },
-		'gsm-evil': { startUrl: '/api/gsm-evil/start', stopUrl: '/api/gsm-evil/stop' },
+		'gsm-evil': { controlUrl: '/api/gsm-evil/control' },
 		openwebrx: { controlUrl: '/api/openwebrx/control' }
 	};
 

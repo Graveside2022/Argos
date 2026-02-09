@@ -114,7 +114,9 @@
 				{:else if $activeView === 'hackrf'}
 					<ToolUnavailableView title="HackRF Spectrum Analyzer" />
 				{:else if $activeView === 'gsm-evil'}
-					<ToolUnavailableView title="GSM Evil" />
+					<ToolViewWrapper title="GSM Evil" onBack={goBackToMap}>
+						<iframe src="/gsm-evil" title="GSM Evil" class="tool-iframe"></iframe>
+					</ToolViewWrapper>
 				{:else if $activeView === 'rtl-433'}
 					<ToolUnavailableView title="RTL-433 Decoder" />
 				{:else if $activeView === 'btle'}
