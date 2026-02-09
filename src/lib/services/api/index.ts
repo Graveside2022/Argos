@@ -1,8 +1,8 @@
 /**
  * API Services Module
  *
- * Central export point for all REST API client services: HackRF, Kismet,
- * and System APIs with shared configuration, error handling, and retry logic.
+ * Central export point for HackRF and Kismet REST API client services
+ * with shared configuration, error handling, and retry logic.
  */
 
 // --- config ---
@@ -15,40 +15,27 @@ export {
 	defaultRequestOptions,
 	handleResponse,
 	retryRequest,
-	withTimeout,
-} from "./config";
-export type { RetryConfig } from "./config";
+	withTimeout
+} from './config';
+export type { RetryConfig } from './config';
 
 // --- hackrf ---
-export { hackrfAPI } from "./hackrf";
+export { hackrfAPI } from './hackrf';
 export type {
 	HackRFConfig,
 	HackRFStatus,
 	SignalDetection,
 	SpectrumData,
-	SweepResult,
-} from "./hackrf";
+	SweepResult
+} from './hackrf';
 
 // --- kismet ---
-export { kismetAPI } from "./kismet";
+export { kismetAPI } from './kismet';
 export type {
 	DeviceFilter,
 	KismetConfig,
 	KismetDevice,
 	KismetScript,
 	KismetStats,
-	KismetStatus,
-} from "./kismet";
-
-// --- system ---
-export { systemAPI } from "./system";
-export type {
-	LogEntry,
-	NetworkInterface,
-	ServiceStatus,
-	SystemHealth,
-	SystemInfo,
-} from "./system";
-
-// --- example-usage ---
-export { hackrfExample, kismetExample, systemExample } from "./example-usage";
+	KismetStatus
+} from './kismet';
