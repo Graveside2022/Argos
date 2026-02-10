@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { sweepManager } from '$lib/server/hackrf/sweepManager';
-import { UsrpSweepManager } from '$lib/server/usrp/sweepManager';
+import { sweepManager } from '$lib/server/hackrf/sweep-manager';
+import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getCorsHeaders } from '$lib/server/security/cors';
 
 const execAsync = promisify(exec);
 
@@ -147,12 +148,10 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 // Add CORS headers
-export function OPTIONS() {
+export const OPTIONS: RequestHandler = ({ request }) => {
+	const origin = request.headers.get('origin');
 	return new Response(null, {
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
-		}
+		status: 204,
+		headers: getCorsHeaders(origin)
 	});
-}
+};

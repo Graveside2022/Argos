@@ -1,6 +1,14 @@
-// Kismet server modules exports
-export * from './types';
-export { KismetServiceManager } from './serviceManager';
-export { KismetProxy } from './kismetProxy';
-export { ScriptManager } from './scriptManager';
-export { WebSocketManager } from './webSocketManager';
+// Kismet WiFi scanner integration
+export { AlfaDetector } from './alfa-detector';
+export { fusionKismetController } from './fusion-controller';
+export { KismetProxy } from './kismet-proxy';
+export { KismetServiceManager } from './service-manager';
+export { WebSocketManager } from './web-socket-manager';
+export type {
+	DeviceFilter,
+	DeviceStats,
+	KismetConfig,
+	KismetDevice,
+	KismetServiceStatus,
+	KismetStatus
+} from './types';

@@ -1,0 +1,27 @@
+// Root component barrel — re-exports dashboard components
+export {
+	AgentChatPanel,
+	DashboardMap,
+	DevicesPanel,
+	FrontendToolExecutor,
+	frontendToolExecutor,
+	IconRail,
+	KismetView,
+	LayersPanel,
+	OpenWebRXView,
+	OverviewPanel,
+	PanelContainer,
+	ResizableBottomPanel,
+	SettingsPanel,
+	TerminalPanel,
+	TerminalTabContent,
+	ToolCard,
+	ToolCategoryCard,
+	ToolsNavigationView,
+	ToolsPanel,
+	ToolsPanelHeader,
+	ToolViewWrapper,
+	TopStatusBar,
+	type FrontendToolCall,
+	type FrontendToolResult
+} from './dashboard';

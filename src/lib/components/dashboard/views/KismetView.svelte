@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { activeView } from '$lib/stores/dashboard/dashboardStore';
+	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import ToolViewWrapper from './ToolViewWrapper.svelte';
 
 	let iframeUrl = '';

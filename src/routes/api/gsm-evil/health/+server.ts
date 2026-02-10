@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
 
 // Comprehensive health check for GSM Evil pipeline
 const performHealthCheck = async () => {
@@ -37,7 +37,10 @@ const performHealthCheck = async () => {
 		// Check GRGSM process
 		const { stdout: grgsmCheck } = await hostExec(
 			'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.debug('[gsm-evil-health] GRGSM process check failed', { error: String(error) });
+			return { stdout: '' };
+		});
 		if (grgsmCheck.trim()) {
 			const parts = grgsmCheck.trim().split(/\s+/);
 			const pid = parseInt(parts[1]);
@@ -45,7 +48,12 @@ const performHealthCheck = async () => {
 				// Check runtime to distinguish from scans
 				const { stdout: pidTime } = await hostExec(
 					`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
-				).catch(() => ({ stdout: '0' }));
+				).catch((error: unknown) => {
+					console.debug('[gsm-evil-health] PID runtime check failed', {
+						error: String(error)
+					});
+					return { stdout: '0' };
+				});
 				const runtime = parseInt(pidTime.trim()) || 0;
 
 				if (runtime > 10) {
@@ -64,7 +72,12 @@ const performHealthCheck = async () => {
 		// Check GSM Evil process and web interface
 		const { stdout: gsmevilCheck } = await hostExec(
 			'ps aux | grep -E "python3? GsmEvil[_a-zA-Z0-9]*\\.py" | grep -v grep | head -1'
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.debug('[gsm-evil-health] GSM Evil process check failed', {
+				error: String(error)
+			});
+			return { stdout: '' };
+		});
 		if (gsmevilCheck.trim()) {
 			const parts = gsmevilCheck.trim().split(/\s+/);
 			const pid = parseInt(parts[1]);
@@ -76,14 +89,24 @@ const performHealthCheck = async () => {
 				// Check port 8080 listener
 				const { stdout: portCheck } = await hostExec(
 					'sudo lsof -i :8080 | grep LISTEN'
-				).catch(() => ({ stdout: '' }));
+				).catch((error: unknown) => {
+					console.debug('[gsm-evil-health] Port 8080 check failed', {
+						error: String(error)
+					});
+					return { stdout: '' };
+				});
 				health.gsmevil.port8080 = portCheck.trim().length > 0;
 
 				// Check HTTP response
 				if (health.gsmevil.port8080) {
 					const { stdout: httpCheck } = await hostExec(
 						'timeout 3 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
-					).catch(() => ({ stdout: '000' }));
+					).catch((error: unknown) => {
+						console.debug('[gsm-evil-health] HTTP check failed', {
+							error: String(error)
+						});
+						return { stdout: '000' };
+					});
 					health.gsmevil.webInterface = httpCheck.trim() === '200';
 				}
 			}
@@ -95,7 +118,10 @@ const performHealthCheck = async () => {
 		// GSMTAP port 4729
 		const { stdout: gsmtapPort } = await hostExec(
 			'ss -u -n | grep -c ":4729" || echo "0"'
-		).catch(() => ({ stdout: '0' }));
+		).catch((error: unknown) => {
+			console.debug('[gsm-evil-health] GSMTAP port check failed', { error: String(error) });
+			return { stdout: '0' };
+		});
 		health.dataFlow.port4729Active = parseInt(gsmtapPort.trim()) > 0;
 		health.dataFlow.gsmtapActive = health.dataFlow.port4729Active;
 
@@ -108,14 +134,24 @@ const performHealthCheck = async () => {
 				// Quick database connectivity test
 				const { stdout: dbCheck } = await hostExec(
 					`python3 -c "import sqlite3; conn = sqlite3.connect('${dbPath}'); conn.close(); print('ok')" 2>/dev/null || echo "error"`
-				).catch(() => ({ stdout: 'error' }));
+				).catch((error: unknown) => {
+					console.error('[gsm-evil-health] Database connectivity test failed', {
+						error: String(error)
+					});
+					return { stdout: 'error' };
+				});
 				health.dataFlow.databaseAccessible = dbCheck.trim() === 'ok';
 
 				// Check for recent data (last 10 minutes)
 				if (health.dataFlow.databaseAccessible) {
 					const { stdout: recentData } = await hostExec(
 						`python3 -c "import sqlite3; from datetime import datetime, timedelta; conn = sqlite3.connect('${dbPath}'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM imsi_data WHERE datetime(date_time) > datetime(\\'now\\', \\'-10 minutes\\')'); print(cursor.fetchone()[0]); conn.close()" 2>/dev/null || echo "0"`
-					).catch(() => ({ stdout: '0' }));
+					).catch((error: unknown) => {
+						console.debug('[gsm-evil-health] Recent data check failed', {
+							error: String(error)
+						});
+						return { stdout: '0' };
+					});
 					health.dataFlow.recentData = parseInt(recentData.trim()) > 0;
 				}
 			}

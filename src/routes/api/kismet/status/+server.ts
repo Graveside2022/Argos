@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fusionKismetController } from '$lib/server/kismet/fusion_controller';
-import { KismetProxy } from '$lib/server/kismet/kismetProxy';
+import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
+import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {

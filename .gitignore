@@ -326,6 +326,9 @@ docker-images/
 .development-archive/
 bmad-method/
 
+# Credential-bearing config files
+config/opencellid.json
+
 # Enhanced Environment Security
 .envrc
 
@@ -399,3 +402,12 @@ core.*
 
 # Stale report directories
 completed/
+
+# Python virtual environments
+hackrf_emitter/backend/.venv/
+
+# HackRF wideband cache
+wideband_cache/
+
+# Claude Code artifacts
+.claude-container/

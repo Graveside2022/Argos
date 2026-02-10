@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { updateSessionConnection } from '$lib/stores/dashboard/terminalStore';
+	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
 
 	interface Props {
 		sessionId: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { gsmEvilStore } from '$lib/stores/gsmEvilStore';
+	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 
 	let imsiCaptureActive = false;
 	let imsiPollInterval: ReturnType<typeof setInterval>;
@@ -30,13 +30,29 @@
 		currentFrequency: '947.2',
 		message: 'Checking...'
 	};
+	let expandedTowers: Set<string> = new Set(); // Track which tower rows are expanded
+	let timestampTicker = 0; // Increment to force timestamp recalculation
+	let timestampInterval: ReturnType<typeof setInterval>;
+
+	// Sorting state
+	type SortColumn =
+		| 'carrier'
+		| 'country'
+		| 'location'
+		| 'lac'
+		| 'mccMnc'
+		| 'devices'
+		| 'lastSeen';
+	let sortColumn: SortColumn = 'devices'; // Default sort by device count
+	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	// Real-time frequency parsing state
 	let _currentFrequencyData: any = {};
 
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
-	$: groupedTowers =
-		capturedIMSIs && towerLocations && towerLookupAttempted && groupIMSIsByTower();
+	$: groupedTowers = capturedIMSIs
+		? sortTowers(groupIMSIsByTower(), sortColumn, sortDirection)
+		: [];
 
 	// Derive detected towers from scan results that have cell info (MCC/MNC/LAC/CI)
 	$: scanDetectedTowers = scanResults
@@ -943,8 +959,8 @@
 						carrier: carrier,
 						devices: [],
 						count: 0,
-						firstSeen: new Date(),
-						lastSeen: new Date(),
+						firstSeen: new Date('9999-12-31T23:59:59Z'),
+						lastSeen: new Date(0), // Epoch so any real timestamp will be greater
 						isNew: false, // We'll implement detection later
 						status: status,
 						statusSymbol: statusSymbol,
@@ -952,14 +968,144 @@
 					};
 				}
 
-				towerGroups[towerId].devices.push(imsi.imsi);
+				// Store full device object with timestamp
+				towerGroups[towerId].devices.push({
+					imsi: imsi.imsi,
+					tmsi: imsi.tmsi,
+					timestamp: imsi.timestamp
+				});
 				towerGroups[towerId].count++;
-				towerGroups[towerId].lastSeen = new Date();
+				// Update lastSeen to most recent device timestamp
+				const deviceTime = new Date(imsi.timestamp);
+				if (!towerGroups[towerId].lastSeen || deviceTime > towerGroups[towerId].lastSeen) {
+					towerGroups[towerId].lastSeen = deviceTime;
+				}
 			}
 		});
 
-		// Sort by count descending
-		return Object.values(towerGroups).sort((a, b) => b.count - a.count);
+		// Return unsorted - sorting will be handled by sortTowers()
+		return Object.values(towerGroups);
+	}
+
+	// Sort towers by the selected column and direction
+	function sortTowers(towers: any[], column: SortColumn, direction: 'asc' | 'desc') {
+		const sorted = [...towers].sort((a, b) => {
+			let aVal, bVal;
+
+			switch (column) {
+				case 'carrier':
+					aVal = a.carrier.toLowerCase();
+					bVal = b.carrier.toLowerCase();
+					break;
+				case 'country':
+					aVal = a.country.name.toLowerCase();
+					bVal = b.country.name.toLowerCase();
+					break;
+				case 'location':
+					// Sort by whether location exists, then by distance from origin
+					aVal = a.location
+						? Math.sqrt(a.location.lat ** 2 + a.location.lon ** 2)
+						: Infinity;
+					bVal = b.location
+						? Math.sqrt(b.location.lat ** 2 + b.location.lon ** 2)
+						: Infinity;
+					break;
+				case 'lac':
+					aVal = parseInt(a.lac) || 0;
+					bVal = parseInt(b.lac) || 0;
+					break;
+				case 'mccMnc':
+					aVal = a.mccMnc;
+					bVal = b.mccMnc;
+					break;
+				case 'devices':
+					aVal = a.count;
+					bVal = b.count;
+					break;
+				case 'lastSeen':
+					aVal = a.lastSeen.getTime();
+					bVal = b.lastSeen.getTime();
+					break;
+				default:
+					return 0;
+			}
+
+			if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+			if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+			return 0;
+		});
+
+		return sorted;
+	}
+
+	// Handle column header click for sorting
+	function handleSort(column: SortColumn) {
+		if (sortColumn === column) {
+			// Toggle direction if same column
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			// New column - default to descending for numbers, ascending for text
+			sortColumn = column;
+			sortDirection = ['devices', 'lastSeen'].includes(column) ? 'desc' : 'asc';
+		}
+	}
+
+	// Toggle tower row expansion
+	function toggleTowerExpansion(towerId: string) {
+		if (expandedTowers.has(towerId)) {
+			expandedTowers.delete(towerId);
+		} else {
+			expandedTowers.add(towerId);
+		}
+		// Trigger reactivity
+		expandedTowers = new Set(expandedTowers);
+	}
+
+	// Format timestamp for display
+	function formatTimestamp(timestamp: string): string {
+		// Force reactive dependency on ticker to update "X ago" times
+		void timestampTicker;
+
+		// Parse custom format: "21:49:40 2026-02-09" -> "2026-02-09T21:49:40"
+		let date: Date;
+		if (timestamp.includes(' ') && timestamp.split(' ').length === 2) {
+			const [time, dateStr] = timestamp.split(' ');
+			date = new Date(`${dateStr}T${time}`);
+		} else {
+			date = new Date(timestamp);
+		}
+
+		// Check if date is valid
+		if (isNaN(date.getTime())) {
+			return timestamp; // Return original if can't parse
+		}
+
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffSecs = Math.floor(diffMs / 1000);
+		const diffMins = Math.floor(diffSecs / 60);
+		const diffHours = Math.floor(diffMins / 60);
+
+		// Show relative time for recent detections
+		if (diffSecs < 60) {
+			return `${diffSecs}s ago`;
+		} else if (diffMins < 60) {
+			return `${diffMins}m ago`;
+		} else if (diffHours < 24) {
+			return `${diffHours}h ago`;
+		}
+
+		// Show date/time for older detections
+		const timeStr = date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+		const dateStr = date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric'
+		});
+		return `${dateStr} ${timeStr}`;
 	}
 
 	// Fetch tower location
@@ -1006,33 +1152,101 @@
 			if (imsiPollInterval) {
 				clearInterval(imsiPollInterval);
 			}
-			imsiCaptureActive = false;
 
 			// Kill server-side grgsm_livemon_headless and GsmEvil processes
 			try {
-				await fetch('/api/gsm-evil/control', {
+				const response = await fetch('/api/gsm-evil/control', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ action: 'stop' })
 				});
-			} catch (_error: unknown) {
-				// Best effort - server process cleanup
+
+				const data = await response.json();
+
+				if (!response.ok || !data.success) {
+					const errorMsg = data.message || data.error || 'Unknown error';
+					console.error('[GSM] Stop failed:', errorMsg);
+					// Show error but still clear UI state
+					alert(
+						`Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`
+					);
+				} else {
+					console.log('[GSM] Stop successful:', data.message);
+				}
+			} catch (error: unknown) {
+				console.error('[GSM] Stop request failed:', error);
+				alert('Failed to communicate with server. Processes may still be running.');
 			}
 
-			gsmEvilStore.clearResults();
+			// Clear UI state after attempting stop
+			imsiCaptureActive = false;
+			// gsmEvilStore.clearResults(); // COMMENTED: preserve IMSI data
+			gsmFrames = []; // Clear frames
 		} else {
 			// Start the scan
 			scanFrequencies();
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		console.log('[GSM] Component mounted');
+
+		// Start timestamp ticker for reactive "X ago" updates
+		timestampInterval = setInterval(() => {
+			timestampTicker++;
+		}, 10000); // Update every 10 seconds
+
+		// Check if GSM Evil is already running (e.g. user navigated away and back)
+		try {
+			const res = await fetch('/api/gsm-evil/status');
+			const data = await res.json();
+
+			// Check if grgsm is running (for live frames) even if overall status is "stopped"
+			const grgsmRunning = data.details?.grgsm?.running;
+			const bothRunning = data.status === 'running';
+
+			if (grgsmRunning || bothRunning) {
+				console.log('[GSM] Detected running grgsm process — starting polling');
+				console.log('[GSM] Status details:', {
+					grgsm: data.details?.grgsm,
+					gsmevil: data.details?.gsmevil,
+					overallStatus: data.status
+				});
+
+				// Set active state if ANY GSM process is running (so stop button works)
+				if (grgsmRunning || bothRunning) {
+					imsiCaptureActive = true;
+				}
+
+				// Start polling for data
+				if (imsiPollInterval) clearInterval(imsiPollInterval);
+				imsiPollInterval = setInterval(() => {
+					fetchIMSIs();
+					checkActivity();
+					fetchRealFrames();
+				}, 2000);
+
+				// Immediate fetch to populate UI
+				fetchIMSIs();
+				checkActivity();
+				fetchRealFrames();
+			} else {
+				console.log('[GSM] No GSM processes detected - page in stopped state');
+				// Clear any stale scanning state from localStorage
+				gsmEvilStore.completeScan();
+			}
+		} catch (error) {
+			console.error('[GSM] Status check failed:', error);
+			// Status check failed — page starts in default stopped state
+		}
 	});
 
 	onDestroy(() => {
 		if (imsiPollInterval) {
 			clearInterval(imsiPollInterval);
+		}
+		if (timestampInterval) {
+			clearInterval(timestampInterval);
 		}
 	});
 
@@ -1262,31 +1476,48 @@
 
 	async function fetchRealFrames() {
 		try {
-			const response = await fetch('/api/gsm-evil/frames');
+			const response = await fetch('/api/gsm-evil/live-frames', {
+				credentials: 'same-origin' // Ensure cookies are included
+			});
+
 			if (response.ok) {
 				const data = await response.json();
 
-				if (data.frames && data.frames.length > 0) {
+				// Debug logging
+				console.log('[GSM Frames] API response:', {
+					success: data.success,
+					frameCount: data.frames?.length || 0,
+					message: data.message,
+					currentTotal: gsmFrames.length
+				});
+
+				if (data.success && data.frames && data.frames.length > 0) {
 					// Append new frames to existing ones (console-like behavior)
 					gsmFrames = [...gsmFrames, ...data.frames];
 
-					// Keep only the last 25 frames to prevent memory issues
-					if (gsmFrames.length > 25) {
-						gsmFrames = gsmFrames.slice(-25);
+					// Keep only the last 30 frames to prevent memory issues
+					if (gsmFrames.length > 30) {
+						gsmFrames = gsmFrames.slice(-30);
 					}
-
-					// Force Svelte to update - no longer needed with proper array handling
 
 					// Auto-scroll to bottom after adding new frames
 					await tick();
-					const frameDisplay = document.querySelector('.gsm-capture-card .frame-display');
+					const frameDisplay = document.querySelector('.live-frames-console');
 					if (frameDisplay) {
 						frameDisplay.scrollTop = frameDisplay.scrollHeight;
 					}
+
+					console.log('[GSM Frames] Updated, new total:', gsmFrames.length);
+				} else {
+					console.log('[GSM Frames] No frames in this batch:', data.message);
 				}
+			} else if (response.status === 401) {
+				console.error('[GSM Frames] Authentication failed - session may have expired');
+			} else {
+				console.error('[GSM Frames] API error:', response.status, response.statusText);
 			}
 		} catch (error) {
-			console.error('Failed to fetch GSM frames:', error);
+			console.error('[GSM Frames] Failed to fetch:', error);
 		}
 	}
 
@@ -1385,57 +1616,172 @@
 			<div class="tower-groups" style="padding: 0.75rem;">
 				{#if capturedIMSIs.length > 0}
 					<div class="tower-header">
-						<span class="header-carrier">Carrier</span>
+						<button
+							class="header-sortable header-carrier"
+							onclick={() => handleSort('carrier')}
+							title="Click to sort by Carrier"
+						>
+							Carrier
+							{#if sortColumn === 'carrier'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 						<span class="tower-separator">|</span>
-						<span class="header-country">Country</span>
+						<button
+							class="header-sortable header-country"
+							onclick={() => handleSort('country')}
+							title="Click to sort by Country"
+						>
+							Country
+							{#if sortColumn === 'country'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 						<span class="tower-separator">|</span>
-						<span class="header-location">Cell Tower Location</span>
+						<button
+							class="header-sortable header-location"
+							onclick={() => handleSort('location')}
+							title="Click to sort by Location"
+						>
+							Cell Tower Location
+							{#if sortColumn === 'location'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 						<span class="tower-separator">|</span>
-						<span class="header-lac">LAC/CI</span>
+						<button
+							class="header-sortable header-lac"
+							onclick={() => handleSort('lac')}
+							title="Click to sort by LAC/CI"
+						>
+							LAC/CI
+							{#if sortColumn === 'lac'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 						<span class="tower-separator">|</span>
-						<span class="header-mcc">MCC-MNC</span>
+						<button
+							class="header-sortable header-mcc"
+							onclick={() => handleSort('mccMnc')}
+							title="Click to sort by MCC-MNC"
+						>
+							MCC-MNC
+							{#if sortColumn === 'mccMnc'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 						<span class="tower-separator">|</span>
-						<span class="header-devices">Devices</span>
+						<button
+							class="header-sortable header-devices"
+							onclick={() => handleSort('devices')}
+							title="Click to sort by Device Count"
+						>
+							Devices
+							{#if sortColumn === 'devices'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
+						<span class="tower-separator">|</span>
+						<button
+							class="header-sortable header-time"
+							onclick={() => handleSort('lastSeen')}
+							title="Click to sort by Last Seen"
+						>
+							Last Seen
+							{#if sortColumn === 'lastSeen'}
+								<span class="sort-indicator"
+									>{sortDirection === 'asc' ? '▲' : '▼'}</span
+								>
+							{/if}
+						</button>
 					</div>
 					{#each groupedTowers as tower}
-						<div class="tower-line">
-							<span
-								class="tower-carrier {tower.carrier === 'Unknown'
-									? 'text-yellow-500'
-									: ''}">{tower.carrier}</span
+						{@const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`}
+						{@const isExpanded = expandedTowers.has(towerId)}
+						<div>
+							<div
+								class="tower-line tower-line-clickable {isExpanded
+									? 'tower-line-expanded'
+									: ''}"
+								onclick={() => toggleTowerExpansion(towerId)}
+								role="button"
+								tabindex="0"
 							>
-							<span class="tower-separator">|</span>
-							<span class="tower-country"
-								>{tower.country.flag} {tower.country.code}</span
-							>
-							<span class="tower-separator">|</span>
-							<span class="tower-location">
-								{#if tower.location}
-									<span class="text-green-400"
-										>{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(
-											4
-										)}</span
-									>
-								{:else if !towerLookupAttempted[`${tower.mccMnc}-${tower.lac}-${tower.ci}`]}
-									<span class="text-xs text-yellow-500">Looking up...</span>
-								{:else}
-									<span class="text-xs" style="color: #94a3b8;">Roaming</span>
-								{/if}
-							</span>
-							<span class="tower-separator">|</span>
-							<span
-								class="tower-lac {tower.carrier === 'Unknown'
-									? 'text-yellow-500'
-									: ''}">{tower.lac}/{tower.ci}</span
-							>
-							<span class="tower-separator">|</span>
-							<span
-								class="tower-mcc {tower.carrier === 'Unknown'
-									? 'text-yellow-500'
-									: ''}">{tower.mccMnc}</span
-							>
-							<span class="tower-separator">|</span>
-							<span class="tower-devices">{tower.count}</span>
+								<span class="tower-expand-icon">{isExpanded ? '▼' : '▶'}</span>
+								<span
+									class="tower-carrier {tower.carrier === 'Unknown'
+										? 'text-yellow-500'
+										: ''}">{tower.carrier}</span
+								>
+								<span class="tower-separator">|</span>
+								<span class="tower-country"
+									>{tower.country.flag} {tower.country.code}</span
+								>
+								<span class="tower-separator">|</span>
+								<span class="tower-location">
+									{#if tower.location}
+										<span class="text-green-400"
+											>{tower.location.lat.toFixed(4)}, {tower.location.lon.toFixed(
+												4
+											)}</span
+										>
+									{:else if !towerLookupAttempted[towerId]}
+										<span class="text-xs text-yellow-500">Looking up...</span>
+									{:else}
+										<span class="text-xs" style="color: #94a3b8;">Roaming</span>
+									{/if}
+								</span>
+								<span class="tower-separator">|</span>
+								<span
+									class="tower-lac {tower.carrier === 'Unknown'
+										? 'text-yellow-500'
+										: ''}">{tower.lac}/{tower.ci}</span
+								>
+								<span class="tower-separator">|</span>
+								<span
+									class="tower-mcc {tower.carrier === 'Unknown'
+										? 'text-yellow-500'
+										: ''}">{tower.mccMnc}</span
+								>
+								<span class="tower-separator">|</span>
+								<span class="tower-devices">{tower.count}</span>
+								<span class="tower-separator">|</span>
+								<span class="tower-time text-gray-400">
+									{formatTimestamp(tower.lastSeen.toISOString())}
+								</span>
+							</div>
+
+							<!-- Expanded Device List -->
+							{#if isExpanded}
+								<div class="device-list-expanded">
+									<div class="device-list-header">
+										<span class="device-header-imsi">IMSI</span>
+										<span class="device-header-tmsi">TMSI</span>
+										<span class="device-header-time">Detected</span>
+									</div>
+									{#each tower.devices.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
+										<div class="device-list-row">
+											<span class="device-imsi">{device.imsi}</span>
+											<span class="device-tmsi">{device.tmsi || 'N/A'}</span>
+											<span class="device-time text-gray-400">
+												{formatTimestamp(device.timestamp)}
+											</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/each}
 				{:else}
@@ -1451,141 +1797,147 @@
 		</div>
 	{/if}
 
-	<!-- Frequency Selector Panel (Compact) -->
-	<div class="frequency-panel-compact">
-		<div class="frequency-container">
-			<!-- Scan Results Table -->
-			<div class="scan-results-table">
-				<h4 class="table-title"><span style="color: #dc2626;">Scan</span> Results</h4>
-				<div class="table-container">
-					{#if scanResults.length > 0}
-						<table class="frequency-table">
-							<thead>
-								<tr>
-									<th>Frequency</th>
-									<th>Signal</th>
-									<th>Quality</th>
-									<th>Channel Type</th>
-									<th>GSM Frames</th>
-									<th>Activity</th>
-									<th>Action</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
-									<tr
-										class={selectedFrequency === result.frequency
-											? 'selected'
-											: ''}
-									>
-										<td class="freq-cell">{result.frequency} MHz</td>
-										<td class="signal-cell"
-											>{result.power !== undefined && result.power > -100
-												? result.power.toFixed(1) + ' dBm'
-												: result.strength || 'N/A'}</td
-										>
-										<td>
-											<span
-												class="quality-badge {result.strength
-													.toLowerCase()
-													.replace(' ', '-')}">{result.strength}</span
-											>
-										</td>
-										<td>
-											{#if result.channelType}
-												<span
-													class="channel-type {result.controlChannel
-														? 'control'
-														: ''}">{result.channelType}</span
-												>
-											{:else}
-												<span class="channel-type unknown">-</span>
-											{/if}
-										</td>
-										<td class="frames-cell">
-											{#if result.frameCount !== undefined}
-												<span class="frame-count">{result.frameCount}</span>
-											{:else}
-												<span class="no-data">-</span>
-											{/if}
-										</td>
-										<td class="activity-cell">
-											{#if result.hasGsmActivity}
-												<span class="activity-yes">✓</span>
-											{:else}
-												<span class="activity-no">✗</span>
-											{/if}
-										</td>
-										<td>
-											<button
-												class="select-btn {selectedFrequency ===
-												result.frequency
-													? 'selected'
-													: ''}"
-												onclick={() =>
-													gsmEvilStore.setSelectedFrequency(
-														result.frequency
-													)}
-											>
-												{selectedFrequency === result.frequency
-													? 'Selected'
-													: 'Select'}
-											</button>
-										</td>
+	<!-- Frequency Selector Panel (Compact) - Hidden when IMSI capture is active -->
+	{#if !imsiCaptureActive}
+		<div class="frequency-panel-compact">
+			<div class="frequency-container">
+				<!-- Scan Results Table -->
+				<div class="scan-results-table">
+					<h4 class="table-title"><span style="color: #dc2626;">Scan</span> Results</h4>
+					<div class="table-container">
+						{#if scanResults.length > 0}
+							<table class="frequency-table">
+								<thead>
+									<tr>
+										<th>Frequency</th>
+										<th>Signal</th>
+										<th>Quality</th>
+										<th>Channel Type</th>
+										<th>GSM Frames</th>
+										<th>Activity</th>
+										<th>Action</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
-					{:else}
-						<div class="empty-table">
-							<p class="text-gray-500">No results available</p>
-						</div>
-					{/if}
-				</div>
-				{#if scanResults.length > 0}
-					<p class="table-footer">
-						Found {scanResults.length} active frequencies • Sorted by GSM frame count
-					</p>
-				{/if}
-			</div>
-
-			<!-- Scan Progress Console -->
-			<div class="scan-progress-console">
-				<div class="console-header">
-					<span class="console-title">CONSOLE</span>
-					{#if isScanning}
-						<span class="console-status">SCANNING...</span>
-					{:else if scanProgress.length > 0}
-						<span class="console-status">COMPLETE</span>
-					{/if}
-				</div>
-				<div class="console-body">
-					{#if scanProgress.length > 0}
-						{#each scanProgress as line}
-							<div
-								class="console-line {line.startsWith('[ERROR]')
-									? 'error'
-									: line.startsWith('[CMD]')
-										? 'command'
-										: line.startsWith('[TEST')
-											? 'test'
-											: line.includes('=====')
-												? 'header'
-												: ''}"
-							>
-								{line}
+								</thead>
+								<tbody>
+									{#each scanResults.sort((a, b) => (b.frameCount || 0) - (a.frameCount || 0)) as result}
+										<tr
+											class={selectedFrequency === result.frequency
+												? 'selected'
+												: ''}
+										>
+											<td class="freq-cell">{result.frequency} MHz</td>
+											<td class="signal-cell"
+												>{result.power !== undefined && result.power > -100
+													? result.power.toFixed(1) + ' dBm'
+													: result.strength || 'N/A'}</td
+											>
+											<td>
+												<span
+													class="quality-badge {result.strength
+														.toLowerCase()
+														.replace(' ', '-')}">{result.strength}</span
+												>
+											</td>
+											<td>
+												{#if result.channelType}
+													<span
+														class="channel-type {result.controlChannel
+															? 'control'
+															: ''}">{result.channelType}</span
+													>
+												{:else}
+													<span class="channel-type unknown">-</span>
+												{/if}
+											</td>
+											<td class="frames-cell">
+												{#if result.frameCount !== undefined}
+													<span class="frame-count"
+														>{result.frameCount}</span
+													>
+												{:else}
+													<span class="no-data">-</span>
+												{/if}
+											</td>
+											<td class="activity-cell">
+												{#if result.hasGsmActivity}
+													<span class="activity-yes">✓</span>
+												{:else}
+													<span class="activity-no">✗</span>
+												{/if}
+											</td>
+											<td>
+												<button
+													class="select-btn {selectedFrequency ===
+													result.frequency
+														? 'selected'
+														: ''}"
+													onclick={() =>
+														gsmEvilStore.setSelectedFrequency(
+															result.frequency
+														)}
+												>
+													{selectedFrequency === result.frequency
+														? 'Selected'
+														: 'Select'}
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{:else}
+							<div class="empty-table">
+								<p class="text-gray-500">No results available</p>
 							</div>
-						{/each}
-						{#if isScanning}
-							<div class="console-cursor">█</div>
 						{/if}
-					{:else}
-						<div class="console-line text-gray-500">Click 'Start Scan' to begin</div>
+					</div>
+					{#if scanResults.length > 0}
+						<p class="table-footer">
+							Found {scanResults.length} active frequencies • Sorted by GSM frame count
+						</p>
 					{/if}
+				</div>
+
+				<!-- Scan Progress Console -->
+				<div class="scan-progress-console">
+					<div class="console-header">
+						<span class="console-title">CONSOLE</span>
+						{#if isScanning}
+							<span class="console-status">SCANNING...</span>
+						{:else if scanProgress.length > 0}
+							<span class="console-status">COMPLETE</span>
+						{/if}
+					</div>
+					<div class="console-body">
+						{#if scanProgress.length > 0}
+							{#each scanProgress as line}
+								<div
+									class="console-line {line.startsWith('[ERROR]')
+										? 'error'
+										: line.startsWith('[CMD]')
+											? 'command'
+											: line.startsWith('[TEST')
+												? 'test'
+												: line.includes('=====')
+													? 'header'
+													: ''}"
+								>
+									{line}
+								</div>
+							{/each}
+							{#if isScanning}
+								<div class="console-cursor">█</div>
+							{/if}
+						{:else}
+							<div class="console-line text-gray-500">
+								Click 'Start Scan' to begin
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
 
 	<!-- Live GSM Frames (shows after scan starts IMSI capture) -->
 	{#if imsiCaptureActive}
@@ -1597,10 +1949,13 @@
 					<span style="color: #dc2626; font-weight: 600;"
 						>{activityStatus.currentFrequency} MHz</span
 					>
+					<span style="color: #gray; margin-left: 1rem;">• {gsmFrames.length} frames</span
+					>
 				</span>
 			</h4>
 			<div
-				style="padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.75rem;"
+				class="live-frames-console"
+				style="padding: 0.75rem; max-height: calc(100vh - 350px); min-height: 600px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; background: rgba(0, 0, 0, 0.8);"
 			>
 				{#if gsmFrames.length > 0}
 					{#each gsmFrames as frame, i}
@@ -1612,6 +1967,20 @@
 					{/each}
 				{:else}
 					<div class="frame-line text-gray-500">Waiting for GSM frames...</div>
+					<div class="frame-line text-gray-600 text-xs">
+						{#if activityStatus.packetCount > 0}
+							Processing {activityStatus.packetCount} packets/sec
+						{:else}
+							Listening for GSM traffic on {activityStatus.currentFrequency} MHz
+						{/if}
+					</div>
+					<div class="frame-line text-gray-600 text-xs">
+						{#if capturedIMSIs.length > 0}
+							✓ Capturing IMSIs ({capturedIMSIs.length} devices detected)
+						{:else}
+							IMSI sniffer active - devices will appear when detected
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</div>
@@ -2377,6 +2746,126 @@
 		text-align: center;
 	}
 
+	.header-time {
+		min-width: 120px;
+		text-align: center;
+	}
+
+	/* Sortable header styles */
+	.header-sortable {
+		background: none;
+		border: none;
+		color: #64748b;
+		cursor: pointer;
+		font-family: monospace;
+		font-weight: bold;
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
+		user-select: none;
+	}
+
+	.header-sortable:hover {
+		color: #3b82f6;
+		background-color: rgba(59, 130, 246, 0.1);
+		border-radius: 4px;
+	}
+
+	.sort-indicator {
+		color: #3b82f6;
+		font-size: 0.7rem;
+		margin-left: 0.25rem;
+	}
+
+	.tower-time {
+		min-width: 120px;
+		font-family: monospace;
+		font-size: 0.75rem;
+		text-align: center;
+	}
+
+	.tower-line-clickable {
+		cursor: pointer;
+		transition:
+			background-color 0.2s,
+			border-left 0.2s;
+		border-left: 3px solid transparent;
+	}
+
+	.tower-line-clickable:hover {
+		background-color: rgba(59, 130, 246, 0.1);
+		border-left-color: #3b82f6;
+	}
+
+	.tower-line-expanded {
+		background-color: rgba(59, 130, 246, 0.15);
+		border-left-color: #3b82f6;
+	}
+
+	.tower-expand-icon {
+		display: inline-block;
+		width: 20px;
+		color: #3b82f6;
+		font-size: 0.7rem;
+		margin-right: 0.5rem;
+	}
+
+	.device-list-expanded {
+		background: rgba(0, 0, 0, 0.3);
+		border-left: 3px solid #3b82f6;
+		margin: 0.5rem 0 0.5rem 1.5rem;
+		padding: 0.75rem;
+		border-radius: 4px;
+	}
+
+	.device-list-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.5rem 0;
+		border-bottom: 1px solid #374151;
+		margin-bottom: 0.5rem;
+		font-weight: 600;
+		font-size: 0.75rem;
+		color: #9ca3af;
+	}
+
+	.device-list-row {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.5rem 0;
+		font-family: monospace;
+		font-size: 0.75rem;
+		border-bottom: 1px solid #1f2937;
+	}
+
+	.device-list-row:last-child {
+		border-bottom: none;
+	}
+
+	.device-header-imsi,
+	.device-imsi {
+		flex: 2;
+		color: #10b981;
+	}
+
+	.device-header-tmsi,
+	.device-tmsi {
+		flex: 1;
+		color: #60a5fa;
+	}
+
+	.device-header-time,
+	.device-time {
+		flex: 1;
+		text-align: right;
+	}
+
 	.tower-lac {
 		color: #94a3b8;
 		font-family: monospace;
@@ -2587,5 +3076,21 @@
 			transform: scale(1.1);
 			opacity: 0.1;
 		}
+	}
+
+	/* Live GSM Frames Console */
+	.live-frames-console {
+		background: rgba(0, 0, 0, 0.9);
+		border: 1px solid #2c2f36;
+		border-radius: 4px;
+	}
+
+	.frame-line {
+		white-space: pre-wrap;
+		font-family: 'Monaco', 'Menlo', monospace;
+		font-size: 0.7rem;
+		line-height: 1.4;
+		padding: 0.2rem 0;
+		color: #9ca3af;
 	}
 </style>

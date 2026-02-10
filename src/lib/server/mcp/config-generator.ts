@@ -9,25 +9,78 @@ import { homedir } from 'os';
 import type { MCPConfiguration, MCPServerDefinition } from './types';
 
 /**
- * Get path to Argos MCP server executable
+ * MCP server definitions for each specialized server
  */
-function getArgosMCPServerPath(): string {
-	// In development, use the TypeScript file via tsx
-	// In production, use compiled JavaScript
+const MCP_SERVERS = [
+	{
+		id: 'argos-hackrf',
+		name: 'HackRF SDR Control',
+		serverFile: 'hackrf-server.ts'
+	},
+	{
+		id: 'argos-kismet',
+		name: 'WiFi Scanning & Device Tracking',
+		serverFile: 'kismet-server.ts'
+	},
+	{
+		id: 'argos-gps',
+		name: 'GPS Positioning & Location',
+		serverFile: 'gps-server.ts'
+	},
+	{
+		id: 'argos-gsm-evil',
+		name: 'GSM Monitoring & IMSI Detection',
+		serverFile: 'gsm-evil-server.ts'
+	},
+	{
+		id: 'argos-system',
+		name: 'System Stats & Hardware Scanning',
+		serverFile: 'system-server.ts'
+	}
+] as const;
+
+/**
+ * Get path to MCP server executable
+ */
+function getMCPServerPath(serverFile: string): string {
 	const isDev = process.env.NODE_ENV !== 'production';
 
 	if (isDev) {
-		return join(process.cwd(), 'src/lib/server/mcp/dynamic-server.ts');
+		return join(process.cwd(), 'src/lib/server/mcp/servers', serverFile);
 	} else {
-		return join(process.cwd(), 'build/server/mcp/dynamic-server.js');
+		return join(process.cwd(), 'build/server/mcp/servers', serverFile.replace('.ts', '.js'));
 	}
 }
 
 /**
- * Generate MCP server definition for Argos
+ * Generate MCP server definition
+ */
+export function generateMCPServer(serverId: string, serverFile: string): MCPServerDefinition {
+	const serverPath = getMCPServerPath(serverFile);
+	const isDev = process.env.NODE_ENV !== 'production';
+
+	return {
+		id: serverId,
+		command: isDev ? 'npx' : 'node',
+		args: isDev ? ['tsx', serverPath] : [serverPath],
+		env: {
+			NODE_ENV: process.env.NODE_ENV || 'development',
+			ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173',
+			ARGOS_API_KEY: process.env.ARGOS_API_KEY || ''
+		}
+	};
+}
+
+/**
+ * Generate MCP server definition for legacy monolithic server (backward compat)
  */
 export function generateArgosMCPServer(): MCPServerDefinition {
-	const serverPath = getArgosMCPServerPath();
+	const serverPath = join(
+		process.cwd(),
+		process.env.NODE_ENV !== 'production'
+			? 'src/lib/server/mcp/dynamic-server.ts'
+			: 'build/server/mcp/dynamic-server.js'
+	);
 	const isDev = process.env.NODE_ENV !== 'production';
 
 	return {
@@ -36,7 +89,8 @@ export function generateArgosMCPServer(): MCPServerDefinition {
 		args: isDev ? ['tsx', serverPath] : [serverPath],
 		env: {
 			NODE_ENV: process.env.NODE_ENV || 'development',
-			ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173'
+			ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173',
+			ARGOS_API_KEY: process.env.ARGOS_API_KEY || ''
 		}
 	};
 }
@@ -45,33 +99,31 @@ export function generateArgosMCPServer(): MCPServerDefinition {
  * Generate MCP configuration for Context B (Host Claude CLI)
  */
 export async function generateContextBConfig(): Promise<MCPConfiguration> {
-	const argoServer = generateArgosMCPServer();
+	const mcpServers: Record<string, MCPServerDefinition> = {};
 
-	const config: MCPConfiguration = {
-		mcpServers: {
-			'argos-tools': argoServer
-		}
-	};
+	// Add all modular servers
+	for (const server of MCP_SERVERS) {
+		mcpServers[server.id] = generateMCPServer(server.id, server.serverFile);
+	}
 
-	return config;
+	return { mcpServers };
 }
 
 /**
  * Generate MCP configuration for Context C (Container Claude CLI)
  */
 export async function generateContextCConfig(): Promise<MCPConfiguration> {
-	const argoServer = generateArgosMCPServer();
+	const mcpServers: Record<string, MCPServerDefinition> = {};
 
-	// Adjust URLs for container environment
-	argoServer.env!.ARGOS_API_URL = 'http://host.docker.internal:5173';
+	// Add all modular servers with container-adjusted URLs
+	for (const server of MCP_SERVERS) {
+		const serverDef = generateMCPServer(server.id, server.serverFile);
+		// Container connects to host via host.docker.internal
+		serverDef.env!.ARGOS_API_URL = 'http://host.docker.internal:5173';
+		mcpServers[server.id] = serverDef;
+	}
 
-	const config: MCPConfiguration = {
-		mcpServers: {
-			'argos-tools': argoServer
-		}
-	};
-
-	return config;
+	return { mcpServers };
 }
 
 /**
@@ -127,7 +179,7 @@ export async function generateMCPConfigContent(context: 'b' | 'c'): Promise<stri
 
 /**
  * Update existing MCP configuration
- * Merges Argos server with existing servers
+ * Merges Argos servers with existing servers
  */
 export async function updateExistingConfig(configPath: string): Promise<void> {
 	try {
@@ -136,14 +188,16 @@ export async function updateExistingConfig(configPath: string): Promise<void> {
 		const existingContent = await readFile(configPath, 'utf-8');
 		const existingConfig: MCPConfiguration = JSON.parse(existingContent);
 
-		// Add/update Argos server
-		const argoServer = generateArgosMCPServer();
-		existingConfig.mcpServers['argos-tools'] = argoServer;
+		// Add/update all Argos servers
+		for (const server of MCP_SERVERS) {
+			const serverDef = generateMCPServer(server.id, server.serverFile);
+			existingConfig.mcpServers[server.id] = serverDef;
+		}
 
 		// Write back
 		await writeMCPConfig(existingConfig, configPath);
 
-		console.log('[MCP Config] Updated existing configuration');
+		console.log('[MCP Config] Updated existing configuration with all Argos MCP servers');
 	} catch (_error) {
 		// If file doesn't exist, create new one
 		console.log('[MCP Config] Creating new configuration');
@@ -159,7 +213,17 @@ export async function updateExistingConfig(configPath: string): Promise<void> {
  */
 export function getInstallationInstructions(): string {
 	return `
-# MCP Configuration Installation
+# Argos MCP Servers Installation
+
+## Available Servers
+
+The Argos platform provides 5 specialized MCP servers:
+
+1. **argos-hackrf** - HackRF SDR control and spectrum analysis
+2. **argos-kismet** - WiFi scanning and device tracking
+3. **argos-gps** - GPS positioning and location services
+4. **argos-gsm-evil** - GSM monitoring and IMSI detection
+5. **argos-system** - System stats, hardware scanning, diagnostics
 
 ## Context B (Host Claude CLI)
 
@@ -169,7 +233,7 @@ export function getInstallationInstructions(): string {
 2. Configuration will be written to:
    ~/.claude/mcp.json
 
-3. Restart Claude CLI to load the configuration
+3. Restart Claude CLI to load all 5 servers
 
 4. Test with:
    claude "List available Argos tools"
@@ -187,9 +251,19 @@ export function getInstallationInstructions(): string {
 
 4. Restart container Claude CLI
 
+## Running Individual Servers (Development)
+
+You can also run servers individually for testing:
+
+npm run mcp:hackrf    # HackRF server only
+npm run mcp:kismet    # Kismet server only
+npm run mcp:gps       # GPS server only
+npm run mcp:gsm-evil  # GSM Evil server only
+npm run mcp:system    # System server only
+
 ## Manual Installation
 
-You can also generate the config and copy it manually:
+Generate the config and copy it manually:
 
 # Show config for Context B
 npm run mcp:config-b

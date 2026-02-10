@@ -11,7 +11,7 @@ import type {
 	SDRCapabilities,
 	WiFiCapabilities,
 	BluetoothCapabilities
-} from '../detection-types';
+} from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
 

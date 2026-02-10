@@ -1,7 +1,9 @@
 # Multi-stage Dockerfile for Argos with Kismet support
 
 # Stage 1: Dependencies
-FROM node:20-bookworm-slim AS deps
+# Node 22 LTS — must match host version (v22.x) to ensure ABI compatibility
+# for native modules (better-sqlite3) across host/container boundary.
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
 # Install build tools required for native modules (better-sqlite3)
@@ -23,7 +25,7 @@ RUN npm ci --only=production --ignore-scripts && \
     npm rebuild better-sqlite3
 
 # Stage 2: Builder (Development with Kismet)
-FROM node:20-bookworm AS builder
+FROM node:22-bookworm AS builder
 WORKDIR /app
 
 # Install Kismet from official repository and wireless dependencies
@@ -99,7 +101,7 @@ ENV DATABASE_PATH=/app/rf_signals.db
 RUN npm run build
 
 # Stage 3: Runner (Production)
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 # Install runtime dependencies for Kismet from official repository

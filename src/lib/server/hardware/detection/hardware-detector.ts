@@ -6,13 +6,13 @@
 import { detectUSBDevices } from './usb-detector';
 import { detectSerialDevices } from './serial-detector';
 import { detectNetworkDevices } from './network-detector';
-import { globalHardwareRegistry } from '../hardware-registry';
+import { globalHardwareRegistry } from '$lib/server/hardware/hardware-registry';
 import type {
 	DetectedHardware,
 	HardwareScanResult,
 	HardwareCategory,
 	ConnectionType
-} from '../detection-types';
+} from '$lib/server/hardware/detection-types';
 
 /**
  * Scan system for all hardware

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import { markCSSLoaded } from '$lib/utils/cssLoader';
+	import { markCSSLoaded } from '$lib/utils/css-loader';
 	import '../app.css';
-	import '../lib/styles/hackrf/custom-components-exact.css';
 
 	interface Props {
 		children: Snippet;

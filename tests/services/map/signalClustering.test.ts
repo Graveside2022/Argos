@@ -3,7 +3,7 @@ import {
 	clusterSignals,
 	createClusterPopupContent,
 	getClusterIcon
-} from '$lib/services/map/signalClustering';
+} from '$lib/services/map/signal-clustering';
 import type { SignalMarker } from '$lib/stores/map/signals';
 import { SignalSource } from '$lib/types/enums';
 
