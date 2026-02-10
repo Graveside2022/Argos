@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { currentCategory } from '$lib/stores/dashboard/toolsStore';
+	import { currentCategory } from '$lib/stores/dashboard/tools-store';
 	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
-	import { activeView, activePanel } from '$lib/stores/dashboard/dashboardStore';
-	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismetStore';
-	import ToolCategoryCard from '../shared/ToolCategoryCard.svelte';
-	import ToolCard from '../shared/ToolCard.svelte';
+	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
+	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
+	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
+	import ToolCard from '$lib/components/dashboard/shared/ToolCard.svelte';
 
 	/**
 	 * Tool endpoint configuration.
@@ -20,8 +20,8 @@
 	}
 
 	const toolEndpoints: Record<string, ToolEndpoint> = {
-		'kismet-wifi': { startUrl: '/api/kismet/start', stopUrl: '/api/kismet/stop' },
-		'gsm-evil': { startUrl: '/api/gsm-evil/start', stopUrl: '/api/gsm-evil/stop' },
+		'kismet-wifi': { controlUrl: '/api/kismet/control' },
+		'gsm-evil': { controlUrl: '/api/gsm-evil/control' },
 		openwebrx: { controlUrl: '/api/openwebrx/control' }
 	};
 
@@ -142,7 +142,7 @@
 		}
 	}
 
-	/** Check initial status of Docker-based tools on mount */
+	/** Check initial status of tools on mount */
 	onMount(() => {
 		// Check OpenWebRX container status
 		const openwebrxEp = toolEndpoints['openwebrx'];
@@ -158,6 +158,14 @@
 				})
 				.catch(() => {});
 		}
+
+		// Check GSM Evil process status (uses dedicated GET endpoint)
+		fetch('/api/gsm-evil/status')
+			.then((r) => r.json())
+			.then((data) => {
+				if (data.status === 'running') setLocalStatus('gsm-evil', 'running');
+			})
+			.catch(() => {});
 	});
 </script>
 

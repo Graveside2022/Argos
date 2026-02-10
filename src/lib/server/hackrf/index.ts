@@ -1,9 +1,14 @@
-export { sweepManager } from './sweepManager';
+// HackRF One SDR integration: spectrum sweep management and real-time signal analysis
+
+// sweep-manager
+export { SweepManager, getSweepManager, sweepManager } from "./sweep-manager";
+
+// types
 export type {
-  SweepConfig,
-  SweepStatus,
-  SpectrumData,
-  SpectrumDataPoint,
-  HackRFHealth,
-  ApiResponse
-} from './types';
+	ApiResponse,
+	HackRFHealth,
+	SpectrumData,
+	SpectrumDataPoint,
+	SweepConfig,
+	SweepStatus,
+} from "./types";

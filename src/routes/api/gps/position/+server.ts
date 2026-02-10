@@ -1,6 +1,35 @@
 import type { RequestHandler } from './$types';
 import { Socket } from 'net';
 import { logWarn } from '$lib/utils/logger';
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { z } from 'zod';
+
+// Zod schema for gpsd JSON protocol messages (TPV, SKY, VERSION, DEVICES, etc.)
+const GpsdMessageSchema = z
+	.object({
+		class: z.string(),
+		mode: z.number().optional(),
+		lat: z.number().optional(),
+		lon: z.number().optional(),
+		alt: z.number().optional(),
+		speed: z.number().optional(),
+		track: z.number().optional(),
+		epx: z.number().optional(),
+		epy: z.number().optional(),
+		time: z.string().optional(),
+		satellites: z
+			.array(
+				z
+					.object({
+						used: z.boolean().optional()
+					})
+					.passthrough()
+			)
+			.optional(),
+		uSat: z.number().optional(),
+		nSat: z.number().optional()
+	})
+	.passthrough();
 
 // Cache last known satellite count from full SKY messages (accurate per-satellite data).
 // Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
@@ -296,8 +325,15 @@ export const GET: RequestHandler = async () => {
 
 		for (const line of lines) {
 			if (line.trim() === '') continue;
+
+			const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
+			if (!result.success) {
+				console.warn('[gps] Malformed gpsd data, skipping line');
+				continue;
+			}
+
 			try {
-				const parsed = JSON.parse(line) as unknown;
+				const parsed = result.data;
 
 				if (!tpvData) {
 					tpvData = parseTPVData(parsed);

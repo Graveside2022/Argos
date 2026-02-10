@@ -8,7 +8,7 @@ vi.mock('$app/environment', () => ({
 	browser: false
 }));
 
-import { toolHierarchy, findByPath, countTools } from '$lib/data/toolHierarchy';
+import { toolHierarchy, findByPath, countTools } from '$lib/data/tool-hierarchy';
 import type { ToolCategory } from '$lib/types/tools';
 
 describe('Tool Navigation Debug', () => {

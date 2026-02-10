@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getRFDatabase } from '$lib/server/db/database';
-import { DatabaseCleanupService } from '$lib/server/db/cleanupService';
-import { DatabaseOptimizer } from '$lib/server/db/dbOptimizer';
+import { DatabaseCleanupService } from '$lib/server/db/cleanup-service';
+import { DatabaseOptimizer } from '$lib/server/db/db-optimizer';
 
 let optimizer: DatabaseOptimizer | null = null;
 

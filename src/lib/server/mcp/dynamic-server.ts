@@ -7,6 +7,7 @@
  */
 
 /* eslint-disable no-undef */
+import { config } from 'dotenv';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -15,6 +16,9 @@ import {
 	ListResourcesRequestSchema,
 	ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
+
+// Load .env for ARGOS_API_KEY (standalone process, not SvelteKit)
+config();
 
 const ARGOS_API = process.env.ARGOS_API_URL || 'http://localhost:5173';
 
@@ -480,10 +484,15 @@ const ARGOS_TOOLS = [
  */
 async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
 	const url = `${ARGOS_API}${path}`;
+	const apiKey = process.env.ARGOS_API_KEY || '';
 	const resp = await fetch(url, {
 		...options,
 		signal: AbortSignal.timeout(15000),
-		headers: { 'Content-Type': 'application/json', ...options?.headers }
+		headers: {
+			'Content-Type': 'application/json',
+			...(apiKey ? { 'X-API-Key': apiKey } : {}),
+			...options?.headers
+		}
 	});
 	if (!resp.ok) {
 		throw new Error(`Argos API error: ${resp.status} ${resp.statusText} for ${path}`);

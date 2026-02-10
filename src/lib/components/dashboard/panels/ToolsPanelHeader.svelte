@@ -3,8 +3,8 @@
 		toolNavigationPath,
 		navigateBack,
 		breadcrumbs
-	} from '$lib/stores/dashboard/toolsStore';
-	import { uiIcons } from '$lib/data/toolIcons';
+	} from '$lib/stores/dashboard/tools-store';
+	import { uiIcons } from '$lib/data/tool-icons';
 
 	let canGoBack = $derived($toolNavigationPath.length > 0);
 	let currentBreadcrumbs = $derived($breadcrumbs);

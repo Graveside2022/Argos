@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
+import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
@@ -56,12 +57,14 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				let alfaInterface = '';
 				for (const iface of ifaceList.trim().split(/\s+/)) {
 					if (iface === 'lo' || iface === 'eth0' || iface === 'wlan0' || !iface) continue;
+					// Validate interface name before using in shell command
+					const validIface = validateInterfaceName(iface);
 					// Check if it's a wireless interface
 					const { stdout: isWireless } = await hostExec(
-						`test -d /sys/class/net/${iface}/wireless && echo yes || true`
+						`test -d /sys/class/net/${validIface}/wireless && echo yes || true`
 					);
 					if (isWireless.trim() === 'yes') {
-						alfaInterface = iface;
+						alfaInterface = validIface;
 						break;
 					}
 				}
@@ -83,7 +86,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 				// Clean up stale monitor interfaces
 				await hostExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
-					() => {}
+					(error: unknown) => {
+						console.debug('[kismet] Cleanup: iw dev mon del failed (non-critical)', {
+							error: String(error)
+						});
+					}
 				);
 
 				// Start Kismet as kali user (NOT root) — capture helpers are suid
@@ -122,19 +129,30 @@ export const POST: RequestHandler = async ({ request, url }) => {
 					);
 				}
 
+				// Validate PID before using in shell command
+				const validPid = validateNumericParam(parseInt(verifyPid, 10), 'pid', 1, 4194304);
+
 				// Verify running as non-root
 				const { stdout: userCheck } = await hostExec(
-					`ps -p ${verifyPid} -o user= 2>/dev/null || true`
+					`ps -p ${validPid} -o user= 2>/dev/null || true`
 				);
-				console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${verifyPid}`);
+				console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${validPid}`);
 
 				// Set up auth credentials if this is a first-time start
 				try {
-					const { stdout: authCheck } = await hostExec(
-						'curl -s -m 3 -X POST -d "username=admin&password=password" http://localhost:2501/session/set_password 2>/dev/null || true'
-					);
-					if (authCheck.includes('Login configured')) {
-						console.warn('[kismet] Initial credentials set (admin/password)');
+					const kismetUser = process.env.KISMET_USER || 'admin';
+					const kismetPass = process.env.KISMET_PASSWORD;
+					if (!kismetPass) {
+						console.warn(
+							'[kismet] KISMET_PASSWORD not set, skipping initial credential setup'
+						);
+					} else {
+						const { stdout: authCheck } = await hostExec(
+							`curl -s -m 3 -X POST -d "username=${kismetUser}&password=${kismetPass}" http://localhost:2501/session/set_password 2>/dev/null || true`
+						);
+						if (authCheck.includes('Login configured')) {
+							console.warn('[kismet] Initial credentials set');
+						}
 					}
 				} catch (_error: unknown) {
 					// Already configured or not yet ready — either is fine
@@ -143,8 +161,8 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				return json({
 					success: true,
 					message: 'Kismet started successfully',
-					details: `Running as ${userCheck.trim() || 'kali'} (PID: ${verifyPid}) on ${alfaInterface}`,
-					pid: verifyPid
+					details: `Running as ${userCheck.trim() || 'kali'} (PID: ${validPid}) on ${alfaInterface}`,
+					pid: validPid
 				});
 			} catch (error: unknown) {
 				console.error('[kismet] Start error:', error);
@@ -171,13 +189,25 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				}
 
 				// Graceful termination
-				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(() => {});
+				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(
+					(error: unknown) => {
+						console.warn('[kismet] Cleanup: pkill -TERM kismet failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 3000));
 
 				// Force kill if still running
 				const { stdout: remaining } = await hostExec('pgrep -x kismet 2>/dev/null || true');
 				if (remaining.trim()) {
-					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(() => {});
+					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(
+						(error: unknown) => {
+							console.warn('[kismet] Cleanup: pkill -9 kismet failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				}
 

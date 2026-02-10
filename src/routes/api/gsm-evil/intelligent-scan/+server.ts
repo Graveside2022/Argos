@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 
 export const POST: RequestHandler = async () => {
@@ -11,7 +12,10 @@ export const POST: RequestHandler = async () => {
 		const { stdout: sweepData } = await hostExec(
 			'timeout 10 hackrf_sweep -f 935:960 -l 32 -g 20 | grep -E "^[0-9]" | sort -k6 -n | head -20',
 			{ timeout: 15000 }
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.error('[gsm-evil-scan] HackRF sweep failed', { error: String(error) });
+			return { stdout: '' };
+		});
 
 		if (!sweepData) {
 			return json({
@@ -69,6 +73,7 @@ export const POST: RequestHandler = async () => {
 			);
 
 			const pid = gsmPid.trim();
+			validateNumericParam(pid, 'pid', 1, 4194304);
 
 			// Wait for initialization
 			await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -76,7 +81,10 @@ export const POST: RequestHandler = async () => {
 			// Count GSMTAP packets for 3 seconds
 			const { stdout: packetCount } = await hostExec(
 				'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
-			).catch(() => ({ stdout: '0' }));
+			).catch((error: unknown) => {
+				console.debug('[gsm-evil-scan] tcpdump check failed', { error: String(error) });
+				return { stdout: '0' };
+			});
 
 			const frameCount = parseInt(packetCount.trim()) || 0;
 
@@ -92,7 +100,11 @@ export const POST: RequestHandler = async () => {
 			}
 
 			// Kill grgsm_livemon
-			await hostExec(`sudo kill ${pid} 2>/dev/null`).catch(() => {});
+			await hostExec(`sudo kill ${pid} 2>/dev/null`).catch((error: unknown) => {
+				console.warn('[gsm-evil] Cleanup: kill grgsm_livemon process failed', {
+					error: String(error)
+				});
+			});
 
 			// Determine strength category
 			let strength = 'Weak';

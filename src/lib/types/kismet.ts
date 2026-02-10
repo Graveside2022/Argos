@@ -1,24 +1,33 @@
 export interface KismetDevice {
 	mac: string;
+	macaddr?: string; // Alias for mac
 	last_seen: number;
-	last_time?: number; // Add missing last_time property
+	last_time?: number;
+	firstSeen?: number;
+	lastSeen?: number;
 	signal: {
 		last_signal?: number;
 		max_signal?: number;
 		min_signal?: number;
 	};
+	signalStrength?: number;
 	manufacturer?: string;
-	manuf?: string; // Add missing manuf property (alias for manufacturer)
+	manuf?: string;
 	type: string;
 	channel: number;
 	frequency: number;
 	packets: number;
 	datasize: number;
-	ssid?: string;  // Add SSID field for WiFi networks
+	dataSize?: number;
+	ssid?: string;
+	encryption?: string[];
+	encryptionType?: string[];
 	location?: {
 		lat: number;
 		lon: number;
 	};
+	clients?: string[];
+	parentAP?: string;
 }
 
 export interface KismetNetwork {

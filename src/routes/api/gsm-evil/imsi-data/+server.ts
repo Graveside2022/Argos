@@ -1,13 +1,43 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { z } from 'zod';
+
+// Zod schema for GSM Evil IMSI detailed data from Python subprocess
+const GsmEvilImsiDataSchema = z.union([
+	z.array(
+		z
+			.object({
+				id: z.number(),
+				imsi: z.string(),
+				tmsi: z.string(),
+				mcc: z.string(),
+				mnc: z.string(),
+				lac: z.string(),
+				ci: z.string(),
+				datetime: z.string()
+			})
+			.passthrough()
+	),
+	z
+		.object({
+			error: z.string()
+		})
+		.passthrough()
+]);
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Find the IMSI database on the host
 		const { stdout: dbFound } = await hostExec(
 			'for p in /usr/src/gsmevil2/database/imsi.db /home/kali/gsmevil-user/database/imsi.db; do [ -f "$p" ] && echo "$p" && break; done'
-		).catch(() => ({ stdout: '' }));
+		).catch((error: unknown) => {
+			console.error('[gsm-evil-imsi-data] Database path search failed', {
+				error: String(error)
+			});
+			return { stdout: '' };
+		});
 
 		const dbPath = dbFound.trim();
 		if (!dbPath) {
@@ -16,6 +46,15 @@ export const GET: RequestHandler = async () => {
 				message: 'IMSI database not found',
 				data: []
 			});
+		}
+
+		// Validate dbPath against known allowlist to prevent shell injection
+		const ALLOWED_IMSI_DB_PATHS = [
+			'/usr/src/gsmevil2/database/imsi.db',
+			'/home/kali/gsmevil-user/database/imsi.db'
+		] as const;
+		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
+			return json({ success: false, message: 'Invalid database path', data: [] });
 		}
 
 		// Run python on the host where the DB lives
@@ -34,9 +73,21 @@ except Exception as e:
 `;
 
 		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
-		const result = JSON.parse(stdout);
 
-		if (result.error) {
+		const parseResult = safeJsonParse(stdout, GsmEvilImsiDataSchema, 'gsm-evil-imsi-data');
+		if (!parseResult.success) {
+			return json(
+				{
+					success: false,
+					message: 'Failed to parse IMSI data from subprocess',
+					data: []
+				},
+				{ status: 500 }
+			);
+		}
+
+		const result = parseResult.data;
+		if (typeof result === 'object' && 'error' in result && result.error) {
 			return json({
 				success: false,
 				message: 'Failed to read database',

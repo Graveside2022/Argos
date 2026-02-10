@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { activeView } from '$lib/stores/dashboard/dashboardStore';
+	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import ToolViewWrapper from './ToolViewWrapper.svelte';
 
 	function goBack() {

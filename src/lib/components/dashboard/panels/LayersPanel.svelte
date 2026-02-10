@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { signalBands } from '$lib/utils/signalUtils';
+	import { signalBands } from '$lib/utils/signal-utils';
 	import {
 		layerVisibility,
 		toggleLayerVisibility,
 		activeBands,
 		toggleBand
-	} from '$lib/stores/dashboard/dashboardStore';
+	} from '$lib/stores/dashboard/dashboard-store';
 </script>
 
 <div class="layers-panel">
@@ -25,6 +25,19 @@
 				onclick={() => toggleLayerVisibility('deviceDots')}
 				role="switch"
 				aria-checked={$layerVisibility.deviceDots}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+		<label class="toggle-row">
+			<span class="toggle-label">Connections</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.connectionLines}
+				onclick={() => toggleLayerVisibility('connectionLines')}
+				role="switch"
+				aria-checked={$layerVisibility.connectionLines}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -79,6 +92,22 @@
 				</button>
 			</label>
 		{/each}
+
+		<label class="toggle-row">
+			<div class="band-label">
+				<span class="band-dot" style="background: #9a9a9a"></span>
+				<span class="toggle-label">No RSSI</span>
+			</div>
+			<button
+				class="toggle-switch"
+				class:on={$activeBands.has('none')}
+				onclick={() => toggleBand('none')}
+				role="switch"
+				aria-checked={$activeBands.has('none')}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
 	</section>
 </div>
 

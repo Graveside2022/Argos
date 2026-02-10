@@ -1,8 +1,9 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -74,24 +75,42 @@ export const POST: RequestHandler = async ({ request }) => {
 					}
 				}
 
-				const freq = frequency || '947.2';
+				// Validate frequency — prevents shell injection via hostExec template literal
+				const validatedFreq = validateNumericParam(
+					frequency || '947.2',
+					'frequency',
+					800,
+					1000
+				);
+				const freq = String(validatedFreq);
 				const gain = '40';
 				const gsmDir = '/home/kali/gsmevil-user';
 				console.warn(`[gsm-evil] Starting on ${freq} MHz...`);
 
 				// 1. Kill existing processes (ignore errors - may not be running)
 				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
-					() => {}
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					}
 				);
-				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 
-				// 2. Start grgsm_livemon_headless (same pattern as working scan endpoint)
+				// 2. Start grgsm_livemon_headless with proper daemonization (like Kismet)
+				// Use setsid + nohup to detach from parent process so dev server restarts don't kill it
 				const { stdout: grgsmPid } = await hostExec(
-					`sudo grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729 >/dev/null 2>&1 & echo $!`,
+					`sudo setsid nohup grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729 >/dev/null 2>&1 & echo $!`,
 					{ timeout: 5000 }
 				);
-				console.warn(`[gsm-evil] grgsm started, PID: ${grgsmPid.trim()}`);
+				console.warn(`[gsm-evil] grgsm started (daemonized), PID: ${grgsmPid.trim()}`);
 
 				// 3. Ensure GsmEvil_auto.py exists with sniffers enabled
 				await hostExec(
@@ -99,11 +118,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				).catch(() => console.warn('[gsm-evil] GsmEvil_auto.py setup note'));
 
 				// 4. Start GsmEvil2 (needs root for pyshark/tshark capture permissions)
+				// Daemonize it so dev server restarts don't kill it
 				const { stdout: evilPid } = await hostExec(
-					`cd ${gsmDir} && sudo python3 GsmEvil_auto.py --host 0.0.0.0 --port 8080 >/tmp/gsmevil2.log 2>&1 & echo $!`,
+					`cd ${gsmDir} && sudo setsid nohup python3 GsmEvil_auto.py --host 0.0.0.0 --port 8080 >/tmp/gsmevil2.log 2>&1 & echo $!`,
 					{ timeout: 5000 }
 				);
-				console.warn(`[gsm-evil] GsmEvil2 started, PID: ${evilPid.trim()}`);
+				console.warn(`[gsm-evil] GsmEvil2 started (daemonized), PID: ${evilPid.trim()}`);
 
 				// 5. Wait for processes to initialize
 				await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -151,10 +171,26 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				// Kill processes directly (same pattern as working scan endpoint)
 				await hostExec('sudo pkill -f grgsm_livemon_headless 2>/dev/null; true').catch(
-					() => {}
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					}
 				);
-				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(() => {});
-				await hostExec('sudo fuser -k 8080/tcp 2>/dev/null; true').catch(() => {});
+				await hostExec('sudo pkill -f GsmEvil 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
+							error: String(error)
+						});
+					}
+				);
+				await hostExec('sudo fuser -k 8080/tcp 2>/dev/null; true').catch(
+					(error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: fuser kill port 8080 failed', {
+							error: String(error)
+						});
+					}
+				);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 
 				// Verify processes are stopped
@@ -166,8 +202,18 @@ export const POST: RequestHandler = async ({ request }) => {
 					// Force kill
 					await hostExec(
 						'sudo pkill -9 -f grgsm_livemon_headless 2>/dev/null; true'
-					).catch(() => {});
-					await hostExec('sudo pkill -9 -f GsmEvil 2>/dev/null; true').catch(() => {});
+					).catch((error: unknown) => {
+						console.warn('[gsm-evil] Cleanup: pkill -9 grgsm_livemon_headless failed', {
+							error: String(error)
+						});
+					});
+					await hostExec('sudo pkill -9 -f GsmEvil 2>/dev/null; true').catch(
+						(error: unknown) => {
+							console.warn('[gsm-evil] Cleanup: pkill -9 GsmEvil failed', {
+								error: String(error)
+							});
+						}
+					);
 					await new Promise((resolve) => setTimeout(resolve, 500));
 				}
 
@@ -207,10 +253,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			} finally {
 				// ALWAYS release HackRF — the stop was requested, so release the lock
 				// even if cleanup was partial. This prevents deadlocks.
-				await resourceManager.release('gsm-evil', HardwareDevice.HACKRF).catch(() => {
-					// If release fails (e.g., not owner), force-release as last resort
-					return resourceManager.forceRelease(HardwareDevice.HACKRF);
-				});
+				await resourceManager
+					.release('gsm-evil', HardwareDevice.HACKRF)
+					.catch((error: unknown) => {
+						console.warn('[gsm-evil] Graceful resource release failed, forcing.', {
+							error: String(error)
+						});
+						// If release fails (e.g., not owner), force-release as last resort
+						return resourceManager.forceRelease(HardwareDevice.HACKRF);
+					});
 			}
 			return stopResult!;
 		} else {

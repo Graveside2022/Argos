@@ -1,15 +1,16 @@
 import type { RequestHandler } from './$types';
-import { resourceManager } from '$lib/server/hardware/resourceManager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { hostExec, isDockerContainer } from '$lib/server/hostExec';
+import { hostExec, isDockerContainer } from '$lib/server/host-exec';
 import { validateGain, sanitizeGainForShell } from '$lib/validators/gsm';
+import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import {
 	parseCellIdentity,
 	analyzeGsmFrames,
 	classifySignalStrength,
 	determineChannelType
-} from '$lib/services/gsm/protocolParser';
+} from '$lib/services/gsm-evil/protocol-parser';
 
 export const POST: RequestHandler = async ({ request: _request }) => {
 	const encoder = new TextEncoder();
@@ -180,6 +181,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 					const freq = checkFreqs[i];
 					let pid = '';
 					const stderrLog = `/tmp/grgsm_scan_${Date.now()}_${i}.log`;
+					validatePathWithinDir(stderrLog, '/tmp');
 
 					try {
 						// Validate gain parameter (prevents command injection)
@@ -213,6 +215,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 						);
 
 						pid = String(gsmPid).trim();
+						validateNumericParam(pid, 'pid', 1, 4194304);
 
 						// Validate process started
 						if (!pid || pid === '0') {
@@ -258,14 +261,24 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 						// tshark must run concurrently to capture SI3 messages as they arrive.
 						const tcpdumpPromise = hostExec(
 							`sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || true`
-						).catch(() => ({ stdout: '0', stderr: '' }));
+						).catch((error: unknown) => {
+							console.debug('[gsm-evil-scan-stream] tcpdump failed', {
+								error: String(error)
+							});
+							return { stdout: '0', stderr: '' };
+						});
 
 						// Capture cell identity from SI3/SI4 messages via tshark
 						// Fields: e212.lai.mcc/mnc (from LAI in SI3/SI4), gsm_a.lac, gsm_a.bssmap.cell_ci (from SI3)
 						const tsharkPromise = hostExec(
 							`sudo timeout ${captureTime} tshark -i lo -f 'udp port 4729' -T fields -e e212.lai.mcc -e e212.lai.mnc -e gsm_a.lac -e gsm_a.bssmap.cell_ci -E separator=, -c 300 2>/dev/null | grep -v '^,*$' | grep -E '[0-9]' | head -30`,
 							{ timeout: captureTime * 1000 + 3000 }
-						).catch(() => ({ stdout: '', stderr: '' }));
+						).catch((error: unknown) => {
+							console.debug('[gsm-evil-scan-stream] tshark failed', {
+								error: String(error)
+							});
+							return { stdout: '', stderr: '' };
+						});
 
 						const [tcpdumpResult, tsharkResult] = await Promise.all([
 							tcpdumpPromise,
@@ -445,10 +458,22 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 							// Also clean up any orphaned grgsm processes matching this frequency
 							await hostExec(
 								`sudo pkill -f "grgsm_livemon_headless.*-f ${freq}M" 2>/dev/null`
-							).catch(() => {});
+							).catch((error: unknown) => {
+								console.warn(
+									`[gsm-evil] Cleanup: pkill orphaned grgsm process for ${freq}M failed`,
+									{ error: String(error) }
+								);
+							});
 						}
 						// Clean up temp stderr log
-						await hostExec(`rm -f ${stderrLog} 2>/dev/null`).catch(() => {});
+						await hostExec(`rm -f ${stderrLog} 2>/dev/null`).catch((error: unknown) => {
+							console.debug(
+								'[gsm-evil] Cleanup: rm stderr log failed (non-critical)',
+								{
+									error: String(error)
+								}
+							);
+						});
 					}
 
 					// Brief pause between frequencies

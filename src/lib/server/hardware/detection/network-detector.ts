@@ -5,7 +5,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import type { DetectedHardware, SDRCapabilities } from '../detection-types';
+import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
 

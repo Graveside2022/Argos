@@ -1,42 +1,66 @@
-/**
- * Hardware Auto-Detection System
- *
- * Comprehensive hardware detection for SDRs, WiFi/Bluetooth adapters,
- * GPS modules, and other devices
- */
+// Hardware auto-detection, resource management, and device control for SDR and network adapters
 
-// Core types
+// alfa-manager
+export {
+	detectAdapter as detectAlfaAdapter,
+	getBlockingProcesses as getAlfaBlockingProcesses,
+	getMode as getAlfaMode,
+	killBlockingProcesses as killAlfaBlockingProcesses,
+} from "./alfa-manager";
+
+// detection (individual detectors)
+export { detectNetworkDevices } from "./detection/network-detector";
+export { detectSerialDevices } from "./detection/serial-detector";
+export { detectUSBDevices } from "./detection/usb-detector";
+
+// detection (hardware-detector)
+export {
+	HardwareMonitor,
+	detectHardwareById,
+	getCompatibleHardware,
+	globalHardwareMonitor,
+	isCategoryAvailable,
+	isHardwareAvailable,
+	scanAllHardware,
+} from "./detection/hardware-detector";
+
+// detection-types
 export type {
-	HardwareCategory,
+	BluetoothCapabilities,
+	CellularCapabilities,
 	ConnectionType,
+	DetectedHardware,
+	GPSCapabilities,
+	HardwareCapabilities,
+	HardwareCategory,
+	HardwareQueryOptions,
+	HardwareRequirement,
+	HardwareScanResult,
 	HardwareStatus,
 	SDRCapabilities,
 	WiFiCapabilities,
-	BluetoothCapabilities,
-	GPSCapabilities,
-	CellularCapabilities,
-	HardwareCapabilities,
-	DetectedHardware,
-	HardwareScanResult,
-	HardwareQueryOptions,
-	HardwareRequirement
-} from './detection-types';
+} from "./detection-types";
 
-// Registry
-export { HardwareRegistry, globalHardwareRegistry } from './hardware-registry';
-
-// Detection
+// hackrf-manager
 export {
-	scanAllHardware,
-	detectHardwareById,
-	isHardwareAvailable,
-	isCategoryAvailable,
-	getCompatibleHardware,
-	HardwareMonitor,
-	globalHardwareMonitor
-} from './detection/hardware-detector';
+	detectHackRF,
+	getBlockingProcesses as getHackRFBlockingProcesses,
+	getContainerStatus,
+	killBlockingProcesses as killHackRFBlockingProcesses,
+	stopContainers,
+} from "./hackrf-manager";
 
-// Individual detectors (for advanced usage)
-export { detectUSBDevices } from './detection/usb-detector';
-export { detectSerialDevices } from './detection/serial-detector';
-export { detectNetworkDevices } from './detection/network-detector';
+// hardware-registry
+export { HardwareRegistry, globalHardwareRegistry } from "./hardware-registry";
+
+// resource-manager
+export { getResourceManager, resourceManager } from "./resource-manager";
+
+// types (HardwareStatus aliased to avoid conflict with detection-types.HardwareStatus)
+export {
+	HardwareDevice,
+	type HardwareStatus as ResourceHardwareStatus,
+	type ResourceRequest,
+	type ResourceState,
+	type ToolRegistration,
+} from "./types";

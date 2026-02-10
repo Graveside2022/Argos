@@ -9,42 +9,6 @@
 		/>
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<!-- Offline-first font strategy: No external requests in restricted environments -->
-		<script>
-			// Detect if we're in a restricted network environment
-			const isRestrictedEnvironment = () => {
-				// Check for common indicators of restricted environments
-				return (
-					window.location.hostname.match(/^(\d+\.){3}\d+$/) || // IP address
-					window.location.hostname === 'localhost' ||
-					window.location.protocol === 'file:' ||
-					navigator.onLine === false
-				);
-			};
-
-			// Only attempt font loading in unrestricted environments
-			if (!isRestrictedEnvironment()) {
-				const loadGoogleFonts = () => {
-					const link = document.createElement('link');
-					link.href =
-						'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap';
-					link.rel = 'stylesheet';
-					link.onload = () => document.documentElement.classList.add('fonts-loaded');
-					link.onerror = () => document.documentElement.classList.add('fonts-failed');
-					document.head.appendChild(link);
-				};
-
-				// Non-blocking font load
-				if (document.readyState === 'loading') {
-					document.addEventListener('DOMContentLoaded', loadGoogleFonts);
-				} else {
-					setTimeout(loadGoogleFonts, 100);
-				}
-			} else {
-				// Skip external fonts in restricted environments
-				document.documentElement.classList.add('fonts-offline');
-			}
-		</script>
 		<!-- Critical CSS - Inlined to prevent FOUC -->
 		<style>
 			/* CRITICAL CSS - Prevents white outlines on initial load */

@@ -14,16 +14,16 @@
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { SignalMarker } from '$lib/stores/map/signals';
-import type { NetworkNode, NetworkEdge } from '$lib/services/map/networkAnalyzer';
-import { DatabaseCleanupService } from './cleanupService';
-import { runMigrations } from './migrations/runMigrations';
+import type { SignalMarker } from '$lib/types/signals';
+import type { NetworkNode, NetworkEdge } from '$lib/types/network';
+import { DatabaseCleanupService } from './cleanup-service';
+import { runMigrations } from './migrations/run-migrations';
 import { logError, logWarn, logInfo } from '$lib/utils/logger';
 
 // Repository / service imports
-import * as signalRepo from './signalRepository';
-import * as spatialRepo from './spatialRepository';
-import * as networkRepo from './networkRepository';
+import * as signalRepo from './signal-repository';
+import * as spatialRepo from './spatial-repository';
+import * as networkRepo from './network-repository';
 
 // Re-export types for backward compatibility
 export type {

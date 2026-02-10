@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { hostExec } from '$lib/server/hostExec';
+import { hostExec } from '$lib/server/host-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -81,6 +82,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 
 				pid = gsmPid.trim();
+				validateNumericParam(pid, 'pid', 1, 4194304);
 
 				// Validate process started
 				if (!pid || pid === '0') {
@@ -137,7 +139,12 @@ export const POST: RequestHandler = async ({ request }) => {
 						console.log('Log analysis found no frames, trying tcpdump fallback...');
 						const tcpdumpCommand = `sudo timeout 2 tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || echo 0`;
 						const { stdout: packetCount } = await hostExec(tcpdumpCommand).catch(
-							() => ({ stdout: '0' })
+							(error: unknown) => {
+								console.debug('[gsm-evil-scan] tcpdump fallback failed', {
+									error: String(error)
+								});
+								return { stdout: '0' };
+							}
 						);
 						const tcpdumpFrames = parseInt(packetCount.trim()) || 0;
 						console.log(`Tcpdump fallback: ${tcpdumpFrames} packets`);
@@ -257,7 +264,13 @@ export const POST: RequestHandler = async ({ request }) => {
 						await hostExec(`sudo kill ${pid} 2>/dev/null`);
 					} catch (_error: unknown) {
 						console.log(`Warning: Failed to clean up process ${pid}`);
-						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(() => {});
+						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(
+							(error: unknown) => {
+								console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
+									error: String(error)
+								});
+							}
+						);
 					}
 				}
 			}
