@@ -28,6 +28,7 @@ export interface SignalMarker {
 	id: string;
 	lat: number;
 	lon: number;
+	altitude?: number; // Elevation data from GPS
 	position: Position;
 	frequency: number;
 	power: number;

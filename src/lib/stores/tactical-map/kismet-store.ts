@@ -7,6 +7,7 @@ export interface KismetState {
 	deviceMarkers: Map<string, any>; // Leaflet markers
 	deviceCount: number;
 	whitelistMAC: string;
+	message?: string; // Status message for agent context
 	distributions: {
 		byType: Map<string, number>;
 		byManufacturer: Map<string, number>;
@@ -31,27 +32,27 @@ export const kismetStore: Writable<KismetState> = writable(initialKismetState);
 
 // Helper functions to update store
 export const setKismetStatus = (status: 'stopped' | 'starting' | 'running' | 'stopping') => {
-	kismetStore.update(state => ({ ...state, status }));
+	kismetStore.update((state) => ({ ...state, status }));
 };
 
 export const setWhitelistMAC = (mac: string) => {
-	kismetStore.update(state => ({ ...state, whitelistMAC: mac }));
+	kismetStore.update((state) => ({ ...state, whitelistMAC: mac }));
 };
 
 export const addKismetDevice = (device: KismetDevice) => {
-	kismetStore.update(state => {
+	kismetStore.update((state) => {
 		const newDevices = new Map(state.devices);
 		newDevices.set(device.mac, device);
-		return { 
-			...state, 
+		return {
+			...state,
 			devices: newDevices,
-			deviceCount: newDevices.size 
+			deviceCount: newDevices.size
 		};
 	});
 };
 
 export const updateKismetDevice = (mac: string, updates: Partial<KismetDevice>) => {
-	kismetStore.update(state => {
+	kismetStore.update((state) => {
 		const newDevices = new Map(state.devices);
 		const existingDevice = newDevices.get(mac);
 		if (existingDevice) {
@@ -62,19 +63,19 @@ export const updateKismetDevice = (mac: string, updates: Partial<KismetDevice>) 
 };
 
 export const removeKismetDevice = (mac: string) => {
-	kismetStore.update(state => {
+	kismetStore.update((state) => {
 		const newDevices = new Map(state.devices);
 		newDevices.delete(mac);
-		return { 
-			...state, 
+		return {
+			...state,
 			devices: newDevices,
-			deviceCount: newDevices.size 
+			deviceCount: newDevices.size
 		};
 	});
 };
 
 export const clearAllKismetDevices = () => {
-	kismetStore.update(state => ({
+	kismetStore.update((state) => ({
 		...state,
 		devices: new Map(),
 		deviceMarkers: new Map(),
@@ -88,7 +89,7 @@ export const clearAllKismetDevices = () => {
 };
 
 export const addKismetDeviceMarker = (mac: string, marker: any) => {
-	kismetStore.update(state => {
+	kismetStore.update((state) => {
 		const newMarkers = new Map(state.deviceMarkers);
 		newMarkers.set(`kismet_${mac}`, marker);
 		return { ...state, deviceMarkers: newMarkers };
@@ -96,7 +97,7 @@ export const addKismetDeviceMarker = (mac: string, marker: any) => {
 };
 
 export const removeKismetDeviceMarker = (mac: string) => {
-	kismetStore.update(state => {
+	kismetStore.update((state) => {
 		const newMarkers = new Map(state.deviceMarkers);
 		newMarkers.delete(`kismet_${mac}`);
 		return { ...state, deviceMarkers: newMarkers };
@@ -108,7 +109,7 @@ export const updateDistributions = (devices: Map<string, KismetDevice>) => {
 	const byManufacturer = new Map<string, number>();
 	const byChannel = new Map<string, number>();
 
-	devices.forEach(device => {
+	devices.forEach((device) => {
 		// Update type distribution
 		const type = device.type || 'Unknown';
 		byType.set(type, (byType.get(type) || 0) + 1);
@@ -122,7 +123,7 @@ export const updateDistributions = (devices: Map<string, KismetDevice>) => {
 		byChannel.set(channel, (byChannel.get(channel) || 0) + 1);
 	});
 
-	kismetStore.update(state => ({
+	kismetStore.update((state) => ({
 		...state,
 		distributions: { byType, byManufacturer, byChannel }
 	}));

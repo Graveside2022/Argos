@@ -32,9 +32,11 @@ export type AuthEventType =
 	| 'WS_AUTH_SUCCESS'
 	| 'WS_AUTH_FAILURE'
 	| 'SESSION_CREATED'
-	| 'RATE_LIMIT_HIT';
+	| 'RATE_LIMIT_HIT'
+	| 'RATE_LIMIT_EXCEEDED'; // Added for hooks.server.ts compatibility
 
 interface AuthAuditRecord {
+	[key: string]: unknown; // Allow logger to accept record as generic object
 	timestamp: string;
 	eventType: AuthEventType;
 	ip: string;
@@ -77,6 +79,7 @@ export function logAuthEvent(event: {
 		case 'WS_AUTH_FAILURE':
 		case 'AUTH_MISSING':
 		case 'RATE_LIMIT_HIT':
+		case 'RATE_LIMIT_EXCEEDED':
 			logger.warn('[AUTH_AUDIT]', record);
 			break;
 		default:
