@@ -1,14 +1,66 @@
 {
 	"mcpServers": {
-		"argos-tools": {
-			"command": "bash",
-			"args": [
-				"-c",
-				"if [ -d /app/src ]; then cd /app && exec npx tsx src/lib/server/mcp/dynamic-server.ts; else cd /home/kali/Documents/Argos/Argos && exec npx tsx src/lib/server/mcp/dynamic-server.ts; fi"
-			],
+		"argos-hardware-debugger": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/hardware-debugger.ts"],
 			"env": {
 				"NODE_ENV": "development",
-				"ARGOS_API_URL": "http://localhost:5173"
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-system-inspector": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/system-inspector.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-streaming-inspector": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/streaming-inspector.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-database-inspector": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/database-inspector.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-api-debugger": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/api-debugger.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-test-runner": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/test-runner.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
+			}
+		},
+		"argos-gsm-evil": {
+			"command": "npx",
+			"args": ["tsx", "src/lib/server/mcp/servers/gsm-evil-server.ts"],
+			"env": {
+				"NODE_ENV": "development",
+				"ARGOS_API_URL": "http://localhost:5173",
+				"ARGOS_API_KEY": "1ab28ca3cce220ddef06dd105a19694cc32ebf701f988126f1aced1c22a66318"
 			}
 		}
 	}
