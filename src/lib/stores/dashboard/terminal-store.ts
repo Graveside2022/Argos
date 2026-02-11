@@ -38,7 +38,7 @@ function getInitialState(): TerminalPanelState {
 			// If we have restored sessions, auto-open the terminal panel
 			const hasRestorableSessions = restoredSessions.length > 0;
 			if (hasRestorableSessions) {
-				console.log(
+				console.warn(
 					`[Terminal] Restoring ${restoredSessions.length} session(s), auto-opening panel`
 				);
 				// Set activeBottomTab to 'terminal' to auto-open the panel
@@ -69,7 +69,7 @@ function getDefaultState(): TerminalPanelState {
 		activeTabId: null,
 		sessions: [],
 		splits: null,
-		preferredShell: '/app/scripts/tmux-zsh-wrapper.sh',
+		preferredShell: '/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
 		isMaximized: false
 	};
 }
@@ -140,9 +140,15 @@ export function toggleTerminalPanel(): void {
 function createNewSession(shell: string): TerminalSession {
 	let shellName = shell.split('/').pop() || 'terminal';
 
-	// Friendly name for tmux + zsh terminal
-	if (shell.includes('tmux-zsh-wrapper.sh')) {
-		shellName = '🐋 Claude';
+	// Friendly names for tmux profiles
+	if (shell.includes('tmux-0.sh')) {
+		shellName = 'Tmux 0';
+	} else if (shell.includes('tmux-1.sh')) {
+		shellName = 'Tmux 1';
+	} else if (shell.includes('tmux-2.sh')) {
+		shellName = 'Tmux 2';
+	} else if (shell.includes('tmux-3.sh')) {
+		shellName = 'Tmux 3';
 	}
 
 	return {

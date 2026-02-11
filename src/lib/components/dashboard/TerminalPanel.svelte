@@ -11,7 +11,6 @@
 		renameSession,
 		closeTerminalPanel,
 		toggleMaximize,
-		splitTerminal,
 		unsplit
 	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
@@ -21,6 +20,7 @@
 	let availableShells = $state<ShellInfo[]>([]);
 	let showShellDropdown = $state(false);
 	let showMoreMenu = $state(false);
+	let pendingSplitSessionId = $state<string | null>(null); // Track if we're adding a split
 
 	// Fetch available shells on mount
 	onMount(async () => {
@@ -39,7 +39,40 @@
 	});
 
 	function handleCreateSession(shell?: string) {
-		createSession(shell);
+		const newSessionId = createSession(shell);
+
+		// If we're adding a split (pendingSplitSessionId is set)
+		if (pendingSplitSessionId) {
+			terminalPanelState.update((s) => {
+				if (s.splits) {
+					// Already split - add to existing split (max 4 panes)
+					if (s.splits.sessionIds.length >= 4) return s;
+
+					const newSessionIds = [...s.splits.sessionIds, newSessionId];
+					const equalWidth = 100 / newSessionIds.length;
+					return {
+						...s,
+						splits: {
+							...s.splits,
+							sessionIds: newSessionIds,
+							widths: newSessionIds.map(() => equalWidth)
+						}
+					};
+				} else {
+					// Create new split with the original session and the new one
+					return {
+						...s,
+						splits: {
+							id: Math.random().toString(36).substring(2, 9),
+							sessionIds: [pendingSplitSessionId, newSessionId],
+							widths: [50, 50]
+						}
+					};
+				}
+			});
+			pendingSplitSessionId = null;
+		}
+
 		showShellDropdown = false;
 	}
 
@@ -52,10 +85,13 @@
 		renameSession(sessionId, newTitle);
 	}
 
-	function handleSplit() {
+	function handleSplit(e: MouseEvent) {
+		e.stopPropagation(); // Prevent window click handler from closing the dropdown
 		const active = $activeSession;
 		if (active) {
-			splitTerminal(active.id);
+			// Instead of auto-creating a split, open the dropdown to choose
+			pendingSplitSessionId = active.id;
+			showShellDropdown = true;
 		}
 		showMoreMenu = false;
 	}
@@ -63,8 +99,10 @@
 	// Close dropdowns when clicking outside
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
-		if (!target.closest('.shell-dropdown-wrapper')) {
+		// Don't close dropdown if clicking the split button (it opens the dropdown)
+		if (!target.closest('.shell-dropdown-wrapper') && !target.closest('.split-btn')) {
 			showShellDropdown = false;
+			pendingSplitSessionId = null; // Clear pending split if clicking away
 		}
 		if (!target.closest('.more-menu-wrapper')) {
 			showMoreMenu = false;
@@ -129,7 +167,8 @@
 			<div class="shell-dropdown-wrapper">
 				<button
 					class="toolbar-btn add-btn"
-					aria-label="New terminal"
+					aria-label={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
+					title={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
 					onclick={() => handleCreateSession()}
 				>
 					<svg
@@ -146,7 +185,12 @@
 				</button>
 				<button
 					class="toolbar-btn dropdown-toggle"
-					aria-label="Select shell type"
+					aria-label={$terminalPanelState.splits
+						? 'Select tmux profile for split'
+						: 'Select tmux profile'}
+					title={$terminalPanelState.splits
+						? 'Select tmux profile for split'
+						: 'Select tmux profile'}
 					onclick={() => (showShellDropdown = !showShellDropdown)}
 				>
 					<svg
@@ -202,7 +246,7 @@
 				</button>
 			{:else}
 				<button
-					class="toolbar-btn"
+					class="toolbar-btn split-btn"
 					aria-label="Split terminal"
 					title="Split terminal"
 					onclick={handleSplit}

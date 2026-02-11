@@ -8,16 +8,16 @@ import type { RequestHandler } from './$types';
 import { access, constants } from 'fs/promises';
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
 
-// Common shell paths to check (Tmux + zsh first, then ZSH as preferred default)
+// Four independent tmux profiles (container paths for Docker, host paths as fallback)
 const SHELL_PATHS = [
-	'/app/scripts/tmux-zsh-wrapper.sh', // Tmux + zsh persistent session (container path)
-	'/bin/zsh',
-	'/usr/bin/zsh',
-	'/bin/bash',
-	'/bin/sh',
-	'/usr/bin/bash',
-	'/usr/bin/fish',
-	'/bin/fish'
+	'/app/scripts/tmux/tmux-0.sh', // Tmux 0 (default) (container path)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh', // Tmux 0 (default) (host path)
+	'/app/scripts/tmux/tmux-1.sh', // Tmux 1 (container path)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh', // Tmux 1 (host path)
+	'/app/scripts/tmux/tmux-2.sh', // Tmux 2 (container path)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh', // Tmux 2 (host path)
+	'/app/scripts/tmux/tmux-3.sh', // Tmux 3 (container path)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh' // Tmux 3 (host path)
 ];
 
 /**
@@ -38,9 +38,18 @@ async function isShellAvailable(shellPath: string): Promise<boolean> {
  * Get the display name for a shell
  */
 function getShellName(shellPath: string): string {
-	// Friendly name for tmux + zsh terminal
-	if (shellPath.includes('tmux-zsh-wrapper.sh')) {
-		return '🐋 Claude (tmux + zsh)';
+	// Friendly names for the four tmux profiles
+	if (shellPath.includes('tmux-0.sh')) {
+		return 'Tmux 0';
+	}
+	if (shellPath.includes('tmux-1.sh')) {
+		return 'Tmux 1';
+	}
+	if (shellPath.includes('tmux-2.sh')) {
+		return 'Tmux 2';
+	}
+	if (shellPath.includes('tmux-3.sh')) {
+		return 'Tmux 3';
 	}
 	const basename = shellPath.split('/').pop() || shellPath;
 	return basename;

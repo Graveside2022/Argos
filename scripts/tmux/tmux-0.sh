@@ -1,7 +1,9 @@
 #!/bin/bash
-# Tmux + zsh wrapper for terminal (works in both container and host)
+# VS Code Terminal Profile: Tmux 0 (Default)
+# Independent tmux session for primary development work
+# Based on: scripts/tmux-zsh-wrapper.sh (legacy - retained for compatibility)
 
-TMUX_SESSION="argos-claude"
+TMUX_SESSION="tmux-0"
 
 # Start in appropriate directory
 if [ -d "/app" ]; then

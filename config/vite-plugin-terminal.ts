@@ -7,17 +7,21 @@ const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message
 const CLEANUP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes before killing orphaned PTY
 const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
 
-// Valid shell paths
+// Valid shell paths - Four independent tmux sessions (0-3)
 const VALID_SHELLS = [
-	'/bin/bash',
-	'/bin/zsh',
-	'/bin/sh',
-	'/usr/bin/bash',
-	'/usr/bin/zsh',
-	'/usr/bin/fish',
-	'/bin/fish',
-	// Tmux + zsh persistent terminal (runs inside container)
-	'/app/scripts/tmux-zsh-wrapper.sh'
+	// Tmux profiles (container paths)
+	'/app/scripts/tmux/tmux-0.sh',
+	'/app/scripts/tmux/tmux-1.sh',
+	'/app/scripts/tmux/tmux-2.sh',
+	'/app/scripts/tmux/tmux-3.sh',
+	// Tmux profiles (host paths)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh',
+	// Keep legacy wrapper for backward compatibility
+	'/app/scripts/tmux-zsh-wrapper.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux-zsh-wrapper.sh'
 ];
 
 /** Persistent PTY session that survives WebSocket disconnections */
