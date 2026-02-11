@@ -93,8 +93,8 @@ export const selectedDeviceDetails = derived(
 				device['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] ??
 				null,
 			signalDbm:
-				device.signal?.last_signal_dbm ??
-				device['kismet.device.base.signal']?.['kismet.common.signal.last_signal_dbm'] ??
+				device.signal?.last_signal ??
+				device['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] ??
 				null,
 			channel: device.channel || device['kismet.device.base.channel'] || null,
 			frequency: device.frequency || device['kismet.device.base.frequency'] || null,
@@ -140,16 +140,16 @@ export const agentContext = derived(
 				? {
 						lat: $gps.position.lat,
 						lon: $gps.position.lon,
-						accuracy: $gps.accuracy,
-						heading: $gps.heading,
-						speed: $gps.speed
+						accuracy: $gps.status.accuracy,
+						heading: $gps.status.heading,
+						speed: $gps.status.speed
 					}
 				: null,
 
 		// Tactical environment context
 		activeSignals: $kismet.deviceCount,
 		kismetStatus: {
-			connected: $kismet.status === 'connected',
+			connected: $kismet.status === 'running',
 			status: $kismet.status,
 			message: $kismet.message
 		},

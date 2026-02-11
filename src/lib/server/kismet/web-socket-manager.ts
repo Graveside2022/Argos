@@ -202,7 +202,11 @@ export class WebSocketManager extends EventEmitter {
 			type: this.getDeviceType(kismetDevice),
 			channel: kismetDevice['kismet.device.base.channel'] || 0,
 			frequency: kismetDevice['kismet.device.base.frequency'] || 0,
-			signal: signalStrength,
+			signal: {
+				last_signal: signalStrength,
+				max_signal: signalStrength,
+				min_signal: signalStrength
+			},
 			signalStrength: signalStrength,
 			lastSeen: kismetDevice['kismet.device.base.last_time'] || Date.now() / 1000,
 			firstSeen: kismetDevice['kismet.device.base.first_time'] || Date.now() / 1000,
@@ -304,7 +308,7 @@ export class WebSocketManager extends EventEmitter {
 	private emitDeviceUpdate(device: KismetDevice) {
 		const message: WebSocketMessage = {
 			type: 'device_update',
-			data: device,
+			data: device as unknown as Record<string, unknown>,
 			timestamp: new Date().toISOString()
 		};
 

@@ -118,7 +118,11 @@ export interface KismetDevice {
 	manufacturer?: string;
 	firstSeen: number;
 	lastSeen: number;
-	signal?: number; // Alias for signalStrength for backward compatibility
+	signal: {
+		last_signal?: number;
+		max_signal?: number;
+		min_signal?: number;
+	};
 	signalStrength: number;
 	channel: number;
 	frequency: number;
