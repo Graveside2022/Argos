@@ -96,10 +96,10 @@ export const GET: RequestHandler = async ({ fetch }) => {
 				fusionKismetController.getDevices(),
 				getReceiverGPS(fetch)
 			]);
-			const status = fusionKismetController.getStatus();
+			const status = await fusionKismetController.getStatus();
 
 			return json({
-				devices: normalizeFusionDevices((devices || []) as Record<string, unknown>[], gps),
+				devices: normalizeFusionDevices(devices || [], gps),
 				source: 'kismet' as const,
 				status: {
 					running: status.running,

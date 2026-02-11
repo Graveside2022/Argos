@@ -63,7 +63,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		// Fall back to fusion controller
 		if (fusionKismetController.isReady()) {
-			const status = fusionKismetController.getStatus();
+			const status = await fusionKismetController.getStatus();
 
 			return json({
 				success: true,
