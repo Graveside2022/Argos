@@ -22,3 +22,24 @@ export interface GPSApiResponse {
 	mode?: number;
 	details?: string;
 }
+
+/**
+ * Individual satellite data from gpsd SKY message.
+ */
+export interface Satellite {
+	prn: number;
+	constellation: 'GPS' | 'GLONASS' | 'Galileo' | 'BeiDou';
+	snr: number;
+	elevation: number;
+	azimuth: number;
+	used: boolean;
+}
+
+/**
+ * API response for /api/gps/satellites endpoint.
+ */
+export interface SatellitesApiResponse {
+	success: boolean;
+	satellites: Satellite[];
+	error?: string;
+}
