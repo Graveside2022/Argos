@@ -81,11 +81,12 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 		id: dbSignal.signal_id,
 		lat: dbSignal.latitude,
 		lon: dbSignal.longitude,
+		position: { lat: dbSignal.latitude, lon: dbSignal.longitude },
 		power: dbSignal.power,
 		frequency: dbSignal.frequency,
 		timestamp: dbSignal.timestamp,
 		source: dbSignal.source as SignalMarker['source'],
-		metadata
+		metadata: metadata as SignalMarker['metadata']
 	};
 }
 

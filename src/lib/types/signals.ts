@@ -1,4 +1,5 @@
 // Type definitions for signal data structures used throughout the application
+import type { SignalSource } from './enums';
 
 export interface Position {
 	lat: number;
@@ -33,7 +34,7 @@ export interface SignalMarker {
 	frequency: number;
 	power: number;
 	timestamp: number;
-	source: 'kismet' | 'hackrf' | 'rtl-sdr' | 'other';
+	source: SignalSource;
 	metadata: SignalMetadata;
 }
 

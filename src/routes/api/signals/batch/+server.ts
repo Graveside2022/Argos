@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getRFDatabase } from '$lib/server/db/database';
-import type { SignalMarker } from '$lib/types/signals';
+import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
 import { SignalSource } from '$lib/types/enums';
 
 function normalizeSignalSource(source: string): SignalSource {
@@ -54,6 +54,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				id,
 				lat: lat as number,
 				lon: lon as number,
+				position: { lat: lat as number, lon: lon as number },
 				altitude: altitude as number,
 				frequency: signalObj.frequency as number,
 				power: signalObj.power as number,
@@ -72,8 +73,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					kurtosis: signalObj.kurtosis as number,
 					antennaId: signalObj.antennaId as string,
 					scanConfig: signalObj.scanConfig as Record<string, unknown>
-				}
-			};
+				} as unknown as SignalMetadata
+			} as SignalMarker;
 		});
 
 		// Validate converted signals
