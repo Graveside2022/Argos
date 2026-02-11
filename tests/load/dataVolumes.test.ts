@@ -3,7 +3,8 @@ import { TestDataGenerator } from '../utils/testDataGenerator';
 import { PerformanceMonitor } from '../utils/performanceMonitor';
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
-import type { SignalMarker } from '$lib/stores/map/signals';
+// import type { SignalMarker } from '$lib/stores/map/signals'; // Module removed
+type SignalMarker = any;
 // Define Signal type locally for testing based on generator output
 interface Signal {
 	id: string;
