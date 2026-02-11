@@ -141,9 +141,9 @@ export const GET: RequestHandler = () => {
 							data.powerValues && data.startFreq && data.endFreq
 								? data.powerValues.map((_, index) => {
 										const freqStep =
-											(data.endFreq - data.startFreq) /
-											(data.powerValues.length - 1);
-										return data.startFreq + index * freqStep;
+											(data.endFreq! - data.startFreq!) /
+											(data.powerValues!.length - 1);
+										return data.startFreq! + index * freqStep;
 									})
 								: [],
 						power: data.powerValues || [],
@@ -169,9 +169,9 @@ export const GET: RequestHandler = () => {
 			// on connection close in cancel().
 			onSpectrumData = (data: unknown) => {
 				if (data && typeof data === 'object' && 'data' in data) {
-					onSpectrum!((data as { data: unknown }).data);
+					onSpectrum!((data as { data: SpectrumData }).data);
 				} else {
-					onSpectrum!(data);
+					onSpectrum!(data as SpectrumData);
 				}
 			};
 

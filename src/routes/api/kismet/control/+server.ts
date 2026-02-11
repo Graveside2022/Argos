@@ -179,8 +179,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			try {
 				console.warn('[kismet] Stopping Kismet...');
 
+				// Check if Kismet is running at all
 				const { stdout: pids } = await hostExec('pgrep -x kismet 2>/dev/null || true');
 				if (!pids.trim()) {
+					// Also ensure systemd service is stopped
+					await hostExec('sudo systemctl stop kismet 2>/dev/null || true');
 					return json({
 						success: true,
 						message: 'Kismet stopped successfully',
@@ -188,26 +191,17 @@ export const POST: RequestHandler = async ({ request, url }) => {
 					});
 				}
 
-				// Graceful termination
-				await hostExec('pkill -x -TERM kismet 2>/dev/null || true').catch(
-					(error: unknown) => {
-						console.warn('[kismet] Cleanup: pkill -TERM kismet failed', {
-							error: String(error)
-						});
-					}
-				);
+				// Stop via systemctl first (prevents Restart=always from respawning)
+				await hostExec('sudo systemctl stop kismet 2>/dev/null || true');
 				await new Promise((resolve) => setTimeout(resolve, 3000));
 
-				// Force kill if still running
+				// Force kill any remaining processes not managed by systemd
 				const { stdout: remaining } = await hostExec('pgrep -x kismet 2>/dev/null || true');
 				if (remaining.trim()) {
-					await hostExec('pkill -x -9 kismet 2>/dev/null || true').catch(
-						(error: unknown) => {
-							console.warn('[kismet] Cleanup: pkill -9 kismet failed', {
-								error: String(error)
-							});
-						}
+					console.warn(
+						'[kismet] Processes remain after systemctl stop, force killing...'
 					);
+					await hostExec('sudo pkill -x -9 kismet 2>/dev/null || true');
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				}
 
@@ -230,7 +224,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				return json({
 					success: true,
 					message: 'Kismet stopped successfully',
-					details: 'Processes terminated and verified'
+					details: 'Service stopped and processes terminated'
 				});
 			} catch (error: unknown) {
 				return json(
