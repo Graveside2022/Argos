@@ -1,8 +1,8 @@
 # Argos MCP Servers
 
-**Modular Model Context Protocol servers for tactical RF intelligence**
+**Diagnostic Model Context Protocol servers for tactical RF intelligence**
 
-Argos ships with 5 specialized MCP servers that expose RF/network analysis capabilities to Claude Code. Each server is hardware-aligned, independently deployable, and production-ready.
+Argos ships with 7 specialized diagnostic MCP servers that expose system diagnostics, hardware debugging, and RF/network analysis capabilities to Claude Code. Each server is purpose-aligned, independently deployable, and production-ready.
 
 ## Architecture
 
@@ -15,128 +15,202 @@ Argos ships with 5 specialized MCP servers that expose RF/network analysis capab
     │  MCP    │  (Model Context Protocol)
     └────┬────┘
          │
-    ┌────┴─────────────────────────────────────┐
-    │                                           │
-┌───┴──────┐  ┌────────┐  ┌─────┐  ┌────────┐ │  ┌────────┐
-│ HackRF   │  │Kismet  │  │ GPS │  │GSM Evil│ │  │System  │
-│ Server   │  │Server  │  │Serv.│  │Server  │ │  │Server  │
-└────┬─────┘  └────┬───┘  └──┬──┘  └────┬───┘ │  └────┬───┘
-     │             │         │          │     │       │
-     └─────────────┴─────────┴──────────┴─────┴───────┘
-                           │
-                    ┌──────┴──────┐
-                    │  Argos API  │  (localhost:5173)
-                    │  HTTP Auth  │
-                    └──────┬──────┘
-                           │
-         ┌─────────────────┼─────────────────┐
-         │                 │                 │
-    ┌────┴────┐      ┌─────┴─────┐    ┌─────┴─────┐
-    │ HackRF  │      │  Kismet   │    │ GSM Evil  │
-    │Hardware │      │ WiFi Scan │    │  Monitor  │
-    └─────────┘      └───────────┘    └───────────┘
+    ┌────┴──────────────────────────────────────────────────────────┐
+    │                                                                │
+┌───┴────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  ┌────────┐│
+│ Hardware   │  │ System   │  │Streaming │  │Database│  │  API   ││
+│ Debugger   │  │Inspector │  │Inspector │  │Inspector│ │Debugger││
+└────┬───────┘  └────┬─────┘  └────┬─────┘  └────┬───┘  └────┬───┘│
+     │               │              │             │           │    │
+     └───────────────┴──────────────┴─────────────┴───────────┘    │
+                                    │                              │
+                          ┌─────────┴──────┐                       │
+                          │                │                       │
+                     ┌────┴──────┐   ┌─────┴─────┐                │
+                     │   Test    │   │ GSM Evil  │                │
+                     │  Runner   │   │  Server   │                │
+                     └────┬──────┘   └─────┬─────┘                │
+                          │                │                       │
+                          └────────┬───────┘                       │
+                                   │                               │
+                            ┌──────┴──────┐                        │
+                            │  Argos API  │  (localhost:5173)      │
+                            │  HTTP Auth  │                        │
+                            └──────┬──────┘                        │
+                                   │                               │
+         ┌─────────────────────────┼───────────────────────────────┘
+         │                         │                 │
+    ┌────┴────┐              ┌─────┴─────┐    ┌─────┴─────┐
+    │ HackRF  │              │  Kismet   │    │ GSM Evil  │
+    │Hardware │              │ WiFi Scan │    │  Monitor  │
+    └─────────┘              └───────────┘    └───────────┘
 ```
 
 **Key Design Principles:**
 
-- **Hardware-aligned** - Each server maps to a physical device or subsystem
+- **Purpose-aligned** - Each server maps to a diagnostic category (system, hardware, streaming, database, API, testing, RF operations)
 - **Isolated failure** - One server crash doesn't affect others
 - **Modular activation** - Enable only needed servers to save RPi resources
 - **Shared authentication** - All servers use ARGOS_API_KEY for HTTP API calls
 
 ## Server Catalog
 
-### 1. HackRF Server (`argos-hackrf`)
+### 1. Hardware Debugger (`argos-hardware-debugger`)
 
-**Purpose:** HackRF One SDR control and RF spectrum analysis
+**Purpose:** Unified HackRF/Kismet/GPS diagnostics, USB conflict detection, hardware recovery
 
-**Tools:**
+**Tools (5):**
 
-- `get_status` - Hardware connection state, frequency, sample rate
-- `start_sweep` - Begin spectrum scanning (multi-range, configurable cycle time)
-- `stop_sweep` - Graceful halt of active sweep
-- `emergency_stop` - Force-kill all HackRF processes
-- `get_spectrum_data` - FFT power levels, frequency bins, signal peaks
-
-**API Endpoints:**
-
-- `/api/hackrf/status`
-- `/api/hackrf/start-sweep`
-- `/api/hackrf/stop-sweep`
-- `/api/hackrf/emergency-stop`
+- `diagnose_hardware` - Complete hardware health check (HackRF, Kismet, GPS) with connection status, conflicts, operational issues, recovery recommendations
+- `detect_conflicts` - USB contention, port conflicts, process locks detection
+- `suggest_recovery` - Auto-recovery suggestions for failed hardware
+- `test_hardware_capability` - Quick capability check without starting full operations
+- `quick_hardware_status` - One-line status for all hardware (non-diagnostic)
 
 **Use Cases:**
 
-- Tactical spectrum mapping (900MHz, 2.4GHz, 5GHz bands)
-- Signal detection and characterization
-- Real-time FFT visualization for Claude analysis
+- **Use FIRST** when investigating hardware problems
+- USB resource conflicts between HackRF and WiFi adapter
+- GPS connection issues
+- Kismet service failures
+- Hardware validation before operations
+
+**Critical Rule:** Always run `diagnose_hardware` BEFORE debugging specific hardware issues.
 
 ---
 
-### 2. Kismet Server (`argos-kismet`)
+### 2. System Inspector (`argos-system-inspector`)
 
-**Purpose:** WiFi scanning, device tracking, network intelligence
+**Purpose:** System health diagnostics, Docker monitoring, memory pressure analysis, service validation
 
-**Tools:**
+**Tools (5):**
 
-- `get_status` - Service state, device count, interface, uptime
-- `start_service` - Auto-detect ALFA adapter, start monitor mode
-- `stop_service` - Graceful shutdown, cleanup monitor interfaces
-- `get_devices` - Active WiFi devices (MAC, SSID, signal, encryption, location)
-- `get_device_details` - Full device profile by MAC/SSID
-- `analyze_security` - Encryption assessment (CRITICAL/HIGH/MEDIUM/LOW risk)
-
-**API Endpoints:**
-
-- `/api/kismet/status`
-- `/api/kismet/control` (start/stop actions)
-- `/api/kismet/devices`
+- `diagnose_system` - Complete system health check (Docker status, service health, memory pressure, recent errors, actionable recommendations)
+- `check_docker_health` - Container status, resource usage, restart recommendations
+- `analyze_memory_pressure` - System memory, Node.js heap, OOM risk, mitigation strategies
+- `get_recent_errors` - Aggregated errors from all services (Node.js, Docker, Kismet, systemd)
+- `verify_dev_environment` - Dev server (port 5173), Docker, services, hardware detection
 
 **Use Cases:**
 
-- WiFi network enumeration
-- Rogue AP detection (evil twin analysis)
-- WEP/WPA2 vulnerability assessment
-- Device tracking over time
+- **Use FIRST** for performance issues, crashes, or multi-service errors
+- System slowdowns or unexpected behavior
+- Docker container misbehavior
+- Memory exhaustion investigation
+- Development environment validation at session start
+
+**Critical Rule:** Always run `diagnose_system` BEFORE debugging system-level issues.
 
 ---
 
-### 3. GPS Server (`argos-gps`)
+### 3. Streaming Inspector (`argos-streaming-inspector`)
 
-**Purpose:** GPS positioning, location-based signal queries
+**Purpose:** SSE/WebSocket stream debugging, real-time data validation, throughput analysis
 
-**Tools:**
+**Tools (3):**
 
-- `get_position` - Lat/lon, altitude, speed, heading, accuracy, satellite count, fix quality
-- `get_nearby_signals` - R-tree spatial query for signals within radius
-- `query_signal_history` - Temporal signal patterns (device tracking over time)
+- `inspect_sse_stream` - Monitor live SSE stream, capture events, validate data structure, measure throughput/latency
+- `test_sse_connection` - Quick connectivity test (connect, wait for first event, disconnect)
+- `list_sse_endpoints` - List all available SSE streaming endpoints with descriptions
 
-**API Endpoints:**
+**Supported Streams:**
 
-- `/api/gps/position`
-- `/api/signals` (spatial queries)
+- `/api/hackrf/data-stream` - HackRF spectrum FFT data
+- `/api/gsm-evil/intelligent-scan-stream` - GSM tower scan progress
+- `/api/rf/data-stream` - RF signal data stream
 
 **Use Cases:**
 
-- Geolocation of RF emitters
-- Drive-by signal mapping
-- Tactical intelligence (correlate signals with GPS tracks)
-- R-tree indexed spatial queries (O(log N) performance)
+- HackRF FFT stream not updating
+- GSM scan progress not streaming
+- WebSocket connection failures
+- Data validation and structure debugging
 
 ---
 
-### 4. GSM Evil Server (`argos-gsm-evil`)
+### 4. Database Inspector (`argos-database-inspector`)
 
-**Purpose:** GSM signal monitoring, IMSI detection, cellular intelligence
+**Purpose:** SQLite schema inspection, safe read-only queries, spatial index debugging, data integrity
 
-**Tools:**
+**Tools (5):**
 
-- `get_status` - Service state, captured IMSI data, GSMTAP health
+- `inspect_schema` - Database schema (tables, indexes, views), row counts, statistics
+- `query_database` - Safe SELECT queries (read-only, automatic LIMIT enforcement, max 1000 rows)
+- `analyze_database_health` - Orphaned records, stale data, large tables, missing indexes, data corruption
+- `get_recent_activity` - Recent database activity (last N minutes: new signals, active devices, network changes)
+- `debug_spatial_index` - R-tree spatial index performance testing, grid-based indexing validation
+
+**Security:**
+
+- **Auto-blocks** INSERT/UPDATE/DELETE queries
+- **Max 1000 rows** per query (automatic LIMIT enforcement)
+- **Read-only** access for safety
+
+**Use Cases:**
+
+- Database structure exploration before writing queries
+- Data integrity validation
+- R-tree spatial query debugging ("find signals within N meters")
+- Verify data capture is working correctly
+
+---
+
+### 5. API Debugger (`argos-api-debugger`)
+
+**Purpose:** API endpoint testing, connectivity validation, auth/CORS diagnostics
+
+**Tools (3):**
+
+- `test_api_endpoint` - Test specific endpoint connectivity and auth, response time measurement
+- `list_api_endpoints` - List all 58+ API endpoints organized by category with descriptions
+- `diagnose_api_issues` - Common API issues (auth failures, connectivity, CORS, rate limiting)
+
+**API Categories:**
+
+- HackRF, Kismet, GPS, GSM Evil, System, Streaming, Database
+
+**Use Cases:**
+
+- Verify API endpoint is reachable before debugging
+- Auth troubleshooting (401 errors)
+- CORS and connectivity issues
+- Discover available endpoints
+
+---
+
+### 6. Test Runner (`argos-test-runner`)
+
+**Purpose:** Test suite execution, type checking, linting validation
+
+**Tools (3):**
+
+- `run_tests` - Run test suites (unit/integration/e2e/all) with pass/fail status, test counts, failed test details
+- `run_typecheck` - TypeScript type checking (svelte-check) with type errors and file locations
+- `run_lint` - ESLint checks with errors/warnings and file locations (auto-fix option)
+
+**Use Cases:**
+
+- Verify functionality after code changes
+- Type safety validation after TypeScript changes
+- Code style validation before commits
+- Pre-PR validation
+
+**Critical Rule:** Always run tests BEFORE committing code changes.
+
+---
+
+### 7. GSM Evil Server (`argos-gsm-evil`)
+
+**Purpose:** GSM signal monitoring, IMSI detection, cellular intelligence, tower scanning
+
+**Tools (7):**
+
+- `get_status` - Service state, captured IMSI data, GSMTAP pipeline health
 - `start_monitoring` - Acquire HackRF, start grgsm + GsmEvil2 pipeline
 - `stop_monitoring` - Graceful shutdown, release hardware
-- `scan_towers` - Intelligent band scan (GSM900/DCS1800/ALL)
-- `get_imsi_data` - Captured mobile subscriber identities
-- `get_frames` - Raw GSM layer 2/3 frames (GSMTAP)
+- `scan_towers` - Intelligent band scan (GSM900/DCS1800/ALL) with signal strength, MCC/MNC detection
+- `get_imsi_data` - Captured mobile subscriber identities with timestamps and tower info
+- `get_frames` - Raw GSM layer 2/3 frames (GSMTAP) for protocol analysis
 - `get_activity` - Timeline of IMSI captures, tower changes, channel activity
 
 **API Endpoints:**
@@ -155,32 +229,9 @@ Argos ships with 5 specialized MCP servers that expose RF/network analysis capab
 - Mobile subscriber tracking
 - Cellular protocol analysis
 
+**Critical Rule:** Requires **exclusive HackRF access** (cannot run simultaneously with HackRF spectrum sweeps).
+
 ---
-
-### 5. System Server (`argos-system`)
-
-**Purpose:** System monitoring, hardware scanning, infrastructure diagnostics
-
-**Tools:**
-
-- `get_stats` - CPU, memory, hostname, uptime, process health (RPi5 monitoring)
-- `scan_hardware` - Detect all RF/network hardware (SDR, WiFi, GPS, cellular, serial)
-- `scan_installed_tools` - Enumerate 90+ OFFNET/ONNET tools (Docker/native/systemd)
-- `get_cell_towers` - OpenCellID tower lookup (LTE/GSM/UMTS, MCC/MNC, LAC, cell ID)
-
-**API Endpoints:**
-
-- `/api/system/stats`
-- `/api/hardware/scan`
-- `/api/tools/scan`
-- `/api/cell-towers/nearby`
-
-**Use Cases:**
-
-- RPi5 resource monitoring (OOM protection context)
-- Hardware auto-detection and validation
-- Tool availability checking (what's installed?)
-- Cellular infrastructure mapping
 
 ## Installation
 
@@ -198,7 +249,7 @@ npm run mcp:install-b
 npm run mcp:install-c
 ```
 
-This generates `~/.claude/mcp.json` with all 5 servers configured.
+This generates `~/.claude/mcp.json` with all 7 servers configured.
 
 ### Manual Configuration
 
@@ -218,19 +269,21 @@ npm run mcp:config-c  # Container
 ```json
 {
   "mcpServers": {
-    "argos-hackrf": {
+    "argos-hardware-debugger": {
       "command": "npx",
-      "args": ["tsx", "/app/src/lib/server/mcp/servers/hackrf-server.ts"],
+      "args": ["tsx", "/home/kali/Documents/Argos/Argos/src/lib/server/mcp/servers/hardware-debugger.ts"],
       "env": {
         "NODE_ENV": "development",
         "ARGOS_API_URL": "http://localhost:5173",
         "ARGOS_API_KEY": "<your-api-key>"
       }
     },
-    "argos-kismet": { ... },
-    "argos-gps": { ... },
-    "argos-gsm-evil": { ... },
-    "argos-system": { ... }
+    "argos-system-inspector": { ... },
+    "argos-streaming-inspector": { ... },
+    "argos-database-inspector": { ... },
+    "argos-api-debugger": { ... },
+    "argos-test-runner": { ... },
+    "argos-gsm-evil": { ... }
   }
 }
 ```
@@ -244,11 +297,13 @@ MCP servers start automatically when Claude Code invokes them. No manual startup
 ### Individual Servers (Development/Testing)
 
 ```bash
-npm run mcp:hackrf      # HackRF server only
-npm run mcp:kismet      # Kismet server only
-npm run mcp:gps         # GPS server only
-npm run mcp:gsm-evil    # GSM Evil server only
-npm run mcp:system      # System server only
+npm run mcp:system           # System health diagnostics
+npm run mcp:streaming        # SSE/WebSocket stream debugging
+npm run mcp:hardware         # HackRF/Kismet/GPS unified diagnostics
+npm run mcp:database         # SQLite schema & query inspection
+npm run mcp:api              # API endpoint testing & debugging
+npm run mcp:test             # Test suite execution & validation
+npm run mcp:gsm-evil         # GSM monitoring & IMSI capture
 ```
 
 **Note:** Servers communicate with Argos via HTTP API, so ensure `npm run dev` is running.
@@ -300,14 +355,48 @@ openssl rand -hex 32
 Tools are namespaced by server for clarity:
 
 ```
-mcp__argos-hackrf__get_status
-mcp__argos-kismet__get_devices
-mcp__argos-gps__get_position
+mcp__argos-hardware-debugger__diagnose_hardware
+mcp__argos-system-inspector__diagnose_system
+mcp__argos-streaming-inspector__inspect_sse_stream
+mcp__argos-database-inspector__query_database
+mcp__argos-api-debugger__test_api_endpoint
+mcp__argos-test-runner__run_tests
 mcp__argos-gsm-evil__scan_towers
-mcp__argos-system__scan_hardware
 ```
 
 This prevents naming collisions and makes server ownership explicit.
+
+## Usage Workflow
+
+**System-Level Investigation:**
+
+1. **Start with** `system-inspector.diagnose_system` - Get full system health overview
+2. **Then** `hardware-debugger.diagnose_hardware` - If hardware issues detected
+3. **Then** specific diagnostics based on findings
+
+**Hardware Problems:**
+
+1. **Start with** `hardware-debugger.diagnose_hardware` - Complete hardware check
+2. **If conflicts** → `hardware-debugger.detect_conflicts`
+3. **For recovery** → `hardware-debugger.suggest_recovery`
+
+**Streaming Issues:**
+
+1. **Test connectivity** → `streaming-inspector.test_sse_connection`
+2. **If connected but broken** → `streaming-inspector.inspect_sse_stream`
+3. **Validate data structure** and throughput
+
+**Database Queries:**
+
+1. **Explore schema first** → `database-inspector.inspect_schema`
+2. **Run safe queries** → `database-inspector.query_database`
+3. **Validate health** → `database-inspector.analyze_database_health`
+
+**Before Commits:**
+
+1. **Run tests** → `test-runner.run_tests`
+2. **Type check** → `test-runner.run_typecheck`
+3. **Lint** → `test-runner.run_lint`
 
 ## Troubleshooting
 
@@ -319,8 +408,8 @@ This prevents naming collisions and makes server ownership explicit.
 
 1. Check Argos app is running: `curl http://localhost:5173/api/health`
 2. Verify `ARGOS_API_KEY` in `.env` and MCP config match
-3. Check server logs: `npm run mcp:hackrf` (etc.) for error messages
-4. Validate config: `cat ~/.claude/mcp.json` (ensure paths are correct)
+3. Check server logs: `npm run mcp:system` (etc.) for error messages
+4. Validate config: `cat ~/.claude/mcp.json` or `cat .mcp.json` (ensure paths are correct)
 
 ### "Cannot reach Argos" error
 
@@ -334,14 +423,14 @@ This prevents naming collisions and makes server ownership explicit.
 
 ### Hardware not detected
 
-**Symptom:** HackRF/Kismet tools return "disconnected"
+**Symptom:** Hardware tools return "disconnected"
 
 **Solutions:**
 
-1. Check USB connections: `lsusb` (should see HackRF, ALFA adapter)
-2. Verify Docker USB passthrough: `--device=/dev/bus/usb`
-3. Run hardware scan: `curl http://localhost:5173/api/hardware/scan`
-4. Check hardware manager logs in Argos
+1. Run `hardware-debugger.diagnose_hardware` for complete analysis
+2. Check USB connections: `lsusb` (should see HackRF, ALFA adapter)
+3. Verify Docker USB passthrough: `--device=/dev/bus/usb`
+4. Run hardware scan: `curl http://localhost:5173/api/hardware/scan`
 
 ### Authentication failures
 
@@ -354,19 +443,31 @@ This prevents naming collisions and makes server ownership explicit.
 3. Restart MCP servers after updating key
 4. Confirm key is at least 32 characters
 
+### MCP servers not appearing in Claude Code
+
+**Symptom:** Servers configured but not showing in MCP manager
+
+**Solutions:**
+
+1. **Check config precedence:** Project `.mcp.json` > `~/.claude.json` project-specific > `~/.claude/mcp.json` global
+2. **Update project config:** If `.mcp.json` exists in project root, it overrides all other configs
+3. **Restart Claude Code** after config changes
+4. **Verify paths** are absolute (host) or relative (container)
+
 ## Performance Considerations
 
 **RPi5 Resource Constraints:**
 
 - Total Node.js heap: 1024MB (OOM protection)
 - Each MCP server is a separate process (memory overhead)
-- Enable only needed servers to conserve resources
+- **All 7 servers** spawn ~30 processes consuming ~800MB RAM
+- **Avoid running 2+ Claude Code instances simultaneously** (each spawns full server set)
 
 **Recommendations:**
 
-- **Field deployment:** All 5 servers (full capabilities)
-- **Development:** Only active servers (e.g., just HackRF during spectrum work)
-- **Low memory:** Disable unused servers in `~/.claude/mcp.json`
+- **Field deployment:** All 7 servers (full capabilities)
+- **Development:** All 7 servers (diagnostic coverage critical)
+- **Multiple Claude instances:** Avoid on RPi5 (memory exhaustion)
 
 ## Security
 
@@ -389,11 +490,17 @@ This prevents naming collisions and makes server ownership explicit.
 - Body limits: 64KB hardware, 10MB general
 - Pattern: `/api/(hackrf|kismet|gsm-evil|rf)/`
 
+**Database Security:**
+
+- `database-inspector` is **read-only** (auto-blocks INSERT/UPDATE/DELETE)
+- Max 1000 rows per query (prevents memory exhaustion)
+- Parameterized queries only (SQL injection protection)
+
 ## Development
 
 ### Adding New Tools
 
-**1. Edit server file** (e.g., `src/lib/server/mcp/servers/hackrf-server.ts`):
+**1. Edit server file** (e.g., `src/lib/server/mcp/servers/hardware-debugger.ts`):
 
 ```typescript
 {
@@ -416,49 +523,56 @@ This prevents naming collisions and makes server ownership explicit.
 **2. Test:**
 
 ```bash
-npm run mcp:hackrf  # Start server
+npm run mcp:hardware  # Start server
 # In Claude Code: invoke new tool
 ```
 
 **3. Commit changes:**
 
 ```bash
-git add src/lib/server/mcp/servers/hackrf-server.ts
-git commit -m "feat(mcp): add new_tool to HackRF server"
+git add src/lib/server/mcp/servers/hardware-debugger.ts
+git commit -m "feat(mcp): add new_tool to hardware-debugger"
 ```
 
 ### Creating New Servers
 
 Follow the pattern in `src/lib/server/mcp/servers/`:
 
-1. Extend `BaseMCPServer` class
-2. Define `serverName` and `tools` array
-3. Add npm script in `package.json`
+1. Create new server file (e.g., `performance-inspector.ts`)
+2. Define tools array with MCP tool schema
+3. Add npm script in `package.json`: `"mcp:performance": "npx tsx src/lib/server/mcp/servers/performance-inspector.ts"`
 4. Update `config-generator.ts` to include new server
 5. Document in this file
 
-## Migration from Legacy Server
+## Migration from Legacy Servers
 
-**Old (monolithic):**
+**Old (hardware-aligned, deprecated):**
 
 ```json
 {
   "mcpServers": {
-    "argos-tools": { ... }  // All 12 tools in one server
+    "argos-tools": { ... },      // Monolithic dynamic server
+    "argos-hackrf": { ... },     // Hardware-specific
+    "argos-kismet": { ... },     // Hardware-specific
+    "argos-gps": { ... },        // Hardware-specific
+    "argos-gsm-evil": { ... },   // Kept in new architecture
+    "argos-system": { ... }      // Hardware-specific
   }
 }
 ```
 
-**New (modular):**
+**New (diagnostic-aligned, current):**
 
 ```json
 {
   "mcpServers": {
-    "argos-hackrf": { ... },    // 5 tools
-    "argos-kismet": { ... },    // 6 tools
-    "argos-gps": { ... },       // 3 tools
-    "argos-gsm-evil": { ... },  // 7 tools
-    "argos-system": { ... }     // 4 tools
+    "argos-hardware-debugger": { ... },    // 5 tools - unified hardware diagnostics
+    "argos-system-inspector": { ... },     // 5 tools - system health
+    "argos-streaming-inspector": { ... },  // 3 tools - SSE/WebSocket
+    "argos-database-inspector": { ... },   // 5 tools - SQLite
+    "argos-api-debugger": { ... },         // 3 tools - API testing
+    "argos-test-runner": { ... },          // 3 tools - test execution
+    "argos-gsm-evil": { ... }              // 7 tools - GSM operations
   }
 }
 ```
@@ -466,10 +580,14 @@ Follow the pattern in `src/lib/server/mcp/servers/`:
 **To migrate:**
 
 ```bash
-npm run mcp:install-b  # Overwrites old config with modular servers
+npm run mcp:install-b  # Overwrites old config with diagnostic servers
 ```
 
-**Backward compatibility:** The legacy `dynamic-server.ts` remains for compatibility but is deprecated.
+**Key Changes:**
+
+- **Hardware consolidation:** HackRF/Kismet/GPS tools → `hardware-debugger` (unified diagnostics)
+- **Purpose alignment:** System monitoring → `system-inspector`, API testing → `api-debugger`, etc.
+- **Diagnostic focus:** Servers now organized by diagnostic category, not hardware type
 
 ## References
 
