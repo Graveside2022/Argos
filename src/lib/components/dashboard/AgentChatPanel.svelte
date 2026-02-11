@@ -30,7 +30,7 @@
 	let chatContainer: HTMLDivElement;
 
 	// System info
-	let llmProvider = $state<'anthropic' | 'ollama' | 'unavailable'>('unavailable');
+	let llmProvider = $state<'anthropic' | 'unavailable'>('unavailable');
 	let isCheckingLLM = $state(true);
 
 	// Check LLM availability on mount
@@ -55,9 +55,7 @@
 			content:
 				llmProvider === 'anthropic'
 					? 'Argos Agent online (Claude Sonnet 4.5)'
-					: llmProvider === 'ollama'
-						? 'Argos Agent online (Ollama local - offline mode)'
-						: 'Agent unavailable. Install Ollama or set ANTHROPIC_API_KEY.',
+					: 'Agent unavailable. Set ANTHROPIC_API_KEY environment variable.',
 			timestamp: new Date().toISOString()
 		});
 	});
@@ -248,11 +246,7 @@
 			<span class="toolbar-title">Argos Agent</span>
 			{#if !isCheckingLLM}
 				<span class="llm-badge" class:online={llmProvider !== 'unavailable'}>
-					{llmProvider === 'anthropic'
-						? 'Claude'
-						: llmProvider === 'ollama'
-							? 'Ollama'
-							: 'Offline'}
+					{llmProvider === 'anthropic' ? 'Claude' : 'Offline'}
 				</span>
 			{/if}
 		</div>

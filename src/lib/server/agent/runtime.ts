@@ -1,6 +1,5 @@
 /**
- * Argos Agent Runtime with Hybrid LLM and Tool Execution Framework
- * Supports Anthropic Claude (online) with Ollama fallback (offline)
+ * Argos Agent Runtime with Anthropic Claude Integration
  * Full integration with Argos UI state and tactical data
  * Dynamically loads tools from Tool Execution Framework
  */
@@ -79,20 +78,6 @@ async function isAnthropicAvailable(): Promise<boolean> {
 			signal: AbortSignal.timeout(2000) // 2 second timeout
 		});
 		return response.ok || response.status === 404; // 404 is ok, means API is reachable
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Check if Ollama is available locally
- */
-async function isOllamaAvailable(): Promise<boolean> {
-	try {
-		const response = await fetch('http://localhost:11434/api/tags', {
-			signal: AbortSignal.timeout(1000)
-		});
-		return response.ok;
 	} catch {
 		return false;
 	}
@@ -202,66 +187,15 @@ async function* processWithAnthropic(
 }
 
 /**
- * Fetch response from Ollama BEFORE starting generator
- * This avoids async deadlock in SSE stream context
- */
-async function fetchOllamaResponse(
-	messages: AgentMessage[],
-	context?: AgentContext
-): Promise<string> {
-	const systemPrompt = getSystemPrompt(context);
-	const messagesWithSystem = [{ role: 'system' as const, content: systemPrompt }, ...messages];
-
-	const response = await fetch('http://localhost:11434/api/chat', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			model: 'llama3.2:1b',
-			messages: messagesWithSystem.map((m) => ({ role: m.role, content: m.content })),
-			stream: false
-		}),
-		signal: AbortSignal.timeout(30000)
-	});
-
-	if (!response.ok) {
-		throw new Error(`Ollama API error: ${response.statusText}`);
-	}
-
-	const data = await response.json();
-	return data.message?.content || '';
-}
-
-/**
- * Process message with Ollama (local fallback)
- * Generator yields pre-fetched response to avoid SSE deadlock
- */
-async function* processWithOllama(
-	messages: AgentMessage[],
-	_tools: ReturnType<typeof getAllTools>,
-	context?: AgentContext,
-	prefetchedResponse?: string
-): AsyncGenerator<AgentEvent> {
-	// If response wasn't pre-fetched, this shouldn't happen, but handle it
-	const content = prefetchedResponse || 'Error: Response not pre-fetched';
-
-	yield {
-		type: 'TextMessageContent',
-		messageId: 'assistant-1',
-		delta: content
-	};
-}
-
-/**
- * Create Agent instance with MCP tools and hybrid LLM
+ * Create Agent instance with MCP tools and Anthropic Claude
  */
 export async function createAgent() {
-	// Check LLM availability
+	// Check Anthropic availability
 	const hasAnthropic = await isAnthropicAvailable();
-	const hasOllama = await isOllamaAvailable();
 
-	if (!hasAnthropic && !hasOllama) {
+	if (!hasAnthropic) {
 		throw new Error(
-			'No LLM available. Install Ollama locally or set ANTHROPIC_API_KEY environment variable.'
+			'Anthropic Claude API not available. Set ANTHROPIC_API_KEY environment variable.'
 		);
 	}
 
@@ -286,22 +220,11 @@ export async function createAgent() {
 			};
 
 			try {
-				// For Ollama: Pre-fetch response OUTSIDE generator to avoid SSE deadlock
-				let ollamaResponse: string | undefined;
-				if (!hasAnthropic) {
-					ollamaResponse = await fetchOllamaResponse(messages, context);
-				}
-
 				// Get dynamic tool list from framework
 				const availableTools = getAllTools();
 
-				// Choose LLM based on availability and pass context
-				const processor = hasAnthropic
-					? processWithAnthropic(messages, availableTools, context)
-					: processWithOllama(messages, availableTools, context, ollamaResponse);
-
-				// Stream LLM responses
-				for await (const event of processor) {
+				// Stream Anthropic Claude responses
+				for await (const event of processWithAnthropic(messages, availableTools, context)) {
 					yield event;
 				}
 
@@ -330,6 +253,6 @@ export async function createAgent() {
 		},
 
 		// Expose provider information
-		provider: hasAnthropic ? ('anthropic' as const) : ('ollama' as const)
+		provider: 'anthropic' as const
 	};
 }
