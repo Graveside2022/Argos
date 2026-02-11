@@ -27,8 +27,7 @@ export const PORTS = {
 	KISMET_REST: 2501,
 	HACKRF_CONTROL: 3002,
 	SPECTRUM_WEB: 8073,
-	BETTERCAP: 8081,
-	OLLAMA: 11434
+	BETTERCAP: 8081
 } as const;
 
 // ─── Timeouts & Intervals ──────────────────────────────────────────
@@ -59,9 +58,7 @@ export const TIMEOUTS = {
 	/** Hardware detection refresh interval */
 	HARDWARE_REFRESH_INTERVAL_MS: 30000,
 	/** WebSocket heartbeat interval */
-	WEBSOCKET_HEARTBEAT_MS: 30000,
-	/** Agent/Ollama request timeout */
-	AGENT_TIMEOUT_MS: 120000
+	WEBSOCKET_HEARTBEAT_MS: 30000
 } as const;
 
 // ─── Resource Limits ───────────────────────────────────────────────
@@ -75,11 +72,7 @@ export const RESOURCE_LIMITS = {
 	/** Maximum signal history entries */
 	MAX_SIGNAL_HISTORY: 500,
 	/** Node.js max old space size in MB */
-	NODE_MAX_OLD_SPACE_MB: 1024,
-	/** Ollama context window tokens */
-	OLLAMA_CONTEXT_TOKENS: 2048,
-	/** Ollama max prediction tokens */
-	OLLAMA_MAX_PREDICT: 64
+	NODE_MAX_OLD_SPACE_MB: 1024
 } as const;
 
 // ─── Geographic Constants ──────────────────────────────────────────

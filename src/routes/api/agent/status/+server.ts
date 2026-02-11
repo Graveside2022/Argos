@@ -1,6 +1,6 @@
 /**
  * Agent Status Endpoint
- * Returns current LLM provider availability
+ * Returns current LLM provider availability (Anthropic Claude only)
  */
 
 import { json } from '@sveltejs/kit';
@@ -25,45 +25,16 @@ async function isAnthropicAvailable(): Promise<boolean> {
 	}
 }
 
-/**
- * Check if Ollama is available locally
- */
-async function isOllamaAvailable(): Promise<boolean> {
-	try {
-		const response = await fetch('http://localhost:11434/api/tags', {
-			signal: AbortSignal.timeout(1000)
-		});
-		return response.ok;
-	} catch {
-		return false;
-	}
-}
-
 export const GET: RequestHandler = async () => {
-	const [hasAnthropic, hasOllama] = await Promise.all([
-		isAnthropicAvailable(),
-		isOllamaAvailable()
-	]);
-
-	let provider: 'anthropic' | 'ollama' | 'unavailable' = 'unavailable';
-
-	if (hasAnthropic) {
-		provider = 'anthropic';
-	} else if (hasOllama) {
-		provider = 'ollama';
-	}
+	const hasAnthropic = await isAnthropicAvailable();
 
 	return json({
-		provider,
+		provider: hasAnthropic ? 'anthropic' : 'unavailable',
 		available: {
-			anthropic: hasAnthropic,
-			ollama: hasOllama
+			anthropic: hasAnthropic
 		},
-		message:
-			provider === 'anthropic'
-				? 'Claude Sonnet 4.5 online'
-				: provider === 'ollama'
-					? 'Ollama local model available (offline mode)'
-					: 'No LLM available. Install Ollama or set ANTHROPIC_API_KEY.'
+		message: hasAnthropic
+			? 'Claude Sonnet 4.5 online'
+			: 'No LLM available. Set ANTHROPIC_API_KEY environment variable.'
 	});
 };
