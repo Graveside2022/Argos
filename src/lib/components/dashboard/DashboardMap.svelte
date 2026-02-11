@@ -275,7 +275,8 @@
 					client.location.lat,
 					apLon,
 					apLat,
-					clientMac
+					clientMac,
+					client.signal?.last_signal ?? -70
 				);
 				features.push({
 					type: 'Feature',

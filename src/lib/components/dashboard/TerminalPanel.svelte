@@ -64,7 +64,7 @@
 						...s,
 						splits: {
 							id: Math.random().toString(36).substring(2, 9),
-							sessionIds: [pendingSplitSessionId, newSessionId],
+							sessionIds: [pendingSplitSessionId!, newSessionId],
 							widths: [50, 50]
 						}
 					};

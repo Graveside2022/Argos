@@ -3,7 +3,7 @@
  * Uses IndexedDB for browser-based storage with spatial indexing
  */
 
-import type { SignalMarker } from '$lib/types/signals';
+import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
 import type { NetworkEdge } from '$lib/types/network';
 import type { SignalSource, DeviceRecord as SharedDeviceRecord } from '$lib/types/shared';
 import { SignalSource as SignalSourceEnum } from '$lib/types/enums';
@@ -486,11 +486,12 @@ class SignalDatabase {
 			id: record.id,
 			lat: record.lat,
 			lon: record.lon,
+			position: { lat: record.lat, lon: record.lon },
 			power: record.power,
 			frequency: record.frequency,
 			timestamp: record.timestamp,
 			source: this.normalizeSignalSource(record.source),
-			metadata: (record.metadata || {}) as Record<string, unknown>
+			metadata: (record.metadata || {}) as SignalMetadata
 		};
 	}
 

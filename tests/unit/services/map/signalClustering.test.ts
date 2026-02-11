@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 // import { SignalClusteringService } from '$lib/services/map/signal-clustering';
 import type { SignalMarker, SignalCluster } from '$lib/types/signals';
+import { SignalSource } from '$lib/types/enums';
 
 // Mock SignalClusteringService for testing
 class MockSignalClusteringService {
@@ -84,7 +85,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -95,7 +96,7 @@ describe('SignalClusteringService', () => {
 					power: -55,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -106,7 +107,7 @@ describe('SignalClusteringService', () => {
 					power: -60,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				}
 			];
@@ -130,7 +131,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				}
 			];
@@ -163,7 +164,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -174,7 +175,7 @@ describe('SignalClusteringService', () => {
 					power: -55,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				}
 			];
@@ -194,7 +195,7 @@ describe('SignalClusteringService', () => {
 				power: -50 - i,
 				frequency: 2400000000,
 				timestamp: Date.now(),
-				source: 'hackrf' as const,
+				source: SignalSource.HackRF,
 				metadata: {}
 			}));
 
@@ -259,7 +260,7 @@ describe('SignalClusteringService', () => {
 						power: -50,
 						frequency: 2400000000,
 						timestamp: Date.now(),
-						source: 'hackrf' as const,
+						source: SignalSource.HackRF,
 						metadata: {}
 					}
 				],
@@ -286,7 +287,7 @@ describe('SignalClusteringService', () => {
 						power: -55,
 						frequency: 2400000000,
 						timestamp: Date.now(),
-						source: 'hackrf' as const,
+						source: SignalSource.HackRF,
 						metadata: {}
 					}
 				],
@@ -322,7 +323,7 @@ describe('SignalClusteringService', () => {
 						power: -50,
 						frequency: 2400000000,
 						timestamp: Date.now(),
-						source: 'hackrf' as const,
+						source: SignalSource.HackRF,
 						metadata: metadata1
 					}
 				],
@@ -349,7 +350,7 @@ describe('SignalClusteringService', () => {
 						power: -55,
 						frequency: 2400000000,
 						timestamp: Date.now(),
-						source: 'hackrf' as const,
+						source: SignalSource.HackRF,
 						metadata: metadata2
 					}
 				],
@@ -381,7 +382,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -392,7 +393,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				}
 			];
@@ -416,7 +417,7 @@ describe('SignalClusteringService', () => {
 					power: -50,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -427,7 +428,7 @@ describe('SignalClusteringService', () => {
 					power: -55,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				},
 				{
@@ -438,7 +439,7 @@ describe('SignalClusteringService', () => {
 					power: -60,
 					frequency: 2400000000,
 					timestamp: Date.now(),
-					source: 'hackrf' as const,
+					source: SignalSource.HackRF,
 					metadata: {}
 				}
 			];
@@ -463,7 +464,7 @@ describe('SignalClusteringService', () => {
 				power: -50 - Math.random() * 30,
 				frequency: 2400000000,
 				timestamp: Date.now(),
-				source: 'hackrf' as const,
+				source: SignalSource.HackRF,
 				metadata: {}
 			}));
 
