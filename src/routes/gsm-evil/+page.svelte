@@ -1771,7 +1771,7 @@
 										<span class="device-header-tmsi">TMSI</span>
 										<span class="device-header-time">Detected</span>
 									</div>
-									{#each tower.devices.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
+									{#each tower.devices.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
 										<div class="device-list-row">
 											<span class="device-imsi">{device.imsi}</span>
 											<span class="device-tmsi">{device.tmsi || 'N/A'}</span>

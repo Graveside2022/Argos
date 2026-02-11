@@ -47,7 +47,7 @@ describe.skip('signalClustering', () => {
 			expect(clusters).toHaveLength(2);
 
 			// First cluster should have 3 signals
-			const mainCluster = clusters.find((c) => c.stats.count === 3);
+			const mainCluster = clusters.find((c: any) => c.stats.count === 3);
 			expect(mainCluster).toBeDefined();
 			if (mainCluster) {
 				expect(mainCluster.stats.avgPower).toBeCloseTo(-65, 1);
@@ -56,7 +56,7 @@ describe.skip('signalClustering', () => {
 			}
 
 			// Second cluster should have 1 signal
-			const singleCluster = clusters.find((c) => c.stats.count === 1);
+			const singleCluster = clusters.find((c: any) => c.stats.count === 1);
 			expect(singleCluster).toBeDefined();
 			if (singleCluster) {
 				expect(singleCluster.stats.avgPower).toBe(-55);
@@ -72,7 +72,7 @@ describe.skip('signalClustering', () => {
 			const clusters = clusterSignals(signals, 50, 3); // Min size 3
 
 			expect(clusters).toHaveLength(2);
-			expect(clusters.every((c) => c.stats.count === 1)).toBe(true);
+			expect(clusters.every((c: any) => c.stats.count === 1)).toBe(true);
 		});
 
 		it('should calculate weighted center position', () => {
