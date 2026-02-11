@@ -1,4 +1,7 @@
 export interface KismetDevice {
+	// Allow dynamic property access for Kismet's nested field names
+	[key: string]: any;
+
 	mac: string;
 	macaddr?: string; // Alias for mac
 	last_seen: number;
