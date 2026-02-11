@@ -1,16 +1,21 @@
 # HackRF Backend Dockerfile
 # Python Flask application for HackRF control and RF workflows
 
-FROM python:3.11-slim
+# Use Kali Linux base since HackRF packages are only in Kali repos
+FROM kalilinux/kali-rolling:arm64
 
 # Prevent Python from writing pyc files and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies including HackRF tools
+# Install Python 3 and HackRF tools from Kali repos
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-dev \
+    python3-pip \
     hackrf \
     libhackrf-dev \
+    libhackrf0 \
     libusb-1.0-0-dev \
     build-essential \
     pkg-config \
@@ -26,10 +31,10 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Cython (needed to build python-hackrf wheel)
-RUN pip install --no-cache-dir Cython>=3.1.0
+RUN pip install --no-cache-dir --break-system-packages Cython>=3.1.0
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy application code
 COPY . .

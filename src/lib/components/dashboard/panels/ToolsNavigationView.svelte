@@ -96,7 +96,7 @@
 			}
 		} catch {
 			if (tool.id === 'kismet-wifi') {
-				setKismetStatus('stopped');
+				setKismetStatus('running');
 			} else {
 				setLocalStatus(tool.id, 'stopped');
 			}
@@ -129,13 +129,13 @@
 			const data = await res.json();
 
 			if (tool.id === 'kismet-wifi') {
-				setKismetStatus('stopped');
+				setKismetStatus(data.success ? 'stopped' : 'running');
 			} else {
 				setLocalStatus(tool.id, data.success ? 'stopped' : 'running');
 			}
 		} catch {
 			if (tool.id === 'kismet-wifi') {
-				setKismetStatus('stopped');
+				setKismetStatus('running');
 			} else {
 				setLocalStatus(tool.id, 'stopped');
 			}

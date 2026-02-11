@@ -103,17 +103,15 @@
 		if (locationName && dist < 500) return;
 
 		try {
-			const res = await fetch(
-				`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`,
-				{ headers: { 'User-Agent': 'Argos-Dashboard/1.0' } }
-			);
+			// Use backend proxy to avoid CORS issues
+			const res = await fetch(`/api/gps/location?lat=${lat}&lon=${lon}`);
 			if (!res.ok) return;
 			const data = await res.json();
-			const city = data.address?.city || data.address?.town || data.address?.village || '';
-			const country = data.address?.country_code?.toUpperCase() || '';
-			locationName = city && country ? `${city}, ${country}` : city || country || '';
-			lastGeocodeLat = lat;
-			lastGeocodeLon = lon;
+			if (data.success && data.locationName) {
+				locationName = data.locationName;
+				lastGeocodeLat = lat;
+				lastGeocodeLon = lon;
+			}
 		} catch (_error: unknown) {
 			// Silently fail
 		}
@@ -968,33 +966,116 @@
 		letter-spacing: 0.08em;
 	}
 
-	/* Responsive: progressively hide less critical items */
-	@media (max-width: 1200px) {
-		.location-name,
-		.location-name + .coord-sep {
-			display: none;
-		}
-	}
+	/* ============================================
+	   RESPONSIVE DESIGN - Mobile-First Progressive Enhancement
+	   ============================================ */
 
-	@media (max-width: 1000px) {
+	/* Large tablets and desktop (1024px+): Show everything */
+	@media (max-width: 1023px) {
 		.weather-wrapper,
 		.weather-wrapper + .coord-sep {
 			display: none;
 		}
 	}
 
-	@media (max-width: 850px) {
+	/* Tablets (768px - 1023px): Hide weather, show core info */
+	@media (max-width: 900px) {
 		.status-label {
 			font-size: 11px;
 		}
+	}
+
+	/* Small tablets and large phones (600px - 767px): Compact mode */
+	@media (max-width: 767px) {
+		.top-status-bar {
+			padding: 0 var(--space-2);
+		}
+
+		.status-group {
+			gap: var(--space-2);
+		}
+
+		.app-brand {
+			font-size: 13px;
+		}
+
+		.status-label {
+			font-size: 10px;
+		}
+
 		.sat-count {
+			display: none;
+		}
+
+		.location-name,
+		.location-name + .coord-sep {
+			display: none;
+		}
+
+		/* Hide MGRS on smaller screens */
+		.coords-group span:nth-child(7),
+		.coords-group span:nth-child(8) {
+			display: none;
+		}
+
+		.coord-value {
+			font-size: 11px;
+		}
+	}
+
+	/* Phones landscape (480px - 599px): Icon-only mode */
+	@media (max-width: 599px) {
+		.status-divider {
+			display: none;
+		}
+
+		.status-label {
+			display: none;
+		}
+
+		/* Show only dots and essential coords */
+		.coords-group {
+			font-size: 10px;
+			gap: var(--space-1);
+		}
+
+		/* Show only lat/lon, hide time */
+		.time-value {
 			display: none;
 		}
 	}
 
-	@media (max-width: 700px) {
+	/* Phones portrait (320px - 479px): Minimal mode */
+	@media (max-width: 479px) {
+		.top-status-bar {
+			height: auto;
+			min-height: 36px;
+			flex-wrap: wrap;
+			padding: var(--space-1) var(--space-2);
+		}
+
+		.app-brand {
+			font-size: 12px;
+		}
+
 		.coords-group {
 			display: none;
+		}
+
+		/* Make status dots larger for touch */
+		.status-dot {
+			width: 10px;
+			height: 10px;
+		}
+
+		/* Ensure touch targets are at least 44px */
+		.device-btn {
+			padding: 8px;
+			min-width: 44px;
+			min-height: 44px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 	}
 </style>

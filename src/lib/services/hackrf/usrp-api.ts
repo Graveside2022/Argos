@@ -25,12 +25,12 @@ export class USRPAPI {
 	visibilityHandler: (() => void) | null = null;
 
 	// Store listener references for proper cleanup (prevents memory leaks)
-	private eventListeners: Map<string, (event: Event) => void> = new Map();
+	private eventListeners: Map<string, (event: MessageEvent) => void> = new Map();
 
 	/**
 	 * Add event listener with automatic cleanup tracking
 	 */
-	private addTrackedListener(eventName: string, handler: (event: Event) => void) {
+	private addTrackedListener(eventName: string, handler: (event: MessageEvent) => void) {
 		if (!this.eventSource) return;
 		this.eventSource.addEventListener(eventName, handler);
 		this.eventListeners.set(eventName, handler);
