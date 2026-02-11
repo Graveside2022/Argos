@@ -340,10 +340,16 @@ export const GET: RequestHandler = async () => {
 				}
 
 				const skyMsg = parseSkyMessage(parsed);
-				if (skyMsg && skyMsg.satellites && skyMsg.satellites.length > 0) {
-					cachedSatelliteCount = skyMsg.satellites.filter(
-						(sat) => sat.used === true
-					).length;
+				if (skyMsg) {
+					// gpsd 3.20+ provides uSat (used satellite count) directly
+					if (typeof skyMsg.uSat === 'number') {
+						cachedSatelliteCount = skyMsg.uSat;
+					} else if (skyMsg.satellites && skyMsg.satellites.length > 0) {
+						// Fallback: count satellites with used=true (older gpsd versions)
+						cachedSatelliteCount = skyMsg.satellites.filter(
+							(sat) => sat.used === true
+						).length;
+					}
 				}
 			} catch (_error: unknown) {
 				// Skip non-JSON lines (e.g. gpsd banner)
