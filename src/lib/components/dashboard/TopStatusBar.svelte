@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import type { Satellite } from '$lib/types/gps';
 
 	type DeviceState = 'active' | 'standby' | 'offline';
 
@@ -53,6 +54,11 @@
 	let lastGeocodeLat = 0;
 	let lastGeocodeLon = 0;
 	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | null = $state(null);
+
+	// Satellite panel state
+	let satellitesExpanded = $state(false);
+	let satelliteData = $state<Satellite[]>([]);
+	let satelliteUsedCount = $state(0);
 
 	// Weather state
 	interface WeatherData {
@@ -150,6 +156,20 @@
 			gpsSpeed = null;
 			gpsAccuracy = null;
 			gpsFix = 0;
+		}
+	});
+
+	// Poll satellites only when GPS dropdown is open and expanded
+	$effect(() => {
+		if (openDropdown === 'gps' && satellitesExpanded) {
+			// Initial fetch
+			void fetchSatelliteData();
+
+			// Poll every 10 seconds while panel is open
+			const interval = setInterval(() => void fetchSatelliteData(), 10000);
+
+			// Cleanup when panel closes
+			return () => clearInterval(interval);
 		}
 	});
 
@@ -266,6 +286,21 @@
 			lastWeatherLon = lon;
 		} catch (_error: unknown) {
 			// Silently fail
+		}
+	}
+
+	async function fetchSatelliteData() {
+		try {
+			const res = await fetch('/api/gps/satellites');
+			if (!res.ok) return;
+			const data = await res.json();
+
+			if (data.success && data.satellites) {
+				satelliteData = data.satellites;
+				satelliteUsedCount = data.satellites.filter((s: Satellite) => s.used).length;
+			}
+		} catch (_error: unknown) {
+			// Silently fail like other status fetches
 		}
 	}
 
@@ -584,11 +619,39 @@
 										: 'No Fix'}</span
 							>
 						</div>
-						<div class="dropdown-row">
-							<span class="dropdown-key">Satellites</span><span class="dropdown-val"
-								>{gpsSats}</span
-							>
+						<div
+							class="dropdown-row satellites-toggle"
+							onclick={() => (satellitesExpanded = !satellitesExpanded)}
+							role="button"
+							tabindex="0"
+						>
+							<span class="dropdown-key">Satellites</span><span class="dropdown-val">
+								{gpsSats}
+								<span class="expand-icon" class:expanded={satellitesExpanded}
+									>▼</span
+								>
+							</span>
 						</div>
+
+						{#if satellitesExpanded && satelliteData.length > 0}
+							<div class="satellites-list">
+								{#each satelliteData as sat}
+									<div class="dropdown-row satellite-item">
+										<span class="dropdown-key"
+											>PRN {sat.prn} ({sat.constellation})</span
+										>
+										<span class="dropdown-val">{sat.snr} dB</span>
+									</div>
+								{/each}
+
+								<div class="dropdown-divider"></div>
+								<div class="dropdown-row">
+									<span class="dropdown-key">Used for Fix</span>
+									<span class="dropdown-val accent">{satelliteUsedCount}</span>
+								</div>
+							</div>
+						{/if}
+
 						{#if gpsSpeed !== null}
 							<div class="dropdown-row">
 								<span class="dropdown-key">Speed</span><span class="dropdown-val"
@@ -1077,5 +1140,56 @@
 			align-items: center;
 			justify-content: center;
 		}
+	}
+
+	/* ============================================
+	   SATELLITES EXPANDABLE PANEL
+	   ============================================ */
+
+	/* Satellites expandable row */
+	.satellites-toggle {
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.satellites-toggle:hover {
+		background: var(--palantir-bg-hover);
+	}
+
+	/* Expand icon */
+	.expand-icon {
+		display: inline-block;
+		font-size: 10px;
+		margin-left: var(--space-1);
+		transition: transform 0.2s ease;
+		color: var(--palantir-text-tertiary);
+	}
+
+	.expand-icon.expanded {
+		transform: rotate(180deg);
+	}
+
+	/* Nested satellite list */
+	.satellites-list {
+		padding-left: var(--space-2);
+		margin-top: var(--space-1);
+		animation: slideDown 0.2s ease;
+	}
+
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			max-height: 0;
+		}
+		to {
+			opacity: 1;
+			max-height: 500px;
+		}
+	}
+
+	/* Individual satellite rows */
+	.satellite-item .dropdown-key,
+	.satellite-item .dropdown-val {
+		font-size: 10px;
 	}
 </style>
