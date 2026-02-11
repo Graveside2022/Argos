@@ -42,7 +42,7 @@ async function waitForKismet(maxAttempts = 15): Promise<boolean> {
 	return false;
 }
 
-export const POST: RequestHandler = async ({ _url }) => {
+export const POST: RequestHandler = async () => {
 	try {
 		console.warn('Starting Kismet WiFi discovery...');
 

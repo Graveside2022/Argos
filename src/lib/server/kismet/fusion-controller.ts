@@ -19,7 +19,7 @@ class FusionKismetController {
 
 	async getStatus(): Promise<KismetStatusResponse> {
 		try {
-			return (await KismetProxy.getSystemStatus()) as KismetStatusResponse;
+			return (await KismetProxy.getSystemStatus()) as unknown as KismetStatusResponse;
 		} catch {
 			return {
 				running: false,
