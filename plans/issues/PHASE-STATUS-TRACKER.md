@@ -1,6 +1,6 @@
 # Argos Codebase Audit - Phase Status Tracker
 
-**Last Updated:** 2026-02-12 18:50 UTC
+**Last Updated:** 2026-02-12 19:15 UTC
 **Current Branch:** dev-branch-1
 **Master Audit Plan:** 2026-02-11-full-codebase-audit-plan.md
 **Phase Planning Documents:** See `phase-plans/` subfolder for original plans and reports
@@ -15,7 +15,7 @@
 | Phase 0   | ✅ **COMPLETE** | 100%     | Manual            | 2026-02-11   |
 | Phase 1   | ✅ **COMPLETE** | 100%     | Survey-Agents     | 2026-02-12   |
 | Phase 1.5 | ✅ **COMPLETE** | 100%     | Test-Refactor     | 2026-02-12   |
-| Phase 2   | ⏸️ **PENDING**  | 0%       | DeadCode-\*       | -            |
+| Phase 2   | 🔄 **READY**    | 0%       | DeadCode-\*       | 2026-02-12   |
 | Phase 3   | ✅ **COMPLETE** | 100%     | Organize-Finalize | 2026-02-12   |
 | Phase 3.5 | ✅ **COMPLETE** | 100%     | ESLint-Cleanup    | 2026-02-12   |
 | Phase 4   | ✅ **COMPLETE** | 100%     | Cleanup-\*        | 2026-02-12   |
@@ -89,7 +89,8 @@
 
 **Critical Issues Identified:**
 
-1. 🚨 gsm-evil/+page.svelte is EMPTY (was 3,096 LOC) - requires investigation
+1. ✅ RESOLVED: gsm-evil/+page.svelte accidentally deleted in d8cd6d9, restored in commit 38210e1 (2,181 LOC)
+    - Type mismatch between IMSICapture (store) and CapturedIMSI (types) - deferred to Phase 2/4
 2. ⚠️ OpenWebRX configs duplicated (3 subdirectories, unclear canonical)
 3. ⚠️ 5 major features undocumented (GPS satellites, tmux profiles, MCP usage, visual regression, property testing)
 
