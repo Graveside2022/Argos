@@ -4,21 +4,23 @@
  * Validates Phase 2.1.1: API Authentication Middleware
  * Tests that unauthenticated requests to protected endpoints return 401.
  *
+ * Requirements: Running dev server at localhost:5173, ARGOS_API_KEY in .env
  * Standards: OWASP A01:2021 (Broken Access Control), NIST SP 800-53 AC-3
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+// Restore real fetch — these are integration tests that need real HTTP calls
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
 
-describe('API Authentication Security', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
+// Skip entire suite if server not running or API key not configured
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
+describe.runIf(canRun)('API Authentication Security', () => {
 	describe('Protected Endpoints - Require Authentication', () => {
 		const protectedEndpoints = [
 			'/api/rf/status',
@@ -91,7 +93,6 @@ describe('API Authentication Security', () => {
 			}
 
 			// Variance should be low (< 50ms) across identical invalid requests.
-			// High variance would indicate timing oracle vulnerability.
 			const avg = timings.reduce((a, b) => a + b, 0) / timings.length;
 			const variance =
 				timings.reduce((sum, t) => sum + Math.pow(t - avg, 2), 0) / timings.length;
@@ -112,9 +113,6 @@ describe('API Authentication Security', () => {
 				headers: { 'x-api-key': API_KEY }
 			});
 
-			// Most frameworks normalize headers, but verify behavior
-			// If this fails, it means lowercase works (acceptable but document it)
-			// If it passes with 401, case sensitivity is enforced (stricter)
 			const isRejected = response.status === 401;
 			const isAccepted = response.status !== 401;
 
@@ -129,15 +127,12 @@ describe('API Authentication Security', () => {
 				] as unknown as globalThis.HeadersInit
 			});
 
-			// Either rejected (401) or first header used (not 401).
-			// Should NOT accept the wrong key.
 			expect([200, 401, 404, 500]).toContain(response.status);
 		});
 	});
 
 	describe('Session Cookie Authentication (Browser Clients)', () => {
 		test('Valid session cookie allows access to protected endpoint', async () => {
-			// First, get a session cookie by visiting the root page
 			const pageResponse = await fetch(`${BASE_URL}/`, {
 				redirect: 'manual'
 			});
@@ -150,15 +145,12 @@ describe('API Authentication Security', () => {
 				return;
 			}
 
-			// Extract cookie value
-			const cookieHeader = cookies.split(';')[0]; // Get just the name=value part
+			const cookieHeader = cookies.split(';')[0];
 
-			// Use cookie to access protected endpoint
 			const apiResponse = await fetch(`${BASE_URL}/api/rf/status`, {
 				headers: { Cookie: cookieHeader }
 			});
 
-			// Should succeed (not 401) if session cookie auth is working
 			expect(apiResponse.status).not.toBe(401);
 		});
 	});

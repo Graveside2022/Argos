@@ -53,18 +53,15 @@ describe('KismetService', () => {
 			});
 		});
 
-		it('should return default position when API call fails', async () => {
+		it('should return null when API call fails', async () => {
 			mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
 			const position = await KismetService.getGPSPosition(mockFetch);
 
-			expect(position).toEqual({
-				latitude: 50.083933333,
-				longitude: 8.274061667
-			});
+			expect(position).toBeNull();
 		});
 
-		it('should return default position when API returns non-OK status', async () => {
+		it('should return null when API returns non-OK status', async () => {
 			mockFetch.mockResolvedValueOnce({
 				ok: false,
 				status: 404
@@ -72,13 +69,10 @@ describe('KismetService', () => {
 
 			const position = await KismetService.getGPSPosition(mockFetch);
 
-			expect(position).toEqual({
-				latitude: 50.083933333,
-				longitude: 8.274061667
-			});
+			expect(position).toBeNull();
 		});
 
-		it('should return default position when API returns success:false', async () => {
+		it('should return null when API returns success:false', async () => {
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({
@@ -89,10 +83,7 @@ describe('KismetService', () => {
 
 			const position = await KismetService.getGPSPosition(mockFetch);
 
-			expect(position).toEqual({
-				latitude: 50.083933333,
-				longitude: 8.274061667
-			});
+			expect(position).toBeNull();
 		});
 	});
 

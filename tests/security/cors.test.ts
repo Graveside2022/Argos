@@ -8,18 +8,16 @@
  *            NIST SP 800-53 SC-7 (Boundary Protection)
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
-describe('CORS Security', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('CORS Security', () => {
 	describe('Known Origins - CORS Allowed', () => {
 		const allowedOrigins = [
 			'http://localhost:5173',

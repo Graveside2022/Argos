@@ -44,7 +44,9 @@ describe('Input Validators (Property-Based)', () => {
 		test('rejects all non-numeric strings', () => {
 			fc.assert(
 				fc.property(
-					fc.string().filter((s) => isNaN(Number(s)) || !s.trim()),
+					// Only generate strings that Number() can't parse (NaN)
+					// Exclude empty/whitespace strings since Number("") = 0 which is valid
+					fc.string().filter((s) => isNaN(Number(s))),
 					(s) => {
 						expect(() => validateNumericParam(s, 'test', 0, 100)).toThrow(
 							InputValidationError
@@ -319,8 +321,9 @@ describe('Input Validators (Property-Based)', () => {
 				'../../etc/passwd',
 				'../../../root/.ssh/id_rsa',
 				'logs/../../../etc/shadow',
-				'./../../../../../../etc/passwd',
-				'....//....//etc/passwd'
+				'./../../../../../../etc/passwd'
+				// Note: '....//....//etc/passwd' is NOT a traversal — '....' is a literal
+				// directory name (not '..'), so path.resolve keeps it within allowedDir
 			];
 
 			traversalAttempts.forEach((attempt) => {

@@ -8,18 +8,16 @@
  *            CWE-770 (Allocation of Resources Without Limits)
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
-describe('Rate Limiting Security', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('Rate Limiting Security', () => {
 	describe('Hardware Endpoint Rate Limiting', () => {
 		const hardwareEndpoints = [
 			'/api/hackrf/status',

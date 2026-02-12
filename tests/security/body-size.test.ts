@@ -8,22 +8,20 @@
  *            CWE-400 (Uncontrolled Resource Consumption)
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
 // Body size limits per Phase 2.1.7
 const _MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit
 const _HARDWARE_BODY_LIMIT = 64 * 1024; // 64KB for hardware endpoints
 
-describe('Request Body Size Security', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('Request Body Size Security', () => {
 	describe('General API Endpoints - 10MB Limit', () => {
 		test('Request under 10MB is accepted', async () => {
 			const smallPayload = 'x'.repeat(1024); // 1KB
