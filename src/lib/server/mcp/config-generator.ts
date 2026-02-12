@@ -3,7 +3,7 @@
  * Auto-generates MCP configs for Context B (host) and Context C (container)
  */
 
-import { mkdir,writeFile } from 'fs/promises';
+import { mkdir, writeFile } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -138,7 +138,7 @@ async function writeMCPConfig(config: MCPConfiguration, path: string): Promise<v
 	// Write config file
 	await writeFile(path, JSON.stringify(config, null, 2), 'utf-8');
 
-	console.log(`[MCP Config] Written to: ${path}`);
+	console.warn(`[MCP Config] Written to: ${path}`);
 }
 
 /**
@@ -198,10 +198,10 @@ export async function updateExistingConfig(configPath: string): Promise<void> {
 		// Write back
 		await writeMCPConfig(existingConfig, configPath);
 
-		console.log('[MCP Config] Updated existing configuration with all Argos MCP servers');
+		console.warn('[MCP Config] Updated existing configuration with all Argos MCP servers');
 	} catch (_error) {
 		// If file doesn't exist, create new one
-		console.log('[MCP Config] Creating new configuration');
+		console.warn('[MCP Config] Creating new configuration');
 		const context = configPath.includes('container') ? 'c' : 'b';
 		const config =
 			context === 'b' ? await generateContextBConfig() : await generateContextCConfig();

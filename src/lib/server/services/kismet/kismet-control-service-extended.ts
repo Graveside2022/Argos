@@ -68,7 +68,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		// Clean up stale monitor interfaces
 		await hostExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
 			(error: unknown) => {
-				console.debug('[kismet] Cleanup: iw dev mon del failed (non-critical)', {
+				console.warn('[kismet] Cleanup: iw dev mon del failed (non-critical)', {
 					error: String(error)
 				});
 			}

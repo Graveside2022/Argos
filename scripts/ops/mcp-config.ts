@@ -14,20 +14,22 @@ async function main() {
 		if (command === 'b' || command === 'host') {
 			// Show Context B config
 			const config = await generateMCPConfigContent('b');
-			console.log('# Context B (Host) MCP Configuration');
-			console.log('# Save to: ~/.claude/mcp.json\n');
-			console.log(config);
+			process.stdout.write('# Context B (Host) MCP Configuration\n');
+			process.stdout.write('# Save to: ~/.claude/mcp.json\n\n');
+			process.stdout.write(config + '\n');
 		} else if (command === 'c' || command === 'container') {
 			// Show Context C config
 			const config = await generateMCPConfigContent('c');
-			console.log('# Context C (Container) MCP Configuration');
-			console.log('# Save to: .claude-container/mcp.json\n');
-			console.log(config);
+			process.stdout.write('# Context C (Container) MCP Configuration\n');
+			process.stdout.write('# Save to: .claude-container/mcp.json\n\n');
+			process.stdout.write(config + '\n');
 		} else {
 			console.error(`[ERROR] Unknown command: ${command}`);
-			console.log('\nUsage:');
-			console.log('  npm run mcp:config-b    # Show config for Context B (host)');
-			console.log('  npm run mcp:config-c    # Show config for Context C (container)');
+			process.stdout.write('\nUsage:\n');
+			process.stdout.write('  npm run mcp:config-b    # Show config for Context B (host)\n');
+			process.stdout.write(
+				'  npm run mcp:config-c    # Show config for Context C (container)\n'
+			);
 			process.exit(1);
 		}
 	} catch (error) {

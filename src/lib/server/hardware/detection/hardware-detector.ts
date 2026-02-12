@@ -7,7 +7,8 @@ import type {
 	ConnectionType,
 	DetectedHardware,
 	HardwareCategory,
-	HardwareScanResult} from '$lib/server/hardware/detection-types';
+	HardwareScanResult
+} from '$lib/server/hardware/detection-types';
 import { globalHardwareRegistry } from '$lib/server/hardware/hardware-registry';
 
 import { detectNetworkDevices } from './network-detector';
@@ -18,7 +19,7 @@ import { detectUSBDevices } from './usb-detector';
  * Scan system for all hardware
  */
 export async function scanAllHardware(): Promise<HardwareScanResult> {
-	console.log('[HardwareDetector] Starting comprehensive hardware scan...');
+	console.warn('[HardwareDetector] Starting comprehensive hardware scan...');
 	const startTime = Date.now();
 
 	// Run all detectors in parallel
@@ -92,14 +93,9 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 	};
 
 	const duration = Date.now() - startTime;
-	console.log(`[HardwareDetector] Scan complete in ${duration}ms`);
-	console.log(`  - Total hardware: ${scanResult.stats.total}`);
-	console.log(`  - Connected: ${scanResult.stats.connected}`);
-	console.log(`  - SDRs: ${byCategory.sdr}`);
-	console.log(`  - WiFi adapters: ${byCategory.wifi}`);
-	console.log(`  - Bluetooth adapters: ${byCategory.bluetooth}`);
-	console.log(`  - GPS modules: ${byCategory.gps}`);
-	console.log(`  - Cellular modems: ${byCategory.cellular}`);
+	console.warn(
+		`[HardwareDetector] Scan complete in ${duration}ms: ${scanResult.stats.total} total, ${scanResult.stats.connected} connected, SDR=${byCategory.sdr} WiFi=${byCategory.wifi} BT=${byCategory.bluetooth} GPS=${byCategory.gps} Cell=${byCategory.cellular}`
+	);
 
 	return scanResult;
 }
@@ -163,7 +159,7 @@ export class HardwareMonitor {
 			return;
 		}
 
-		console.log(`[HardwareMonitor] Starting (interval: ${intervalMs}ms)`);
+		console.warn(`[HardwareMonitor] Starting (interval: ${intervalMs}ms)`);
 		this.running = true;
 
 		// Initial scan
@@ -187,7 +183,7 @@ export class HardwareMonitor {
 			return;
 		}
 
-		console.log('[HardwareMonitor] Stopping');
+		console.warn('[HardwareMonitor] Stopping');
 		this.running = false;
 
 		if (this.interval) {

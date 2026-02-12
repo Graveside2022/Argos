@@ -100,7 +100,7 @@ export class KismetServiceManager {
 
 			// Remove monitor interface if it exists
 			await execAsync('iw dev kismon0 del').catch((error: unknown) => {
-				console.debug('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
+				console.warn('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
 					error: String(error)
 				});
 			}); // Ignore errors if interface doesn't exist
@@ -115,7 +115,7 @@ export class KismetServiceManager {
 
 				for (const interfaceName of wifiInterfaces) {
 					try {
-						console.log(`Resetting USB WiFi interface: ${interfaceName}`);
+						console.warn(`Resetting USB WiFi interface: ${interfaceName}`);
 
 						// Bring interface down
 						await execAsync(`ip link set ${interfaceName} down`);
@@ -151,7 +151,7 @@ export class KismetServiceManager {
 											await execAsync(
 												`echo '${bus}-${device}' > /sys/bus/usb/drivers/usb/bind`
 											);
-											console.log(
+											console.warn(
 												`Reset USB device at Bus ${bus} Device ${device}`
 											);
 										} catch (usbResetError) {
@@ -170,7 +170,7 @@ export class KismetServiceManager {
 
 						// Bring interface back up
 						await execAsync(`ip link set ${interfaceName} up`);
-						console.log(`Interface ${interfaceName} reset complete`);
+						console.warn(`Interface ${interfaceName} reset complete`);
 					} catch (interfaceError) {
 						console.warn(`Failed to reset interface ${interfaceName}:`, interfaceError);
 					}

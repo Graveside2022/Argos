@@ -84,7 +84,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const apiUrl = `https://opencellid.org/cell/get?key=${apiKey}&mcc=${mcc}&mnc=${mnc}&lac=${lac}&cellid=${ci}&format=json`;
 
 			try {
-				console.log('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
+				console.warn('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
 				const apiResponse = await fetch(apiUrl);
 
 				if (apiResponse.ok) {
@@ -92,14 +92,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
 					// Check if API returned an error
 					if (apiData.error) {
-						console.log('OpenCellID API error:', apiData.error, 'for tower:', {
+						console.warn('OpenCellID API error:', apiData.error, 'for tower:', {
 							mcc,
 							mnc,
 							lac,
 							ci
 						});
 					} else if (apiData.lat && apiData.lon) {
-						console.log('Found in OpenCellID API:', apiData);
+						console.warn('Found in OpenCellID API:', apiData);
 						return json({
 							success: true,
 							found: true,
@@ -112,10 +112,10 @@ export const POST: RequestHandler = async ({ request }) => {
 							}
 						});
 					} else {
-						console.log('OpenCellID API returned incomplete data:', apiData);
+						console.warn('OpenCellID API returned incomplete data:', apiData);
 					}
 				} else {
-					console.log(
+					console.warn(
 						'OpenCellID API returned:',
 						apiResponse.status,
 						apiResponse.statusText

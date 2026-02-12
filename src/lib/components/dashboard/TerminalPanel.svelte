@@ -403,7 +403,8 @@
 								sessionId={session.id}
 								shell={session.shell}
 								isActive={true}
-								onTitleChange={(title) => handleTitleChange(session.id, title)}
+								onTitleChange={(title: string) =>
+									handleTitleChange(session.id, title)}
 							/>
 						</div>
 						{#if index < $terminalPanelState.splits.sessionIds.length - 1}
@@ -419,7 +420,7 @@
 					sessionId={session.id}
 					shell={session.shell}
 					isActive={session.id === $terminalPanelState.activeTabId}
-					onTitleChange={(title) => handleTitleChange(session.id, title)}
+					onTitleChange={(title: string) => handleTitleChange(session.id, title)}
 				/>
 			{/each}
 		{/if}

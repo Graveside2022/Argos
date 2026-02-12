@@ -8,7 +8,7 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async () => {
 	try {
-		console.log('Starting intelligent GSM frequency scan...');
+		console.warn('Starting intelligent GSM frequency scan...');
 
 		// Phase 1: Quick RF power scan
 		const { stdout: sweepData } = await hostExec(
@@ -61,13 +61,13 @@ export const POST: RequestHandler = async () => {
 			});
 		}
 
-		console.log(`Testing ${candidateFreqs.length} frequencies for GSM activity...`);
+		console.warn(`Testing ${candidateFreqs.length} frequencies for GSM activity...`);
 
 		// Phase 2: Test each candidate frequency for actual GSM frames
 		const results: FrequencyTestResult[] = [];
 
 		for (const [freq, power] of candidateFreqs) {
-			console.log(`Testing ${freq} MHz...`);
+			console.warn(`Testing ${freq} MHz...`);
 
 			// Start grgsm_livemon briefly
 			const { stdout: gsmPid } = await hostExec(
@@ -84,7 +84,7 @@ export const POST: RequestHandler = async () => {
 			const { stdout: packetCount } = await hostExec(
 				'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
 			).catch((error: unknown) => {
-				console.debug('[gsm-evil-scan] tcpdump check failed', { error: String(error) });
+				console.warn('[gsm-evil-scan] tcpdump check failed', { error: String(error) });
 				return { stdout: '0' };
 			});
 
