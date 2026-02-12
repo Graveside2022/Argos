@@ -8,7 +8,7 @@ vi.mock('$app/environment', () => ({
 	browser: false
 }));
 
-import { countTools,findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
+import { countTools, findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolCategory } from '$lib/types/tools';
 
 describe('Tool Navigation Debug', () => {
@@ -16,7 +16,7 @@ describe('Tool Navigation Debug', () => {
 		expect(toolHierarchy.root).toBeDefined();
 		expect(toolHierarchy.root.children).toBeDefined();
 		expect(toolHierarchy.root.children.length).toBeGreaterThan(0);
-		console.log(
+		console.warn(
 			'Root children:',
 			toolHierarchy.root.children.map((c) => c.id)
 		);
@@ -26,14 +26,14 @@ describe('Tool Navigation Debug', () => {
 		const offnet = toolHierarchy.root.children.find((c) => c.id === 'offnet');
 		expect(offnet).toBeDefined();
 		expect('children' in offnet!).toBe(true);
-		console.log('Offnet found:', offnet!.id, offnet!.name);
+		console.warn('Offnet found:', offnet!.id, offnet!.name);
 	});
 
 	it('onnet node exists in root children', () => {
 		const onnet = toolHierarchy.root.children.find((c) => c.id === 'onnet');
 		expect(onnet).toBeDefined();
 		expect('children' in onnet!).toBe(true);
-		console.log('Onnet found:', onnet!.id, onnet!.name);
+		console.warn('Onnet found:', onnet!.id, onnet!.name);
 	});
 
 	it('offnet node has 4 workflow children (RECON, ATTACK, DEFENSE, UTILITIES)', () => {
@@ -50,8 +50,8 @@ describe('Tool Navigation Debug', () => {
 		expect(result!).toHaveProperty('id', 'offnet');
 		expect('children' in result!).toBe(true);
 		const cat = result as ToolCategory;
-		console.log('findByPath result:', cat.id, 'with', cat.children.length, 'children');
-		console.log(
+		console.warn('findByPath result:', cat.id, 'with', cat.children.length, 'children');
+		console.warn(
 			'Children IDs:',
 			cat.children.map((c) => c.id)
 		);
@@ -73,7 +73,7 @@ describe('Tool Navigation Debug', () => {
 		const offnet = findByPath(['offnet'], toolHierarchy.root) as ToolCategory;
 		for (const child of offnet.children) {
 			const hasChildren = 'children' in child;
-			console.log(`  ${child.id}: hasChildren=${hasChildren}`);
+			console.warn(`  ${child.id}: hasChildren=${hasChildren}`);
 			expect(hasChildren).toBe(true);
 		}
 	});
