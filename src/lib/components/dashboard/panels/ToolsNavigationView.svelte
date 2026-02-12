@@ -183,15 +183,15 @@
 					name={item.name}
 					description={item.description}
 					icon={item.icon}
-					installed={item.installed}
+					isInstalled={item.installed}
 					canOpen={item.canOpen}
 					showControls={item.showControls}
 					externalUrl={item.externalUrl}
 					status={getLiveStatus(item)}
 					count={getLiveCount(item)}
-					onopen={() => handleOpen(item)}
-					onstart={() => handleStart(item)}
-					onstop={() => handleStop(item)}
+					onOpen={() => handleOpen(item)}
+					onStart={() => handleStart(item)}
+					onStop={() => handleStop(item)}
 				/>
 			{/if}
 		{/each}
