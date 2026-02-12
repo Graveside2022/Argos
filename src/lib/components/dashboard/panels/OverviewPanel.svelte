@@ -188,7 +188,11 @@
 							: 'var(--palantir-accent)'}"
 					></div>
 				</div>
-				<span class="meter-value">{formatBytes(systemInfo.memory.used)}</span>
+				<span class="meter-value"
+					>{systemInfo.memory.percentage.toFixed(0)}% ({formatBytes(
+						systemInfo.memory.used
+					)})</span
+				>
 			</div>
 
 			<!-- Storage -->
