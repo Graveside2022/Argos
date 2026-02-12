@@ -3,6 +3,7 @@ import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
@@ -37,6 +38,9 @@ export default [
 				NodeJS: 'readonly'
 			}
 		},
+		plugins: {
+			'simple-import-sort': simpleImportSort
+		},
 		rules: {
 			'no-unused-vars': [
 				'error',
@@ -45,7 +49,9 @@ export default [
 					varsIgnorePattern: '^_',
 					caughtErrorsIgnorePattern: '^_'
 				}
-			]
+			],
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error'
 		}
 	},
 	{
