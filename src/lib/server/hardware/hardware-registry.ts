@@ -86,9 +86,8 @@ export class HardwareRegistry {
 
 		// Filter by compatible tool
 		if (options.compatibleWithTool) {
-			results = results.filter((hw) =>
-				hw.compatibleTools?.includes(options.compatibleWithTool!)
-			);
+			const targetTool = options.compatibleWithTool;
+			results = results.filter((hw) => hw.compatibleTools?.includes(targetTool));
 		}
 
 		// Search by name, manufacturer, or model
