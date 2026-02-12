@@ -13,12 +13,15 @@ const STORAGE_VERSION = '1.0';
 
 export interface IMSICapture {
 	imsi: string;
-	timestamp: number;
-	mcc?: string;
-	mnc?: string;
-	lac?: string;
-	ci?: string;
-	frequency?: string;
+	tmsi?: string;
+	mcc: string | number;
+	mnc: string | number;
+	lac: number;
+	ci: number;
+	lat?: number;
+	lon?: number;
+	timestamp: string;
+	frequency?: string; // Extra field for store tracking
 }
 
 export interface TowerLocation {
