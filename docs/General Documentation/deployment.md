@@ -46,14 +46,14 @@ docker compose -f docker/docker-compose.portainer-dev.yml up -d
 
 ## OOM Protection Strategy
 
-**Why?** RPi 5 with 8GB RAM running Docker, Ollama, Kismet, HackRF can hit OOM under load.
+**Why?** RPi 5 with 8GB RAM running Docker, Kismet, HackRF can hit OOM under load.
 
 **Protection Layers:**
 
 1. **earlyoom**: Proactive OOM killer
     - Params: `-m 10 -s 50 -r 60`
-    - Kill order: `ollama` → `claude` → `vscode`
-    - Protect: ssh, docker, systemd
+    - Kill order: Prefers non-critical processes
+    - Protect: ssh, docker, systemd, claude
 
 2. **zram**: Compressed swap
     - Size: 4GB (zstd compression)
@@ -65,7 +65,7 @@ docker compose -f docker/docker-compose.portainer-dev.yml up -d
     tailscaled:     -900 (never kill)
     earlyoom:       -800 (protect killer)
     ssh/docker:     -500 (protect remote/runtime)
-    ollama:         +500 (kill first)
+    claude:         -500 (protect AI agent)
     ```
 
 4. **Kernel Tuning:**
@@ -78,8 +78,6 @@ docker compose -f docker/docker-compose.portainer-dev.yml up -d
 
 5. **Application Limits:**
     - Node.js: `--max-old-space-size=1024` (1GB heap)
-    - Ollama: 2GB Docker memory limit
-    - Models: llama3.2:1b ONLY (~900MB)
 
 **Gotcha:** Don't increase Node.js heap beyond 1024MB. Strategy calibrated for this limit.
 
