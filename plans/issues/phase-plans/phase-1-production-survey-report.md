@@ -1037,24 +1037,556 @@ src/
 
 ## 7. Function Inventory (Hotspot Files Only)
 
-### `src/routes/gsm-evil/+page.svelte`
+**Analysis Date:** 2026-02-12
+**Analyst:** Survey-Production
+**Method:** Grep pattern matching + manual verification
 
-(To be populated - requires full file read and function extraction)
+---
 
-### `src/lib/components/dashboard/DashboardMap.svelte`
+### 🚨 CRITICAL FINDING: Hotspot #1 File Empty
 
-(To be populated - requires full file read and function extraction)
+**File:** `src/routes/gsm-evil/+page.svelte`
 
-### `src/lib/components/dashboard/TopStatusBar.svelte`
+**Status:** ❌ **EMPTY** (0 bytes, 0 LOC as of 2026-02-12 13:57)
 
-**Functions Identified (first 100 lines):**
+**Historical Data:**
 
-1. `updateClock()` - Updates Zulu time display
-2. `toggleDropdown(which)` - Toggles dropdown visibility
-3. `closeDropdown()` - Closes all dropdowns
-4. `reverseGeocode(lat, lon)` - Geocodes coordinates to location name
+- **Original LOC:** 3,096 (as reported in initial survey)
+- **Last known refactor:** commit `cd4d3d6` (2026-02-12) - reduced to 2,180 LOC
+- **Current state:** File exists but is completely empty in HEAD commit
+- **Git blob hash:** `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391` (empty file signature)
 
-(Full inventory requires complete file read)
+**Impact Assessment:**
+
+- 🔴 **CRITICAL:** The #1 hotspot file (14% of total component LOC) has been emptied
+- 🔴 **All planned refactoring for this file is BLOCKED**
+- 🔴 **Function inventory cannot be completed**
+- 🔴 **Test characterization (Phase 1.5) cannot proceed**
+
+**Investigation Required:**
+
+1. Verify if content was moved to another file
+2. Check if this is intentional work-in-progress
+3. Restore from git history if accidental deletion
+4. Update hotspot analysis if file has been permanently removed
+
+**Git History:**
+
+```
+cd4d3d6 refactor(phase-1.5): complete GSM Evil hotspot extraction (3096→2180 LOC)
+d8cd6d9 feat(phase-3.5): ultra-strict ESLint cleanup - 235 warnings fixed (352→117)
+```
+
+**Functions:** None (file is empty)
+
+**Recommendation:** 🚨 **IMMEDIATE ACTION REQUIRED** - Investigate file status before proceeding with Phase 1.5 test writing.
+
+---
+
+### Hotspot #2: `src/lib/components/dashboard/DashboardMap.svelte`
+
+**Metrics:**
+
+- **Current LOC:** 1,439 (verified 2026-02-12)
+- **Total Functions:** 16
+- **Complexity:** High (mapping logic, RF calculations, GPS transformations)
+
+**Functions (by line number):**
+
+#### Geometric & Coordinate Utilities (4 functions)
+
+1. **`macToAngle(mac: string): number`** (Line 118)
+    - Converts MAC address to angle for device spreading
+    - ~5 LOC
+
+2. **`rssiToMeters(rssi: number): number`** (Line 131)
+    - Converts RSSI to distance in meters using log-distance path loss model
+    - ~5 LOC
+
+3. **`spreadClientPosition(apLat, apLon, mac, rssi): [number, number]`** (Line 139)
+    - Spreads client device position around access point
+    - Uses MAC-based angle and RSSI-based distance
+    - ~15 LOC
+
+4. **`haversineKm(lat1, lon1, lat2, lon2): number`** (Line 441)
+    - Haversine formula for great-circle distance
+    - ~10 LOC
+
+#### GeoJSON & Polygon Generation (3 functions)
+
+5. **`bezierArc(start, end): string`** (Line 158)
+    - Creates Bezier curve arc between two points for lines
+    - ~10 LOC
+
+6. **`createCirclePolygon(center: [number, number], radiusMeters: number): GeoJSON.Polygon`** (Line 346)
+    - Generates circle polygon for range bands
+    - ~15 LOC
+
+7. **`createRingPolygon(center: [number, number], innerRadius: number, outerRadius: number): GeoJSON.Polygon`** (Line 370)
+    - Generates donut-shaped ring polygon for range bands
+    - Uses nested `makeRing` helper function
+    - ~25 LOC
+
+#### Visualization & Rendering (4 functions)
+
+8. **`buildConeSVG(heading: number): string`** (Line 402)
+    - Builds SVG path for directional detection cone
+    - ~15 LOC
+
+9. **`getRadioColor(radio: string): string`** (Line 423)
+    - Maps radio type (WiFi, Bluetooth, etc.) to color
+    - ~10 LOC
+
+10. **`formatFrequency(freq: number): string`** (Line 741)
+    - Formats frequency for display (MHz/GHz)
+    - ~5 LOC
+
+11. **`formatTimeAgo(timestamp: number): string`** (Line 704)
+    - Formats relative time (e.g., "2m ago", "3h ago")
+    - ~12 LOC
+
+#### Event Handlers & API Calls (5 functions)
+
+12. **`async fetchCellTowers(lat: number, lon: number): Promise<void>`** (Line 454)
+    - Fetches nearby cell towers from API
+    - Handles error states and loading
+    - ~60 LOC
+
+13. **`handleMapLoad(): void`** (Line 522)
+    - Map initialization handler
+    - Sets up layer visibility
+    - ~90 LOC
+
+14. **`applyLayerVisibility(): void`** (Line 619)
+    - Applies layer visibility toggles to map
+    - ~10 LOC
+
+15. **`handleLocateClick(): void`** (Line 632)
+    - Centers map on GPS position
+    - ~5 LOC
+
+16. **`handleDeviceClick(ev: maplibregl.MapMouseEvent): void`** (Line 638)
+    - Handles click on device marker
+    - Shows device details
+    - ~35 LOC
+
+17. **`async handleClusterClick(ev: maplibregl.MapMouseEvent): Promise<void>`** (Line 680)
+    - Handles cluster expansion
+    - Zooms map to cluster bounds
+    - ~20 LOC
+
+18. **`handleTowerClick(ev: maplibregl.MapMouseEvent): void`** (Line 718)
+    - Handles click on cell tower marker
+    - Shows tower details
+    - ~20 LOC
+
+**Code Complexity Analysis:**
+
+- **Longest function:** `handleMapLoad()` (~90 LOC) - should be extracted
+- **Async functions:** 2 (fetchCellTowers, handleClusterClick)
+- **Event handlers:** 5 (map interactions)
+- **Pure functions:** 11 (geometric calculations, formatting)
+
+**Refactoring Targets:**
+
+1. Extract geometric functions to `$lib/utils/map-geometry.ts`
+2. Extract `handleMapLoad()` into smaller initialization functions
+3. Move RF calculations (`rssiToMeters`) to `$lib/services/rf/range-calculator.ts`
+
+---
+
+### Hotspot #3: `src/lib/components/dashboard/TopStatusBar.svelte`
+
+**Metrics:**
+
+- **Current LOC:** 1,196 (verified 2026-02-12)
+- **Total Functions:** 13
+- **Complexity:** High (hardware status, GPS, weather, clock)
+
+**Functions (by line number):**
+
+#### Clock & UI State (3 functions)
+
+1. **`updateClock(): void`** (Line 83)
+    - Updates Zulu time display (UTC)
+    - Called on interval
+    - ~8 LOC
+
+2. **`toggleDropdown(which: 'wifi' | 'sdr' | 'gps' | 'weather'): void`** (Line 92)
+    - Toggles dropdown panel visibility
+    - ~3 LOC
+
+3. **`closeDropdown(): void`** (Line 96)
+    - Closes all dropdown panels
+    - ~3 LOC
+
+#### API Data Fetching (4 functions)
+
+4. **`async reverseGeocode(lat: number, lon: number): Promise<void>`** (Line 100)
+    - Reverse geocodes coordinates to location name
+    - Uses Haversine distance check to avoid redundant API calls
+    - ~70 LOC
+
+5. **`async fetchHardwareStatus(): Promise<void>`** (Line 177)
+    - Fetches WiFi/SDR/GPS device status
+    - Updates device state objects
+    - ~25 LOC
+
+6. **`async fetchHardwareDetails(): Promise<void>`** (Line 206)
+    - Fetches detailed hardware information
+    - Populates `wifiInfo`, `sdrInfo`, `gpsInfo` objects
+    - ~45 LOC
+
+7. **`async fetchWeather(lat: number, lon: number): Promise<void>`** (Line 254)
+    - Fetches weather data from Open-Meteo API
+    - Uses Haversine distance check for cache
+    - ~35 LOC
+
+8. **`async fetchSatelliteData(): Promise<void>`** (Line 293)
+    - Fetches GPS satellite constellation data
+    - ~12 LOC
+
+#### Data Formatting & Display (5 functions)
+
+9. **`getWeatherIcon(code: number, isDay: boolean): string`** (Line 308)
+    - Maps WMO weather code to emoji icon
+    - ~24 LOC (large switch statement)
+
+10. **`getWeatherCondition(code: number): string`** (Line 334)
+    - Maps WMO code to text description
+    - ~16 LOC (switch statement)
+
+11. **`getRfConditions(w: WeatherData): { label: string; cls: string }`** (Line 352)
+    - Calculates RF propagation conditions from weather
+    - ~5 LOC
+
+12. **`getFlightConditions(w: WeatherData): { label: string; cls: string }`** (Line 358)
+    - Calculates flight conditions (VFR/MVFR/IFR)
+    - ~25 LOC
+
+13. **`formatSerial(s: string): string`** (Line 386)
+    - Formats hardware serial numbers
+    - ~3 LOC
+
+**Code Complexity Analysis:**
+
+- **Longest function:** `reverseGeocode()` (~70 LOC)
+- **Async functions:** 5 (all API data fetching)
+- **Pure formatters:** 5
+- **Total API endpoints called:** 5 (geocode, hardware status, hardware details, weather, satellites)
+
+**Inline Type Definitions (Code Smell):**
+
+- `DeviceState`, `WifiInfo`, `SdrInfo`, `GpsInfo`, `WeatherData`
+- **Should be moved to:** `$lib/types/hardware.ts`
+
+**Refactoring Targets:**
+
+1. Extract `reverseGeocode()` to `$lib/services/geo/geocode-service.ts`
+2. Extract `fetchWeather()` to `$lib/services/weather/weather-service.ts`
+3. Extract weather formatters to `$lib/utils/weather-utils.ts`
+4. Move all inline types to `$lib/types/hardware.ts`
+5. Split component into 4 panels: HardwareStatus, GPSPanel, WeatherPanel, ClockDisplay
+
+---
+
+### Hotspot #4: `src/lib/components/dashboard/panels/DevicesPanel.svelte`
+
+**Metrics:**
+
+- **Current LOC:** 1,023 (verified 2026-02-12)
+- **Total Functions:** 14
+- **Complexity:** Medium-High (table management, filtering, sorting)
+
+**Functions (by line number):**
+
+#### State Management (2 functions)
+
+1. **`toggleBand(key: string): void`** (Line 25)
+    - Toggles frequency band visibility
+    - Manages `hiddenBands` Set
+    - ~8 LOC
+
+2. **`handleSort(col: typeof sortColumn): void`** (Line 34)
+    - Handles table column sorting
+    - Toggles sort direction
+    - ~8 LOC
+
+#### Whitelist Management (2 functions)
+
+3. **`addToWhitelist(): void`** (Line 43)
+    - Adds device to whitelist via store action
+    - ~8 LOC
+
+4. **`removeFromWhitelist(mac: string): void`** (Line 52)
+    - Removes device from whitelist
+    - ~3 LOC
+
+#### Device Interaction (2 functions)
+
+5. **`handleRowClick(device: KismetDevice): void`** (Line 56)
+    - Handles device row click
+    - Updates selection and isolation state
+    - ~35 LOC
+
+6. **`lookupDevice(mac: string): KismetDevice | undefined`** (Line 101)
+    - Looks up device by MAC address
+    - ~4 LOC
+
+#### Device Data Access (1 function)
+
+7. **`hasConnections(device: KismetDevice): boolean`** (Line 97)
+    - Checks if device has client connections
+    - ~3 LOC
+
+8. **`getRSSI(device: KismetDevice): number`** (Line 106)
+    - Gets RSSI value from device object
+    - ~3 LOC
+
+#### Formatting Functions (6 functions)
+
+9. **`formatFreq(freq: number): string`** (Line 110)
+    - Formats frequency (MHz/GHz)
+    - ~5 LOC
+
+10. **`formatEncryption(device: KismetDevice): string`** (Line 117)
+    - Formats encryption type display
+    - ~6 LOC
+
+11. **`formatLastSeen(device: KismetDevice): string`** (Line 124)
+    - Formats relative time for last seen
+    - ~11 LOC
+
+12. **`formatPackets(n: number): string`** (Line 137)
+    - Formats packet count with K/M suffixes
+    - ~6 LOC
+
+13. **`formatDataSize(bytes: number): string`** (Line 144)
+    - Formats data size (KB/MB/GB)
+    - ~7 LOC
+
+14. **`formatFirstSeen(device: KismetDevice): string`** (Line 152)
+    - Formats first seen timestamp
+    - ~40 LOC (complex date/time formatting)
+
+#### UI Helper (1 function)
+
+15. **`sortIndicator(col: string): string`** (Line 230)
+    - Returns sort arrow indicator (↑/↓)
+    - ~3 LOC
+
+**Reactive Derived State (Inline Arrow Functions):**
+
+- Lines 195-197: Search filter logic (inline in $derived)
+- Line 230+: Table sorting logic (inline in $derived)
+
+**Code Complexity Analysis:**
+
+- **Longest function:** `formatFirstSeen()` (~40 LOC) - over-complex
+- **Total formatters:** 6 (high cohesion for display logic)
+- **Store coupling:** 2 store modules (kismet-store, dashboard-store)
+- **Total functions:** 15 (including sort indicator)
+
+**Refactoring Targets:**
+
+1. Extract all formatters to `$lib/utils/device-formatters.ts`
+2. Extract `handleRowClick()` logic into smaller functions
+3. Simplify `formatFirstSeen()` (consider using date-fns library)
+4. Split component into: DeviceTable, DeviceFilters, WhitelistManager
+
+---
+
+### Hotspot #5: `src/lib/server/usrp/sweep-manager.ts`
+
+**Metrics:**
+
+- **Current LOC:** 449 (verified 2026-02-12)
+- **Significant reduction from reported 687 LOC** (refactored)
+- **Pattern:** Class-based singleton (extends EventEmitter)
+- **Total Methods:** 18 (11 public, 7 private)
+
+**Class Structure:**
+
+```typescript
+export class UsrpSweepManager extends EventEmitter {
+	private static instance: UsrpSweepManager | null = null;
+
+	// Dependencies
+	private processManager: ProcessManager;
+	private bufferManager: BufferManager;
+
+	// State
+	private isRunning: boolean;
+	private isInitialized: boolean;
+	private sweepSettings: SweepSettings | null;
+	private status: SweepStatus;
+
+	// Constants
+	private readonly FREQUENCY_RANGES: Record<string, FrequencyRange>;
+}
+```
+
+**Public Methods (11):**
+
+1. **`static getInstance(): UsrpSweepManager`** (Line 70)
+    - Singleton pattern getter
+    - ~5 LOC
+
+2. **`async initialize(): Promise<void>`** (Line 80)
+    - Initializes sweep manager
+    - Guards against double initialization
+    - ~13 LOC
+
+3. **`async startSweep(settings: SweepSettings): Promise<boolean>`** (Line 131)
+    - Starts frequency sweep with settings
+    - Complex validation and state management
+    - ~67 LOC (LONG METHOD - refactoring candidate)
+
+4. **`async stopSweep(): Promise<void>`** (Line 203)
+    - Stops current sweep gracefully
+    - ~30 LOC
+
+5. **`async emergencyStop(): Promise<void>`** (Line 238)
+    - Force-kills sweep process
+    - ~23 LOC
+
+6. **`setFrequencyRange(rangeName: string): boolean`** (Line 266)
+    - Sets frequency range by preset name
+    - ~14 LOC
+
+7. **`getAvailableRanges(): Record<string, FrequencyRange>`** (Line 285)
+    - Returns available frequency presets
+    - ~2 LOC
+
+8. **`getStatus(): SweepStatus & { isRunning: boolean; deviceInfo?: string }`** (Line 292)
+    - Gets current sweep status
+    - ~7 LOC
+
+9. **`async cleanup(): Promise<void>`** (Line 424)
+    - Cleans up resources
+    - ~10 LOC
+
+10. **`getBufferStats()`** (Line 439)
+    - Returns buffer statistics
+    - ~2 LOC (delegates to BufferManager)
+
+11. **`getBufferHealth()`** (Line 446)
+    - Returns buffer health status
+    - ~2 LOC (delegates to BufferManager)
+
+**Private Methods (7):**
+
+12. **`private constructor()`** (Line 58)
+    - Singleton pattern (private constructor)
+    - Initializes managers and event handlers
+    - ~7 LOC
+
+13. **`private async _performInitialization(): Promise<void>`** (Line 95)
+    - Performs actual initialization logic
+    - Tests USRP availability
+    - ~30 LOC
+
+14. **`private _buildSweepArgs(settings: SweepSettings): string[]`** (Line 304)
+    - Builds command-line arguments for USRP Python script
+    - ~25 LOC
+
+15. **`private _setupEventHandlers(): void`** (Line 334)
+    - Sets up ProcessManager event handlers
+    - ~7 LOC
+
+16. **`private _handleStdout(data: Buffer): void`** (Line 346)
+    - Processes USRP stdout data
+    - Delegates to BufferManager
+    - ~16 LOC
+
+17. **`private _handleStderr(data: Buffer): void`** (Line 367)
+    - Processes USRP stderr messages
+    - Classifies errors/warnings/info
+    - ~13 LOC
+
+18. **`private _handleProcessExit(code: number | null, signal: string | null): void`** (Line 385)
+    - Handles process exit events
+    - Updates state and emits events
+    - ~18 LOC
+
+19. **`private _emitEvent(event: string, data?: unknown): void`** (Line 408)
+    - Wrapper for EventEmitter.emit
+    - ~2 LOC
+
+20. **`private _emitError(message: string, context?: string): void`** (Line 415)
+    - Emits error event with structured data
+    - ~4 LOC
+
+**Interfaces (3):**
+
+1. **`SweepStatus`** (Line 8)
+    - `state: SystemStatus`
+    - `message?: string`
+    - `details?: any`
+
+2. **`FrequencyRange`** (Line 15)
+    - `start: number` (MHz)
+    - `stop: number` (MHz)
+    - `label: string`
+
+3. **`SweepSettings`** (Line 21)
+    - `frequencyRange: FrequencyRange`
+    - `sampleRate?: number`
+    - `gain?: number`
+    - `bandwidth?: number`
+    - `antennaPort?: 'TX/RX' | 'RX2'`
+
+**Code Complexity Analysis:**
+
+- **Longest method:** `startSweep()` (67 LOC) - exceeds 30 LOC guideline
+- **Async methods:** 5 (initialize, startSweep, stopSweep, emergencyStop, cleanup)
+- **Event handlers:** 3 (stdout, stderr, exit)
+- **Total methods:** 20 (18 methods + constructor + static getter)
+- **Dependencies:** 2 external managers (ProcessManager, BufferManager)
+
+**Design Pattern:**
+
+- ✅ **Singleton Pattern** (single instance management)
+- ✅ **Event Emitter Pattern** (extends EventEmitter)
+- ✅ **Separation of Concerns** (delegates buffer/process management)
+- ⚠️ **Long Methods** (`startSweep` at 67 LOC should be split)
+
+**Refactoring Targets:**
+
+1. Split `startSweep()` into:
+    - `_validateSweepPreconditions()`
+    - `_checkDeviceAvailability()`
+    - `_startSweepProcess(settings)`
+2. Extract state machine logic to separate class
+3. Consider moving event emission to dedicated EventManager
+
+---
+
+## Summary: Hotspot Function Inventory
+
+| File                        | LOC       | Functions | Longest Function     | Async  | Event Handlers | Status           |
+| --------------------------- | --------- | --------- | -------------------- | ------ | -------------- | ---------------- |
+| **gsm-evil/+page.svelte**   | 0         | 0         | N/A                  | N/A    | N/A            | ❌ **EMPTY**     |
+| **DashboardMap.svelte**     | 1,439     | 18        | handleMapLoad (90)   | 2      | 5              | ✅ Complete      |
+| **TopStatusBar.svelte**     | 1,196     | 13        | reverseGeocode (70)  | 5      | 0              | ✅ Complete      |
+| **DevicesPanel.svelte**     | 1,023     | 15        | formatFirstSeen (40) | 0      | 1              | ✅ Complete      |
+| **sweep-manager.ts**        | 449       | 20        | startSweep (67)      | 5      | 3              | ✅ Complete      |
+| **TOTAL (excluding empty)** | **4,107** | **66**    | —                    | **12** | **9**          | **80% Complete** |
+
+**Key Findings:**
+
+1. ❌ **Critical Issue:** Hotspot #1 (gsm-evil) is empty - blocks Phase 1.5 test writing
+2. ✅ **4 of 5 files analyzed** with complete function signatures
+3. 🔴 **3 functions exceed 30 LOC guideline:** handleMapLoad (90), reverseGeocode (70), startSweep (67)
+4. ⚠️ **High async complexity** in TopStatusBar (5 async functions calling different APIs)
+5. ⚠️ **Event handler concentration** in DashboardMap (5 handlers - suggests need for event delegation)
+
+**Next Steps:**
+
+1. 🚨 **Investigate gsm-evil file status** (empty file investigation)
+2. Update hotspot metrics in PHASE-STATUS-TRACKER.md
+3. Proceed with Phase 1.5 test writing for 4 available files
+4. Plan extraction of long methods (>30 LOC) in Phase 4
 
 ---
 
