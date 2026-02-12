@@ -181,8 +181,14 @@ export class KismetService {
 		mac: string,
 		signalDbm: number
 	): { lat: number; lon: number } {
-		if (this.hasValidLocation(deviceLat, deviceLon)) {
-			return { lat: deviceLat!, lon: deviceLon! };
+		if (
+			this.hasValidLocation(deviceLat, deviceLon) &&
+			deviceLat !== null &&
+			deviceLon !== null &&
+			deviceLat !== undefined &&
+			deviceLon !== undefined
+		) {
+			return { lat: deviceLat, lon: deviceLon };
 		}
 
 		if (gpsPosition) {

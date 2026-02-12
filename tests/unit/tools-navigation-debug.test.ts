@@ -25,15 +25,17 @@ describe('Tool Navigation Debug', () => {
 	it('offnet node exists in root children', () => {
 		const offnet = toolHierarchy.root.children.find((c) => c.id === 'offnet');
 		expect(offnet).toBeDefined();
-		expect('children' in offnet!).toBe(true);
-		console.warn('Offnet found:', offnet!.id, offnet!.name);
+		if (!offnet) throw new Error('Offnet not found');
+		expect('children' in offnet).toBe(true);
+		console.warn('Offnet found:', offnet.id, offnet.name);
 	});
 
 	it('onnet node exists in root children', () => {
 		const onnet = toolHierarchy.root.children.find((c) => c.id === 'onnet');
 		expect(onnet).toBeDefined();
-		expect('children' in onnet!).toBe(true);
-		console.warn('Onnet found:', onnet!.id, onnet!.name);
+		if (!onnet) throw new Error('Onnet not found');
+		expect('children' in onnet).toBe(true);
+		console.warn('Onnet found:', onnet.id, onnet.name);
 	});
 
 	it('offnet node has 4 workflow children (RECON, ATTACK, DEFENSE, UTILITIES)', () => {
@@ -47,8 +49,9 @@ describe('Tool Navigation Debug', () => {
 	it('findByPath(["offnet"], root) returns offnet category', () => {
 		const result = findByPath(['offnet'], toolHierarchy.root);
 		expect(result).not.toBeNull();
-		expect(result!).toHaveProperty('id', 'offnet');
-		expect('children' in result!).toBe(true);
+		if (!result) throw new Error('Result not found');
+		expect(result).toHaveProperty('id', 'offnet');
+		expect('children' in result).toBe(true);
 		const cat = result as ToolCategory;
 		console.warn('findByPath result:', cat.id, 'with', cat.children.length, 'children');
 		console.warn(
@@ -60,8 +63,9 @@ describe('Tool Navigation Debug', () => {
 	it('findByPath(["offnet", "recon"], root) returns recon', () => {
 		const result = findByPath(['offnet', 'recon'], toolHierarchy.root);
 		expect(result).not.toBeNull();
-		expect(result!).toHaveProperty('id', 'recon');
-		expect('children' in result!).toBe(true);
+		if (!result) throw new Error('Result not found');
+		expect(result).toHaveProperty('id', 'recon');
+		expect('children' in result).toBe(true);
 	});
 
 	it('findByPath(["offnet", "offnet"], root) returns null', () => {

@@ -110,7 +110,8 @@ class ResourceManager extends EventEmitter {
 		try {
 			// --- HackRF: detection + ownership ---
 			const hackrfDetected = await hackrfMgr.detectHackRF();
-			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF)!;
+			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF);
+			if (!hackrfCurrent) return;
 			hackrfCurrent.detected = hackrfDetected;
 
 			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
@@ -135,7 +136,8 @@ class ResourceManager extends EventEmitter {
 
 			// --- ALFA: detection + ownership ---
 			const alfaIface = await alfaMgr.detectAdapter();
-			const alfaCurrent = this.state.get(HardwareDevice.ALFA)!;
+			const alfaCurrent = this.state.get(HardwareDevice.ALFA);
+			if (!alfaCurrent) return;
 			alfaCurrent.detected = !!alfaIface;
 
 			const alfaProcesses = await alfaMgr.getBlockingProcesses();
@@ -185,7 +187,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false, owner: 'device-not-found' };
+			}
 			if (!current.available) {
 				return { success: false, owner: current.owner ?? 'unknown' };
 			}
@@ -215,7 +220,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false, error: 'device-not-found' };
+			}
 			if (current.owner !== toolName) {
 				return {
 					success: false,
@@ -245,7 +253,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false };
+			}
 			const previousOwner = current.owner;
 
 			// Kill processes based on device type
@@ -272,10 +283,18 @@ class ResourceManager extends EventEmitter {
 	}
 
 	getStatus(): HardwareStatus {
+		const hackrf = this.state.get(HardwareDevice.HACKRF);
+		const alfa = this.state.get(HardwareDevice.ALFA);
+		const bluetooth = this.state.get(HardwareDevice.BLUETOOTH);
+
+		if (!hackrf || !alfa || !bluetooth) {
+			throw new Error('Hardware state not initialized');
+		}
+
 		return {
-			hackrf: { ...this.state.get(HardwareDevice.HACKRF)! },
-			alfa: { ...this.state.get(HardwareDevice.ALFA)! },
-			bluetooth: { ...this.state.get(HardwareDevice.BLUETOOTH)! }
+			hackrf: { ...hackrf },
+			alfa: { ...alfa },
+			bluetooth: { ...bluetooth }
 		};
 	}
 

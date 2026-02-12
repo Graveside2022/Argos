@@ -120,7 +120,9 @@ export async function generateContextCConfig(): Promise<MCPConfiguration> {
 	for (const server of MCP_SERVERS) {
 		const serverDef = generateMCPServer(server.id, server.serverFile);
 		// Container connects to host via host.docker.internal
-		serverDef.env!.ARGOS_API_URL = 'http://host.docker.internal:5173';
+		if (serverDef.env) {
+			serverDef.env.ARGOS_API_URL = 'http://host.docker.internal:5173';
+		}
 		mcpServers[server.id] = serverDef;
 	}
 
