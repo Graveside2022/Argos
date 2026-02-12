@@ -6,9 +6,10 @@ import {
 	analyzeGsmFrames,
 	classifySignalStrength,
 	determineChannelType,
-	parseCellIdentity} from '$lib/services/gsm-evil/protocol-parser';
+	parseCellIdentity
+} from '$lib/services/gsm-evil/protocol-parser';
 import type { FrequencyTestResult } from '$lib/types/gsm';
-import { sanitizeGainForShell,validateGain } from '$lib/validators/gsm';
+import { sanitizeGainForShell, validateGain } from '$lib/validators/gsm';
 
 export type ScanEventType = 'update' | 'result' | 'error';
 
@@ -266,7 +267,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 				const tcpdumpPromise = hostExec(
 					`sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || true`
 				).catch((error: unknown) => {
-					console.debug('[gsm-evil-scan-stream] tcpdump failed', {
+					console.warn('[gsm-evil-scan-stream] tcpdump failed', {
 						error: String(error)
 					});
 					return { stdout: '0', stderr: '' };
@@ -278,7 +279,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 					`sudo timeout ${captureTime} tshark -i lo -f 'udp port 4729' -T fields -e e212.lai.mcc -e e212.lai.mnc -e gsm_a.lac -e gsm_a.bssmap.cell_ci -E separator=, -c 300 2>/dev/null | grep -v '^,*$' | grep -E '[0-9]' | head -30`,
 					{ timeout: captureTime * 1000 + 3000 }
 				).catch((error: unknown) => {
-					console.debug('[gsm-evil-scan-stream] tshark failed', {
+					console.warn('[gsm-evil-scan-stream] tshark failed', {
 						error: String(error)
 					});
 					return { stdout: '', stderr: '' };
@@ -467,7 +468,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 				}
 				// Clean up temp stderr log
 				await hostExec(`rm -f ${stderrLog} 2>/dev/null`).catch((error: unknown) => {
-					console.debug('[gsm-evil] Cleanup: rm stderr log failed (non-critical)', {
+					console.warn('[gsm-evil] Cleanup: rm stderr log failed (non-critical)', {
 						error: String(error)
 					});
 				});
@@ -501,15 +502,15 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 		yield sendUpdate(
 			`[SCAN] ACTIVE FREQUENCIES (${activeResults.length} of ${results.length} tested):`
 		);
-	for (let index = 0; index < activeResults.length; index++) {
-		const result = activeResults[index];
-		const cellInfo = result.mcc
-			? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
-			: '';
-		yield sendUpdate(
-			`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`
-		);
-	}
+		for (let index = 0; index < activeResults.length; index++) {
+			const result = activeResults[index];
+			const cellInfo = result.mcc
+				? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
+				: '';
+			yield sendUpdate(
+				`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`
+			);
+		}
 		if (activeResults.length === 0) {
 			yield sendUpdate('[SCAN] No active GSM frequencies found');
 		}

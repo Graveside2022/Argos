@@ -10,7 +10,8 @@ import { promisify } from 'util';
 import type {
 	CellularCapabilities,
 	DetectedHardware,
-	GPSCapabilities} from '$lib/server/hardware/detection-types';
+	GPSCapabilities
+} from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
 
@@ -72,7 +73,7 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 				}
 			} catch (_error) {
 				// Device might be in use or not accessible
-				console.log(`[SerialDetector] Could not read ${devicePath}:`, _error);
+				console.warn(`[SerialDetector] Could not read ${devicePath}:`, _error);
 			}
 		}
 
@@ -169,7 +170,7 @@ async function detectCellularModems(): Promise<DetectedHardware[]> {
 		}
 	} catch (_error) {
 		// ModemManager not installed or no modems
-		console.log('[SerialDetector] No cellular modems detected via ModemManager');
+		console.warn('[SerialDetector] No cellular modems detected via ModemManager');
 	}
 
 	return hardware;
@@ -243,7 +244,7 @@ async function detectGenericSerialDevices(): Promise<DetectedHardware[]> {
  * Main serial device detection function
  */
 export async function detectSerialDevices(): Promise<DetectedHardware[]> {
-	console.log('[SerialDetector] Scanning for serial hardware...');
+	console.warn('[SerialDetector] Scanning for serial hardware...');
 
 	const results = await Promise.allSettled([
 		detectGPSModules(),
@@ -268,7 +269,7 @@ export async function detectSerialDevices(): Promise<DetectedHardware[]> {
 		return true;
 	});
 
-	console.log(`[SerialDetector] Found ${deduplicated.length} serial devices`);
+	console.warn(`[SerialDetector] Found ${deduplicated.length} serial devices`);
 
 	return deduplicated;
 }
