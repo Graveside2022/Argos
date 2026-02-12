@@ -312,7 +312,7 @@
 			bind:value={inputValue}
 			onkeydown={handleKeydown}
 			placeholder={llmProvider === 'unavailable'
-				? 'Agent unavailable. Install Ollama or configure ANTHROPIC_API_KEY.'
+				? 'Agent unavailable. Configure ANTHROPIC_API_KEY in environment.'
 				: 'Type a message (Enter to send, Shift+Enter for new line)...'}
 			disabled={isStreaming || llmProvider === 'unavailable'}
 			class="chat-input"

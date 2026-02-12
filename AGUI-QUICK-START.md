@@ -6,9 +6,9 @@ Your Argos SDR console now has an AI agent that understands natural language and
 
 ## 🚀 Get Started in 3 Steps
 
-### Step 1: Choose Your LLM Backend
+### Step 1: Configure Claude API
 
-**Option A: Online Mode (Best Quality)**
+**Set up Anthropic Claude API**
 
 ```bash
 # Set your API key
@@ -18,21 +18,12 @@ export ANTHROPIC_API_KEY="your-key-here"
 echo 'ANTHROPIC_API_KEY=your-key-here' >> .env
 ```
 
-**Option B: Offline Mode (NTC/JMRC Ready)**
+**Get an API key:**
 
-```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull the model (1B - safe for RPi 5 8GB RAM)
-ollama pull llama3.2:1b
-
-# Verify
-curl http://localhost:11434/api/tags
-```
-
-**Option C: Hybrid (Recommended)**
-Do both! Agent uses Claude when online, Ollama offline.
+1. Visit https://console.anthropic.com/
+2. Create an account or sign in
+3. Navigate to API Keys
+4. Generate a new key and copy it
 
 ### Step 2: Start Argos
 
@@ -151,22 +142,7 @@ All attack tools require explicit approval:
 
 - **Pros**: Smarter, faster, better understanding
 - **Cons**: Needs internet, API costs, data leaves device
-- **Use When**: Back at base, high-stakes operations
-
-### Ollama (Offline)
-
-- **Pros**: Works anywhere, free, data stays local, OPSEC
-- **Cons**: Slower, less capable, uses ~4GB RAM
-- **Use When**: Field deployment, NTC/JMRC, disconnected ops
-
-### Hybrid Mode
-
-Agent automatically:
-
-1. Checks internet connectivity
-2. Tries Anthropic Claude API
-3. Falls back to Ollama if offline
-4. You get best of both worlds!
+- **Use When**: All deployments (online connectivity required)
 
 ## 🛠 Available MCP Tools
 
@@ -205,9 +181,6 @@ curl http://localhost:5173/api/agent/status
 
 # What tools are available?
 curl http://localhost:5173/api/mcp
-
-# Test Ollama
-curl http://localhost:11434/api/tags
 ```
 
 ## ⚡ Keyboard Shortcuts
@@ -224,17 +197,18 @@ curl http://localhost:11434/api/tags
 ### "Agent unavailable"
 
 ```bash
-# Install Ollama OR set API key
-ollama pull llama3.2:3b
-# OR
+# Set your API key
 export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Or add to .env file
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env
 ```
 
 ### Agent responds slowly
 
-- Using Ollama? Normal (2-3 sec on RPi 5)
-- Upgrade to Claude API for <500ms response
-- Check RPi 5 isn't running heavy tasks
+- Claude API typically responds in <500ms
+- Check internet connectivity
+- Verify RPi 5 isn't running heavy background tasks
 
 ### Tool calls fail
 

@@ -158,7 +158,6 @@ cat > framework-config.json << 'EOF'
         "src/lib/styles/hackrf/style.css",
         "src/lib/styles/hackrf/monochrome-theme.css",
         "src/lib/styles/hackrf/geometric-backgrounds.css",
-        "src/lib/styles/hackrf/custom-components-exact.css",
         "src/lib/styles/hackrf/saasfly-buttons.css"
       ]
     },

@@ -1,4 +1,4 @@
-import { derived,writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
@@ -7,7 +7,7 @@ import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
  * Agent Context Store - AG-UI Shared State Bridge
  *
  * This store implements the AG-UI shared state pattern, providing bidirectional
- * context synchronization between the Argos UI and the agent (Ollama).
+ * context synchronization between the Argos UI and the agent (Claude AI).
  *
  * Architecture:
  * - Captures UI interactions (device clicks, map state, etc.)

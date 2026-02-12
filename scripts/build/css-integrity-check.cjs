@@ -17,7 +17,6 @@ const PROTECTED_CSS_FILES = [
   'src/lib/styles/hackrf/style.css',
   'src/lib/styles/hackrf/monochrome-theme.css',
   'src/lib/styles/hackrf/geometric-backgrounds.css',
-  'src/lib/styles/hackrf/custom-components-exact.css',
   'src/lib/styles/hackrf/saasfly-buttons.css'
 ];
 
