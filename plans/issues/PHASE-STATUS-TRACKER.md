@@ -1,8 +1,9 @@
 # Argos Codebase Audit - Phase Status Tracker
 
-**Last Updated:** 2026-02-12 18:15 UTC
+**Last Updated:** 2026-02-12 18:45 UTC
 **Current Branch:** dev-branch-1
 **Audit Plan:** 2026-02-11-full-codebase-audit-plan.md
+**Completed Work Verification:** See `completed/` subfolder for verification reports
 
 ---
 
@@ -370,39 +371,204 @@
 
 ---
 
-## Remaining Work Summary
+## ACTIONABLE REMAINING WORK
 
-### Immediate (Next Session)
+### Phase 1: Survey Completion (2-3 hours) 🔴 BLOCKING PHASE 2
 
-1. **Complete Phase 1 Survey** (2-3 hours)
-    - Finish function inventory for hotspot files
-    - Complete configuration and documentation audit
-    - Generate final dependency graph
+**Must complete before Phase 2 can start.**
 
-### Short-term (1-2 days)
+#### 1.1 Function Inventory (1 hour)
 
-2. **Complete Phase 3 Organization** (1-2 hours)
-    - File naming standardization
-    - Documentation consolidation
-    - Script cleanup
+- [ ] Extract function signatures from `src/routes/gsm-evil/+page.svelte` (3,096 LOC)
+- [ ] Extract function signatures from `src/lib/components/dashboard/DashboardMap.svelte` (1,436 LOC)
+- [ ] Extract function signatures from `src/lib/components/dashboard/TopStatusBar.svelte` (1,195 LOC)
+- [ ] Extract function signatures from `src/lib/server/usrp/sweep-manager.ts` (687 LOC)
+- [ ] Extract function signatures from `src/lib/components/dashboard/panels/DevicesPanel.svelte` (669 LOC)
+- [ ] Document function count, complexity (parameters, LOC) for each file
+- [ ] Append findings to `phase-1-production-survey-report.md`
 
-3. **Execute Phase 2: Dead Code Elimination** (3-4 hours)
-    - Awaiting Phase 1 dependency graph
-    - Safe removal of unused code
-    - Verification after each removal
+**Definition of Done:** Each hotspot file has section listing all exported functions with signature + LOC count.
 
-### Medium-term (3-5 days)
+#### 1.2 Infrastructure Survey (1 hour)
 
-4. **Address P0 Hotspots** (6-8 hours)
-    - Refactor gsm-evil/+page.svelte
-    - Decompose DashboardMap.svelte
-    - Simplify TopStatusBar.svelte
+- [ ] Audit all config files in `/config/` directory (list files, purpose, last modified)
+- [ ] Audit all scripts in `/scripts/` directory (list files, purpose, dependencies)
+- [ ] List all markdown files in `/docs/` directory with purpose
+- [ ] Check for unused config files (compare imports vs. actual usage)
+- [ ] Append findings to `phase-1-infrastructure-survey-report.md`
 
-5. **Execute Phase 5: Final Verification** (2-3 hours)
-    - Full test suite
-    - Build verification
-    - Performance testing
-    - Security audit
+**Definition of Done:** Complete inventory of config files, scripts, docs with "actively used" vs "potentially unused" classification.
+
+#### 1.3 Dependency Graph (30 min)
+
+- [ ] Generate visual dependency graph using `madge` or similar tool
+- [ ] Identify circular dependencies (if any)
+- [ ] Export graph as SVG/PNG and markdown table
+- [ ] Add to `phase-1-production-survey-report.md`
+
+**Definition of Done:** Visual dependency graph showing import relationships, list of circular deps (or confirmation of none).
+
+---
+
+### Phase 3: Organization Completion (1-2 hours) ⚡ NON-BLOCKING
+
+**Can be done in parallel with Phase 1.**
+
+#### 3.1 File Naming Standardization (30 min)
+
+- [ ] Audit file naming consistency in `src/lib/components/`
+- [ ] Identify files not following kebab-case convention
+- [ ] List files with inconsistent suffixes (.service.ts vs Service.ts)
+- [ ] Document findings in `phase-3-organization-completion-report.md`
+- [ ] (Optional) Rename files if < 10 files affected
+
+**Definition of Done:** Document listing all naming inconsistencies, with decision on whether to fix now or defer.
+
+#### 3.2 Documentation Consolidation (30 min)
+
+- [ ] Move completed work docs to `plans/issues/completed/`
+- [ ] Create `docs/README.md` as documentation index
+- [ ] List all docs with one-line purpose
+- [ ] Identify duplicate or outdated docs for removal
+- [ ] Archive old planning docs to `plans/archive/` if needed
+
+**Definition of Done:** Single source of truth for where each type of documentation lives.
+
+#### 3.3 Script Cleanup (30 min)
+
+- [ ] Audit all shell scripts in `scripts/`
+- [ ] Add header comment to scripts missing them (purpose, usage, requirements)
+- [ ] Mark deprecated scripts with DEPRECATED: prefix
+- [ ] Document in `phase-3-organization-completion-report.md`
+
+**Definition of Done:** All scripts have clear purpose comment, deprecated ones marked.
+
+---
+
+### Phase 2: Dead Code Elimination (3-4 hours) ⏸️ BLOCKED BY PHASE 1
+
+**Cannot start until Phase 1 dependency graph is complete.**
+
+#### 2.1 TypeScript/Svelte Dead Code (2 hours)
+
+- [ ] Use dependency graph to identify unreferenced exports
+- [ ] Verify candidates are truly unused (grep across codebase)
+- [ ] Remove dead exports one file at a time
+- [ ] Run `npm run typecheck && npm test` after EACH removal
+- [ ] Commit after each successful removal with descriptive message
+
+**Definition of Done:** All unreferenced TypeScript/Svelte exports removed, all tests passing.
+
+#### 2.2 Python Dead Code (1 hour)
+
+- [ ] Audit `service/` directory for unused Python modules
+- [ ] Check import statements in Python services
+- [ ] Remove unused Python files
+- [ ] Test affected services (HackRF sweep, GPS, etc.)
+
+**Definition of Done:** Unused Python modules removed, hardware services still functional.
+
+#### 2.3 Infrastructure Dead Code (30 min)
+
+- [ ] Remove unused config files identified in Phase 1.2
+- [ ] Remove deprecated scripts marked in Phase 3.3
+- [ ] Clean up unused dependencies in package.json (run `npm prune`)
+- [ ] Document removals in `phase-2-dead-code-report.md`
+
+**Definition of Done:** Unused configs/scripts removed, package.json cleaned.
+
+---
+
+### Phase 5: Final Verification (2-3 hours) ⏸️ BLOCKED BY PHASE 2, 3
+
+**Cannot start until Phase 1, 2, 3 are 100% complete.**
+
+#### 5.1 Test Suite Execution (30 min)
+
+- [ ] Run `npm run test` (all tests)
+- [ ] Run `npm run test:integration`
+- [ ] Run `npm run test:e2e`
+- [ ] Verify 137/137 tests passing (or new count if tests added)
+
+**Definition of Done:** All test suites passing with no failures.
+
+#### 5.2 Build & Type Safety (15 min)
+
+- [ ] Run `npm run typecheck` (0 errors expected)
+- [ ] Run `npm run lint` (0 warnings expected)
+- [ ] Run `npm run build` (successful build)
+
+**Definition of Done:** Clean build with no TypeScript or ESLint issues.
+
+#### 5.3 Performance Baseline (30 min)
+
+- [ ] Run `npm run test:performance`
+- [ ] Compare against baseline metrics from Phase 0
+- [ ] Document any regressions or improvements
+- [ ] Add to `phase-5-verification-report.md`
+
+**Definition of Done:** Performance metrics documented, no significant regressions (>10%).
+
+#### 5.4 Security Audit (30 min)
+
+- [ ] Run `npm audit` (check for vulnerabilities)
+- [ ] Review authentication implementation (ARGOS_API_KEY enforcement)
+- [ ] Check input sanitization is used in all API routes
+- [ ] Verify no secrets in git history
+- [ ] Document in `phase-5-verification-report.md`
+
+**Definition of Done:** No critical vulnerabilities, security patterns verified.
+
+#### 5.5 Documentation Verification (30 min)
+
+- [ ] Verify CLAUDE.md is up-to-date
+- [ ] Verify README.md reflects current state
+- [ ] Check all docs in `docs/` are accurate
+- [ ] Update any stale documentation
+
+**Definition of Done:** All documentation accurate and current.
+
+---
+
+### P0 Hotspot Refactoring (6-8 hours) 🔮 FUTURE WORK
+
+**Not required for audit completion, but strongly recommended before production release.**
+
+This work is OUT OF SCOPE for the current audit phases but should be addressed in a future refactoring sprint.
+
+#### Hotspot 1: gsm-evil/+page.svelte (3,096 LOC) - 3 hours
+
+- [ ] Extract tower data to separate JSON file
+- [ ] Extract inline components to separate .svelte files
+- [ ] Move business logic to service layer
+- [ ] Target: Reduce to < 500 LOC
+
+#### Hotspot 2: DashboardMap.svelte (1,436 LOC) - 2 hours
+
+- [ ] Extract Leaflet map logic to separate component
+- [ ] Extract marker rendering to separate component
+- [ ] Reduce store coupling
+- [ ] Target: Reduce to < 400 LOC
+
+#### Hotspot 3: TopStatusBar.svelte (1,195 LOC) - 1.5 hours
+
+- [ ] Extract inline types to separate type files
+- [ ] Break into sub-components (NetworkStatus, GPSStatus, HardwareStatus)
+- [ ] Target: Reduce to < 300 LOC
+
+---
+
+## Remaining Work Timeline
+
+| Phase                | Hours          | Blocking                 | Start Condition          | End Condition                                          |
+| -------------------- | -------------- | ------------------------ | ------------------------ | ------------------------------------------------------ |
+| Phase 1 Survey       | 2-3            | Blocks Phase 2           | Can start now            | Function inventory + infra survey + dep graph complete |
+| Phase 3 Organization | 1-2            | None                     | Can start now            | File naming + docs + scripts standardized              |
+| Phase 2 Dead Code    | 3-4            | Blocked by Phase 1       | Phase 1 100% done        | All dead code removed, tests passing                   |
+| Phase 5 Verification | 2-3            | Blocked by Phase 1, 2, 3 | Phases 1, 2, 3 100% done | All quality gates pass                                 |
+| **TOTAL**            | **8-11 hours** | -                        | -                        | All phases 100% complete                               |
+
+**P0 Hotspots** are future work (out of scope for audit).
 
 ---
 
