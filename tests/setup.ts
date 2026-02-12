@@ -25,7 +25,7 @@ global.WebSocket = vi.fn(() => ({
 })) as unknown as typeof WebSocket;
 
 // Store original fetch for integration tests that need real HTTP calls
-(globalThis as any).__realFetch = globalThis.fetch;
+(globalThis as typeof globalThis & { __realFetch?: typeof fetch }).__realFetch = globalThis.fetch;
 
 // Mock fetch for unit tests (integration tests restore real fetch via __realFetch)
 global.fetch = vi.fn();
