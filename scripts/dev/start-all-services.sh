@@ -14,7 +14,7 @@ PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Project directories
-ARGOS_DIR="/home/ubuntu/projects/Argos"
+ARGOS_DIR="/home/kali/Documents/Argos/Argos"
 HACKRF_BACKEND_DIR="$ARGOS_DIR/hackrf_emitter/backend"
 HACKRF_FRONTEND_DIR="$ARGOS_DIR/hackrf_emitter/frontend"
 
@@ -204,9 +204,9 @@ show_status() {
     echo "  [START] Argos + HackRF Emitter System Status"
     echo "==========================================="
     echo ""
-    echo "[OK] Main Argos App:     http://100.79.154.94:5173"
-    echo "[OK] HackRF Frontend:    http://100.79.154.94:3000"
-    echo "[OK] HackRF Backend:     http://100.79.154.94:5000"
+    echo "[OK] Main Argos App:     http://localhost:5173"
+    echo "[OK] HackRF Frontend:    http://localhost:3000"
+    echo "[OK] HackRF Backend:     http://localhost:5000"
     echo ""
     echo "Process IDs:"
     echo "  Argos:            $ARGOS_PID"
@@ -219,7 +219,7 @@ show_status() {
     echo "  HackRF Frontend:  $HACKRF_FRONTEND_DIR/frontend_startup.log"
     echo ""
     echo "[TARGET] Quick Access:"
-    echo "  - Navigate to http://100.79.154.94:5173 for main dashboard"
+    echo "  - Navigate to http://localhost:5173 for main dashboard"
     echo "  - Click 'RF Emitter' to open HackRF interface"
     echo "  - All services will stay running until you press Ctrl+C"
     echo ""
