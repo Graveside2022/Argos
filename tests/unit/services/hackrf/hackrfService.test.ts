@@ -567,6 +567,10 @@ describe('HackRFService - Core SDR Functionality', () => {
 			expect(status.connected).toBe(false);
 
 			// Should be able to reconnect
+		vi.mocked(hackrfAPI.getStatus).mockResolvedValue({
+			connected: true,
+			sweeping: false
+		});
 			await hackrfService.connect();
 
 			const newStatus = await new Promise<HackRFStatus>((resolve) => {
