@@ -45,6 +45,7 @@
 
 		// If we're adding a split (pendingSplitSessionId is set)
 		if (pendingSplitSessionId) {
+			const originalSessionId = pendingSplitSessionId;
 			terminalPanelState.update((s) => {
 				if (s.splits) {
 					// Already split - add to existing split (max 4 panes)
@@ -66,7 +67,7 @@
 						...s,
 						splits: {
 							id: Math.random().toString(36).substring(2, 9),
-							sessionIds: [pendingSplitSessionId!, newSessionId],
+							sessionIds: [originalSessionId, newSessionId],
 							widths: [50, 50]
 						}
 					};
