@@ -9,8 +9,9 @@ import { dev } from '$app/environment';
 import {
 	getSessionCookieHeader,
 	validateApiKey,
-	validateSecurityConfig} from '$lib/server/auth/auth-middleware';
-import { globalHardwareMonitor,scanAllHardware } from '$lib/server/hardware';
+	validateSecurityConfig
+} from '$lib/server/auth/auth-middleware';
+import { globalHardwareMonitor, scanAllHardware } from '$lib/server/hardware';
 import { WebSocketManager } from '$lib/server/kismet';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
 import { RateLimiter } from '$lib/server/security/rate-limiter';
@@ -28,6 +29,16 @@ const HARDWARE_PATH_PATTERN =
 // This runs at module load time, before the server accepts any connections.
 // If the key is missing, the process exits with a FATAL error. (Phase 2.1.1)
 validateSecurityConfig();
+
+// Safe client address getter - handles VPN/Tailscale networking issues
+// Returns 'unknown' when client address cannot be determined (e.g., behind Mullvad VPN)
+function getSafeClientAddress(event: Parameters<Handle>[0]['event']): string {
+	try {
+		return event.getClientAddress();
+	} catch {
+		return 'unknown';
+	}
+}
 
 // Create WebSocket server with payload limit (Phase 2.1.6).
 // noServer mode does not support verifyClient -- authentication is enforced
@@ -163,7 +174,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (!wsAuthenticated) {
 			logAuthEvent({
 				eventType: 'WS_AUTH_FAILURE',
-				ip: event.getClientAddress(),
+				ip: getSafeClientAddress(event),
 				method: event.request.method,
 				path: event.url.pathname,
 				userAgent: event.request.headers.get('user-agent') || undefined,
@@ -195,7 +206,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 			logAuthEvent({
 				eventType,
-				ip: event.getClientAddress(),
+				ip: getSafeClientAddress(event),
 				method: event.request.method,
 				path: event.url.pathname,
 				userAgent: event.request.headers.get('user-agent') || undefined,
@@ -212,7 +223,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 		logAuthEvent({
 			eventType: 'AUTH_SUCCESS',
-			ip: event.getClientAddress(),
+			ip: getSafeClientAddress(event),
 			method: event.request.method,
 			path: event.url.pathname,
 			userAgent: event.request.headers.get('user-agent') || undefined
@@ -221,7 +232,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Rate limiting -- runs after auth, before route processing (Phase 2.2.5)
 	const path = event.url.pathname;
-	const clientIp = event.getClientAddress();
+	const clientIp = getSafeClientAddress(event);
 
 	// Skip rate limiting for streaming/SSE endpoints and map tiles
 	// Map tiles can make 50+ requests during initial load (style, sprites, fonts, vector tiles)
@@ -298,7 +309,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.append('Set-Cookie', getSessionCookieHeader());
 		logAuthEvent({
 			eventType: 'SESSION_CREATED',
-			ip: event.getClientAddress(),
+			ip: getSafeClientAddress(event),
 			method: event.request.method,
 			path: event.url.pathname,
 			userAgent: event.request.headers.get('user-agent') || undefined
