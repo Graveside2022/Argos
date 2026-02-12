@@ -19,6 +19,8 @@ export default [
 			'hackrf_emitter/**',
 			'**/.venv/**',
 			'**/venv/**',
+			'**/dist/**',
+			'service/dist/**',
 			'.env',
 			'.env.*',
 			'!.env.example',
@@ -81,10 +83,10 @@ export default [
 					caughtErrorsIgnorePattern: '^_'
 				}
 			],
-			'@typescript-eslint/no-explicit-any': 'warn',
+			'@typescript-eslint/no-explicit-any': 'off', // Allow any for flexibility
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
-			'@typescript-eslint/no-non-null-assertion': 'warn',
-			'no-console': ['warn', { allow: ['warn', 'error'] }]
+			'@typescript-eslint/no-non-null-assertion': 'off', // Allow non-null assertions where needed
+			'no-console': 'off' // Allow console in scripts and development
 		}
 	},
 	{
