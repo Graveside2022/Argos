@@ -1,0 +1,16 @@
+# ESLint ignore patterns
+# Build artifacts
+.svelte-kit/
+build/
+dist/
+.next/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Generated files
+*.generated.*
