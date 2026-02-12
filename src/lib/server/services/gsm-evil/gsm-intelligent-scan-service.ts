@@ -501,14 +501,15 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 		yield sendUpdate(
 			`[SCAN] ACTIVE FREQUENCIES (${activeResults.length} of ${results.length} tested):`
 		);
-		activeResults.forEach((result, index) => {
-			const cellInfo = result.mcc
-				? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
-				: '';
-			yield sendUpdate(
-				`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`
-			);
-		});
+	for (let index = 0; index < activeResults.length; index++) {
+		const result = activeResults[index];
+		const cellInfo = result.mcc
+			? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
+			: '';
+		yield sendUpdate(
+			`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`
+		);
+	}
 		if (activeResults.length === 0) {
 			yield sendUpdate('[SCAN] No active GSM frequencies found');
 		}
