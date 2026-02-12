@@ -52,7 +52,7 @@ for (const signal of signals) {
 
 ## Migrations
 
-**Location:** [src/lib/database/migrations/](../src/lib/database/migrations/)
+**Location:** [src/lib/server/db/migrations/](../../src/lib/server/db/migrations/)
 
 **Pattern:**
 

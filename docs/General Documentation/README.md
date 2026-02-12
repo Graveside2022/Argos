@@ -7,7 +7,7 @@ This directory contains detailed documentation for specific topics, referenced f
 Claude Code can load these files on-demand using the `@import` syntax:
 
 ```markdown
-For auth flow details: @docs/authentication.md
+For auth flow details: see security-architecture.md
 ```
 
 Each document is focused, actionable, and contains only information Claude cannot infer from the codebase itself.
