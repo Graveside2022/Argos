@@ -1,15 +1,16 @@
-import { BaseWebSocket, type BaseWebSocketConfig } from './base';
-import { kismetStore } from '$lib/stores/kismet';
-import { updateKismetConnection } from '$lib/stores/connection';
 import { get } from 'svelte/store';
-import type { 
-    KismetDevice,
-    KismetNetwork,
-    KismetStatus,
-    KismetAlert,
-    KismetGPS
-} from '$lib/types/kismet';
+
+import { updateKismetConnection } from '$lib/stores/connection';
+import { kismetStore } from '$lib/stores/kismet';
 import { KismetEvent } from '$lib/types/enums';
+import type { 
+    KismetAlert,
+    KismetDevice,
+    KismetGPS,
+    KismetNetwork,
+    KismetStatus} from '$lib/types/kismet';
+
+import { BaseWebSocket, type BaseWebSocketConfig } from './base';
 
 export type KismetWebSocketConfig = BaseWebSocketConfig;
 

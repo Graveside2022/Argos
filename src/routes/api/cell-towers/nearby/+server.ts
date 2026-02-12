@@ -1,7 +1,9 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { findNearbyCellTowers } from '$lib/server/services/cell-towers/cell-tower-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/cell-towers/nearby?lat=...&lon=...&radius=5

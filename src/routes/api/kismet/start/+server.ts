@@ -1,6 +1,8 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+
 import { startKismet } from '$lib/server/services/kismet/kismet-control-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/kismet/start

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type {
-	HackRFStatus,
 	HackRFConfig,
-	SpectrumData,
+	HackRFStatus,
 	SignalDetection,
+	SpectrumData,
 	SweepResult
 } from '$lib/services/api/hackrf';
 
@@ -81,8 +82,8 @@ vi.mock('$lib/types/enums', () => ({
 }));
 
 // Import after mocking
-import { HackRFService } from '$lib/services/hackrf/hackrf-service';
 import { hackrfAPI } from '$lib/services/api';
+import { HackRFService } from '$lib/services/hackrf/hackrf-service';
 
 // Mock WebSocket for testing
 class MockWebSocket {

@@ -1,6 +1,7 @@
-import { WebSocketServer } from 'ws';
 import type { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+
 import { validateApiKey } from '$lib/server/auth/auth-middleware';
 import { logger } from '$lib/utils/logger';
 

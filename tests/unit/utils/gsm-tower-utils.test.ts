@@ -8,15 +8,15 @@
  * Focus: Inputs → Outputs, critical paths, edge cases
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect,it } from 'vitest';
+
+import { mccToCountry,mncToCarrier } from '$lib/data/carrier-mappings';
+import type { CapturedIMSI } from '$lib/types/gsm';
 import {
 	groupIMSIsByTower,
+	type SortColumn,
 	sortTowers,
-	type TowerGroup,
-	type SortColumn
-} from '$lib/utils/gsm-tower-utils';
-import { mncToCarrier, mccToCountry } from '$lib/data/carrier-mappings';
-import type { CapturedIMSI } from '$lib/types/gsm';
+	type TowerGroup} from '$lib/utils/gsm-tower-utils';
 
 describe('groupIMSIsByTower', () => {
 	describe('tower identification', () => {

@@ -1,7 +1,8 @@
-import type { RequestHandler } from './$types';
-import type { SpectrumData } from '$lib/server/hackrf/types';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
-import { logInfo, logDebug } from '$lib/utils/logger';
+import type { SpectrumData } from '$lib/server/hackrf/types';
+import { logDebug,logInfo } from '$lib/utils/logger';
+
+import type { RequestHandler } from './$types';
 
 // Track active SSE connections with metadata
 interface ConnectionInfo {

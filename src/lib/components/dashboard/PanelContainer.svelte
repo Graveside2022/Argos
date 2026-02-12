@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { activePanel } from '$lib/stores/dashboard/dashboard-store';
-	import OverviewPanel from './panels/OverviewPanel.svelte';
-	import ToolsPanel from './panels/ToolsPanel.svelte';
+
 	import LayersPanel from './panels/LayersPanel.svelte';
+	import OverviewPanel from './panels/OverviewPanel.svelte';
 	import SettingsPanel from './panels/SettingsPanel.svelte';
+	import ToolsPanel from './panels/ToolsPanel.svelte';
 
 	let isOpen = $derived($activePanel !== null);
 </script>

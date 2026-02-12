@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 test.describe('Smoke Test - Happy Path Navigation', () => {
 	test('should navigate from console to tactical map and load core components', async ({

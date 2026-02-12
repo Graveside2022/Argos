@@ -1,7 +1,8 @@
 // Simplified Kismet controller — delegates to KismetProxy
+import type { KismetStatusResponse } from '$lib/types/service-responses';
+
 import { KismetProxy } from './kismet-proxy';
 import type { KismetDevice } from './types';
-import type { KismetStatusResponse } from '$lib/types/service-responses';
 
 class FusionKismetController {
 	private static instance: FusionKismetController | null = null;

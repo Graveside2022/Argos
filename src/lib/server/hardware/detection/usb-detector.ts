@@ -5,13 +5,13 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 import type {
+	BluetoothCapabilities,
 	DetectedHardware,
 	HardwareCategory,
 	SDRCapabilities,
-	WiFiCapabilities,
-	BluetoothCapabilities
-} from '$lib/server/hardware/detection-types';
+	WiFiCapabilities} from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
 

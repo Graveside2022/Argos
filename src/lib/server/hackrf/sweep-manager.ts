@@ -1,21 +1,22 @@
-import type {
-	SweepConfig,
-	SweepStatus,
-	SpectrumData,
-	HackRFHealth,
-} from "./types";
-import { EventEmitter } from "events";
 import { exec } from "child_process";
-import { logInfo, logError, logWarn } from "$lib/utils/logger";
-import { SystemStatus } from "$lib/types/enums";
+import { EventEmitter } from "events";
+
 import { resourceManager } from "$lib/server/hardware/resource-manager";
 import { HardwareDevice } from "$lib/server/hardware/types";
-
-// Import modular services
-import { ProcessManager } from "$lib/services/hackrf/sweep-manager/process-manager";
-import { FrequencyCycler } from "$lib/services/hackrf/sweep-manager/frequency-cycler";
 import { BufferManager } from "$lib/services/hackrf/sweep-manager/buffer-manager";
 import { ErrorTracker } from "$lib/services/hackrf/sweep-manager/error-tracker";
+import { FrequencyCycler } from "$lib/services/hackrf/sweep-manager/frequency-cycler";
+// Import modular services
+import { ProcessManager } from "$lib/services/hackrf/sweep-manager/process-manager";
+import { SystemStatus } from "$lib/types/enums";
+import { logError, logInfo, logWarn } from "$lib/utils/logger";
+
+import type {
+	HackRFHealth,
+	SpectrumData,
+	SweepConfig,
+	SweepStatus,
+} from "./types";
 
 /**
  * Manages HackRF sweep operations using modular service architecture

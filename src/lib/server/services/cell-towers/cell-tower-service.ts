@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 
 // OpenCellID getInArea limits bbox to 4 km² (~2km x 2km).
 // We tile a larger radius into ~1.5km x 1.5km tiles and fetch in parallel.

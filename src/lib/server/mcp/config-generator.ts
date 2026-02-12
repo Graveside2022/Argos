@@ -3,9 +3,10 @@
  * Auto-generates MCP configs for Context B (host) and Context C (container)
  */
 
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { mkdir,writeFile } from 'fs/promises';
 import { homedir } from 'os';
+import { join } from 'path';
+
 import type { MCPConfiguration, MCPServerDefinition } from './types';
 
 /**

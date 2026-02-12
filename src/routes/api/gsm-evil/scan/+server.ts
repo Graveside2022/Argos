@@ -1,6 +1,8 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { performGsmScan } from '$lib/server/services/gsm-evil/gsm-scan-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/gsm-evil/scan

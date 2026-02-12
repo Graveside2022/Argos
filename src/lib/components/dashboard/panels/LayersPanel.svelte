@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { signalBands } from '$lib/utils/signal-utils';
 	import {
-		layerVisibility,
-		toggleLayerVisibility,
 		activeBands,
-		toggleBand
-	} from '$lib/stores/dashboard/dashboard-store';
+		layerVisibility,
+		toggleBand,
+		toggleLayerVisibility	} from '$lib/stores/dashboard/dashboard-store';
+	import { signalBands } from '$lib/utils/signal-utils';
 </script>
 
 <div class="layers-panel">

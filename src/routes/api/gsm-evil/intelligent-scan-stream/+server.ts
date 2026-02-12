@@ -1,5 +1,6 @@
-import type { RequestHandler } from './$types';
 import { performIntelligentScan } from '$lib/server/services/gsm-evil/gsm-intelligent-scan-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/gsm-evil/intelligent-scan-stream

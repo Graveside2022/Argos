@@ -3,10 +3,10 @@
  * Uses IndexedDB for browser-based storage with spatial indexing
  */
 
-import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
-import type { NetworkEdge } from '$lib/types/network';
-import type { SignalSource, DeviceRecord as SharedDeviceRecord } from '$lib/types/shared';
 import { SignalSource as SignalSourceEnum } from '$lib/types/enums';
+import type { NetworkEdge } from '$lib/types/network';
+import type { DeviceRecord as SharedDeviceRecord,SignalSource } from '$lib/types/shared';
+import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
 
 export interface SignalRecord {
 	id: string;

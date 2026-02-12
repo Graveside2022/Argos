@@ -1,14 +1,14 @@
 /**
  * Debug test: Verify tools navigation works correctly
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock $app/environment before importing the store
 vi.mock('$app/environment', () => ({
 	browser: false
 }));
 
-import { toolHierarchy, findByPath, countTools } from '$lib/data/tool-hierarchy';
+import { countTools,findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolCategory } from '$lib/types/tools';
 
 describe('Tool Navigation Debug', () => {

@@ -1,14 +1,14 @@
 import { hackrfAPI } from '$lib/services/hackrf/api';
+import { SignalAggregator } from '$lib/services/map/signal-aggregator';
 import { spectrumData } from '$lib/stores/hackrf';
 import {
+	clearAllSignals,
 	hackrfStore,
 	setConnectionStatus,
 	setSearchingState,
 	setTargetFrequency,
-	clearAllSignals,
 	type SimplifiedSignal
 } from '$lib/stores/tactical-map/hackrf-store';
-import { SignalAggregator } from '$lib/services/map/signal-aggregator';
 
 export class HackRFService {
 	private spectrumUnsubscribe: (() => void) | null = null;

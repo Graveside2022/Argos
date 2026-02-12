@@ -3,7 +3,8 @@
  * Advanced device tracking and analysis
  */
 
-import { writable, derived, type Readable } from 'svelte/store';
+import { derived, type Readable,writable } from 'svelte/store';
+
 import type { KismetDevice } from '$lib/services/api/kismet';
 
 interface EnrichedDevice extends KismetDevice {

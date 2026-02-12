@@ -15,10 +15,10 @@ export { detectUSBDevices } from "./detection/usb-detector";
 
 // detection (hardware-detector)
 export {
-	HardwareMonitor,
 	detectHardwareById,
 	getCompatibleHardware,
 	globalHardwareMonitor,
+	HardwareMonitor,
 	isCategoryAvailable,
 	isHardwareAvailable,
 	scanAllHardware,
@@ -44,14 +44,14 @@ export type {
 // hackrf-manager
 export {
 	detectHackRF,
-	getBlockingProcesses as getHackRFBlockingProcesses,
 	getContainerStatus,
+	getBlockingProcesses as getHackRFBlockingProcesses,
 	killBlockingProcesses as killHackRFBlockingProcesses,
 	stopContainers,
 } from "./hackrf-manager";
 
 // hardware-registry
-export { HardwareRegistry, globalHardwareRegistry } from "./hardware-registry";
+export { globalHardwareRegistry,HardwareRegistry } from "./hardware-registry";
 
 // resource-manager
 export { getResourceManager, resourceManager } from "./resource-manager";

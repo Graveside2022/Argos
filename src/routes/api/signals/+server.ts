@@ -1,7 +1,9 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error,json } from '@sveltejs/kit';
+
 import { getRFDatabase } from '$lib/server/db/database';
 import type { SignalMarker } from '$lib/types/signals';
+
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ url }) => {
 	try {

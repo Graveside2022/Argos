@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs/promises';
-import _path from 'path';
 import { arch, platform } from 'os';
+import _path from 'path';
+import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 // Dynamic imports for optional dependencies
 let puppeteer: typeof import('puppeteer') | null = null;

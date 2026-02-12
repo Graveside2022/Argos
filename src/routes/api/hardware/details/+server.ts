@@ -1,5 +1,6 @@
-import type { RequestHandler } from './$types';
 import { getAllHardwareDetails } from '$lib/server/services/hardware/hardware-details-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/hardware/details

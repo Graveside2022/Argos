@@ -1,7 +1,8 @@
-import type { RequestHandler } from './$types';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
-import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
+
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, request }) => {
 	const origin = request.headers.get('origin');

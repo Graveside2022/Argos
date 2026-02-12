@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { TestDataGenerator } from '../utils/testDataGenerator';
-import { PerformanceMonitor } from '../utils/performanceMonitor';
+import { afterAll,beforeAll, describe, expect, it } from 'vitest';
+
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
+
+import { PerformanceMonitor } from '../utils/performanceMonitor';
+import { TestDataGenerator } from '../utils/testDataGenerator';
 // import type { SignalMarker } from '$lib/stores/map/signals'; // Module removed
 type SignalMarker = any;
 // Define Signal type locally for testing based on generator output

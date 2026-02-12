@@ -4,9 +4,11 @@
  */
 
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { access, constants } from 'fs/promises';
+
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
+
+import type { RequestHandler } from './$types';
 
 // Four independent tmux profiles (container paths for Docker, host paths as fallback)
 const SHELL_PATHS = [

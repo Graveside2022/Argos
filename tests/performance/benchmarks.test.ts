@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { performance } from 'perf_hooks';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { testUtils } from '../helpers/setup';
 
 const API_BASE_URL = process.env.TEST_URL || 'http://localhost:5173';

@@ -4,9 +4,10 @@
  * Tools for running tests, checking coverage, and build validation
  */
 
-import { config } from 'dotenv';
 import { exec } from 'child_process';
+import { config } from 'dotenv';
 import { promisify } from 'util';
+
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
 const execAsync = promisify(exec);

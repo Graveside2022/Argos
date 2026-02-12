@@ -7,15 +7,15 @@
  */
 
 /* eslint-disable no-undef */
-import { config } from 'dotenv';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
 	CallToolRequestSchema,
-	ListToolsRequestSchema,
 	ListResourcesRequestSchema,
+	ListToolsRequestSchema,
 	ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import { config } from 'dotenv';
 
 // Load .env for ARGOS_API_KEY (standalone process, not SvelteKit)
 config();

@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { currentCategory } from '$lib/stores/dashboard/tools-store';
-	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
-	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
-	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
-	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
+
 	import ToolCard from '$lib/components/dashboard/shared/ToolCard.svelte';
+	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
+	import { activePanel,activeView } from '$lib/stores/dashboard/dashboard-store';
+	import { currentCategory } from '$lib/stores/dashboard/tools-store';
+	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
+	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
 
 	/**
 	 * Tool endpoint configuration.

@@ -11,9 +11,9 @@ export { default as TopStatusBar } from "./TopStatusBar.svelte";
 
 // TypeScript modules
 export {
+	type FrontendToolCall,
 	FrontendToolExecutor,
 	frontendToolExecutor,
-	type FrontendToolCall,
 	type FrontendToolResult,
 } from "./frontend-tool-executor";
 
@@ -27,7 +27,5 @@ export {
 	ToolsPanel,
 	ToolsPanelHeader,
 } from "./panels";
-
 export { ToolCard, ToolCategoryCard } from "./shared";
-
 export { KismetView, OpenWebRXView, ToolViewWrapper } from "./views";

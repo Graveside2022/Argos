@@ -1,11 +1,11 @@
 import js from '@eslint/js';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import svelte from 'eslint-plugin-svelte';
-import svelteParser from 'svelte-eslint-parser';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import prettier from 'eslint-config-prettier';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
+import svelteParser from 'svelte-eslint-parser';
 
 export default [
 	js.configs.recommended,

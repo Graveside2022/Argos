@@ -14,16 +14,16 @@
  *            OWASP A03:2021 (Injection), CERT MSC17-C (Complete Input Validation)
  */
 
-import { describe, test, expect } from 'vitest';
 import fc from 'fast-check';
+import { describe, expect,test } from 'vitest';
+
 import {
-	validateNumericParam,
+	InputValidationError,
 	validateAllowlist,
-	validateMacAddress,
 	validateInterfaceName,
-	validatePathWithinDir,
-	InputValidationError
-} from '$lib/server/security/input-sanitizer';
+	validateMacAddress,
+	validateNumericParam,
+	validatePathWithinDir} from '$lib/server/security/input-sanitizer';
 
 describe('Input Validators (Property-Based)', () => {
 	describe('validateNumericParam', () => {

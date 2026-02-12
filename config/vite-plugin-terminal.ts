@@ -1,6 +1,6 @@
-import type { Plugin, ViteDevServer } from 'vite';
-import { WebSocketServer, WebSocket } from 'ws';
 import { access, constants } from 'fs/promises';
+import type { Plugin, ViteDevServer } from 'vite';
+import { WebSocket,WebSocketServer } from 'ws';
 
 const TERMINAL_PORT = 3001;
 const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message

@@ -3,9 +3,10 @@
  * Implements automatic cleanup, data aggregation, and maintenance tasks
  */
 
-import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
-import { logInfo, logError, logWarn as _logWarn } from '$lib/utils/logger';
+import Database from 'better-sqlite3';
+
+import { logError, logInfo, logWarn as _logWarn } from '$lib/utils/logger';
 
 interface CleanupConfig {
 	// Retention periods in milliseconds

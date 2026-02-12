@@ -1,8 +1,10 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import path from 'path';
+
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+
+import type { RequestHandler } from './$types';
 
 // Sample tower data for demo (when real DB is not available)
 const sampleTowers: { [key: string]: any } = {

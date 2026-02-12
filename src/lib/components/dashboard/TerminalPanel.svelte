@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
 	import { browser } from '$app/environment';
 	import {
+		activeSession,
+		closeSession,
+		closeTerminalPanel,
+		createSession,
+		renameSession,
+		setActiveSession,
 		terminalPanelState,
 		terminalSessions,
-		activeSession,
-		createSession,
-		closeSession,
-		setActiveSession,
-		renameSession,
-		closeTerminalPanel,
 		toggleMaximize,
 		unsplit
 	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
+
 	import TerminalTabContent from './TerminalTabContent.svelte';
 
 	// Available shells from API

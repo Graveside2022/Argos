@@ -1,6 +1,7 @@
-import { writable, derived } from 'svelte/store';
-import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+import { derived,writable } from 'svelte/store';
+
 import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 
 /**
  * Agent Context Store - AG-UI Shared State Bridge

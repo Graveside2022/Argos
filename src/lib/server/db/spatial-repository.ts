@@ -3,8 +3,9 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { DbDevice, SpatialQuery, TimeQuery } from './types';
+
 import { convertRadiusToGrid } from './geo';
+import type { DbDevice, SpatialQuery, TimeQuery } from './types';
 
 /**
  * Find devices near a geographic point.

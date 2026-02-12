@@ -2,15 +2,14 @@
  * Kismet Service Exports
  */
 
-export { kismetService } from './kismet-service';
 export { deviceManager } from './device-manager';
+export { kismetService } from './kismet-service';
 
 // Re-export types
 export type {
-	KismetStatus,
+	DeviceFilter,
+	KismetConfig,
 	KismetDevice,
 	KismetScript,
 	KismetStats,
-	KismetConfig,
-	DeviceFilter
-} from '$lib/services/api/kismet';
+	KismetStatus} from '$lib/services/api/kismet';

@@ -1,7 +1,8 @@
 import { Socket } from 'net';
-import { logWarn } from '$lib/utils/logger';
-import { safeJsonParse } from '$lib/server/security/safe-json';
 import { z } from 'zod';
+
+import { safeJsonParse } from '$lib/server/security/safe-json';
+import { logWarn } from '$lib/utils/logger';
 
 // Zod schema for gpsd JSON protocol messages (TPV, SKY, VERSION, DEVICES, etc.)
 const GpsdMessageSchema = z

@@ -1,16 +1,16 @@
-import { BaseWebSocket, type BaseWebSocketConfig } from './base';
 import {
-	updateSpectrumData,
-	updateSweepStatus,
+	type CycleStatus,
+	type DeviceInfo,
+	type SpectrumData,
+	type SweepStatus,
 	updateConnectionStatus,
 	updateCycleStatus,
 	updateEmergencyStopStatus,
-	type SpectrumData,
-	type SweepStatus,
-	type CycleStatus,
-	type DeviceInfo
-} from '$lib/stores/hackrf';
-import { isObject, hasProperty } from '$lib/types/validation';
+	updateSpectrumData,
+	updateSweepStatus} from '$lib/stores/hackrf';
+import { hasProperty,isObject } from '$lib/types/validation';
+
+import { BaseWebSocket, type BaseWebSocketConfig } from './base';
 
 export interface HackRFWebSocketConfig extends BaseWebSocketConfig {
 	bufferSize?: number;
