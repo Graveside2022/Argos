@@ -1,7 +1,7 @@
 <script lang="ts">
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
-	import type { Feature,FeatureCollection } from 'geojson';
+	import type { Feature, FeatureCollection } from 'geojson';
 	import type { LngLatLike } from 'maplibre-gl';
 	import maplibregl from 'maplibre-gl'; // Runtime import for MapLibre GL library
 	import { setContext } from 'svelte';
@@ -15,17 +15,19 @@
 		Marker,
 		NavigationControl,
 		Popup,
-		SymbolLayer	} from 'svelte-maplibre-gl';
+		SymbolLayer
+	} from 'svelte-maplibre-gl';
 
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,
 		isolatedDeviceMAC,
 		isolateDevice,
-		layerVisibility	} from '$lib/stores/dashboard/dashboard-store';
+		layerVisibility
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import { getSignalBandKey,getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 
 	let map: maplibregl.Map | undefined = $state();
 	let initialViewSet = false;
@@ -519,10 +521,11 @@
 	// NOTE: Uses pure expression syntax — do NOT mix with legacy filter syntax.
 	function handleMapLoad() {
 		if (!map) return;
+		const mapInstance = map;
 
 		// Click on empty map background → dismiss overlay and clear isolation
-		map.on('click', (e) => {
-			const features = map!.queryRenderedFeatures(e.point, {
+		mapInstance.on('click', (e) => {
+			const features = mapInstance.queryRenderedFeatures(e.point, {
 				layers: ['device-circles', 'device-clusters', 'cell-tower-circles']
 			});
 			if (!features || features.length === 0) {
@@ -533,7 +536,7 @@
 		});
 
 		// Enhanced building outlines (brighter than the subtle default)
-		map.addLayer(
+		mapInstance.addLayer(
 			{
 				id: 'building-outline-enhanced',
 				type: 'line',
@@ -549,7 +552,7 @@
 		);
 
 		// House numbers on buildings (zoom 17+)
-		map.addLayer({
+		mapInstance.addLayer({
 			id: 'housenumber-labels',
 			type: 'symbol',
 			source: 'openmaptiles',
@@ -573,7 +576,7 @@
 
 		// ALL named POIs — no class or rank filter (zoom 14+)
 		// Uses coalesce to try name:latin first, then name
-		map.addLayer({
+		mapInstance.addLayer({
 			id: 'poi-labels-all',
 			type: 'symbol',
 			source: 'openmaptiles',

@@ -4,7 +4,7 @@
 
 	import ToolCard from '$lib/components/dashboard/shared/ToolCard.svelte';
 	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
-	import { activePanel,activeView } from '$lib/stores/dashboard/dashboard-store';
+	import { activePanel, activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { currentCategory } from '$lib/stores/dashboard/tools-store';
 	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
 	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
@@ -73,8 +73,10 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ action: 'start' })
 				});
+			} else if (ep.startUrl) {
+				res = await fetch(ep.startUrl, { method: 'POST' });
 			} else {
-				res = await fetch(ep.startUrl!, { method: 'POST' });
+				throw new Error('No start URL configured for tool');
 			}
 
 			const data = await res.json();
@@ -123,8 +125,10 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ action: 'stop' })
 				});
+			} else if (ep.stopUrl) {
+				res = await fetch(ep.stopUrl, { method: 'POST' });
 			} else {
-				res = await fetch(ep.stopUrl!, { method: 'POST' });
+				throw new Error('No stop URL configured for tool');
 			}
 
 			const data = await res.json();
