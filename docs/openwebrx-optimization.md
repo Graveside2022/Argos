@@ -30,11 +30,14 @@ The HackRF One has three independent receive gain stages:
 	"rf_gain": 0, // RF amp OFF (was "auto")
 	"lna_gain": 16, // IF/LNA at baseline
 	"vga_gain": 16, // VGA at baseline
-	"amp": false // Explicit RF amp disable
+	"amp": false, // Explicit RF amp disable
+	"bot_ban_enabled": false // Disable anti-bot for single-operator use
 }
 ```
 
 **Total receive gain**: ~32 dB (without RF amp)
+
+**Bot ban disabled**: Single-operator tactical system doesn't need robot detection (prevents false positives during rapid reconnections)
 
 ### Tactical Frequency Profiles
 
