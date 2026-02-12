@@ -1,6 +1,6 @@
 # Argos Codebase Audit - Phase Status Tracker
 
-**Last Updated:** 2026-02-12 19:15 UTC
+**Last Updated:** 2026-02-12 19:45 UTC
 **Current Branch:** dev-branch-1
 **Master Audit Plan:** 2026-02-11-full-codebase-audit-plan.md
 **Phase Planning Documents:** See `phase-plans/` subfolder for original plans and reports
@@ -10,16 +10,16 @@
 
 ## Quick Status Overview
 
-| Phase     | Status          | Progress | Agent             | Last Updated |
-| --------- | --------------- | -------- | ----------------- | ------------ |
-| Phase 0   | ✅ **COMPLETE** | 100%     | Manual            | 2026-02-11   |
-| Phase 1   | ✅ **COMPLETE** | 100%     | Survey-Agents     | 2026-02-12   |
-| Phase 1.5 | ✅ **COMPLETE** | 100%     | Test-Refactor     | 2026-02-12   |
-| Phase 2   | 🔄 **READY**    | 0%       | DeadCode-\*       | 2026-02-12   |
-| Phase 3   | ✅ **COMPLETE** | 100%     | Organize-Finalize | 2026-02-12   |
-| Phase 3.5 | ✅ **COMPLETE** | 100%     | ESLint-Cleanup    | 2026-02-12   |
-| Phase 4   | ✅ **COMPLETE** | 100%     | Cleanup-\*        | 2026-02-12   |
-| Phase 5   | ⏸️ **PENDING**  | 0%       | Verify-Safety     | -            |
+| Phase     | Status             | Progress | Agent             | Last Updated |
+| --------- | ------------------ | -------- | ----------------- | ------------ |
+| Phase 0   | ✅ **COMPLETE**    | 100%     | Manual            | 2026-02-11   |
+| Phase 1   | ✅ **COMPLETE**    | 100%     | Survey-Agents     | 2026-02-12   |
+| Phase 1.5 | ✅ **COMPLETE**    | 100%     | Test-Refactor     | 2026-02-12   |
+| Phase 2   | 🔄 **IN PROGRESS** | 66%      | DeadCode-\*       | 2026-02-12   |
+| Phase 3   | ✅ **COMPLETE**    | 100%     | Organize-Finalize | 2026-02-12   |
+| Phase 3.5 | ✅ **COMPLETE**    | 100%     | ESLint-Cleanup    | 2026-02-12   |
+| Phase 4   | ✅ **COMPLETE**    | 100%     | Cleanup-\*        | 2026-02-12   |
+| Phase 5   | ⏸️ **PENDING**     | 0%       | Verify-Safety     | -            |
 
 ---
 
@@ -138,24 +138,32 @@
 
 ---
 
-### Phase 2: Dead Code Elimination ⏸️ PENDING
+### Phase 2: Dead Code Elimination 🔄 IN PROGRESS (33%)
 
 **Owners:** DeadCode-Python, DeadCode-TypeScript, DeadCode-Infrastructure
 
-**Status:** Not started - awaiting Phase 1 survey completion
+**Status:** 1 of 3 subphases complete
 
-**Planned Scope:**
+**Progress:**
 
-- Python code: service/, hackrf_emitter/
-- TypeScript/Svelte: src/
-- Infrastructure: scripts, configs, docs
+- ✅ Phase 2.3: Infrastructure (DeadCode-Infrastructure) - COMPLETE
+- 🔄 Phase 2.2: Python (DeadCode-Python) - IN PROGRESS
+- 🔄 Phase 2.1: TypeScript/Svelte (DeadCode-TypeScript) - IN PROGRESS
 
-**Blockers:**
+**Completed Work:**
 
-- Phase 1 dependency graph must be complete
-- Phase 1 dead code candidates must be identified
+**Phase 2.3: Infrastructure Dead Code (✅ COMPLETE - 2026-02-12 19:40 UTC)**
 
-**Estimated Start:** After Phase 1 completion
+- Removed 3 OpenWebRX duplicate config directories (3.47 MB)
+- Removed 15 obsolete documentation files (724 KB)
+- Removed 1 unused npm package (@testing-library/svelte)
+- Verified all 16 scripts actively used (0 removals)
+- Total space saved: ~4.2 MB
+- Quality gate: ✅ Build successful, all tests passing
+
+**Files Produced:**
+
+- `phase-2-dead-code-report.md` (Phase 2.3 section complete)
 
 ---
 
