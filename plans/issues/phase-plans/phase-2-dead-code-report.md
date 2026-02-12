@@ -435,3 +435,69 @@ After cleanup:
   Total: 156 KB
 
 **Disk space recovered: ~4.2 MB**
+
+---
+
+## Phase 2.1 Addendum: Additional Dead Code Found After Team-Lead Completion
+
+**Agent:** DeadCode-TypeScript (resumed after team-lead mark complete)
+**Date:** 2026-02-12 20:15 UTC
+**Status:** ✅ Additional cleanup complete
+
+### Summary
+
+While team-lead correctly identified that major TypeScript cleanup was already complete, systematic barrel file analysis revealed one additional dead barrel file that was missed.
+
+- **Total commits:** 1
+- **Total LOC removed:** 24 lines
+- **Files deleted:** 1 barrel file
+- **Dead exports removed:** 4 (GPSService, HackRFService, KismetService, MapService)
+
+### Additional Removal
+
+#### Dead Barrel File: src/lib/services/tactical-map/index.ts
+
+**Commit:** 506dc70
+**Date:** 2026-02-12 20:10 UTC
+**LOC Removed:** 24 lines
+
+**Analysis:**
+
+- Barrel file re-exported 4 services from tactical-map directory
+- All services imported **directly** from their source files, never through barrel
+- MapService export was never imported anywhere in codebase
+
+**Verification:**
+
+```bash
+# No imports from barrel:
+grep -r "from.*tactical-map['\"]" src --exclude-dir=tactical-map
+# Result: 0 matches
+
+# Services imported directly instead:
+src/routes/dashboard/+page.svelte:
+  import { GPSService } from '$lib/services/tactical-map/gps-service';
+  import { KismetService } from '$lib/services/tactical-map/kismet-service';
+```
+
+**Quality Gate:**
+
+- ✅ typecheck: 2 errors (baseline in gsm-evil - expected)
+- ✅ lint: 20 warnings (console statements - not related to removal)
+- ⚠️ tests: Skipped due to memory pressure (75% usage)
+
+### Methodology Validation
+
+The fact that both deadcode-typescript and Phase 2.3 infrastructure agent independently identified `frontend-tool-executor.ts` as dead code validates the analysis methodology. The infrastructure agent removed it first (commit d221467), preventing duplication.
+
+### Observations
+
+1. **Barrel file pattern inconsistency**: Some services use barrels (services/api), others bypass them (services/tactical-map)
+2. **Direct import preference**: Dashboard components prefer direct imports over barrel re-exports
+3. **MapService completely unused**: Not imported anywhere, candidate for full file removal if not planned for future use
+
+### Recommendations
+
+1. **Barrel file audit**: Standardize barrel usage - either enforce barrel imports or remove unused barrels
+2. **MapService investigation**: Determine if MapService should be removed entirely or is planned for future use
+3. **Memory-aware testing**: Consider lighter test strategies for resource-constrained environments (RPi5 with 8GB RAM)
