@@ -67,7 +67,7 @@ export abstract class BaseWebSocket {
 			if (typeof window !== 'undefined' && window.WebSocket) {
 				this.ws = new WebSocket(this.config.url, this.config.protocols);
 			} else if (typeof global !== 'undefined' && global.WebSocket) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				 
 				this.ws = new (global.WebSocket as any)(this.config.url, this.config.protocols);
 			} else {
 				// In Node.js environment, we'd need to import ws package

@@ -136,7 +136,7 @@ export class USRPAPI {
 		});
 
 		this.addTrackedListener('sweep_data', (event) => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			 
 			let rawData: any;
 			try {
 				rawData = JSON.parse(event.data as string);
