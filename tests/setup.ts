@@ -1,5 +1,14 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { config } from 'dotenv';
+
+// Load .env for test environment (provides ARGOS_API_KEY and other env vars)
+config();
+
+// Set test API key if not present in .env (allows unit tests to run without .env)
+if (!process.env.ARGOS_API_KEY) {
+	process.env.ARGOS_API_KEY = 'test-api-key-for-vitest-minimum-32-chars-required';
+}
 
 // Mock WebSocket
 global.WebSocket = vi.fn(() => ({
@@ -14,7 +23,10 @@ global.WebSocket = vi.fn(() => ({
 	CLOSED: 3
 })) as unknown as typeof WebSocket;
 
-// Mock fetch
+// Store original fetch for integration tests that need real HTTP calls
+(globalThis as any).__realFetch = globalThis.fetch;
+
+// Mock fetch for unit tests (integration tests restore real fetch via __realFetch)
 global.fetch = vi.fn();
 
 // Mock localStorage

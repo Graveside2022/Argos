@@ -8,10 +8,14 @@
  *            NIST SP 800-53 SI-10 (Input Validation)
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
 // Shell metacharacters that should be rejected
 const SHELL_METACHARACTERS = [
@@ -32,13 +36,7 @@ const SHELL_METACHARACTERS = [
 	'"'
 ];
 
-describe('Command Injection Prevention', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('Command Injection Prevention', () => {
 	describe('Numeric Parameter Validation', () => {
 		test('Non-numeric frequency parameter returns 400', async () => {
 			const maliciousInput = '100; rm -rf /';

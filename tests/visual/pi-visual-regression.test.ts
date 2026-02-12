@@ -1,10 +1,36 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import puppeteer, { Browser, Page } from 'puppeteer';
-import pixelmatch from 'pixelmatch';
-import { PNG } from 'pngjs';
 import fs from 'fs/promises';
 import _path from 'path';
 import { arch, platform } from 'os';
+
+// Dynamic imports for optional dependencies
+let puppeteer: typeof import('puppeteer') | null = null;
+let pixelmatch: typeof import('pixelmatch').default | null = null;
+let PNG: typeof import('pngjs').PNG | null = null;
+
+type Browser = import('puppeteer').Browser;
+type Page = import('puppeteer').Page;
+
+let canRun = false;
+try {
+	puppeteer = await import('puppeteer');
+	const pngjs = await import('pngjs');
+	const pm = await import('pixelmatch');
+	PNG = pngjs.PNG;
+	pixelmatch = pm.default;
+	// Try to verify chromium is available
+	const testBrowser = await puppeteer.default.launch({
+		headless: true,
+		args: ['--no-sandbox'],
+		executablePath: '/usr/bin/chromium-browser',
+		timeout: 5000
+	});
+	await testBrowser.close();
+	canRun = true;
+} catch {
+	// puppeteer, pixelmatch, pngjs, or chromium not available
+	canRun = false;
+}
 
 /**
  * Grade A+ Visual Regression Tests for Raspberry Pi
@@ -12,12 +38,8 @@ import { arch, platform } from 'os';
  * This test suite is specifically designed for ARM architecture (Raspberry Pi)
  * with optimized thresholds and Pi-specific baseline management.
  *
- * Features:
- * - ARM-optimized rendering thresholds
- * - Pi-specific browser configuration
- * - Automatic baseline generation for Pi architecture
- * - Cross-platform compatibility verification
- * - Performance-optimized test execution
+ * Requires: puppeteer, pixelmatch, pngjs, chromium-browser
+ * Skips gracefully when dependencies are not available.
  */
 
 const PI_VISUAL_CONFIG = {
@@ -56,16 +78,16 @@ const PI_VISUAL_CONFIG = {
 	]
 };
 
-describe('Grade A+ Visual Regression Tests - Raspberry Pi Optimized', () => {
+describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimized', () => {
 	let browser: Browser | undefined;
 	let page: Page | undefined;
 
 	beforeAll(async () => {
-		console.error(`🍓 Running visual tests on Raspberry Pi (${arch()}/${platform()})`);
+		console.error(`Running visual tests on Raspberry Pi (${arch()}/${platform()})`);
 
 		try {
 			// Pi-specific browser launch configuration
-			browser = await puppeteer.launch({
+			browser = await puppeteer!.default.launch({
 				headless: true,
 				args: PI_VISUAL_CONFIG.browserArgs,
 				executablePath: '/usr/bin/chromium-browser',

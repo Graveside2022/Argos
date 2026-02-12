@@ -8,18 +8,16 @@
  *            OWASP CSP Cheat Sheet, Mozilla Security Headers
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
-describe('Security Headers', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('Security Headers', () => {
 	describe('Content Security Policy (CSP)', () => {
 		test('CSP header is present on all responses', async () => {
 			const endpoints = ['/', '/dashboard', '/api/health', '/api/rf/status'];

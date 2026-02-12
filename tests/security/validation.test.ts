@@ -8,18 +8,16 @@
  *            NIST SP 800-53 SI-10 (Information Input Validation)
  */
 
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+
+restoreRealFetch();
 
 const BASE_URL = 'http://localhost:5173';
 const API_KEY = process.env.ARGOS_API_KEY || '';
+const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
-describe('Input Validation Security', () => {
-	beforeAll(() => {
-		if (!API_KEY) {
-			throw new Error('ARGOS_API_KEY not set in environment. Tests require valid API key.');
-		}
-	});
-
+describe.runIf(canRun)('Input Validation Security', () => {
 	describe('Type Mismatch Validation', () => {
 		test('String where number expected returns 400', async () => {
 			const response = await fetch(`${BASE_URL}/api/signals/recent?limit=not-a-number`, {
