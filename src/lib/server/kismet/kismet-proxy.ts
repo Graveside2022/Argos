@@ -1,5 +1,5 @@
 // Proxy for Kismet REST API
-import type { KismetDevice, DeviceFilter, DeviceStats } from './types';
+import type { DeviceFilter, DeviceStats,KismetDevice } from './types';
 
 // Kismet API response types
 interface KismetDeviceResponse {

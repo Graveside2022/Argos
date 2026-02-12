@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import type { Satellite } from '$lib/types/gps';
 

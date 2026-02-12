@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+
 import { config } from 'dotenv';
+import { vi } from 'vitest';
 
 // Load .env for test environment (provides ARGOS_API_KEY and other env vars)
 config();

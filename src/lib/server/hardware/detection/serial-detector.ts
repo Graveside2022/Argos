@@ -4,13 +4,13 @@
  */
 
 import { exec } from 'child_process';
-import { promisify } from 'util';
 import { readdir, readFile } from 'fs/promises';
+import { promisify } from 'util';
+
 import type {
+	CellularCapabilities,
 	DetectedHardware,
-	GPSCapabilities,
-	CellularCapabilities
-} from '$lib/server/hardware/detection-types';
+	GPSCapabilities} from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
 

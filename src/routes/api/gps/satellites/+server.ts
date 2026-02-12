@@ -1,5 +1,6 @@
-import type { RequestHandler } from './$types';
 import { getSatelliteData } from '$lib/server/services/gps/gps-satellite-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/gps/satellites

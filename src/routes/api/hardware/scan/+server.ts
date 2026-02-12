@@ -4,8 +4,10 @@
  */
 
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+
 import { scanAllHardware } from '$lib/server/hardware';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/hardware/scan

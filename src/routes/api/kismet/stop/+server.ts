@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
+import type { RequestHandler } from './$types';
 
 const execAsync = promisify(exec);
 

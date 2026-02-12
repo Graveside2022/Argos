@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
+	import { activePanel,activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
 	import type { SystemInfo } from '$lib/types/system';
 
 	interface DeviceState {

@@ -4,10 +4,10 @@
  */
 
 import type {
+	ConnectionType,
 	DetectedHardware,
 	HardwareCategory,
 	HardwareQueryOptions,
-	ConnectionType,
 	HardwareStatus
 } from './detection-types';
 

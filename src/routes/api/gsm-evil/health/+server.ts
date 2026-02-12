@@ -1,6 +1,8 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { checkGsmEvilHealth } from '$lib/server/services/gsm-evil/gsm-evil-health-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/gsm-evil/health

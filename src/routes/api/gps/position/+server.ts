@@ -1,5 +1,6 @@
-import type { RequestHandler } from './$types';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/gps/position

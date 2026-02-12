@@ -5,13 +5,12 @@
 
 import {
   API_ENDPOINTS,
+  APIError,
+  buildQueryString,
   defaultRequestOptions,
   handleResponse,
-  buildQueryString,
   retryRequest,
-  withTimeout,
-  APIError
-} from './config';
+  withTimeout} from './config';
 
 export interface HackRFStatus {
   connected: boolean;

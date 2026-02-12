@@ -5,7 +5,8 @@
  * Skips gracefully when environment is not available.
  */
 
-import { describe, it, afterAll } from 'vitest';
+import { afterAll,describe, it } from 'vitest';
+
 import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
 
 restoreRealFetch();

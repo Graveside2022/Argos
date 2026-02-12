@@ -3,14 +3,15 @@
  * Handles execution of frontend tools called by the agent
  */
 
+import type { Map as LeafletMap } from 'leaflet';
+
 import {
+	clearWorkflow,
+	nextWorkflowStep,
 	selectedDeviceMAC,
 	setWorkflow,
-	nextWorkflowStep,
-	clearWorkflow,
 	type WorkflowType
 } from '$lib/stores/dashboard/agent-context-store';
-import type { Map as LeafletMap } from 'leaflet';
 
 export interface FrontendToolCall {
 	tool: string;

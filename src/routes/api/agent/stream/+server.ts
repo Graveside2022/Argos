@@ -4,8 +4,9 @@
  * Uses Anthropic Claude API
  */
 
-import type { RequestHandler } from './$types';
 import { createAgent } from '$lib/server/agent/runtime';
+
+import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const {

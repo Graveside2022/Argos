@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { setContext } from 'svelte';
-	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import {
-		layerVisibility,
-		activeBands,
-		isolateDevice,
-		isolatedDeviceMAC
-	} from '$lib/stores/dashboard/dashboard-store';
-	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
-	import { getSignalHex, getSignalBandKey } from '$lib/utils/signal-utils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+
+	import type { Feature,FeatureCollection } from 'geojson';
+	import type { LngLatLike } from 'maplibre-gl';
 	import maplibregl from 'maplibre-gl'; // Runtime import for MapLibre GL library
+	import { setContext } from 'svelte';
 	import {
+		CircleLayer,
+		CustomControl,
+		FillLayer,
+		GeoJSONSource,
+		LineLayer,
 		MapLibre,
 		Marker,
+		NavigationControl,
 		Popup,
-		GeoJSONSource,
-		CircleLayer,
-		SymbolLayer,
-		FillLayer,
-		LineLayer,
-		CustomControl,
-		NavigationControl
-	} from 'svelte-maplibre-gl';
-	import type { LngLatLike } from 'maplibre-gl';
-	import type { FeatureCollection, Feature } from 'geojson';
+		SymbolLayer	} from 'svelte-maplibre-gl';
+
+	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
+	import {
+		activeBands,
+		isolatedDeviceMAC,
+		isolateDevice,
+		layerVisibility	} from '$lib/stores/dashboard/dashboard-store';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { getSignalBandKey,getSignalHex } from '$lib/utils/signal-utils';
 
 	let map: maplibregl.Map | undefined = $state();
 	let initialViewSet = false;

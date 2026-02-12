@@ -1,39 +1,38 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
-	import {
-		activeView,
-		activePanel,
-		activeBottomTab,
-		isBottomPanelOpen,
-		bottomPanelHeight,
-		setBottomPanelHeight,
-		closeBottomPanel
-	} from '$lib/stores/dashboard/dashboard-store';
-	import {
-		terminalPanelState,
-		toggleTerminalPanel,
-		createSession,
-		nextTab,
-		previousTab
-	} from '$lib/stores/dashboard/terminal-store';
-	import { GPSService } from '$lib/services/tactical-map/gps-service';
-	import { KismetService } from '$lib/services/tactical-map/kismet-service';
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';
 
-	import TopStatusBar from '$lib/components/dashboard/TopStatusBar.svelte';
+	import { onDestroy,onMount } from 'svelte';
+
+	import { browser } from '$app/environment';
+	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
+	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
 	import IconRail from '$lib/components/dashboard/IconRail.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
-	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
-	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
-	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
-	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
-	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
+	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
-	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
-	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
+	import TopStatusBar from '$lib/components/dashboard/TopStatusBar.svelte';
+	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
+	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
+	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
+	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
+	import { GPSService } from '$lib/services/tactical-map/gps-service';
+	import { KismetService } from '$lib/services/tactical-map/kismet-service';
+	import {
+		activeBottomTab,
+		activePanel,
+		activeView,
+		bottomPanelHeight,
+		closeBottomPanel,
+		isBottomPanelOpen,
+		setBottomPanelHeight	} from '$lib/stores/dashboard/dashboard-store';
+	import {
+		createSession,
+		nextTab,
+		previousTab,
+		terminalPanelState,
+		toggleTerminalPanel	} from '$lib/stores/dashboard/terminal-store';
 
 	const gpsService = new GPSService();
 	const kismetService = new KismetService();

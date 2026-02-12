@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { KismetService } from '$lib/server/services/kismet.service';
-import type { GPSPosition } from '$lib/server/services/kismet.service';
+import { beforeEach, describe, expect, it, type Mock,vi } from 'vitest';
+
 import { KismetProxy } from '$lib/server/kismet';
+import type { GPSPosition } from '$lib/server/services/kismet.service';
+import { KismetService } from '$lib/server/services/kismet.service';
 
 // Mock the KismetProxy module
 vi.mock('$lib/server/kismet', () => ({

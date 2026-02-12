@@ -1,20 +1,20 @@
 import '$lib/server/env';
-import type { Handle, HandleServerError } from '@sveltejs/kit';
-import { WebSocketServer } from 'ws';
-import type { WebSocket } from 'ws';
-import { WebSocketManager } from '$lib/server/kismet';
-import { dev } from '$app/environment';
-import type { IncomingMessage } from 'http';
-import { logger } from '$lib/utils/logger';
 
-import { scanAllHardware, globalHardwareMonitor } from '$lib/server/hardware';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
+import type { IncomingMessage } from 'http';
+import type { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+
+import { dev } from '$app/environment';
 import {
+	getSessionCookieHeader,
 	validateApiKey,
-	validateSecurityConfig,
-	getSessionCookieHeader
-} from '$lib/server/auth/auth-middleware';
+	validateSecurityConfig} from '$lib/server/auth/auth-middleware';
+import { globalHardwareMonitor,scanAllHardware } from '$lib/server/hardware';
+import { WebSocketManager } from '$lib/server/kismet';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
 import { RateLimiter } from '$lib/server/security/rate-limiter';
+import { logger } from '$lib/utils/logger';
 
 // Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
 const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit

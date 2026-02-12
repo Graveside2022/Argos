@@ -1,12 +1,12 @@
+import { get } from 'svelte/store';
+
+import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import {
 	mapStore,
+	setAccuracyCircle,
 	setMap,
-	setUserMarker,
-	setAccuracyCircle
-} from '$lib/stores/tactical-map/map-store';
-import type { LeafletMap, LeafletMarker, LeafletCircle } from '$lib/types/map';
-import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-import { get } from 'svelte/store';
+	setUserMarker} from '$lib/stores/tactical-map/map-store';
+import type { LeafletCircle,LeafletMap, LeafletMarker } from '$lib/types/map';
 
 declare global {
 	interface Window {

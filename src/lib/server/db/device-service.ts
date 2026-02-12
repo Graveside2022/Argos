@@ -3,8 +3,9 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { DbSignal } from './types';
+
 import { detectDeviceType } from './geo';
+import type { DbSignal } from './types';
 
 /**
  * Ensure that a device record exists for the given signal's device_id.

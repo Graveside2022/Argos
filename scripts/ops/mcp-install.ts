@@ -5,10 +5,9 @@
  */
 
 import {
+	getInstallationInstructions,
 	installContextBConfig,
-	installContextCConfig,
-	getInstallationInstructions
-} from '../src/lib/server/mcp';
+	installContextCConfig} from '../src/lib/server/mcp';
 
 const args = process.argv.slice(2);
 const command = args[0];

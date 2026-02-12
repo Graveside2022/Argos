@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import puppeteer, { Browser, Page } from 'puppeteer';
+import fs from 'fs/promises';
+import { arch } from 'os';
+import _path from 'path';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
-import fs from 'fs/promises';
-import _path from 'path';
-import { arch } from 'os';
+import puppeteer, { Browser, Page } from 'puppeteer';
+import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 const VISUAL_REGRESSION_CONFIG = {
 	threshold: 0.1, // 0.1% difference allowed for pixel-perfect validation

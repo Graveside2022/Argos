@@ -1,10 +1,11 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import {
+	getKismetStatus,
 	startKismetExtended,
-	stopKismetExtended,
-	getKismetStatus
-} from '$lib/server/services/kismet/kismet-control-service-extended';
+	stopKismetExtended} from '$lib/server/services/kismet/kismet-control-service-extended';
+
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/kismet/control

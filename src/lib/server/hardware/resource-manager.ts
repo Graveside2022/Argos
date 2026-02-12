@@ -1,8 +1,10 @@
 import { EventEmitter } from 'events';
-import { HardwareDevice, type ResourceState, type HardwareStatus } from './types';
-import * as hackrfMgr from './hackrf-manager';
-import * as alfaMgr from './alfa-manager';
+
 import { logWarn } from '$lib/utils/logger';
+
+import * as alfaMgr from './alfa-manager';
+import * as hackrfMgr from './hackrf-manager';
+import { HardwareDevice, type HardwareStatus,type ResourceState } from './types';
 
 class ResourceManager extends EventEmitter {
 	private state: Map<HardwareDevice, ResourceState> = new Map();

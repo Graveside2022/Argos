@@ -1,11 +1,12 @@
 import { EventEmitter } from "events";
-import { logInfo, logError, logWarn, logDebug } from "$lib/utils/logger";
-import { ProcessManager } from "$lib/services/usrp/sweep-manager/process-manager";
+
 import {
 	BufferManager,
 	type ParsedLine,
 } from "$lib/services/usrp/sweep-manager/buffer-manager";
+import { ProcessManager } from "$lib/services/usrp/sweep-manager/process-manager";
 import { SystemStatus } from "$lib/types/enums";
+import { logDebug,logError, logInfo, logWarn } from "$lib/utils/logger";
 
 interface SweepStatus {
 	state: SystemStatus;

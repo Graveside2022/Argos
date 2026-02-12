@@ -1,6 +1,8 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { hostExec } from '$lib/server/host-exec';
+
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {

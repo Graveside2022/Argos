@@ -1,5 +1,5 @@
 import { KismetProxy } from '$lib/server/kismet';
-import { logInfo, logError, logWarn } from '$lib/utils/logger';
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 /**
  * Represents a wireless device detected by Kismet

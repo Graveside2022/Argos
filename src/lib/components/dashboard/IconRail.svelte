@@ -1,10 +1,9 @@
 <script lang="ts">
 	import {
-		activePanel,
-		togglePanel,
 		activeBottomTab,
-		toggleBottomTab
-	} from '$lib/stores/dashboard/dashboard-store';
+		activePanel,
+		toggleBottomTab,
+		togglePanel	} from '$lib/stores/dashboard/dashboard-store';
 	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminal-store';
 
 	const topIcons = [

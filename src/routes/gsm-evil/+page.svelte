@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
+
+	import { mccToCountry,mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import { groupIMSIsByTower, sortTowers } from '$lib/utils/gsm-tower-utils';
-	import { mncToCarrier, mccToCountry } from '$lib/data/carrier-mappings';
 
 	let imsiCaptureActive = false;
 	let imsiPollInterval: ReturnType<typeof setInterval>;

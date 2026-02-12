@@ -5,7 +5,7 @@
  * Skips gracefully when server is not available.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { afterEach,describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 
 const WS_URL = process.env.WS_URL || 'ws://localhost:8093';

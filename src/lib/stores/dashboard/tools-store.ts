@@ -3,10 +3,11 @@
  * Manages navigation state, expanded categories, and tool runtime status
  */
 
-import { writable, derived } from 'svelte/store';
+import { derived,writable } from 'svelte/store';
+
 import { browser } from '$app/environment';
+import { findByPath,toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolStatus } from '$lib/types/tools';
-import { toolHierarchy, findByPath } from '$lib/data/tool-hierarchy';
 
 // Validate stored path against current hierarchy (handles structure changes)
 function getValidatedPath(): string[] {

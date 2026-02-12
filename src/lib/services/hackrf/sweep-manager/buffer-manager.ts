@@ -1,5 +1,5 @@
-import { logInfo, logError, logWarn, logDebug } from "$lib/utils/logger";
 import type { SpectrumData } from "$lib/server/hackrf/types";
+import { logDebug,logError, logInfo, logWarn } from "$lib/utils/logger";
 
 export interface BufferState {
 	stdoutBuffer: string;

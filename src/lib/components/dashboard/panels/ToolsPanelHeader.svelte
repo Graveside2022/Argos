@@ -1,10 +1,9 @@
 <script lang="ts">
-	import {
-		toolNavigationPath,
-		navigateBack,
-		breadcrumbs
-	} from '$lib/stores/dashboard/tools-store';
 	import { uiIcons } from '$lib/data/tool-icons';
+	import {
+		breadcrumbs,
+		navigateBack,
+		toolNavigationPath	} from '$lib/stores/dashboard/tools-store';
 
 	let canGoBack = $derived($toolNavigationPath.length > 0);
 	let currentBreadcrumbs = $derived($breadcrumbs);

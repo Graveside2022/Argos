@@ -3,16 +3,16 @@
  * Coordinates all hardware detection and registers devices
  */
 
-import { detectUSBDevices } from './usb-detector';
-import { detectSerialDevices } from './serial-detector';
-import { detectNetworkDevices } from './network-detector';
-import { globalHardwareRegistry } from '$lib/server/hardware/hardware-registry';
 import type {
+	ConnectionType,
 	DetectedHardware,
-	HardwareScanResult,
 	HardwareCategory,
-	ConnectionType
-} from '$lib/server/hardware/detection-types';
+	HardwareScanResult} from '$lib/server/hardware/detection-types';
+import { globalHardwareRegistry } from '$lib/server/hardware/hardware-registry';
+
+import { detectNetworkDevices } from './network-detector';
+import { detectSerialDevices } from './serial-detector';
+import { detectUSBDevices } from './usb-detector';
 
 /**
  * Scan system for all hardware

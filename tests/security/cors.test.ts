@@ -8,7 +8,8 @@
  *            NIST SP 800-53 SC-7 (Boundary Protection)
  */
 
-import { describe, test, expect } from 'vitest';
+import { describe, expect,test } from 'vitest';
+
 import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
 
 restoreRealFetch();
