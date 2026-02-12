@@ -63,7 +63,9 @@ class SystemInspector extends BaseMCPServer {
 				// Check services
 				if (services.overall_health === 'degraded') {
 					if (overallStatus === 'HEALTHY') overallStatus = 'DEGRADED';
-					const degraded = services.services.filter((s: any) => s.status !== 'healthy');
+					const degraded = services.services.filter(
+						(s: { status: string }) => s.status !== 'healthy'
+					);
 					for (const svc of degraded) {
 						if (svc.status === 'stopped') {
 							recommendations.push(
@@ -128,7 +130,7 @@ class SystemInspector extends BaseMCPServer {
 							protections: memory.protection || {}
 						},
 						recent_errors:
-							logs?.sources?.map((src: any) => ({
+							logs?.sources?.map((src: { source: string; entries: unknown[] }) => ({
 								source: src.source,
 								count: src.entries.length
 							})) || []
@@ -158,7 +160,7 @@ class SystemInspector extends BaseMCPServer {
 				}
 
 				const stoppedContainers =
-					data.containers?.filter((c: any) => c.state !== 'running') || [];
+					data.containers?.filter((c: { state: string }) => c.state !== 'running') || [];
 				const recommendations = [];
 
 				if (stoppedContainers.length > 0) {

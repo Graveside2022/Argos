@@ -5,7 +5,8 @@ import {
 	updateCycleStatus,
 	updateEmergencyStopStatus,
 	updateSpectrumData,
-	updateSweepStatus} from '$lib/stores/hackrf';
+	updateSweepStatus
+} from '$lib/stores/hackrf';
 import { SystemStatus } from '$lib/types/enums';
 import { logDebug, logError, logInfo, logWarn } from '$lib/utils/logger';
 
@@ -136,7 +137,7 @@ export class USRPAPI {
 		});
 
 		this.addTrackedListener('sweep_data', (event) => {
-			 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			let rawData: any;
 			try {
 				rawData = JSON.parse(event.data as string);

@@ -399,6 +399,7 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					mcc: undefined as any,
 					mnc: '410',
 					lac: 12345,
@@ -418,6 +419,7 @@ describe('groupIMSIsByTower', () => {
 					imsi: '310410123456789',
 					mcc: '310',
 					mnc: '410',
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					lac: undefined as any,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -436,6 +438,7 @@ describe('groupIMSIsByTower', () => {
 					mcc: '310',
 					mnc: '410',
 					lac: 12345,
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					ci: undefined as any,
 					timestamp: '2026-02-12T10:00:00Z'
 				}

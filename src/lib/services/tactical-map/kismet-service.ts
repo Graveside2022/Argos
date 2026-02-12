@@ -1,9 +1,9 @@
-import { 
+import {
 	addKismetDevice,
 	clearAllKismetDevices,
-	kismetStore, 
+	kismetStore,
 	removeKismetDevice,
-	setKismetStatus, 
+	setKismetStatus,
 	updateDistributions
 } from '$lib/stores/tactical-map/kismet-store';
 import type { KismetDevice } from '$lib/types/kismet';
@@ -34,10 +34,12 @@ export class KismetService {
 
 			if (response.ok) {
 				const data = (await response.json()) as KismetControlResponse;
-				
+
 				// Get current status
 				let currentStatus: string = 'stopped';
-				const unsubscribe = kismetStore.subscribe(state => currentStatus = state.status);
+				const unsubscribe = kismetStore.subscribe(
+					(state) => (currentStatus = state.status)
+				);
 				unsubscribe();
 
 				if (data.running && currentStatus === 'stopped') {
@@ -53,7 +55,7 @@ export class KismetService {
 
 	async startKismet(): Promise<void> {
 		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe(state => currentStatus = state.status);
+		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
 		unsubscribe();
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
@@ -89,7 +91,7 @@ export class KismetService {
 
 	async stopKismet(): Promise<void> {
 		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe(state => currentStatus = state.status);
+		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
 		unsubscribe();
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
@@ -122,7 +124,7 @@ export class KismetService {
 
 	async toggleKismet(): Promise<void> {
 		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe(state => currentStatus = state.status);
+		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
 		unsubscribe();
 
 		if (currentStatus === 'running') {
@@ -133,25 +135,25 @@ export class KismetService {
 	}
 
 	async fetchKismetDevices(): Promise<KismetDevice[]> {
-		let currentState: any;
-		const unsubscribe = kismetStore.subscribe(state => currentState = state);
+		let currentState: { status: string; devices: Map<string, KismetDevice> } | undefined;
+		const unsubscribe = kismetStore.subscribe((state) => (currentState = state));
 		unsubscribe();
 
-		if (currentState.status !== 'running') return [];
+		if (currentState?.status !== 'running') return [];
 
 		try {
 			const response = await fetch('/api/kismet/devices');
 			if (response.ok) {
 				const data = (await response.json()) as KismetDevicesResponse;
-				
+
 				// Update devices in store
 				const devices = data.devices;
-				
+
 				// Track which devices we've seen this fetch
-				const currentDeviceMACs = new Set(devices.map(d => d.mac));
-				
+				const currentDeviceMACs = new Set(devices.map((d) => d.mac));
+
 				// Remove devices that are no longer present
-				currentState.devices.forEach((device: KismetDevice, mac: string) => {
+				currentState?.devices.forEach((device: KismetDevice, mac: string) => {
 					if (!currentDeviceMACs.has(mac)) {
 						removeKismetDevice(mac);
 					}
@@ -164,7 +166,7 @@ export class KismetService {
 
 				// Update distributions
 				const deviceMap = new Map();
-				devices.forEach(device => {
+				devices.forEach((device) => {
 					deviceMap.set(device.mac, device);
 				});
 				updateDistributions(deviceMap);

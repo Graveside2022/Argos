@@ -4,6 +4,30 @@ import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 
 import type { RequestHandler } from './$types';
 
+// Event handler types for spectrum data streaming
+interface SpectrumData {
+	frequency?: number;
+	power?: number;
+	powerValues?: number[];
+	startFreq?: number;
+	endFreq?: number;
+	timestamp?: number;
+}
+
+interface ErrorEvent {
+	message: string;
+	context?: string;
+	timestamp?: Date;
+	code?: number | null;
+	signal?: NodeJS.Signals | null;
+}
+
+interface StatusEvent {
+	state?: string;
+	isRunning?: boolean;
+	[key: string]: unknown;
+}
+
 export const GET: RequestHandler = async ({ url, request }) => {
 	const origin = request.headers.get('origin');
 	const corsHeaders = getCorsHeaders(origin);
@@ -18,9 +42,9 @@ export const GET: RequestHandler = async ({ url, request }) => {
 
 	// Shared state between start() and cancel() — hoisted so cancel() can clean up
 	let activeDevice: string = deviceType;
-	let dataHandler: ((data: any) => void) | null = null;
-	let errorHandler: ((error: any) => void) | null = null;
-	let statusHandler: ((status: any) => void) | null = null;
+	let dataHandler: ((data: SpectrumData) => void) | null = null;
+	let errorHandler: ((error: ErrorEvent) => void) | null = null;
+	let statusHandler: ((status: StatusEvent) => void) | null = null;
 	let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 	const stream = new ReadableStream({
@@ -35,10 +59,10 @@ export const GET: RequestHandler = async ({ url, request }) => {
 			if (deviceType === 'auto') {
 				// Auto-detect which device is active
 				const usrpManager = UsrpSweepManager.getInstance();
-				const usrpStatus = usrpManager.getStatus();
+				const usrpStatus = usrpManager.getStatus() as StatusEvent;
 				const hackrfStatus = sweepManager.getStatus();
 
-				if ((usrpStatus as any).isRunning) {
+				if (usrpStatus.isRunning) {
 					activeDevice = 'usrp';
 				} else if (hackrfStatus.state === 'running' || hackrfStatus.state === 'sweeping') {
 					activeDevice = 'hackrf';
@@ -49,7 +73,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				const usrpManager = UsrpSweepManager.getInstance();
 
 				// USRP data handler
-				dataHandler = (data: any) => {
+				dataHandler = (data: SpectrumData) => {
 					try {
 						// Transform USRP data to frontend format
 						const transformedData = {
@@ -73,7 +97,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				};
 
 				// Error handler
-				errorHandler = (error: any) => {
+				errorHandler = (error: ErrorEvent) => {
 					const message = `event: error\ndata: ${JSON.stringify({
 						message: error.message || 'Unknown error',
 						device: 'usrp'
@@ -82,7 +106,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				};
 
 				// Status handler
-				statusHandler = (status: any) => {
+				statusHandler = (status: StatusEvent) => {
 					const message = `event: status\ndata: ${JSON.stringify({
 						...status,
 						device: 'usrp'
@@ -96,12 +120,12 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				usrpManager.on('status', statusHandler);
 			} else {
 				// HackRF data handler (default)
-				dataHandler = (data: any) => {
+				dataHandler = (data: SpectrumData) => {
 					try {
 						// Transform the data if needed
 						const transformedData = {
 							frequencies: data.powerValues
-								? data.powerValues.map((_: any, index: number) => {
+								? data.powerValues.map((_: number, index: number) => {
 										const freqStep =
 											(data.endFreq! - data.startFreq!) /
 											(data.powerValues!.length - 1);
@@ -127,7 +151,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				};
 
 				// Error handler
-				errorHandler = (error: any) => {
+				errorHandler = (error: ErrorEvent) => {
 					const message = `event: error\ndata: ${JSON.stringify({
 						message: error.message || 'Unknown error',
 						device: 'hackrf'
@@ -136,7 +160,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				};
 
 				// Status handler
-				statusHandler = (status: any) => {
+				statusHandler = (status: StatusEvent) => {
 					const message = `event: status\ndata: ${JSON.stringify({
 						...status,
 						device: 'hackrf'

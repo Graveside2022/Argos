@@ -55,6 +55,7 @@ export const GET: RequestHandler = async () => {
 			'/usr/src/gsmevil2/database/imsi.db',
 			'/home/kali/gsmevil-user/database/imsi.db'
 		] as const;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
 			return json({ success: false, message: 'Invalid database path', data: [] });
 		}

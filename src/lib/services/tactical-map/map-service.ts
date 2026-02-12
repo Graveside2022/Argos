@@ -5,17 +5,21 @@ import {
 	mapStore,
 	setAccuracyCircle,
 	setMap,
-	setUserMarker} from '$lib/stores/tactical-map/map-store';
-import type { LeafletCircle,LeafletMap, LeafletMarker } from '$lib/types/map';
+	setUserMarker
+} from '$lib/stores/tactical-map/map-store';
+import type { LeafletCircle, LeafletMap, LeafletMarker } from '$lib/types/map';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LeafletLibrary = any;
 
 declare global {
 	interface Window {
-		L: any;
+		L: LeafletLibrary;
 	}
 }
 
 export class MapService {
-	private L: any = null;
+	private L: LeafletLibrary = null;
 
 	async initializeLeaflet(): Promise<void> {
 		if (typeof window !== 'undefined' && !this.L) {

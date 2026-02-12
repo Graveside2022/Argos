@@ -71,10 +71,25 @@ async function queryLocalDatabase(
 
 			db.close();
 
+			interface TowerRow {
+				radio: string;
+				mcc: number;
+				net: number;
+				area: number;
+				cell: number;
+				lat: number;
+				lon: number;
+				range: number;
+				samples: number;
+				created: number;
+				updated: number;
+				averageSignal: number;
+			}
+
 			return {
 				success: true,
 				source: 'database',
-				towers: (rows as any[]).map((r) => ({
+				towers: (rows as TowerRow[]).map((r) => ({
 					radio: r.radio || 'Unknown',
 					mcc: r.mcc,
 					mnc: r.net,
