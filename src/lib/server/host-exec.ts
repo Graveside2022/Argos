@@ -8,7 +8,7 @@
  *
  * Outside Docker, commands run directly as before.
  */
-import { exec, execSync } from 'node:child_process';
+import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
@@ -25,19 +25,6 @@ export async function isDockerContainer(): Promise<boolean> {
 	try {
 		await execAsync('cat /.dockerenv 2>/dev/null');
 		await execAsync('nsenter -t 1 -m -- true 2>/dev/null');
-		_isDocker = true;
-	} catch (_error: unknown) {
-		_isDocker = false;
-	}
-	return _isDocker;
-}
-
-/** Synchronous Docker detection (for toolChecker which uses execSync) */
-export function isDockerContainerSync(): boolean {
-	if (_isDocker !== null) return _isDocker;
-	try {
-		execSync('cat /.dockerenv 2>/dev/null', { stdio: 'pipe' });
-		execSync('nsenter -t 1 -m -- true 2>/dev/null', { stdio: 'pipe' });
 		_isDocker = true;
 	} catch (_error: unknown) {
 		_isDocker = false;
@@ -62,16 +49,4 @@ export async function hostExec(
 		return execAsync(`nsenter -t 1 -m -- bash -c '${escaped}'`, execOpts);
 	}
 	return execAsync(cmd, execOpts);
-}
-
-/**
- * Synchronous version of hostExec for use in toolChecker.
- */
-export function hostExecSync(cmd: string): string {
-	const inDocker = isDockerContainerSync();
-	if (inDocker) {
-		const escaped = cmd.replace(/'/g, "'\\''");
-		return execSync(`nsenter -t 1 -m -- bash -c '${escaped}'`, { stdio: 'pipe' }).toString();
-	}
-	return execSync(cmd, { stdio: 'pipe' }).toString();
 }
