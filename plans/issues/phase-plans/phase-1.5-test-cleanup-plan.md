@@ -274,6 +274,7 @@ grep -r "test.skip\|it.skip\|describe.skip" tests/
     - Complete the test or delete if feature doesn't exist
 
 3. **Legitimately skipped** (keep skipped)
+
     ```typescript
     test.skip('E2E with real hardware', () => { // Only run manually
     ```
