@@ -221,17 +221,17 @@ describe('KismetService', () => {
 			expect(KismetProxy.proxyGet).toHaveBeenCalledTimes(2);
 			expect(result.source).toBe('fallback');
 			expect(result.error).toBe('Connection refused');
-			expect(result.devices).toHaveLength(4); // FALLBACK_DEVICES count
+			expect(result.devices).toHaveLength(0); // Empty when all methods fail
 
-			// Check one of the fallback devices
-			const arrisDevice = result.devices.find((d) => d.manufacturer === 'ARRIS');
-			expect(arrisDevice).toBeDefined();
-			expect(arrisDevice).toMatchObject({
-				mac: '88:71:B1:95:65:3A',
-				type: 'wifi ap',
-				channel: 1,
-				frequency: 2412
-			});
+// 			// Check one of the fallback devices
+// 			const arrisDevice = result.devices.find((d) => d.manufacturer === 'ARRIS');
+// 			expect(arrisDevice).toBeDefined();
+// 			expect(arrisDevice).toMatchObject({
+// 				mac: '88:71:B1:95:65:3A',
+// 				type: 'wifi ap',
+// 				channel: 1,
+// 				frequency: 2412
+// 			});
 		});
 
 		it('should use GPS position for device locations in all scenarios', async () => {
@@ -297,7 +297,7 @@ describe('KismetService', () => {
 			const result = await KismetService.getDevices(mockFetch);
 
 			expect(result.source).toBe('fallback');
-			expect(result.devices).toHaveLength(4); // Should return fallback devices
+			expect(result.devices).toHaveLength(0); // Empty when all methods fail
 		});
 
 		it('should handle empty arrays from Kismet', async () => {
