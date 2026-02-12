@@ -406,7 +406,7 @@ describe('HackRFService - Core SDR Functionality', () => {
 		});
 
 		it('should handle spectrum data updates through stores', async () => {
-			const dataPoints: any[] = [];
+			const dataPoints: unknown[] = [];
 
 			// Subscribe to spectrum data updates
 			const unsubscribe = hackrfService.spectrumData.subscribe((data) => {
@@ -567,13 +567,13 @@ describe('HackRFService - Core SDR Functionality', () => {
 			expect(status.connected).toBe(false);
 
 			// Should be able to reconnect
-		vi.mocked(hackrfAPI.getStatus).mockResolvedValue({
-			connected: true,
-			sweeping: false
-		});
+			vi.mocked(hackrfAPI.getStatus).mockResolvedValue({
+				connected: true,
+				sweeping: false
+			});
 			await hackrfService.connect();
-		// Wait for store update to propagate
-		await new Promise((resolve) => setTimeout(resolve, 10));
+			// Wait for store update to propagate
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			const newStatus = await new Promise<HackRFStatus>((resolve) => {
 				const unsubscribe = hackrfService.status.subscribe((status) => {
@@ -582,11 +582,11 @@ describe('HackRFService - Core SDR Functionality', () => {
 				});
 			});
 
-		// TODO: Status doesn't update immediately after reconnect
-		// The service successfully reconnects without errors, but status may not update until next poll
-		expect(newStatus.connected).toBe(false); // Will update to true on next status poll
+			// TODO: Status doesn't update immediately after reconnect
+			// The service successfully reconnects without errors, but status may not update until next poll
+			expect(newStatus.connected).toBe(false); // Will update to true on next status poll
+		});
 	});
-});
 
 	describe('Performance Benchmarks', () => {
 		beforeEach(async () => {

@@ -11,7 +11,9 @@
 const BASE_URL = process.env.TEST_URL || 'http://localhost:5173';
 
 // Use the real (unmocked) fetch for server checks
-const realFetch: typeof fetch = (globalThis as any).__realFetch || globalThis.fetch;
+const realFetch: typeof fetch =
+	(globalThis as typeof globalThis & { __realFetch?: typeof fetch }).__realFetch ??
+	globalThis.fetch;
 
 let _serverAvailable: boolean | null = null;
 
@@ -41,7 +43,9 @@ export async function isServerAvailable(): Promise<boolean> {
  * Call at the top of integration test files that need real HTTP.
  */
 export function restoreRealFetch(): void {
-	if ((globalThis as any).__realFetch) {
-		globalThis.fetch = (globalThis as any).__realFetch;
+	const realFetch = (globalThis as typeof globalThis & { __realFetch?: typeof fetch })
+		.__realFetch;
+	if (realFetch) {
+		globalThis.fetch = realFetch;
 	}
 }
