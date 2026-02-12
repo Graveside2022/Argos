@@ -4,7 +4,7 @@ import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
 
 // Re-export for backward compatibility (barrel and consumers that import from this module)
-export type { GPSApiResponse,GPSPositionData } from '$lib/types/gps';
+export type { GPSApiResponse, GPSPositionData } from '$lib/types/gps';
 
 export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;
@@ -49,11 +49,21 @@ export class GPSService {
 					mgrsCoord
 				});
 			} else {
-				updateGPSStatus({ gpsStatus: 'GPS: No Fix' });
+				updateGPSStatus({
+					hasGPSFix: false,
+					gpsStatus: 'GPS: No Fix',
+					satellites: 0,
+					fixType: 'No'
+				});
 			}
 		} catch (error) {
 			console.error('GPS fetch error:', error);
-			updateGPSStatus({ gpsStatus: 'GPS: Error' });
+			updateGPSStatus({
+				hasGPSFix: false,
+				gpsStatus: 'GPS: Error',
+				satellites: 0,
+				fixType: 'No'
+			});
 		}
 	}
 
