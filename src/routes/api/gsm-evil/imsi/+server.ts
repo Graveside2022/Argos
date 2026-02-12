@@ -99,10 +99,10 @@ except Exception as e:
 			`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`
 		);
 
-		console.log('[gsm-evil-imsi] Python stdout length:', stdout.length);
-		console.log('[gsm-evil-imsi] Python stderr:', stderr);
+		console.warn('[gsm-evil-imsi] Python stdout length:', stdout.length);
+		console.warn('[gsm-evil-imsi] Python stderr:', stderr);
 		if (stdout.length < 100) {
-			console.log('[gsm-evil-imsi] Full stdout:', stdout);
+			console.warn('[gsm-evil-imsi] Full stdout:', stdout);
 		}
 
 		// Parse and return the result

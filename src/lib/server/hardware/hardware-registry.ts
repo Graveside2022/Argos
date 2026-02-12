@@ -19,7 +19,7 @@ export class HardwareRegistry {
 	 */
 	register(hardware: DetectedHardware): void {
 		this.hardware.set(hardware.id, hardware);
-		console.log(`[HardwareRegistry] Registered: ${hardware.name} (${hardware.id})`);
+		console.warn(`[HardwareRegistry] Registered: ${hardware.name} (${hardware.id})`);
 	}
 
 	/**
@@ -37,7 +37,7 @@ export class HardwareRegistry {
 	unregister(id: string): boolean {
 		const result = this.hardware.delete(id);
 		if (result) {
-			console.log(`[HardwareRegistry] Unregistered: ${id}`);
+			console.warn(`[HardwareRegistry] Unregistered: ${id}`);
 		}
 		return result;
 	}
@@ -201,7 +201,7 @@ export class HardwareRegistry {
 	 */
 	clear(): void {
 		this.hardware.clear();
-		console.log('[HardwareRegistry] Cleared all hardware');
+		console.warn('[HardwareRegistry] Cleared all hardware');
 	}
 
 	/**

@@ -46,7 +46,7 @@ export class FrontendToolExecutor {
 	async execute(toolCall: FrontendToolCall): Promise<FrontendToolResult> {
 		const { tool, parameters } = toolCall;
 
-		console.log('[FrontendToolExecutor] Executing:', tool, parameters);
+		console.warn('[FrontendToolExecutor] Executing:', tool, parameters);
 
 		try {
 			switch (tool) {

@@ -70,7 +70,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		const { stdout: grgsmCheck } = await hostExec(
 			'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
 		).catch((error: unknown) => {
-			console.debug('[gsm-evil-health] GRGSM process check failed', { error: String(error) });
+			console.warn('[gsm-evil-health] GRGSM process check failed', { error: String(error) });
 			return { stdout: '' };
 		});
 
@@ -82,7 +82,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 				const { stdout: pidTime } = await hostExec(
 					`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
 				).catch((error: unknown) => {
-					console.debug('[gsm-evil-health] PID runtime check failed', {
+					console.warn('[gsm-evil-health] PID runtime check failed', {
 						error: String(error)
 					});
 					return { stdout: '0' };
@@ -106,7 +106,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		const { stdout: gsmevilCheck } = await hostExec(
 			'ps aux | grep -E "python3? GsmEvil[_a-zA-Z0-9]*\\.py" | grep -v grep | head -1'
 		).catch((error: unknown) => {
-			console.debug('[gsm-evil-health] GSM Evil process check failed', {
+			console.warn('[gsm-evil-health] GSM Evil process check failed', {
 				error: String(error)
 			});
 			return { stdout: '' };
@@ -124,7 +124,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 				const { stdout: portCheck } = await hostExec(
 					'sudo lsof -i :8080 | grep LISTEN'
 				).catch((error: unknown) => {
-					console.debug('[gsm-evil-health] Port 8080 check failed', {
+					console.warn('[gsm-evil-health] Port 8080 check failed', {
 						error: String(error)
 					});
 					return { stdout: '' };
@@ -136,7 +136,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 					const { stdout: httpCheck } = await hostExec(
 						'timeout 3 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
 					).catch((error: unknown) => {
-						console.debug('[gsm-evil-health] HTTP check failed', {
+						console.warn('[gsm-evil-health] HTTP check failed', {
 							error: String(error)
 						});
 						return { stdout: '000' };
@@ -153,7 +153,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		const { stdout: gsmtapPort } = await hostExec(
 			'ss -u -n | grep -c ":4729" || echo "0"'
 		).catch((error: unknown) => {
-			console.debug('[gsm-evil-health] GSMTAP port check failed', { error: String(error) });
+			console.warn('[gsm-evil-health] GSMTAP port check failed', { error: String(error) });
 			return { stdout: '0' };
 		});
 		health.dataFlow.port4729Active = parseInt(gsmtapPort.trim()) > 0;
@@ -181,7 +181,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 					const { stdout: recentData } = await hostExec(
 						`python3 -c "import sqlite3; from datetime import datetime, timedelta; conn = sqlite3.connect('${dbPath}'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM imsi_data WHERE datetime(date_time) > datetime(\\'now\\', \\'-10 minutes\\')'); print(cursor.fetchone()[0]); conn.close()" 2>/dev/null || echo "0"`
 					).catch((error: unknown) => {
-						console.debug('[gsm-evil-health] Recent data check failed', {
+						console.warn('[gsm-evil-health] Recent data check failed', {
 							error: String(error)
 						});
 						return { stdout: '0' };

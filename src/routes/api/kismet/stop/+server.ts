@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export const POST: RequestHandler = async () => {
 	try {
-		console.log('Stopping Kismet with robust cleanup...');
+		console.warn('Stopping Kismet with robust cleanup...');
 
 		// First try to get Kismet PIDs
 		let pids: string[] = [];
@@ -20,11 +20,11 @@ export const POST: RequestHandler = async () => {
 				.filter((pid) => pid.length > 0);
 
 			if (pids.length > 0) {
-				console.log('Found Kismet processes to terminate:', pids.join(', '));
+				console.warn('Found Kismet processes to terminate:', pids.join(', '));
 			}
 		} catch (_error: unknown) {
 			// No Kismet processes found
-			console.log('No Kismet processes found');
+			console.warn('No Kismet processes found');
 			return json({
 				success: true,
 				status: 'stopped',
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async () => {
 		if (pids.length > 0) {
 			try {
 				await execAsync('pkill -TERM kismet');
-				console.log('Sent SIGTERM to Kismet processes');
+				console.warn('Sent SIGTERM to Kismet processes');
 
 				// Give Kismet time to cleanup gracefully
 				await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async () => {
 				try {
 					await execAsync('pgrep -x kismet');
 					// If we get here, some processes are still running, force kill them
-					console.log('Some Kismet processes still running, sending SIGKILL...');
+					console.warn('Some Kismet processes still running, sending SIGKILL...');
 					await execAsync('pkill -KILL kismet');
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				} catch (_error: unknown) {
@@ -80,7 +80,7 @@ export const POST: RequestHandler = async () => {
 			);
 		} catch (_error: unknown) {
 			// Good - no Kismet processes found
-			console.log('Verification passed: No Kismet processes found');
+			console.warn('Verification passed: No Kismet processes found');
 		}
 
 		return json({

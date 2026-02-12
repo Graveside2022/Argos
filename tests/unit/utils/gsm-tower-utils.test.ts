@@ -20,16 +20,16 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
 				},
 				{
 					imsi: '310410987654321',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:01:00Z'
@@ -47,16 +47,16 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 11111,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
 				},
 				{
 					imsi: '310410987654321',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 22222,
 					ci: 67890,
 					timestamp: '2026-02-12T10:01:00Z'
@@ -72,16 +72,16 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 11111,
 					timestamp: '2026-02-12T10:00:00Z'
 				},
 				{
 					imsi: '310410987654321',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 22222,
 					timestamp: '2026-02-12T10:01:00Z'
@@ -99,8 +99,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -116,8 +116,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '999999123456789',
-					mcc: '999' as any,
-					mnc: '999' as any,
+					mcc: '999',
+					mnc: '999',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -133,8 +133,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310004123456789',
-					mcc: '310' as any,
-					mnc: '004' as any, // MNC comes as string with leading zeros from IMSI parsing
+					mcc: '310',
+					mnc: '004', // MNC comes as string with leading zeros from IMSI parsing
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -154,8 +154,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -175,8 +175,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '999999123456789',
-					mcc: '999' as any,
-					mnc: '999' as any,
+					mcc: '999',
+					mnc: '999',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -196,9 +196,9 @@ describe('groupIMSIsByTower', () => {
 	describe('status determination', () => {
 		it('marks fake MCCs as "fake" status', () => {
 			const testMCCs = [
-				{ mcc: '000' as any, expected: 'fake' as const },
-				{ mcc: '001' as any, expected: 'fake' as const },
-				{ mcc: '999' as any, expected: 'fake' as const }
+				{ mcc: '000', expected: 'fake' as const },
+				{ mcc: '001', expected: 'fake' as const },
+				{ mcc: '999', expected: 'fake' as const }
 			];
 
 			testMCCs.forEach(({ mcc, expected }) => {
@@ -206,7 +206,7 @@ describe('groupIMSIsByTower', () => {
 					{
 						imsi: `${mcc}999123456789`,
 						mcc: mcc,
-						mnc: '999' as any,
+						mnc: '999',
 						lac: 12345,
 						ci: 67890,
 						timestamp: '2026-02-12T10:00:00Z'
@@ -224,8 +224,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '888888123456789',
-					mcc: '888' as any, // Not in mccToCountry mapping
-					mnc: '888' as any,
+					mcc: '888', // Not in mccToCountry mapping
+					mnc: '888',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -242,8 +242,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310999123456789',
-					mcc: '310' as any, // Valid MCC (USA)
-					mnc: '999' as any, // Invalid MNC
+					mcc: '310', // Valid MCC (USA)
+					mnc: '999', // Invalid MNC
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -260,8 +260,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any, // Valid MCC (USA)
-					mnc: '410' as any, // Valid MNC (AT&T)
+					mcc: '310', // Valid MCC (USA)
+					mnc: '410', // Valid MNC (AT&T)
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -280,16 +280,16 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
 				},
 				{
 					imsi: '310410987654321',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:05:00Z' // 5 minutes later
@@ -305,16 +305,16 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
 				},
 				{
 					imsi: '310410987654321',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:05:00Z'
@@ -334,8 +334,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -355,8 +355,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					lat: 40.7128,
@@ -374,8 +374,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -400,7 +400,7 @@ describe('groupIMSIsByTower', () => {
 				{
 					imsi: '310410123456789',
 					mcc: undefined as any,
-					mnc: '410' as any,
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -416,8 +416,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: undefined as any,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -433,8 +433,8 @@ describe('groupIMSIsByTower', () => {
 			const imsis: CapturedIMSI[] = [
 				{
 					imsi: '310410123456789',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: undefined as any,
 					timestamp: '2026-02-12T10:00:00Z'
@@ -451,8 +451,8 @@ describe('groupIMSIsByTower', () => {
 				{
 					imsi: '310410123456789',
 					tmsi: 'ABCD1234',
-					mcc: '310' as any,
-					mnc: '410' as any,
+					mcc: '310',
+					mnc: '410',
 					lac: 12345,
 					ci: 67890,
 					timestamp: '2026-02-12T10:00:00Z'

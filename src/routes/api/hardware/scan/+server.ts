@@ -15,7 +15,7 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async () => {
 	try {
-		console.log('[API /hardware/scan] Scanning system hardware...');
+		console.warn('[API /hardware/scan] Scanning system hardware...');
 
 		const scanResult = await scanAllHardware();
 

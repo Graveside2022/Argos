@@ -90,7 +90,7 @@ async function queryLocalDatabase(
 				count: rows.length
 			};
 		} catch (dbErr) {
-			console.log(`Cell tower DB at ${dbPath} failed:`, (dbErr as Error).message);
+			console.warn(`Cell tower DB at ${dbPath} failed:`, (dbErr as Error).message);
 		}
 	}
 

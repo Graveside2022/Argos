@@ -6,7 +6,7 @@
 export interface CSSLoadOptions {
 	preload?: boolean;
 	media?: string;
-	priority?: 'high' | 'medium' | 'low';
+	priority?: 'high' | 'low';
 }
 
 /**
@@ -44,7 +44,8 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
 
 		// Add priority hint if supported
 		if (options.priority && 'fetchPriority' in link) {
-			(link as any).fetchPriority = options.priority;
+			(link as HTMLLinkElement & { fetchPriority?: 'high' | 'low' }).fetchPriority =
+				options.priority;
 		}
 
 		document.head.appendChild(link);
@@ -57,9 +58,7 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
  * @returns Promise that resolves when all CSS is loaded
  */
 export function preloadCSS(cssFiles: string[]): Promise<void[]> {
-	return Promise.all(
-		cssFiles.map(href => loadCSS(href, { preload: true, priority: 'high' }))
-	);
+	return Promise.all(cssFiles.map((href) => loadCSS(href, { preload: true, priority: 'high' })));
 }
 
 /**
@@ -68,14 +67,14 @@ export function preloadCSS(cssFiles: string[]): Promise<void[]> {
  */
 export function isCriticalCSSLoaded(): boolean {
 	if (typeof window === 'undefined') return false;
-	
+
 	const testElement = document.createElement('div');
 	testElement.style.display = 'none';
 	document.body.appendChild(testElement);
-	
+
 	const bgPrimary = getComputedStyle(testElement).getPropertyValue('--bg-primary');
 	document.body.removeChild(testElement);
-	
+
 	return bgPrimary.trim() === '#0a0a0a';
 }
 
@@ -87,15 +86,15 @@ export function isCriticalCSSLoaded(): boolean {
 export function waitForCriticalCSS(maxWaitTime: number = 100): Promise<void> {
 	return new Promise((resolve) => {
 		const startTime = Date.now();
-		
+
 		const checkCSS = () => {
-			if (isCriticalCSSLoaded() || (Date.now() - startTime) >= maxWaitTime) {
+			if (isCriticalCSSLoaded() || Date.now() - startTime >= maxWaitTime) {
 				resolve();
 			} else {
 				requestAnimationFrame(checkCSS);
 			}
 		};
-		
+
 		checkCSS();
 	});
 }
@@ -106,7 +105,7 @@ export function waitForCriticalCSS(maxWaitTime: number = 100): Promise<void> {
  */
 export function markCSSLoaded(): void {
 	if (typeof window === 'undefined') return;
-	
+
 	// Wait for critical CSS and then mark as loaded
 	waitForCriticalCSS().then(() => {
 		requestAnimationFrame(() => {

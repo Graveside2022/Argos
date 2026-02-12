@@ -83,10 +83,10 @@ export default [
 					caughtErrorsIgnorePattern: '^_'
 				}
 			],
-			'@typescript-eslint/no-explicit-any': 'off', // Allow any for flexibility
+			'@typescript-eslint/no-explicit-any': 'warn', // Enforce proper typing
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
-			'@typescript-eslint/no-non-null-assertion': 'off', // Allow non-null assertions where needed
-			'no-console': 'off' // Allow console in scripts and development
+			'@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards
+			'no-console': ['warn', { allow: ['warn', 'error'] }] // Use proper logging
 		}
 	},
 	{
