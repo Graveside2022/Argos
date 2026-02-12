@@ -1,5 +1,5 @@
 // Proxy for Kismet REST API
-import type { DeviceFilter, DeviceStats,KismetDevice } from './types';
+import type { DeviceFilter, DeviceStats, KismetDevice } from './types';
 
 // Kismet API response types
 interface KismetDeviceResponse {
@@ -287,7 +287,10 @@ export class KismetProxy {
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
 		const encryptionNumber = raw['kismet.device.base.crypt'];
 		const manufacturer = raw['kismet.device.base.manuf'] || 'Unknown';
-		const signalRaw = raw['kismet.device.base.signal'] as any;
+		const signalRaw = raw['kismet.device.base.signal'] as
+			| number
+			| Record<string, number>
+			| undefined;
 		// Kismet returns signal as either a plain number or an object with nested fields
 		const lastSignal =
 			typeof signalRaw === 'number'
@@ -427,7 +430,10 @@ export class KismetProxy {
 		raw: KismetDeviceResponse
 	): KismetDevice['location'] | undefined {
 		// Kismet may store location in different ways
-		const location = raw['kismet.device.base.location'] as any;
+		const location = raw['kismet.device.base.location'] as
+			| Record<string, number>
+			| number
+			| undefined;
 
 		if (!location || location === 0) return undefined;
 

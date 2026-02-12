@@ -13,11 +13,24 @@ interface AgentMessage {
 
 interface AgentContext {
 	selectedDevice?: string;
+	selectedDeviceDetails?: {
+		ssid: string;
+		type: string;
+		manufacturer: string;
+		signalDbm: number | null;
+		channel: string;
+		frequency: number;
+		encryption: string;
+		packets: number;
+	};
 	mapBounds?: { north: number; south: number; east: number; west: number };
 	activeSignals?: number;
 	userLocation?: { lat: number; lon: number };
-	kismetStatus?: string;
+	kismetStatus?: { connected: boolean; status: string };
 	hackrfStatus?: string;
+	currentWorkflow?: string;
+	workflowStep?: number;
+	workflowGoal?: string;
 }
 
 interface AgentRunInput {

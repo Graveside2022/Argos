@@ -1,4 +1,6 @@
-import { type Writable,writable } from 'svelte/store';
+import { type Writable, writable } from 'svelte/store';
+
+import type { LeafletMarker } from '$lib/types/map';
 
 export interface SimplifiedSignal {
 	id: string;
@@ -17,7 +19,7 @@ export interface HackRFState {
 	signalCount: number;
 	currentSignal: SimplifiedSignal | null;
 	signals: Map<string, SimplifiedSignal>;
-	signalMarkers: Map<string, any>; // Leaflet markers
+	signalMarkers: Map<string, LeafletMarker>;
 }
 
 const initialHackRFState: HackRFState = {
@@ -34,39 +36,39 @@ export const hackrfStore: Writable<HackRFState> = writable(initialHackRFState);
 
 // Helper functions to update store
 export const setSearchingState = (isSearching: boolean) => {
-	hackrfStore.update(state => ({ ...state, isSearching }));
+	hackrfStore.update((state) => ({ ...state, isSearching }));
 };
 
 export const setConnectionStatus = (status: 'Connected' | 'Disconnected') => {
-	hackrfStore.update(state => ({ ...state, connectionStatus: status }));
+	hackrfStore.update((state) => ({ ...state, connectionStatus: status }));
 };
 
 export const setTargetFrequency = (frequency: number) => {
-	hackrfStore.update(state => ({ ...state, targetFrequency: frequency }));
+	hackrfStore.update((state) => ({ ...state, targetFrequency: frequency }));
 };
 
 export const updateSignalCount = (count: number) => {
-	hackrfStore.update(state => ({ ...state, signalCount: count }));
+	hackrfStore.update((state) => ({ ...state, signalCount: count }));
 };
 
 export const setCurrentSignal = (signal: SimplifiedSignal | null) => {
-	hackrfStore.update(state => ({ ...state, currentSignal: signal }));
+	hackrfStore.update((state) => ({ ...state, currentSignal: signal }));
 };
 
 export const addSignal = (signal: SimplifiedSignal) => {
-	hackrfStore.update(state => {
+	hackrfStore.update((state) => {
 		const newSignals = new Map(state.signals);
 		newSignals.set(signal.id, signal);
-		return { 
-			...state, 
+		return {
+			...state,
 			signals: newSignals,
-			signalCount: newSignals.size 
+			signalCount: newSignals.size
 		};
 	});
 };
 
 export const updateSignal = (signalId: string, updates: Partial<SimplifiedSignal>) => {
-	hackrfStore.update(state => {
+	hackrfStore.update((state) => {
 		const newSignals = new Map(state.signals);
 		const existingSignal = newSignals.get(signalId);
 		if (existingSignal) {
@@ -77,19 +79,19 @@ export const updateSignal = (signalId: string, updates: Partial<SimplifiedSignal
 };
 
 export const removeSignal = (signalId: string) => {
-	hackrfStore.update(state => {
+	hackrfStore.update((state) => {
 		const newSignals = new Map(state.signals);
 		newSignals.delete(signalId);
-		return { 
-			...state, 
+		return {
+			...state,
 			signals: newSignals,
-			signalCount: newSignals.size 
+			signalCount: newSignals.size
 		};
 	});
 };
 
 export const clearAllSignals = () => {
-	hackrfStore.update(state => ({
+	hackrfStore.update((state) => ({
 		...state,
 		signals: new Map(),
 		signalMarkers: new Map(),
@@ -98,8 +100,8 @@ export const clearAllSignals = () => {
 	}));
 };
 
-export const addSignalMarker = (signalId: string, marker: any) => {
-	hackrfStore.update(state => {
+export const addSignalMarker = (signalId: string, marker: LeafletMarker) => {
+	hackrfStore.update((state) => {
 		const newMarkers = new Map(state.signalMarkers);
 		newMarkers.set(signalId, marker);
 		return { ...state, signalMarkers: newMarkers };
@@ -107,7 +109,7 @@ export const addSignalMarker = (signalId: string, marker: any) => {
 };
 
 export const removeSignalMarker = (signalId: string) => {
-	hackrfStore.update(state => {
+	hackrfStore.update((state) => {
 		const newMarkers = new Map(state.signalMarkers);
 		newMarkers.delete(signalId);
 		return { ...state, signalMarkers: newMarkers };
@@ -115,7 +117,7 @@ export const removeSignalMarker = (signalId: string) => {
 };
 
 export const clearAllSignalMarkers = () => {
-	hackrfStore.update(state => ({
+	hackrfStore.update((state) => ({
 		...state,
 		signalMarkers: new Map()
 	}));

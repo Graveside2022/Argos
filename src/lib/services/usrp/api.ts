@@ -6,6 +6,7 @@ class USRPAPI {
 		'disconnected'
 	);
 	private lastError = writable<string | null>(null);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private dataCallback: ((data: any) => void) | null = null;
 
 	connectToDataStream() {
@@ -97,6 +98,7 @@ class USRPAPI {
 		}, 100);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	onData(callback: (data: any) => void) {
 		this.dataCallback = callback;
 	}

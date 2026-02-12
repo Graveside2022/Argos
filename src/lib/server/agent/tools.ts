@@ -182,10 +182,22 @@ export const argosTools = [
 	}
 ];
 
+interface ToolSchema {
+	type: string;
+	properties?: Record<string, unknown>;
+	required?: string[];
+}
+
+interface Tool {
+	name: string;
+	description: string;
+	input_schema: ToolSchema;
+}
+
 /**
  * Get all available tools (hardcoded + frontend)
  */
-export function getAllTools(): Array<{ name: string; description: string; input_schema: any }> {
+export function getAllTools(): Tool[] {
 	const frontendTools = getFrontendToolsForAgent();
 	return [...argosTools, ...frontendTools];
 }
@@ -208,11 +220,31 @@ function getToolListForPrompt(): string {
 		.join('\n');
 }
 
+interface SystemContext {
+	selectedDevice?: string;
+	selectedDeviceDetails?: {
+		ssid: string;
+		type: string;
+		manufacturer: string;
+		signalDbm: number | null;
+		channel: string;
+		frequency: number;
+		encryption: string;
+		packets: number;
+	};
+	userLocation?: { lat: number; lon: number };
+	activeSignals?: number;
+	kismetStatus?: { connected: boolean; status: string };
+	currentWorkflow?: string;
+	workflowStep?: number;
+	workflowGoal?: string;
+}
+
 /**
  * System prompt for Argos Agent
  * Provides context about the system and available capabilities
  */
-export function getSystemPrompt(context?: any): string {
+export function getSystemPrompt(context?: SystemContext): string {
 	const timestamp = new Date().toISOString();
 
 	// Extract context from AG-UI shared state structure
@@ -247,7 +279,7 @@ export function getSystemPrompt(context?: any): string {
 		workflowContext = `
 ACTIVE WORKFLOW: ${currentWorkflow}
 - Goal: ${workflowGoal || 'Not specified'}
-- Step: ${workflowStep + 1}
+- Step: ${(workflowStep ?? 0) + 1}
 - Continue guiding the operator through this workflow`;
 	}
 

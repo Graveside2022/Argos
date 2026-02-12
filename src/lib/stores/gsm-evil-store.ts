@@ -11,6 +11,26 @@ import { browser } from '$app/environment';
 const STORAGE_KEY = 'gsm-evil-state';
 const STORAGE_VERSION = '1.0';
 
+export interface IMSICapture {
+	imsi: string;
+	timestamp: number;
+	mcc?: string;
+	mnc?: string;
+	lac?: string;
+	ci?: string;
+	frequency?: string;
+}
+
+export interface TowerLocation {
+	lat: number;
+	lon: number;
+	range?: number;
+	samples?: number;
+	city?: string;
+	source?: string;
+	lastUpdated?: string;
+}
+
 export interface ScanResult {
 	frequency: string;
 	power: number;
@@ -40,10 +60,10 @@ export interface GSMEvilState {
 	scanButtonText: string;
 
 	// IMSI and tower data
-	capturedIMSIs: any[];
+	capturedIMSIs: IMSICapture[];
 	totalIMSIs: number;
-	towerLocations: { [key: string]: any };
-	towerLookupAttempted: { [key: string]: boolean };
+	towerLocations: Record<string, TowerLocation>;
+	towerLookupAttempted: Record<string, boolean>;
 
 	// Metadata
 	lastScanTime: string | null;
@@ -222,7 +242,7 @@ function createGSMEvilStore() {
 			}),
 
 		// IMSI Management
-		setCapturedIMSIs: (imsis: any[]) =>
+		setCapturedIMSIs: (imsis: IMSICapture[]) =>
 			update((state) => {
 				const newState = {
 					...state,
@@ -233,7 +253,7 @@ function createGSMEvilStore() {
 				return newState;
 			}),
 
-		addCapturedIMSI: (imsi: any) =>
+		addCapturedIMSI: (imsi: IMSICapture) =>
 			update((state) => {
 				const cappedIMSIs = [...state.capturedIMSIs, imsi].slice(-1000);
 				const newState = {
@@ -246,14 +266,14 @@ function createGSMEvilStore() {
 			}),
 
 		// Tower Management
-		setTowerLocations: (locations: { [key: string]: any }) =>
+		setTowerLocations: (locations: Record<string, TowerLocation>) =>
 			update((state) => {
 				const newState = { ...state, towerLocations: locations };
 				persistState(newState);
 				return newState;
 			}),
 
-		updateTowerLocation: (key: string, location: any) =>
+		updateTowerLocation: (key: string, location: TowerLocation) =>
 			update((state) => {
 				const newState = {
 					...state,

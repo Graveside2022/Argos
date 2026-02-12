@@ -3,7 +3,7 @@
  * Handles execution of frontend tools called by the agent
  */
 
-import type { Map as LeafletMap } from 'leaflet';
+import type { Map as LeafletMap, Marker } from 'leaflet';
 
 import {
 	clearWorkflow,
@@ -15,6 +15,7 @@ import {
 
 export interface FrontendToolCall {
 	tool: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	parameters: Record<string, any>;
 }
 
@@ -31,7 +32,7 @@ export interface FrontendToolResult {
 export class FrontendToolExecutor {
 	private map: LeafletMap | null = null;
 	private highlightedDevices = new Set<string>();
-	private customMarkers: any[] = [];
+	private customMarkers: Marker[] = [];
 
 	/**
 	 * Set the Leaflet map instance for map-related tools
@@ -350,7 +351,8 @@ export class FrontendToolExecutor {
 		action: string,
 		description: string,
 		tool: string,
-		parameters: any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		parameters: Record<string, any>
 	): FrontendToolResult {
 		// Emit event that UI can display as a clickable action button
 		window.dispatchEvent(
