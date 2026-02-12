@@ -124,14 +124,23 @@ export const GET: RequestHandler = async ({ url, request }) => {
 					try {
 						// Transform the data if needed
 						const transformedData = {
-							frequencies: data.powerValues
-								? data.powerValues.map((_: number, index: number) => {
-										const freqStep =
-											(data.endFreq! - data.startFreq!) /
-											(data.powerValues!.length - 1);
-										return data.startFreq! + index * freqStep;
-									})
-								: [],
+							frequencies:
+								data.powerValues &&
+								data.startFreq !== undefined &&
+								data.endFreq !== undefined &&
+								data.powerValues !== undefined
+									? (() => {
+											const startFreq = data.startFreq;
+											const endFreq = data.endFreq;
+											const powerValues = data.powerValues;
+											return powerValues.map((_: number, index: number) => {
+												const freqStep =
+													(endFreq - startFreq) /
+													(powerValues.length - 1);
+												return startFreq + index * freqStep;
+											});
+										})()
+									: [],
 							power: data.powerValues || [],
 							power_levels: data.powerValues || [],
 							start_freq: data.startFreq,

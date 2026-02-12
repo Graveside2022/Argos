@@ -115,7 +115,10 @@ export class HardwareRegistry {
 			if (!byCategory[hw.category]) {
 				byCategory[hw.category] = [];
 			}
-			byCategory[hw.category]!.push(hw);
+			const category = byCategory[hw.category];
+			if (category) {
+				category.push(hw);
+			}
 		}
 
 		return byCategory as Record<HardwareCategory, DetectedHardware[]>;
@@ -131,7 +134,10 @@ export class HardwareRegistry {
 			if (!byConnection[hw.connectionType]) {
 				byConnection[hw.connectionType] = [];
 			}
-			byConnection[hw.connectionType]!.push(hw);
+			const connection = byConnection[hw.connectionType];
+			if (connection) {
+				connection.push(hw);
+			}
 		}
 
 		return byConnection as Record<ConnectionType, DetectedHardware[]>;

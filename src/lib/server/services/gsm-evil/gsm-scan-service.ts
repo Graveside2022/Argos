@@ -61,9 +61,9 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					const testResult = await hostExec(`timeout 4 ${baseCommand}`);
 					gsmTestOutput = testResult.stdout + testResult.stderr;
 					console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 300)}`);
-				} catch (testError: any) {
-					// eslint-disable-line @typescript-eslint/no-explicit-any
-					gsmTestOutput = (testError.stdout || '') + (testError.stderr || '');
+				} catch (testError: unknown) {
+					const error = testError as { stdout?: string; stderr?: string };
+					gsmTestOutput = (error.stdout || '') + (error.stderr || '');
 				}
 
 				console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 500)}...`);

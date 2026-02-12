@@ -1,6 +1,6 @@
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import type { SpectrumData } from '$lib/server/hackrf/types';
-import { logDebug,logInfo } from '$lib/utils/logger';
+import { logDebug, logInfo } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -139,13 +139,20 @@ export const GET: RequestHandler = () => {
 					// Transform data to frontend format
 					const transformedData = {
 						frequencies:
-							data.powerValues && data.startFreq && data.endFreq
-								? data.powerValues.map((_, index) => {
-										const freqStep =
-											(data.endFreq! - data.startFreq!) /
-											(data.powerValues!.length - 1);
-										return data.startFreq! + index * freqStep;
-									})
+							data.powerValues &&
+							data.startFreq !== undefined &&
+							data.endFreq !== undefined &&
+							data.powerValues !== undefined
+								? (() => {
+										const startFreq = data.startFreq;
+										const endFreq = data.endFreq;
+										const powerValues = data.powerValues;
+										return powerValues.map((_, index) => {
+											const freqStep =
+												(endFreq - startFreq) / (powerValues.length - 1);
+											return startFreq + index * freqStep;
+										});
+									})()
 								: [],
 						power: data.powerValues || [],
 						power_levels: data.powerValues || [],
@@ -169,10 +176,11 @@ export const GET: RequestHandler = () => {
 			// Assigned to a named reference so it can be properly unregistered
 			// on connection close in cancel().
 			onSpectrumData = (data: unknown) => {
+				if (!onSpectrum) return;
 				if (data && typeof data === 'object' && 'data' in data) {
-					onSpectrum!((data as { data: SpectrumData }).data);
+					onSpectrum((data as { data: SpectrumData }).data);
 				} else {
-					onSpectrum!(data as SpectrumData);
+					onSpectrum(data as SpectrumData);
 				}
 			};
 

@@ -86,8 +86,9 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		console.error(`Running visual tests on Raspberry Pi (${arch()}/${platform()})`);
 
 		try {
+			if (!puppeteer) throw new Error('Puppeteer not available');
 			// Pi-specific browser launch configuration
-			browser = await puppeteer!.default.launch({
+			browser = await puppeteer.default.launch({
 				headless: true,
 				args: PI_VISUAL_CONFIG.browserArgs,
 				executablePath: '/usr/bin/chromium-browser',

@@ -5,7 +5,7 @@
  * Skips gracefully when environment is not available.
  */
 
-import { afterAll,describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 
 import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
 
@@ -45,25 +45,29 @@ describe.runIf(canRun)('Argos Application Integration', () => {
 	});
 
 	it('should load the home page', async () => {
-		await page!.goto('http://localhost:5173');
-		await expect(page!).toHaveTitle(/Argos/);
+		if (!page) throw new Error('Page not initialized');
+		await page.goto('http://localhost:5173');
+		await expect(page).toHaveTitle(/Argos/);
 	});
 
 	it('should navigate to HackRF page', async () => {
-		await page!.goto('http://localhost:5173');
-		await page!.click('a[href="/hackrf"]');
-		await expect(page!).toHaveURL(/.*\/hackrf/);
+		if (!page) throw new Error('Page not initialized');
+		await page.goto('http://localhost:5173');
+		await page.click('a[href="/hackrf"]');
+		await expect(page).toHaveURL(/.*\/hackrf/);
 	});
 
 	it('should navigate to Kismet page', async () => {
-		await page!.goto('http://localhost:5173');
-		await page!.click('a[href="/kismet"]');
-		await expect(page!).toHaveURL(/.*\/kismet/);
+		if (!page) throw new Error('Page not initialized');
+		await page.goto('http://localhost:5173');
+		await page.click('a[href="/kismet"]');
+		await expect(page).toHaveURL(/.*\/kismet/);
 	});
 
 	it('should navigate to TAK page', async () => {
-		await page!.goto('http://localhost:5173');
-		await page!.click('a[href="/tak"]');
-		await expect(page!).toHaveURL(/.*\/tak/);
+		if (!page) throw new Error('Page not initialized');
+		await page.goto('http://localhost:5173');
+		await page.click('a[href="/tak"]');
+		await expect(page).toHaveURL(/.*\/tak/);
 	});
 });
