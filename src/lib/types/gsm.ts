@@ -7,6 +7,18 @@
  *   - src/routes/api/gsm-evil/intelligent-scan/+server.ts
  */
 
+export interface CapturedIMSI {
+	imsi: string;
+	tmsi?: string;
+	mcc: string | number;
+	mnc: string | number;
+	lac: number;
+	ci: number;
+	lat?: number;
+	lon?: number;
+	timestamp: string;
+}
+
 export interface FrequencyTestResult {
 	frequency: string;
 	power: number;

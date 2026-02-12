@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { arch, platform } from 'os';
 import _path from 'path';
-import { afterAll,beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // Dynamic imports for optional dependencies
 let puppeteer: typeof import('puppeteer') | null = null;
@@ -350,6 +350,10 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		try {
 			const baselineBuffer = await fs.readFile(baselinePath);
 			const screenshotBuffer = await fs.readFile(screenshotPath);
+
+			if (!PNG || !pixelmatch) {
+				throw new Error('PNG or pixelmatch not available');
+			}
 
 			const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
 			const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));

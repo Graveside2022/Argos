@@ -14,41 +14,35 @@ vi.mock('$lib/services/api', () => ({
 		connect: vi.fn().mockResolvedValue({ success: true, message: 'Connected' }),
 		disconnect: vi.fn().mockResolvedValue({ success: true, message: 'Disconnected' }),
 		getStatus: vi.fn().mockResolvedValue({ connected: true, sweeping: false }),
-		getConfig: vi
-			.fn()
-			.mockResolvedValue({
+		getConfig: vi.fn().mockResolvedValue({
+			startFreq: 88,
+			endFreq: 108,
+			binSize: 100000,
+			sampleRate: 20000000,
+			gain: 20,
+			amplifierEnabled: false
+		}),
+		updateConfig: vi.fn().mockResolvedValue({
+			success: true,
+			config: {
 				startFreq: 88,
 				endFreq: 108,
 				binSize: 100000,
 				sampleRate: 20000000,
 				gain: 20,
 				amplifierEnabled: false
-			}),
-		updateConfig: vi
-			.fn()
-			.mockResolvedValue({
-				success: true,
-				config: {
-					startFreq: 88,
-					endFreq: 108,
-					binSize: 100000,
-					sampleRate: 20000000,
-					gain: 20,
-					amplifierEnabled: false
-				}
-			}),
+			}
+		}),
 		startSweep: vi.fn().mockResolvedValue({ success: true, message: 'Sweep started' }),
 		stopSweep: vi.fn().mockResolvedValue({ success: true, message: 'Sweep stopped' }),
 		setGain: vi.fn().mockResolvedValue({ success: true }),
 		toggleAmplifier: vi.fn().mockResolvedValue({ success: true }),
-		getDeviceInfo: vi
-			.fn()
-			.mockResolvedValue({
-				serial: 'test',
-				boardId: '1',
-				firmwareVersion: '1.0',
-				partId: 'test'
-			}),
+		getDeviceInfo: vi.fn().mockResolvedValue({
+			serial: 'test',
+			boardId: '1',
+			firmwareVersion: '1.0',
+			partId: 'test'
+		}),
 		exportData: vi.fn().mockResolvedValue(new Blob(['test']))
 	}
 }));
@@ -169,8 +163,8 @@ describe('HackRFService - Core SDR Functionality', () => {
 			success: true,
 			message: 'Sweep stopped'
 		});
-		vi.mocked(hackrfAPI.setGain).mockResolvedValue({ success: true });
-		vi.mocked(hackrfAPI.toggleAmplifier).mockResolvedValue({ success: true });
+		vi.mocked(hackrfAPI.setGain).mockResolvedValue({ success: true, gain: 20 });
+		vi.mocked(hackrfAPI.toggleAmplifier).mockResolvedValue({ success: true, enabled: false });
 
 		// Mock global fetch for emergencyStop (uses fetch directly, not hackrfAPI)
 		vi.mocked(global.fetch).mockResolvedValue({
