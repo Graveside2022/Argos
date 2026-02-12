@@ -238,7 +238,7 @@ export class KismetService {
 				manufacturer: (d.manufacturer as string) || 'Unknown',
 				type: rawType?.toLowerCase() || 'unknown',
 				channel: parseInt(String(d.channel)) || 0,
-				frequency: (d.frequency as number) || 0,
+				frequency: (d.frequency as number) || (parseInt(String(d.channel)) || 0) * 5 + 2400,
 				packets: (d.packets as number) || 0,
 				datasize: (d.packets as number) || 0,
 				ssid: (d.ssid as string) || (d.name as string) || undefined,
@@ -299,7 +299,9 @@ export class KismetService {
 				manufacturer: (d['kismet.device.base.manuf'] as string) || 'Unknown',
 				type: rawType.toLowerCase(),
 				channel: parseInt(String(d['kismet.device.base.channel'])) || 0,
-				frequency: (d['kismet.device.base.frequency'] as number) || 0,
+				frequency:
+					(d['kismet.device.base.frequency'] as number) ||
+					(parseInt(String(d['kismet.device.base.channel'])) || 0) * 5 + 2400,
 				packets: (d['kismet.device.base.packets.total'] as number) || 0,
 				datasize: (d['kismet.device.base.packets.total'] as number) || 0,
 				ssid: ssid,

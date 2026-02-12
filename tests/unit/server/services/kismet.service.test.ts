@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, type Mock,vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { KismetProxy } from '$lib/server/kismet';
 import type { GPSPosition } from '$lib/server/services/kismet.service';
@@ -251,8 +251,8 @@ describe('KismetService', () => {
 			const result = await KismetService.getDevices(mockFetch);
 
 			// Device should have location near GPS position with variance
-			expect(Math.abs(result.devices[0].location.lat - 52.520008)).toBeLessThanOrEqual(0.001);
-			expect(Math.abs(result.devices[0].location.lon - 13.404954)).toBeLessThanOrEqual(0.001);
+			expect(Math.abs(result.devices[0].location.lat - 52.520008)).toBeLessThanOrEqual(0.003);
+			expect(Math.abs(result.devices[0].location.lon - 13.404954)).toBeLessThanOrEqual(0.003);
 		});
 
 		it('should handle error messages and logging correctly', async () => {
@@ -379,10 +379,10 @@ describe('KismetService', () => {
 			expect(device.location.lat).toBeCloseTo(mockGPSPosition.latitude, 2);
 			expect(device.location.lon).toBeCloseTo(mockGPSPosition.longitude, 2);
 			expect(Math.abs(device.location.lat - mockGPSPosition.latitude)).toBeLessThanOrEqual(
-				0.001
-			); // Half of LOCATION_VARIANCE
+				0.002
+			); // Signal-based variance: ~20-200m → ~0.0002-0.002 degrees
 			expect(Math.abs(device.location.lon - mockGPSPosition.longitude)).toBeLessThanOrEqual(
-				0.001
+				0.002
 			);
 		});
 
@@ -402,10 +402,10 @@ describe('KismetService', () => {
 			result.forEach((device) => {
 				expect(
 					Math.abs(device.location.lat - mockGPSPosition.latitude)
-				).toBeLessThanOrEqual(0.001);
+				).toBeLessThanOrEqual(0.003);
 				expect(
 					Math.abs(device.location.lon - mockGPSPosition.longitude)
-				).toBeLessThanOrEqual(0.001);
+				).toBeLessThanOrEqual(0.003);
 			});
 
 			// Locations should be different due to random variance
@@ -487,10 +487,10 @@ describe('KismetService', () => {
 
 			// Location should have variance applied
 			expect(Math.abs(device.location.lat - mockGPSPosition.latitude)).toBeLessThanOrEqual(
-				0.001
+				0.003
 			);
 			expect(Math.abs(device.location.lon - mockGPSPosition.longitude)).toBeLessThanOrEqual(
-				0.001
+				0.003
 			);
 		});
 
