@@ -71,10 +71,11 @@
 				res = await fetch(ep.controlUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'start' })
+					body: JSON.stringify({ action: 'start' }),
+					credentials: 'same-origin'
 				});
 			} else if (ep.startUrl) {
-				res = await fetch(ep.startUrl, { method: 'POST' });
+				res = await fetch(ep.startUrl, { method: 'POST', credentials: 'same-origin' });
 			} else {
 				throw new Error('No start URL configured for tool');
 			}
@@ -89,7 +90,8 @@
 					const statusRes = await fetch(ep.controlUrl, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ action: 'status' })
+						body: JSON.stringify({ action: 'status' }),
+						credentials: 'same-origin'
 					});
 					const statusData = await statusRes.json();
 					setLocalStatus(tool.id, statusData.running ? 'running' : 'stopped');
@@ -123,10 +125,11 @@
 				res = await fetch(ep.controlUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'stop' })
+					body: JSON.stringify({ action: 'stop' }),
+					credentials: 'same-origin'
 				});
 			} else if (ep.stopUrl) {
-				res = await fetch(ep.stopUrl, { method: 'POST' });
+				res = await fetch(ep.stopUrl, { method: 'POST', credentials: 'same-origin' });
 			} else {
 				throw new Error('No stop URL configured for tool');
 			}
@@ -155,7 +158,8 @@
 			fetch(openwebrxEp.controlUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'status' })
+				body: JSON.stringify({ action: 'status' }),
+				credentials: 'same-origin'
 			})
 				.then((r) => r.json())
 				.then((data) => {
