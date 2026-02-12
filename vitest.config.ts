@@ -1,0 +1,38 @@
+import { defineConfig } from 'vitest/config';
+import { sveltekit } from '@sveltejs/kit/vite';
+import path from 'path';
+
+export default defineConfig({
+	plugins: [sveltekit()],
+	resolve: {
+		alias: {
+			$lib: path.resolve('./src/lib'),
+			$app: path.resolve('./.svelte-kit/runtime/app')
+		}
+	},
+	test: {
+		environment: 'jsdom',
+		globals: true,
+		setupFiles: ['./tests/setup.ts'],
+		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		exclude: ['tests/e2e/**', 'node_modules/**'],
+		testTimeout: 30000,
+		hookTimeout: 30000,
+		// RPi5 memory constraints: limit to single worker to prevent OOM
+		maxWorkers: 1,
+		minWorkers: 1,
+		pool: 'forks',
+		coverage: {
+			reporter: ['text', 'json', 'html'],
+			exclude: [
+				'node_modules/',
+				'tests/',
+				'**/*.d.ts',
+				'**/*.config.ts',
+				'**/*.config.js',
+				'build/',
+				'.svelte-kit/'
+			]
+		}
+	}
+});
