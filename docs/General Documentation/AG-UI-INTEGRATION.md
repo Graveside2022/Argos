@@ -93,9 +93,11 @@ Exposes all Argos capabilities as MCP tools:
 - VS Code-style interface
 - LLM provider status indicator
 
-### 4. Tool Approval Dialog (`src/lib/components/dashboard/ToolApprovalDialog.svelte`)
+### 4. Tool Approval Dialog ~~`src/lib/components/dashboard/ToolApprovalDialog.svelte`~~ (REMOVED)
 
-Human-in-the-loop approval for attack tools:
+> **Note:** This component was removed during Phase 2 dead code elimination. Tool approval is now handled differently.
+
+Original design - Human-in-the-loop approval for attack tools:
 
 - Visual warning indicators
 - Tool arguments display
@@ -344,8 +346,8 @@ curl http://localhost:5173/api/agent/status
 # Test MCP endpoint
 curl http://localhost:5173/api/mcp
 
-# Check tool definitions
-cat src/lib/server/mcp/tools/*.ts
+# Check MCP server implementations (tools are embedded in servers)
+ls -la src/lib/server/mcp/servers/*.ts
 ```
 
 ### Ollama Model Missing

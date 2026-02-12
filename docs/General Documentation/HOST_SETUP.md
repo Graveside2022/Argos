@@ -554,5 +554,5 @@ After host setup is complete:
 
 - [Container Deployment](../config/openwebrx/README.md)
 - [OpenWebRX Configuration](../config/openwebrx/README.md)
-- [Troubleshooting Guide](TROUBLESHOOTING.md)
+- ~~Troubleshooting Guide~~ (TODO: not yet created)
 - Automated Setup: `scripts/setup-host-complete.sh`
