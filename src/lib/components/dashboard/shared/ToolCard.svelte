@@ -50,7 +50,7 @@
 		<div class="tool-info">
 			<span class="tool-name">{name}</span>
 			<div class="tool-status-row">
-				{#if installed}
+				{#if isInstalled}
 					<span
 						class="tool-status-dot"
 						class:dot-active={isRunning}
@@ -72,7 +72,7 @@
 		<p class="tool-description">{description}</p>
 	{/if}
 
-	{#if installed}
+	{#if isInstalled}
 		<div class="tool-actions">
 			{#if canOpen}
 				{#if externalUrl}
