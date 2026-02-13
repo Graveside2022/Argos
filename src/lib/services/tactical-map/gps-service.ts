@@ -1,10 +1,10 @@
+import type { GPSApiResponse } from '$lib/gps/types';
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
-import type { GPSApiResponse } from '$lib/types/gps';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
 
 // Re-export for backward compatibility (barrel and consumers that import from this module)
-export type { GPSApiResponse, GPSPositionData } from '$lib/types/gps';
+export type { GPSApiResponse, GPSPositionData } from '$lib/gps/types';
 
 export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;

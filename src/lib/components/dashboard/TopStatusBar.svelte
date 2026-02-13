@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	import type { Satellite } from '$lib/gps/types';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import type { Satellite } from '$lib/types/gps';
 
 	type DeviceState = 'active' | 'standby' | 'offline';
 

@@ -1,6 +1,6 @@
+import { GPSPositionSchema } from '$lib/gps/types';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { ApiResponseSchema } from '$lib/types/api';
-import { GPSPositionSchema } from '$lib/types/gps';
 
 import type { RequestHandler } from './$types';
 

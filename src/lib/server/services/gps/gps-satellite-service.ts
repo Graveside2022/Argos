@@ -1,8 +1,8 @@
 import { Socket } from 'net';
 import { z } from 'zod';
 
+import type { Satellite, SatellitesApiResponse } from '$lib/gps/types';
 import { safeJsonParse } from '$lib/server/security/safe-json';
-import type { Satellite, SatellitesApiResponse } from '$lib/types/gps';
 import { logWarn } from '$lib/utils/logger';
 
 // Zod schema for gpsd SKY message with full satellite data
