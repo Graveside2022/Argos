@@ -103,6 +103,9 @@ npm run typecheck            # TypeScript validation
 npm run lint                 # ESLint check
 npm run lint:fix             # Auto-fix ESLint errors
 
+# Code Quality Audit
+npx tsx scripts/run-audit.ts  # Constitutional audit (see docs/constitutional-audit-tool/)
+
 # Framework Validation (CSS/HTML/Visual Integrity)
 npm run framework:validate-all    # Run all framework checks
 npm run framework:check-css       # CSS integrity check
