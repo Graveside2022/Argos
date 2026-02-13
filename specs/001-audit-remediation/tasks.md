@@ -94,22 +94,22 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 ### Step 1: Create Common Zod Schemas (Foundation for US1)
 
-- [ ] T018 [P] [US1] Create SignalReading schema in `src/lib/types/signal.ts` with Zod validation. Include JSDoc comment explaining validation rules (frequency 1-6000 MHz, power -120 to 0 dBm). Verify: `npx tsc --noEmit src/lib/types/signal.ts`. Commit: `git add src/lib/types/signal.ts && git commit -m "feat(types): T018 — create SignalReading Zod schema
+- [X] T018 [P] [US1] Create SignalReading schema in `src/lib/types/signal.ts` with Zod validation. Include JSDoc comment explaining validation rules (frequency 1-6000 MHz, power -120 to 0 dBm). Verify: `npx tsc --noEmit src/lib/types/signal.ts`. Commit: `git add src/lib/types/signal.ts && git commit -m "feat(types): T018 — create SignalReading Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T019 [P] [US1] Create WifiNetwork schema in `src/lib/types/wifi.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/wifi.ts`. Commit: `git add src/lib/types/wifi.ts && git commit -m "feat(types): T019 — create WifiNetwork Zod schema
+- [X] T019 [P] [US1] Create WifiNetwork schema in `src/lib/types/wifi.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/wifi.ts`. Commit: `git add src/lib/types/wifi.ts && git commit -m "feat(types): T019 — create WifiNetwork Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T020 [P] [US1] Create GpsPosition schema in `src/lib/types/gps.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/gps.ts`. Commit: `git add src/lib/types/gps.ts && git commit -m "feat(types): T020 — create GpsPosition Zod schema
+- [X] T020 [P] [US1] Create GpsPosition schema in `src/lib/types/gps.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/gps.ts`. Commit: `git add src/lib/types/gps.ts && git commit -m "feat(types): T020 — create GpsPosition Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T021 [P] [US1] Create ApiResponse<T> generic schema in `src/lib/types/api.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/api.ts`. Commit: `git add src/lib/types/api.ts && git commit -m "feat(types): T021 — create ApiResponse generic Zod schema
+- [X] T021 [P] [US1] Create ApiResponse<T> generic schema in `src/lib/types/api.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/api.ts`. Commit: `git add src/lib/types/api.ts && git commit -m "feat(types): T021 — create ApiResponse generic Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T022 [P] [US1] Create HackRFSweepConfig schema in `src/lib/types/hackrf.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/hackrf.ts`. Commit: `git add src/lib/types/hackrf.ts && git commit -m "feat(types): T022 — create HackRFSweepConfig Zod schema
+- [X] T022 [P] [US1] Create HackRFSweepConfig schema in `src/lib/types/hackrf.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/hackrf.ts`. Commit: `git add src/lib/types/hackrf.ts && git commit -m "feat(types): T022 — create HackRFSweepConfig Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T023 [P] [US1] Create KismetDevice schema in `src/lib/types/kismet.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/kismet.ts`. Commit: `git add src/lib/types/kismet.ts && git commit -m "feat(types): T023 — create KismetDevice Zod schema
+- [X] T023 [P] [US1] Create KismetDevice schema in `src/lib/types/kismet.ts` with Zod validation. Include JSDoc comment explaining validation rules. Verify: `npx tsc --noEmit src/lib/types/kismet.ts`. Commit: `git add src/lib/types/kismet.ts && git commit -m "feat(types): T023 — create KismetDevice Zod schema
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
@@ -119,22 +119,22 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 **Rationale**: API endpoints handle untrusted external data - highest priority for runtime validation
 
-- [ ] T024 [US1] Add Zod validation to `src/routes/api/hackrf/sweep/+server.ts` for POST request body. Verify: `npx tsc --noEmit src/routes/api/hackrf/sweep/+server.ts && npm run test:integration`. Commit: `git add src/routes/api/hackrf/sweep/+server.ts && git commit -m "refactor(api): T024 — add Zod validation to HackRF sweep endpoint
+- [X] T024 [US1] Add Zod validation to `src/routes/api/hackrf/sweep/+server.ts` for POST request body. Verify: `npx tsc --noEmit src/routes/api/hackrf/sweep/+server.ts && npm run test:integration`. Commit: `git add src/routes/api/hackrf/sweep/+server.ts && git commit -m "refactor(api): T024 — add Zod validation to HackRF sweep endpoint
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T025 [US1] Add Zod validation to `src/routes/api/hackrf/status/+server.ts` for GET response
-- [ ] T026 [US1] Add Zod validation to `src/routes/api/kismet/devices/+server.ts` for GET response
+- [X] T025 [US1] Add Zod validation to `src/routes/api/hackrf/status/+server.ts` for GET response
+- [X] T026 [US1] Add Zod validation to `src/routes/api/kismet/devices/+server.ts` for GET response
 - [ ] T027 [US1] Add Zod validation to `src/routes/api/kismet/networks/+server.ts` for GET response
-- [ ] T028 [US1] Add Zod validation to `src/routes/api/gps/position/+server.ts` for GET response
+- [X] T028 [US1] Add Zod validation to `src/routes/api/gps/position/+server.ts` for GET response
 - [ ] T029 [US1] Add Zod validation to `src/routes/api/usrp/power/+server.ts` for POST request body
-- [ ] T030 [US1] Add Zod validation to `src/routes/api/gsm-evil/control/+server.ts` for POST request body
+- [X] T030 [US1] Add Zod validation to `src/routes/api/gsm-evil/control/+server.ts` for POST request body
 
 **Verification**: Run `npm run typecheck && npm run test:integration` after each API migration
 
 ### Step 3: Migrate WebSocket Message Handlers (High Priority - Real-Time Data)
 
-- [ ] T031 [US1] Add Zod validation to HackRF WebSocket message handler in `src/lib/server/websocket-server.ts`
-- [ ] T032 [US1] Add Zod validation to Kismet WebSocket message handler in `src/lib/server/websocket-server.ts`
+- [X] T031 [US1] Add Zod validation to HackRF WebSocket message handler in `src/lib/server/websocket-server.ts`
+- [X] T032 [US1] Add Zod validation to Kismet WebSocket message handler in `src/lib/server/websocket-server.ts`
 - [ ] T033 [US1] Add Zod validation to GPS WebSocket message handler in `src/lib/server/websocket-server.ts`
 
 **Verification**: Test WebSocket connections manually via browser DevTools after each migration
@@ -178,10 +178,10 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Final US1 Verification
 
-- [ ] T048 [US1] Run full test suite: `npm run test:unit && npm run test:integration && npm run test:e2e`
-- [ ] T049 [US1] Run TypeScript strict mode compilation: `npm run typecheck`
-- [ ] T050 [US1] Run ESLint: `npm run lint`
-- [ ] T051 [US1] Run performance benchmark for Zod validation: `npx tsx scripts/benchmark-zod-validation.ts` (verify <5ms)
+- [X] T048 [US1] Run full test suite: `npm run test:unit && npm run test:integration && npm run test:e2e`
+- [X] T049 [US1] Run TypeScript strict mode compilation: `npm run typecheck`
+- [X] T050 [US1] Run ESLint: `npm run lint`
+- [X] T051 [US1] Run performance benchmark for Zod validation: `npx tsx scripts/benchmark-zod-validation.ts` (verify <5ms)
 - [ ] T052 [US1] Run constitutional audit: `npx tsx scripts/run-audit.ts` (verify compliance ≥ 60%, zero HIGH violations). Commit: `git add . && git commit -m "test(audit): T052 — verify P1 compliance at 60%
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
