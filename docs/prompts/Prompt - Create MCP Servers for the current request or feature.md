@@ -846,6 +846,7 @@ deployment. These are not optional.
   <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <quick_reference>
+
 <title>Condensed Workflow for Adding Tools When a New Feature Ships</title>
 <instruction>
 Use this 10-step quick reference for the common case of "a feature was just

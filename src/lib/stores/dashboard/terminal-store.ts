@@ -3,9 +3,11 @@
  * Handles session state, panel visibility, and persistence
  */
 
-import { writable, derived, get } from 'svelte/store';
+import { derived, get,writable } from 'svelte/store';
+
 import { browser } from '$app/environment';
-import type { TerminalSession, TerminalPanelState } from '$lib/types/terminal';
+import type { TerminalPanelState,TerminalSession } from '$lib/types/terminal';
+
 import { activeBottomTab, closeBottomPanel, setBottomPanelHeight } from './dashboard-store';
 
 // Constants

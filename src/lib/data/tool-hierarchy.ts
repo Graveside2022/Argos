@@ -3,7 +3,8 @@
  * Organized as: TOOLS → OFFNET/ONNET → Workflow → Categories → Tools
  */
 
-import type { ToolHierarchy, ToolCategory, ToolDefinition } from '$lib/types/tools';
+import type { ToolCategory, ToolDefinition,ToolHierarchy } from '$lib/types/tools';
+
 import { toolIcons } from './tool-icons';
 
 export const toolHierarchy: ToolHierarchy = {

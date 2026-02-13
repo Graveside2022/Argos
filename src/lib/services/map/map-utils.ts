@@ -26,7 +26,7 @@ interface LeafletWindow {
 // Fix Leaflet icon paths
 export function fixLeafletIcons() {
 	// L will be passed in from the component
-	const L = (window as any as LeafletWindow).L;
+	const L = (window as unknown as LeafletWindow).L;
 	if (!L) return;
 
 	delete L.Icon.Default.prototype._getIconUrl;

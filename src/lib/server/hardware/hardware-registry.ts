@@ -4,10 +4,10 @@
  */
 
 import type {
+	ConnectionType,
 	DetectedHardware,
 	HardwareCategory,
 	HardwareQueryOptions,
-	ConnectionType,
 	HardwareStatus
 } from './detection-types';
 
@@ -19,7 +19,7 @@ export class HardwareRegistry {
 	 */
 	register(hardware: DetectedHardware): void {
 		this.hardware.set(hardware.id, hardware);
-		console.log(`[HardwareRegistry] Registered: ${hardware.name} (${hardware.id})`);
+		console.warn(`[HardwareRegistry] Registered: ${hardware.name} (${hardware.id})`);
 	}
 
 	/**
@@ -37,7 +37,7 @@ export class HardwareRegistry {
 	unregister(id: string): boolean {
 		const result = this.hardware.delete(id);
 		if (result) {
-			console.log(`[HardwareRegistry] Unregistered: ${id}`);
+			console.warn(`[HardwareRegistry] Unregistered: ${id}`);
 		}
 		return result;
 	}
@@ -86,9 +86,8 @@ export class HardwareRegistry {
 
 		// Filter by compatible tool
 		if (options.compatibleWithTool) {
-			results = results.filter((hw) =>
-				hw.compatibleTools?.includes(options.compatibleWithTool!)
-			);
+			const targetTool = options.compatibleWithTool;
+			results = results.filter((hw) => hw.compatibleTools?.includes(targetTool));
 		}
 
 		// Search by name, manufacturer, or model
@@ -116,7 +115,10 @@ export class HardwareRegistry {
 			if (!byCategory[hw.category]) {
 				byCategory[hw.category] = [];
 			}
-			byCategory[hw.category]!.push(hw);
+			const category = byCategory[hw.category];
+			if (category) {
+				category.push(hw);
+			}
 		}
 
 		return byCategory as Record<HardwareCategory, DetectedHardware[]>;
@@ -132,7 +134,10 @@ export class HardwareRegistry {
 			if (!byConnection[hw.connectionType]) {
 				byConnection[hw.connectionType] = [];
 			}
-			byConnection[hw.connectionType]!.push(hw);
+			const connection = byConnection[hw.connectionType];
+			if (connection) {
+				connection.push(hw);
+			}
 		}
 
 		return byConnection as Record<ConnectionType, DetectedHardware[]>;
@@ -201,7 +206,7 @@ export class HardwareRegistry {
 	 */
 	clear(): void {
 		this.hardware.clear();
-		console.log('[HardwareRegistry] Cleared all hardware');
+		console.warn('[HardwareRegistry] Cleared all hardware');
 	}
 
 	/**

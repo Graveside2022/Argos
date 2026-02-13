@@ -5,7 +5,7 @@
  * Skips gracefully when server is not available.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 
 const WS_URL = process.env.WS_URL || 'ws://localhost:8093';
@@ -68,9 +68,11 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 
 		it('should receive spectrum data', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			const dataPromise = new Promise((resolve) => {
-				ws!.on('message', (data: unknown) => {
+				if (!ws) return;
+				ws.on('message', (data: unknown) => {
 					const message = JSON.parse(String(data)) as Record<string, unknown>;
 					resolve(message);
 				});
@@ -85,9 +87,11 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 
 		it('should handle ping/pong for keepalive', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			const pongPromise = new Promise((resolve) => {
-				ws!.on('pong', () => resolve(true));
+				if (!ws) return;
+				ws.on('pong', () => resolve(true));
 			});
 
 			ws.ping();
@@ -106,11 +110,13 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 
 		it('should reconnect after disconnect', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			ws.close();
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 			expect(ws.readyState).toBe(WebSocket.OPEN);
 		});
 	});
@@ -118,10 +124,12 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 	describe('Message Flow Tests', () => {
 		it('should handle request-response pattern', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			const requestId = Date.now().toString();
 			const responsePromise = new Promise((resolve) => {
-				ws!.on('message', (data: unknown) => {
+				if (!ws) return;
+				ws.on('message', (data: unknown) => {
 					const message = JSON.parse(String(data)) as Record<string, unknown>;
 					if (message.requestId === requestId) {
 						resolve(message);
@@ -144,10 +152,12 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 
 		it('should handle binary data transfer', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			const binaryData = new Uint8Array([1, 2, 3, 4, 5]);
 			const responsePromise = new Promise((resolve) => {
-				ws!.on('message', (data) => {
+				if (!ws) return;
+				ws.on('message', (data) => {
 					if (data instanceof Buffer) {
 						resolve(data);
 					}
@@ -164,6 +174,7 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 	describe('Performance and Load Tests', () => {
 		it('should handle high-frequency messages', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			let messageCount = 0;
 			const startTime = Date.now();
@@ -204,9 +215,11 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 	describe('Error Recovery Tests', () => {
 		it('should handle malformed messages', async () => {
 			ws = await waitForWebSocket(WS_URL);
+			if (!ws) throw new Error('WebSocket not initialized');
 
 			const errorPromise = new Promise((resolve) => {
-				ws!.on('message', (data: unknown) => {
+				if (!ws) return;
+				ws.on('message', (data: unknown) => {
 					const message = JSON.parse(String(data)) as Record<string, unknown>;
 					if (message.type === 'error') {
 						resolve(message);
@@ -229,8 +242,9 @@ describe.runIf(canRun)('WebSocket Connection Tests', () => {
 
 			expect(ws.readyState).toBe(WebSocket.OPEN);
 
+			const capturedWs = ws;
 			const validResponse = new Promise((resolve) => {
-				ws!.on('message', (data: unknown) => {
+				capturedWs.on('message', (data: unknown) => {
 					const message = JSON.parse(String(data)) as Record<string, unknown>;
 					if (message.type === 'pong') {
 						resolve(true);

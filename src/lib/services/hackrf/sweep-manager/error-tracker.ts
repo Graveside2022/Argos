@@ -1,4 +1,4 @@
-import { logInfo, logError, logWarn } from "$lib/utils/logger";
+import { logError, logInfo, logWarn } from "$lib/utils/logger";
 
 export interface ErrorState {
 	consecutiveErrors: number;

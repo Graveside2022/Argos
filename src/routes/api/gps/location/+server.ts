@@ -1,5 +1,6 @@
-import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
+
+import type { RequestHandler } from './$types';
 
 /**
  * Reverse geocoding proxy endpoint

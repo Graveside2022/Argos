@@ -1,14 +1,14 @@
+import type { HackRFStatus } from '$lib/services/api/hackrf';
 import {
+	type SpectrumData,
 	updateConnectionStatus,
-	updateSweepStatus,
-	updateSpectrumData,
 	updateCycleStatus,
 	updateEmergencyStopStatus,
-	type SpectrumData
+	updateSpectrumData,
+	updateSweepStatus
 } from '$lib/stores/hackrf';
-import type { HackRFStatus } from '$lib/services/api/hackrf';
-import { logError, logInfo, logDebug, logWarn } from '$lib/utils/logger';
 import { SystemStatus } from '$lib/types/enums';
+import { logDebug, logError, logInfo, logWarn } from '$lib/utils/logger';
 
 /**
  * USRP API that maintains the same interface as HackRF API

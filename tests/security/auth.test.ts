@@ -8,7 +8,8 @@
  * Standards: OWASP A01:2021 (Broken Access Control), NIST SP 800-53 AC-3
  */
 
-import { describe, test, expect } from 'vitest';
+import { describe, expect,test } from 'vitest';
+
 import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
 
 // Restore real fetch — these are integration tests that need real HTTP calls

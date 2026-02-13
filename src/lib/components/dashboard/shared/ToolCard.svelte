@@ -8,10 +8,10 @@
 		canOpen?: boolean;
 		showControls?: boolean;
 		externalUrl?: string | null;
-		installed?: boolean;
-		onstart?: () => void;
-		onstop?: () => void;
-		onopen?: () => void;
+		isInstalled?: boolean;
+		onStart?: () => void;
+		onStop?: () => void;
+		onOpen?: () => void;
 	}
 
 	let {
@@ -23,10 +23,10 @@
 		canOpen = true,
 		showControls = true,
 		externalUrl = null,
-		installed = true,
-		onstart,
-		onstop,
-		onopen
+		isInstalled = true,
+		onStart,
+		onStop,
+		onOpen
 	}: Props = $props();
 
 	let isRunning = $derived(status === 'running');
@@ -42,7 +42,7 @@
 	);
 </script>
 
-<div class="tool-card" class:running={isRunning} class:not-installed={!installed}>
+<div class="tool-card" class:running={isRunning} class:not-installed={!isInstalled}>
 	<div class="tool-header">
 		<div class="tool-icon">
 			{@html icon}
@@ -50,7 +50,7 @@
 		<div class="tool-info">
 			<span class="tool-name">{name}</span>
 			<div class="tool-status-row">
-				{#if installed}
+				{#if isInstalled}
 					<span
 						class="tool-status-dot"
 						class:dot-active={isRunning}
@@ -72,7 +72,7 @@
 		<p class="tool-description">{description}</p>
 	{/if}
 
-	{#if installed}
+	{#if isInstalled}
 		<div class="tool-actions">
 			{#if canOpen}
 				{#if externalUrl}
@@ -83,7 +83,7 @@
 						rel="noopener noreferrer">Open</a
 					>
 				{:else}
-					<button class="btn btn-open btn-sm" onclick={() => onopen?.()}>Open</button>
+					<button class="btn btn-open btn-sm" onclick={() => onOpen?.()}>Open</button>
 				{/if}
 			{/if}
 			{#if showControls}
@@ -91,13 +91,13 @@
 					<button
 						class="btn btn-danger btn-sm"
 						disabled={isTransitioning}
-						onclick={() => onstop?.()}>Stop</button
+						onclick={() => onStop?.()}>Stop</button
 					>
 				{:else}
 					<button
 						class="btn btn-start btn-sm"
 						disabled={isTransitioning}
-						onclick={() => onstart?.()}>Start</button
+						onclick={() => onStart?.()}>Start</button
 					>
 				{/if}
 			{/if}

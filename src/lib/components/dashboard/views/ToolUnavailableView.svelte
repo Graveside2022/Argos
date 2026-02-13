@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
+
 	import ToolViewWrapper from './ToolViewWrapper.svelte';
 
 	interface Props {

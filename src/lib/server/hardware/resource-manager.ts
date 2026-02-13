@@ -1,8 +1,10 @@
 import { EventEmitter } from 'events';
-import { HardwareDevice, type ResourceState, type HardwareStatus } from './types';
-import * as hackrfMgr from './hackrf-manager';
-import * as alfaMgr from './alfa-manager';
+
 import { logWarn } from '$lib/utils/logger';
+
+import * as alfaMgr from './alfa-manager';
+import * as hackrfMgr from './hackrf-manager';
+import { HardwareDevice, type HardwareStatus, type ResourceState } from './types';
 
 class ResourceManager extends EventEmitter {
 	private state: Map<HardwareDevice, ResourceState> = new Map();
@@ -35,7 +37,7 @@ class ResourceManager extends EventEmitter {
 			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
 			if (hackrfProcesses.length > 0) {
 				const owner = hackrfProcesses[0].name;
-				console.log(`[ResourceManager] Orphan scan: HackRF process found: ${owner}`);
+				console.warn(`[ResourceManager] Orphan scan: HackRF process found: ${owner}`);
 				this.state.set(HardwareDevice.HACKRF, {
 					device: HardwareDevice.HACKRF,
 					available: false,
@@ -45,19 +47,21 @@ class ResourceManager extends EventEmitter {
 				});
 			} else {
 				const detected = await hackrfMgr.detectHackRF();
-				console.log(
+				console.warn(
 					`[ResourceManager] Orphan scan: HackRF detected=${detected}, no blocking processes`
 				);
-				const current = this.state.get(HardwareDevice.HACKRF)!;
-				current.detected = detected;
-				this.state.set(HardwareDevice.HACKRF, current);
+				const current = this.state.get(HardwareDevice.HACKRF);
+				if (current) {
+					current.detected = detected;
+					this.state.set(HardwareDevice.HACKRF, current);
+				}
 			}
 
 			// Check HackRF tool containers (not the default backend)
 			const containers = await hackrfMgr.getContainerStatus(true);
 			for (const c of containers) {
 				if (c.running) {
-					console.log(
+					console.warn(
 						`[ResourceManager] Orphan scan: HackRF tool container running: ${c.name}`
 					);
 					this.state.set(HardwareDevice.HACKRF, {
@@ -75,7 +79,7 @@ class ResourceManager extends EventEmitter {
 			const alfaIface = await alfaMgr.detectAdapter();
 			const alfaProcesses = await alfaMgr.getBlockingProcesses();
 			if (alfaProcesses.length > 0) {
-				console.log(
+				console.warn(
 					`[ResourceManager] Orphan scan: ALFA process found: ${alfaProcesses[0].name}`
 				);
 				this.state.set(HardwareDevice.ALFA, {
@@ -86,15 +90,17 @@ class ResourceManager extends EventEmitter {
 					detected: !!alfaIface
 				});
 			} else {
-				console.log(
+				console.warn(
 					`[ResourceManager] Orphan scan: ALFA detected=${!!alfaIface}, no blocking processes`
 				);
-				const current = this.state.get(HardwareDevice.ALFA)!;
-				current.detected = !!alfaIface;
-				this.state.set(HardwareDevice.ALFA, current);
+				const current = this.state.get(HardwareDevice.ALFA);
+				if (current) {
+					current.detected = !!alfaIface;
+					this.state.set(HardwareDevice.ALFA, current);
+				}
 			}
 
-			console.log('[ResourceManager] Orphan scan complete');
+			console.warn('[ResourceManager] Orphan scan complete');
 		} catch (error) {
 			console.error('[ResourceManager] Orphan scan failed:', error);
 		}
@@ -104,7 +110,8 @@ class ResourceManager extends EventEmitter {
 		try {
 			// --- HackRF: detection + ownership ---
 			const hackrfDetected = await hackrfMgr.detectHackRF();
-			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF)!;
+			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF);
+			if (!hackrfCurrent) return;
 			hackrfCurrent.detected = hackrfDetected;
 
 			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
@@ -129,7 +136,8 @@ class ResourceManager extends EventEmitter {
 
 			// --- ALFA: detection + ownership ---
 			const alfaIface = await alfaMgr.detectAdapter();
-			const alfaCurrent = this.state.get(HardwareDevice.ALFA)!;
+			const alfaCurrent = this.state.get(HardwareDevice.ALFA);
+			if (!alfaCurrent) return;
 			alfaCurrent.detected = !!alfaIface;
 
 			const alfaProcesses = await alfaMgr.getBlockingProcesses();
@@ -179,7 +187,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false, owner: 'device-not-found' };
+			}
 			if (!current.available) {
 				return { success: false, owner: current.owner ?? 'unknown' };
 			}
@@ -209,7 +220,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false, error: 'device-not-found' };
+			}
 			if (current.owner !== toolName) {
 				return {
 					success: false,
@@ -239,7 +253,10 @@ class ResourceManager extends EventEmitter {
 		}
 
 		try {
-			const current = this.state.get(device)!;
+			const current = this.state.get(device);
+			if (!current) {
+				return { success: false };
+			}
 			const previousOwner = current.owner;
 
 			// Kill processes based on device type
@@ -266,10 +283,18 @@ class ResourceManager extends EventEmitter {
 	}
 
 	getStatus(): HardwareStatus {
+		const hackrf = this.state.get(HardwareDevice.HACKRF);
+		const alfa = this.state.get(HardwareDevice.ALFA);
+		const bluetooth = this.state.get(HardwareDevice.BLUETOOTH);
+
+		if (!hackrf || !alfa || !bluetooth) {
+			throw new Error('Hardware state not initialized');
+		}
+
 		return {
-			hackrf: { ...this.state.get(HardwareDevice.HACKRF)! },
-			alfa: { ...this.state.get(HardwareDevice.ALFA)! },
-			bluetooth: { ...this.state.get(HardwareDevice.BLUETOOTH)! }
+			hackrf: { ...hackrf },
+			alfa: { ...alfa },
+			bluetooth: { ...bluetooth }
 		};
 	}
 

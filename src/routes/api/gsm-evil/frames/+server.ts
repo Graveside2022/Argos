@@ -1,12 +1,14 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { hostExec } from '$lib/server/host-exec';
+
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
 		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
-			console.debug('[gsm-evil-frames] GRGSM process check failed', { error: String(error) });
+			console.warn('[gsm-evil-frames] GRGSM process check failed', { error: String(error) });
 			return { stdout: '' };
 		});
 		if (!grgsm.stdout.trim()) {
@@ -23,7 +25,7 @@ export const GET: RequestHandler = async () => {
 			`tail -10 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s"`,
 			{ timeout: 2000 }
 		).catch((error: unknown) => {
-			console.debug('[gsm-evil-frames] Frame log read failed', { error: String(error) });
+			console.warn('[gsm-evil-frames] Frame log read failed', { error: String(error) });
 			return { stdout: '' };
 		});
 

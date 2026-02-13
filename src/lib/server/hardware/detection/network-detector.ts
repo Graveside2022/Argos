@@ -5,6 +5,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
@@ -197,7 +198,7 @@ async function detectOpenWebRX(): Promise<DetectedHardware[]> {
  * Main network device detection function
  */
 export async function detectNetworkDevices(): Promise<DetectedHardware[]> {
-	console.log('[NetworkDetector] Scanning for network hardware...');
+	console.warn('[NetworkDetector] Scanning for network hardware...');
 
 	const results = await Promise.allSettled([
 		detectNetworkUSRP(),
@@ -214,7 +215,7 @@ export async function detectNetworkDevices(): Promise<DetectedHardware[]> {
 		}
 	}
 
-	console.log(`[NetworkDetector] Found ${allHardware.length} network devices`);
+	console.warn(`[NetworkDetector] Found ${allHardware.length} network devices`);
 
 	return allHardware;
 }

@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 import { AlfaDetector } from '$lib/server/kismet/alfa-detector';
 
 const execAsync = promisify(exec);

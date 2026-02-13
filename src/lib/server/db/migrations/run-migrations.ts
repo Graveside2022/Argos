@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { readFileSync, readdirSync } from 'fs';
+import { readdirSync,readFileSync } from 'fs';
 import { join } from 'path';
 
 export async function runMigrations(db: Database.Database, migrationsPath: string) {

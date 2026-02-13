@@ -1,4 +1,5 @@
 // Dashboard stores — panel layout, terminal sessions, tool navigation, and agent context
+export type { InteractionEvent, WorkflowType } from "./agent-context-store";
 export {
 	agentContext,
 	clearSelection,
@@ -13,8 +14,6 @@ export {
 	workflowGoal,
 	workflowStep,
 } from "./agent-context-store";
-export type { InteractionEvent, WorkflowType } from "./agent-context-store";
-
 export {
 	activeBands,
 	activeBottomTab,
@@ -30,7 +29,6 @@ export {
 	toggleLayerVisibility,
 	togglePanel,
 } from "./dashboard-store";
-
 export {
 	activeSession,
 	closeSession,
@@ -55,7 +53,6 @@ export {
 	updateSessionConnection,
 	updateSplitWidths,
 } from "./terminal-store";
-
 export {
 	breadcrumbs,
 	currentCategory,

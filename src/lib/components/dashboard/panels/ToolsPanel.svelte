@@ -1,6 +1,6 @@
 <script lang="ts">
-	import ToolsPanelHeader from './ToolsPanelHeader.svelte';
 	import ToolsNavigationView from './ToolsNavigationView.svelte';
+	import ToolsPanelHeader from './ToolsPanelHeader.svelte';
 </script>
 
 <div class="tools-panel">

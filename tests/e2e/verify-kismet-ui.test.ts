@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect,test } from '@playwright/test';
 
 test('Kismet page displays with proper glass panel styling', async ({ page }) => {
 	// Navigate to Kismet page

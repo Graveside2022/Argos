@@ -15,6 +15,7 @@ export {
 } from './enums';
 
 // errors.ts — error interfaces and runtime type guards/factories
+export type { ApiError, BaseError, DatabaseError, ValidationError, WebSocketError } from './errors';
 export {
 	createApiError,
 	createDatabaseError,
@@ -27,7 +28,6 @@ export {
 	isWebSocketError,
 	toError
 } from './errors';
-export type { ApiError, BaseError, DatabaseError, ValidationError, WebSocketError } from './errors';
 
 // kismet.ts — domain-level Kismet types
 export type {
@@ -50,9 +50,9 @@ export type { AppError, Device, DeviceRecord, SweepManagerState } from './shared
 export type {
 	HackRFData,
 	HackRFMessage,
-	KismetDevice as RawKismetDevice,
 	KismetMessage,
 	Position,
+	KismetDevice as RawKismetDevice,
 	SignalAggregator,
 	SignalCluster,
 	SignalData,
@@ -74,15 +74,14 @@ export type {
 	TerminalInputMessage,
 	TerminalMessage,
 	TerminalPanelState,
-	TerminalReattachedMessage,
 	TerminalReadyMessage,
+	TerminalReattachedMessage,
 	TerminalResizeMessage,
 	TerminalSession,
 	TerminalSessionsMessage
 } from './terminal';
 
 // tools.ts — tool hierarchy types and runtime type guard
-export { isCategory } from './tools';
 export type {
 	DeploymentType,
 	ToolCategory,
@@ -90,8 +89,15 @@ export type {
 	ToolHierarchy,
 	ToolStatus
 } from './tools';
+export { isCategory } from './tools';
 
 // validation.ts — runtime type guards and validation utilities
+export type {
+	DeviceInfoValidation,
+	StatusMessage,
+	SweepDataValidation,
+	ValidatedMessage
+} from './validation';
 export {
 	assertDefined,
 	getProperty,
@@ -107,12 +113,6 @@ export {
 	isString,
 	isSweepData,
 	isValidMessage
-} from './validation';
-export type {
-	DeviceInfoValidation,
-	StatusMessage,
-	SweepDataValidation,
-	ValidatedMessage
 } from './validation';
 
 // gps.ts — GPS position and response types

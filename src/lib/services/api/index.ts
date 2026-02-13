@@ -6,21 +6,19 @@
  */
 
 // --- config ---
+export type { RetryConfig } from './config';
 export {
 	API_BASE_URL,
 	API_ENDPOINTS,
 	APIError,
-	WS_ENDPOINTS,
 	buildQueryString,
 	defaultRequestOptions,
 	handleResponse,
 	retryRequest,
-	withTimeout
-} from './config';
-export type { RetryConfig } from './config';
+	withTimeout,
+	WS_ENDPOINTS} from './config';
 
 // --- hackrf ---
-export { hackrfAPI } from './hackrf';
 export type {
 	HackRFConfig,
 	HackRFStatus,
@@ -28,9 +26,9 @@ export type {
 	SpectrumData,
 	SweepResult
 } from './hackrf';
+export { hackrfAPI } from './hackrf';
 
 // --- kismet ---
-export { kismetAPI } from './kismet';
 export type {
 	DeviceFilter,
 	KismetConfig,
@@ -39,3 +37,4 @@ export type {
 	KismetStats,
 	KismetStatus
 } from './kismet';
+export { kismetAPI } from './kismet';

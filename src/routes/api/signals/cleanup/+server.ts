@@ -1,6 +1,7 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error,json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
+
+import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {

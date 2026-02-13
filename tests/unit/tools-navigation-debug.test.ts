@@ -1,14 +1,14 @@
 /**
  * Debug test: Verify tools navigation works correctly
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock $app/environment before importing the store
 vi.mock('$app/environment', () => ({
 	browser: false
 }));
 
-import { toolHierarchy, findByPath, countTools } from '$lib/data/tool-hierarchy';
+import { countTools, findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolCategory } from '$lib/types/tools';
 
 describe('Tool Navigation Debug', () => {
@@ -16,7 +16,7 @@ describe('Tool Navigation Debug', () => {
 		expect(toolHierarchy.root).toBeDefined();
 		expect(toolHierarchy.root.children).toBeDefined();
 		expect(toolHierarchy.root.children.length).toBeGreaterThan(0);
-		console.log(
+		console.warn(
 			'Root children:',
 			toolHierarchy.root.children.map((c) => c.id)
 		);
@@ -25,15 +25,17 @@ describe('Tool Navigation Debug', () => {
 	it('offnet node exists in root children', () => {
 		const offnet = toolHierarchy.root.children.find((c) => c.id === 'offnet');
 		expect(offnet).toBeDefined();
-		expect('children' in offnet!).toBe(true);
-		console.log('Offnet found:', offnet!.id, offnet!.name);
+		if (!offnet) throw new Error('Offnet not found');
+		expect('children' in offnet).toBe(true);
+		console.warn('Offnet found:', offnet.id, offnet.name);
 	});
 
 	it('onnet node exists in root children', () => {
 		const onnet = toolHierarchy.root.children.find((c) => c.id === 'onnet');
 		expect(onnet).toBeDefined();
-		expect('children' in onnet!).toBe(true);
-		console.log('Onnet found:', onnet!.id, onnet!.name);
+		if (!onnet) throw new Error('Onnet not found');
+		expect('children' in onnet).toBe(true);
+		console.warn('Onnet found:', onnet.id, onnet.name);
 	});
 
 	it('offnet node has 4 workflow children (RECON, ATTACK, DEFENSE, UTILITIES)', () => {
@@ -47,11 +49,12 @@ describe('Tool Navigation Debug', () => {
 	it('findByPath(["offnet"], root) returns offnet category', () => {
 		const result = findByPath(['offnet'], toolHierarchy.root);
 		expect(result).not.toBeNull();
-		expect(result!).toHaveProperty('id', 'offnet');
-		expect('children' in result!).toBe(true);
+		if (!result) throw new Error('Result not found');
+		expect(result).toHaveProperty('id', 'offnet');
+		expect('children' in result).toBe(true);
 		const cat = result as ToolCategory;
-		console.log('findByPath result:', cat.id, 'with', cat.children.length, 'children');
-		console.log(
+		console.warn('findByPath result:', cat.id, 'with', cat.children.length, 'children');
+		console.warn(
 			'Children IDs:',
 			cat.children.map((c) => c.id)
 		);
@@ -60,8 +63,9 @@ describe('Tool Navigation Debug', () => {
 	it('findByPath(["offnet", "recon"], root) returns recon', () => {
 		const result = findByPath(['offnet', 'recon'], toolHierarchy.root);
 		expect(result).not.toBeNull();
-		expect(result!).toHaveProperty('id', 'recon');
-		expect('children' in result!).toBe(true);
+		if (!result) throw new Error('Result not found');
+		expect(result).toHaveProperty('id', 'recon');
+		expect('children' in result).toBe(true);
 	});
 
 	it('findByPath(["offnet", "offnet"], root) returns null', () => {
@@ -73,7 +77,7 @@ describe('Tool Navigation Debug', () => {
 		const offnet = findByPath(['offnet'], toolHierarchy.root) as ToolCategory;
 		for (const child of offnet.children) {
 			const hasChildren = 'children' in child;
-			console.log(`  ${child.id}: hasChildren=${hasChildren}`);
+			console.warn(`  ${child.id}: hasChildren=${hasChildren}`);
 			expect(hasChildren).toBe(true);
 		}
 	});

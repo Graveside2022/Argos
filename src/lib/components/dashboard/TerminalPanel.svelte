@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
 	import { browser } from '$app/environment';
 	import {
+		activeSession,
+		closeSession,
+		closeTerminalPanel,
+		createSession,
+		renameSession,
+		setActiveSession,
 		terminalPanelState,
 		terminalSessions,
-		activeSession,
-		createSession,
-		closeSession,
-		setActiveSession,
-		renameSession,
-		closeTerminalPanel,
 		toggleMaximize,
 		unsplit
 	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
+
 	import TerminalTabContent from './TerminalTabContent.svelte';
 
 	// Available shells from API
@@ -43,6 +45,7 @@
 
 		// If we're adding a split (pendingSplitSessionId is set)
 		if (pendingSplitSessionId) {
+			const originalSessionId = pendingSplitSessionId;
 			terminalPanelState.update((s) => {
 				if (s.splits) {
 					// Already split - add to existing split (max 4 panes)
@@ -64,7 +67,7 @@
 						...s,
 						splits: {
 							id: Math.random().toString(36).substring(2, 9),
-							sessionIds: [pendingSplitSessionId!, newSessionId],
+							sessionIds: [originalSessionId, newSessionId],
 							widths: [50, 50]
 						}
 					};
@@ -401,7 +404,8 @@
 								sessionId={session.id}
 								shell={session.shell}
 								isActive={true}
-								onTitleChange={(title) => handleTitleChange(session.id, title)}
+								onTitleChange={(title: string) =>
+									handleTitleChange(session.id, title)}
 							/>
 						</div>
 						{#if index < $terminalPanelState.splits.sessionIds.length - 1}
@@ -417,7 +421,7 @@
 					sessionId={session.id}
 					shell={session.shell}
 					isActive={session.id === $terminalPanelState.activeTabId}
-					onTitleChange={(title) => handleTitleChange(session.id, title)}
+					onTitleChange={(title: string) => handleTitleChange(session.id, title)}
 				/>
 			{/each}
 		{/if}

@@ -1,11 +1,23 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import path from 'path';
+
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
+import type { RequestHandler } from './$types';
+
+interface TowerLocationData {
+	lat: number;
+	lon: number;
+	range: number;
+	city?: string;
+	samples?: number;
+	created?: number;
+	updated?: number;
+}
+
 // Sample tower data for demo (when real DB is not available)
-const sampleTowers: { [key: string]: any } = {
+const sampleTowers: Record<string, TowerLocationData> = {
 	'310-410-12345-6789': { lat: 37.7749, lon: -122.4194, range: 1000, city: 'San Francisco, CA' },
 	'310-410-12345-6790': { lat: 37.7849, lon: -122.4094, range: 1000, city: 'San Francisco, CA' },
 	'262-01-23456-7890': { lat: 52.52, lon: 13.405, range: 1500, city: 'Berlin, Germany' },
@@ -82,7 +94,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const apiUrl = `https://opencellid.org/cell/get?key=${apiKey}&mcc=${mcc}&mnc=${mnc}&lac=${lac}&cellid=${ci}&format=json`;
 
 			try {
-				console.log('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
+				console.warn('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
 				const apiResponse = await fetch(apiUrl);
 
 				if (apiResponse.ok) {
@@ -90,14 +102,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
 					// Check if API returned an error
 					if (apiData.error) {
-						console.log('OpenCellID API error:', apiData.error, 'for tower:', {
+						console.warn('OpenCellID API error:', apiData.error, 'for tower:', {
 							mcc,
 							mnc,
 							lac,
 							ci
 						});
 					} else if (apiData.lat && apiData.lon) {
-						console.log('Found in OpenCellID API:', apiData);
+						console.warn('Found in OpenCellID API:', apiData);
 						return json({
 							success: true,
 							found: true,
@@ -110,10 +122,10 @@ export const POST: RequestHandler = async ({ request }) => {
 							}
 						});
 					} else {
-						console.log('OpenCellID API returned incomplete data:', apiData);
+						console.warn('OpenCellID API returned incomplete data:', apiData);
 					}
 				} else {
-					console.log(
+					console.warn(
 						'OpenCellID API returned:',
 						apiResponse.status,
 						apiResponse.statusText
@@ -150,15 +162,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Return real database result
+		const dbResult = result as TowerLocationData;
 		return json({
 			success: true,
 			found: true,
 			location: {
-				lat: (result as any).lat,
-				lon: (result as any).lon,
-				range: (result as any).range || 1000,
-				samples: (result as any).samples || 1,
-				lastUpdated: (result as any).updated,
+				lat: dbResult.lat,
+				lon: dbResult.lon,
+				range: dbResult.range || 1000,
+				samples: dbResult.samples || 1,
+				lastUpdated: dbResult.updated,
 				source: 'database'
 			}
 		});

@@ -2,25 +2,28 @@ import { writable } from 'svelte/store';
 
 class USRPAPI {
 	private eventSource: EventSource | null = null;
-	private connectionState = writable<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+	private connectionState = writable<'disconnected' | 'connecting' | 'connected' | 'error'>(
+		'disconnected'
+	);
 	private lastError = writable<string | null>(null);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private dataCallback: ((data: any) => void) | null = null;
 
 	connectToDataStream() {
 		if (this.eventSource) {
-			console.log('Already connected to USRP data stream');
+			console.warn('Already connected to USRP data stream');
 			return;
 		}
 
 		this.connectionState.set('connecting');
-		console.log('Connecting to USRP data stream...');
+		console.warn('Connecting to USRP data stream...');
 
 		try {
 			// Since we're using auto_sweep.sh which outputs through hackrf pipeline
 			this.eventSource = new EventSource('/api/hackrf/data-stream');
 
 			this.eventSource.onopen = () => {
-				console.log('USRP data stream connected');
+				console.warn('USRP data stream connected');
 				this.connectionState.set('connected');
 				this.lastError.set(null);
 			};
@@ -32,14 +35,14 @@ class USRPAPI {
 			};
 
 			this.eventSource.addEventListener('connected', (event) => {
-				console.log('USRP stream connected:', event.data);
+				console.warn('USRP stream connected:', event.data);
 			});
 
 			this.eventSource.addEventListener('sweep_data', (event) => {
 				try {
-					console.log('Raw sweep_data event:', event.data);
+					console.warn('Raw sweep_data event:', event.data);
 					const data = JSON.parse(event.data);
-					console.log('USRP spectrum data received:', data);
+					console.warn('USRP spectrum data received:', data);
 					// Call the callback with the raw sweep_data for the usrp store
 					if (this.dataCallback) {
 						this.dataCallback(data);
@@ -63,16 +66,15 @@ class USRPAPI {
 			this.eventSource.addEventListener('status', (event) => {
 				try {
 					const data = JSON.parse(event.data);
-					console.log('USRP status update:', data);
+					console.warn('USRP status update:', data);
 				} catch (error) {
 					console.error('Error parsing USRP status:', error);
 				}
 			});
 
 			this.eventSource.addEventListener('heartbeat', (event) => {
-				console.log('USRP heartbeat:', event.data);
+				console.warn('USRP heartbeat:', event.data);
 			});
-
 		} catch (error) {
 			console.error('Failed to connect to USRP data stream:', error);
 			this.connectionState.set('error');
@@ -82,7 +84,7 @@ class USRPAPI {
 
 	disconnect() {
 		if (this.eventSource) {
-			console.log('Disconnecting from USRP data stream');
+			console.warn('Disconnecting from USRP data stream');
 			this.eventSource.close();
 			this.eventSource = null;
 			this.connectionState.set('disconnected');
@@ -96,6 +98,7 @@ class USRPAPI {
 		}, 100);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	onData(callback: (data: any) => void) {
 		this.dataCallback = callback;
 	}

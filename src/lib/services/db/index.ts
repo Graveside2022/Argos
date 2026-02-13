@@ -6,7 +6,6 @@
  */
 
 // --- signal-database ---
-export { getSignalDatabase } from "./signal-database";
 export type {
 	DeviceRecord,
 	RelationshipRecord,
@@ -14,3 +13,4 @@ export type {
 	SignalRecord,
 	SpatialQuery,
 } from "./signal-database";
+export { getSignalDatabase } from "./signal-database";

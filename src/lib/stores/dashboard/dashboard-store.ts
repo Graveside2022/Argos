@@ -1,4 +1,5 @@
-import { writable, derived } from 'svelte/store';
+import { derived,writable } from 'svelte/store';
+
 import { browser } from '$app/environment';
 
 /** Which panel is open in the icon rail (null = closed) */

@@ -1,21 +1,25 @@
+import { get } from 'svelte/store';
+
+import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import {
 	mapStore,
+	setAccuracyCircle,
 	setMap,
-	setUserMarker,
-	setAccuracyCircle
+	setUserMarker
 } from '$lib/stores/tactical-map/map-store';
-import type { LeafletMap, LeafletMarker, LeafletCircle } from '$lib/types/map';
-import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-import { get } from 'svelte/store';
+import type { LeafletCircle, LeafletMap, LeafletMarker } from '$lib/types/map';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LeafletLibrary = any;
 
 declare global {
 	interface Window {
-		L: any;
+		L: LeafletLibrary;
 	}
 }
 
 export class MapService {
-	private L: any = null;
+	private L: LeafletLibrary = null;
 
 	async initializeLeaflet(): Promise<void> {
 		if (typeof window !== 'undefined' && !this.L) {

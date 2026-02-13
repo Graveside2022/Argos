@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-// import { SignalClusteringService } from '$lib/services/map/signal-clustering';
-import type { SignalMarker, SignalCluster } from '$lib/types/signals';
+import { beforeEach,describe, expect, it } from 'vitest';
+
 import { SignalSource } from '$lib/types/enums';
+// import { SignalClusteringService } from '$lib/services/map/signal-clustering';
+import type { SignalCluster,SignalMarker } from '$lib/types/signals';
 
 // Mock SignalClusteringService for testing
 class MockSignalClusteringService {

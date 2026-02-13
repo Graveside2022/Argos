@@ -14,28 +14,29 @@
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
+import type { NetworkEdge,NetworkNode } from '$lib/types/network';
 import type { SignalMarker } from '$lib/types/signals';
-import type { NetworkNode, NetworkEdge } from '$lib/types/network';
+import { logError, logInfo,logWarn } from '$lib/utils/logger';
+
 import { DatabaseCleanupService } from './cleanup-service';
 import { runMigrations } from './migrations/run-migrations';
-import { logError, logWarn, logInfo } from '$lib/utils/logger';
-
+import * as networkRepo from './network-repository';
 // Repository / service imports
 import * as signalRepo from './signal-repository';
 import * as spatialRepo from './spatial-repository';
-import * as networkRepo from './network-repository';
 
 // Re-export types for backward compatibility
 export type {
-	DbSignal,
 	DbDevice,
 	DbNetwork,
 	DbRelationship,
+	DbSignal,
 	SpatialQuery,
 	TimeQuery
 } from './types';
 
-import type { DbSignal, DbDevice, SpatialQuery, TimeQuery, DbRelationship } from './types';
+import type { DbDevice, DbRelationship,DbSignal, SpatialQuery, TimeQuery } from './types';
 
 export class RFDatabase {
 	private db: Database.Database;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import type { Satellite } from '$lib/types/gps';
 
@@ -165,8 +166,8 @@
 			// Initial fetch
 			void fetchSatelliteData();
 
-			// Poll every 10 seconds while panel is open
-			const interval = setInterval(() => void fetchSatelliteData(), 10000);
+			// Poll every 5 seconds while panel is open (reduced from 10s for fresher data)
+			const interval = setInterval(() => void fetchSatelliteData(), 5000);
 
 			// Cleanup when panel closes
 			return () => clearInterval(interval);

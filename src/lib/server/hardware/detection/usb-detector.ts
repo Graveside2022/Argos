@@ -5,12 +5,13 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 import type {
+	BluetoothCapabilities,
 	DetectedHardware,
 	HardwareCategory,
 	SDRCapabilities,
-	WiFiCapabilities,
-	BluetoothCapabilities
+	WiFiCapabilities
 } from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
@@ -354,7 +355,7 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
  * Main USB detection function
  */
 export async function detectUSBDevices(): Promise<DetectedHardware[]> {
-	console.log('[USBDetector] Scanning for USB hardware...');
+	console.warn('[USBDetector] Scanning for USB hardware...');
 
 	const results = await Promise.allSettled([
 		detectHackRF(),
@@ -372,7 +373,7 @@ export async function detectUSBDevices(): Promise<DetectedHardware[]> {
 		}
 	}
 
-	console.log(`[USBDetector] Found ${allHardware.length} USB devices`);
+	console.warn(`[USBDetector] Found ${allHardware.length} USB devices`);
 
 	return allHardware;
 }

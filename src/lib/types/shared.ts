@@ -3,7 +3,7 @@
  * This file contains common types that should be reused to ensure consistency
  */
 
-import { SystemStatus, SignalSource as SignalSourceEnum } from './enums';
+import { SignalSource as SignalSourceEnum,SystemStatus } from './enums';
 
 /**
  * Signal source types supported by the application
