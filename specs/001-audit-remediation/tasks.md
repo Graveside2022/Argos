@@ -230,16 +230,18 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 **Rationale**: Start with high-visibility dashboard components, migrate one-by-one with verification
 
-**MCP Server Guidance**: For each migration task, use `mcp__shadcn__get_item_examples_from_registries` to view implementation examples before migrating (e.g., search for "button-demo", "input example", "card-demo").
+**MCP Server Guidance**:
+- **Shadcn**: Use `mcp__shadcn__get_item_examples_from_registries` to view implementation examples before migrating (e.g., search for "button-demo", "input example", "card-demo")
+- **Svelte**: Use `mcp__svelte__svelte-autofixer` to validate component code after migration and `mcp__svelte__get-documentation` to reference Svelte 5 patterns (runes, snippets, effects)
 
-- [ ] T066 [US2] Replace custom Button in HackRF panel with Shadcn Button in `src/routes/+page.svelte`
-- [ ] T067 [US2] Replace custom Button in Kismet panel with Shadcn Button in `src/routes/+page.svelte`
-- [ ] T068 [US2] Replace custom Button in GPS panel with Shadcn Button in `src/routes/+page.svelte`
-- [ ] T069 [US2] Replace custom Button in Tactical Map panel with Shadcn Button in `src/routes/+page.svelte`
-- [ ] T070 [US2] Replace custom Input in HackRF frequency inputs with Shadcn Input in `src/routes/+page.svelte`
-- [ ] T071 [US2] Replace custom Card in panel containers with Shadcn Card in `src/routes/+page.svelte`
+- [ ] T066 [US2] Replace custom Button in HackRF panel with Shadcn Button in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
+- [ ] T067 [US2] Replace custom Button in Kismet panel with Shadcn Button in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
+- [ ] T068 [US2] Replace custom Button in GPS panel with Shadcn Button in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
+- [ ] T069 [US2] Replace custom Button in Tactical Map panel with Shadcn Button in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
+- [ ] T070 [US2] Replace custom Input in HackRF frequency inputs with Shadcn Input in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
+- [ ] T071 [US2] Replace custom Card in panel containers with Shadcn Card in `src/routes/+page.svelte`. After editing, validate with `mcp__svelte__svelte-autofixer`.
 
-**Verification**: Test each component replacement manually - verify click handlers work, styling is modern, functionality identical
+**Verification**: Test each component replacement manually - verify click handlers work, styling is modern, functionality identical. Run svelte-autofixer on modified files to catch Svelte 5 pattern violations.
 
 ### Step 5: Migrate Hardcoded Colors to Tailwind Theme
 
