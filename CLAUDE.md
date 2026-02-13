@@ -282,3 +282,10 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 **Security Model**: Fail-closed, defense-in-depth, OWASP compliant
 **Memory Model**: 1GB Node.js heap, OOM protection via earlyoom + zram
 **Deployment**: Raspberry Pi 5, Kali Linux 2025.4, Docker v27.5.1
+
+## Active Technologies
+- TypeScript 5.8.3 (strict mode) (001-constitution-audit)
+- JSON files in `.specify/audit-reports/` (timestamped filenames: `audit-YYYY-MM-DD-HHmmss.json`) (001-constitution-audit)
+
+## Recent Changes
+- 001-constitution-audit: Added TypeScript 5.8.3 (strict mode)

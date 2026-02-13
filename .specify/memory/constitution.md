@@ -39,7 +39,7 @@
 
 ### Project Description
 
-Argos is a professional-grade tactical communications interface for Software Defined Radio (SDR) operations, WiFi network scanning, GPS tracking, and TAK integration. It is built with TypeScript, SvelteKit, Vite, and Tailwind CSS, targeting Dragon OS / Debian / Ubuntu systems with hardware integration (HackRF One, Alfa WiFi adapters, GPS receivers).
+Argos is a professional-grade tactical communications interface for Software Defined Radio (SDR) operations, WiFi network scanning, GPS tracking, and TAK integration. It is built with TypeScript, SvelteKit, Vite, and Tailwind CSS, targeting ParrotOS / /cDragon OS / Debian / Ubuntu systems with hardware integration (HackRF One, Alfa WiFi adapters, GPS receivers).
 
 ### Authority
 
