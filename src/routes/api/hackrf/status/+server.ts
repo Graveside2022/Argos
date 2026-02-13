@@ -52,18 +52,21 @@ export const GET: RequestHandler = () => {
 		return json(validated);
 	} catch (error: unknown) {
 		console.error('Error getting HackRF status:', error);
-		return json(
-			{
-				connected: false,
-				sweeping: false,
-				deviceInfo: null,
-				currentFrequency: null,
-				sweepConfig: null,
-				status: { state: SystemStatus.Error },
-				timestamp: Date.now(),
-				error: error instanceof Error ? error.message : 'Unknown error'
-			},
-			{ status: 200 }
-		); // Return 200 even on error to avoid breaking SSE
+
+		const errorResponse = {
+			connected: false,
+			sweeping: false,
+			deviceInfo: null,
+			currentFrequency: null,
+			sweepConfig: null,
+			status: { state: SystemStatus.Error },
+			timestamp: Date.now(),
+			error: error instanceof Error ? error.message : 'Unknown error'
+		};
+
+		// Validate error response with Zod (T025)
+		const validated = HackRFStatusResponseSchema.parse(errorResponse);
+
+		return json(validated, { status: 200 }); // Return 200 even on error to avoid breaking SSE
 	}
 };

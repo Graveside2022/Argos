@@ -1,9 +1,29 @@
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetService } from '$lib/server/services';
 
 import type { RequestHandler } from './$types';
+
+/**
+ * Zod schema for Kismet devices GET response
+ * Task: T026 - Constitutional Audit Remediation (P1)
+ */
+const KismetDevicesResponseSchema = z.object({
+	devices: z.array(z.record(z.unknown())).describe('Array of Kismet device objects'),
+	source: z.enum(['kismet', 'fallback']).optional().describe('Data source'),
+	status: z
+		.object({
+			running: z.boolean(),
+			deviceCount: z.number().int().nonnegative(),
+			interface: z.string().optional(),
+			uptime: z.number().nonnegative().optional()
+		})
+		.optional()
+		.describe('Kismet service status'),
+	error: z.string().optional().describe('Error message if any')
+});
 
 /**
  * Fetch current GPS position for fallback when devices lack their own location.
@@ -100,7 +120,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 			]);
 			const status = await fusionKismetController.getStatus();
 
-			return json({
+			const responseData = {
 				devices: normalizeFusionDevices(
 					(devices || []) as unknown as Record<string, unknown>[],
 					gps
@@ -112,25 +132,39 @@ export const GET: RequestHandler = async ({ fetch }) => {
 					interface: status.interface,
 					uptime: status.uptime
 				}
-			});
+			};
+
+			// Validate response with Zod (T026)
+			const validated = KismetDevicesResponseSchema.parse(responseData);
+			return json(validated);
 		}
 
 		// Fallback to existing service implementation (GPS fallback handled inside KismetService)
 		const response = await KismetService.getDevices(fetch);
-		return json(response);
+
+		// Validate response with Zod (T026)
+		const validated = KismetDevicesResponseSchema.parse(response);
+		return json(validated);
 	} catch (error: unknown) {
 		console.error('Error in Kismet devices endpoint:', error);
 
 		// Fallback to existing service implementation on error
 		try {
 			const response = await KismetService.getDevices(fetch);
-			return json(response);
+
+			// Validate fallback response with Zod (T026)
+			const validated = KismetDevicesResponseSchema.parse(response);
+			return json(validated);
 		} catch (error: unknown) {
-			return json({
+			const errorResponse = {
 				devices: [],
 				error: (error as { message?: string }).message || 'Unknown error',
 				source: 'fallback' as const
-			});
+			};
+
+			// Validate error response with Zod (T026)
+			const validated = KismetDevicesResponseSchema.parse(errorResponse);
+			return json(validated);
 		}
 	}
 };
