@@ -104,7 +104,8 @@ npm run lint                 # ESLint check
 npm run lint:fix             # Auto-fix ESLint errors
 
 # Code Quality Audit
-npx tsx scripts/run-audit.ts  # Constitutional audit (see docs/constitutional-audit-tool/)
+npx tsx scripts/run-audit.ts  # Constitutional audit (automated analysis, see docs/constitutional-audit-tool/)
+# Creates organized report: docs/reports/YYYY-MM-DD/ with category analysis + dependency investigation
 
 # Framework Validation (CSS/HTML/Visual Integrity)
 npm run framework:validate-all    # Run all framework checks
@@ -291,4 +292,4 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 - JSON files in `.specify/audit-reports/` (timestamped filenames: `audit-YYYY-MM-DD-HHmmss.json`) (001-constitution-audit)
 
 ## Recent Changes
-- 001-constitution-audit: Added TypeScript 5.8.3 (strict mode)
+- 001-constitution-audit: Added TypeScript 5.8.3 (strict mode), automated violation analysis with dependency investigation (Rulebook v2.0)

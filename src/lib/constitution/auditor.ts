@@ -5,6 +5,7 @@ import { join } from 'path';
 import { parseConstitution } from './constitution-parser.js';
 import { applyExemptions, parseExemptions } from './exemption-parser.js';
 import { categorizeViolationByTimestamp } from './git-categorizer.js';
+import { writeOrganizedReports as generateOrganizedReports } from './organized-report-writer.js';
 import { generateReport, saveReport } from './report-generator.js';
 import { calculateTrends } from './trend-tracker.js';
 import {
@@ -130,6 +131,9 @@ async function runAuditInternal(
 			}
 		}
 	}
+
+	// Generate organized reports with category analysis and dependency validation
+	await generateOrganizedReports(report, reportOutputDir, projectRoot);
 
 	return report;
 }

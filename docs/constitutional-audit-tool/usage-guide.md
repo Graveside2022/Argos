@@ -8,9 +8,36 @@ Run the audit:
 npx tsx scripts/run-audit.ts
 ```
 
-Reports are saved to: `docs/reports/audit-YYYY-MM-DD-HH-MM-SS.{json,md}`
+Reports are saved to: `docs/reports/YYYY-MM-DD/` (organized folder structure with category analysis)
 
-## Understanding the Output
+## Understanding the New Organized Output (UPDATED)
+
+### Folder Structure (NEW)
+
+The audit now creates an organized folder structure with automated analysis:
+
+```
+docs/reports/2026-02-13/
+├── README.md                              # Master report (START HERE)
+├── DEPENDENCY-INVESTIGATION-REPORT.md     # Dependency details
+├── audit-2026-02-13-15-15-05.json        # Raw data
+├── audit-2026-02-13-15-15-05.md          # Summary
+├── 01-ui-modernization/
+│   └── README.md                          # Complete analysis + options
+├── 02-service-layer-violations/
+│   └── README.md
+├── 03-type-safety-violations/
+│   └── README.md
+└── 04-component-reuse/
+    └── README.md
+```
+
+**How to Navigate:**
+
+1. **Start with master README** - Gives overall picture and priorities
+2. **Check DEPENDENCY-INVESTIGATION-REPORT** - See what packages are needed
+3. **Read category READMEs** - Detailed analysis for each violation type
+4. **Choose remediation options** - Each category offers 3 approaches (A/B/C)
 
 ### Terminal Output
 
@@ -90,7 +117,7 @@ Example structure:
 
 ### Markdown Report (Human-Readable)
 
-**Location**: `docs/reports/audit-YYYY-MM-DD-HH-MM-SS.md`
+**Location**: `docs/reports/YYYY-MM-DD/audit-*.md`
 
 Use for:
 
@@ -105,6 +132,154 @@ Contains:
 - Article compliance breakdown
 - Full violation listings
 - Trend comparisons
+
+### Category READMEs (NEW - Actionable Analysis)
+
+**Location**: `docs/reports/YYYY-MM-DD/XX-category-name/README.md`
+
+Each category README provides complete implementation guidance:
+
+**Sections:**
+
+- **Quick Summary** - Problem, constitution rule, solution
+- **Dependency Requirements** - Packages needed (or ZERO if none!)
+    - Install commands (copy-paste ready)
+    - Verification commands
+    - Bundle size impact
+- **Detected Violations** - File paths, line numbers, fixes
+- **Remediation Strategy** - Three options:
+    - Option A: Full remediation (timeline, risk, approach)
+    - Option B: Incremental (fix during normal development)
+    - Option C: Constitutional exemption (document and defer)
+- **Risk Assessment** - Overall risk, mitigation strategies
+- **Recommendation** - Priority-based guidance
+- **Next Steps** - Detailed checklists for implementation or deferral
+- **Compliance Impact** - What changes after remediation
+
+**Example Use:**
+
+```bash
+# Read UI modernization category
+cat docs/reports/2026-02-13/01-ui-modernization/README.md
+
+# If you decide to proceed:
+# 1. Install dependencies (commands provided in README)
+npm install clsx@^2.1.1 tailwind-merge@^2.5.5 ...
+
+# 2. Verify installation (commands provided in README)
+npm run typecheck && npm run build
+
+# 3. Create branch and start implementation
+git checkout -b feature/01-ui-modernization
+```
+
+### Dependency Investigation Report (NEW)
+
+**Location**: `docs/reports/YYYY-MM-DD/DEPENDENCY-INVESTIGATION-REPORT.md`
+
+Complete dependency analysis using Dependency Verification Rulebook v2.0:
+
+**Sections:**
+
+- **Executive Summary** - Table showing dependencies, bundle impact, cost, risk for ALL categories
+- **Critical Findings** - Which categories need ZERO dependencies (prioritize these!)
+- **Per-Category Analysis**:
+    - Required dependencies (name, version, size, license, purpose)
+    - Installation commands
+    - Prerequisites
+    - Verification commands
+
+**Use Cases:**
+
+- **Architecture Planning** - Understand bundle size impact before starting
+- **Dependency Approval** - Review licenses and purposes
+- **ZERO-Dependency Wins** - Identify categories you can fix immediately
+- **Cost-Benefit Analysis** - Weigh implementation cost vs compliance gain
+
+**Example:**
+
+```markdown
+## ✅ Critical Findings
+
+### ZERO Dependencies Needed:
+
+- ✅ Service Layer Violations - Ready to proceed immediately
+- ✅ Type Safety Violations - Ready to proceed immediately
+
+### Dependencies Required:
+
+- ⚠️ UI Modernization: 5 packages (+209KB)
+```
+
+## Common Workflows (UPDATED for Organized Reports)
+
+### Workflow 1: Strategic Planning (NEW)
+
+**Use the organized reports to make informed decisions:**
+
+```bash
+# 1. Run audit
+npx tsx scripts/run-audit.ts
+
+# 2. Read master README for overall picture
+cat docs/reports/$(date +%Y-%m-%d)/README.md
+
+# 3. Check dependency summary
+cat docs/reports/$(date +%Y-%m-%d)/DEPENDENCY-INVESTIGATION-REPORT.md
+
+# 4. Decision matrix:
+# - ZERO dependencies? → Start immediately
+# - LOW cost (<5 packages)? → Schedule for this sprint
+# - HIGH cost (>10 packages)? → Evaluate ROI carefully
+```
+
+### Workflow 2: Implementation Execution (NEW)
+
+**Once you've chosen a category to fix:**
+
+```bash
+# 1. Read category README for detailed guidance
+cat docs/reports/2026-02-13/02-service-layer-violations/README.md
+
+# 2. Check dependencies section
+# - If ZERO dependencies: Proceed immediately ✅
+# - If dependencies needed: Run install commands
+
+# 3. Create feature branch
+git checkout -b feature/02-service-layer-violations
+
+# 4. Follow remediation option from README
+# - Option A: Full fix (timeline, approach provided)
+# - Option B: Incremental (fix during normal work)
+# - Option C: Exempt with justification
+
+# 5. Re-run audit after completion
+npx tsx scripts/run-audit.ts
+
+# 6. Verify violations resolved
+```
+
+### Workflow 3: Quick Wins (NEW - ZERO-Dependency Categories)
+
+**Maximize impact with minimal overhead:**
+
+```bash
+# 1. Run audit
+npx tsx scripts/run-audit.ts
+
+# 2. Check DEPENDENCY-INVESTIGATION-REPORT for ZERO-dependency categories
+grep -A 5 "ZERO Dependencies Needed" docs/reports/*/DEPENDENCY-INVESTIGATION-REPORT.md
+
+# 3. Prioritize these categories (no installation overhead)
+# Example output:
+#   ✅ Service Layer Violations - Ready to proceed immediately
+#   ✅ Type Safety Violations - Ready to proceed immediately
+
+# 4. Start with highest-priority ZERO-dependency category
+cat docs/reports/2026-02-13/03-type-safety-violations/README.md
+
+# 5. Implement immediately (no dependencies to install!)
+```
 
 ## Common Use Cases
 
