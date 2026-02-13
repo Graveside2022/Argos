@@ -298,17 +298,17 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.1: Kismet Feature Module Migration
 
-- [ ] T094 [US3] Create feature directory: `mkdir -p src/lib/kismet`
-- [ ] T095 [US3] Move `src/lib/services/websocket/kismet.ts` → `src/lib/kismet/websocket.ts`
-- [ ] T096 [US3] Create `src/lib/kismet/api.ts` and move Kismet API logic from `src/routes/api/kismet/`
-- [ ] T097 [US3] Create `src/lib/kismet/types.ts` and move Kismet types from `src/lib/types/kismet.ts`
-- [ ] T098 [US3] Create `src/lib/kismet/stores.ts` and move Kismet stores from `src/lib/stores/`
-- [ ] T099 [US3] Update all imports throughout codebase: `grep -r "from.*services.*kismet" src/` and replace with `src/lib/kismet/`
-- [ ] T100 [US3] Run TypeScript compilation to catch broken imports: `npm run typecheck`
-- [ ] T101 [US3] Run ESLint to catch unused imports: `npm run lint`
-- [ ] T102 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T103 [US3] Verify Kismet WebSocket connection works: Manual test via browser DevTools (connect, receive WiFi data)
-- [ ] T104 [US3] Commit Kismet migration: `git add . && git commit -m "refactor(kismet): migrate to feature-based architecture
+- [X] T094 [US3] Create feature directory: `mkdir -p src/lib/kismet`
+- [X] T095 [US3] Move `src/lib/services/websocket/kismet.ts` → `src/lib/kismet/websocket.ts`
+- [X] T096 [US3] Create `src/lib/kismet/api.ts` and move Kismet API logic from `src/routes/api/kismet/`
+- [X] T097 [US3] Create `src/lib/kismet/types.ts` and move Kismet types from `src/lib/types/kismet.ts`
+- [X] T098 [US3] Create `src/lib/kismet/stores.ts` and move Kismet stores from `src/lib/stores/`
+- [X] T099 [US3] Update all imports throughout codebase: `grep -r "from.*services.*kismet" src/` and replace with `src/lib/kismet/`
+- [X] T100 [US3] Run TypeScript compilation to catch broken imports: `npm run typecheck`
+- [X] T101 [US3] Run ESLint to catch unused imports: `npm run lint`
+- [X] T102 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T103 [US3] Verify Kismet WebSocket connection works: Manual test via browser DevTools (connect, receive WiFi data)
+- [X] T104 [US3] Commit Kismet migration: `git add . && git commit -m "refactor(kismet): migrate to feature-based architecture
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
