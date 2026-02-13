@@ -1,4 +1,4 @@
-import { logError, logInfo, logWarn } from "$lib/utils/logger";
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 export interface FrequencyConfig {
 	value: number;
@@ -37,13 +37,13 @@ export class FrequencyCycler {
 		frequencies: [],
 		cycleTime: 0,
 		frequencyCount: 0,
-		currentFrequency: null,
+		currentFrequency: null
 	};
 
 	private cycleConfig: CycleConfig = {
 		frequencies: [],
 		cycleTime: 10000,
-		switchingTime: 3000,
+		switchingTime: 3000
 	};
 
 	private frequencyBlacklist = new Set<number>();
@@ -65,14 +65,14 @@ export class FrequencyCycler {
 		// Dynamically adjust switching time
 		this.cycleConfig.switchingTime = Math.min(
 			3000,
-			Math.max(500, Math.floor(this.cycleConfig.cycleTime * 0.25)),
+			Math.max(500, Math.floor(this.cycleConfig.cycleTime * 0.25))
 		);
 
-		logInfo("[RETRY] Frequency cycling initialized", {
+		logInfo('[RETRY] Frequency cycling initialized', {
 			frequencies: config.frequencies.length,
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime,
-			isCycling: this.cycleState.isCycling,
+			isCycling: this.cycleState.isCycling
 		});
 	}
 
@@ -93,9 +93,7 @@ export class FrequencyCycler {
 		if (this.cycleConfig.frequencies.length === 0) {
 			return null;
 		}
-		const nextIndex =
-			(this.cycleState.currentIndex + 1) %
-			this.cycleConfig.frequencies.length;
+		const nextIndex = (this.cycleState.currentIndex + 1) % this.cycleConfig.frequencies.length;
 		return this.cycleConfig.frequencies[nextIndex];
 	}
 
@@ -104,13 +102,10 @@ export class FrequencyCycler {
 	 */
 	startAutomaticCycling(
 		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>,
-		onCycleStart?: (currentFreq: FrequencyConfig) => void,
+		onCycleStart?: (currentFreq: FrequencyConfig) => void
 	): void {
-		if (
-			!this.cycleState.isCycling ||
-			this.cycleConfig.frequencies.length <= 1
-		) {
-			logInfo("Single frequency mode - no cycling needed");
+		if (!this.cycleState.isCycling || this.cycleConfig.frequencies.length <= 1) {
+			logInfo('Single frequency mode - no cycling needed');
 			return;
 		}
 
@@ -122,16 +117,15 @@ export class FrequencyCycler {
 		// Set timer for next frequency
 		this.cycleState.cycleTimer = setTimeout(() => {
 			this.cycleToNext(onCycleComplete).catch((error) => {
-				logError("Error cycling to next frequency", {
-					error:
-						error instanceof Error ? error.message : String(error),
+				logError('Error cycling to next frequency', {
+					error: error instanceof Error ? error.message : String(error)
 				});
 			});
 		}, this.cycleConfig.cycleTime);
 
-		logInfo("[RETRY] Automatic cycling started", {
+		logInfo('[RETRY] Automatic cycling started', {
 			currentFreq: currentFreq?.value,
-			nextCycleIn: this.cycleConfig.cycleTime,
+			nextCycleIn: this.cycleConfig.cycleTime
 		});
 	}
 
@@ -139,7 +133,7 @@ export class FrequencyCycler {
 	 * Cycle to next frequency
 	 */
 	async cycleToNext(
-		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>,
+		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>
 	): Promise<void> {
 		if (!this.cycleState.isCycling) {
 			return;
@@ -149,37 +143,31 @@ export class FrequencyCycler {
 
 		// Move to next frequency
 		this.cycleState.currentIndex =
-			(this.cycleState.currentIndex + 1) %
-			this.cycleConfig.frequencies.length;
+			(this.cycleState.currentIndex + 1) % this.cycleConfig.frequencies.length;
 
 		const nextFreq = this.getCurrentFrequency();
 		// Update currentFrequency in state
 		this.cycleState.currentFrequency = nextFreq;
 		if (!nextFreq) {
-			logError("No next frequency available");
+			logError('No next frequency available');
 			return;
 		}
 
-		logInfo("[RETRY] Cycling to next frequency", {
+		logInfo('[RETRY] Cycling to next frequency', {
 			from:
 				this.cycleState.currentIndex === 0
-					? this.cycleConfig.frequencies[
-							this.cycleConfig.frequencies.length - 1
-						]
-					: this.cycleConfig.frequencies[
-							this.cycleState.currentIndex - 1
-						],
+					? this.cycleConfig.frequencies[this.cycleConfig.frequencies.length - 1]
+					: this.cycleConfig.frequencies[this.cycleState.currentIndex - 1],
 			to: nextFreq,
-			index: this.cycleState.currentIndex,
+			index: this.cycleState.currentIndex
 		});
 
 		// Wait before switching
 		this.cycleState.switchTimer = setTimeout(() => {
 			this.cycleState.inFrequencyTransition = false;
 			onCycleComplete(nextFreq).catch((error) => {
-				logError("Error in cycle completion callback", {
-					error:
-						error instanceof Error ? error.message : String(error),
+				logError('Error in cycle completion callback', {
+					error: error instanceof Error ? error.message : String(error)
 				});
 			});
 		}, this.cycleConfig.switchingTime);
@@ -190,9 +178,9 @@ export class FrequencyCycler {
 	 */
 	skipToFrequency(index: number): FrequencyConfig | null {
 		if (index < 0 || index >= this.cycleConfig.frequencies.length) {
-			logWarn("Invalid frequency index", {
+			logWarn('Invalid frequency index', {
 				index,
-				total: this.cycleConfig.frequencies.length,
+				total: this.cycleConfig.frequencies.length
 			});
 			return null;
 		}
@@ -200,7 +188,7 @@ export class FrequencyCycler {
 		this.cycleState.currentIndex = index;
 		const frequency = this.getCurrentFrequency();
 
-		logInfo("⏭️ Skipped to frequency", { index, frequency });
+		logInfo('⏭️ Skipped to frequency', { index, frequency });
 		return frequency;
 	}
 
@@ -222,7 +210,7 @@ export class FrequencyCycler {
 			this.cycleState.switchTimer = null;
 		}
 
-		logInfo("[STOP] Frequency cycling stopped");
+		logInfo('[STOP] Frequency cycling stopped');
 	}
 
 	/**
@@ -232,7 +220,7 @@ export class FrequencyCycler {
 		const freqHz = this.convertToHz(frequency.value, frequency.unit);
 		this.frequencyBlacklist.add(freqHz);
 
-		logWarn("[BLOCK] Frequency blacklisted", { frequency, freqHz });
+		logWarn('[BLOCK] Frequency blacklisted', { frequency, freqHz });
 	}
 
 	/**
@@ -247,9 +235,7 @@ export class FrequencyCycler {
 	 * Get valid (non-blacklisted) frequencies
 	 */
 	getValidFrequencies(): FrequencyConfig[] {
-		return this.cycleConfig.frequencies.filter(
-			(freq) => !this.isFrequencyBlacklisted(freq),
-		);
+		return this.cycleConfig.frequencies.filter((freq) => !this.isFrequencyBlacklisted(freq));
 	}
 
 	/**
@@ -259,9 +245,9 @@ export class FrequencyCycler {
 		const freqHz = this.convertToHz(frequency.value, frequency.unit);
 		this.frequencyBlacklist.delete(freqHz);
 
-		logInfo("[CLEAR] Frequency removed from blacklist", {
+		logInfo('[CLEAR] Frequency removed from blacklist', {
 			frequency,
-			freqHz,
+			freqHz
 		});
 	}
 
@@ -270,28 +256,25 @@ export class FrequencyCycler {
 	 */
 	clearBlacklist(): void {
 		this.frequencyBlacklist.clear();
-		logInfo("[CLEANUP] Frequency blacklist cleared");
+		logInfo('[CLEANUP] Frequency blacklist cleared');
 	}
 
 	/**
 	 * Normalize frequencies to standard format
 	 */
 	normalizeFrequencies(
-		frequencies: (
-			| number
-			| { frequency?: number; value?: number; unit?: string }
-		)[],
+		frequencies: (number | { frequency?: number; value?: number; unit?: string })[]
 	): FrequencyConfig[] {
 		return frequencies
 			.map((freq) => {
-				if (typeof freq === "number") {
-					return { value: freq, unit: "MHz" };
+				if (typeof freq === 'number') {
+					return { value: freq, unit: 'MHz' };
 				} else if (freq.frequency !== undefined) {
-					return { value: freq.frequency, unit: freq.unit || "MHz" };
+					return { value: freq.frequency, unit: freq.unit || 'MHz' };
 				} else if (freq.value !== undefined) {
-					return { value: freq.value, unit: freq.unit || "MHz" };
+					return { value: freq.value, unit: freq.unit || 'MHz' };
 				}
-				throw new Error("Invalid frequency format");
+				throw new Error('Invalid frequency format');
 			})
 			.filter((f) => f.value > 0);
 	}
@@ -301,13 +284,13 @@ export class FrequencyCycler {
 	 */
 	convertToHz(value: number, unit: string): number {
 		switch (unit.toLowerCase()) {
-			case "hz":
+			case 'hz':
 				return value;
-			case "khz":
+			case 'khz':
 				return value * 1000;
-			case "mhz":
+			case 'mhz':
 				return value * 1000000;
-			case "ghz":
+			case 'ghz':
 				return value * 1000000000;
 			default:
 				return value * 1000000; // Default to MHz
@@ -319,13 +302,13 @@ export class FrequencyCycler {
 	 */
 	convertToMHz(value: number, unit: string): number {
 		switch (unit.toLowerCase()) {
-			case "hz":
+			case 'hz':
 				return value / 1000000;
-			case "khz":
+			case 'khz':
 				return value / 1000;
-			case "mhz":
+			case 'mhz':
 				return value;
-			case "ghz":
+			case 'ghz':
 				return value * 1000;
 			default:
 				return value;
@@ -361,9 +344,7 @@ export class FrequencyCycler {
 		const nextFrequency = this.getNextFrequency();
 		const progress =
 			this.cycleConfig.frequencies.length > 0
-				? (this.cycleState.currentIndex /
-						this.cycleConfig.frequencies.length) *
-					100
+				? (this.cycleState.currentIndex / this.cycleConfig.frequencies.length) * 100
 				: 0;
 
 		return {
@@ -372,7 +353,7 @@ export class FrequencyCycler {
 			progress,
 			currentFrequency,
 			nextFrequency,
-			blacklistedCount: this.frequencyBlacklist.size,
+			blacklistedCount: this.frequencyBlacklist.size
 		};
 	}
 
@@ -387,9 +368,9 @@ export class FrequencyCycler {
 			this.cycleConfig.switchingTime = switchingTime;
 		}
 
-		logInfo("[TIMER] Cycle timing updated", {
+		logInfo('[TIMER] Cycle timing updated', {
 			cycleTime: this.cycleConfig.cycleTime,
-			switchingTime: this.cycleConfig.switchingTime,
+			switchingTime: this.cycleConfig.switchingTime
 		});
 	}
 
@@ -401,7 +382,7 @@ export class FrequencyCycler {
 		this.cycleState.currentIndex = 0;
 		this.cycleState.isCycling = false;
 		this.cycleState.inFrequencyTransition = false;
-		logInfo("[RETRY] Cycling reset");
+		logInfo('[RETRY] Cycling reset');
 	}
 
 	/**
@@ -416,7 +397,7 @@ export class FrequencyCycler {
 			clearTimeout(this.cycleState.switchTimer);
 			this.cycleState.switchTimer = null;
 		}
-		logInfo("[TIMER] All timers cleared");
+		logInfo('[TIMER] All timers cleared');
 	}
 
 	/**
@@ -425,27 +406,21 @@ export class FrequencyCycler {
 	emergencyStop(): void {
 		this.stopCycling();
 		this.clearAllTimers();
-		logWarn("[ALERT] Emergency stop - frequency cycling halted");
+		logWarn('[ALERT] Emergency stop - frequency cycling halted');
 	}
 
 	/**
 	 * Start cycle timer with callback
 	 */
 	startCycleTimer(callback: () => void): void {
-		this.cycleState.cycleTimer = setTimeout(
-			callback,
-			this.cycleConfig.cycleTime,
-		);
+		this.cycleState.cycleTimer = setTimeout(callback, this.cycleConfig.cycleTime);
 	}
 
 	/**
 	 * Start switch timer with callback
 	 */
 	startSwitchTimer(callback: () => void): void {
-		this.cycleState.switchTimer = setTimeout(
-			callback,
-			this.cycleConfig.switchingTime,
-		);
+		this.cycleState.switchTimer = setTimeout(callback, this.cycleConfig.switchingTime);
 	}
 
 	/**
@@ -454,6 +429,6 @@ export class FrequencyCycler {
 	cleanup(): void {
 		this.stopCycling();
 		this.clearBlacklist();
-		logInfo("[CLEANUP] FrequencyCycler cleanup completed");
+		logInfo('[CLEANUP] FrequencyCycler cleanup completed');
 	}
 }

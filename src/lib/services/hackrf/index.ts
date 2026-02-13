@@ -18,8 +18,8 @@ export type {
 	TimeWindowConfig,
 	TimeWindowState,
 	TimeWindowStats
-} from './time-window-filter';
-export { formatAge, getAgeColor, getRelevanceIcon, timeWindowFilter } from './time-window-filter';
+} from '$lib/hackrf/spectrum';
+export { formatAge, getAgeColor, getRelevanceIcon, timeWindowFilter } from '$lib/hackrf/spectrum';
 
 // --- usrp-api ---
 export { USRPAPI, usrpAPI } from './usrp-api';
@@ -30,7 +30,7 @@ export { USRPAPI, usrpAPI } from './usrp-api';
 // imports node:path and node:url which are server-only — re-exporting here
 // would pull Node.js built-ins into the client bundle via the barrel chain.
 // Import sweep-manager classes directly:
-//   import { ProcessManager } from '$lib/services/hackrf/sweep-manager';
+//   import { ProcessManager } from '$lib/hackrf/sweep';
 export type {
 	BufferConfig,
 	BufferState,
@@ -44,4 +44,4 @@ export type {
 	ProcessConfig,
 	ProcessState,
 	RecoveryConfig
-} from './sweep-manager';
+} from '$lib/hackrf/sweep';

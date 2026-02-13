@@ -1,6 +1,6 @@
+import { spectrumData } from '$lib/hackrf/stores';
 import { hackrfAPI } from '$lib/services/hackrf/api';
 import { SignalAggregator } from '$lib/services/map/signal-aggregator';
-import { spectrumData } from '$lib/stores/hackrf';
 import {
 	clearAllSignals,
 	hackrfStore,
