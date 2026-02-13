@@ -1,11 +1,45 @@
 import type { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
+import { z } from 'zod';
 
 import { validateApiKey } from '$lib/server/auth/auth-middleware';
 import { logger } from '$lib/utils/logger';
 
-// WebSocket message interface
+/**
+ * Zod schema for HackRF WebSocket messages
+ * Task: T031 - Constitutional Audit Remediation (P1)
+ */
+const HackRFMessageSchema = z.union([
+	z.object({ type: z.literal('request_status') }),
+	z.object({ type: z.literal('request_sweep_status') }),
+	z.object({
+		type: z.literal('start_sweep'),
+		config: z
+			.object({
+				startFreq: z.number().min(1).max(6000000000).describe('Start frequency in Hz'),
+				endFreq: z.number().min(1).max(6000000000).describe('End frequency in Hz')
+			})
+			.optional()
+	}),
+	z.object({ type: z.literal('stop_sweep') }),
+	z.object({
+		type: z.literal('subscribe'),
+		streams: z.array(z.string()).optional()
+	})
+]);
+
+/**
+ * Zod schema for Kismet WebSocket messages
+ * Task: T032 - Constitutional Audit Remediation (P1)
+ */
+const KismetMessageSchema = z.union([
+	z.object({ type: z.literal('request_status') }),
+	z.object({ type: z.literal('request_devices') }),
+	z.object({ type: z.literal('refresh') })
+]);
+
+// WebSocket message interface (legacy - for backward compatibility)
 interface WebSocketMessage {
 	type: string;
 	config?: {
@@ -203,8 +237,25 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 
 /**
  * Register HackRF WebSocket handler
+ * Task: T031 - Constitutional Audit Remediation (P1)
  */
-messageHandlers.set('/hackrf', (ws, message) => {
+messageHandlers.set('/hackrf', (ws, rawMessage) => {
+	// Validate message with Zod (T031)
+	const validationResult = HackRFMessageSchema.safeParse(rawMessage);
+
+	if (!validationResult.success) {
+		ws.send(
+			JSON.stringify({
+				type: 'error',
+				message: 'Invalid message format',
+				errors: validationResult.error.format()
+			})
+		);
+		return;
+	}
+
+	const message = validationResult.data;
+
 	switch (message.type) {
 		case 'request_status':
 			ws.send(
@@ -303,20 +354,31 @@ messageHandlers.set('/hackrf', (ws, message) => {
 			);
 			break;
 
-		default:
-			ws.send(
-				JSON.stringify({
-					type: 'error',
-					message: `Unknown message type: ${message.type}`
-				})
-			);
+		// No default case - Zod validation ensures message.type is valid
 	}
 });
 
 /**
  * Register Kismet WebSocket handler
+ * Task: T032 - Constitutional Audit Remediation (P1)
  */
-messageHandlers.set('/kismet', (ws, message) => {
+messageHandlers.set('/kismet', (ws, rawMessage) => {
+	// Validate message with Zod (T032)
+	const validationResult = KismetMessageSchema.safeParse(rawMessage);
+
+	if (!validationResult.success) {
+		ws.send(
+			JSON.stringify({
+				type: 'error',
+				message: 'Invalid message format',
+				errors: validationResult.error.format()
+			})
+		);
+		return;
+	}
+
+	const message = validationResult.data;
+
 	switch (message.type) {
 		case 'request_status':
 			ws.send(
@@ -378,13 +440,7 @@ messageHandlers.set('/kismet', (ws, message) => {
 			);
 			break;
 
-		default:
-			ws.send(
-				JSON.stringify({
-					type: 'error',
-					message: `Unknown message type: ${message.type}`
-				})
-			);
+		// No default case - Zod validation ensures message.type is valid
 	}
 });
 
