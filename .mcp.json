@@ -62,6 +62,10 @@
 				"ARGOS_API_URL": "http://localhost:5173",
 				"ARGOS_API_KEY": "REDACTED_API_KEY_ROTATED_2026_04_15"
 			}
+		},
+		"shadcn": {
+			"command": "npx",
+			"args": ["shadcn@latest", "mcp"]
 		}
 	}
 }
