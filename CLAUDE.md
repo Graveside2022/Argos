@@ -290,6 +290,8 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 ## Active Technologies
 - TypeScript 5.8.3 (strict mode) (001-constitution-audit)
 - JSON files in `.specify/audit-reports/` (timestamped filenames: `audit-YYYY-MM-DD-HHmmss.json`) (001-constitution-audit)
+- TypeScript 5.8.3 (strict mode), SvelteKit 2.22.3, Svelte 5.35.5 (001-audit-remediation)
+- SQLite (rf_signals.db) - no changes (001-audit-remediation)
 
 ## Recent Changes
 - 001-constitution-audit: Added TypeScript 5.8.3 (strict mode), automated violation analysis with dependency investigation (Rulebook v2.0)

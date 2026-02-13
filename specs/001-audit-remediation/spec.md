@@ -87,23 +87,23 @@ Developers adding features or debugging issues need to understand code organizat
 
 - **FR-001**: System MUST replace all 581 type assertions with Zod runtime validation schemas
 - **FR-002**: System MUST catch type validation errors at runtime before they cause undefined behavior
-- **FR-003**: Zod schemas MUST cover common types including API responses, database query results, user data, and hardware device responses
-- **FR-004**: Validation failures MUST provide descriptive error messages identifying which field failed and why
+- **FR-003**: Zod schemas MUST cover approximately 50-100 common types including API responses (HackRF sweep config, Kismet device data, GPS position), database query results (signal readings, network scans), user data, and hardware device responses
+- **FR-004**: Validation failures MUST provide descriptive error messages in format: "[Field name]: [What constraint was violated]. [Corrective action]." Example: "frequency: Expected number ≤6000, received 9999. Reduce frequency to 1-6000 MHz range."
 - **FR-005**: Validation errors MUST be logged to console with full diagnostic details (error message, failed field path, input data, stack trace) for developer debugging via Docker logs
-- **FR-006**: Validation errors from user-initiated actions (form submissions, button clicks) MUST display non-blocking toast notifications with user-friendly messages
-- **FR-007**: Background validation failures (periodic hardware checks, WebSocket streams) MUST log to console without UI notifications
+- **FR-006**: Validation errors from user-initiated actions (form submissions, button clicks) MUST display non-blocking toast notifications with user-friendly messages (plain language, no stack traces, actionable guidance). Example: "Invalid frequency: Maximum 6000 MHz allowed."
+- **FR-007**: Background validation failures (periodic hardware checks, WebSocket streams) MUST log to console (per FR-005) WITHOUT displaying UI toast notifications (no user interruption for background tasks)
 - **FR-008**: System MUST maintain TypeScript strict mode compilation after replacing type assertions
-- **FR-009**: All existing tests MUST pass after Zod migration
+- ~~**FR-009**: All existing tests MUST pass after Zod migration~~ _**CONSOLIDATED** into FR-029 (redundant subset)_
 
 **UI Design System (P2):**
 
 - **FR-010**: System MUST replace all 269 hardcoded hex colors with Tailwind theme classes
 - **FR-011**: System MUST adopt Shadcn component library for buttons, inputs, cards, dialogs, and other interactive elements
-- **FR-012**: Visual appearance MUST change (rounded corners, shadows, modern styling) while preserving all layout structure
+- **FR-012**: Visual appearance MUST change to Shadcn default theme (border-radius: 0.375rem for rounded-md, box-shadow: elevation levels 1-3, transition: 150ms ease-in-out, focus rings visible) while preserving all layout structure
 - **FR-013**: All functionality MUST remain identical after UI migration (same click handlers, same WebSocket data, same map behavior)
 - **FR-014**: System MUST achieve WCAG 2.1 AA accessibility compliance with keyboard navigation and focus indicators
 - **FR-015**: System MUST adopt Shadcn default theme (colors, rounded corners, shadows) rather than matching existing color scheme
-- **FR-016**: Before/after screenshot comparison MUST be shared with Army EW operators for approval before deployment to field units
+- **FR-016**: Before/after screenshot comparison MUST be shared with Army EW operators for approval before deployment to field units. **Process**: Email PDF with side-by-side comparisons (6-8 dashboard states) to NTC/JMRC lead contact, request approval within 3 business days. **Approval criteria**: (1) Zero functionality regressions (verified via manual checklist), (2) Visual changes acceptable (subjective operator judgment), (3) Accessibility features functional (keyboard nav tested).
 - **FR-017**: System MUST capture 6-8 dashboard state screenshots for visual regression baseline: default state, HackRF panel active, Kismet panel active, GPS panel active, Tactical Map panel active, multiple panels active, error state (optional), responsive view (optional)
 - **FR-018**: Visual regression baseline MUST be captured via Playwright automation before P2 migration begins
 - **FR-019**: Installation MUST add required dependencies: shadcn-svelte, clsx, tailwind-merge, and related packages
@@ -124,20 +124,22 @@ Developers adding features or debugging issues need to understand code organizat
 
 **Overall Requirements:**
 
-- **FR-031**: Constitutional audit MUST show compliance improvement: 42% baseline → 60% (P1) → 68% (P1+P2) → 70%+ (P1+P2+P3)
+- **FR-031**: Constitutional audit MUST show compliance improvement: 42% baseline → ≥60% (P1) → ≥68% (P1+P2) → ≥70% (P1+P2+P3)
 - **FR-032**: System MUST maintain all existing functionality throughout migration (no feature regressions)
 - **FR-033**: Each priority level (P1, P2, P3) MUST be independently deployable and testable
 - **FR-034**: P1 (Type Safety) MUST be deployed to production and evaluated for 1-2 weeks before P2/P3 work begins
 - **FR-035**: P2/P3 phases MUST proceed only after P1 field validation confirms migration approach is sound
 - **FR-036**: Git history MUST show clear separation between phases with descriptive commit messages
 
-### Key Entities _(include if feature involves data)_
+### Key Entities & Terminology _(standardized across all documents)_
 
-- **Zod Schema**: Runtime validation schema defining expected shape and constraints of data types (strings, numbers, objects, arrays), used to validate API responses, database results, and user inputs before type assertions
-- **Shadcn Component**: Pre-built, accessible UI primitive (Button, Input, Card, Dialog) with consistent styling via Tailwind classes, replacing custom HTML elements with design system primitives
-- **Feature Module**: Self-contained directory (`src/lib/<feature>/`) containing all code related to one feature domain (WebSocket, API, types, stores) instead of scattered across technical layers
-- **Type Assertion**: TypeScript `as Type` syntax that bypasses type checking, currently used 581 times without justification, to be replaced with Zod validation
-- **Service Layer**: Architectural pattern using `src/lib/services/` directory to group code by technical concern (websocket/, usrp/, tactical-map/), forbidden by constitution in favor of feature-based organization
+**Core Concepts:**
+
+- **Type Assertion** (always use this term, not "assertion" alone): TypeScript `as Type` syntax that bypasses type checking. Example: `const data = response as UserData`. Currently 581 instances exist without justification, to be replaced with Zod validation.
+- **Zod Schema**: Runtime validation schema defining expected shape and constraints of data types (strings, numbers, objects, arrays), used to validate API responses, database results, and user inputs. Replaces type assertions with runtime safety.
+- **shadcn-svelte** (always hyphenated, lowercase): The Shadcn component library for Svelte. Individual components referenced as "Shadcn Button component", "Shadcn Input component", etc.
+- **Feature Module** (preferred term, not "feature-based architecture" or "feature directory"): Self-contained directory at `src/lib/<feature>/` containing all code related to one feature domain (websocket.ts, api.ts, types.ts, stores.ts) instead of scattered across technical layers.
+- **Service Layer Pattern** (always include "pattern", not just "service layer"): Forbidden architectural pattern using `src/lib/services/` directory to group code by technical concern. Constitutional violation per Article II §2.7.
 
 ## Success Criteria _(mandatory)_
 
@@ -169,7 +171,7 @@ Developers adding features or debugging issues need to understand code organizat
 **Overall:**
 
 - **SC-015**: Total constitutional audit violations decrease from 958 to fewer than 300
-- **SC-016**: All existing integration tests, unit tests, and E2E tests pass after each priority phase
+- **SC-016**: Full test suite passes after each priority phase (per FR-029)
 - **SC-017**: System remains deployable to Raspberry Pi 5 field units throughout migration process
 
 ## Scope _(mandatory)_
@@ -293,13 +295,13 @@ Developers adding features or debugging issues need to understand code organizat
 - Development work happens on feature branch `001-audit-remediation` with regular commits
 - Each priority phase (P1, P2, P3) merged independently via separate PRs
 - **P1 deployment**: Merge to main and deploy to production immediately after completion
-- **P1 evaluation**: Monitor field performance at NTC/JMRC for 1-2 weeks before starting P2
-- **P2/P3 proceed**: Only after P1 validation confirms migration approach is sound
+- **P1 evaluation**: Monitor field performance at NTC/JMRC for 1-2 weeks before starting P2. **Go decision requires**: Zero P1-caused production incidents, <1% API requests trigger Zod validation errors (measured via Docker logs), Zod overhead <5ms per NFR-001 (measured via benchmarks), positive operator feedback (informal poll, >50% satisfied).
+- **P2/P3 proceed**: Only after P1 validation confirms migration approach is sound (Go decision reached)
 - Constitutional audit script (`npx tsx scripts/run-audit.ts`) runs after each phase to verify progress
 - Visual regression testing tools available (Playwright for screenshots)
 - Rollback plan: git history allows reverting to last working state if phase fails
 - **Development freeze**: No other feature development happens during 3-6 week remediation period (this is the only priority work)
-- **Hotfix exception**: Critical production bugs or security vulnerabilities can be fixed via separate hotfix branches that merge to main; remediation branch rebases to include hotfixes
+- **Hotfix exception**: Critical production bugs or security vulnerabilities can be fixed via separate hotfix branches that merge to main; remediation branch rebases to include hotfixes. **Critical defined as**: System crash, data loss/corruption, security vulnerability (CVE), or hardware communication total failure preventing field operations. Non-critical bugs (UI glitches, performance slowdowns, cosmetic issues) wait until after remediation.
 
 ### Timeline Assumptions
 
@@ -413,7 +415,7 @@ Developers adding features or debugging issues need to understand code organizat
 ### Testing
 
 - **NFR-014**: Test coverage must not decrease during migration (maintain current coverage %)
-- **NFR-015**: Integration tests must verify real hardware functionality after each phase (HackRF, Kismet, GPS)
+- **NFR-015**: Integration tests SHOULD verify real hardware functionality after each phase (HackRF One, Alfa WiFi adapter, GPS receiver connected, not mocked) - optional but recommended before production deployment
 - **NFR-016**: E2E tests must verify complete user workflows work after each phase
 
 ## Open Questions _(optional)_
@@ -501,10 +503,10 @@ Developers adding features or debugging issues need to understand code organizat
 | Milestone                       | Compliance | Violations Resolved                 | Risk   |
 | ------------------------------- | ---------- | ----------------------------------- | ------ |
 | **Baseline**                    | 42%        | 0                                   | -      |
-| **After P1 (Type Safety)**      | ~60%       | 581 HIGH                            | LOW    |
-| **After P2 (UI Modernization)** | ~68%       | 581 HIGH + 269 MEDIUM               | MEDIUM |
-| **After P3 (Service Layer)**    | ~70%+      | 581 HIGH + 269 MEDIUM + 10 CRITICAL | MEDIUM |
-| **Target**                      | >50%       | All HIGH + MEDIUM + CRITICAL        | -      |
+| **After P1 (Type Safety)**      | ≥60%       | 581 HIGH                            | LOW    |
+| **After P2 (UI Modernization)** | ≥68%       | 581 HIGH + 269 MEDIUM               | MEDIUM |
+| **After P3 (Service Layer)**    | ≥70%       | 581 HIGH + 269 MEDIUM + 10 CRITICAL | MEDIUM |
+| **Target**                      | ≥50%       | All HIGH + MEDIUM + CRITICAL        | -      |
 
 ### Rollback Strategy
 
@@ -525,7 +527,7 @@ All phases maintain passing test suite before merge - test failures block merge 
 
 ### Communication Plan
 
-- **After P1**: Share compliance score improvement (42% → 60%) with stakeholders
+- **After P1**: Share compliance score improvement (42% → ≥60%) with stakeholders
 - **After P2**: Share before/after UI screenshots with Army EW operators for feedback
 - **After P3**: Share architectural diagram showing new feature-based structure
 - **Final Report**: Document total compliance improvement (42% → 70%+) and lessons learned
