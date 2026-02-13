@@ -2,7 +2,7 @@
  * HackRF Services Module
  *
  * Core HackRF SDR service layer: device management, spectrum sweep analysis,
- * signal processing, time-window filtering, API client, USRP API bridge,
+ * signal processing, time-window filtering, API client,
  * and low-level sweep manager components.
  */
 
@@ -20,9 +20,6 @@ export type {
 	TimeWindowStats
 } from '$lib/hackrf/spectrum';
 export { formatAge, getAgeColor, getRelevanceIcon, timeWindowFilter } from '$lib/hackrf/spectrum';
-
-// --- usrp-api ---
-export { USRPAPI, usrpAPI } from './usrp-api';
 
 // --- sweep-manager/ subdirectory (types only) ---
 // NOTE: Value re-exports (BufferManager, ErrorTracker, FrequencyCycler,

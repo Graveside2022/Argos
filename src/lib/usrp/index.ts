@@ -1,14 +1,14 @@
 /**
- * USRP Services Module
+ * USRP Feature Module
  *
  * API client and sweep management for USRP software-defined radio hardware.
  */
 
-// --- api ---
-export { usrpAPI } from './api';
+// --- api-client ---
+export { USRPAPI, usrpAPI } from './api-client';
 
 // --- sweep-manager/ subdirectory (values) ---
-export { BufferManager, ProcessManager } from '$lib/hackrf/sweep';
+export { BufferManager, ProcessManager } from './sweep-manager';
 
 // --- sweep-manager/ subdirectory (types) ---
 export type {
@@ -17,4 +17,4 @@ export type {
 	ParsedLine,
 	ProcessConfig,
 	ProcessState
-} from '$lib/hackrf/sweep';
+} from './sweep-manager';
