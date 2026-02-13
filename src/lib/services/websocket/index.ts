@@ -15,12 +15,12 @@ export type {
 export { BaseWebSocket } from './base';
 
 // --- hackrf ---
-export type { HackRFMessage, HackRFWebSocketConfig } from './hackrf';
+export type { HackRFMessage, HackRFWebSocketConfig } from '$lib/hackrf/websocket';
 export {
 	destroyHackRFWebSocketClient,
 	getHackRFWebSocketClient,
 	HackRFWebSocketClient
-} from './hackrf';
+} from '$lib/hackrf/websocket';
 
 // --- kismet ---
 export type { KismetMessage, KismetWebSocketConfig } from '$lib/kismet/websocket';

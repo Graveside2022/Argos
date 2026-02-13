@@ -1,4 +1,3 @@
-import type { HackRFStatus } from '$lib/services/api/hackrf';
 import {
 	type SpectrumData,
 	updateConnectionStatus,
@@ -6,7 +5,8 @@ import {
 	updateEmergencyStopStatus,
 	updateSpectrumData,
 	updateSweepStatus
-} from '$lib/stores/hackrf';
+} from '$lib/hackrf/stores';
+import type { HackRFStatus } from '$lib/services/api/hackrf';
 import { SystemStatus } from '$lib/types/enums';
 import { logDebug, logError, logInfo, logWarn } from '$lib/utils/logger';
 

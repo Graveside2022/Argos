@@ -5,10 +5,10 @@
  */
 
 // --- api ---
-export { usrpAPI } from "./api";
+export { usrpAPI } from './api';
 
 // --- sweep-manager/ subdirectory (values) ---
-export { BufferManager, ProcessManager } from "./sweep-manager";
+export { BufferManager, ProcessManager } from '$lib/hackrf/sweep';
 
 // --- sweep-manager/ subdirectory (types) ---
 export type {
@@ -16,5 +16,5 @@ export type {
 	BufferState,
 	ParsedLine,
 	ProcessConfig,
-	ProcessState,
-} from "./sweep-manager";
+	ProcessState
+} from '$lib/hackrf/sweep';
