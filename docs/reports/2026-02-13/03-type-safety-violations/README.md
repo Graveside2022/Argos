@@ -1,7 +1,7 @@
 # Type Safety Violations Analysis
 
 **Violation Category:** HIGH (Article II §2.1)
-**Violation Count:** 578 violations
+**Violation Count:** 570 violations
 **Impact:** Potential runtime errors, unclear type assumptions, maintainability issues
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -34,7 +34,7 @@ npm run test
 ## 🔍 Detected Violations
 
 **Files Affected:** 107
-**Total Occurrences:** 578
+**Total Occurrences:** 570
 
 ### 1. src/hooks.server.ts
 
@@ -106,7 +106,7 @@ npm run test
 **Fix:** Add comment explaining why assertion is safe
 **Status:** ⚠️ Pre-existing (since 2026-02-07)
 
-_...and 568 more violations_
+_...and 560 more violations_
 
 ---
 
@@ -114,7 +114,7 @@ _...and 568 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 578 violations
+**Impact:** Resolves all 570 violations
 **Timeline:** 1-2 weeks
 **Risk:** LOW
 
@@ -177,14 +177,14 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 578 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
+HIGH priority violations represent 570 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1-2 weeks
-- Impact: Resolves 578 violations
+- Impact: Resolves 570 violations
 
 ---
 
@@ -216,6 +216,6 @@ HIGH priority violations represent 578 issues that should be addressed. The esti
 
 **After Remediation:**
 
-- **HIGH violations:** 578 → 0 (all resolved)
+- **HIGH violations:** 570 → 0 (all resolved)
 - **Estimated Timeline:** 1-2 weeks
 - **Risk Level:** LOW
