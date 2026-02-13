@@ -1,12 +1,7 @@
 import type { Writable } from 'svelte/store';
-import { derived, get,writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 
-import type {
-	KismetAlert,
-	KismetDevice,
-	KismetNetwork,
-	KismetStatus,
-	KismetStore} from '$lib/types/kismet';
+import type { KismetAlert, KismetDevice, KismetNetwork, KismetStatus, KismetStore } from './types';
 
 interface KismetDataUpdate {
 	devices?: KismetDevice[];

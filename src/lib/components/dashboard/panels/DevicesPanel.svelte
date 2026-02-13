@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
+	import type { KismetDevice } from '$lib/kismet/types';
 	import { isolatedDeviceMAC, isolateDevice } from '$lib/stores/dashboard/dashboard-store';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
-	import type { KismetDevice } from '$lib/types/kismet';
 	import { getSignalBandKey, getSignalHex, signalBands } from '$lib/utils/signal-utils';
 
 	const dashboardMap = getContext<
