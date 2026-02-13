@@ -46,12 +46,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     net-tools \
     gpsd-clients \
     zsh \
+    tmux \
+    locales \
     git \
     fontconfig \
     unzip \
     bat \
     && rm -rf /var/lib/apt/lists/* \
-    && echo "gps=gpsd:host=localhost,port=2947" > /etc/kismet/kismet_site.conf
+    && echo "gps=gpsd:host=localhost,port=2947" > /etc/kismet/kismet_site.conf \
+    && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
+    && locale-gen
 
 # Install Oh My Zsh, Powerlevel10k, plugins, and tools
 ENV RUNZSH=no CHSH=no HOME=/root

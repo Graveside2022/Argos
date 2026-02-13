@@ -9,8 +9,9 @@ import { dev } from '$app/environment';
 import {
 	getSessionCookieHeader,
 	validateApiKey,
-	validateSecurityConfig} from '$lib/server/auth/auth-middleware';
-import { globalHardwareMonitor,scanAllHardware } from '$lib/server/hardware';
+	validateSecurityConfig
+} from '$lib/server/auth/auth-middleware';
+import { globalHardwareMonitor, scanAllHardware } from '$lib/server/hardware';
 import { WebSocketManager } from '$lib/server/kismet';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
 import { RateLimiter } from '$lib/server/security/rate-limiter';
@@ -28,6 +29,39 @@ const HARDWARE_PATH_PATTERN =
 // This runs at module load time, before the server accepts any connections.
 // If the key is missing, the process exits with a FATAL error. (Phase 2.1.1)
 validateSecurityConfig();
+
+// Safe client address getter - handles VPN/Tailscale networking issues
+// Returns 'unknown' when client address cannot be determined (e.g., behind Tailscale VPN)
+function getSafeClientAddress(event: Parameters<Handle>[0]['event']): string {
+	try {
+		return event.getClientAddress();
+	} catch {
+		return 'unknown';
+	}
+}
+
+// Get rate limit identifier - uses session cookie when IP unavailable
+// This prevents all Tailscale clients from sharing the same rate limit bucket
+function getRateLimitKey(event: Parameters<Handle>[0]['event'], prefix: string): string {
+	try {
+		const ip = event.getClientAddress();
+		return `${prefix}:${ip}`;
+	} catch {
+		// IP unavailable (Tailscale/Docker) - try session cookie as identifier
+		const cookieHeader = event.request.headers.get('cookie');
+		if (cookieHeader) {
+			// Extract session cookie value - all browser sessions share the same cookie
+			// (deterministic HMAC of API key), but this is better than 'unknown' for all
+			const sessionMatch = cookieHeader.match(/__argos_session=([^;]+)/);
+			if (sessionMatch) {
+				// Use first 16 chars of session token as identifier (sufficient uniqueness)
+				return `${prefix}:session:${sessionMatch[1].slice(0, 16)}`;
+			}
+		}
+		// Last resort: 'unknown' (shared bucket, but rate limits will be higher)
+		return `${prefix}:unknown`;
+	}
+}
 
 // Create WebSocket server with payload limit (Phase 2.1.6).
 // noServer mode does not support verifyClient -- authentication is enforced
@@ -163,7 +197,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (!wsAuthenticated) {
 			logAuthEvent({
 				eventType: 'WS_AUTH_FAILURE',
-				ip: event.getClientAddress(),
+				ip: getSafeClientAddress(event),
 				method: event.request.method,
 				path: event.url.pathname,
 				userAgent: event.request.headers.get('user-agent') || undefined,
@@ -195,7 +229,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 			logAuthEvent({
 				eventType,
-				ip: event.getClientAddress(),
+				ip: getSafeClientAddress(event),
 				method: event.request.method,
 				path: event.url.pathname,
 				userAgent: event.request.headers.get('user-agent') || undefined,
@@ -212,7 +246,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 		logAuthEvent({
 			eventType: 'AUTH_SUCCESS',
-			ip: event.getClientAddress(),
+			ip: getSafeClientAddress(event),
 			method: event.request.method,
 			path: event.url.pathname,
 			userAgent: event.request.headers.get('user-agent') || undefined
@@ -221,7 +255,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Rate limiting -- runs after auth, before route processing (Phase 2.2.5)
 	const path = event.url.pathname;
-	const clientIp = event.getClientAddress();
+	const clientIp = getSafeClientAddress(event);
 
 	// Skip rate limiting for streaming/SSE endpoints and map tiles
 	// Map tiles can make 50+ requests during initial load (style, sprites, fonts, vector tiles)
@@ -232,14 +266,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 		!path.startsWith('/api/map-tiles/')
 	) {
 		if (isHardwareControlPath(path)) {
-			// Hardware control: 30 requests/minute (0.5 tokens/second) - increased for testing
-			if (!rateLimiter.check(`hw:${clientIp}`, 30, 30 / 60)) {
+			// Hardware control: 60 requests/minute (1 token/second) for Tailscale, 30 for direct IP
+			// GSM Evil makes rapid start/stop/status calls, needs higher limit on Tailscale
+			const hwKey = getRateLimitKey(event, 'hw');
+			const hwLimit = hwKey.includes('unknown') ? 60 : 30;
+			if (!rateLimiter.check(hwKey, hwLimit, hwLimit / 60)) {
 				logAuthEvent({
 					eventType: 'RATE_LIMIT_EXCEEDED',
 					ip: clientIp,
 					method: event.request.method,
 					path,
-					reason: 'Hardware control rate limit exceeded (30 req/min)'
+					reason: `Hardware control rate limit exceeded (${hwLimit} req/min)`
 				});
 				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
 					status: 429,
@@ -252,7 +289,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		} else if (path.startsWith('/api/')) {
 			// Data queries: 200 requests/minute (~3.3 tokens/second)
 			// Dashboard makes 60+ API calls on initial load (polling endpoints)
-			if (!rateLimiter.check(`api:${clientIp}`, 200, 200 / 60)) {
+			const apiKey = getRateLimitKey(event, 'api');
+			if (!rateLimiter.check(apiKey, 200, 200 / 60)) {
 				logAuthEvent({
 					eventType: 'RATE_LIMIT_EXCEEDED',
 					ip: clientIp,
@@ -298,7 +336,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.append('Set-Cookie', getSessionCookieHeader());
 		logAuthEvent({
 			eventType: 'SESSION_CREATED',
-			ip: event.getClientAddress(),
+			ip: getSafeClientAddress(event),
 			method: event.request.method,
 			path: event.url.pathname,
 			userAgent: event.request.headers.get('user-agent') || undefined

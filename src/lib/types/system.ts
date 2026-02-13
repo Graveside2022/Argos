@@ -6,6 +6,7 @@
 export interface SystemInfo {
 	hostname: string;
 	ip: string;
+	tailscaleIp: string | null;
 	wifiInterfaces: Array<{
 		name: string;
 		ip: string;

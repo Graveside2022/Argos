@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { activePanel,activeView } from '$lib/stores/dashboard/dashboard-store';
+	import { activePanel, activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 	import type { SystemInfo } from '$lib/types/system';
@@ -112,10 +112,11 @@
 		void fetchSystem();
 		void fetchHardware();
 		void fetchHardwareDetails();
+		// Refresh system info every 5 seconds for responsive updates
 		const refreshInterval = setInterval(() => {
 			void fetchSystem();
 			void fetchHardware();
-		}, 15000);
+		}, 5000);
 		return () => {
 			clearInterval(refreshInterval);
 		};
@@ -140,6 +141,12 @@
 					<span class="info-label">IP</span>
 					<span class="info-value mono">{systemInfo.ip}</span>
 				</div>
+				{#if systemInfo.tailscaleIp}
+					<div class="info-item">
+						<span class="info-label">TAILSCALE</span>
+						<span class="info-value mono">{systemInfo.tailscaleIp}</span>
+					</div>
+				{/if}
 				<div class="info-item">
 					<span class="info-label">UPTIME</span>
 					<span class="info-value">{formatUptime(systemInfo.uptime)}</span>
@@ -181,7 +188,11 @@
 							: 'var(--palantir-accent)'}"
 					></div>
 				</div>
-				<span class="meter-value">{formatBytes(systemInfo.memory.used)}</span>
+				<span class="meter-value"
+					>{systemInfo.memory.percentage.toFixed(0)}% ({formatBytes(
+						systemInfo.memory.used
+					)})</span
+				>
 			</div>
 
 			<!-- Storage -->
