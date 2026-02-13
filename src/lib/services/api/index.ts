@@ -16,7 +16,8 @@ export {
 	handleResponse,
 	retryRequest,
 	withTimeout,
-	WS_ENDPOINTS} from './config';
+	WS_ENDPOINTS
+} from './config';
 
 // --- hackrf ---
 export type {
@@ -36,5 +37,5 @@ export type {
 	KismetScript,
 	KismetStats,
 	KismetStatus
-} from './kismet';
-export { kismetAPI } from './kismet';
+} from '$lib/kismet/api';
+export { kismetAPI } from '$lib/kismet/api';

@@ -1,3 +1,4 @@
+import type { KismetDevice } from '$lib/kismet/types';
 import {
 	addKismetDevice,
 	clearAllKismetDevices,
@@ -6,7 +7,6 @@ import {
 	setKismetStatus,
 	updateDistributions
 } from '$lib/stores/tactical-map/kismet-store';
-import type { KismetDevice } from '$lib/types/kismet';
 
 export interface KismetDevicesResponse {
 	devices: KismetDevice[];

@@ -37,7 +37,7 @@ export type {
 	KismetNetwork,
 	KismetStatus,
 	KismetStore
-} from './kismet';
+} from '$lib/kismet/types';
 
 // shared.ts — cross-cutting domain types
 // Note: SignalSource and WebSocketState from shared.ts are intentionally excluded

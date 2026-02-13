@@ -3,18 +3,19 @@
  * High-level service for managing Kismet operations with real-time streaming
  */
 
-import { derived, get, type Readable, type Writable,writable } from 'svelte/store';
+import { derived, get, type Readable, type Writable, writable } from 'svelte/store';
 
-import { kismetAPI } from '$lib/services/api';
 import type {
 	DeviceFilter,
 	KismetConfig,
 	KismetDevice,
 	KismetScript,
 	KismetStats,
-	KismetStatus} from '$lib/services/api/kismet';
+	KismetStatus
+} from '$lib/kismet/api';
+import { KismetWebSocketClient } from '$lib/kismet/websocket';
+import { kismetAPI } from '$lib/services/api';
 import type { WebSocketEvent } from '$lib/services/websocket/base';
-import { KismetWebSocketClient } from '$lib/services/websocket/kismet';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 
 interface KismetServiceState {

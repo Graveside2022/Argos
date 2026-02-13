@@ -10,7 +10,8 @@ import {
 	defaultRequestOptions,
 	handleResponse,
 	retryRequest,
-	withTimeout} from './config';
+	withTimeout
+} from '$lib/services/api/config';
 
 export interface KismetStatus {
 	running: boolean;

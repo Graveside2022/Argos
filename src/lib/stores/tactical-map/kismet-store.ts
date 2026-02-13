@@ -1,6 +1,6 @@
 import { type Writable, writable } from 'svelte/store';
 
-import type { KismetDevice } from '$lib/types/kismet';
+import type { KismetDevice } from '$lib/kismet/types';
 import type { LeafletMarker } from '$lib/types/map';
 
 export interface KismetState {

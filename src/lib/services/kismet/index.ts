@@ -12,4 +12,5 @@ export type {
 	KismetDevice,
 	KismetScript,
 	KismetStats,
-	KismetStatus} from '$lib/services/api/kismet';
+	KismetStatus
+} from '$lib/kismet/api';

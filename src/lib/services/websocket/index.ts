@@ -19,11 +19,13 @@ export type { HackRFMessage, HackRFWebSocketConfig } from './hackrf';
 export {
 	destroyHackRFWebSocketClient,
 	getHackRFWebSocketClient,
-	HackRFWebSocketClient} from './hackrf';
+	HackRFWebSocketClient
+} from './hackrf';
 
 // --- kismet ---
-export type { KismetMessage, KismetWebSocketConfig } from './kismet';
+export type { KismetMessage, KismetWebSocketConfig } from '$lib/kismet/websocket';
 export {
 	destroyKismetWebSocketClient,
 	getKismetWebSocketClient,
-	KismetWebSocketClient} from './kismet';
+	KismetWebSocketClient
+} from '$lib/kismet/websocket';

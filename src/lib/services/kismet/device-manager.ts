@@ -3,9 +3,9 @@
  * Advanced device tracking and analysis
  */
 
-import { derived, type Readable,writable } from 'svelte/store';
+import { derived, type Readable, writable } from 'svelte/store';
 
-import type { KismetDevice } from '$lib/services/api/kismet';
+import type { KismetDevice } from '$lib/kismet/api';
 
 interface EnrichedDevice extends KismetDevice {
 	// Location tracking
