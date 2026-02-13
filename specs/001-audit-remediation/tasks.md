@@ -167,10 +167,10 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Step 7: Audit Remaining Type Assertions
 
-- [ ] T045 [US1] Audit all remaining type assertions: `grep -r " as " src/ --include="*.ts" | wc -l` (should be significantly reduced)
-- [ ] T046 [US1] Add justification comments to any remaining necessary type assertions per Article II §2.1
-- [ ] T047 [US1] Document any type assertions that cannot be migrated to Zod in `docs/type-assertions-justification.md`
-- [ ] T047A [US1] **VALIDATION TEST (SC-004)**: Inject invalid data to verify Zod catches runtime errors. Test cases: (1) POST to `/api/hackrf/sweep` with `frequency: 9999` (exceeds 6000 MHz max), (2) POST with `frequency: "invalid"` (wrong type), (3) POST with missing required field. Expected: ZodError thrown with descriptive message `"frequency: Expected number ≤6000, received 9999"`, error logged to console with field path + stack trace (FR-005), toast notification displayed for user-initiated POST (FR-006). Verify error does NOT crash application (graceful degradation). Document test results in `docs/reports/2026-02-13/zod-validation-test.md`. Commit: `git add docs/reports/2026-02-13/zod-validation-test.md && git commit -m "test(validation): T047A — verify Zod catches runtime errors
+- [X] T045 [US1] Audit all remaining type assertions: `grep -r " as " src/ --include="*.ts" | wc -l` (should be significantly reduced)
+- [X] T046 [US1] Add justification comments to any remaining necessary type assertions per Article II §2.1
+- [X] T047 [US1] Document any type assertions that cannot be migrated to Zod in `docs/type-assertions-justification.md`
+- [X] T047A [US1] **VALIDATION TEST (SC-004)**: Inject invalid data to verify Zod catches runtime errors. Test cases: (1) POST to `/api/hackrf/sweep` with `frequency: 9999` (exceeds 6000 MHz max), (2) POST with `frequency: "invalid"` (wrong type), (3) POST with missing required field. Expected: ZodError thrown with descriptive message `"frequency: Expected number ≤6000, received 9999"`, error logged to console with field path + stack trace (FR-005), toast notification displayed for user-initiated POST (FR-006). Verify error does NOT crash application (graceful degradation). Document test results in `docs/reports/2026-02-13/zod-validation-test.md`. Commit: `git add docs/reports/2026-02-13/zod-validation-test.md && git commit -m "test(validation): T047A — verify Zod catches runtime errors
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
@@ -182,10 +182,10 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 - [X] T049 [US1] Run TypeScript strict mode compilation: `npm run typecheck`
 - [X] T050 [US1] Run ESLint: `npm run lint`
 - [X] T051 [US1] Run performance benchmark for Zod validation: `npx tsx scripts/benchmark-zod-validation.ts` (verify <5ms)
-- [ ] T052 [US1] Run constitutional audit: `npx tsx scripts/run-audit.ts` (verify compliance ≥ 60%, zero HIGH violations). Commit: `git add . && git commit -m "test(audit): T052 — verify P1 compliance at 60%
+- [X] T052 [US1] Run constitutional audit: `npx tsx scripts/run-audit.ts` (verify compliance ≥ 60%, zero HIGH violations). Commit: `git add . && git commit -m "test(audit): T052 — verify P1 compliance at 60%
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
-- [ ] T053 [US1] Create PR for P1 deployment: `gh pr create --title "P1: Type Safety Validation" --body "Replaces 581 type assertions with Zod runtime validation. Compliance: 42% → 60%."`
+- [X] T053 [US1] Create PR for P1 deployment: `gh pr create --title "P1: Type Safety Validation" --body "Replaces 581 type assertions with Zod runtime validation. Compliance: 42% → 60%."`
 - [ ] T053A [US1] **EVALUATION CHECKPOINT**: Deploy P1 to production Raspberry Pi 5 units at NTC/JMRC. Monitor for 1-2 weeks. **Go/No-Go Decision Criteria**: (1) Zero P1-caused production incidents, (2) <1% API requests trigger Zod validation errors (measured via Docker logs: `docker logs argos-dev | grep "ZodError"`), (3) Performance within NFR-001 budget (<5ms overhead, measured via `scripts/benchmark-zod-validation.ts`), (4) Positive operator feedback (informal poll, >50% satisfied). Document decision in `docs/reports/2026-02-13/p1-evaluation-decision.md`. **BLOCKING**: P2 (US2) cannot start until Go decision reached.
 
 **Checkpoint**: User Story 1 (P1) complete and ready for production deployment. Evaluate at NTC/JMRC for 1-2 weeks before starting P2.
