@@ -13,8 +13,37 @@ This document summarizes the first constitutional audit of the Argos codebase, e
 # Run the constitutional audit
 npx tsx scripts/run-audit.ts
 
-# Reports are saved to: docs/reports/audit-YYYY-MM-DD-HH-MM-SS.{json,md}
+# Reports are saved to: docs/reports/YYYY-MM-DD/
+# Organized folder structure with category analysis
 ```
+
+### Output Structure (NEW - Automated Analysis)
+
+The audit now automatically creates an organized report structure:
+
+```
+docs/reports/YYYY-MM-DD/
+├── README.md                              # Master report with priorities
+├── DEPENDENCY-INVESTIGATION-REPORT.md     # Complete dependency analysis
+├── audit-YYYY-MM-DD-HH-MM-SS.json        # Machine-readable data
+├── audit-YYYY-MM-DD-HH-MM-SS.md          # Human-readable summary
+├── 01-ui-modernization/
+│   └── README.md                          # Category analysis + dependencies
+├── 02-service-layer-violations/
+│   └── README.md
+├── 03-type-safety-violations/
+│   └── README.md
+└── 04-component-reuse/
+    └── README.md
+```
+
+**Each category README includes:**
+
+- Dependency analysis (using Dependency Verification Rulebook v2.0)
+- Install commands (if dependencies needed)
+- Remediation options (A: Full, B: Incremental, C: Exemption)
+- Risk assessment
+- Implementation timeline
 
 ## Baseline Results (February 13, 2026)
 

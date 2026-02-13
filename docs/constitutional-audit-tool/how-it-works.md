@@ -59,7 +59,7 @@ The constitutional audit tool is a static analysis system that scans the Argos c
 │  - JSON format (machine-readable, full data)                 │
 │  - Markdown format (human-readable documentation)            │
 │  - Terminal format (colorized CLI output)                    │
-│  - Saved to: docs/reports/audit-YYYY-MM-DD-HH-MM-SS.*        │
+│  - Saved to: docs/reports/YYYY-MM-DD/audit-*.*              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -68,6 +68,48 @@ The constitutional audit tool is a static analysis system that scans the Argos c
 │  - Compares to previous audit reports                        │
 │  - Calculates compliance trends (improving/degrading/stable) │
 │  - Tracks article-level trends                               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🆕 Organized Report Writer (organized-report-writer.ts)     │
+│  - Orchestrates automated analysis workflow                  │
+│  - Creates dated folder: docs/reports/YYYY-MM-DD/           │
+│  - Generates category subfolders with comprehensive READMEs  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🆕 Category Organizer (category-organizer.ts)               │
+│  - Groups violations by type (UI, Service, Type Safety, etc) │
+│  - Assigns priorities (CRITICAL/HIGH/MEDIUM/LOW)             │
+│  - Creates category metadata (impact, timeline, description) │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🆕 Dependency Analyzer (dependency-analyzer.ts)             │
+│  - Applies Dependency Verification Rulebook v2.0 (8 phases)  │
+│  - Analyzes package.json for existing dependencies           │
+│  - Calculates new dependencies per category                  │
+│  - Estimates bundle size impact and risk level               │
+│  - Generates install and verification commands               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🆕 Analysis Generator (analysis-generator.ts)               │
+│  - Generates comprehensive README for each category          │
+│  - Includes: violations, dependencies, remediation options   │
+│  - Risk assessment, recommendations, next steps              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🆕 Master Report Generator (master-report-generator.ts)     │
+│  - Creates top-level README with priority matrix             │
+│  - Generates DEPENDENCY-INVESTIGATION-REPORT.md              │
+│  - Provides implementation roadmap and compliance projections│
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -249,7 +291,228 @@ Generates three report formats:
    ↓
 10. Generate reports (JSON, Markdown, Terminal)
     ↓
-11. Save to docs/reports/
+11. Save to docs/reports/YYYY-MM-DD/
+    ↓
+12. 🆕 Organize violations into categories
+    ↓
+13. 🆕 Analyze dependencies for each category (Rulebook v2.0)
+    ↓
+14. 🆕 Create dated folder with subfolders
+    ↓
+15. 🆕 Generate category READMEs with analysis
+    ↓
+16. 🆕 Generate master README and DEPENDENCY-INVESTIGATION-REPORT
+    ↓
+17. 🆕 Present organized analysis to user
+```
+
+## Automated Organized Analysis (NEW)
+
+### Overview
+
+The audit system now automatically generates organized, actionable reports with dependency analysis BEFORE presenting results to the user. This eliminates manual analysis steps and provides immediate implementation guidance.
+
+### Category Organization
+
+**File**: `src/lib/constitution/category-organizer.ts`
+
+Violations are automatically grouped into logical categories:
+
+1. **UI Modernization** - Hardcoded colors, inline styles, non-Tailwind patterns
+2. **Service Layer Violations** - Files in `src/lib/services/` (Article II §2.7)
+3. **Type Safety Violations** - `any` types, `@ts-ignore`, type assertions
+4. **Component Reuse** - Duplicate component patterns
+5. **Test Coverage** - Missing or low test coverage
+6. **Security** - Article IX violations (secrets, eval, unsafe patterns)
+7. **Performance** - Article V violations
+8. **Other** - Violations not fitting other categories
+
+Each category includes:
+
+- Priority (CRITICAL/HIGH/MEDIUM/LOW)
+- Impact description
+- Estimated implementation timeline
+- Folder name for organized reports
+
+### Dependency Analysis (Rulebook v2.0)
+
+**File**: `src/lib/constitution/dependency-analyzer.ts`
+
+Applies the 8-phase Dependency Verification Rulebook methodology:
+
+**Phase 1: Inventory** - Read package.json, list existing dependencies
+
+**Phase 2: Concreteness** - Map each category to specific package requirements
+
+- UI Modernization → clsx, tailwind-merge, tailwind-variants, lucide-svelte, shadcn-svelte
+- Service Layer → ZERO (code reorganization only)
+- Type Safety → ZERO (Zod already installed)
+
+**Phase 3: Dependency Chains** - Check transitive dependencies (npm tree)
+
+**Phase 4: Translation** - Generate exact install commands
+
+```bash
+npm install clsx@^2.1.1 tailwind-merge@^2.5.5 ...
+```
+
+**Phase 5: Completeness** - Verify prerequisites (Tailwind, TypeScript, SvelteKit)
+
+**Phase 6: Proof** - Validate with verification commands
+
+```bash
+npm run typecheck && npm run build
+```
+
+**Phase 7: Challenge** - Identify ZERO-dependency categories (highest priority)
+
+**Phase 8: Consistency** - Calculate bundle size impact and risk level
+
+**Output**: `DependencyAnalysis` object per category with:
+
+- New dependencies (name, version, size, license, purpose)
+- Existing dependencies
+- Bundle size impact (KB)
+- Total cost (ZERO/LOW/MEDIUM/HIGH)
+- Risk level (LOW/MEDIUM/HIGH/CRITICAL)
+- Install commands
+- Verification commands
+
+### Category Analysis Generation
+
+**File**: `src/lib/constitution/analysis-generator.ts`
+
+Generates comprehensive README.md for each category with:
+
+**Header Section**:
+
+- Violation count, priority, impact
+- Status (pre-existing vs new)
+
+**Dependency Requirements**:
+
+- If ZERO dependencies: Rationale for why (e.g., "Zod already installed")
+- If new dependencies: List with versions, sizes, licenses, purposes
+- Install commands (ready to copy-paste)
+- Verification commands
+
+**Detected Violations**:
+
+- File paths and line numbers
+- Rule violated
+- Suggested fix
+- Pre-existing status with commit dates
+
+**Remediation Strategy**:
+
+- **Option A**: Full remediation (fix all violations, estimated timeline)
+- **Option B**: Incremental remediation (fix during normal development)
+- **Option C**: Constitutional exemption (document and defer)
+
+**Risk Assessment**:
+
+- Overall risk level
+- Dependency risks (if applicable)
+- Mitigation strategies
+
+**Recommendation**:
+
+- Priority-based recommendation (CRITICAL → Option A or C, HIGH → Option A, MEDIUM → Option B, LOW → Option C)
+- Cost-benefit analysis
+
+**Next Steps**:
+
+- Detailed checklist for proceeding with remediation
+- Checklist for deferring with exemptions
+
+### Master Report Generation
+
+**File**: `src/lib/constitution/master-report-generator.ts`
+
+Creates two top-level documents:
+
+**1. README.md (Master Report)**:
+
+- Quick summary (overall compliance, total violations)
+- Breakdown by severity with category names
+- Report structure (links to category folders)
+- Priority matrix (CRITICAL → HIGH → MEDIUM → LOW)
+- Recommended implementation order
+- Compliance score projections
+- How to use this report (strategic planning, implementation, tracking)
+- Next actions (immediate, this week, next audit)
+
+**2. DEPENDENCY-INVESTIGATION-REPORT.md**:
+
+- Executive summary table (dependencies, bundle impact, cost, risk)
+- Critical findings (ZERO dependencies vs dependencies required)
+- Per-category analysis sections:
+    - Required dependencies (with versions, sizes, licenses)
+    - Installation commands
+    - Prerequisites
+    - Verification commands
+- Methodology reference (Rulebook v2.0, 8 phases)
+
+### Orchestration
+
+**File**: `src/lib/constitution/organized-report-writer.ts`
+
+Main orchestrator that executes the automated workflow:
+
+```typescript
+1. organizeViolations() → Create categories
+2. analyzeDependencies() → Run Rulebook v2.0 analysis
+3. Create dated folder: docs/reports/YYYY-MM-DD/
+4. For each category:
+   - Create subfolder
+   - Generate README with analysis
+5. Generate master README
+6. Generate DEPENDENCY-INVESTIGATION-REPORT.md
+7. Print summary to console with next steps
+```
+
+**Console Output**:
+
+```
+📁 Organizing violations into categories...
+   Found 4 violation categories
+📦 Analyzing dependencies for each category...
+   Dependency analysis complete
+   Created audit folder: 2026-02-13/
+📝 Generating category analyses...
+   ✓ 01-ui-modernization/README.md
+   ✓ 02-service-layer-violations/README.md
+   ✓ 03-type-safety-violations/README.md
+   ✓ 04-component-reuse/README.md
+📄 Generating master README...
+   ✓ README.md (master report)
+🔍 Generating dependency investigation report...
+   ✓ DEPENDENCY-INVESTIGATION-REPORT.md
+
+✅ Organized audit reports generated successfully!
+
+📊 Summary:
+   - 4 violation categories
+   - 4 category READMEs
+   - 1 master README
+   - 1 dependency investigation report
+
+📁 Location: docs/reports/2026-02-13
+
+💡 Dependency Summary:
+
+   ✅ ZERO dependencies needed for:
+      - Service Layer Violations
+      - Type Safety Violations
+
+   ⚠️  Dependencies required for:
+      - UI Modernization: 5 packages (+209KB)
+
+📖 Next Steps:
+   1. Review the master README in the dated folder
+   2. Check DEPENDENCY-INVESTIGATION-REPORT.md for dependency details
+   3. Read each category README for remediation options
+   4. Choose your implementation approach
 ```
 
 ## Detection Strategies
