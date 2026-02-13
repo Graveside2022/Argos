@@ -353,13 +353,13 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.4: USRP Feature Module Migration
 
-- [ ] T128 [US3] Move `src/lib/services/usrp/` → `src/lib/usrp/` (entire directory)
-- [ ] T129 [US3] Organize USRP module: create `src/lib/usrp/api.ts`, `src/lib/usrp/power.ts`, `src/lib/usrp/types.ts`
-- [ ] T130 [US3] Update all imports throughout codebase: `grep -r "from.*services.*usrp" src/` and replace with `src/lib/usrp/`
-- [ ] T131 [US3] Run TypeScript compilation: `npm run typecheck`
-- [ ] T132 [US3] Run ESLint: `npm run lint`
-- [ ] T133 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T134 [US3] Commit USRP migration: `git add . && git commit -m "refactor(usrp): migrate to feature-based architecture
+- [X] T128 [US3] Move `src/lib/services/usrp/` → `src/lib/usrp/` (entire directory)
+- [X] T129 [US3] Organize USRP module: create `src/lib/usrp/api.ts`, `src/lib/usrp/power.ts`, `src/lib/usrp/types.ts`
+- [X] T130 [US3] Update all imports throughout codebase: `grep -r "from.*services.*usrp" src/` and replace with `src/lib/usrp/`
+- [X] T131 [US3] Run TypeScript compilation: `npm run typecheck`
+- [X] T132 [US3] Run ESLint: `npm run lint`
+- [X] T133 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T134 [US3] Commit USRP migration: `git add . && git commit -m "refactor(usrp): migrate to feature-based architecture
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
