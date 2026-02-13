@@ -69,10 +69,11 @@ function queryGpsd(timeoutMs: number = 3000): Promise<string> {
 		socket.on('connect', () => {
 			socket.write('?WATCH={"enable":true,"json":true}\n');
 
-			// Collect data for 2 seconds
+			// Collect data for 5 seconds to catch SKY message with satellite array
+			// (gpsd alternates between SKY messages with uSat count and satellite details)
 			setTimeout(() => {
 				finish(Buffer.concat(chunks).toString('utf8'));
-			}, 2000);
+			}, 5000);
 		});
 
 		socket.on('data', (chunk: Buffer) => {
@@ -212,11 +213,15 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 	}
 
 	try {
-		const allLines = await queryGpsd(3000);
+		const allLines = await queryGpsd(6000); // Increased timeout for more SKY messages
 
 		let satellites: Satellite[] = [];
+		let usedSatCount = 0;
 		const lines = allLines.trim().split('\n');
 
+		// Collect all SKY messages with satellite arrays and use the one with most satellites
+		// Also capture uSat (used satellite count) from SKY messages that have it
+		// (gpsd sends multiple SKY messages - some with uSat count, some with satellite details)
 		for (const line of lines) {
 			if (line.trim() === '') continue;
 
@@ -226,9 +231,26 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 			}
 
 			const parsed = parseSatellites(result.data);
-			if (parsed.length > 0) {
+			// Keep the SKY message with the most satellites
+			if (parsed.length > satellites.length) {
 				satellites = parsed;
-				break; // Found SKY message with satellites
+			}
+
+			// Capture uSat (used satellite count) if present
+			const obj = result.data as Record<string, unknown>;
+			if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
+				usedSatCount = obj.uSat;
+			}
+		}
+
+		// Mark the first N satellites as "used" based on uSat count
+		// (gpsd doesn't mark individual satellites as used in the satellite array messages)
+		if (usedSatCount > 0 && satellites.length > 0) {
+			// Sort by SNR (descending) and mark top N as used
+			const sorted = [...satellites].sort((a, b) => b.snr - a.snr);
+			for (let i = 0; i < Math.min(usedSatCount, sorted.length); i++) {
+				const sat = satellites.find((s) => s.prn === sorted[i].prn);
+				if (sat) sat.used = true;
 			}
 		}
 
