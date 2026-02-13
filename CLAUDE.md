@@ -117,7 +117,7 @@ npm run framework:check-visual    # Visual regression testing
 npm run db:migrate           # Run migrations
 npm run db:rollback          # Rollback last migration
 
-# MCP Servers (7 specialized diagnostic servers)
+# MCP Servers (10 total: 7 Argos diagnostic + 3 utility servers)
 npm run mcp:system           # System health diagnostics
 npm run mcp:streaming        # SSE/WebSocket stream debugging
 npm run mcp:hardware         # HackRF/Kismet/GPS unified diagnostics
@@ -129,7 +129,7 @@ npm run mcp:install-b        # Install all MCP servers (host)
 npm run mcp:install-c        # Install all MCP servers (container)
 ```
 
-**Note:** Each Claude Code instance spawns all configured MCP servers (~30 processes, ~800MB RAM). Avoid running multiple Claude instances simultaneously on RPi5.
+**Note:** Each Claude Code instance spawns all configured MCP servers (~30 processes, ~800MB RAM). Utility servers (octocode, svelte, tailwindcss) are also configured. Avoid running multiple Claude instances simultaneously on RPi5.
 
 ### MCP Server Usage Guide
 
@@ -146,11 +146,20 @@ npm run mcp:install-c        # Install all MCP servers (container)
 **RF Operations:**
 - `gsm-evil` (7 tools) - GSM monitoring, IMSI capture, tower scanning (requires exclusive HackRF access)
 
+**UI Development:**
+- `svelte` (4 tools) - Svelte 5/SvelteKit documentation, code examples, playground links, auto-fixing
+  - `get-documentation` - Fetch official Svelte 5 and SvelteKit documentation sections
+  - `list-sections` - List all available documentation sections with use-case metadata
+  - `playground-link` - Generate interactive playground links for Svelte components
+  - `svelte-autofixer` - Validate and auto-fix Svelte component code (MUST use before sending code to user)
+  - **Usage**: Reference during P2 (UI Modernization) component migration tasks
+
 **Critical Rules:**
-- All servers require `ARGOS_API_KEY` environment variable
+- All Argos servers require `ARGOS_API_KEY` environment variable
 - Use `system-inspector` first for any system-level investigation
 - Use `hardware-debugger` when multiple RF devices might conflict
 - Use `database-inspector` for queries, never direct SQL
+- Use `svelte` MCP server when writing/editing Svelte components (especially P2 tasks)
 - See @docs/mcp-servers.md for detailed tool documentation
 
 ## Project Structure
