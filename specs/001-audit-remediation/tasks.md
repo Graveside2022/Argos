@@ -335,17 +335,17 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.3: GPS Feature Module Migration
 
-- [ ] T117 [US3] Create feature directory: `mkdir -p src/lib/gps`
-- [ ] T118 [US3] Create `src/lib/gps/api.ts` and move GPS API logic from `src/routes/api/gps/`
-- [ ] T119 [US3] Create `src/lib/gps/positioning.ts` and move GPS positioning logic
-- [ ] T120 [US3] Create `src/lib/gps/types.ts` and move GPS types from `src/lib/types/gps.ts`
-- [ ] T121 [US3] Create `src/lib/gps/stores.ts` and move GPS stores from `src/lib/stores/`
-- [ ] T122 [US3] Update all imports throughout codebase: `grep -r "from.*services.*gps" src/` (if any) and replace
-- [ ] T123 [US3] Run TypeScript compilation: `npm run typecheck`
-- [ ] T124 [US3] Run ESLint: `npm run lint`
-- [ ] T125 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T126 [US3] Verify GPS positioning works: Manual test (check GPS panel shows lat/lon, tactical map shows marker)
-- [ ] T127 [US3] Commit GPS migration: `git add . && git commit -m "refactor(gps): migrate to feature-based architecture
+- [X] T117 [US3] Create feature directory: `mkdir -p src/lib/gps`
+- [X] T118 [US3] Create `src/lib/gps/api.ts` and move GPS API logic from `src/routes/api/gps/`
+- [X] T119 [US3] Create `src/lib/gps/positioning.ts` and move GPS positioning logic
+- [X] T120 [US3] Create `src/lib/gps/types.ts` and move GPS types from `src/lib/types/gps.ts`
+- [X] T121 [US3] Create `src/lib/gps/stores.ts` and move GPS stores from `src/lib/stores/`
+- [X] T122 [US3] Update all imports throughout codebase: `grep -r "from.*services.*gps" src/` (if any) and replace
+- [X] T123 [US3] Run TypeScript compilation: `npm run typecheck`
+- [X] T124 [US3] Run ESLint: `npm run lint`
+- [X] T125 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T126 [US3] Verify GPS positioning works: Manual test (check GPS panel shows lat/lon, tactical map shows marker)
+- [X] T127 [US3] Commit GPS migration: `git add . && git commit -m "refactor(gps): migrate to feature-based architecture
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
