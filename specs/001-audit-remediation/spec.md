@@ -5,6 +5,16 @@
 **Status**: Draft
 **Input**: User description: "Implement constitutional audit remediation for three violation categories: (1) UI Modernization - migrate from hardcoded hex colors to Shadcn component library with full design system including rounded corners, shadows, and accessibility features while preserving all layout and functionality, (2) Service Layer Violations - refactor from service layer pattern to feature-based architecture by moving code from src/lib/services/ to src/lib/<feature>/ following 7-phase plan for Kismet, HackRF, GPS, USRP, and Tactical Map modules, (3) Type Safety Violations - replace 581 type assertions with Zod runtime validation schemas to catch type errors at runtime and improve type safety"
 
+## Clarifications
+
+### Session 2026-02-13
+
+- Q: When Zod validation fails in production (e.g., malformed API response from HackRF), how should the error be made visible to operators and developers for debugging? → A: Console logging (persistent via Docker logs) + UI toast notifications for user-initiated actions only. Console logs include full diagnostic details (error message, failed field, input data, stack trace). UI toasts show user-friendly messages for form submissions and button clicks, but not for background tasks.
+- Q: Should the UI migration (P2) match the existing color scheme or adopt Shadcn's default modern theme? → A: Adopt Shadcn default theme (modern look with rounded corners, shadows, Shadcn color palette) while preserving all layout structure. Requires Army EW operator approval via before/after screenshot comparison before deployment to field units.
+- Q: Should each remediation phase (P1, P2, P3) be deployed to production field units independently or all together? → A: Deploy P1 (Type Safety) to production immediately after merge, evaluate field performance for 1-2 weeks at NTC/JMRC, then decide whether to continue with P2/P3 based on production validation results. This incremental approach validates migration strategy with lowest-risk phase first.
+- Q: How many UI screenshots should be captured for visual regression testing baseline before P2 (UI migration) begins? → A: Capture 6-8 dashboard state screenshots covering: (1) default/idle state, (2) HackRF panel active, (3) Kismet panel active, (4) GPS panel active, (5) Tactical Map panel active, (6) multiple panels active simultaneously, (7) error state (optional), (8) responsive view (optional). Argos is a single-page dashboard application with different tool views that activate on button clicks, not multiple separate pages.
+- Q: If other feature development happens during this 3-6 week migration, what's the conflict resolution strategy? → A: Development freeze - no concurrent feature development planned during remediation period. This is the only priority work for 3-6 weeks to avoid merge conflicts and maintain focus on constitutional compliance (42%→70%+ improvement). Exception: Critical production bugs or security vulnerabilities can be fixed via separate hotfix branches that merge to main; remediation branch rebases to include hotfixes.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Type Safety Validation (Priority: P1)
@@ -79,39 +89,47 @@ Developers adding features or debugging issues need to understand code organizat
 - **FR-002**: System MUST catch type validation errors at runtime before they cause undefined behavior
 - **FR-003**: Zod schemas MUST cover common types including API responses, database query results, user data, and hardware device responses
 - **FR-004**: Validation failures MUST provide descriptive error messages identifying which field failed and why
-- **FR-005**: System MUST maintain TypeScript strict mode compilation after replacing type assertions
-- **FR-006**: All existing tests MUST pass after Zod migration
+- **FR-005**: Validation errors MUST be logged to console with full diagnostic details (error message, failed field path, input data, stack trace) for developer debugging via Docker logs
+- **FR-006**: Validation errors from user-initiated actions (form submissions, button clicks) MUST display non-blocking toast notifications with user-friendly messages
+- **FR-007**: Background validation failures (periodic hardware checks, WebSocket streams) MUST log to console without UI notifications
+- **FR-008**: System MUST maintain TypeScript strict mode compilation after replacing type assertions
+- **FR-009**: All existing tests MUST pass after Zod migration
 
 **UI Design System (P2):**
 
-- **FR-007**: System MUST replace all 269 hardcoded hex colors with Tailwind theme classes
-- **FR-008**: System MUST adopt Shadcn component library for buttons, inputs, cards, dialogs, and other interactive elements
-- **FR-009**: Visual appearance MUST change (rounded corners, shadows, modern styling) while preserving all layout structure
-- **FR-010**: All functionality MUST remain identical after UI migration (same click handlers, same WebSocket data, same map behavior)
-- **FR-011**: System MUST achieve WCAG 2.1 AA accessibility compliance with keyboard navigation and focus indicators
-- **FR-012**: System MUST capture visual regression baseline before migration to verify intended changes only
-- **FR-013**: Installation MUST add required dependencies: shadcn-svelte, clsx, tailwind-merge, and related packages
+- **FR-010**: System MUST replace all 269 hardcoded hex colors with Tailwind theme classes
+- **FR-011**: System MUST adopt Shadcn component library for buttons, inputs, cards, dialogs, and other interactive elements
+- **FR-012**: Visual appearance MUST change (rounded corners, shadows, modern styling) while preserving all layout structure
+- **FR-013**: All functionality MUST remain identical after UI migration (same click handlers, same WebSocket data, same map behavior)
+- **FR-014**: System MUST achieve WCAG 2.1 AA accessibility compliance with keyboard navigation and focus indicators
+- **FR-015**: System MUST adopt Shadcn default theme (colors, rounded corners, shadows) rather than matching existing color scheme
+- **FR-016**: Before/after screenshot comparison MUST be shared with Army EW operators for approval before deployment to field units
+- **FR-017**: System MUST capture 6-8 dashboard state screenshots for visual regression baseline: default state, HackRF panel active, Kismet panel active, GPS panel active, Tactical Map panel active, multiple panels active, error state (optional), responsive view (optional)
+- **FR-018**: Visual regression baseline MUST be captured via Playwright automation before P2 migration begins
+- **FR-019**: Installation MUST add required dependencies: shadcn-svelte, clsx, tailwind-merge, and related packages
 
 **Service Layer Refactor (P3):**
 
-- **FR-014**: System MUST migrate code from `src/lib/services/` to feature-based structure `src/lib/<feature>/`
-- **FR-015**: Kismet module MUST include websocket.ts, api.ts, types.ts, and stores.ts in `src/lib/kismet/`
-- **FR-016**: HackRF module MUST include websocket.ts, spectrum.ts, sweep.ts, and stores.ts in `src/lib/hackrf/`
-- **FR-017**: GPS module MUST include api.ts, positioning.ts, and stores.ts in `src/lib/gps/`
-- **FR-018**: USRP module MUST include api.ts, power.ts, and types.ts in `src/lib/usrp/`
-- **FR-019**: Tactical Map module MUST include map-engine.ts, layers/, and stores.ts in `src/lib/tactical-map/`
-- **FR-020**: Shared WebSocket base code MUST move to `src/lib/server/websocket-base.ts` (not feature-specific)
-- **FR-021**: System MUST delete empty `src/lib/services/` directory after migration completes
-- **FR-022**: All import paths throughout codebase MUST be updated to reflect new feature module locations
-- **FR-023**: Full test suite MUST pass after each phase (Kismet, HackRF, GPS, USRP, Tactical Map, WebSocket Base, Cleanup)
-- **FR-024**: Real-time WebSocket connections MUST continue functioning after migration (HackRF FFT, Kismet WiFi, GPS position)
+- **FR-020**: System MUST migrate code from `src/lib/services/` to feature-based structure `src/lib/<feature>/`
+- **FR-021**: Kismet module MUST include websocket.ts, api.ts, types.ts, and stores.ts in `src/lib/kismet/`
+- **FR-022**: HackRF module MUST include websocket.ts, spectrum.ts, sweep.ts, and stores.ts in `src/lib/hackrf/`
+- **FR-023**: GPS module MUST include api.ts, positioning.ts, and stores.ts in `src/lib/gps/`
+- **FR-024**: USRP module MUST include api.ts, power.ts, and types.ts in `src/lib/usrp/`
+- **FR-025**: Tactical Map module MUST include map-engine.ts, layers/, and stores.ts in `src/lib/tactical-map/`
+- **FR-026**: Shared WebSocket base code MUST move to `src/lib/server/websocket-base.ts` (not feature-specific)
+- **FR-027**: System MUST delete empty `src/lib/services/` directory after migration completes
+- **FR-028**: All import paths throughout codebase MUST be updated to reflect new feature module locations
+- **FR-029**: Full test suite MUST pass after each phase (Kismet, HackRF, GPS, USRP, Tactical Map, WebSocket Base, Cleanup)
+- **FR-030**: Real-time WebSocket connections MUST continue functioning after migration (HackRF FFT, Kismet WiFi, GPS position)
 
 **Overall Requirements:**
 
-- **FR-025**: Constitutional audit MUST show compliance improvement: 42% baseline → 60% (P1) → 68% (P1+P2) → 70%+ (P1+P2+P3)
-- **FR-026**: System MUST maintain all existing functionality throughout migration (no feature regressions)
-- **FR-027**: Each priority level (P1, P2, P3) MUST be independently deployable and testable
-- **FR-028**: Git history MUST show clear separation between phases with descriptive commit messages
+- **FR-031**: Constitutional audit MUST show compliance improvement: 42% baseline → 60% (P1) → 68% (P1+P2) → 70%+ (P1+P2+P3)
+- **FR-032**: System MUST maintain all existing functionality throughout migration (no feature regressions)
+- **FR-033**: Each priority level (P1, P2, P3) MUST be independently deployable and testable
+- **FR-034**: P1 (Type Safety) MUST be deployed to production and evaluated for 1-2 weeks before P2/P3 work begins
+- **FR-035**: P2/P3 phases MUST proceed only after P1 field validation confirms migration approach is sound
+- **FR-036**: Git history MUST show clear separation between phases with descriptive commit messages
 
 ### Key Entities _(include if feature involves data)_
 
@@ -273,11 +291,15 @@ Developers adding features or debugging issues need to understand code organizat
 ### Process Assumptions
 
 - Development work happens on feature branch `001-audit-remediation` with regular commits
-- Each priority phase (P1, P2, P3) can be merged independently or as single large PR
+- Each priority phase (P1, P2, P3) merged independently via separate PRs
+- **P1 deployment**: Merge to main and deploy to production immediately after completion
+- **P1 evaluation**: Monitor field performance at NTC/JMRC for 1-2 weeks before starting P2
+- **P2/P3 proceed**: Only after P1 validation confirms migration approach is sound
 - Constitutional audit script (`npx tsx scripts/run-audit.ts`) runs after each phase to verify progress
 - Visual regression testing tools available (Playwright for screenshots)
 - Rollback plan: git history allows reverting to last working state if phase fails
-- No other major development work happens concurrently (avoid merge conflicts)
+- **Development freeze**: No other feature development happens during 3-6 week remediation period (this is the only priority work)
+- **Hotfix exception**: Critical production bugs or security vulnerabilities can be fixed via separate hotfix branches that merge to main; remediation branch rebases to include hotfixes
 
 ### Timeline Assumptions
 
@@ -400,15 +422,12 @@ Developers adding features or debugging issues need to understand code organizat
 
 - Should Zod schemas be co-located with types (`types.ts`) or in separate `schemas.ts` files?
     - **Default Assumption**: Co-locate with types for easier maintenance unless file becomes too large
-- Should validation errors be logged to database or just thrown as exceptions?
-    - **Default Assumption**: Throw exceptions with descriptive messages, let error boundaries handle logging
+- ~~Should validation errors be logged to database or just thrown as exceptions?~~ **RESOLVED**: Console logging (Docker logs) + UI notifications for user-initiated actions
 
 ### UI Design System (P2)
 
-- Should visual regression baseline be captured manually or automated via CI/CD?
-    - **Default Assumption**: Manual capture before starting, automated in future
-- Should Shadcn components be customized to match exact current colors or adopt default theme?
-    - **Default Assumption**: Adopt default theme (modern look is the goal), customize only if contrast/accessibility issues
+- ~~Should visual regression baseline be captured manually or automated via CI/CD?~~ **RESOLVED**: Manual Playwright capture of 6-8 dashboard states before P2 begins, automated in future
+- ~~Should Shadcn components be customized to match exact current colors or adopt default theme?~~ **RESOLVED**: Adopt Shadcn default theme (modern look) with operator approval via screenshot comparison before deployment
 
 ### Service Layer Refactor (P3)
 
@@ -419,10 +438,8 @@ Developers adding features or debugging issues need to understand code organizat
 
 ### Overall
 
-- Should all three phases be merged as single large PR or three separate PRs?
-    - **Default Assumption**: Three separate PRs for independent review and deployment
-- Should visual changes (P2) be reviewed by end users before merging?
-    - **Default Assumption**: Yes - screenshot comparison shared with Army EW operators for feedback
+- ~~Should all three phases be merged as single large PR or three separate PRs?~~ **RESOLVED**: Three separate PRs with incremental deployment. P1 deploys to production first, evaluated for 1-2 weeks, then P2/P3 proceed based on validation results.
+- ~~Should visual changes (P2) be reviewed by end users before merging?~~ **RESOLVED**: Yes - screenshot comparison shared with Army EW operators for approval before deployment (covered in Q2)
 
 ## Related Work _(optional)_
 
@@ -460,17 +477,24 @@ Developers adding features or debugging issues need to understand code organizat
 
 ### Implementation Strategy
 
-**Sequential Phases (Recommended):**
+**Incremental Deployment with Evaluation Checkpoints (Recommended):**
 
 1. **Week 1-2**: P1 (Type Safety) - Highest ROI, lowest risk, establishes runtime safety before visual changes
+    - **Merge to main** and deploy to production Raspberry Pi 5 units
+    - **Evaluate for 1-2 weeks** at NTC/JMRC field deployment
+    - Monitor: Zod validation errors, performance impact, operator feedback
+    - **Go/No-Go Decision**: Proceed to P2 only if P1 validates successfully
+
 2. **Week 3-4**: P2 (UI Design System) - User-facing improvements, auto-resolves folder 04 violations
+    - **Only starts after P1 field validation completes**
+    - Screenshot comparison with Army EW operators for approval
+    - **Merge to main** and deploy to production after operator approval
+
 3. **Week 5-6**: P3 (Service Layer Refactor) - Architectural cleanup after stable P1/P2 foundation
+    - **Only starts after P2 field validation completes**
+    - **Merge to main** and deploy to production after testing
 
-**Parallel Phases (Alternative - Higher Risk):**
-
-- P1 and P2 can be worked on simultaneously by different developers
-- P3 should wait until P1/P2 merge to avoid import path conflicts
-- Higher risk of merge conflicts and integration issues
+**Rationale**: Incremental deployment reduces risk, provides early feedback, and validates migration approach before committing full 3-6 week timeline.
 
 ### Compliance Score Tracking
 
