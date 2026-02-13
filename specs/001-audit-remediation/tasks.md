@@ -316,18 +316,18 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.2: HackRF Feature Module Migration
 
-- [ ] T105 [US3] Create feature directory: `mkdir -p src/lib/hackrf`
-- [ ] T106 [US3] Move `src/lib/services/websocket/hackrf.ts` → `src/lib/hackrf/websocket.ts`
-- [ ] T107 [US3] Create `src/lib/hackrf/spectrum.ts` and move spectrum analysis logic
-- [ ] T108 [US3] Create `src/lib/hackrf/sweep.ts` and move sweep logic
-- [ ] T109 [US3] Create `src/lib/hackrf/types.ts` and move HackRF types from `src/lib/types/hackrf.ts`
-- [ ] T110 [US3] Create `src/lib/hackrf/stores.ts` and move HackRF stores from `src/lib/stores/`
-- [ ] T111 [US3] Update all imports throughout codebase: `grep -r "from.*services.*hackrf" src/` and replace with `src/lib/hackrf/`
-- [ ] T112 [US3] Run TypeScript compilation: `npm run typecheck`
-- [ ] T113 [US3] Run ESLint: `npm run lint`
-- [ ] T114 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T115 [US3] Verify HackRF FFT stream works: Manual test via browser (start scan, verify FFT waterfall displays)
-- [ ] T116 [US3] Commit HackRF migration: `git add . && git commit -m "refactor(hackrf): migrate to feature-based architecture
+- [X] T105 [US3] Create feature directory: `mkdir -p src/lib/hackrf`
+- [X] T106 [US3] Move `src/lib/services/websocket/hackrf.ts` → `src/lib/hackrf/websocket.ts`
+- [X] T107 [US3] Create `src/lib/hackrf/spectrum.ts` and move spectrum analysis logic
+- [X] T108 [US3] Create `src/lib/hackrf/sweep.ts` and move sweep logic
+- [X] T109 [US3] Create `src/lib/hackrf/types.ts` and move HackRF types from `src/lib/types/hackrf.ts`
+- [X] T110 [US3] Create `src/lib/hackrf/stores.ts` and move HackRF stores from `src/lib/stores/`
+- [X] T111 [US3] Update all imports throughout codebase: `grep -r "from.*services.*hackrf" src/` and replace with `src/lib/hackrf/`
+- [X] T112 [US3] Run TypeScript compilation: `npm run typecheck`
+- [X] T113 [US3] Run ESLint: `npm run lint`
+- [X] T114 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T115 [US3] Verify HackRF FFT stream works: Manual test via browser (start scan, verify FFT waterfall displays)
+- [X] T116 [US3] Commit HackRF migration: `git add . && git commit -m "refactor(hackrf): migrate to feature-based architecture
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
