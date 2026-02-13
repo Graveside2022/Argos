@@ -1,8 +1,10 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
+
 import { hostExec } from '$lib/server/host-exec';
 import { safeJsonParse } from '$lib/server/security/safe-json';
-import { z } from 'zod';
+
+import type { RequestHandler } from './$types';
 
 // Zod schema for GSM Evil IMSI query result from Python subprocess
 const GsmEvilImsiResultSchema = z
@@ -72,6 +74,7 @@ export const GET: RequestHandler = async () => {
 			'/usr/src/gsmevil2/database/imsi.db',
 			'/home/kali/gsmevil-user/database/imsi.db'
 		] as const;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
 			return json({ success: false, message: 'Invalid database path', imsis: [], total: 0 });
 		}
@@ -97,10 +100,10 @@ except Exception as e:
 			`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`
 		);
 
-		console.log('[gsm-evil-imsi] Python stdout length:', stdout.length);
-		console.log('[gsm-evil-imsi] Python stderr:', stderr);
+		console.warn('[gsm-evil-imsi] Python stdout length:', stdout.length);
+		console.warn('[gsm-evil-imsi] Python stderr:', stderr);
 		if (stdout.length < 100) {
-			console.log('[gsm-evil-imsi] Full stdout:', stdout);
+			console.warn('[gsm-evil-imsi] Full stdout:', stdout);
 		}
 
 		// Parse and return the result

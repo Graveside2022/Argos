@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { testUtils as _testUtils } from '../helpers/setup';
 
 const API_BASE_URL = process.env.TEST_URL || 'http://localhost:5173';

@@ -1,10 +1,11 @@
 import js from '@eslint/js';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import svelte from 'eslint-plugin-svelte';
-import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
+import svelteParser from 'svelte-eslint-parser';
 
 export default [
 	js.configs.recommended,
@@ -13,7 +14,13 @@ export default [
 			'node_modules/**',
 			'build/**',
 			'.svelte-kit/**',
+			'.next/**',
 			'package/**',
+			'hackrf_emitter/**',
+			'**/.venv/**',
+			'**/venv/**',
+			'**/dist/**',
+			'service/dist/**',
 			'.env',
 			'.env.*',
 			'!.env.example',
@@ -37,6 +44,9 @@ export default [
 				NodeJS: 'readonly'
 			}
 		},
+		plugins: {
+			'simple-import-sort': simpleImportSort
+		},
 		rules: {
 			'no-unused-vars': [
 				'error',
@@ -45,7 +55,9 @@ export default [
 					varsIgnorePattern: '^_',
 					caughtErrorsIgnorePattern: '^_'
 				}
-			]
+			],
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error'
 		}
 	},
 	{
@@ -71,10 +83,10 @@ export default [
 					caughtErrorsIgnorePattern: '^_'
 				}
 			],
-			'@typescript-eslint/no-explicit-any': 'warn',
+			'@typescript-eslint/no-explicit-any': 'warn', // Enforce proper typing
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
-			'@typescript-eslint/no-non-null-assertion': 'warn',
-			'no-console': ['warn', { allow: ['warn', 'error'] }]
+			'@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards
+			'no-console': ['warn', { allow: ['warn', 'error'] }] // Use proper logging
 		}
 	},
 	{

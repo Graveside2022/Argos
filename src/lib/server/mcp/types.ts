@@ -11,6 +11,7 @@ export interface MCPTool {
 	description: string;
 	inputSchema: {
 		type: 'object';
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		properties: Record<string, any>;
 		required?: string[];
 	};

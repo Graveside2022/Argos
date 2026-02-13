@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 	import { get } from 'svelte/store';
+
+	import { browser } from '$app/environment';
 	import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agent-context-store';
 
 	// Props are no longer needed - context comes from store
@@ -311,7 +312,7 @@
 			bind:value={inputValue}
 			onkeydown={handleKeydown}
 			placeholder={llmProvider === 'unavailable'
-				? 'Agent unavailable. Install Ollama or configure ANTHROPIC_API_KEY.'
+				? 'Agent unavailable. Configure ANTHROPIC_API_KEY in environment.'
 				: 'Type a message (Enter to send, Shift+Enter for new line)...'}
 			disabled={isStreaming || llmProvider === 'unavailable'}
 			class="chat-input"

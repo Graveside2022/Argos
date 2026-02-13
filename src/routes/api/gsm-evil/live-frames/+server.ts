@@ -1,12 +1,14 @@
-import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+
 import { hostExec } from '$lib/server/host-exec';
+
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
 		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
-			console.debug('[gsm-evil-live-frames] GRGSM process check failed', {
+			console.warn('[gsm-evil-live-frames] GRGSM process check failed', {
 				error: String(error)
 			});
 			return { stdout: '' };

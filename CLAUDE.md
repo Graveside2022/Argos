@@ -171,7 +171,7 @@ config/                      # Vite, ESLint, Tailwind, terminal plugin
 **Key Patterns:**
 - **Service Layer**: Routes handle HTTP, business logic in `src/lib/services/`, DB access in `src/lib/server/db/`
 - **Hardware Abstraction**: `src/lib/server/hardware/` detects/manages RF devices
-- **Host-Container Bridge**: `src/lib/server/hostExec.ts` uses `nsenter` to run host commands from container (for gr-gsm, tcpdump, etc.)
+- **Host-Container Bridge**: `src/lib/server/host-exec.ts` uses `nsenter` to run host commands from container (for gr-gsm, tcpdump, etc.)
 
 ## Code Conventions
 
@@ -275,7 +275,7 @@ npm run build
 
 ## Reference Documentation
 
-Detailed guides: @docs/{mcp-servers,security-architecture,hardware-patterns,websocket-guide,database-guide,testing-guide,deployment}.md
+Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-architecture.md, hardware-patterns.md, websocket-guide.md, database-guide.md, testing-guide.md, deployment.md
 
 ---
 

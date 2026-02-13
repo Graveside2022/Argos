@@ -1,5 +1,6 @@
 export interface KismetDevice {
 	// Allow dynamic property access for Kismet's nested field names
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: any;
 
 	mac: string;

@@ -1,14 +1,14 @@
 import { hackrfAPI } from '$lib/services/hackrf/api';
+import { SignalAggregator } from '$lib/services/map/signal-aggregator';
 import { spectrumData } from '$lib/stores/hackrf';
 import {
+	clearAllSignals,
 	hackrfStore,
 	setConnectionStatus,
 	setSearchingState,
 	setTargetFrequency,
-	clearAllSignals,
 	type SimplifiedSignal
 } from '$lib/stores/tactical-map/hackrf-store';
-import { SignalAggregator } from '$lib/services/map/signal-aggregator';
 
 export class HackRFService {
 	private spectrumUnsubscribe: (() => void) | null = null;
@@ -25,11 +25,11 @@ export class HackRFService {
 		this.spectrumUnsubscribe = spectrumData.subscribe((data) => {
 			const _state = hackrfStore;
 			// Access current state synchronously
-			let currentState: any;
+			let currentState: { isSearching: boolean } | undefined;
 			const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
 			unsubscribe();
 
-			if (data && currentState.isSearching) {
+			if (data && currentState?.isSearching) {
 				this.aggregator.addSpectrumData(data);
 			}
 		});
@@ -61,11 +61,11 @@ export class HackRFService {
 	}
 
 	toggleSearch(frequency: number): void {
-		let currentState: any;
+		let currentState: { isSearching: boolean } | undefined;
 		const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
 		unsubscribe();
 
-		if (currentState.isSearching) {
+		if (currentState?.isSearching) {
 			this.stopSearch();
 		} else {
 			this.startSearch(frequency);

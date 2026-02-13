@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs/promises';
-import _path from 'path';
 import { arch, platform } from 'os';
+import _path from 'path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // Dynamic imports for optional dependencies
 let puppeteer: typeof import('puppeteer') | null = null;
@@ -86,8 +86,9 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		console.error(`Running visual tests on Raspberry Pi (${arch()}/${platform()})`);
 
 		try {
+			if (!puppeteer) throw new Error('Puppeteer not available');
 			// Pi-specific browser launch configuration
-			browser = await puppeteer!.default.launch({
+			browser = await puppeteer.default.launch({
 				headless: true,
 				args: PI_VISUAL_CONFIG.browserArgs,
 				executablePath: '/usr/bin/chromium-browser',
@@ -350,6 +351,10 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		try {
 			const baselineBuffer = await fs.readFile(baselinePath);
 			const screenshotBuffer = await fs.readFile(screenshotPath);
+
+			if (!PNG || !pixelmatch) {
+				throw new Error('PNG or pixelmatch not available');
+			}
 
 			const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
 			const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));

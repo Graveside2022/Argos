@@ -30,7 +30,7 @@ htmlcov/
 .coverage.*
 
 # Production
-build/
+/build/
 dist/
 .svelte-kit/
 package/

@@ -4,7 +4,7 @@
 export { DatabaseCleanupService } from "./cleanup-service";
 
 // database (facade)
-export { RFDatabase, getRFDatabase } from "./database";
+export { getRFDatabase,RFDatabase } from "./database";
 
 // db-optimizer
 export { DatabaseOptimizer } from "./db-optimizer";

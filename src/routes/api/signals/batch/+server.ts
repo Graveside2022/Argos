@@ -1,8 +1,10 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error,json } from '@sveltejs/kit';
+
 import { getRFDatabase } from '$lib/server/db/database';
-import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
 import { SignalSource } from '$lib/types/enums';
+import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
+
+import type { RequestHandler } from './$types';
 
 function normalizeSignalSource(source: string): SignalSource {
 	const sourceMap: Record<string, SignalSource> = {

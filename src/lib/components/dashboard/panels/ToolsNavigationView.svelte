@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { currentCategory } from '$lib/stores/dashboard/tools-store';
-	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
-	import { activeView, activePanel } from '$lib/stores/dashboard/dashboard-store';
-	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
-	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
+
 	import ToolCard from '$lib/components/dashboard/shared/ToolCard.svelte';
+	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
+	import { activePanel, activeView } from '$lib/stores/dashboard/dashboard-store';
+	import { currentCategory } from '$lib/stores/dashboard/tools-store';
+	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
+	import { isCategory, type ToolDefinition, type ToolStatus } from '$lib/types/tools';
 
 	/**
 	 * Tool endpoint configuration.
@@ -70,10 +71,13 @@
 				res = await fetch(ep.controlUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'start' })
+					body: JSON.stringify({ action: 'start' }),
+					credentials: 'same-origin'
 				});
+			} else if (ep.startUrl) {
+				res = await fetch(ep.startUrl, { method: 'POST', credentials: 'same-origin' });
 			} else {
-				res = await fetch(ep.startUrl!, { method: 'POST' });
+				throw new Error('No start URL configured for tool');
 			}
 
 			const data = await res.json();
@@ -86,7 +90,8 @@
 					const statusRes = await fetch(ep.controlUrl, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ action: 'status' })
+						body: JSON.stringify({ action: 'status' }),
+						credentials: 'same-origin'
 					});
 					const statusData = await statusRes.json();
 					setLocalStatus(tool.id, statusData.running ? 'running' : 'stopped');
@@ -120,10 +125,13 @@
 				res = await fetch(ep.controlUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'stop' })
+					body: JSON.stringify({ action: 'stop' }),
+					credentials: 'same-origin'
 				});
+			} else if (ep.stopUrl) {
+				res = await fetch(ep.stopUrl, { method: 'POST', credentials: 'same-origin' });
 			} else {
-				res = await fetch(ep.stopUrl!, { method: 'POST' });
+				throw new Error('No stop URL configured for tool');
 			}
 
 			const data = await res.json();
@@ -150,7 +158,8 @@
 			fetch(openwebrxEp.controlUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'status' })
+				body: JSON.stringify({ action: 'status' }),
+				credentials: 'same-origin'
 			})
 				.then((r) => r.json())
 				.then((data) => {
@@ -183,15 +192,15 @@
 					name={item.name}
 					description={item.description}
 					icon={item.icon}
-					installed={item.installed}
+					isInstalled={item.installed}
 					canOpen={item.canOpen}
 					showControls={item.showControls}
 					externalUrl={item.externalUrl}
 					status={getLiveStatus(item)}
 					count={getLiveCount(item)}
-					onopen={() => handleOpen(item)}
-					onstart={() => handleStart(item)}
-					onstop={() => handleStop(item)}
+					onOpen={() => handleOpen(item)}
+					onStart={() => handleStart(item)}
+					onStop={() => handleStop(item)}
 				/>
 			{/if}
 		{/each}

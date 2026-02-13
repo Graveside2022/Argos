@@ -5,10 +5,12 @@
 // hooks.server.ts has already authenticated the connection (verifyClient equivalent
 // + maxPayload: 262144 on the noServer WSS). No duplicate auth check is needed here
 // because the connection is rejected at the server level before it reaches addClient().
-import { WebSocket } from 'ws';
-import type { WebSocketMessage, KismetDevice } from './types';
 import { EventEmitter } from 'events';
+import { WebSocket } from 'ws';
+
 import { logError, logInfo } from '$lib/utils/logger';
+
+import type { KismetDevice,WebSocketMessage } from './types';
 
 // Kismet API raw device data interface
 interface KismetRawDevice {

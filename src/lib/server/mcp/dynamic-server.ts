@@ -7,20 +7,61 @@
  */
 
 /* eslint-disable no-undef */
-import { config } from 'dotenv';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
 	CallToolRequestSchema,
-	ListToolsRequestSchema,
 	ListResourcesRequestSchema,
+	ListToolsRequestSchema,
 	ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import { config } from 'dotenv';
 
 // Load .env for ARGOS_API_KEY (standalone process, not SvelteKit)
 config();
 
 const ARGOS_API = process.env.ARGOS_API_URL || 'http://localhost:5173';
+
+// Type definitions for Kismet device data (dynamic properties from API)
+interface KismetDevice {
+	mac?: string;
+	macaddr?: string;
+	ssid?: string;
+	name?: string;
+	signalStrength?: number;
+	signal?: {
+		last_signal?: number;
+	};
+	manufacturer?: string;
+	manuf?: string;
+	type?: string;
+	deviceType?: string;
+	encryption?: string;
+	crypt?: string;
+	channel?: number;
+	frequency?: number;
+	packets?: number;
+	dataPackets?: number;
+	lastSeen?: string;
+	last_time?: string;
+	firstSeen?: string;
+	first_time?: string;
+	location?: unknown;
+}
+
+interface ToolScanEntry {
+	installed: boolean;
+	deployment?: string;
+	binary?: {
+		path?: string;
+	};
+	container?: {
+		name?: string;
+	};
+	service?: {
+		name?: string;
+	};
+}
 
 /**
  * MCP Tool definitions — matches argosTools in tools.ts
@@ -48,18 +89,18 @@ const ARGOS_TOOLS = [
 		execute: async (args: Record<string, unknown>) => {
 			const resp = await apiFetch('/api/kismet/devices');
 			const data = await resp.json();
-			let devices = data.devices || [];
+			let devices: KismetDevice[] = data.devices || [];
 
 			// Apply filters
 			const minSignal = (args.min_signal_strength as number) ?? -90;
-			devices = devices.filter((d: any) => {
+			devices = devices.filter((d: KismetDevice) => {
 				const sig = d.signalStrength ?? d.signal?.last_signal ?? -100;
 				return sig >= minSignal;
 			});
 
 			const filterType = (args.filter_type as string) || 'all';
 			if (filterType !== 'all') {
-				devices = devices.filter((d: any) => {
+				devices = devices.filter((d: KismetDevice) => {
 					const type = (d.type || d.deviceType || 'wifi').toLowerCase();
 					return type.includes(filterType);
 				});
@@ -68,7 +109,7 @@ const ARGOS_TOOLS = [
 			return {
 				device_count: devices.length,
 				source: data.source || 'kismet',
-				devices: devices.slice(0, 50).map((d: any) => ({
+				devices: devices.slice(0, 50).map((d: KismetDevice) => ({
 					mac: d.mac || d.macaddr || 'unknown',
 					ssid: d.ssid || d.name || 'Unknown',
 					signal_dbm: d.signalStrength ?? d.signal?.last_signal ?? null,
@@ -103,10 +144,10 @@ const ARGOS_TOOLS = [
 			const deviceId = (args.device_id as string) || '';
 			const resp = await apiFetch('/api/kismet/devices');
 			const data = await resp.json();
-			const devices = data.devices || [];
+			const devices: KismetDevice[] = data.devices || [];
 
 			const searchLower = deviceId.toLowerCase();
-			const match = devices.find((d: any) => {
+			const match = devices.find((d: KismetDevice) => {
 				const mac = (d.mac || d.macaddr || '').toLowerCase();
 				const ssid = (d.ssid || d.name || '').toLowerCase();
 				return mac.includes(searchLower) || ssid.includes(searchLower);
@@ -182,10 +223,10 @@ const ARGOS_TOOLS = [
 			const networkId = (args.network_id as string) || '';
 			const resp = await apiFetch('/api/kismet/devices');
 			const data = await resp.json();
-			const devices = data.devices || [];
+			const devices: KismetDevice[] = data.devices || [];
 
 			const searchLower = networkId.toLowerCase();
-			const matches = devices.filter((d: any) => {
+			const matches = devices.filter((d: KismetDevice) => {
 				const mac = (d.mac || d.macaddr || '').toLowerCase();
 				const ssid = (d.ssid || d.name || '').toLowerCase();
 				return mac.includes(searchLower) || ssid.includes(searchLower);
@@ -198,7 +239,7 @@ const ARGOS_TOOLS = [
 			return {
 				found: true,
 				network_count: matches.length,
-				networks: matches.map((d: any) => {
+				networks: matches.map((d: KismetDevice) => {
 					const encryption = (d.encryption || d.crypt || 'None').toUpperCase();
 					const isOpen = encryption === 'NONE' || encryption === 'OPEN';
 					const isWEP = encryption.includes('WEP');
@@ -402,12 +443,12 @@ const ARGOS_TOOLS = [
 			}
 
 			const installedOnly = args.installed_only !== false;
-			const tools = data.tools || {};
+			const tools: Record<string, ToolScanEntry> = data.tools || {};
 			const entries = Object.entries(tools);
 
 			const installed = entries
-				.filter(([_, t]: [string, any]) => t.installed)
-				.map(([id, t]: [string, any]) => ({
+				.filter(([_, t]: [string, ToolScanEntry]) => t.installed)
+				.map(([id, t]: [string, ToolScanEntry]) => ({
 					id,
 					deployment: t.deployment,
 					binary: t.binary?.path || null,
@@ -423,8 +464,8 @@ const ARGOS_TOOLS = [
 
 			if (!installedOnly) {
 				const notInstalled = entries
-					.filter(([_, t]: [string, any]) => !t.installed)
-					.map(([id]: [string, any]) => id);
+					.filter(([_, t]: [string, ToolScanEntry]) => !t.installed)
+					.map(([id]: [string, ToolScanEntry]) => id);
 				result.not_installed_count = notInstalled.length;
 				result.not_installed = notInstalled;
 			}

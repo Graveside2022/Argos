@@ -3,7 +3,9 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { NetworkNode, NetworkEdge } from '$lib/types/network';
+
+import type { NetworkEdge,NetworkNode } from '$lib/types/network';
+
 import type { DbRelationship } from './types';
 
 /**

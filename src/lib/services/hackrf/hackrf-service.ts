@@ -3,19 +3,19 @@
  * High-level service for managing HackRF operations with real-time streaming
  */
 
-import { writable, derived, type Readable, type Writable } from 'svelte/store';
-import { logWarn } from '$lib/utils/logger';
+import { derived, type Readable, type Writable,writable } from 'svelte/store';
+
 import { hackrfAPI } from '$lib/services/api';
-import { HackRFWebSocketClient } from '$lib/services/websocket/hackrf';
 import type {
-	HackRFStatus,
 	HackRFConfig,
-	SweepResult,
+	HackRFStatus,
 	SignalDetection,
-	SpectrumData
-} from '$lib/services/api/hackrf';
+	SpectrumData,
+	SweepResult} from '$lib/services/api/hackrf';
 import type { WebSocketEvent, WebSocketEventType } from '$lib/services/websocket/base';
+import { HackRFWebSocketClient } from '$lib/services/websocket/hackrf';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
+import { logWarn } from '$lib/utils/logger';
 
 interface HackRFServiceState {
 	status: HackRFStatus;

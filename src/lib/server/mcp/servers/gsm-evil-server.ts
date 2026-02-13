@@ -5,8 +5,9 @@
  */
 
 import { config } from 'dotenv';
-import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
+
 import { apiFetch } from '../shared/api-client';
+import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
 // Load .env for ARGOS_API_KEY
 config();

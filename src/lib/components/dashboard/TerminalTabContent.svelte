@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+
 	import { browser } from '$app/environment';
 	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
 
@@ -108,7 +109,7 @@
 
 		ws.onopen = () => {
 			connectionError = false;
-			console.log(`[Terminal ${sessionId}] WebSocket connected, sending init`);
+			console.warn(`[Terminal ${sessionId}] WebSocket connected, sending init`);
 			// Send init message with shell selection
 			ws?.send(JSON.stringify({ type: 'init', shell, sessionId }));
 		};
@@ -119,7 +120,7 @@
 				try {
 					const msg = JSON.parse(e.data);
 					if (msg.type === 'ready') {
-						console.log(`[Terminal ${sessionId}] New PTY session spawned`);
+						console.warn(`[Terminal ${sessionId}] New PTY session spawned`);
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';
@@ -141,7 +142,7 @@
 						return;
 					}
 					if (msg.type === 'reattached') {
-						console.log(`[Terminal ${sessionId}] PTY session reattached successfully`);
+						console.warn(`[Terminal ${sessionId}] PTY session reattached successfully`);
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';

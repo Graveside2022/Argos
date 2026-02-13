@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { Snippet } from 'svelte';
-	import { markCSSLoaded } from '$lib/utils/css-loader';
 	import '../app.css';
+
+	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
+
+	import { markCSSLoaded } from '$lib/utils/css-loader';
 
 	interface Props {
 		children: Snippet;

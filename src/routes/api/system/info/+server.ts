@@ -1,9 +1,11 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as os from 'os';
+import { promisify } from 'util';
+
 import type { SystemInfo } from '$lib/types/system';
+
+import type { RequestHandler } from './$types';
 
 const execAsync = promisify(exec);
 
@@ -12,9 +14,11 @@ async function getSystemInfo(): Promise<SystemInfo> {
 		// Get hostname
 		const hostname = os.hostname();
 
-		// Get primary IP
-		const { stdout: ipOutput } = await execAsync("hostname -I | awk '{print $1}'");
-		const primaryIp = ipOutput.trim();
+		// Get all IPs and extract primary + Tailscale
+		const { stdout: allIps } = await execAsync('hostname -I');
+		const ips = allIps.trim().split(' ').filter(Boolean);
+		const primaryIp = ips[0] || '';
+		const tailscaleIp = ips.find((ip) => ip.startsWith('100.')) || null;
 
 		// Get WiFi interfaces
 		const wifiInterfaces = [];
@@ -141,6 +145,7 @@ async function getSystemInfo(): Promise<SystemInfo> {
 		return {
 			hostname,
 			ip: primaryIp,
+			tailscaleIp,
 			wifiInterfaces,
 			cpu: {
 				usage: cpuUsage,

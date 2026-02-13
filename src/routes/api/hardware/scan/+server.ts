@@ -4,8 +4,10 @@
  */
 
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+
 import { scanAllHardware } from '$lib/server/hardware';
+
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/hardware/scan
@@ -13,11 +15,12 @@ import { scanAllHardware } from '$lib/server/hardware';
  */
 export const GET: RequestHandler = async () => {
 	try {
-		console.log('[API /hardware/scan] Scanning system hardware...');
+		console.warn('[API /hardware/scan] Scanning system hardware...');
 
 		const scanResult = await scanAllHardware();
 
 		// Build detailed response
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const hardwareByCategory: Record<string, any[]> = {};
 
 		for (const hw of scanResult.detected) {

@@ -1,5 +1,5 @@
 import { KismetProxy } from '$lib/server/kismet';
-import { logInfo, logError, logWarn } from '$lib/utils/logger';
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 /**
  * Represents a wireless device detected by Kismet
@@ -181,8 +181,14 @@ export class KismetService {
 		mac: string,
 		signalDbm: number
 	): { lat: number; lon: number } {
-		if (this.hasValidLocation(deviceLat, deviceLon)) {
-			return { lat: deviceLat!, lon: deviceLon! };
+		if (
+			this.hasValidLocation(deviceLat, deviceLon) &&
+			deviceLat !== null &&
+			deviceLon !== null &&
+			deviceLat !== undefined &&
+			deviceLon !== undefined
+		) {
+			return { lat: deviceLat, lon: deviceLon };
 		}
 
 		if (gpsPosition) {
@@ -238,7 +244,7 @@ export class KismetService {
 				manufacturer: (d.manufacturer as string) || 'Unknown',
 				type: rawType?.toLowerCase() || 'unknown',
 				channel: parseInt(String(d.channel)) || 0,
-				frequency: (d.frequency as number) || 0,
+				frequency: (d.frequency as number) || (parseInt(String(d.channel)) || 0) * 5 + 2400,
 				packets: (d.packets as number) || 0,
 				datasize: (d.packets as number) || 0,
 				ssid: (d.ssid as string) || (d.name as string) || undefined,
@@ -299,7 +305,9 @@ export class KismetService {
 				manufacturer: (d['kismet.device.base.manuf'] as string) || 'Unknown',
 				type: rawType.toLowerCase(),
 				channel: parseInt(String(d['kismet.device.base.channel'])) || 0,
-				frequency: (d['kismet.device.base.frequency'] as number) || 0,
+				frequency:
+					(d['kismet.device.base.frequency'] as number) ||
+					(parseInt(String(d['kismet.device.base.channel'])) || 0) * 5 + 2400,
 				packets: (d['kismet.device.base.packets.total'] as number) || 0,
 				datasize: (d['kismet.device.base.packets.total'] as number) || 0,
 				ssid: ssid,

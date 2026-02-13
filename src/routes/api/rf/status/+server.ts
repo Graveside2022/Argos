@@ -1,19 +1,29 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { sweepManager } from '$lib/server/hackrf/sweep-manager';
-import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
+import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
+
+import type { RequestHandler } from './$types';
 
 const execAsync = promisify(exec);
+
+interface DeviceInfo {
+	connected: boolean;
+	serial?: string;
+	info?: string;
+	usbInfo?: string;
+	error?: string;
+}
 
 async function detectConnectedDevices(): Promise<{
 	hackrf: boolean;
 	usrp: boolean;
-	deviceInfo: Record<string, any>;
+	deviceInfo: Record<string, DeviceInfo>;
 }> {
-	const deviceInfo: Record<string, any> = {};
+	const deviceInfo: Record<string, DeviceInfo> = {};
 	let hackrfConnected = false;
 	let usrpConnected = false;
 
@@ -94,7 +104,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		}
 
-		let status: any = {
+		let status: Record<string, unknown> = {
 			connectedDevices: {
 				hackrf,
 				usrp

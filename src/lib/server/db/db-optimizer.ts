@@ -4,6 +4,7 @@
  */
 
 import type { Database as DatabaseType } from 'better-sqlite3';
+
 import { validateSqlIdentifier } from '$lib/server/security/input-sanitizer';
 
 interface OptimizationConfig {
