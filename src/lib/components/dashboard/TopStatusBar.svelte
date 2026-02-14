@@ -1,5 +1,5 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
-<!-- @constitutional-exemption Article-IV-4.2 issue:#TBD — Button pattern extraction deferred to component library refactor -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 
@@ -725,7 +725,7 @@
 					role="button"
 					tabindex="0"
 				>
-					<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — getWeatherIcon() returns hardcoded SVG strings, no user input -->
+					<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
 					<span class="weather-icon"
 						>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
 					>

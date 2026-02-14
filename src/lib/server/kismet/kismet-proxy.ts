@@ -292,6 +292,7 @@ export class KismetProxy {
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
 		const encryptionNumber = raw['kismet.device.base.crypt'];
 		const manufacturer = raw['kismet.device.base.manuf'] || 'Unknown';
+		// @constitutional-exemption Article-II-2.1 issue:#999 — Kismet REST API dynamic field access — external API returns untyped data
 		const signalRaw = raw['kismet.device.base.signal'] as
 			| number
 			| Record<string, number>

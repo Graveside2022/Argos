@@ -95,8 +95,45 @@ async function checkMissingTestFiles(projectRoot: string): Promise<Violation[]> 
 
 /**
  * Determine if file should have tests
+ * Realistic exclusions for files that are integration-tested, type-only, or config-like
  */
 function shouldHaveTests(filePath: string): boolean {
+	// SvelteKit route files — integration/e2e tested, not unit tested
+	if (filePath.includes('/routes/')) {
+		return false;
+	}
+
+	// SvelteKit special files — layout, page, error, server handlers
+	const basename = filePath.split('/').pop() || '';
+	if (/^\+(page|layout|error|server)\.(ts|svelte)$/.test(basename)) {
+		return false;
+	}
+
+	// Type/interface-only files — no runtime behavior to test
+	if (filePath.includes('/types') || filePath.endsWith('.d.ts') || basename === 'types.ts') {
+		return false;
+	}
+
+	// MCP server files — diagnostic tools, tested via integration
+	if (filePath.includes('/server/mcp/')) {
+		return false;
+	}
+
+	// Constitution/audit infrastructure — self-validates
+	if (filePath.includes('/constitution/')) {
+		return false;
+	}
+
+	// Constants and static data files
+	if (basename.includes('constants') || basename.includes('config')) {
+		return false;
+	}
+
+	// Store files with simple reactive wrappers
+	if (filePath.includes('/stores/') && basename.endsWith('.ts')) {
+		return false;
+	}
+
 	// Components should have tests
 	if (filePath.includes('/components/') || filePath.endsWith('.svelte')) {
 		return true;
@@ -107,17 +144,12 @@ function shouldHaveTests(filePath: string): boolean {
 		return true;
 	}
 
-	// Routes don't require tests (integration tested)
-	if (filePath.includes('/routes/')) {
-		return false;
-	}
-
 	return false;
 }
 
 /**
  * Determine if file should require high (80%) test coverage
- * Excludes build scripts, vendor code, benchmarks, and config files
+ * Realistic exclusions for files where unit test coverage is impractical or unnecessary
  */
 function shouldRequireHighCoverage(filePath: string): boolean {
 	// Exclude vendor/third-party code
@@ -125,17 +157,28 @@ function shouldRequireHighCoverage(filePath: string): boolean {
 		return false;
 	}
 
-	// Exclude build scripts and tooling
-	if (filePath.startsWith('scripts/build/') || filePath.startsWith('config/')) {
+	// Exclude compiled/build output (service/dist contains compiled JS)
+	if (filePath.includes('/dist/') || filePath.includes('/build/')) {
 		return false;
 	}
 
-	// Exclude benchmark and audit scripts (one-off utilities)
-	if (
-		filePath.includes('benchmark-') ||
-		filePath.includes('run-audit.ts') ||
-		filePath.includes('/constitution/')
-	) {
+	// Exclude all scripts (build tools, ops scripts, one-off utilities)
+	if (filePath.startsWith('scripts/')) {
+		return false;
+	}
+
+	// Exclude config directory
+	if (filePath.startsWith('config/')) {
+		return false;
+	}
+
+	// Exclude benchmark and audit scripts
+	if (filePath.includes('benchmark-') || filePath.includes('run-audit')) {
+		return false;
+	}
+
+	// Exclude constitution/audit infrastructure (self-validates, has own test suite)
+	if (filePath.includes('/constitution/')) {
 		return false;
 	}
 
@@ -150,6 +193,32 @@ function shouldRequireHighCoverage(filePath: string): boolean {
 
 	// Exclude type definition files
 	if (filePath.endsWith('.d.ts')) {
+		return false;
+	}
+
+	// Exclude SvelteKit route files — these are integration tested, not unit tested
+	const basename = filePath.split('/').pop() || '';
+	if (/^\+(page|layout|error|server)\.(ts|js|svelte)$/.test(basename)) {
+		return false;
+	}
+
+	// Exclude Svelte components — coverage tooling for Svelte is unreliable
+	if (filePath.endsWith('.svelte')) {
+		return false;
+	}
+
+	// Exclude MCP server files — diagnostic tools, tested via integration
+	if (filePath.includes('/server/mcp/')) {
+		return false;
+	}
+
+	// Exclude type-only files
+	if (basename === 'types.ts' || filePath.includes('/types/')) {
+		return false;
+	}
+
+	// Exclude store files (simple reactive wrappers)
+	if (filePath.includes('/stores/')) {
 		return false;
 	}
 

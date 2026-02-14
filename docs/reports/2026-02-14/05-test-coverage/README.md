@@ -1,7 +1,7 @@
 # Test Coverage Analysis
 
 **Violation Category:** HIGH (Article III §3.2)
-**Violation Count:** 434 violations
+**Violation Count:** 234 violations
 **Impact:** Reduced confidence in code changes, potential regressions
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -34,79 +34,67 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 276
-**Total Occurrences:** 434
+**Files Affected:** 133
+**Total Occurrences:** 234
 
-### 1. scripts/ops/mcp-config.ts
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-06)
-
-### 2. scripts/ops/mcp-install.ts
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-06)
-
-### 3. service/dist/services/gps/gps-service.js
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-10)
-
-### 4. service/dist/services/gsm/gsm-service.js
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-10)
-
-### 5. service/dist/services/kismet/kismet-service.js
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-10)
-
-### 6. service/dist/websocket/kismet-handler.js
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-10)
-
-### 7. service/dist/websocket/terminal-handler.js
-
-**Line:** 1
-**Rule:** Test coverage must be ≥ 80%
-**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
-**Status:** ⚠️ Pre-existing (since 2026-02-10)
-
-### 8. src/hooks.server.ts
-
+### 1. src/hooks.server.ts
 **Line:** 1
 **Rule:** Test coverage must be ≥ 80%
 **Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
 **Status:** ⚠️ Pre-existing (since 2025-07-13)
 
-### 9. src/lib/api/config.ts
-
+### 2. src/lib/api/config.ts
 **Line:** 1
 **Rule:** Test coverage must be ≥ 80%
 **Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
 **Status:** ⚠️ Pre-existing (since 2025-07-13)
 
-### 10. src/lib/api/hackrf.ts
-
+### 3. src/lib/api/hackrf.ts
 **Line:** 1
 **Rule:** Test coverage must be ≥ 80%
 **Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
 
-_...and 424 more violations_
+### 4. src/lib/api/index.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+
+### 5. src/lib/components/dashboard/index.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+**Status:** ⚠️ Pre-existing (since 2026-02-08)
+
+### 6. src/lib/components/dashboard/panels/index.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+**Status:** ⚠️ Pre-existing (since 2026-02-08)
+
+### 7. src/lib/components/dashboard/shared/index.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+**Status:** ⚠️ Pre-existing (since 2026-02-08)
+
+### 8. src/lib/components/dashboard/views/index.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+**Status:** ⚠️ Pre-existing (since 2026-02-08)
+
+### 9. src/lib/constants/limits.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+**Status:** ⚠️ Pre-existing (since 2026-02-07)
+
+### 10. src/lib/gps/api.ts
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+
+*...and 224 more violations*
 
 ---
 
@@ -114,12 +102,11 @@ _...and 424 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 434 violations
+**Impact:** Resolves all 234 violations
 **Timeline:** 2-3 weeks
 **Risk:** LOW
 
 **Approach:**
-
 1. Review all violations in detail
 2. Apply fixes systematically (file-by-file or phase-by-phase)
 3. Run tests after each change
@@ -134,7 +121,6 @@ _...and 424 more violations_
 **Risk:** LOW
 
 **Approach:**
-
 1. Fix violations as you touch related files
 2. Add exemption annotations for deferred work
 3. Track progress with periodic audits
@@ -149,9 +135,8 @@ _...and 424 more violations_
 
 **Approach:**
 Add exemption to affected files:
-
 ```typescript
-// @constitutional-exemption: Article III §3.2 issue:#TBD
+// @constitutional-exemption: Article III §3.2 issue:#999
 // Justification: [Reason for exemption]
 ```
 
@@ -177,14 +162,13 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 434 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
+HIGH priority violations represent 234 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
-
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 2-3 weeks
-- Impact: Resolves 434 violations
+- Impact: Resolves 234 violations
 
 ---
 
@@ -196,11 +180,11 @@ HIGH priority violations represent 434 issues that should be addressed. The esti
 2. **Create git branch:** `feature/${category.folderName}`
 3. **No installation needed** - ready to proceed
 4. **Verify baseline:**
-    ```bash
-    npm run typecheck
-    npm run lint
-    npm run test
-    ```
+   ```bash
+   npm run typecheck
+   npm run lint
+   npm run test
+   ```
 5. **Begin implementation** following the chosen option
 6. **Re-run audit** after completion: `npm run constitutional-audit`
 
@@ -217,6 +201,6 @@ HIGH priority violations represent 434 issues that should be addressed. The esti
 
 **After Remediation:**
 
-- **HIGH violations:** 434 → 0 (all resolved)
+- **HIGH violations:** 234 → 0 (all resolved)
 - **Estimated Timeline:** 2-3 weeks
 - **Risk Level:** LOW

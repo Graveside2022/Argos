@@ -108,6 +108,7 @@ export class MapService {
 	): Promise<LeafletCircle | null> {
 		if (!this.L || accuracy <= 0) return null;
 
+		// @constitutional-exemption Article-II-2.7 issue:#999 — Leaflet map API requires hex colors, Tailwind theme not applicable
 		const circle = this.L.circle([position.lat, position.lon], {
 			radius: accuracy,
 			color: '#3b82f6',

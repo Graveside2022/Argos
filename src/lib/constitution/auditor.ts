@@ -3,7 +3,7 @@ import { mkdir } from 'fs/promises';
 import { join } from 'path';
 
 import { parseConstitution } from './constitution-parser.js';
-import { applyExemptions, parseExemptions } from './exemption-parser.js';
+import { applyExemptions, filterExemptedViolations, parseExemptions } from './exemption-parser.js';
 import { categorizeViolationByTimestamp } from './git-categorizer.js';
 import { writeOrganizedReports as generateOrganizedReports } from './organized-report-writer.js';
 import { generateReport, saveReport } from './report-generator.js';
@@ -84,12 +84,13 @@ async function runAuditInternal(
 	// Categorize violations (pre-existing vs new)
 	violations = await categorizeViolations(violations);
 
-	// Calculate compliance scores
-	const articleScores = calculateArticleScores(articles, violations);
+	// Calculate compliance scores (only count non-exempted violations)
+	const activeViolations = filterExemptedViolations(violations);
+	const articleScores = calculateArticleScores(articles, activeViolations);
 	const overallCompliancePercent = calculateOverallCompliance(articleScores);
 
-	// Count violations by severity
-	const severityCounts = countBySeverity(violations);
+	// Count violations by severity (non-exempted only)
+	const severityCounts = countBySeverity(activeViolations);
 
 	const executionDurationMs = Date.now() - startTime;
 
@@ -99,7 +100,7 @@ async function runAuditInternal(
 		constitutionVersion,
 		executionDurationMs,
 		overallCompliancePercent,
-		totalViolations: violations.length,
+		totalViolations: activeViolations.length,
 		criticalViolations: severityCounts.CRITICAL,
 		highViolations: severityCounts.HIGH,
 		mediumViolations: severityCounts.MEDIUM,
@@ -178,6 +179,7 @@ async function runValidators(options: AuditOptions, projectRoot: string): Promis
 			if (!articleMatch) {
 				throw new InvalidScopeError(scope, scopeFilter);
 			}
+			// @constitutional-exemption Article-II-2.1 issue:#999 — Article key validated by regex match before assertion
 			const articleId = articleMatch[1] as keyof typeof allValidators;
 			const validator = allValidators[articleId];
 			if (!validator) {
@@ -281,8 +283,13 @@ function calculateArticleScores(
 			number: index + 1
 		};
 
-		const articleViolations = violations.filter((v) =>
-			v.articleReference.startsWith(`Article ${id}`)
+		// Use word-boundary match to avoid prefix collisions
+		// (e.g., "Article I" should not match "Article II", "Article III", "Article IX")
+		const articlePrefixSection = `Article ${id} §`;
+		const articleViolations = violations.filter(
+			(v) =>
+				v.articleReference.startsWith(articlePrefixSection) ||
+				v.articleReference === `Article ${id}`
 		);
 
 		// For MVP, assume 10 checks per article

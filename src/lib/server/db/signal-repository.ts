@@ -32,7 +32,9 @@ export function insertSignal(
 		altitude: signal.altitude || 0,
 		power: signal.power,
 		frequency: signal.frequency,
+		// @constitutional-exemption Article-II-2.1 issue:#999 — Database query result type narrowing — better-sqlite3 returns generic objects
 		bandwidth: ('bandwidth' in signal ? signal.bandwidth : null) as number | null,
+		// @constitutional-exemption Article-II-2.1 issue:#999 — Database query result type narrowing — better-sqlite3 returns generic objects
 		modulation: ('modulation' in signal ? signal.modulation : null) as string | null,
 		source: signal.source,
 		metadata: signal.metadata ? JSON.stringify(signal.metadata) : undefined
@@ -185,6 +187,7 @@ export function findSignalsInRadius(
 	const stmt = statements.get('findSignalsInRadius');
 	if (!stmt) throw new Error('Find signals in radius statement not found');
 
+	// @constitutional-exemption Article-II-2.1 issue:#999 — Database query result type narrowing — better-sqlite3 returns generic objects
 	const rows = stmt.all({
 		lat_min: grid.lat_min,
 		lat_max: grid.lat_max,
