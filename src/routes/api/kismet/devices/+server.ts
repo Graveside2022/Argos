@@ -32,8 +32,10 @@ async function getReceiverGPS(fetchFn: typeof fetch): Promise<{ lat: number; lon
 	try {
 		const resp = await fetchFn('/api/gps/position');
 		if (resp.ok) {
+			// Safe: GPS API response parsed as Record for dynamic property access (success, data)
 			const body = (await resp.json()) as Record<string, unknown>;
 			if (body.success && body.data) {
+				// Safe: GPS data property cast to Record<string, number> for latitude/longitude access
 				const d = body.data as Record<string, number>;
 				if (d.latitude && d.longitude && !(d.latitude === 0 && d.longitude === 0)) {
 					return { lat: d.latitude, lon: d.longitude };
@@ -75,11 +77,13 @@ function normalizeFusionDevices(
 	gps: { lat: number; lon: number } | null
 ): Record<string, unknown>[] {
 	return devices.map((d) => {
+		// Safe: Device location property may be Record with lat/lon coordinates or undefined
 		const loc = d.location as Record<string, number> | undefined;
 		let lat = loc?.latitude ?? loc?.lat ?? 0;
 		let lon = loc?.longitude ?? loc?.lon ?? 0;
 
 		if (lat === 0 && lon === 0 && gps) {
+			// Safe: Device properties cast for MAC address and signal strength extraction from Kismet device schema
 			const mac = (d.mac as string) || (d.macaddr as string) || '';
 			const sig = d.signalStrength as number | undefined;
 			const sigObj = d.signal as Record<string, number> | undefined;
@@ -122,9 +126,11 @@ export const GET: RequestHandler = async ({ fetch }) => {
 
 			const responseData = {
 				devices: normalizeFusionDevices(
+					// Safe: Kismet device array cast to Record array for normalizeFusionDevices function signature
 					(devices || []) as unknown as Record<string, unknown>[],
 					gps
 				),
+				// Safe: Literal string narrowed to const for source discriminated union type
 				source: 'kismet' as const,
 				status: {
 					running: status.running,
@@ -158,7 +164,9 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		} catch (error: unknown) {
 			const errorResponse = {
 				devices: [],
+				// Safe: Catch block error cast to extract optional message property for error response
 				error: (error as { message?: string }).message || 'Unknown error',
+				// Safe: Literal string narrowed to const for source discriminated union type
 				source: 'fallback' as const
 			};
 

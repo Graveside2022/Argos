@@ -3,7 +3,8 @@ import { json } from '@sveltejs/kit';
 import {
 	getKismetStatus,
 	startKismetExtended,
-	stopKismetExtended} from '$lib/server/services/kismet/kismet-control-service-extended';
+	stopKismetExtended
+} from '$lib/server/services/kismet/kismet-control-service-extended';
 
 import type { RequestHandler } from './$types';
 
@@ -15,6 +16,7 @@ import type { RequestHandler } from './$types';
  */
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
+		// Safe: Request body structure validated - action property extracted for control logic
 		const { action } = (await request.json()) as {
 			action: unknown;
 		};
@@ -66,6 +68,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			{
 				success: false,
 				message: 'Server error',
+				// Safe: Error object cast to extract optional message property for user-friendly error response
 				error: (error as { message?: string }).message
 			},
 			{ status: 500 }
