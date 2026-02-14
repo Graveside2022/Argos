@@ -28,6 +28,7 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 		for (const line of lines) {
 			if (line.includes('Device Address')) {
 				if (currentDevice && currentDevice.ipAddress) {
+					// Safe: Partial promoted after required fields populated
 					hardware.push(currentDevice as DetectedHardware);
 				}
 				currentDevice = {
@@ -62,9 +63,11 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 				txCapable: true,
 				rxCapable: true,
 				fullDuplex: true
+				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
 			} as SDRCapabilities;
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
 
+			// Safe: Partial promoted after required fields populated
 			hardware.push(currentDevice as DetectedHardware);
 		}
 	} catch (_error) {

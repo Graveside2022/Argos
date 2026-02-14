@@ -33,6 +33,7 @@ export async function extractCoverageMetrics(
 		const content = await readFile(coveragePath, 'utf-8');
 		coverageData = JSON.parse(content);
 	} catch (error) {
+		// Safe: File system errors have ErrnoException shape with code property
 		if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
 			throw new CoverageNotFoundError(coveragePath);
 		}

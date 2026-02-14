@@ -266,6 +266,7 @@ export class HackRFWebSocketClient extends BaseWebSocket {
 	private handleDeviceStatus(status: { connected?: boolean; info?: unknown }): void {
 		updateConnectionStatus({
 			deviceConnected: status.connected,
+			// Safe: status.info matches DeviceInfo when device info is available
 			deviceInfo: status.info as DeviceInfo | undefined
 		});
 	}

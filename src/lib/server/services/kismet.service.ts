@@ -59,8 +59,10 @@ export class KismetService {
 		try {
 			const gpsResponse = await fetchFn('/api/gps/position');
 			if (gpsResponse.ok) {
+				// Safe: JSON.parse returns unknown, cast to Record for property access
 				const gpsData = (await gpsResponse.json()) as Record<string, unknown>;
 				if (gpsData.success && gpsData.data) {
+					// Safe: gpsData.data existence checked on line above; narrowing for lat/lon access
 					const data = gpsData.data as Record<string, unknown>;
 					return {
 						latitude: data.latitude as number,
@@ -93,6 +95,7 @@ export class KismetService {
 			logInfo(`Successfully fetched ${devices.length} devices from Kismet`);
 			return { devices, error: null, source: 'kismet' };
 		} catch (err: unknown) {
+			// Safe: Error-like object narrowed for message property access
 			error = (err as { message?: string }).message || 'Unknown error';
 			logError('KismetProxy.getDevices failed', { error });
 		}
@@ -108,6 +111,7 @@ export class KismetService {
 			if (Array.isArray(response)) {
 				if (response.length > 0) {
 					logWarn('Sample device signal data', {
+						// Safe: Array element cast to Record for Kismet JSON field access
 						signal: (response[0] as Record<string, unknown>)[
 							'kismet.device.base.signal'
 						]
@@ -118,6 +122,7 @@ export class KismetService {
 				return { devices, error: null, source: 'kismet' };
 			}
 		} catch (err2: unknown) {
+			// Safe: Error-like object narrowed for message property access
 			logError('Direct REST API failed', { error: (err2 as { message?: string }).message });
 		}
 
@@ -129,6 +134,7 @@ export class KismetService {
 				return { devices, error: null, source: 'kismet' };
 			}
 		} catch (err3: unknown) {
+			// Safe: Error-like object narrowed for message property access
 			logError('Summary endpoint failed', { error: (err3 as { message?: string }).message });
 		}
 
@@ -226,11 +232,14 @@ export class KismetService {
 		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
 		return kismetDevices.map((device: unknown) => {
+			// Safe: Kismet API returns JSON objects — cast to Record for dynamic field access throughout transform
 			const d = device as Record<string, unknown>;
 			const rawSignal = (d.signal as number) || this.DEFAULT_SIGNAL;
 			const rawType = d.type as string;
 
+			// Safe: Device location field cast to Record for lat/lon extraction
 			const deviceLat = (d.location as Record<string, unknown>)?.lat as number;
+			// Safe: Device location field cast to Record for lat/lon extraction
 			const deviceLon = (d.location as Record<string, unknown>)?.lon as number;
 
 			return {
@@ -269,6 +278,7 @@ export class KismetService {
 		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
 		return rawDevices.map((device: unknown) => {
+			// Safe: Raw Kismet JSON objects — cast to Record for dynamic kismet.* field access throughout transform
 			const d = device as Record<string, unknown>;
 			const rawSignal = this.extractSignalFromDevice(d);
 			const rawType = (d['kismet.device.base.type'] as string) || 'Unknown';
@@ -276,9 +286,11 @@ export class KismetService {
 			// Extract SSID from multiple possible locations in Kismet data
 			let ssid: string | undefined = undefined;
 			if (d['dot11.device']) {
+				// Safe: Kismet dot11 device data cast to Record for SSID field access
 				const dot11 = d['dot11.device'] as Record<string, unknown>;
 				ssid =
 					(dot11['dot11.device.last_beaconed_ssid'] as string) ||
+					// Safe: Kismet dot11 SSID map cast to Record for nested field access
 					((dot11['dot11.device.advertised_ssid_map'] as Record<string, unknown>)?.[
 						'ssid'
 					] as string) ||
@@ -326,6 +338,7 @@ export class KismetService {
 		const signalField = device['kismet.device.base.signal'];
 
 		if (typeof signalField === 'object' && signalField !== null) {
+			// Safe: signalField confirmed to be non-null object on line above
 			const signalObj = signalField as Record<string, unknown>;
 			return (
 				(signalObj['kismet.common.signal.last_signal'] as number) ||

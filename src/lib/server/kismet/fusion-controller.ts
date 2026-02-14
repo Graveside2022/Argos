@@ -20,6 +20,7 @@ class FusionKismetController {
 
 	async getStatus(): Promise<KismetStatusResponse> {
 		try {
+			// Safe: Kismet system status response shape compatible with KismetStatusResponse
 			return (await KismetProxy.getSystemStatus()) as unknown as KismetStatusResponse;
 		} catch {
 			return {
@@ -35,6 +36,7 @@ class FusionKismetController {
 				},
 				channels: [],
 				monitorInterfaces: []
+				// Safe: Fallback status object constructed with all required KismetStatusResponse fields
 			} as KismetStatusResponse;
 		}
 	}

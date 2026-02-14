@@ -1,4 +1,4 @@
-import { error,json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
@@ -20,14 +20,15 @@ function normalizeSignalSource(source: string): SignalSource {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const db = getRFDatabase();
-	// Safe: Request body parsed as Record for dynamic signal/signals property access
+		// Safe: Request body parsed as Record for dynamic signal/signals property access
 		const body = (await request.json()) as Record<string, unknown>;
 
 		// Handle both direct array and object with signals property
 		const signals: SignalMarker[] = Array.isArray(body)
-			? (body as SignalMarker[])
-		// Safe: Request body contains either signals array or is array itself, cast to SignalMarker[]
-			: (body.signals as SignalMarker[]);
+			? // Safe: body validated as array by Array.isArray check
+				(body as SignalMarker[])
+			: // Safe: Request body contains either signals array or is array itself, cast to SignalMarker[]
+				(body.signals as SignalMarker[]);
 
 		if (!signals || !Array.isArray(signals)) {
 			return error(400, 'Invalid signals array');
@@ -40,9 +41,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				(signal as { id?: string }).id ||
 				`signal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-		// Safe: Each signal cast to Record for dynamic property extraction during normalization
+			// Safe: Each signal cast to Record for dynamic property extraction during normalization
 			const signalObj = signal as Record<string, unknown>;
-		// Safe: Location property may be Record with lat/lon or undefined
+			// Safe: Location property may be Record with lat/lon or undefined
 			const location = signalObj.location as Record<string, unknown> | undefined;
 
 			// Extract coordinates from either direct properties or location object
@@ -57,7 +58,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					: signalObj.timestamp;
 
 			return {
-		// Safe: Signal properties extracted and cast to expected types for SignalMarker construction
+				// Safe: Signal properties extracted and cast to expected types for SignalMarker construction
 				id,
 				lat: lat as number,
 				lon: lon as number,
@@ -79,8 +80,11 @@ export const POST: RequestHandler = async ({ request }) => {
 					skewness: signalObj.skewness as number,
 					kurtosis: signalObj.kurtosis as number,
 					antennaId: signalObj.antennaId as string,
+					// Safe: scanConfig is optional Record field from signal object
 					scanConfig: signalObj.scanConfig as Record<string, unknown>
+					// Safe: Object built with all SignalMetadata fields from validated signal data
 				} as unknown as SignalMetadata
+				// Safe: Full SignalMarker constructed with all required fields above
 			} as SignalMarker;
 		});
 

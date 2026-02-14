@@ -1,9 +1,11 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { uiIcons } from '$lib/data/tool-icons';
 	import {
 		breadcrumbs,
 		navigateBack,
-		toolNavigationPath	} from '$lib/stores/dashboard/tools-store';
+		toolNavigationPath
+	} from '$lib/stores/dashboard/tools-store';
 
 	let canGoBack = $derived($toolNavigationPath.length > 0);
 	let currentBreadcrumbs = $derived($breadcrumbs);

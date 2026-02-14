@@ -74,7 +74,8 @@ export class KismetProxy {
 		const headers: Record<string, string> = {
 			Authorization: `Basic ${auth}`,
 			'Content-Type': 'application/json',
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
+			// Safe: options.headers may be Headers or Record; cast to Record for spread
 			...((options.headers as Record<string, string>) || {})
 		};
 
@@ -93,9 +94,11 @@ export class KismetProxy {
 				throw new Error(`Kismet API error: ${response.status} ${response.statusText}`);
 			}
 
+			// Safe: Caller provides T matching the expected Kismet API response shape
 			return (await response.json()) as T;
 		} catch (error) {
-		// Safe: Error handling
+			// Safe: Error handling
+			// Safe: error already narrowed by instanceof; cast is redundant but explicit
 			if (error instanceof Error && (error as Error).message.includes('ECONNREFUSED')) {
 				throw new Error('Cannot connect to Kismet. Is it running?');
 			}
@@ -309,6 +312,7 @@ export class KismetProxy {
 
 		// Extract dot11 association data (must fetch whole dot11.device object)
 		// Safe: Type cast for dynamic data access
+		// Safe: Kismet raw device JSON objects use dotted key names; cast for dynamic access
 		const dot11 = (raw as Record<string, unknown>)['dot11.device'] as
 			| Record<string, unknown>
 			| undefined;
@@ -320,7 +324,8 @@ export class KismetProxy {
 			// AP → clients: extract MAC keys from associated_client_map
 			const clientMap = dot11['dot11.device.associated_client_map'];
 			if (clientMap && typeof clientMap === 'object') {
-		// Safe: Type cast for dynamic data access
+				// Safe: Type cast for dynamic data access
+				// Safe: clientMap confirmed as object via typeof check in Kismet response structure
 				clients = Object.keys(clientMap as Record<string, unknown>);
 				if (clients.length === 0) clients = undefined;
 			}

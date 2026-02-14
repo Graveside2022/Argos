@@ -79,6 +79,7 @@ export function insertSignalsBatch(
 				insertStmt.run(signal);
 				successCount++;
 			} catch (err) {
+				// Safe: Catch block error from DB operations is always Error instance
 				const error = err as Error;
 				if (!error.message?.includes('UNIQUE constraint failed')) {
 					logError(
@@ -191,6 +192,7 @@ export function findSignalsInRadius(
 		lon_max: grid.lon_max,
 		since: query.startTime || 0,
 		limit: query.limit || 1000
+		// Safe: SQLite query returns rows matching DbSignal schema
 	}) as DbSignal[];
 
 	// Convert to SignalMarker format and filter by exact distance

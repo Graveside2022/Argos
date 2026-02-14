@@ -99,8 +99,9 @@ function isSatelliteArray(value: unknown): value is SatelliteData[] {
 			(item) =>
 				typeof item === 'object' &&
 				item !== null &&
+				// Safe: item cast to SatelliteData for 'used' field type check; validated by condition
 				(typeof (item as SatelliteData).used === 'boolean' ||
-					(item as SatelliteData).used === undefined)
+					(item as SatelliteData).used === undefined) // Safe: same SatelliteData cast as line above
 		)
 	);
 }
@@ -110,7 +111,7 @@ function parseTPVData(data: unknown): TPVData | null {
 		return null;
 	}
 
-		// Safe: Type cast for dynamic data access
+	// Safe: Type cast for dynamic data access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'TPV') {
@@ -136,7 +137,7 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 		return null;
 	}
 
-		// Safe: Type cast for dynamic data access
+	// Safe: Type cast for dynamic data access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {

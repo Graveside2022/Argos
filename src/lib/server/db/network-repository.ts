@@ -4,7 +4,7 @@
 
 import type Database from 'better-sqlite3';
 
-import type { NetworkEdge,NetworkNode } from '$lib/types/network';
+import type { NetworkEdge, NetworkNode } from '$lib/types/network';
 
 import type { DbRelationship } from './types';
 
@@ -65,5 +65,6 @@ export function getNetworkRelationships(
 	query += ` ORDER BY last_seen DESC LIMIT 1000`;
 
 	const stmt = db.prepare(query);
+	// Safe: SQLite query returns rows matching DbRelationship schema
 	return stmt.all(...params) as DbRelationship[];
 }

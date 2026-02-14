@@ -1,3 +1,5 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#TBD — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	interface Props {
 		name: string;

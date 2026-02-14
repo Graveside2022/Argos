@@ -13,6 +13,7 @@ export class GPSService {
 	async updateGPSPosition(): Promise<void> {
 		try {
 			const response = await fetch('/api/gps/position');
+			// Safe: GPS API response matches GPSApiResponse shape per route contract
 			const result = (await response.json()) as GPSApiResponse;
 
 			if (result.success && result.data) {

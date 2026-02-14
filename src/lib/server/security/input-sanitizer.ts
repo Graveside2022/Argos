@@ -48,11 +48,13 @@ export function validateAllowlist<T extends string>(
 	name: string,
 	allowlist: readonly T[]
 ): T {
+	// Safe: Value validated against allowlist — cast safe after includes() check
 	if (typeof value !== 'string' || !allowlist.includes(value as T)) {
 		throw new InputValidationError(
 			`${name} must be one of: ${allowlist.join(', ')}, got: ${String(value)}`
 		);
 	}
+	// Safe: Value confirmed in allowlist above — narrowing to T is safe
 	return value as T;
 }
 

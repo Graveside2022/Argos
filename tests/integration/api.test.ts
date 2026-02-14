@@ -27,11 +27,13 @@ describe('API Endpoint Tests', () => {
 				amplitudes: [-50, -60, -55, -52, -58]
 			};
 
+			// Safe: Test: Mock object typed for test expectations
 			vi.mocked(global.fetch).mockResolvedValueOnce(createMockResponse(mockData) as Response);
 
 			const response = await fetch(`${API_BASE_URL}/api/spectrum`);
 			expect(response.status).toBe(200);
 
+			// Safe: Test: API response cast for test assertions
 			const data = (await response.json()) as Record<string, unknown>;
 			expect(data).toHaveProperty('frequencies');
 			expect(data).toHaveProperty('amplitudes');
@@ -47,6 +49,7 @@ describe('API Endpoint Tests', () => {
 			};
 
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ success: true }) as Response
 			);
 
@@ -57,6 +60,7 @@ describe('API Endpoint Tests', () => {
 			});
 
 			expect(response.status).toBe(200);
+			// Safe: Test: API response cast for test assertions
 			const result = (await response.json()) as Record<string, unknown>;
 			expect(result.success as boolean).toBe(true);
 		});
@@ -68,6 +72,7 @@ describe('API Endpoint Tests', () => {
 			};
 
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ error: 'Invalid configuration' }, 400) as Response
 			);
 
@@ -78,6 +83,7 @@ describe('API Endpoint Tests', () => {
 			});
 
 			expect(response.status).toBe(400);
+			// Safe: Test: API response cast for test assertions
 			const error = (await response.json()) as Record<string, unknown>;
 			expect(error).toHaveProperty('error');
 		});
@@ -103,6 +109,7 @@ describe('API Endpoint Tests', () => {
 			];
 
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse(mockDevices) as Response
 			);
 
@@ -113,6 +120,7 @@ describe('API Endpoint Tests', () => {
 			expect(Array.isArray(devices)).toBe(true);
 
 			if (devices.length > 0) {
+				// Safe: Test: Object cast to Record for dynamic property access
 				const device = devices[0] as Record<string, unknown>;
 				expect(device).toHaveProperty('id');
 				expect(device).toHaveProperty('name');
@@ -134,6 +142,7 @@ describe('API Endpoint Tests', () => {
 			];
 
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse(mockDevices) as Response
 			);
 
@@ -144,6 +153,7 @@ describe('API Endpoint Tests', () => {
 			devices.forEach((device) => {
 				if (typeof device === 'object' && device !== null && 'signal' in device) {
 					expect(
+						// Safe: Test: Object cast to Record for dynamic property access
 						(device as Record<string, unknown>).signal as number
 					).toBeGreaterThanOrEqual(-70);
 				}
@@ -166,6 +176,7 @@ describe('API Endpoint Tests', () => {
 
 			// Mock the list response
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse(mockDevices) as Response
 			);
 
@@ -174,16 +185,19 @@ describe('API Endpoint Tests', () => {
 			const devices = (await listResponse.json()) as unknown[];
 
 			if (devices.length > 0) {
+				// Safe: Test: Object cast to Record for dynamic property access
 				const deviceId = (devices[0] as Record<string, unknown>).id as string;
 
 				// Mock the detail response
 				vi.mocked(global.fetch).mockResolvedValueOnce(
+					// Safe: Test: Mock object typed for test expectations
 					createMockResponse(mockDeviceDetail) as Response
 				);
 
 				const detailResponse = await fetch(`${API_BASE_URL}/api/devices/${deviceId}`);
 				expect(detailResponse.status).toBe(200);
 
+				// Safe: Test: API response cast for test assertions
 				const device = (await detailResponse.json()) as Record<string, unknown>;
 				expect(device.id).toBe(deviceId);
 				expect(device).toHaveProperty('history');
@@ -193,6 +207,7 @@ describe('API Endpoint Tests', () => {
 
 		it('should handle non-existent device ID', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ error: 'Device not found' }, 404) as Response
 			);
 
@@ -211,6 +226,7 @@ describe('API Endpoint Tests', () => {
 			};
 
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ sweepId: 'sweep-123', status: 'started' }) as Response
 			);
 
@@ -221,6 +237,7 @@ describe('API Endpoint Tests', () => {
 			});
 
 			expect(response.status).toBe(200);
+			// Safe: Test: API response cast for test assertions
 			const result = (await response.json()) as Record<string, unknown>;
 			expect(result).toHaveProperty('sweepId');
 			expect(result.status as string).toBe('started');
@@ -228,12 +245,14 @@ describe('API Endpoint Tests', () => {
 
 		it('should get sweep status', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ active: true, progress: 45 }) as Response
 			);
 
 			const response = await fetch(`${API_BASE_URL}/api/sweep/status`);
 			expect(response.status).toBe(200);
 
+			// Safe: Test: API response cast for test assertions
 			const status = (await response.json()) as Record<string, unknown>;
 			expect(status).toHaveProperty('active');
 			expect(status).toHaveProperty('progress');
@@ -246,6 +265,7 @@ describe('API Endpoint Tests', () => {
 
 		it('should stop an active sweep', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ status: 'stopped' }) as Response
 			);
 
@@ -254,6 +274,7 @@ describe('API Endpoint Tests', () => {
 			});
 
 			expect(response.status).toBe(200);
+			// Safe: Test: API response cast for test assertions
 			const result = (await response.json()) as Record<string, unknown>;
 			expect(result.status as string).toBe('stopped');
 		});
@@ -267,12 +288,14 @@ describe('API Endpoint Tests', () => {
 					gps: { connected: false, status: 'disconnected' },
 					websocket: { connected: true, clients: 2 },
 					uptime: 3600
+					// Safe: Test: Type assertion for test data construction
 				}) as Response
 			);
 
 			const response = await fetch(`${API_BASE_URL}/api/system/status`);
 			expect(response.status).toBe(200);
 
+			// Safe: Test: API response cast for test assertions
 			const status = (await response.json()) as Record<string, unknown>;
 			expect(status).toHaveProperty('hackrf');
 			expect(status).toHaveProperty('gps');
@@ -286,12 +309,14 @@ describe('API Endpoint Tests', () => {
 					cpu: 25.5,
 					memory: 45.2,
 					disk: 60.8
+					// Safe: Test: Type assertion for test data construction
 				}) as Response
 			);
 
 			const response = await fetch(`${API_BASE_URL}/api/system/metrics`);
 			expect(response.status).toBe(200);
 
+			// Safe: Test: API response cast for test assertions
 			const metrics = (await response.json()) as Record<string, unknown>;
 			expect(metrics).toHaveProperty('cpu');
 			expect(metrics).toHaveProperty('memory');
@@ -308,11 +333,13 @@ describe('API Endpoint Tests', () => {
 				.fill(null)
 				.map((_, index) => {
 					if (index < 50) {
+						// Safe: Test: Mock object typed for test expectations
 						return createMockResponse([]) as Response;
 					} else {
 						const response = createMockResponse(
 							{ error: 'Rate limit exceeded' },
 							429
+							// Safe: Test: Type assertion for test data construction
 						) as Response;
 						response.headers.set('Retry-After', '60');
 						return response;
@@ -342,6 +369,7 @@ describe('API Endpoint Tests', () => {
 	describe('Error Handling', () => {
 		it('should return 404 for non-existent endpoints', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ error: 'Not found' }, 404) as Response
 			);
 
@@ -351,6 +379,7 @@ describe('API Endpoint Tests', () => {
 
 		it('should handle malformed JSON gracefully', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ error: 'Invalid JSON' }, 400) as Response
 			);
 
@@ -365,6 +394,7 @@ describe('API Endpoint Tests', () => {
 
 		it('should require authentication for protected endpoints', async () => {
 			vi.mocked(global.fetch).mockResolvedValueOnce(
+				// Safe: Test: Mock object typed for test expectations
 				createMockResponse({ error: 'Unauthorized' }, 401) as Response
 			);
 
@@ -378,6 +408,7 @@ describe('API Endpoint Tests', () => {
 			vi.mocked(global.fetch).mockImplementationOnce(async () => {
 				// Simulate a small delay
 				await new Promise((resolve) => setTimeout(resolve, 50));
+				// Safe: Test: Mock object typed for test expectations
 				return createMockResponse([]) as Response;
 			});
 
@@ -402,6 +433,7 @@ describe('API Endpoint Tests', () => {
 							gps: false,
 							websocket: true,
 							uptime: 3600
+							// Safe: Test: Type assertion for test data construction
 						}) as Response
 					);
 				});

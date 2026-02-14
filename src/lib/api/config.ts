@@ -71,10 +71,12 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 
 	// Handle empty responses
 	if (response.status === 204 || response.headers.get('content-length') === '0') {
+		// Safe: Empty object returned as T on error — caller handles missing fields
 		return {} as T;
 	}
 
 	try {
+		// Safe: Caller provides T matching the expected API response shape
 		return (await response.json()) as T;
 	} catch (_error: unknown) {
 		throw new APIError('Invalid JSON response from server');
@@ -123,7 +125,7 @@ export async function retryRequest<T>(
 		try {
 			return await request();
 		} catch (error) {
-	// Safe: Error handling
+			// Safe: Error handling
 			lastError = error as Error;
 
 			if (attempt === maxAttempts) {

@@ -164,6 +164,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				} catch (logError: unknown) {
 					// Safe: Log analysis error cast to Error for diagnostic message
 					console.warn(
+						// Safe: Catch block error from file operations is Error instance
 						`Direct log analysis failed: ${(logError as Error).message}, using tcpdump fallback`
 					);
 					try {

@@ -39,6 +39,7 @@ describe('Tool Navigation Debug', () => {
 	});
 
 	it('offnet node has 4 workflow children (RECON, ATTACK, DEFENSE, UTILITIES)', () => {
+		// Safe: Test: Type assertion for test data construction
 		const offnet = toolHierarchy.root.children.find((c) => c.id === 'offnet') as ToolCategory;
 		expect(offnet.children).toBeDefined();
 		expect(offnet.children.length).toBe(4);
@@ -52,6 +53,7 @@ describe('Tool Navigation Debug', () => {
 		if (!result) throw new Error('Result not found');
 		expect(result).toHaveProperty('id', 'offnet');
 		expect('children' in result).toBe(true);
+		// Safe: Test: Type assertion for test data construction
 		const cat = result as ToolCategory;
 		console.warn('findByPath result:', cat.id, 'with', cat.children.length, 'children');
 		console.warn(
@@ -74,6 +76,7 @@ describe('Tool Navigation Debug', () => {
 	});
 
 	it('all offnet children are categories (have children property)', () => {
+		// Safe: Test: Type assertion for test data construction
 		const offnet = findByPath(['offnet'], toolHierarchy.root) as ToolCategory;
 		for (const child of offnet.children) {
 			const hasChildren = 'children' in child;
@@ -114,31 +117,37 @@ describe('Tool Navigation Debug', () => {
 	});
 
 	it('OFFNET has exactly 83 tools', () => {
+		// Safe: Test: Type assertion for test data construction
 		const offnet = findByPath(['offnet'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(offnet).total).toBe(83);
 	});
 
 	it('ONNET has exactly 8 tools', () => {
+		// Safe: Test: Type assertion for test data construction
 		const onnet = findByPath(['onnet'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(onnet).total).toBe(8);
 	});
 
 	it('RECON has 37 tools', () => {
+		// Safe: Test: Type assertion for test data construction
 		const recon = findByPath(['offnet', 'recon'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(recon).total).toBe(37);
 	});
 
 	it('ATTACK has 27 tools', () => {
+		// Safe: Test: Type assertion for test data construction
 		const attack = findByPath(['offnet', 'attack'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(attack).total).toBe(27);
 	});
 
 	it('DEFENSE has 1 tool', () => {
+		// Safe: Test: Type assertion for test data construction
 		const defense = findByPath(['offnet', 'defense'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(defense).total).toBe(1);
 	});
 
 	it('UTILITIES has 18 tools', () => {
+		// Safe: Test: Type assertion for test data construction
 		const utils = findByPath(['offnet', 'utilities'], toolHierarchy.root) as ToolCategory;
 		expect(countTools(utils).total).toBe(18);
 	});

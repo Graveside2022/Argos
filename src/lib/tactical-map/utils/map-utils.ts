@@ -26,6 +26,7 @@ interface LeafletWindow {
 // Fix Leaflet icon paths
 export function fixLeafletIcons() {
 	// L will be passed in from the component
+	// Safe: window cast to LeafletWindow to access Leaflet global injected via CDN script
 	const L = (window as unknown as LeafletWindow).L;
 	if (!L) return;
 

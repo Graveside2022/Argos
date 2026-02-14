@@ -91,6 +91,7 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 					capabilities: {
 						device: '/var/run/gpsd.sock',
 						protocol: 'GPSD'
+						// Safe: Object literal satisfies GPSCapabilities — all required fields provided
 					} as GPSCapabilities,
 					lastSeen: Date.now(),
 					firstSeen: Date.now(),

@@ -41,6 +41,7 @@ export async function calculateTrends(
 		);
 
 		if (!previousScore) {
+			// Safe: String literal matches TrendDirection union type
 			return { ...currentScore, trendDirection: 'baseline' as TrendDirection };
 		}
 
