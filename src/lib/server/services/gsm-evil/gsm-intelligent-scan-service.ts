@@ -2,14 +2,15 @@ import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { hostExec, isDockerContainer } from '$lib/server/host-exec';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
+import type { FrequencyTestResult } from '$lib/types/gsm';
+import { sanitizeGainForShell, validateGain } from '$lib/validators/gsm';
+
 import {
 	analyzeGsmFrames,
 	classifySignalStrength,
 	determineChannelType,
 	parseCellIdentity
-} from '$lib/services/gsm-evil/protocol-parser';
-import type { FrequencyTestResult } from '$lib/types/gsm';
-import { sanitizeGainForShell, validateGain } from '$lib/validators/gsm';
+} from './protocol-parser';
 
 export type ScanEventType = 'update' | 'result' | 'error';
 
