@@ -276,9 +276,150 @@ With multiple developers/agents:
 
 ---
 
+## Phase 9: Constitutional Remediation (Post-Audit Implementation)
+
+**Purpose**: Address violations discovered by the constitutional audit tool
+
+**Prerequisites**: Constitutional audit tool complete (Phases 1-8), baseline audit run showing 67% compliance, 0 CRITICAL violations
+
+**Status**: Article IX (Security) complete ✅ — Remaining work: Article II (Type Safety) and Article III (Test Coverage)
+
+**⚠️ EXCLUDED FROM SCOPE**: UI Modernization (Article IV) and Component Reuse — deferred to future work
+
+---
+
+### 9A: Type Safety Remediation (Article II §2.1)
+
+**Violation Count**: 254 violations across 56 files
+**Priority**: 🟠 HIGH
+**Timeline Estimate**: 1-2 weeks (Option A) or 15 minutes (Option C)
+**Risk Level**: LOW
+**Dependencies**: ZERO (no new packages required)
+
+**Three Remediation Options Available**:
+
+#### Option A: Full Remediation (Recommended for High ROI)
+- [ ] T057 [P] Add justification comments to type assertions in `src/routes/gsm-evil/+page.svelte` (lines 54, 480, 496)
+- [ ] T058 [P] Add justification comments to type assertions in `src/lib/websocket/base.ts` (lines 72, 189, 235)
+- [ ] T059 [P] Add justification comments to type assertions in `src/lib/usrp/api-client.ts` (line 145)
+- [ ] T060 [P] Add justification comments to type assertions in `src/lib/tactical-map/map-service.ts` (line 13)
+- [ ] T061 [P] Add justification comments to type assertions in `src/lib/server/websocket-server.ts` (line 96)
+- [ ] T062 [P] Add justification comments to remaining 51 files with type safety violations (see `docs/reports/2026-02-14/03-type-safety-violations/README.md` for complete list)
+- [ ] T063 Run verification: `npm run typecheck && npm run test` to ensure no regressions
+- [ ] T064 Re-run constitutional audit: `npm run constitutional-audit` to verify all violations resolved
+
+**Pattern for justification comments**:
+```typescript
+// @constitutional-exemption Article-II-2.1 issue:#type-safety-remediation — [Brief explanation of why assertion is safe]
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const data: any = parseServerResponse();
+```
+
+#### Option B: Incremental Remediation (Fix During Development)
+- [ ] T065 Document technical debt in GitHub issue tracking type safety violations
+- [ ] T066 Add exemption annotations to all 56 affected files as interim measure
+- [ ] T067 Establish policy: fix type safety violations when touching related files
+- [ ] T068 Schedule monthly audit reviews to track incremental progress
+
+#### Option C: Constitutional Exemption (Acknowledge Technical Debt)
+- [ ] T069 Add constitutional exemption annotations to all 56 files (15 minute task)
+- [ ] T070 Document rationale for exemption in CONSTITUTIONAL-COMPLIANCE-STATUS.md
+- [ ] T071 Re-run audit to verify exemptions recognized
+
+**Checkpoint**: Type safety remediation complete when `npm run constitutional-audit` shows 0 Article II violations
+
+---
+
+### 9B: Test Coverage Improvement (Article III §3.2)
+
+**Violation Count**: 434 violations across 276 files
+**Priority**: 🟠 HIGH
+**Timeline Estimate**: 2-3 weeks (Option A) or 15 minutes (Option C)
+**Risk Level**: LOW
+**Dependencies**: ZERO (Vitest and testing infrastructure already installed)
+
+**Three Remediation Options Available**:
+
+#### Option A: Full Remediation (Recommended for High ROI)
+
+**Critical Infrastructure (Priority 1 - Test First)**:
+- [ ] T072 Write unit tests for `src/hooks.server.ts` (auth middleware, rate limiting)
+- [ ] T073 Write unit tests for `src/lib/server/websocket-server.ts` (WebSocket lifecycle, auth, connection handling)
+- [ ] T074 Write unit tests for `src/lib/server/hardware/` (hardware detection, device management)
+- [ ] T075 Write unit tests for `src/lib/server/auth/auth-middleware.ts` (API key validation, session cookie HMAC)
+
+**Service Layer (Priority 2)**:
+- [ ] T076 [P] Write unit tests for `src/lib/services/` modules (signals, devices, networks)
+- [ ] T077 [P] Write unit tests for `src/lib/api/` modules (hackrf, kismet, gps API clients)
+- [ ] T078 [P] Write unit tests for `src/lib/stores/` (Svelte store state management)
+
+**Utilities and Helpers (Priority 3)**:
+- [ ] T079 [P] Write unit tests for `src/lib/utils/` modules (logger, formatters, validators)
+- [ ] T080 [P] Write unit tests for `src/lib/server/security/` (input sanitizers, error handlers)
+
+**Hardware Integration (Priority 4)**:
+- [ ] T081 Write integration tests for HackRF sweep operations (`src/lib/hackrf/`)
+- [ ] T082 Write integration tests for Kismet WiFi scanning (`src/lib/kismet/`)
+- [ ] T083 Write integration tests for GPS tracking (`src/lib/gps/`)
+- [ ] T084 Write integration tests for GSM monitoring (`src/lib/gsm-evil/`)
+
+**Coverage Verification**:
+- [ ] T085 Run coverage report: `npm run test:coverage` to verify 80%+ coverage achieved
+- [ ] T086 Re-run constitutional audit: `npm run constitutional-audit` to verify all violations resolved
+
+**Test Pattern Example**:
+```typescript
+// tests/lib/server/auth/auth-middleware.test.ts
+import { describe, it, expect, vi } from 'vitest';
+import { validateApiKey } from '$lib/server/auth/auth-middleware';
+
+describe('validateApiKey', () => {
+  it('should accept valid API key', () => {
+    const validKey = 'a'.repeat(32);
+    expect(validateApiKey(validKey)).toBe(true);
+  });
+
+  it('should reject short API key', () => {
+    const shortKey = 'a'.repeat(31);
+    expect(validateApiKey(shortKey)).toBe(false);
+  });
+});
+```
+
+#### Option B: Incremental Remediation (Fix During Development)
+- [ ] T087 Document technical debt in GitHub issue tracking coverage gaps
+- [ ] T088 Add exemption annotations to all 276 affected files as interim measure
+- [ ] T089 Establish policy: write tests when touching files below 80% coverage
+- [ ] T090 Schedule monthly coverage reviews to track incremental progress
+
+#### Option C: Constitutional Exemption (Acknowledge Technical Debt)
+- [ ] T091 Add constitutional exemption annotations to all 276 files (15 minute task)
+- [ ] T092 Document rationale for exemption in CONSTITUTIONAL-COMPLIANCE-STATUS.md
+- [ ] T093 Re-run audit to verify exemptions recognized
+
+**Checkpoint**: Test coverage remediation complete when `npm run constitutional-audit` shows 0 Article III violations
+
+---
+
+### 9C: Remediation Completion Validation
+
+**Purpose**: Verify constitutional compliance after remediation work
+
+- [ ] T094 Run full constitutional audit: `npm run constitutional-audit`
+- [ ] T095 Verify compliance score ≥ 90% (currently 67%, after remediation should be 91%+)
+- [ ] T096 Verify 0 CRITICAL violations (maintained from Article IX work)
+- [ ] T097 Verify 0 HIGH violations (after Article II and III remediation)
+- [ ] T098 Update CONSTITUTIONAL-COMPLIANCE-STATUS.md with new baseline
+- [ ] T099 Commit remediation work to git branch: `git add . && git commit -m "fix: constitutional remediation (Article II + III)"`
+- [ ] T100 Create pull request for review and merge
+
+**Final Checkpoint**: Constitutional compliance complete when audit shows ≥90% compliance with 0 CRITICAL and 0 HIGH violations
+
+---
+
 ## Total Task Count
 
-**Total Tasks**: 57
+**Total Tasks**: 100 (Original: 57, Remediation: 43)
 
 **Breakdown by Phase**:
 - Setup: 3 tasks
@@ -289,6 +430,7 @@ With multiple developers/agents:
 - CLI Integration: 3 tasks
 - Testing: 17 tasks
 - Documentation: 6 tasks
+- **Remediation (Phase 9)**: 43 tasks
 
 **Breakdown by Priority**:
 - P1 (User Story 1): 10 tasks
@@ -296,10 +438,46 @@ With multiple developers/agents:
 - Infrastructure: 9 tasks
 - Testing: 17 tasks
 - Polish: 9 tasks
+- **Remediation (Phase 9)**: 43 tasks
 
 **Parallel Opportunities**: 35 tasks marked [P] can run in parallel within their phase
 
-**MVP Tasks (Phase 1-6)**: 34 tasks
+**MVP Tasks (Phase 1-6)**: 34 tasks (✅ Complete)
+**Remediation Tasks (Phase 9)**: 43 tasks (⏳ In Progress)
+
+---
+
+## Remediation Progress Summary
+
+**Current Status (as of 2026-02-14)**:
+
+✅ **Article IX (Security)**: 100% complete (0 violations)
+- All CRITICAL security violations resolved
+- 0% → 100% compliance achieved
+- Exemption annotations added where appropriate
+- Enhanced exemption parser to check 3 lines back
+
+⏳ **Article II (Type Safety)**: 0% complete (254 violations remain)
+- 56 files require justification comments
+- Option A (recommended): 1-2 weeks, HIGH ROI
+- Option C (fastest): 15 minutes, acknowledges technical debt
+- DECISION REQUIRED: Choose remediation option
+
+⏳ **Article III (Test Coverage)**: 0% complete (434 violations remain)
+- 276 files below 80% coverage threshold
+- Option A (recommended): 2-3 weeks, HIGH ROI
+- Option C (fastest): 15 minutes, acknowledges technical debt
+- DECISION REQUIRED: Choose remediation option
+
+🚫 **UI Work (EXCLUDED)**: UI Modernization and Component Reuse deferred
+- Article IV (UI Modernization): 272 violations (deferred)
+- Component Reuse: 4 violations (deferred)
+
+**Overall Compliance**:
+- Current: 67% (baseline)
+- After Article II remediation: 76%
+- After Article III remediation: 91%
+- Target: ≥90% compliance
 
 ---
 
@@ -315,3 +493,4 @@ With multiple developers/agents:
 - Constitutional exemptions tested at T055
 - All verification commands run at T054 per CLAUDE.md
 - USER APPROVAL REQUIRED for T032 (command creation per Article IX §9.3)
+- **Remediation work (Phase 9)** can use Option A (full fix), Option B (incremental), or Option C (exemption) per user decision
