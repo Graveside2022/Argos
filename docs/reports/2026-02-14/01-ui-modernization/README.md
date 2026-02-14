@@ -81,70 +81,70 @@ npm run build
 
 ### 1. src/routes/gsm-evil/+page.svelte
 
-**Line:** 703
+**Line:** 704
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 2. src/routes/gsm-evil/+page.svelte
 
-**Line:** 832
+**Line:** 833
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #94a3b8 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 3. src/routes/gsm-evil/+page.svelte
 
-**Line:** 896
+**Line:** 897
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 4. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1036
+**Line:** 1037
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 5. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1039
+**Line:** 1040
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 6. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1139
+**Line:** 1140
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 7. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1143
+**Line:** 1144
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #dc2626 with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 8. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1148
+**Line:** 1149
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #e8eaed with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 9. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1157
+**Line:** 1158
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #9ca3af with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 10. src/routes/gsm-evil/+page.svelte
 
-**Line:** 1186
+**Line:** 1187
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #9ca3af with Tailwind color class
 **Status:** ⚠️ Pre-existing (since 2026-02-12)

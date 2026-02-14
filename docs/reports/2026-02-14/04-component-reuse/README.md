@@ -40,28 +40,24 @@ npm run typecheck
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
-**Status:** ⚠️ Pre-existing (since 2026-02-02)
 
 ### 2. src/lib/components/dashboard/TerminalPanel.svelte
 
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
-**Status:** ⚠️ Pre-existing (since 2026-02-06)
 
 ### 3. src/lib/components/dashboard/IconRail.svelte
 
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
-**Status:** ⚠️ Pre-existing (since 2026-02-02)
 
 ### 4. src/lib/components/dashboard/shared/ToolCard.svelte
 
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
-**Status:** ⚠️ Pre-existing (since 2026-02-05)
 
 ---
 
