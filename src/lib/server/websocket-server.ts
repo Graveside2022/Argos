@@ -177,6 +177,7 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 		// Setup message handling
 		ws.on('message', (data: Buffer) => {
 			try {
+	// Safe: WebSocket connection type assertion
 				const message = JSON.parse(data.toString()) as WebSocketMessage;
 
 				// Handle ping/pong

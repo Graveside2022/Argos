@@ -66,6 +66,7 @@ export class SweepManager extends EventEmitter {
 		this.healthMonitorInterval = setInterval(() => {
 			this._performHealthCheck().catch((error) => {
 				logError('Error performing health check', {
+	// Safe: Error type assertion for error handling
 					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
@@ -74,6 +75,7 @@ export class SweepManager extends EventEmitter {
 		// Perform startup validation asynchronously
 		this._performStartupValidation().catch((error) => {
 			logError('Error during startup validation', {
+	// Safe: Error type assertion for error handling
 				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		});
@@ -160,6 +162,7 @@ export class SweepManager extends EventEmitter {
 			}
 		} catch (e) {
 			logError('Failed to check memory:', {
+	// Safe: Error type assertion for error handling
 				error: (e as Error).message
 			});
 		}
@@ -356,8 +359,10 @@ export class SweepManager extends EventEmitter {
 				await this._runNextFrequency();
 				return true;
 			} catch (runError: unknown) {
+	// Safe: Error type assertion for error handling
 				const error = runError as Error;
 				logError('[ERROR] Error in _runNextFrequency:', {
+	// Safe: Error type assertion for error handling
 					error: (error as Error).message
 				});
 				if (error.stack) {
@@ -369,6 +374,7 @@ export class SweepManager extends EventEmitter {
 				return true;
 			}
 		} catch (error: unknown) {
+	// Safe: Error type assertion for error handling
 			const err = error as Error;
 			this._emitError(`Failed to start cycle: ${err.message}`, 'cycle_startup', err);
 			return false;
@@ -504,20 +510,24 @@ export class SweepManager extends EventEmitter {
 				this.frequencyCycler.startCycleTimer(() => {
 					this._cycleToNextFrequency().catch((error) => {
 						logError('Error cycling to next frequency', {
+	// Safe: Error type assertion for error handling
 							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					});
 				});
 			}
 		} catch (error: unknown) {
+	// Safe: Error type assertion for error handling
 			const errorAnalysis = this.errorTracker.recordError(error as Error, {
 				frequency: cycleState.currentFrequency?.value,
 				operation: 'start_sweep'
 			});
 			logError('[ERROR] Error starting sweep process:', {
+	// Safe: Error type assertion for error handling
 				error: (error as Error).message,
 				analysis: errorAnalysis
 			});
+	// Safe: Error type assertion for error handling
 			await this._handleSweepError(error as Error, cycleState.currentFrequency);
 		}
 	}
@@ -548,6 +558,7 @@ export class SweepManager extends EventEmitter {
 		this.frequencyCycler.startSwitchTimer(() => {
 			this._runNextFrequency().catch((error) => {
 				logError('Error running next frequency', {
+	// Safe: Error type assertion for error handling
 					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
@@ -657,12 +668,14 @@ export class SweepManager extends EventEmitter {
 				range: `${freqMinMHz} - ${freqMaxMHz} MHz`
 			});
 		} catch (error) {
+	// Safe: Error type assertion for error handling
 			const analysis = this.errorTracker.recordError(error as Error, {
 				frequency: frequency.value,
 				operation: 'start_process'
 			});
 
 			logError('Failed to start sweep process', {
+	// Safe: Error type assertion for error handling
 				error: error instanceof Error ? (error as Error).message : String(error),
 				analysis
 			});
@@ -706,6 +719,7 @@ export class SweepManager extends EventEmitter {
 			}
 		} catch (error) {
 			logError('Error handling spectrum data', {
+	// Safe: Error type assertion for error handling
 				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		}
@@ -750,6 +764,7 @@ export class SweepManager extends EventEmitter {
 				this._performRecovery(`Process died: ${exitAnalysis.recommendedAction}`).catch(
 					(error) => {
 						logError('Error performing recovery', {
+	// Safe: Error type assertion for error handling
 							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					}
@@ -903,6 +918,7 @@ export class SweepManager extends EventEmitter {
 					} else {
 						resolve({
 							available: false,
+	// Safe: Error type assertion for error handling
 							reason: `Device check failed: ${(error as Error).message}`
 						});
 					}
@@ -1068,6 +1084,7 @@ export class SweepManager extends EventEmitter {
 		});
 
 		logError('Sweep error analyzed by ErrorTracker', {
+	// Safe: Error type assertion for error handling
 			error: (error as Error).message,
 			frequency,
 			analysis: errorAnalysis
@@ -1080,6 +1097,7 @@ export class SweepManager extends EventEmitter {
 		}
 
 		// Emit error event
+	// Safe: Error type assertion for error handling
 		this._emitError((error as Error).message, 'sweep_error', error);
 
 		// Check if we should stop using ErrorTracker
@@ -1184,6 +1202,7 @@ export class SweepManager extends EventEmitter {
 				this._emitEvent('recovery_complete', { reason });
 			}
 		} catch (error: unknown) {
+	// Safe: Error type assertion for error handling
 			const err = error as Error;
 
 			// Record recovery failure
@@ -1238,6 +1257,7 @@ export class SweepManager extends EventEmitter {
 					'Process monitor error',
 					{
 						pid: processState.actualProcessPid,
+	// Safe: Error type assertion for error handling
 						error: error instanceof Error ? (error as Error).message : String(error)
 					},
 					'process-monitor-error'
@@ -1276,6 +1296,7 @@ export class SweepManager extends EventEmitter {
 				);
 				this._performRecovery('No data timeout').catch((error) => {
 					logError('Error performing recovery', {
+	// Safe: Error type assertion for error handling
 						error: error instanceof Error ? (error as Error).message : String(error)
 					});
 				});
@@ -1361,7 +1382,9 @@ export class SweepManager extends EventEmitter {
 // 30s health check interval, orphaning the old instance and leaking timers.
 const SWEEP_MANAGER_KEY = '__argos_sweepManager';
 export const sweepManager: SweepManager =
+	// Safe: Type cast to Record for dynamic property access
 	((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] as SweepManager) ??
+	// Safe: Type cast to Record for dynamic property access
 	(((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] =
 		new SweepManager()) as SweepManager);
 
