@@ -5,6 +5,7 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
+    // Safe: Request body parsed as cleanup options object with optional maxAge parameter
     const { maxAge } = await request.json() as { maxAge?: number };
     
     // Open database directly for cleanup operation

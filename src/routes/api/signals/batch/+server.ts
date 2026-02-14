@@ -20,11 +20,13 @@ function normalizeSignalSource(source: string): SignalSource {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const db = getRFDatabase();
+	// Safe: Request body parsed as Record for dynamic signal/signals property access
 		const body = (await request.json()) as Record<string, unknown>;
 
 		// Handle both direct array and object with signals property
 		const signals: SignalMarker[] = Array.isArray(body)
 			? (body as SignalMarker[])
+		// Safe: Request body contains either signals array or is array itself, cast to SignalMarker[]
 			: (body.signals as SignalMarker[]);
 
 		if (!signals || !Array.isArray(signals)) {
@@ -38,7 +40,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				(signal as { id?: string }).id ||
 				`signal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+		// Safe: Each signal cast to Record for dynamic property extraction during normalization
 			const signalObj = signal as Record<string, unknown>;
+		// Safe: Location property may be Record with lat/lon or undefined
 			const location = signalObj.location as Record<string, unknown> | undefined;
 
 			// Extract coordinates from either direct properties or location object
@@ -53,6 +57,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					: signalObj.timestamp;
 
 			return {
+		// Safe: Signal properties extracted and cast to expected types for SignalMarker construction
 				id,
 				lat: lat as number,
 				lon: lon as number,
