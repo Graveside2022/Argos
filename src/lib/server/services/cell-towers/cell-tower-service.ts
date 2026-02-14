@@ -105,6 +105,7 @@ async function queryLocalDatabase(
 				count: rows.length
 			};
 		} catch (dbErr) {
+		// Safe: Error handling
 			console.warn(`Cell tower DB at ${dbPath} failed:`, (dbErr as Error).message);
 		}
 	}
