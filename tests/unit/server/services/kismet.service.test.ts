@@ -528,60 +528,7 @@ describe('KismetService', () => {
 		});
 	});
 
-	describe('extractSignalFromDevice()', () => {
-		it('should extract signal from nested object structure', () => {
-			const device = {
-				'kismet.device.base.signal': {
-					'kismet.common.signal.last_signal': -72,
-					'kismet.common.signal.max_signal': -68,
-					'kismet.common.signal.min_signal': -78
-				}
-			};
-
-			const signal = KismetService['extractSignalFromDevice'](device);
-			expect(signal).toBe(-72);
-		});
-
-		it('should return max_signal if last_signal is missing', () => {
-			const device = {
-				'kismet.device.base.signal': {
-					'kismet.common.signal.max_signal': -68,
-					'kismet.common.signal.min_signal': -78
-				}
-			};
-
-			const signal = KismetService['extractSignalFromDevice'](device);
-			expect(signal).toBe(-68);
-		});
-
-		it('should handle signal as direct number value', () => {
-			const device = {
-				'kismet.device.base.signal': -82
-			};
-
-			const signal = KismetService['extractSignalFromDevice'](device);
-			expect(signal).toBe(-82);
-		});
-
-		it('should return default signal when field is missing', () => {
-			const device = {};
-
-			const signal = KismetService['extractSignalFromDevice'](device);
-			expect(signal).toBe(-100); // DEFAULT_SIGNAL
-		});
-
-		it('should return default signal when signal object has no valid fields', () => {
-			const device = {
-				'kismet.device.base.signal': {
-					'some.other.field': 'value'
-				}
-			};
-
-			const signal = KismetService['extractSignalFromDevice'](device);
-			expect(signal).toBe(-100); // DEFAULT_SIGNAL
-		});
-	});
-
+	// Test suite for extractSignalFromDevice() removed - method was inlined into transformRawKismetDevices() during type safety remediation
 	// Test suite for createFallbackDevices() removed - method was deleted during refactoring
-	// If this functionality is needed in the future, the test suite can be restored from git history
+	// If this functionality is needed in the future, test suites can be restored from git history
 });
