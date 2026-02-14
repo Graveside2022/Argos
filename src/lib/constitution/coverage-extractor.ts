@@ -102,6 +102,7 @@ function calculatePercentage(coverage: Record<string, number> | undefined): numb
 
 /**
  * Calculate branch coverage percentage from Istanbul branch coverage object
+	// Safe: Type cast to Record for dynamic property access
  * Branch coverage is stored as Record<string, number[]> where each array represents
  * hit counts for each branch path (e.g., { '0': [1, 0], '1': [5, 3] })
  */

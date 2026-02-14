@@ -54,6 +54,7 @@ export function isDatabaseError(error: unknown): error is DatabaseError {
 	return (
 		error instanceof Error &&
 		'code' in error &&
+// Safe: Error type assertion for error handling
 		typeof (error as Error & { code: unknown }).code === 'string'
 	);
 }
@@ -65,6 +66,7 @@ export function isApiError(error: unknown): error is ApiError {
 	return (
 		error instanceof Error &&
 		'statusCode' in error &&
+// Safe: Error type assertion for error handling
 		typeof (error as Error & { statusCode: unknown }).statusCode === 'number'
 	);
 }
@@ -76,6 +78,7 @@ export function isWebSocketError(error: unknown): error is WebSocketError {
 	return (
 		error instanceof Error &&
 		'code' in error &&
+// Safe: Error type assertion for error handling
 		typeof (error as Error & { code: unknown }).code === 'string'
 	);
 }
@@ -160,6 +163,8 @@ export function createValidationError(
  */
 export function getErrorProperty<T>(error: unknown, property: string, defaultValue: T): T {
 	if (error instanceof Error && property in error) {
+// Safe: Type cast to Record for dynamic property access
+// Safe: Type widening to unknown for flexible type handling
 		return (error as unknown as Record<string, unknown>)[property] as T;
 	}
 	return defaultValue;
