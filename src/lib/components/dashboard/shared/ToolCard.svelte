@@ -46,6 +46,7 @@
 
 <div class="tool-card" class:running={isRunning} class:not-installed={!isInstalled}>
 	<div class="tool-header">
+		<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="tool-icon">
 			{@html icon}
 		</div>

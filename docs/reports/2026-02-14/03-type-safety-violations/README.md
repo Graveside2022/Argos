@@ -1,7 +1,7 @@
 # Type Safety Violations Analysis
 
 **Violation Category:** HIGH (Article II §2.1)
-**Violation Count:** 544 violations
+**Violation Count:** 252 violations
 **Impact:** Potential runtime errors, unclear type assumptions, maintainability issues
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -11,7 +11,7 @@
 ## 📊 Quick Summary
 
 **Problem:** Type assertions without justification comments
-**Constitution Rule:** Article II §2.1 - "Type assertion without justification comment"
+**Constitution Rule:** Article II §2.1 - "No `any` type usage"
 **Solution:** Add justification comments or replace with Zod runtime validation
 
 ---
@@ -33,80 +33,77 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 101
-**Total Occurrences:** 544
+**Files Affected:** 54
+**Total Occurrences:** 252
 
-### 1. src/hooks.server.ts
+### 1. src/routes/gsm-evil/+page.svelte
+
+**Line:** 54
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+
+### 2. src/routes/gsm-evil/+page.svelte
+
+**Line:** 480
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+
+### 3. src/routes/gsm-evil/+page.svelte
+
+**Line:** 496
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+**Status:** ⚠️ Pre-existing (since 2026-02-12)
+
+### 4. src/lib/websocket/base.ts
+
+**Line:** 72
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+**Status:** ⚠️ Pre-existing (since 2025-07-13)
+
+### 5. src/lib/websocket/base.ts
+
+**Line:** 189
+**Rule:** Type assertion without justification comment
+**Fix:** Add comment explaining why assertion is safe
+**Status:** ⚠️ Pre-existing (since 2025-07-13)
+
+### 6. src/lib/websocket/base.ts
+
+**Line:** 235
+**Rule:** Type assertion without justification comment
+**Fix:** Add comment explaining why assertion is safe
+**Status:** ⚠️ Pre-existing (since 2025-07-13)
+
+### 7. src/lib/tactical-map/map-service.ts
+
+**Line:** 14
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+**Status:** ⚠️ Pre-existing (since 2026-02-12)
+
+### 8. src/lib/server/websocket-server.ts
 
 **Line:** 96
 **Rule:** Type assertion without justification comment
 **Fix:** Add comment explaining why assertion is safe
 **Status:** ⚠️ Pre-existing (since 2026-02-08)
 
-### 2. src/hooks.server.ts
+### 9. src/lib/kismet/websocket.ts
 
-**Line:** 96
+**Line:** 389
 **Rule:** Type assertion without justification comment
 **Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
 
-### 3. src/hooks.server.ts
+### 10. src/lib/kismet/types.ts
 
-**Line:** 98
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
+**Line:** 85
+**Rule:** No `any` type usage
+**Fix:** Replace `any` with `unknown` and add type guard
+**Status:** ⚠️ Pre-existing (since 2026-02-11)
 
-### 4. src/hooks.server.ts
-
-**Line:** 102
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
-
-### 5. src/hooks.server.ts
-
-**Line:** 104
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
-
-### 6. src/hooks.server.ts
-
-**Line:** 120
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
-
-### 7. src/hooks.server.ts
-
-**Line:** 443
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 8. src/hooks.server.ts
-
-**Line:** 443
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 9. src/hooks.server.ts
-
-**Line:** 479
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-07)
-
-### 10. src/hooks.server.ts
-
-**Line:** 481
-**Rule:** Type assertion without justification comment
-**Fix:** Add comment explaining why assertion is safe
-**Status:** ⚠️ Pre-existing (since 2026-02-07)
-
-_...and 534 more violations_
+_...and 242 more violations_
 
 ---
 
@@ -114,7 +111,7 @@ _...and 534 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 544 violations
+**Impact:** Resolves all 252 violations
 **Timeline:** 1-2 weeks
 **Risk:** LOW
 
@@ -177,14 +174,14 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 544 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
+HIGH priority violations represent 252 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1-2 weeks
-- Impact: Resolves 544 violations
+- Impact: Resolves 252 violations
 
 ---
 
@@ -216,6 +213,6 @@ HIGH priority violations represent 544 issues that should be addressed. The esti
 
 **After Remediation:**
 
-- **HIGH violations:** 544 → 0 (all resolved)
+- **HIGH violations:** 252 → 0 (all resolved)
 - **Estimated Timeline:** 1-2 weeks
 - **Risk Level:** LOW

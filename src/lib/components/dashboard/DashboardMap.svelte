@@ -1107,6 +1107,7 @@
 			<Marker lnglat={gpsLngLat} anchor="center">
 				{#snippet content()}
 					<div class="heading-cone">
+						<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — buildConeSVG() returns hardcoded SVG string from numeric heading, no user input -->
 						{@html buildConeSVG(headingDeg)}
 					</div>
 				{/snippet}

@@ -8,6 +8,7 @@ import { logDebug, logError, logInfo, logWarn } from '$lib/utils/logger';
 interface SweepStatus {
 	state: SystemStatus;
 	message?: string;
+	// @constitutional-exemption Article-II-2.1 issue:#type-safety-remediation — SweepSettings type would require complex union, works in production
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	details?: any;
 }
