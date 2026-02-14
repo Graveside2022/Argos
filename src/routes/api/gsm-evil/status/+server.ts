@@ -114,6 +114,7 @@ export const GET: RequestHandler = async () => {
 				status: 'error',
 				message: 'Failed to check GSM Evil status',
 				// Safe: Catch block error cast to Error for message extraction in error response
+			// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},
 			{ status: 500 }

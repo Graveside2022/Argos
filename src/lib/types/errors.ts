@@ -54,7 +54,7 @@ export function isDatabaseError(error: unknown): error is DatabaseError {
 	return (
 		error instanceof Error &&
 		'code' in error &&
-// Safe: Error type assertion for error handling
+		// Safe: Error type assertion for error handling
 		typeof (error as Error & { code: unknown }).code === 'string'
 	);
 }
@@ -66,7 +66,7 @@ export function isApiError(error: unknown): error is ApiError {
 	return (
 		error instanceof Error &&
 		'statusCode' in error &&
-// Safe: Error type assertion for error handling
+		// Safe: Error type assertion for error handling
 		typeof (error as Error & { statusCode: unknown }).statusCode === 'number'
 	);
 }
@@ -78,7 +78,7 @@ export function isWebSocketError(error: unknown): error is WebSocketError {
 	return (
 		error instanceof Error &&
 		'code' in error &&
-// Safe: Error type assertion for error handling
+		// Safe: Error type assertion for error handling
 		typeof (error as Error & { code: unknown }).code === 'string'
 	);
 }
@@ -99,6 +99,7 @@ export function createDatabaseError(
 	query?: string,
 	params?: unknown[]
 ): DatabaseError {
+	// Safe: Error cast to DatabaseError for typed error construction with additional properties
 	const error = new Error(message) as DatabaseError;
 	error.name = 'DatabaseError';
 	error.code = code;
@@ -116,6 +117,7 @@ export function createApiError(
 	endpoint?: string,
 	method?: string
 ): ApiError {
+	// Safe: Error cast to ApiError for typed error construction with statusCode and endpoint properties
 	const error = new Error(message) as ApiError;
 	error.name = 'ApiError';
 	error.statusCode = statusCode;
@@ -133,6 +135,7 @@ export function createWebSocketError(
 	closeCode?: number,
 	reason?: string
 ): WebSocketError {
+	// Safe: Error cast to WebSocketError for typed error construction with code and closeCode properties
 	const error = new Error(message) as WebSocketError;
 	error.name = 'WebSocketError';
 	error.code = code;
@@ -150,6 +153,7 @@ export function createValidationError(
 	value?: unknown,
 	constraints?: string[]
 ): ValidationError {
+	// Safe: Error cast to ValidationError for typed error construction with field and constraints properties
 	const error = new Error(message) as ValidationError;
 	error.name = 'ValidationError';
 	if (field) error.field = field;
@@ -163,8 +167,8 @@ export function createValidationError(
  */
 export function getErrorProperty<T>(error: unknown, property: string, defaultValue: T): T {
 	if (error instanceof Error && property in error) {
-// Safe: Type cast to Record for dynamic property access
-// Safe: Type widening to unknown for flexible type handling
+		// Safe: Type cast to Record for dynamic property access
+		// Safe: Type widening to unknown for flexible type handling
 		return (error as unknown as Record<string, unknown>)[property] as T;
 	}
 	return defaultValue;
@@ -183,6 +187,7 @@ export function toError(error: unknown): Error {
 	}
 
 	if (typeof error === 'object' && error !== null && 'message' in error) {
+		// Safe: Object with message property cast to extract message for Error construction
 		return new Error(String((error as { message: unknown }).message));
 	}
 

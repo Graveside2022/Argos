@@ -8,6 +8,7 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async ({ request }) => {
 	try {
     // Safe: Record type for dynamic access
+		// Safe: Request body parsed as Record for dynamic property access
 		const body = (await request.json()) as Record<string, unknown>;
 		console.warn('[rf/start-sweep] Request body:', JSON.stringify(body, null, 2));
 
@@ -42,6 +43,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					if (typeof range === 'object' && range !== null) {
 						let centerFreq;
     // Safe: Record type for dynamic access
+						// Safe: Range property cast to Record for dynamic min/max property extraction
 						const rangeObj = range as Record<string, unknown>;
 						if (rangeObj.start !== undefined && rangeObj.stop !== undefined) {
 							centerFreq =

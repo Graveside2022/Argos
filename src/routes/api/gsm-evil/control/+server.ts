@@ -72,6 +72,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				success: false,
 				message: 'Invalid request',
 				// Safe: Catch block error cast to Error for message extraction
+			// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},
 			{ status: 400 }
