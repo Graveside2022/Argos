@@ -239,10 +239,10 @@ Based on priority and impact:
 
 6. ✅ Database validation complete (T034-T036)
 7. ✅ Store validation complete (T039-T040, T037-T038 skipped - no stores exist)
-8. ⏳ API endpoints (T027, T029, T033) - NEXT
-9. ⚠️ Install Shadcn toast component (T043) - BLOCKED on Tailwind v4
-10. Run full test suite and performance benchmarks
-11. Re-run constitutional audit to verify improvements
+8. ✅ API endpoints complete (T027 done, T029-T033 deferred)
+9. ⚠️ Install Shadcn toast component (T043) - BLOCKED on Tailwind v4 upgrade decision
+10. ⏳ Run full test suite and performance benchmarks - NEXT
+11. ⏳ Re-run constitutional audit to verify improvements
 
 ### **Next Audit:**
 
