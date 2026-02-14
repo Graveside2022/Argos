@@ -39,67 +39,66 @@ npm run test
 
 ### 1. src/lib/server/auth/auth-middleware.ts
 
-**Line:** 23
+**Line:** 24
 **Rule:** No hardcoded secrets
 **Fix:** Move Secret/Token to .env file and access via process.env
 **Status:** ⚠️ Pre-existing (since 2026-02-08)
 
 ### 2. src/lib/constitution/validators/article-ix-security.ts
 
-**Line:** 9
+**Line:** 10
 **Rule:** No eval() or new Function() — dynamic code execution forbidden
 **Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
 
 ### 3. src/lib/constitution/validators/article-ix-security.ts
 
-**Line:** 36
+**Line:** 37
 **Rule:** No eval() or new Function() — dynamic code execution forbidden
 **Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
 
 ### 4. src/lib/constitution/validators/article-ix-security.ts
 
-**Line:** 48
+**Line:** 49
 **Rule:** No eval() or new Function() — dynamic code execution forbidden
 **Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
 
 ### 5. src/lib/components/dashboard/TopStatusBar.svelte
 
-**Line:** 727
+**Line:** 730
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-02)
 
 ### 6. src/lib/components/dashboard/IconRail.svelte
 
-**Line:** 76
+**Line:** 80
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 **Status:** ⚠️ Pre-existing (since 2026-02-09)
 
 ### 7. src/lib/components/dashboard/IconRail.svelte
 
-**Line:** 87
+**Line:** 92
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 **Status:** ⚠️ Pre-existing (since 2026-02-09)
 
 ### 8. src/lib/components/dashboard/IconRail.svelte
 
-**Line:** 98
+**Line:** 104
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 **Status:** ⚠️ Pre-existing (since 2026-02-09)
 
 ### 9. src/lib/components/dashboard/IconRail.svelte
 
-**Line:** 113
+**Line:** 120
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 **Status:** ⚠️ Pre-existing (since 2026-02-02)
 
 ### 10. src/lib/components/dashboard/IconRail.svelte
 
-**Line:** 123
+**Line:** 131
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 **Status:** ⚠️ Pre-existing (since 2026-02-06)
