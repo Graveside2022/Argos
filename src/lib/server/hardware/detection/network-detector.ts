@@ -6,6 +6,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 
 const execAsync = promisify(exec);
@@ -28,8 +29,16 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 		for (const line of lines) {
 			if (line.includes('Device Address')) {
 				if (currentDevice && currentDevice.ipAddress) {
-					// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
-					hardware.push(currentDevice as DetectedHardware);
+					// Runtime validation with Zod (replaces unsafe type assertion)
+					const result = DetectedHardwareSchema.safeParse(currentDevice);
+					if (result.success) {
+						hardware.push(result.data);
+					} else {
+						console.error('[network-detector] Invalid network USRP data, skipping:', {
+							device: currentDevice,
+							errors: result.error.format()
+						});
+					}
 				}
 				currentDevice = {
 					category: 'sdr',
@@ -67,8 +76,19 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 			} as SDRCapabilities;
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
 
-			// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
-			hardware.push(currentDevice as DetectedHardware);
+			// Runtime validation with Zod (replaces unsafe type assertion)
+			const result = DetectedHardwareSchema.safeParse(currentDevice);
+			if (result.success) {
+				hardware.push(result.data);
+			} else {
+				console.error(
+					'[network-detector] Invalid network USRP data (last device), skipping:',
+					{
+						device: currentDevice,
+						errors: result.error.format()
+					}
+				);
+			}
 		}
 	} catch (_error) {
 		// No network USRPs found

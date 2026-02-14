@@ -6,6 +6,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
 import type {
 	BluetoothCapabilities,
 	DetectedHardware,
@@ -143,9 +144,16 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 		for (const line of lines) {
 			if (line.includes('Device Address')) {
 				if (currentDevice && currentDevice.serial) {
-// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
-					// Safe: Partial<DetectedHardware> promoted after serial field confirmed present above
-					hardware.push(currentDevice as DetectedHardware);
+					// Runtime validation with Zod (replaces unsafe type assertion)
+					const result = DetectedHardwareSchema.safeParse(currentDevice);
+					if (result.success) {
+						hardware.push(result.data);
+					} else {
+						console.error('[usb-detector] Invalid USRP device data, skipping:', {
+							device: currentDevice,
+							errors: result.error.format()
+						});
+					}
 				}
 				currentDevice = {
 					category: 'sdr',
@@ -177,13 +185,19 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 				txCapable: true,
 				rxCapable: true,
 				fullDuplex: true
-				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
-			} as SDRCapabilities;
+			};
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
-// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
 
-			// Safe: Partial promoted after required fields populated
-			hardware.push(currentDevice as DetectedHardware);
+			// Runtime validation with Zod (replaces unsafe type assertion)
+			const result = DetectedHardwareSchema.safeParse(currentDevice);
+			if (result.success) {
+				hardware.push(result.data);
+			} else {
+				console.error('[usb-detector] Invalid USRP device data (last device), skipping:', {
+					device: currentDevice,
+					errors: result.error.format()
+				});
+			}
 		}
 
 		return hardware;
