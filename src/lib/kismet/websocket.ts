@@ -8,9 +8,9 @@ import type {
 	KismetNetwork,
 	KismetStatus
 } from '$lib/kismet/types';
-import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/services/websocket/base';
 import { updateKismetConnection } from '$lib/stores/connection';
 import { KismetEvent } from '$lib/types/enums';
+import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/websocket/base';
 
 export type KismetWebSocketConfig = BaseWebSocketConfig;
 

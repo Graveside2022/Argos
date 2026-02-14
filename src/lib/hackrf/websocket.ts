@@ -9,8 +9,8 @@ import {
 	updateSpectrumData,
 	updateSweepStatus
 } from '$lib/hackrf/stores';
-import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/services/websocket/base';
 import { hasProperty, isObject } from '$lib/types/validation';
+import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/websocket/base';
 
 export interface HackRFWebSocketConfig extends BaseWebSocketConfig {
 	bufferSize?: number;

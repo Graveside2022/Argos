@@ -15,8 +15,8 @@ import type {
 } from '$lib/kismet/api';
 import { KismetWebSocketClient } from '$lib/kismet/websocket';
 import { kismetAPI } from '$lib/services/api';
-import type { WebSocketEvent } from '$lib/services/websocket/base';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
+import type { WebSocketEvent } from '$lib/websocket/base';
 
 interface KismetServiceState {
 	status: KismetStatus;
