@@ -196,6 +196,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 					validatedGain = validateGain(40);
 				} catch (validationError) {
 					yield sendUpdate(
+						// Safe: Gain validation error cast to Error for diagnostic message
 						`[ERROR] Invalid gain parameter: ${(validationError as Error).message}`
 					);
 					continue;
@@ -411,6 +412,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 				});
 			} catch (freqError) {
 				yield sendUpdate(
+					// Safe: Frequency test error cast to Error for progress update message
 					`[FREQ ${i + 1}/${checkFreqs.length}] Error testing ${freq} MHz: ${(freqError as Error).message}`
 				);
 				yield sendUpdate(
@@ -541,10 +543,12 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 			totalTested: results.length
 		});
 	} catch (error: unknown) {
+		// Safe: Catch block error cast to Error for scan failure message
 		yield sendUpdate(`[ERROR] Scan failed: ${(error as Error).message}`);
 		yield sendResult({
 			success: false,
 			message: 'Scan failed',
+			// Safe: Error object cast to Error for message extraction in error response
 			error: (error as Error).message
 		});
 	} finally {
