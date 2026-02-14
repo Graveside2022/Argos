@@ -101,6 +101,7 @@
 
 	// Close dropdowns when clicking outside
 	function handleWindowClick(e: MouseEvent) {
+	// Safe: MouseEvent.target is EventTarget, narrowing to HTMLElement for DOM navigation methods
 		const target = e.target as HTMLElement;
 		// Don't close dropdown if clicking the split button (it opens the dropdown)
 		if (!target.closest('.shell-dropdown-wrapper') && !target.closest('.split-btn')) {

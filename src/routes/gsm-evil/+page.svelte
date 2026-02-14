@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 
-	import { mccToCountry,mncToCarrier } from '$lib/data/carrier-mappings';
+	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import { groupIMSIsByTower, sortTowers } from '$lib/utils/gsm-tower-utils';
 
@@ -50,6 +50,7 @@
 	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	// Real-time frequency parsing state
+	// Justified `any`: frequency data has dynamic shape from SSE stream, fields vary per GSM band
 	let _currentFrequencyData: any = {};
 
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
@@ -346,6 +347,7 @@
 				body: JSON.stringify({ action: 'start', frequency })
 			});
 
+			// Safe: response from /api/gsm-evil/control always returns {success, message} per route contract
 			const data = (await response.json()) as { success: boolean; message: string };
 			if (response.ok && data.success) {
 				imsiCaptureActive = true;
@@ -474,6 +476,7 @@
 										);
 										console.log(
 											'Results with cell data:',
+											// Justified `any`: scanResults items have dynamic shape from SSE scan stream
 											data.scanResults?.filter((r: any) => r.mcc)
 										);
 										gsmEvilStore.setSelectedFrequency(data.bestFrequency);
@@ -486,6 +489,7 @@
 											`[SCAN] Found ${data.scanResults?.length || 0} active frequencies`
 										);
 
+										// Justified `any`: scanResults items have dynamic shape from SSE scan stream
 										// Log cell identity capture status
 										const withCellData =
 											data.scanResults?.filter(
@@ -856,6 +860,7 @@
 										<span class="device-header-tmsi">TMSI</span>
 										<span class="device-header-time">Detected</span>
 									</div>
+									<!-- Justified `any`: tower.devices array items typed dynamically from groupIMSIsByTower utility -->
 									{#each tower.devices.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
 										<div class="device-list-row">
 											<span class="device-imsi">{device.imsi}</span>
