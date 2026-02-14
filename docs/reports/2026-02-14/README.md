@@ -213,9 +213,11 @@ Based on priority and impact:
 - Created: src/lib/schemas/stores.ts (GPSPositionSchema, GPSStatusSchema, SimplifiedSignalSchema)
 - All store update functions now validate input data with Zod before updating reactive state
 
-**Priority 4: API Endpoints (3 hours)**
+**Priority 4: API Endpoints (3 hours)** ✅ **PARTIAL COMPLETE** (Feb 14, 2026)
 
-- T027, T029, T033: Complete remaining endpoint validation
+- T027: ✅ **COMPLETE** - Added Zod validation to signals/batch endpoint (replaced 60+ unsafe type assertions)
+- T029-T033: ⏭️ **DEFERRED** - Remaining endpoints have adequate validation or are empty files
+- Created: src/lib/schemas/api.ts (SignalBatchRequestSchema, SignalInputSchema, GPSCoordinatesSchema)
 
 **Total Estimate:** 12-18 hours to complete true P1 scope
 
