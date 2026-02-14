@@ -90,6 +90,7 @@ function checkTsIgnore(file: string, sourceFile: ts.SourceFile, content: string)
 			if (!hasIssueRef) {
 				violations.push({
 					id: randomUUID(),
+					// Safe: String literal narrowed to const for severity enum type
 					severity: 'HIGH' as const,
 					articleReference: 'Article II §2.1',
 					ruleViolated: 'No @ts-ignore without issue reference',
@@ -99,6 +100,7 @@ function checkTsIgnore(file: string, sourceFile: ts.SourceFile, content: string)
 					codeSnippet: line.trim().substring(0, 200),
 					suggestedFix: 'Add issue reference: // @ts-ignore issue:#NNN — justification',
 					isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 					exemptionStatus: 'none' as const
 				});
 			}
@@ -156,6 +158,7 @@ function checkHardcodedColors(file: string, content: string): Violation[] {
 
 			violations.push({
 				id: randomUUID(),
+				// Safe: String literal narrowed to const for severity enum type
 				severity: 'MEDIUM' as const,
 				articleReference: 'Article II §2.7',
 				ruleViolated: 'No hardcoded hex colors — use Tailwind theme',
@@ -165,6 +168,7 @@ function checkHardcodedColors(file: string, content: string): Violation[] {
 				codeSnippet: line.trim().substring(0, 200),
 				suggestedFix: `Replace ${match[0]} with Tailwind color class`,
 				isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			});
 		}
@@ -194,6 +198,7 @@ function checkBrowserAlerts(file: string, sourceFile: ts.SourceFile): Violation[
 			) {
 				violations.push({
 					id: randomUUID(),
+					// Safe: String literal narrowed to const for severity enum type
 					severity: 'HIGH' as const,
 					articleReference: 'Article II §2.7',
 					ruleViolated: 'No browser alert/confirm/prompt',
@@ -203,6 +208,7 @@ function checkBrowserAlerts(file: string, sourceFile: ts.SourceFile): Violation[
 					codeSnippet: node.getText().substring(0, 200),
 					suggestedFix: 'Use custom modal component instead',
 					isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 					exemptionStatus: 'none' as const
 				});
 			}
@@ -251,6 +257,7 @@ async function checkBarrelFiles(projectRoot: string): Promise<Violation[]> {
 		if (hasOnlyExports) {
 			violations.push({
 				id: randomUUID(),
+					// Safe: String literal narrowed to const for severity enum type
 				severity: 'HIGH' as const,
 				articleReference: 'Article II §2.7',
 				ruleViolated: 'No barrel files (index.ts with only re-exports)',
@@ -259,6 +266,7 @@ async function checkBarrelFiles(projectRoot: string): Promise<Violation[]> {
 				violationType: 'forbidden-pattern-barrel-file',
 				suggestedFix: 'Import directly from source files instead',
 				isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			});
 		}
@@ -279,6 +287,7 @@ async function checkCatchAllUtils(projectRoot: string): Promise<Violation[]> {
 		violations.push(
 			...files.map((file) => ({
 				id: randomUUID(),
+					// Safe: String literal narrowed to const for severity enum type
 				severity: 'HIGH' as const,
 				articleReference: 'Article II §2.7',
 				ruleViolated: 'No catch-all utility files',
@@ -287,6 +296,7 @@ async function checkCatchAllUtils(projectRoot: string): Promise<Violation[]> {
 				violationType: 'forbidden-pattern-catch-all-utils',
 				suggestedFix: 'Create specific modules with clear responsibilities',
 				isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			}))
 		);
@@ -310,6 +320,7 @@ function createViolation(
 
 	return {
 		id: randomUUID(),
+					// Safe: String literal narrowed to const for severity enum type
 		severity: 'HIGH' as const,
 		articleReference: 'Article II §2.1',
 		ruleViolated,
@@ -320,6 +331,7 @@ function createViolation(
 		codeSnippet: node.getText().substring(0, 200),
 		suggestedFix: getSuggestedFix(violationType),
 		isPreExisting: false,
+					// Safe: String literal narrowed to const for exemption status enum type
 		exemptionStatus: 'none' as const
 	};
 }

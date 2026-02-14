@@ -1,4 +1,4 @@
-	// Safe: WebSocket connection type assertion
+// Safe: WebSocket connection type assertion
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 
 export type WebSocketEventType = WebSocketEventEnum;
@@ -68,7 +68,7 @@ export abstract class BaseWebSocket {
 			if (typeof window !== 'undefined' && window.WebSocket) {
 				this.ws = new WebSocket(this.config.url, this.config.protocols);
 			} else if (typeof global !== 'undefined' && global.WebSocket) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// Safe: Global WebSocket cast to any for Node.js environment compatibility (constructor signature)
 				this.ws = new (global.WebSocket as any)(this.config.url, this.config.protocols);
 			} else {
 				// In Node.js environment, we'd need to import ws package
@@ -346,7 +346,7 @@ export abstract class BaseWebSocket {
 				type: event,
 				timestamp: Date.now(),
 				data: data?.data,
-	// Safe: Error type assertion for error handling
+				// Safe: Error type assertion for error handling
 				error: data?.error as Error | undefined
 			};
 

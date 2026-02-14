@@ -298,6 +298,7 @@ function calculateArticleScores(
 			failingChecks: totalChecks - passingChecks,
 			scorePercent: Math.round((passingChecks / totalChecks) * 100),
 			violationCount,
+			// Safe: String literal narrowed to const for trend direction type
 			trendDirection: 'baseline' as const
 		};
 	});

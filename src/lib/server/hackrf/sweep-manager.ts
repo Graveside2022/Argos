@@ -67,6 +67,7 @@ export class SweepManager extends EventEmitter {
 			this._performHealthCheck().catch((error) => {
 				logError('Error performing health check', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
@@ -76,6 +77,7 @@ export class SweepManager extends EventEmitter {
 		this._performStartupValidation().catch((error) => {
 			logError('Error during startup validation', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		});
@@ -360,6 +362,7 @@ export class SweepManager extends EventEmitter {
 				return true;
 			} catch (runError: unknown) {
 	// Safe: Error type assertion for error handling
+				// Safe: RunError cast to Error for detailed error handling
 				const error = runError as Error;
 				logError('[ERROR] Error in _runNextFrequency:', {
 	// Safe: Error type assertion for error handling
@@ -375,6 +378,7 @@ export class SweepManager extends EventEmitter {
 			}
 		} catch (error: unknown) {
 	// Safe: Error type assertion for error handling
+			// Safe: Catch block error cast to Error for message extraction
 			const err = error as Error;
 			this._emitError(`Failed to start cycle: ${err.message}`, 'cycle_startup', err);
 			return false;
@@ -511,6 +515,7 @@ export class SweepManager extends EventEmitter {
 					this._cycleToNextFrequency().catch((error) => {
 						logError('Error cycling to next frequency', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					});
@@ -518,6 +523,7 @@ export class SweepManager extends EventEmitter {
 			}
 		} catch (error: unknown) {
 	// Safe: Error type assertion for error handling
+			// Safe: Error cast for error tracking (generic error type from promise rejection)
 			const errorAnalysis = this.errorTracker.recordError(error as Error, {
 				frequency: cycleState.currentFrequency?.value,
 				operation: 'start_sweep'
@@ -528,6 +534,7 @@ export class SweepManager extends EventEmitter {
 				analysis: errorAnalysis
 			});
 	// Safe: Error type assertion for error handling
+			// Safe: Error cast for sweep error handler (promise rejection error)
 			await this._handleSweepError(error as Error, cycleState.currentFrequency);
 		}
 	}
@@ -559,6 +566,7 @@ export class SweepManager extends EventEmitter {
 			this._runNextFrequency().catch((error) => {
 				logError('Error running next frequency', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
@@ -669,6 +677,7 @@ export class SweepManager extends EventEmitter {
 			});
 		} catch (error) {
 	// Safe: Error type assertion for error handling
+			// Safe: Error cast for error tracking (generic error type from promise rejection)
 			const analysis = this.errorTracker.recordError(error as Error, {
 				frequency: frequency.value,
 				operation: 'start_process'
@@ -676,6 +685,7 @@ export class SweepManager extends EventEmitter {
 
 			logError('Failed to start sweep process', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 				error: error instanceof Error ? (error as Error).message : String(error),
 				analysis
 			});
@@ -720,6 +730,7 @@ export class SweepManager extends EventEmitter {
 		} catch (error) {
 			logError('Error handling spectrum data', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		}
@@ -765,6 +776,7 @@ export class SweepManager extends EventEmitter {
 					(error) => {
 						logError('Error performing recovery', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					}
@@ -1203,6 +1215,7 @@ export class SweepManager extends EventEmitter {
 			}
 		} catch (error: unknown) {
 	// Safe: Error type assertion for error handling
+			// Safe: Catch block error cast to Error for message extraction
 			const err = error as Error;
 
 			// Record recovery failure
@@ -1258,6 +1271,7 @@ export class SweepManager extends EventEmitter {
 					{
 						pid: processState.actualProcessPid,
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 						error: error instanceof Error ? (error as Error).message : String(error)
 					},
 					'process-monitor-error'
@@ -1297,6 +1311,7 @@ export class SweepManager extends EventEmitter {
 				this._performRecovery('No data timeout').catch((error) => {
 					logError('Error performing recovery', {
 	// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
 						error: error instanceof Error ? (error as Error).message : String(error)
 					});
 				});

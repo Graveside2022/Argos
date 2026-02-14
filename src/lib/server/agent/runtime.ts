@@ -266,6 +266,7 @@ export async function createAgent() {
 		},
 
 		// Expose provider information
+		// Safe: Provider literal narrowed to const for Anthropic SDK provider type
 		provider: 'anthropic' as const
 	};
 }
