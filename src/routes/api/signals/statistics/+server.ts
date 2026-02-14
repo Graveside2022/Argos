@@ -21,6 +21,7 @@ export const GET: RequestHandler = ({ url }) => {
     );
     
     return json({
+    // Safe: Database statistics result cast to access optional numeric properties with defaults
       totalSignals: (stats as { total_signals?: number }).total_signals || 0,
       uniqueDevices: (stats as { unique_devices?: number }).unique_devices || 0,
       avgPower: (stats as { avg_power?: number }).avg_power || 0,
