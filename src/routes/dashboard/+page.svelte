@@ -2,7 +2,7 @@
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';
 
-	import { onDestroy,onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	import { browser } from '$app/environment';
 	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
@@ -17,8 +17,6 @@
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
-	import { GPSService } from '$lib/services/tactical-map/gps-service';
-	import { KismetService } from '$lib/services/tactical-map/kismet-service';
 	import {
 		activeBottomTab,
 		activePanel,
@@ -26,13 +24,17 @@
 		bottomPanelHeight,
 		closeBottomPanel,
 		isBottomPanelOpen,
-		setBottomPanelHeight	} from '$lib/stores/dashboard/dashboard-store';
+		setBottomPanelHeight
+	} from '$lib/stores/dashboard/dashboard-store';
 	import {
 		createSession,
 		nextTab,
 		previousTab,
 		terminalPanelState,
-		toggleTerminalPanel	} from '$lib/stores/dashboard/terminal-store';
+		toggleTerminalPanel
+	} from '$lib/stores/dashboard/terminal-store';
+	import { GPSService } from '$lib/tactical-map/gps-service';
+	import { KismetService } from '$lib/tactical-map/kismet-service';
 
 	const gpsService = new GPSService();
 	const kismetService = new KismetService();
