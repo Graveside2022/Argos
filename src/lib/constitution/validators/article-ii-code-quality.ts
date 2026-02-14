@@ -168,7 +168,7 @@ function checkHardcodedColors(file: string, content: string): Violation[] {
 				codeSnippet: line.trim().substring(0, 200),
 				suggestedFix: `Replace ${match[0]} with Tailwind color class`,
 				isPreExisting: false,
-					// Safe: String literal narrowed to const for exemption status enum type
+				// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			});
 		}
@@ -257,7 +257,7 @@ async function checkBarrelFiles(projectRoot: string): Promise<Violation[]> {
 		if (hasOnlyExports) {
 			violations.push({
 				id: randomUUID(),
-					// Safe: String literal narrowed to const for severity enum type
+				// Safe: String literal narrowed to const for severity enum type
 				severity: 'HIGH' as const,
 				articleReference: 'Article II §2.7',
 				ruleViolated: 'No barrel files (index.ts with only re-exports)',
@@ -266,7 +266,7 @@ async function checkBarrelFiles(projectRoot: string): Promise<Violation[]> {
 				violationType: 'forbidden-pattern-barrel-file',
 				suggestedFix: 'Import directly from source files instead',
 				isPreExisting: false,
-					// Safe: String literal narrowed to const for exemption status enum type
+				// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			});
 		}
@@ -287,7 +287,7 @@ async function checkCatchAllUtils(projectRoot: string): Promise<Violation[]> {
 		violations.push(
 			...files.map((file) => ({
 				id: randomUUID(),
-					// Safe: String literal narrowed to const for severity enum type
+				// Safe: String literal narrowed to const for severity enum type
 				severity: 'HIGH' as const,
 				articleReference: 'Article II §2.7',
 				ruleViolated: 'No catch-all utility files',
@@ -296,7 +296,7 @@ async function checkCatchAllUtils(projectRoot: string): Promise<Violation[]> {
 				violationType: 'forbidden-pattern-catch-all-utils',
 				suggestedFix: 'Create specific modules with clear responsibilities',
 				isPreExisting: false,
-					// Safe: String literal narrowed to const for exemption status enum type
+				// Safe: String literal narrowed to const for exemption status enum type
 				exemptionStatus: 'none' as const
 			}))
 		);
@@ -320,7 +320,7 @@ function createViolation(
 
 	return {
 		id: randomUUID(),
-					// Safe: String literal narrowed to const for severity enum type
+		// Safe: String literal narrowed to const for severity enum type
 		severity: 'HIGH' as const,
 		articleReference: 'Article II §2.1',
 		ruleViolated,
@@ -331,7 +331,7 @@ function createViolation(
 		codeSnippet: node.getText().substring(0, 200),
 		suggestedFix: getSuggestedFix(violationType),
 		isPreExisting: false,
-					// Safe: String literal narrowed to const for exemption status enum type
+		// Safe: String literal narrowed to const for exemption status enum type
 		exemptionStatus: 'none' as const
 	};
 }
@@ -349,7 +349,30 @@ function hasLeadingComment(node: ts.Node, sourceFile: ts.SourceFile): boolean {
 	const nodePos = node.getFullStart();
 	const commentRanges = ts.getLeadingCommentRanges(fullText, nodePos);
 
-	return commentRanges !== undefined && commentRanges.length > 0;
+	// Check for attached comments (same line or immediately preceding)
+	if (commentRanges !== undefined && commentRanges.length > 0) {
+		return true;
+	}
+
+	// Check for "Safe:" comment on preceding line (common pattern)
+	const lineStart = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+	const lineNumber = lineStart.line;
+
+	if (lineNumber > 0) {
+		const lines = fullText.split('\n');
+		const previousLine = lines[lineNumber - 1];
+
+		// Accept "// Safe:" or "// @constitutional-exemption" as justification
+		if (
+			previousLine &&
+			(previousLine.trim().startsWith('// Safe:') ||
+				previousLine.trim().startsWith('// @constitutional-exemption'))
+		) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 function extractScriptFromSvelte(content: string): string {
