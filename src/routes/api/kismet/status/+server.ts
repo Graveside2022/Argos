@@ -32,6 +32,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			const systemStatus = await KismetProxy.getSystemStatus();
 			const config = KismetProxy.getConfig();
 			// Safe: Kismet API response cast to Record for dynamic property access by dot-notation keys
+			// Safe: Runtime type validated Record cast for dynamic property access
 			const ss = systemStatus as Record<string, unknown>;
 
 			// Safe: Kismet system.status API contract guarantees these properties exist with known types
@@ -109,6 +110,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			success: false,
 			status: 'error',
 			// Safe: Catch block error from KismetProxy.getSystemStatus() throws Error instances
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message,
 			data: {
 				running: false,

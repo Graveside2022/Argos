@@ -8,6 +8,7 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
+		// Safe: Request body parsed as Record for dynamic property access
 		const body = (await request.json()) as Record<string, unknown>;
 		const deviceType = (body.deviceType as string) || 'hackrf';
 
