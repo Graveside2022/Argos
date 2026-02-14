@@ -4,7 +4,7 @@ import _path from 'path';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { afterAll,beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const VISUAL_REGRESSION_CONFIG = {
 	threshold: 0.1, // 0.1% difference allowed for pixel-perfect validation
@@ -139,6 +139,7 @@ describe.skipIf(arch().startsWith('arm'))('Visual Regression Tests', () => {
 
 				// Verify canvas dimensions
 				const dimensions = await page.evaluate(() => {
+					// Safe: Test: Type assertion for test data construction
 					const canvas = document.querySelector('.spectrum-canvas') as HTMLCanvasElement;
 					return {
 						width: canvas?.width,

@@ -10,7 +10,7 @@ import { WebSocket } from 'ws';
 
 import { logError, logInfo } from '$lib/utils/logger';
 
-import type { KismetDevice,WebSocketMessage } from './types';
+import type { KismetDevice, WebSocketMessage } from './types';
 
 // Kismet API raw device data interface
 interface KismetRawDevice {
@@ -106,6 +106,7 @@ export class WebSocketManager extends EventEmitter {
 	private static readonly INSTANCE_KEY = '__argos_wsManager';
 	static getInstance(): WebSocketManager {
 		// Safe: Type cast for dynamic data access
+		// Safe: globalThis typed as Record for HMR singleton persistence
 		const existing = (globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] as
 			| WebSocketManager
 			| undefined;
@@ -115,7 +116,8 @@ export class WebSocketManager extends EventEmitter {
 		}
 		if (!this.instance) {
 			this.instance = new WebSocketManager();
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
+			// Safe: globalThis typed as Record for HMR singleton assignment
 			(globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] = this.instance;
 		}
 		return this.instance;
@@ -164,6 +166,7 @@ export class WebSocketManager extends EventEmitter {
 				throw new Error(`Kismet API error: ${response.status}`);
 			}
 
+			// Safe: Kismet REST API returns array of device objects per API contract
 			const devices = (await response.json()) as KismetRawDevice[];
 
 			// Process device updates
@@ -312,7 +315,8 @@ export class WebSocketManager extends EventEmitter {
 	private emitDeviceUpdate(device: KismetDevice) {
 		const message: WebSocketMessage = {
 			type: 'device_update',
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
+			// Safe: KismetRawDevice is a Record-like object, double cast for type bridge
 			data: device as unknown as Record<string, unknown>,
 			timestamp: new Date().toISOString()
 		};
@@ -357,6 +361,7 @@ export class WebSocketManager extends EventEmitter {
 				throw new Error(`Failed to get system status: ${response.status}`);
 			}
 
+			// Safe: Kismet system status endpoint returns KismetSystemStatus per API contract
 			const status = (await response.json()) as KismetSystemStatus;
 
 			const message: WebSocketMessage = {
@@ -421,6 +426,7 @@ export class WebSocketManager extends EventEmitter {
 
 		ws.on('message', (data: Buffer) => {
 			try {
+				// Safe: WebSocket message parsed as ClientMessage — validated by handler below
 				const message = JSON.parse(data.toString()) as ClientMessage;
 				this.handleClientMessage(ws, message);
 			} catch (error) {

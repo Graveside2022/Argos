@@ -292,6 +292,7 @@ export class USRPAPI {
 				maxAttempts: number;
 			};
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				recoveryData = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in recovery_start event', error);

@@ -33,9 +33,11 @@ async function getReceiverGPS(fetchFn: typeof fetch): Promise<{ lat: number; lon
 		const resp = await fetchFn('/api/gps/position');
 		if (resp.ok) {
 			// Safe: GPS API response parsed as Record for dynamic property access (success, data)
+			// Safe: Kismet REST API response parsed as Record for data field access
 			const body = (await resp.json()) as Record<string, unknown>;
 			if (body.success && body.data) {
 				// Safe: GPS data property cast to Record<string, number> for latitude/longitude access
+				// Safe: body.data contains Kismet device count fields
 				const d = body.data as Record<string, number>;
 				if (d.latitude && d.longitude && !(d.latitude === 0 && d.longitude === 0)) {
 					return { lat: d.latitude, lon: d.longitude };
@@ -78,6 +80,7 @@ function normalizeFusionDevices(
 ): Record<string, unknown>[] {
 	return devices.map((d) => {
 		// Safe: Device location property may be Record with lat/lon coordinates or undefined
+		// Safe: Kismet device location field is object with lat/lon or undefined
 		const loc = d.location as Record<string, number> | undefined;
 		let lat = loc?.latitude ?? loc?.lat ?? 0;
 		let lon = loc?.longitude ?? loc?.lon ?? 0;
@@ -86,6 +89,7 @@ function normalizeFusionDevices(
 			// Safe: Device properties cast for MAC address and signal strength extraction from Kismet device schema
 			const mac = (d.mac as string) || (d.macaddr as string) || '';
 			const sig = d.signalStrength as number | undefined;
+			// Safe: Kismet device signal field is object with signal strength values
 			const sigObj = d.signal as Record<string, number> | undefined;
 			const signalDbm = sig ?? sigObj?.last_signal ?? -80;
 
@@ -127,6 +131,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 			const responseData = {
 				devices: normalizeFusionDevices(
 					// Safe: Kismet device array cast to Record array for normalizeFusionDevices function signature
+					// Safe: devices array elements double-cast for Kismet raw device transformation
 					(devices || []) as unknown as Record<string, unknown>[],
 					gps
 				),

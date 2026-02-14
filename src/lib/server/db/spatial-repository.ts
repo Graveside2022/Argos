@@ -27,6 +27,7 @@ export function findDevicesNearby(
 		lon_min: grid.lon_min,
 		lon_max: grid.lon_max,
 		since: query.startTime || Date.now() - 300000 // Default: last 5 minutes
+		// Safe: SQLite query returns aggregated device rows with computed columns
 	}) as Array<DbDevice & { avg_lat: number; avg_lon: number; signal_count: number }>;
 }
 

@@ -33,6 +33,7 @@ export class KismetService {
 			});
 
 			if (response.ok) {
+				// Safe: Kismet API response matches KismetControlResponse per route contract
 				const data = (await response.json()) as KismetControlResponse;
 
 				// Get current status
@@ -113,6 +114,7 @@ export class KismetService {
 					clearAllKismetDevices(); // Clear all devices and signals from the map
 				}, 2000);
 			} else {
+				// Safe: Kismet API response matches KismetControlResponse per route contract
 				const data = (await response.json()) as KismetControlResponse;
 				throw new Error(data.message || 'Failed to stop Kismet');
 			}
@@ -144,6 +146,7 @@ export class KismetService {
 		try {
 			const response = await fetch('/api/kismet/devices');
 			if (response.ok) {
+				// Safe: Kismet API response matches KismetDevicesResponse per route contract
 				const data = (await response.json()) as KismetDevicesResponse;
 
 				// Update devices in store

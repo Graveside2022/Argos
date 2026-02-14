@@ -43,7 +43,8 @@ export class KismetServiceManager {
 		} catch (error) {
 			return {
 				running: false,
-		// Safe: Error handling
+				// Safe: Error handling
+				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
 				error: error instanceof Error ? (error as Error).message : 'Unknown error'
 			};
 		}
@@ -75,7 +76,8 @@ export class KismetServiceManager {
 		} catch (error) {
 			return {
 				success: false,
-		// Safe: Error handling
+				// Safe: Error handling
+				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
 				message: `Failed to start Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
 			};
 		}
@@ -192,7 +194,8 @@ export class KismetServiceManager {
 		} catch (error) {
 			return {
 				success: false,
-		// Safe: Error handling
+				// Safe: Error handling
+				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
 				message: `Failed to stop Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
 			};
 		}
@@ -213,7 +216,8 @@ export class KismetServiceManager {
 		} catch (error) {
 			return {
 				success: false,
-		// Safe: Error handling
+				// Safe: Error handling
+				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
 				message: `Failed to restart Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
 			};
 		}
@@ -228,7 +232,8 @@ export class KismetServiceManager {
 			return stdout.trim().split('\n').filter(Boolean);
 		} catch (error) {
 			return [
-		// Safe: Error handling
+				// Safe: Error handling
+				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
 				`Error reading logs: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
 			];
 		}

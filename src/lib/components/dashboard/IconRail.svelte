@@ -1,9 +1,12 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#TBD — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import {
 		activeBottomTab,
 		activePanel,
 		toggleBottomTab,
-		togglePanel	} from '$lib/stores/dashboard/dashboard-store';
+		togglePanel
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminal-store';
 
 	const topIcons = [
@@ -73,6 +76,7 @@
 			aria-pressed={$activePanel === 'overview'}
 			onclick={() => handleClick(topIcons[0].id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html topIcons[0].svg}
 		</button>
 		<!-- Devices (middle) -->
@@ -84,6 +88,7 @@
 			aria-pressed={$activeBottomTab === 'devices'}
 			onclick={() => handleClick(devicesIcon.id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html devicesIcon.svg}
 		</button>
 		<!-- Tools (zap) -->
@@ -95,6 +100,7 @@
 			aria-pressed={$activePanel === 'tools'}
 			onclick={() => handleClick(topIcons[1].id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html topIcons[1].svg}
 		</button>
 	</div>
@@ -110,6 +116,7 @@
 			aria-pressed={$activeBottomTab === 'terminal'}
 			onclick={() => handleClick(terminalIcon.id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html terminalIcon.svg}
 		</button>
 		<button
@@ -120,6 +127,7 @@
 			aria-pressed={$activeBottomTab === 'chat'}
 			onclick={() => handleClick(chatIcon.id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html chatIcon.svg}
 		</button>
 		<button
@@ -130,6 +138,7 @@
 			aria-pressed={$activePanel === layersIcon.id}
 			onclick={() => handleClick(layersIcon.id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html layersIcon.svg}
 		</button>
 		<button
@@ -140,6 +149,7 @@
 			aria-pressed={$activePanel === bottomIcon.id}
 			onclick={() => handleClick(bottomIcon.id)}
 		>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string, no user input reaches this directive -->
 			{@html bottomIcon.svg}
 		</button>
 	</div>

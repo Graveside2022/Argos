@@ -76,6 +76,7 @@ export function errorResponse(error: string, timestamp?: number): ApiResponse<ne
  */
 export function validateApiResponse<T>(data: unknown, dataSchema: ZodType<T>) {
 	const schema = ApiResponseSchema(dataSchema);
+	// Safe: Zod schema.parse() validates data — result matches ApiResponse<T>
 	return schema.parse(data) as ApiResponse<T>;
 }
 

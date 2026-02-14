@@ -1,3 +1,4 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';

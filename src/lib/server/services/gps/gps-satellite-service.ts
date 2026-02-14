@@ -133,7 +133,8 @@ function parseSatellites(data: unknown): Satellite[] {
 		return [];
 	}
 
-		// Safe: Type cast for dynamic data access
+	// Safe: Type cast for dynamic data access
+	// Safe: gpsd JSON response cast to Record for dynamic field access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {
@@ -149,9 +150,10 @@ function parseSatellites(data: unknown): Satellite[] {
 			return (
 				typeof sat === 'object' &&
 				sat !== null &&
-		// Safe: Type cast for dynamic data access
+				// Safe: Type cast for dynamic data access
+				// Safe: satellite array elements cast to Record for PRN/gnssid field validation
 				typeof (sat as Record<string, unknown>).PRN === 'number' &&
-		// Safe: Type cast for dynamic data access
+				// Safe: Type cast for dynamic data access
 				typeof (sat as Record<string, unknown>).gnssid === 'number'
 			);
 		})
@@ -240,7 +242,8 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 			}
 
 			// Capture uSat (used satellite count) if present
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
+			// Safe: gpsd response data cast to Record for SKY/TPV field access
 			const obj = result.data as Record<string, unknown>;
 			if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
 				usedSatCount = obj.uSat;
