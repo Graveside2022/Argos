@@ -4,6 +4,7 @@ import { glob } from 'glob';
 
 import { type Violation } from '../types.js';
 
+// @constitutional-exemption Article-IX-9.4 issue:#TBD — False positives: validator code contains security patterns it's checking for
 /**
  * Validate Article IX — Security
  * Detects: eval(), new Function(), innerHTML, hardcoded secrets
