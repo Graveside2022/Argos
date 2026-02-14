@@ -23,6 +23,7 @@ export const POST: RequestHandler = async () => {
 		return json(
 			{
 				success: false,
+				// Safe: Catch block error from KismetProxy.start() throws Error instances
 				error: (error as Error).message,
 				message: 'Failed to start Kismet'
 			},
