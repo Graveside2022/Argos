@@ -62,6 +62,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					gsmTestOutput = testResult.stdout + testResult.stderr;
 					console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 300)}`);
 				} catch (testError: unknown) {
+					// Safe: execFile error contains stdout/stderr properties for diagnostic output capture
 					const error = testError as { stdout?: string; stderr?: string };
 					gsmTestOutput = (error.stdout || '') + (error.stderr || '');
 				}
@@ -161,6 +162,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 						frameCount = tcpdumpFrames;
 					}
 				} catch (logError: unknown) {
+					// Safe: Log analysis error cast to Error for diagnostic message
 					console.warn(
 						`Direct log analysis failed: ${(logError as Error).message}, using tcpdump fallback`
 					);
@@ -263,8 +265,10 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					});
 				}
 			} catch (freqError) {
+				// Safe: Frequency test error cast to Error for warning message
 				console.warn(`Error testing ${freq} MHz: ${(freqError as Error).message}`);
 
+				// Safe: Error message check for hardware unavailability detection
 				if ((freqError as Error).message.includes('Hardware not available')) {
 					throw freqError;
 				}
@@ -312,6 +316,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 		return {
 			success: false,
 			message: 'Scan failed. Make sure GSM Evil is stopped first.',
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		};
 	}
