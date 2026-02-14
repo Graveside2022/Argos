@@ -144,6 +144,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			success: false,
 			message: 'Failed to start Kismet',
 		// Safe: Error handling
+				// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		};
 	}
