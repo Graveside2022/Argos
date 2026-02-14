@@ -59,6 +59,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 			if (deviceType === 'auto') {
 				// Auto-detect which device is active
 				const usrpManager = UsrpSweepManager.getInstance();
+	// Safe: Event data type assertion for RF stream data
 				const usrpStatus = usrpManager.getStatus() as StatusEvent;
 				const hackrfStatus = sweepManager.getStatus();
 

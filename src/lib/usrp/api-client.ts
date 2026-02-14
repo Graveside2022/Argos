@@ -39,6 +39,7 @@ export class USRPAPI {
 	async getStatus(): Promise<HackRFStatus> {
 		const response = await fetch('/api/rf/status?device=usrp');
 		if (!response.ok) throw new Error('Failed to get USRP status');
+		// Safe: /api/rf/status endpoint returns HackRFStatus shape per route contract
 		return response.json() as Promise<HackRFStatus>;
 	}
 
@@ -63,6 +64,7 @@ export class USRPAPI {
 		// Connect to SSE for real-time data
 		this.connectToDataStream();
 
+		// Safe: /api/hackrf/start-sweep returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
@@ -76,6 +78,7 @@ export class USRPAPI {
 
 		if (!response.ok) throw new Error('Failed to stop USRP sweep');
 
+		// Safe: /api/hackrf/stop-sweep returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
@@ -89,6 +92,7 @@ export class USRPAPI {
 
 		updateEmergencyStopStatus({ active: true, timestamp: Date.now() });
 
+		// Safe: /api/hackrf/emergency-stop returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
@@ -140,6 +144,7 @@ export class USRPAPI {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			let rawData: any;
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				rawData = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in sweep_data event', error);
@@ -185,6 +190,7 @@ export class USRPAPI {
 				startTime?: number;
 			};
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				status = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in status event', error);
@@ -224,6 +230,7 @@ export class USRPAPI {
 		this.addTrackedListener('cycle_config', (event) => {
 			let config: Record<string, unknown>;
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				config = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in cycle_config event', error);
@@ -241,6 +248,7 @@ export class USRPAPI {
 				status?: string;
 			};
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				change = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in status_change event', error);
@@ -264,6 +272,7 @@ export class USRPAPI {
 				connectionId: string;
 			};
 			try {
+				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				_data = JSON.parse(event.data as string);
 			} catch (error) {
 				console.warn('[USRPAPI] Invalid JSON in heartbeat event', error);
