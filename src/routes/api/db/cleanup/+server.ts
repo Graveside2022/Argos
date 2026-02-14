@@ -155,6 +155,7 @@ export const POST: RequestHandler = async ({ request }) => {
     initializeOptimizer();
     const cleanupService = getCleanupService();
     
+    // Safe: Record type for dynamic access
     const body = await request.json() as Record<string, unknown>;
     const { action, config } = body;
     

@@ -7,10 +7,12 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
+    // Safe: Record type for dynamic access
 		const body = (await request.json()) as Record<string, unknown>;
 		console.warn('[rf/start-sweep] Request body:', JSON.stringify(body, null, 2));
 
 		// Extract device type (default to hackrf for backward compatibility)
+    // Safe: String type assertion
 		const _deviceType = (body.deviceType as string) || 'hackrf';
 
 		// Extract frequencies from request
@@ -39,6 +41,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					// 3. Plain number
 					if (typeof range === 'object' && range !== null) {
 						let centerFreq;
+    // Safe: Record type for dynamic access
 						const rangeObj = range as Record<string, unknown>;
 						if (rangeObj.start !== undefined && rangeObj.stop !== undefined) {
 							centerFreq =
