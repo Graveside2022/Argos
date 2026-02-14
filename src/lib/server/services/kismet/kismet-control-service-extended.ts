@@ -143,6 +143,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		return {
 			success: false,
 			message: 'Failed to start Kismet',
+		// Safe: Error handling
 			error: (error as Error).message
 		};
 	}

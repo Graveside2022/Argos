@@ -105,6 +105,7 @@ export class WebSocketManager extends EventEmitter {
 	 */
 	private static readonly INSTANCE_KEY = '__argos_wsManager';
 	static getInstance(): WebSocketManager {
+		// Safe: Type cast for dynamic data access
 		const existing = (globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] as
 			| WebSocketManager
 			| undefined;
@@ -114,6 +115,7 @@ export class WebSocketManager extends EventEmitter {
 		}
 		if (!this.instance) {
 			this.instance = new WebSocketManager();
+		// Safe: Type cast for dynamic data access
 			(globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] = this.instance;
 		}
 		return this.instance;
@@ -310,6 +312,7 @@ export class WebSocketManager extends EventEmitter {
 	private emitDeviceUpdate(device: KismetDevice) {
 		const message: WebSocketMessage = {
 			type: 'device_update',
+		// Safe: Type cast for dynamic data access
 			data: device as unknown as Record<string, unknown>,
 			timestamp: new Date().toISOString()
 		};

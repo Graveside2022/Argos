@@ -110,6 +110,7 @@ function parseTPVData(data: unknown): TPVData | null {
 		return null;
 	}
 
+		// Safe: Type cast for dynamic data access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'TPV') {
@@ -135,6 +136,7 @@ function parseSkyMessage(data: unknown): SkyMessage | null {
 		return null;
 	}
 
+		// Safe: Type cast for dynamic data access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {

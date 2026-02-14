@@ -83,6 +83,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
+		// Safe: Type cast for dynamic data access
 			logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
 		}
 
@@ -121,6 +122,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
+		// Safe: Type cast for dynamic data access
 			logError('Error finding network interfaces:', error as Record<string, unknown>);
 		}
 

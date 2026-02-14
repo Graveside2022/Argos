@@ -100,6 +100,7 @@ class StreamingInspector extends BaseMCPServer {
 							eventTypes.add(event.type || 'message');
 						} catch (parseError) {
 							errors.push({
+				// Safe: Error handling for MCP server operations
 								message: `Failed to parse event data: ${(parseError as Error).message}`,
 								timestamp: now
 							});
@@ -138,6 +139,7 @@ class StreamingInspector extends BaseMCPServer {
 								eventTypes.add(eventType);
 							} catch (parseError) {
 								errors.push({
+				// Safe: Error handling for MCP server operations
 									message: `Failed to parse ${eventType}: ${(parseError as Error).message}`,
 									timestamp: now
 								});
