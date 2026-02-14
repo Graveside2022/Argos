@@ -156,6 +156,7 @@ export const POST: RequestHandler = async () => {
 			{
 				success: false,
 				message: 'Scan failed. Make sure GSM Evil is stopped first.',
+				// Safe: Catch block error cast to Error for scan failure message
 				error: (error as Error).message
 			},
 			{ status: 500 }
