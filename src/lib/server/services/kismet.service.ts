@@ -1,5 +1,11 @@
+import {
+	GPSAPIResponseSchema,
+	RawKismetDeviceSchema,
+	SimplifiedKismetDeviceSchema
+} from '$lib/schemas/kismet';
 import { KismetProxy } from '$lib/server/kismet';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 /**
  * Represents a wireless device detected by Kismet
@@ -59,14 +65,23 @@ export class KismetService {
 		try {
 			const gpsResponse = await fetchFn('/api/gps/position');
 			if (gpsResponse.ok) {
-				// Safe: JSON.parse returns unknown, cast to Record for property access
-				const gpsData = (await gpsResponse.json()) as Record<string, unknown>;
-				if (gpsData.success && gpsData.data) {
-					// Safe: gpsData.data existence checked on line above; narrowing for lat/lon access
-					const data = gpsData.data as Record<string, unknown>;
+				const rawData = await gpsResponse.json();
+
+				// Validate GPS API response (T-kismet-1)
+				const validated = safeParseWithHandling(
+					GPSAPIResponseSchema,
+					rawData,
+					'background'
+				);
+				if (!validated) {
+					logError('Invalid GPS API response', { rawData }, 'gps-api-validation-failed');
+					return null;
+				}
+
+				if (validated.success && validated.data) {
 					return {
-						latitude: data.latitude as number,
-						longitude: data.longitude as number
+						latitude: validated.data.latitude,
+						longitude: validated.data.longitude
 					};
 				}
 			}
@@ -231,122 +246,135 @@ export class KismetService {
 		kismetDevices: unknown[],
 		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
-		return kismetDevices.map((device: unknown) => {
-			// Safe: Kismet API returns JSON objects — cast to Record for dynamic field access throughout transform
-			const d = device as Record<string, unknown>;
-			const rawSignal = (d.signal as number) || this.DEFAULT_SIGNAL;
-			const rawType = d.type as string;
+		const validatedDevices: KismetDevice[] = [];
 
-			// Safe: Device location field cast to Record for lat/lon extraction
-			const deviceLat = (d.location as Record<string, unknown>)?.lat as number;
-			// Safe: Device location field cast to Record for lat/lon extraction
-			const deviceLon = (d.location as Record<string, unknown>)?.lon as number;
+		for (const device of kismetDevices) {
+			// Validate simplified Kismet device data (T-kismet-2)
+			const validated = safeParseWithHandling(
+				SimplifiedKismetDeviceSchema,
+				device,
+				'background'
+			);
 
-			return {
-				mac: d.mac as string,
-				last_seen: new Date(d.lastSeen as string).getTime(),
+			if (!validated) {
+				logError(
+					'Invalid simplified Kismet device',
+					{ device },
+					'kismet-device-validation-failed'
+				);
+				continue; // Skip invalid device, continue with valid ones
+			}
+
+			const rawSignal = validated.signal ?? this.DEFAULT_SIGNAL;
+			const rawType = validated.type ?? 'unknown';
+			const deviceLat = validated.location?.lat;
+			const deviceLon = validated.location?.lon;
+
+			// Convert lastSeen to timestamp
+			const lastSeenTimestamp =
+				typeof validated.lastSeen === 'string'
+					? new Date(validated.lastSeen).getTime()
+					: validated.lastSeen;
+
+			validatedDevices.push({
+				mac: validated.mac,
+				last_seen: lastSeenTimestamp,
 				signal: {
 					last_signal: rawSignal,
 					max_signal: rawSignal,
 					min_signal: rawSignal
 				},
-				manufacturer: (d.manufacturer as string) || 'Unknown',
-				type: rawType?.toLowerCase() || 'unknown',
-				channel: parseInt(String(d.channel)) || 0,
-				frequency: (d.frequency as number) || (parseInt(String(d.channel)) || 0) * 5 + 2400,
-				packets: (d.packets as number) || 0,
-				datasize: (d.packets as number) || 0,
-				ssid: (d.ssid as string) || (d.name as string) || undefined,
-				encryption: Array.isArray(d.encryption)
-					? (d.encryption as string[])
-					: Array.isArray(d.encryptionType)
-						? (d.encryptionType as string[])
-						: undefined,
+				manufacturer: validated.manufacturer || 'Unknown',
+				type: rawType.toLowerCase(),
+				channel: parseInt(String(validated.channel)) || 0,
+				frequency:
+					validated.frequency || (parseInt(String(validated.channel)) || 0) * 5 + 2400,
+				packets: validated.packets || 0,
+				datasize: validated.packets || 0,
+				ssid: validated.ssid || validated.name || undefined,
+				encryption: validated.encryption || validated.encryptionType || undefined,
 				location: this.resolveLocation(
 					deviceLat,
 					deviceLon,
 					gpsPosition,
-					d.mac as string,
+					validated.mac,
 					rawSignal
 				)
-			};
-		});
+			});
+		}
+
+		return validatedDevices;
 	}
 
 	private static transformRawKismetDevices(
 		rawDevices: unknown[],
 		gpsPosition: GPSPosition | null
 	): KismetDevice[] {
-		return rawDevices.map((device: unknown) => {
-			// Safe: Raw Kismet JSON objects — cast to Record for dynamic kismet.* field access throughout transform
-			const d = device as Record<string, unknown>;
-			const rawSignal = this.extractSignalFromDevice(d);
-			const rawType = (d['kismet.device.base.type'] as string) || 'Unknown';
+		const validatedDevices: KismetDevice[] = [];
 
-			// Extract SSID from multiple possible locations in Kismet data
+		for (const device of rawDevices) {
+			// Validate raw Kismet device data (T-kismet-3)
+			const validated = safeParseWithHandling(RawKismetDeviceSchema, device, 'background');
+
+			if (!validated) {
+				logError(
+					'Invalid raw Kismet device',
+					{ device },
+					'raw-kismet-device-validation-failed'
+				);
+				continue; // Skip invalid device, continue with valid ones
+			}
+
+			// Extract signal from validated device
+			const rawSignal =
+				typeof validated['kismet.device.base.signal'] === 'object' &&
+				validated['kismet.device.base.signal'] !== null
+					? validated['kismet.device.base.signal']['kismet.common.signal.last_signal'] ||
+						validated['kismet.device.base.signal']['kismet.common.signal.max_signal'] ||
+						this.DEFAULT_SIGNAL
+					: validated['kismet.device.base.signal'] || this.DEFAULT_SIGNAL;
+
+			const rawType = validated['kismet.device.base.type'] || 'Unknown';
+
+			// Extract SSID from multiple possible locations
 			let ssid: string | undefined = undefined;
-			if (d['dot11.device']) {
-				// Safe: Kismet dot11 device data cast to Record for SSID field access
-				const dot11 = d['dot11.device'] as Record<string, unknown>;
+			if (validated['dot11.device']) {
 				ssid =
-					(dot11['dot11.device.last_beaconed_ssid'] as string) ||
-					// Safe: Kismet dot11 SSID map cast to Record for nested field access
-					((dot11['dot11.device.advertised_ssid_map'] as Record<string, unknown>)?.[
-						'ssid'
-					] as string) ||
+					validated['dot11.device']['dot11.device.last_beaconed_ssid'] ||
+					validated['dot11.device']['dot11.device.advertised_ssid_map']?.ssid ||
 					undefined;
 			}
-			if (!ssid && d['kismet.device.base.name']) {
-				ssid = d['kismet.device.base.name'] as string;
+			if (!ssid && validated['kismet.device.base.name']) {
+				ssid = validated['kismet.device.base.name'];
 			}
 
-			const locationData = d['kismet.device.base.location'] as
-				| Record<string, unknown>
-				| undefined;
-			const deviceLat = locationData?.['kismet.common.location.lat'] as number | undefined;
-			const deviceLon = locationData?.['kismet.common.location.lon'] as number | undefined;
+			const deviceLat =
+				validated['kismet.device.base.location']?.['kismet.common.location.lat'];
+			const deviceLon =
+				validated['kismet.device.base.location']?.['kismet.common.location.lon'];
+			const mac = validated['kismet.device.base.macaddr'] || 'Unknown';
 
-			return {
-				mac: (d['kismet.device.base.macaddr'] as string) || 'Unknown',
-				last_seen: ((d['kismet.device.base.last_time'] as number) || 0) * 1000,
+			validatedDevices.push({
+				mac,
+				last_seen: (validated['kismet.device.base.last_time'] || 0) * 1000,
 				signal: {
 					last_signal: rawSignal,
 					max_signal: rawSignal,
 					min_signal: rawSignal
 				},
-				manufacturer: (d['kismet.device.base.manuf'] as string) || 'Unknown',
+				manufacturer: validated['kismet.device.base.manuf'] || 'Unknown',
 				type: rawType.toLowerCase(),
-				channel: parseInt(String(d['kismet.device.base.channel'])) || 0,
+				channel: parseInt(String(validated['kismet.device.base.channel'])) || 0,
 				frequency:
-					(d['kismet.device.base.frequency'] as number) ||
-					(parseInt(String(d['kismet.device.base.channel'])) || 0) * 5 + 2400,
-				packets: (d['kismet.device.base.packets.total'] as number) || 0,
-				datasize: (d['kismet.device.base.packets.total'] as number) || 0,
-				ssid: ssid,
-				location: this.resolveLocation(
-					deviceLat,
-					deviceLon,
-					gpsPosition,
-					(d['kismet.device.base.macaddr'] as string) || 'Unknown',
-					rawSignal
-				)
-			};
-		});
-	}
-
-	private static extractSignalFromDevice(device: Record<string, unknown>): number {
-		const signalField = device['kismet.device.base.signal'];
-
-		if (typeof signalField === 'object' && signalField !== null) {
-			// Safe: signalField confirmed to be non-null object on line above
-			const signalObj = signalField as Record<string, unknown>;
-			return (
-				(signalObj['kismet.common.signal.last_signal'] as number) ||
-				(signalObj['kismet.common.signal.max_signal'] as number) ||
-				this.DEFAULT_SIGNAL
-			);
+					validated['kismet.device.base.frequency'] ||
+					(parseInt(String(validated['kismet.device.base.channel'])) || 0) * 5 + 2400,
+				packets: validated['kismet.device.base.packets.total'] || 0,
+				datasize: validated['kismet.device.base.packets.total'] || 0,
+				ssid,
+				location: this.resolveLocation(deviceLat, deviceLon, gpsPosition, mac, rawSignal)
+			});
 		}
 
-		return (signalField as number) || this.DEFAULT_SIGNAL;
+		return validatedDevices;
 	}
 }
