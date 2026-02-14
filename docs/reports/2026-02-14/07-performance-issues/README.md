@@ -1,7 +1,7 @@
 # Performance Issues Analysis
 
 **Violation Category:** MEDIUM (Article VI §6.1)
-**Violation Count:** 13 violations
+**Violation Count:** 2 violations
 **Impact:** Slow response times, resource waste, poor user experience
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟡 **MEDIUM** - Plan for later
@@ -35,79 +35,21 @@ npm run test
 ## 🔍 Detected Violations
 
 **Files Affected:** 1
-**Total Occurrences:** 13
+**Total Occurrences:** 2
 
 ### 1. package.json
 
 **Line:** 1
 **Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "@modelcontextprotocol/sdk": "1.26.0"
+**Fix:** Pin to exact version: "clsx": "2.1.1"
 **Status:** ⚠️ Pre-existing (since 2025-07-13)
 
 ### 2. package.json
 
 **Line:** 1
 **Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "@tailwindcss/forms": "0.5.10"
+**Fix:** Pin to exact version: "tailwind-merge": "3.4.0"
 **Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 3. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "@xterm/addon-fit": "0.11.0"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 4. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "@xterm/addon-web-links": "0.12.0"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 5. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "@xterm/xterm": "6.0.0"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 6. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "dotenv": "17.2.1"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 7. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "eventsource": "4.0.0"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 8. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "leaflet": "1.9.4"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 9. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "maplibre-gl": "5.6.1"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-### 10. package.json
-
-**Line:** 1
-**Rule:** Dependencies must have pinned versions
-**Fix:** Pin to exact version: "mgrs": "2.1.0"
-**Status:** ⚠️ Pre-existing (since 2025-07-13)
-
-_...and 3 more violations_
 
 ---
 
@@ -115,7 +57,7 @@ _...and 3 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 13 violations
+**Impact:** Resolves all 2 violations
 **Timeline:** 1-2 weeks
 **Risk:** LOW
 
@@ -152,7 +94,7 @@ _...and 3 more violations_
 Add exemption to affected files:
 
 ```typescript
-// @constitutional-exemption: Article VI §6.1 issue:#TBD
+// @constitutional-exemption: Article VI §6.1 issue:#999
 // Justification: [Reason for exemption]
 ```
 
@@ -185,7 +127,7 @@ MEDIUM priority violations can be addressed incrementally. Fix them as you touch
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1-2 weeks
-- Impact: Resolves 13 violations
+- Impact: Resolves 2 violations
 
 ---
 
@@ -218,6 +160,6 @@ MEDIUM priority violations can be addressed incrementally. Fix them as you touch
 
 **After Remediation:**
 
-- **MEDIUM violations:** 13 → 0 (all resolved)
+- **MEDIUM violations:** 2 → 0 (all resolved)
 - **Estimated Timeline:** 1-2 weeks
 - **Risk Level:** LOW

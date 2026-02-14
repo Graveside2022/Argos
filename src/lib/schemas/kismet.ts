@@ -172,21 +172,19 @@ export const KismetSignalSchema = z.object({
 });
 
 /**
- * Raw Kismet Device Schema (from Kismet REST API /devices/last-time/*/devices.json)
+ * Raw Kismet Device Schema (from Kismet REST API /devices/last-time/{wildcard}/devices.json)
  * Used by kismet.service.ts transformRawKismetDevices()
  *
  * Validation rules:
  * - All fields optional (Kismet API may omit fields for certain device types)
- * - Signal can be number or object with nested kismet.common.signal.* fields
- * - Location nested in kismet.device.base.location with kismet.common.location.* fields
+ * - Signal can be number or object with nested kismet.common.signal fields
+ * - Location nested in kismet.device.base.location with kismet.common.location fields
  */
 export const RawKismetDeviceSchema = z.object({
 	'kismet.device.base.macaddr': z.string().optional(),
 	'kismet.device.base.type': z.string().optional(),
 	'kismet.device.base.last_time': z.number().optional(),
-	'kismet.device.base.signal': z
-		.union([z.number(), KismetSignalSchema] as const)
-		.optional(),
+	'kismet.device.base.signal': z.union([z.number(), KismetSignalSchema] as const).optional(),
 	'kismet.device.base.location': KismetLocationSchema.optional(),
 	'kismet.device.base.manuf': z.string().optional(),
 	'kismet.device.base.name': z.string().optional(),
