@@ -1,6 +1,9 @@
 import { type Writable, writable } from 'svelte/store';
 
+import { SimplifiedSignalSchema } from '$lib/schemas/stores';
 import type { LeafletMarker } from '$lib/types/map';
+import { logError } from '$lib/utils/logger';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 export interface SimplifiedSignal {
 	id: string;
@@ -52,13 +55,34 @@ export const updateSignalCount = (count: number) => {
 };
 
 export const setCurrentSignal = (signal: SimplifiedSignal | null) => {
-	hackrfStore.update((state) => ({ ...state, currentSignal: signal }));
+	// Validate signal before setting as current (T040)
+	if (signal !== null) {
+		const validated = safeParseWithHandling(SimplifiedSignalSchema, signal, 'background');
+		if (!validated) {
+			logError(
+				'Invalid signal data for setCurrentSignal',
+				{ signal },
+				'signal-validation-failed'
+			);
+			return;
+		}
+		hackrfStore.update((state) => ({ ...state, currentSignal: validated }));
+	} else {
+		hackrfStore.update((state) => ({ ...state, currentSignal: null }));
+	}
 };
 
 export const addSignal = (signal: SimplifiedSignal) => {
+	// Validate signal before adding to store (T040)
+	const validated = safeParseWithHandling(SimplifiedSignalSchema, signal, 'background');
+	if (!validated) {
+		logError('Invalid signal data for addSignal', { signal }, 'signal-validation-failed');
+		return;
+	}
+
 	hackrfStore.update((state) => {
 		const newSignals = new Map(state.signals);
-		newSignals.set(signal.id, signal);
+		newSignals.set(validated.id, validated);
 		return {
 			...state,
 			signals: newSignals,
@@ -68,11 +92,26 @@ export const addSignal = (signal: SimplifiedSignal) => {
 };
 
 export const updateSignal = (signalId: string, updates: Partial<SimplifiedSignal>) => {
+	// Validate updated signal data before applying (T040)
 	hackrfStore.update((state) => {
 		const newSignals = new Map(state.signals);
 		const existingSignal = newSignals.get(signalId);
 		if (existingSignal) {
-			newSignals.set(signalId, { ...existingSignal, ...updates });
+			const mergedSignal = { ...existingSignal, ...updates };
+			const validated = safeParseWithHandling(
+				SimplifiedSignalSchema,
+				mergedSignal,
+				'background'
+			);
+			if (!validated) {
+				logError(
+					'Invalid signal update data',
+					{ signalId, updates },
+					'signal-update-validation-failed'
+				);
+				return state; // Return unchanged state if validation fails
+			}
+			newSignals.set(signalId, validated);
 		}
 		return { ...state, signals: newSignals };
 	});
