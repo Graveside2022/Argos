@@ -23,6 +23,9 @@ export default defineConfig({
 		minWorkers: 1,
 		pool: 'forks',
 		coverage: {
+			provider: 'v8',
+			enabled: true,
+			reportsDirectory: './coverage',
 			reporter: ['text', 'json', 'html'],
 			exclude: [
 				'node_modules/',
