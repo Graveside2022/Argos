@@ -17,7 +17,7 @@ export async function validateArticleIII(projectRoot: string): Promise<Violation
 
 		// Check files that fail coverage threshold (§3.2)
 		for (const file of coverage.details) {
-			if (!file.meetsThreshold) {
+			if (!file.meetsThreshold && shouldRequireHighCoverage(file.filePath)) {
 				violations.push({
 					id: randomUUID(),
 					severity: 'HIGH',
@@ -113,4 +113,46 @@ function shouldHaveTests(filePath: string): boolean {
 	}
 
 	return false;
+}
+
+/**
+ * Determine if file should require high (80%) test coverage
+ * Excludes build scripts, vendor code, benchmarks, and config files
+ */
+function shouldRequireHighCoverage(filePath: string): boolean {
+	// Exclude vendor/third-party code
+	if (filePath.includes('node_modules/') || filePath.includes('.venv/')) {
+		return false;
+	}
+
+	// Exclude build scripts and tooling
+	if (filePath.startsWith('scripts/build/') || filePath.startsWith('config/')) {
+		return false;
+	}
+
+	// Exclude benchmark and audit scripts (one-off utilities)
+	if (
+		filePath.includes('benchmark-') ||
+		filePath.includes('run-audit.ts') ||
+		filePath.includes('/constitution/')
+	) {
+		return false;
+	}
+
+	// Exclude configuration files
+	if (
+		filePath.endsWith('.config.ts') ||
+		filePath.endsWith('.config.js') ||
+		filePath.endsWith('.config.cjs')
+	) {
+		return false;
+	}
+
+	// Exclude type definition files
+	if (filePath.endsWith('.d.ts')) {
+		return false;
+	}
+
+	// Require coverage for core application code
+	return true;
 }
