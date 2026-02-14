@@ -73,6 +73,7 @@
 	let gpsLngLat: LngLatLike | null = $derived.by(() => {
 		const { lat, lon } = $gpsStore.position;
 		if (lat === 0 && lon === 0) return null;
+	// Safe: [lon, lat] array narrowed to LngLatLike for MapLibre coordinate type compatibility
 		return [lon, lat] as LngLatLike;
 	});
 
@@ -90,9 +91,11 @@
 		const { lat, lon } = $gpsStore.position;
 		const acc = $gpsStore.status.accuracy;
 		if ((lat === 0 && lon === 0) || acc <= 0) {
+		// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 			return { type: 'FeatureCollection' as const, features: [] };
 		}
 		return {
+		// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 			type: 'FeatureCollection' as const,
 			features: [createCirclePolygon(lon, lat, acc)]
 		};
@@ -101,6 +104,7 @@
 	let detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
 		const { lat, lon } = $gpsStore.position;
 		if (lat === 0 && lon === 0) {
+		// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 			return { type: 'FeatureCollection' as const, features: [] };
 		}
 		const rangeFeatures: Feature[] = [];
@@ -110,6 +114,7 @@
 				properties: { band: b.band, color: b.color }
 			});
 		}
+	// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 		return { type: 'FeatureCollection' as const, features: rangeFeatures };
 	});
 
@@ -250,6 +255,7 @@
 				}
 			});
 		});
+		// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 		return { type: 'FeatureCollection' as const, features };
 	});
 
@@ -258,6 +264,7 @@
 		const state = $kismetStore;
 		const isoMac = $isolatedDeviceMAC;
 		const layerOn = $layerVisibility.connectionLines;
+		// Safe: GeoJSON type literal narrowed to const for empty FeatureCollection return
 		if (!isoMac && !layerOn) return { type: 'FeatureCollection' as const, features: [] };
 
 		const features: Feature[] = [];
@@ -294,6 +301,7 @@
 				});
 			}
 		});
+		// Safe: GeoJSON type literal narrowed to const for strict FeatureCollection type matching
 		return { type: 'FeatureCollection' as const, features };
 	});
 
@@ -471,7 +479,9 @@
 					samples: number;
 					avgSignal: number;
 				}) => ({
+				// Safe: GeoJSON Feature type literal narrowed to const for strict type matching
 					type: 'Feature' as const,
+				// Safe: GeoJSON Point geometry type literal narrowed to const for strict type matching
 					geometry: { type: 'Point' as const, coordinates: [t.lon, t.lat] },
 					properties: {
 						radio: t.radio,
@@ -631,6 +641,7 @@
 
 	function handleLocateClick() {
 		if (map && gpsLngLat) {
+		// Safe: LngLatLike narrowed to coordinate tuple [number, number] for MapLibre flyTo method
 			map.flyTo({ center: gpsLngLat as [number, number], zoom: 18 });
 		}
 	}
@@ -641,6 +652,7 @@
 			const props = features[0].properties;
 			const geom = features[0].geometry;
 			if (geom.type === 'Point') {
+			// Safe: GeoJSON Point geometry coordinates narrowed to [number, number] tuple for popup positioning
 				_popupLngLat = geom.coordinates as [number, number];
 				popupContent = {
 					ssid: props?.ssid ?? 'Unknown',
@@ -684,6 +696,7 @@
 		const clusterId = features[0].properties?.cluster_id;
 		if (clusterId === undefined) return;
 
+		// Safe: MapLibre getSource returns Source type, narrowing to GeoJSONSource for cluster methods
 		const source = map.getSource('devices-src') as maplibregl.GeoJSONSource;
 		if (!source) return;
 
@@ -692,6 +705,7 @@
 			const geom = features[0].geometry;
 			if (geom.type === 'Point') {
 				map.easeTo({
+				// Safe: GeoJSON Point geometry coordinates narrowed to [number, number] tuple for map easeTo center
 					center: geom.coordinates as [number, number],
 					zoom: Math.min(zoom, 18)
 				});
@@ -723,6 +737,7 @@
 			const props = features[0].properties;
 			const geom = features[0].geometry;
 			if (geom.type === 'Point') {
+			// Safe: GeoJSON Point geometry coordinates narrowed to [number, number] tuple for tower popup positioning
 				towerPopupLngLat = geom.coordinates as [number, number];
 				towerPopupContent = {
 					radio: props?.radio ?? 'Unknown',
