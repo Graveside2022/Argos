@@ -73,6 +73,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get all currently active WiFi devices within detection range. Returns devices with signal strength, MAC address, SSID, manufacturer, encryption, and location.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				filter_type: {
@@ -130,6 +131,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get detailed information about a specific WiFi device by MAC address or name. Returns signal, encryption, manufacturer, packets, and location data.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				device_id: {
@@ -182,6 +184,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get RF signals detected near a specific GPS location from the signal database. Returns signal strength, frequency, and type.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				latitude: { type: 'number', description: 'Latitude coordinate' },
@@ -213,6 +216,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Analyze the security configuration of a WiFi network. Returns encryption type, cipher, authentication method, and security assessment.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				network_id: { type: 'string', description: 'The network SSID or BSSID' }
@@ -279,6 +283,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get current RF spectrum/HackRF status and data. Returns sweep status, frequency range, and signal levels.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				start_freq_mhz: { type: 'number', description: 'Start frequency in MHz' },
@@ -301,6 +306,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get nearby cell towers from OpenCellID database. Returns tower radio type, MCC/MNC, LAC, cell ID, location, and signal strength.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				latitude: {
@@ -345,6 +351,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Query historical signal data from the database. Track signal patterns over time for a device or frequency range.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				device_id: { type: 'string', description: 'Device ID to query (optional)' },
@@ -374,6 +381,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get Argos system statistics: CPU usage, memory usage, hostname, uptime. Useful for monitoring system health.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {}
 		},
@@ -387,6 +395,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get Kismet WiFi scanner service status: running state, device count, interface, uptime.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {}
 		},
@@ -404,6 +413,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Get GSM Evil service status and detected IMSI data. Shows GSM monitoring state and captured identifiers.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {}
 		},
@@ -426,6 +436,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Scan system for all 90+ OFFNET/ONNET tools and their installation status. Detects Docker containers, native binaries, and systemd services. Returns installed tools with deployment type (docker/native/service). Run this to discover what RF/network analysis capabilities are available.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				installed_only: {
@@ -478,6 +489,7 @@ const ARGOS_TOOLS = [
 		description:
 			'Scan for all connected hardware: SDR devices (HackRF, RTL-SDR, USRP), WiFi adapters (ALFA), Bluetooth, GPS modules, cellular modems, serial devices. Returns categories, connection types, capabilities, and compatible tools. Detects USB, serial, and network-attached hardware.',
 		inputSchema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: {
 				category: {

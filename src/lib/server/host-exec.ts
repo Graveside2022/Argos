@@ -42,6 +42,7 @@ export async function hostExec(
 	cmd: string,
 	options?: { timeout?: number }
 ): Promise<{ stdout: string; stderr: string }> {
+	// Safe: Encoding literal narrowed to const for child_process exec options type
 	const execOpts = { ...options, encoding: 'utf8' as const };
 	const inDocker = await isDockerContainer();
 	if (inDocker) {

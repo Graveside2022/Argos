@@ -5,6 +5,7 @@
 
 // ─── RF / GSM Limits ───────────────────────────────────────────────
 
+// Safe: Object literal narrowed to const for readonly constant configuration values
 export const GSM_LIMITS = {
 	FREQ_MIN_MHZ: 800,
 	FREQ_MAX_MHZ: 2000,
@@ -14,6 +15,7 @@ export const GSM_LIMITS = {
 
 // ─── Geographic Constants ──────────────────────────────────────────
 
+// Safe: Object literal narrowed to const for readonly geographic constant configuration
 export const GEO = {
 	/** Earth radius in meters (WGS84 mean) */
 	EARTH_RADIUS_M: 6371000,
