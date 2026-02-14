@@ -168,6 +168,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 
 		// Build partial status with proper type checking
 		const partialStatus: Partial<KismetStatus> = {};
+	// Safe: Type cast for dynamic access
 		const statusObj = status as Record<string, unknown>;
 
 		// Type-safe property extraction
@@ -193,6 +194,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		if (!device || typeof device !== 'object' || device === null) return;
 
 		// Type narrowing with explicit checks
+	// Safe: Type cast for dynamic access
 		const deviceObj = device as Record<string, unknown>;
 		if (!('mac' in deviceObj) || typeof deviceObj.mac !== 'string') return;
 
@@ -216,6 +218,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		if (!device || typeof device !== 'object' || device === null) return;
 
 		// Type narrowing with explicit checks
+	// Safe: Type cast for dynamic access
 		const deviceObj = device as Record<string, unknown>;
 		if (!('mac' in deviceObj) || typeof deviceObj.mac !== 'string') return;
 
@@ -244,6 +247,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	private handleDeviceRemoved(data: unknown): void {
 		if (!data || typeof data !== 'object' || data === null) return;
 
+	// Safe: Type cast for dynamic access
 		const dataObj = data as Record<string, unknown>;
 		if (!('mac' in dataObj) || typeof dataObj.mac !== 'string') return;
 
@@ -256,6 +260,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	private handleDevicesList(data: unknown): void {
 		if (!data || typeof data !== 'object' || data === null) return;
 
+	// Safe: Type cast for dynamic access
 		const dataObj = data as Record<string, unknown>;
 		if (!('devices' in dataObj) || !Array.isArray(dataObj.devices)) return;
 
@@ -273,6 +278,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		if (!network || typeof network !== 'object' || network === null) return;
 
 		// Type narrowing with explicit checks
+	// Safe: Type cast for dynamic access
 		const networkObj = network as Record<string, unknown>;
 		if (!('ssid' in networkObj) || typeof networkObj.ssid !== 'string') return;
 
@@ -294,6 +300,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	private handleNetworksList(data: unknown): void {
 		if (!data || typeof data !== 'object' || data === null) return;
 
+	// Safe: Type cast for dynamic access
 		const dataObj = data as Record<string, unknown>;
 		if (!('networks' in dataObj) || !Array.isArray(dataObj.networks)) return;
 
@@ -310,6 +317,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	private handleAlert(alert: unknown): void {
 		if (!alert || typeof alert !== 'object' || alert === null) return;
 
+	// Safe: Type cast for dynamic access
 		const alertObj = alert as Record<string, unknown>;
 		const message =
 			'message' in alertObj && typeof alertObj.message === 'string'
@@ -357,6 +365,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	private handleGpsUpdate(gps: unknown): void {
 		if (!gps || typeof gps !== 'object' || gps === null) return;
 
+	// Safe: Type cast for dynamic access
 		const gpsObj = gps as Record<string, unknown>;
 
 		// Build a proper KismetGPS object with defaults

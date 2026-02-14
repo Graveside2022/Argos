@@ -368,6 +368,7 @@ describe('Performance Benchmarks', () => {
 								acc[d.vendor].push(d);
 								return acc;
 							},
+		// Safe: Test data structure assertion
 							{} as Record<string, typeof devices>
 						)
 				},
