@@ -178,8 +178,10 @@ export const GET: RequestHandler = () => {
 			onSpectrumData = (data: unknown) => {
 				if (!onSpectrum) return;
 				if (data && typeof data === 'object' && 'data' in data) {
+					// Safe: Runtime check confirms object with 'data' property, narrowing to nested structure
 					onSpectrum((data as { data: SpectrumData }).data);
 				} else {
+					// Safe: Event emitter contract guarantees SpectrumData type for spectrum_data events
 					onSpectrum(data as SpectrumData);
 				}
 			};
