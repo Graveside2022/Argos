@@ -367,14 +367,14 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.5: Tactical Map Feature Module Migration
 
-- [ ] T135 [US3] Move `src/lib/services/tactical-map/` → `src/lib/tactical-map/` (entire directory)
-- [ ] T136 [US3] Organize Tactical Map module: create `src/lib/tactical-map/map-engine.ts`, `src/lib/tactical-map/layers/`, `src/lib/tactical-map/stores.ts`
-- [ ] T137 [US3] Update all imports throughout codebase: `grep -r "from.*services.*tactical-map" src/` and replace with `src/lib/tactical-map/`
-- [ ] T138 [US3] Run TypeScript compilation: `npm run typecheck`
-- [ ] T139 [US3] Run ESLint: `npm run lint`
-- [ ] T140 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T141 [US3] Verify Tactical Map works: Manual test (open map panel, verify GPS marker, WiFi network markers display)
-- [ ] T142 [US3] Commit Tactical Map migration: `git add . && git commit -m "refactor(tactical-map): migrate to feature-based architecture
+- [X] T135 [US3] Move `src/lib/services/tactical-map/` → `src/lib/tactical-map/` (entire directory)
+- [X] T136 [US3] Organize Tactical Map module: create `src/lib/tactical-map/map-engine.ts`, `src/lib/tactical-map/layers/`, `src/lib/tactical-map/stores.ts`
+- [X] T137 [US3] Update all imports throughout codebase: `grep -r "from.*services.*tactical-map" src/` and replace with `src/lib/tactical-map/`
+- [X] T138 [US3] Run TypeScript compilation: `npm run typecheck`
+- [X] T139 [US3] Run ESLint: `npm run lint`
+- [X] T140 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T141 [US3] Verify Tactical Map works: Manual test (open map panel, verify GPS marker, WiFi network markers display)
+- [X] T142 [US3] Commit Tactical Map migration: `git add . && git commit -m "refactor(tactical-map): migrate to feature-based architecture
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
