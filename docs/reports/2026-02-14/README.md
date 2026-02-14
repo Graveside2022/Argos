@@ -205,9 +205,13 @@ Based on priority and impact:
 - Created: src/lib/schemas/database.ts (DbSignalSchema, DbNetworkSchema, DbDeviceSchema, DbRelationshipSchema)
 - All database operations now validate input and query results with Zod
 
-**Priority 3: Store Validation (4-6 hours)**
+**Priority 3: Store Validation (4-6 hours)** ✅ **COMPLETE** (Feb 14, 2026)
 
-- T037-T040: Add Zod validation to 4 stores (signals, networks, gps, hackrf)
+- T037-T038: ⏭️ **SKIPPED** - No dedicated signals/networks stores exist (data managed through database)
+- T039: ✅ **COMPLETE** - Added Zod validation to gps-store.ts (2 functions: updateGPSPosition, updateGPSStatus)
+- T040: ✅ **COMPLETE** - Added Zod validation to hackrf-store.ts (3 functions: setCurrentSignal, addSignal, updateSignal)
+- Created: src/lib/schemas/stores.ts (GPSPositionSchema, GPSStatusSchema, SimplifiedSignalSchema)
+- All store update functions now validate input data with Zod before updating reactive state
 
 **Priority 4: API Endpoints (3 hours)**
 
@@ -232,8 +236,8 @@ Based on priority and impact:
 ### **This Week:**
 
 6. ✅ Database validation complete (T034-T036)
-7. ⏳ Store validation (T037-T040) - IN PROGRESS
-8. ⏳ API endpoints (T027, T029, T033)
+7. ✅ Store validation complete (T039-T040, T037-T038 skipped - no stores exist)
+8. ⏳ API endpoints (T027, T029, T033) - NEXT
 9. ⚠️ Install Shadcn toast component (T043) - BLOCKED on Tailwind v4
 10. Run full test suite and performance benchmarks
 11. Re-run constitutional audit to verify improvements
