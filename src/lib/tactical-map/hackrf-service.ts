@@ -1,5 +1,5 @@
+import { hackrfAPI } from '$lib/hackrf/api-legacy';
 import { spectrumData } from '$lib/hackrf/stores';
-import { hackrfAPI } from '$lib/services/hackrf/api';
 import {
 	clearAllSignals,
 	hackrfStore,

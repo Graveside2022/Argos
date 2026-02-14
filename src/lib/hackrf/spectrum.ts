@@ -5,7 +5,7 @@
 
 import { derived, get, type Readable, type Writable, writable } from 'svelte/store';
 
-import type { SignalDetection } from '$lib/services/api/hackrf';
+import type { SignalDetection } from '$lib/api/hackrf';
 
 export interface TimeWindowConfig {
 	windowDuration: number; // Duration in seconds
