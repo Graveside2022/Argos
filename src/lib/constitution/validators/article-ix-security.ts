@@ -4,10 +4,9 @@ import { glob } from 'glob';
 
 import { type Violation } from '../types.js';
 
-// @constitutional-exemption Article-IX-9.4 issue:#TBD — False positives: validator code contains security patterns it's checking for
 /**
  * Validate Article IX — Security
- * Detects: eval(), new Function(), innerHTML, hardcoded secrets
+ * Checks for: dynamic code execution, innerHTML, hardcoded secrets, unsanitized HTML directives
  */
 export async function validateArticleIX(projectRoot: string): Promise<Violation[]> {
 	const violations: Violation[] = [];
@@ -34,13 +33,59 @@ export async function validateArticleIX(projectRoot: string): Promise<Violation[
 }
 
 /**
+ * Check if a line or the preceding lines (up to 3 lines back) contain an exemption comment
+ * for the specified article section.
+ */
+function isExempted(lines: string[], index: number, articleSection: string): boolean {
+	const exemptionPattern = /@constitutional-exemption\s+Article-[IVX]+-/;
+	const line = lines[index];
+	// Check current line for inline exemption
+	if (exemptionPattern.test(line) && line.includes(articleSection)) {
+		return true;
+	}
+	// Check up to 3 preceding lines for exemption comments above the violation
+	for (let i = 1; i <= 3 && index - i >= 0; i++) {
+		const prevLine = lines[index - i];
+		if (exemptionPattern.test(prevLine) && prevLine.includes(articleSection)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Check if a line is a comment (JS/TS/JSDoc/HTML comment)
+ */
+function isCommentLine(line: string): boolean {
+	const trimmed = line.trim();
+	return (
+		trimmed.startsWith('//') ||
+		trimmed.startsWith('*') ||
+		trimmed.startsWith('/*') ||
+		trimmed.startsWith('<!--')
+	);
+}
+
+/**
  * Check for eval() and new Function() usage (§9.4)
+ * Skips comment lines and exempted lines to avoid false positives.
  */
 function checkEvalUsage(file: string, content: string): Violation[] {
 	const violations: Violation[] = [];
 	const lines = content.split('\n');
 
 	lines.forEach((line, index) => {
+		// Skip comment lines — mentions of eval() in docs/comments are not violations
+		if (isCommentLine(line)) return;
+
+		// Skip lines with exemption annotations
+		if (isExempted(lines, index, '9.4')) return;
+
+		// Match actual eval() or new Function() calls, not string literals containing the text
+		const trimmed = line.trim();
+		// Skip lines where eval appears only inside a string literal
+		if (isInsideStringLiteral(trimmed, 'eval')) return;
+
 		if (/\beval\s*\(/.test(line) || /new\s+Function\s*\(/.test(line)) {
 			violations.push({
 				id: randomUUID(),
@@ -50,7 +95,7 @@ function checkEvalUsage(file: string, content: string): Violation[] {
 				filePath: file,
 				lineNumber: index + 1,
 				violationType: 'eval-usage',
-				codeSnippet: line.trim().substring(0, 200),
+				codeSnippet: trimmed.substring(0, 200),
 				suggestedFix:
 					'Refactor to use safe alternatives (JSON.parse, template strings, etc.)',
 				isPreExisting: false,
@@ -63,6 +108,16 @@ function checkEvalUsage(file: string, content: string): Violation[] {
 }
 
 /**
+ * Heuristic: check if a keyword appears only inside a string literal on this line.
+ * Returns true if ALL occurrences of the keyword are inside quotes.
+ */
+function isInsideStringLiteral(line: string, keyword: string): boolean {
+	// Remove string literals and check if keyword still exists
+	const withoutStrings = line.replace(/(['"`])(?:(?!\1|\\).|\\.)*\1/g, '');
+	return !new RegExp(`\\b${keyword}\\s*\\(`).test(withoutStrings);
+}
+
+/**
  * Check for innerHTML usage (§9.4)
  */
 function checkInnerHTMLUsage(file: string, content: string): Violation[] {
@@ -70,6 +125,9 @@ function checkInnerHTMLUsage(file: string, content: string): Violation[] {
 	const lines = content.split('\n');
 
 	lines.forEach((line, index) => {
+		if (isCommentLine(line)) return;
+		if (isExempted(lines, index, '9.4')) return;
+
 		if (/\.innerHTML\s*=/.test(line)) {
 			violations.push({
 				id: randomUUID(),
@@ -100,6 +158,8 @@ function checkHtmlDirective(file: string, content: string): Violation[] {
 
 	const lines = content.split('\n');
 	lines.forEach((line, index) => {
+		if (isExempted(lines, index, '9.4')) return;
+
 		if (/{@html\s+/.test(line)) {
 			violations.push({
 				id: randomUUID(),
@@ -136,9 +196,12 @@ function checkHardcodedSecrets(file: string, content: string): Violation[] {
 
 	lines.forEach((line, index) => {
 		// Skip comments and imports
-		if (line.trim().startsWith('//') || line.trim().startsWith('import')) {
+		if (isCommentLine(line) || line.trim().startsWith('import')) {
 			return;
 		}
+
+		// Skip exempted lines
+		if (isExempted(lines, index, '9.1')) return;
 
 		for (const { pattern, type } of secretPatterns) {
 			if (pattern.test(line)) {

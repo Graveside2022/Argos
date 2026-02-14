@@ -16,6 +16,7 @@
 <header class="panel-header">
 	{#if canGoBack}
 		<button class="back-btn" onclick={navigateBack}>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 			{@html uiIcons.arrowLeft}
 			<span class="back-label">{parentTitle}</span>
 		</button>

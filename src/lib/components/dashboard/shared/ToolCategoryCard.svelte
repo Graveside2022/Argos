@@ -17,9 +17,11 @@
 <button class="category-card" onclick={() => navigateToCategory(category.id)}>
 	<div class="category-header">
 		{#if category.icon}
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 			<div class="category-icon">{@html category.icon}</div>
 		{/if}
 		<span class="category-name">{category.name}</span>
+		<!-- @constitutional-exemption Article-IX-9.4 issue:#TBD — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="chevron-right">{@html uiIcons.chevronRight}</div>
 	</div>
 	{#if category.description}

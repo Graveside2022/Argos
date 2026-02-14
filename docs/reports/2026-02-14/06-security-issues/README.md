@@ -1,7 +1,7 @@
 # Security Issues Analysis
 
-**Violation Category:** CRITICAL (Article IX §9.1)
-**Violation Count:** 17 violations
+**Violation Category:** CRITICAL (Article IX §9.4)
+**Violation Count:** 2 violations
 **Impact:** Potential security breaches, data exposure, unauthorized access
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🔴 **CRITICAL** - Requires immediate attention
@@ -11,7 +11,7 @@
 ## 📊 Quick Summary
 
 **Problem:** Security vulnerabilities or missing security controls
-**Constitution Rule:** Article IX §9.1 - "No hardcoded secrets"
+**Constitution Rule:** Article IX §9.4 - "No {@html} without sanitization — XSS vulnerability"
 **Solution:** See detailed analysis below
 
 ---
@@ -34,76 +34,21 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 8
-**Total Occurrences:** 17
+**Files Affected:** 2
+**Total Occurrences:** 2
 
-### 1. src/lib/server/auth/auth-middleware.ts
-
-**Line:** 24
-**Rule:** No hardcoded secrets
-**Fix:** Move Secret/Token to .env file and access via process.env
-**Status:** ⚠️ Pre-existing (since 2026-02-08)
-
-### 2. src/lib/constitution/validators/article-ix-security.ts
-
-**Line:** 10
-**Rule:** No eval() or new Function() — dynamic code execution forbidden
-**Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
-
-### 3. src/lib/constitution/validators/article-ix-security.ts
-
-**Line:** 37
-**Rule:** No eval() or new Function() — dynamic code execution forbidden
-**Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
-
-### 4. src/lib/constitution/validators/article-ix-security.ts
-
-**Line:** 49
-**Rule:** No eval() or new Function() — dynamic code execution forbidden
-**Fix:** Refactor to use safe alternatives (JSON.parse, template strings, etc.)
-
-### 5. src/lib/components/dashboard/TopStatusBar.svelte
+### 1. src/lib/components/dashboard/TopStatusBar.svelte
 
 **Line:** 730
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
 
-### 6. src/lib/components/dashboard/IconRail.svelte
+### 2. src/lib/components/dashboard/shared/ToolCard.svelte
 
-**Line:** 80
+**Line:** 51
 **Rule:** No {@html} without sanitization — XSS vulnerability
 **Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-09)
-
-### 7. src/lib/components/dashboard/IconRail.svelte
-
-**Line:** 92
-**Rule:** No {@html} without sanitization — XSS vulnerability
-**Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-09)
-
-### 8. src/lib/components/dashboard/IconRail.svelte
-
-**Line:** 104
-**Rule:** No {@html} without sanitization — XSS vulnerability
-**Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-09)
-
-### 9. src/lib/components/dashboard/IconRail.svelte
-
-**Line:** 120
-**Rule:** No {@html} without sanitization — XSS vulnerability
-**Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-02)
-
-### 10. src/lib/components/dashboard/IconRail.svelte
-
-**Line:** 131
-**Rule:** No {@html} without sanitization — XSS vulnerability
-**Fix:** Sanitize HTML with DOMPurify before {@html} or use {@text}
-**Status:** ⚠️ Pre-existing (since 2026-02-06)
-
-_...and 7 more violations_
+**Status:** ⚠️ Pre-existing (since 2026-02-05)
 
 ---
 
@@ -111,7 +56,7 @@ _...and 7 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 17 violations
+**Impact:** Resolves all 2 violations
 **Timeline:** 1 weeks
 **Risk:** LOW
 
@@ -148,7 +93,7 @@ _...and 7 more violations_
 Add exemption to affected files:
 
 ```typescript
-// @constitutional-exemption: Article IX §9.1 issue:#TBD
+// @constitutional-exemption: Article IX §9.4 issue:#TBD
 // Justification: [Reason for exemption]
 ```
 
@@ -181,7 +126,7 @@ CRITICAL violations should not be left unaddressed. Either fix them immediately 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1 weeks
-- Impact: Resolves 17 violations
+- Impact: Resolves 2 violations
 
 ---
 
@@ -214,6 +159,6 @@ CRITICAL violations should not be left unaddressed. Either fix them immediately 
 
 **After Remediation:**
 
-- **CRITICAL violations:** 17 → 0 (all resolved)
+- **CRITICAL violations:** 2 → 0 (all resolved)
 - **Estimated Timeline:** 1 weeks
 - **Risk Level:** LOW

@@ -1,31 +1,26 @@
 import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { calculateTrends } from '../../src/lib/constitution/trend-tracker.js';
 
 describe('calculateTrends', () => {
-	const reportDir = join(process.cwd(), '.specify/audit-reports');
+	// Use isolated temp directory so existing docs/reports/ audit files don't interfere
+	const tempRoot = join(process.cwd(), 'tests/constitution/fixtures/temp-trends');
 
 	beforeEach(() => {
-		// Clean up audit reports before each test for isolation
-		if (existsSync(reportDir)) {
-			const files = readdirSync(reportDir);
-			files.forEach((file) => {
-				if (file.startsWith('audit-') && file.endsWith('.json')) {
-					rmSync(join(reportDir, file));
-				}
-			});
-		} else {
-			mkdirSync(reportDir, { recursive: true });
-		}
+		mkdirSync(join(tempRoot, 'docs/reports'), { recursive: true });
+	});
+
+	afterEach(() => {
+		rmSync(tempRoot, { recursive: true, force: true });
 	});
 
 	it('should mark first audit as baseline', async () => {
 		const report = createMockReport(75);
 
-		const result = await calculateTrends(report, process.cwd());
+		const result = await calculateTrends(report, tempRoot);
 
 		expect(result.trendDirection).toBe('baseline');
 		result.articleScores.forEach((score) => {
@@ -34,14 +29,46 @@ describe('calculateTrends', () => {
 	});
 
 	it('should detect improving trend when compliance increases', async () => {
-		// This test would require creating a previous report file
-		// For unit test, we verify the logic is correct
-		const report = createMockReport(80);
+		// Create a previous report with lower compliance
+		const previousReport = createMockReport(60);
+		writeFileSync(
+			join(tempRoot, 'docs/reports/audit-2026-02-13-120000.json'),
+			JSON.stringify(previousReport)
+		);
 
-		const result = await calculateTrends(report, process.cwd());
+		const currentReport = createMockReport(80);
 
-		// Without previous report, should be baseline
-		expect(result.trendDirection).toBe('baseline');
+		const result = await calculateTrends(currentReport, tempRoot);
+
+		expect(result.trendDirection).toBe('improving');
+	});
+
+	it('should detect stable trend when compliance unchanged', async () => {
+		const previousReport = createMockReport(80);
+		writeFileSync(
+			join(tempRoot, 'docs/reports/audit-2026-02-13-120000.json'),
+			JSON.stringify(previousReport)
+		);
+
+		const currentReport = createMockReport(80);
+
+		const result = await calculateTrends(currentReport, tempRoot);
+
+		expect(result.trendDirection).toBe('stable');
+	});
+
+	it('should detect degrading trend when compliance decreases', async () => {
+		const previousReport = createMockReport(90);
+		writeFileSync(
+			join(tempRoot, 'docs/reports/audit-2026-02-13-120000.json'),
+			JSON.stringify(previousReport)
+		);
+
+		const currentReport = createMockReport(70);
+
+		const result = await calculateTrends(currentReport, tempRoot);
+
+		expect(result.trendDirection).toBe('degrading');
 	});
 });
 
