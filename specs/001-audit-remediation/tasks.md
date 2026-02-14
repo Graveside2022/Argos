@@ -382,15 +382,15 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 ### Phase 5.6: WebSocket Base Extraction
 
-- [ ] T143 [US3] Identify shared WebSocket base code in `src/lib/server/websocket-server.ts`
-- [ ] T144 [US3] Extract shared WebSocket base code to `src/lib/server/websocket-base.ts`
-- [ ] T145 [US3] Update Kismet feature module to import from `src/lib/server/websocket-base.ts`
-- [ ] T146 [US3] Update HackRF feature module to import from `src/lib/server/websocket-base.ts`
-- [ ] T147 [US3] Update GPS feature module (if WebSocket used) to import from `src/lib/server/websocket-base.ts`
-- [ ] T148 [US3] Run TypeScript compilation: `npm run typecheck`
-- [ ] T149 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
-- [ ] T150 [US3] Verify all WebSocket connections work after extraction (HackRF FFT, Kismet WiFi, GPS position)
-- [ ] T151 [US3] Commit WebSocket base extraction: `git add . && git commit -m "refactor(websocket): extract shared base to websocket-base.ts
+- [X] T143 [US3] Identify shared WebSocket base code in `src/lib/server/websocket-server.ts`
+- [X] T144 [US3] Extract shared WebSocket base code to `src/lib/server/websocket-base.ts`
+- [X] T145 [US3] Update Kismet feature module to import from `src/lib/server/websocket-base.ts`
+- [X] T146 [US3] Update HackRF feature module to import from `src/lib/server/websocket-base.ts`
+- [X] T147 [US3] Update GPS feature module (if WebSocket used) to import from `src/lib/server/websocket-base.ts`
+- [X] T148 [US3] Run TypeScript compilation: `npm run typecheck`
+- [X] T149 [US3] Run full test suite: `npm run test:unit && npm run test:integration`
+- [X] T150 [US3] Verify all WebSocket connections work after extraction (HackRF FFT, Kismet WiFi, GPS position)
+- [X] T151 [US3] Commit WebSocket base extraction: `git add . && git commit -m "refactor(websocket): extract shared base to websocket-base.ts
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
