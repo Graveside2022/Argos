@@ -93,12 +93,14 @@ const ARGOS_TOOLS = [
 			let devices: KismetDevice[] = data.devices || [];
 
 			// Apply filters
+			// Safe: MCP SDK validates args against inputSchema before execute() is called
 			const minSignal = (args.min_signal_strength as number) ?? -90;
 			devices = devices.filter((d: KismetDevice) => {
 				const sig = d.signalStrength ?? d.signal?.last_signal ?? -100;
 				return sig >= minSignal;
 			});
 
+			// Safe: MCP SDK validates args against inputSchema before execute() is called
 			const filterType = (args.filter_type as string) || 'all';
 			if (filterType !== 'all') {
 				devices = devices.filter((d: KismetDevice) => {
@@ -143,6 +145,7 @@ const ARGOS_TOOLS = [
 			required: ['device_id']
 		},
 		execute: async (args: Record<string, unknown>) => {
+			// Safe: MCP SDK validates args against inputSchema (required: device_id) before execute() is called
 			const deviceId = (args.device_id as string) || '';
 			const resp = await apiFetch('/api/kismet/devices');
 			const data = await resp.json();
@@ -201,6 +204,7 @@ const ARGOS_TOOLS = [
 			required: ['latitude', 'longitude']
 		},
 		execute: async (args: Record<string, unknown>) => {
+			// Safe: MCP SDK validates args against inputSchema (required: latitude, longitude) before execute() is called
 			const lat = args.latitude as number;
 			const lon = args.longitude as number;
 			const radius = (args.radius_meters as number) || 100;
@@ -224,6 +228,7 @@ const ARGOS_TOOLS = [
 			required: ['network_id']
 		},
 		execute: async (args: Record<string, unknown>) => {
+			// Safe: MCP SDK validates args against inputSchema (required: network_id) before execute() is called
 			const networkId = (args.network_id as string) || '';
 			const resp = await apiFetch('/api/kismet/devices');
 			const data = await resp.json();
@@ -324,6 +329,7 @@ const ARGOS_TOOLS = [
 			}
 		},
 		execute: async (args: Record<string, unknown>) => {
+			// Safe: MCP SDK validates args against inputSchema before execute() is called
 			const lat = (args.latitude as number) || 0;
 			const lon = (args.longitude as number) || 0;
 			const radius = (args.radius_km as number) || 5;
@@ -361,6 +367,7 @@ const ARGOS_TOOLS = [
 			}
 		},
 		execute: async (args: Record<string, unknown>) => {
+			// Safe: MCP SDK validates args against inputSchema before execute() is called
 			const limit = (args.limit as number) || 100;
 			const startTime = args.start_time
 				? new Date(args.start_time as string).getTime()
@@ -517,6 +524,7 @@ const ARGOS_TOOLS = [
 				return { error: data.error || 'Hardware scan failed' };
 			}
 
+			// Safe: MCP SDK validates args against inputSchema before execute() is called
 			const filterCategory = (args.category as string) || 'all';
 			let hardware = data.hardware || {};
 
