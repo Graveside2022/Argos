@@ -192,12 +192,18 @@ Based on priority and impact:
 
 **Priority 1: Error Handling (2-3 hours)**
 
-- T043: Shadcn toast component integration
-- T044: Background validation logging verification
+- T043: ⚠️ **BLOCKED** - Shadcn toast requires Tailwind v4 upgrade (project uses v3.4.15)
+    - Decision needed: Upgrade Tailwind or use alternative toast solution
+    - Workaround: validation-error.ts already supports toast via showToast parameter
+- T044: Background validation logging verification (deferred until T043 resolved)
 
-**Priority 2: Database Validation (4-6 hours)**
+**Priority 2: Database Validation (4-6 hours)** ✅ **COMPLETE** (Feb 14, 2026)
 
-- T034-T036: Add Zod validation to signal/network/device repositories
+- T034: ✅ **COMPLETE** - Added Zod validation to signal-repository.ts (4 functions: insertSignal, insertSignalsBatch, updateSignal, findSignalsInRadius)
+- T035: ✅ **COMPLETE** - Added Zod validation to network-repository.ts (2 functions: storeNetworkGraph, getNetworkRelationships)
+- T036: ✅ **COMPLETE** - Added Zod validation to device-service.ts (2 functions: ensureDeviceExists, updateDeviceFromSignal)
+- Created: src/lib/schemas/database.ts (DbSignalSchema, DbNetworkSchema, DbDeviceSchema, DbRelationshipSchema)
+- All database operations now validate input and query results with Zod
 
 **Priority 3: Store Validation (4-6 hours)**
 
@@ -225,10 +231,12 @@ Based on priority and impact:
 
 ### **This Week:**
 
-6. Complete remaining P1 work (database, stores, APIs)
-7. Install Shadcn toast component (T043)
-8. Run full test suite and performance benchmarks
-9. Re-run constitutional audit to verify improvements
+6. ✅ Database validation complete (T034-T036)
+7. ⏳ Store validation (T037-T040) - IN PROGRESS
+8. ⏳ API endpoints (T027, T029, T033)
+9. ⚠️ Install Shadcn toast component (T043) - BLOCKED on Tailwind v4
+10. Run full test suite and performance benchmarks
+11. Re-run constitutional audit to verify improvements
 
 ### **Next Audit:**
 
