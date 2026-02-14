@@ -171,6 +171,7 @@ export class DatabaseOptimizer {
         AND name NOT LIKE 'sqlite_%'
     `
 			)
+			// Safe: sqlite_master schema guarantees name, tbl_name, sql columns for index entries
 			.all() as Array<{ index_name: string; table_name: string; sql: string }>;
 
 		// Analyze index usage (approximate based on EXPLAIN QUERY PLAN)
@@ -240,6 +241,7 @@ export class DatabaseOptimizer {
       WHERE m.type = 'table'
     `
 			)
+			// Safe: pragma_foreign_key_list returns name, table columns; joined with sqlite_master.name
 			.all() as Array<{ table_name: string; column_name: string; referenced_table: string }>;
 
 		for (const fk of foreignKeys) {
@@ -294,6 +296,7 @@ export class DatabaseOptimizer {
         AND name NOT LIKE 'sqlite_%'
     `
 			)
+			// Safe: sqlite_master WHERE type='index' guarantees name column exists
 			.all(tableName) as Array<{ name: string }>;
 
 		for (const index of indexes) {
@@ -309,7 +312,9 @@ export class DatabaseOptimizer {
 	 */
 	explainQuery(query: string, params: unknown[] = []) {
 		try {
+			// Safe: spread requires tuple type; params is unknown[] used as positional bind args
 			const plan = this.db.prepare(`EXPLAIN QUERY PLAN ${query}`).all(...(params as []));
+			// Safe: same spread-to-tuple cast as above for EXPLAIN positional bind args
 			const stats = this.db.prepare(`EXPLAIN ${query}`).all(...(params as []));
 
 			return {
@@ -318,6 +323,7 @@ export class DatabaseOptimizer {
 				estimatedCost: this.estimateQueryCost(plan)
 			};
 		} catch (error) {
+			// Safe: catch block error is from db.prepare() which throws Error instances
 			return { error: (error as Error).message };
 		}
 	}
@@ -329,6 +335,7 @@ export class DatabaseOptimizer {
 		let cost = 0;
 
 		for (const step of plan) {
+			// Safe: EXPLAIN QUERY PLAN rows contain detail property describing the query plan step
 			const stepData = step as { detail?: string };
 			if (stepData.detail) {
 				if (stepData.detail.includes('SCAN TABLE')) cost += 1000;
@@ -415,6 +422,7 @@ export class DatabaseOptimizer {
 			.prepare(
 				'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()'
 			)
+			// Safe: page_count * page_size SQL expression always returns single numeric 'size' column
 			.get() as { size: number };
 		const integrity = this.db.pragma('integrity_check');
 		const quickCheck = this.db.pragma('quick_check');
@@ -435,15 +443,19 @@ export class DatabaseOptimizer {
 		// Add row counts
 		for (const table of tables) {
 			try {
+				// Safe: table rows from sqlite_master always have a 'name' column
 				const safeTableName = validateSqlIdentifier(
 					(table as { name: string }).name,
 					'tableName'
 				);
 				const count = this.db
 					.prepare(`SELECT COUNT(*) as count FROM ${safeTableName}`)
+					// Safe: COUNT(*) always returns a single numeric column aliased as 'count'
 					.get() as { count: number };
+				// Safe: augmenting untyped sqlite_master row with computed row_count property
 				(table as { row_count: number }).row_count = count.count;
 			} catch (_error: unknown) {
+				// Safe: augmenting untyped sqlite_master row with fallback row_count on error
 				(table as { row_count: number }).row_count = -1;
 			}
 		}
@@ -477,6 +489,7 @@ export class DatabaseOptimizer {
 
 		// Table size recommendations
 		for (const table of tables) {
+			// Safe: table augmented with row_count above; index_count and name from sqlite_master query
 			const tableData = table as { row_count: number; index_count: number; name: string };
 			if (tableData.row_count > 100000 && tableData.index_count < 2) {
 				recommendations.push({
@@ -488,6 +501,7 @@ export class DatabaseOptimizer {
 		}
 
 		// Cache size recommendation
+		// Safe: cache_size pragma always returns a numeric value
 		const cacheSize = Math.abs((this.getPragmaSettings().cache_size as number) || 0);
 		if (dbSize > cacheSize * 1024 * 10) {
 			// Cache is < 10% of DB size
