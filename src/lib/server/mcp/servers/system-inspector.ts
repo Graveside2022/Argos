@@ -305,8 +305,11 @@ class SystemInspector extends BaseMCPServer {
 				};
 
 				const categorized = {
+					// Safe: MCP result data cast to string array
 					critical: [] as string[],
+					// Safe: MCP result data cast to string array
 					high: [] as string[],
+					// Safe: MCP result data cast to string array
 					medium: [] as string[]
 				};
 
