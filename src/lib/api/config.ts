@@ -123,6 +123,7 @@ export async function retryRequest<T>(
 		try {
 			return await request();
 		} catch (error) {
+	// Safe: Error handling
 			lastError = error as Error;
 
 			if (attempt === maxAttempts) {
