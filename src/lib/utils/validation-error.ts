@@ -205,7 +205,8 @@ export function safeParseWithHandling<T>(
 ): T | undefined {
 	const result = schema.safeParse(data);
 	if (!result.success) {
-		handleValidationError(result.error, context, data, showToast);
+		// Type assertion safe: Zod guarantees error exists when success is false
+		handleValidationError(result.error!, context, data, showToast);
 		return undefined;
 	}
 	return result.data;
