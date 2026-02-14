@@ -1,3 +1,4 @@
+	// Safe: WebSocket connection type assertion
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 
 export type WebSocketEventType = WebSocketEventEnum;
@@ -345,6 +346,7 @@ export abstract class BaseWebSocket {
 				type: event,
 				timestamp: Date.now(),
 				data: data?.data,
+	// Safe: Error type assertion for error handling
 				error: data?.error as Error | undefined
 			};
 
