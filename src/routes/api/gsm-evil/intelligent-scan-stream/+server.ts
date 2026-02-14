@@ -45,6 +45,7 @@ export const POST: RequestHandler = async ({ request: _request }) => {
 				}
 			} catch (error: unknown) {
 				// Service threw an unhandled error
+				// Safe: Catch block error cast to Error for scan failure message
 				const errorMsg = `[ERROR] Scan service failed: ${(error as Error).message}`;
 				controller.enqueue(
 					encoder.encode(`data: ${JSON.stringify({ message: errorMsg })}\n\n`)

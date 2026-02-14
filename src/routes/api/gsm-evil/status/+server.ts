@@ -7,6 +7,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
+		// Safe: Status properties initialized as null, explicitly typed for union types (number|null, string|null)
 		const status = {
 			grgsm: {
 				running: false,
@@ -112,6 +113,7 @@ export const GET: RequestHandler = async () => {
 			{
 				status: 'error',
 				message: 'Failed to check GSM Evil status',
+				// Safe: Catch block error cast to Error for message extraction in error response
 				error: (error as Error).message
 			},
 			{ status: 500 }
