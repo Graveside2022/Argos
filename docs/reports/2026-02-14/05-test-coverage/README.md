@@ -1,7 +1,7 @@
 # Test Coverage Analysis
 
 **Violation Category:** HIGH (Article III §3.2)
-**Violation Count:** 2 violations
+**Violation Count:** 6 violations
 **Impact:** Reduced confidence in code changes, potential regressions
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -34,16 +34,40 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 1
-**Total Occurrences:** 2
+**Files Affected:** 5
+**Total Occurrences:** 6
 
-### 1. src/lib/schemas/kismet.ts
+### 1. src/lib/schemas/api.ts
 
 **Line:** 1
 **Rule:** Test coverage must be ≥ 80%
 **Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
 
-### 2. src/lib/schemas/kismet.ts
+### 2. src/lib/schemas/database.ts
+
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+
+### 3. src/lib/schemas/hardware.ts
+
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+
+### 4. src/lib/schemas/stores.ts
+
+**Line:** 1
+**Rule:** Test coverage must be ≥ 80%
+**Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
+
+### 5. src/lib/schemas/stores.ts
+
+**Line:** 1
+**Rule:** Components and utilities must have tests
+**Fix:** Create test file: tests/lib/schemas/stores.test.ts
+
+### 6. src/lib/schemas/kismet.ts
 
 **Line:** 1
 **Rule:** Components and utilities must have tests
@@ -55,7 +79,7 @@ npm run test
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 2 violations
+**Impact:** Resolves all 6 violations
 **Timeline:** 2-3 weeks
 **Risk:** LOW
 
@@ -118,14 +142,14 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 2 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
+HIGH priority violations represent 6 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 2-3 weeks
-- Impact: Resolves 2 violations
+- Impact: Resolves 6 violations
 
 ---
 
@@ -158,6 +182,6 @@ HIGH priority violations represent 2 issues that should be addressed. The estima
 
 **After Remediation:**
 
-- **HIGH violations:** 2 → 0 (all resolved)
+- **HIGH violations:** 6 → 0 (all resolved)
 - **Estimated Timeline:** 2-3 weeks
 - **Risk Level:** LOW

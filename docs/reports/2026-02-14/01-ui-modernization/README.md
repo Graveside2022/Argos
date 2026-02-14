@@ -18,35 +18,26 @@
 
 ## 📦 Dependency Requirements
 
-**NEW Dependencies Required:** 5 packages
-**Bundle Size Impact:** +209KB
+**NEW Dependencies Required:** 3 packages
+**Bundle Size Impact:** +203KB
 **Total Cost:** LOW
 
-### clsx
-- **Version:** ^2.1.1
-- **Purpose:** Utility for constructing className strings conditionally
-- **Size:** ~1KB
-- **License:** MIT
-
-### tailwind-merge
-- **Version:** ^2.5.5
-- **Purpose:** Merge Tailwind CSS classes without style conflicts
-- **Size:** ~5KB
-- **License:** MIT
-
 ### tailwind-variants
+
 - **Version:** ^0.2.1
 - **Purpose:** Create component variants with Tailwind CSS
 - **Size:** ~3KB
 - **License:** MIT
 
 ### lucide-svelte
+
 - **Version:** ^0.468.0
 - **Purpose:** Icon library for Shadcn components
 - **Size:** ~150KB
 - **License:** ISC
 
 ### shadcn-svelte
+
 - **Version:** latest
 - **Purpose:** CLI for adding Shadcn components
 - **Size:** ~50KB
@@ -55,7 +46,7 @@
 **Installation:**
 
 ```bash
-npm install clsx@^2.1.1 tailwind-merge@^2.5.5 tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
+npm install tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
 npm install -D shadcn-svelte@latest
 npx shadcn-svelte@latest init
 ```
@@ -75,17 +66,20 @@ npm run build
 **Total Occurrences:** 3
 
 ### 1. src/routes/gsm-evil/+page.svelte
+
 **Line:** 257
 **Rule:** No browser alert/confirm/prompt
 **Fix:** Use custom modal component instead
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 2. src/routes/gsm-evil/+page.svelte
+
 **Line:** 266
 **Rule:** No browser alert/confirm/prompt
 **Fix:** Use custom modal component instead
 
 ### 3. src/lib/tactical-map/map-service.ts
+
 **Line:** 115
 **Rule:** No hardcoded hex colors — use Tailwind theme
 **Fix:** Replace #3b82f6 with Tailwind color class
@@ -102,6 +96,7 @@ npm run build
 **Risk:** MEDIUM
 
 **Approach:**
+
 1. Review all violations in detail
 2. Apply fixes systematically (file-by-file or phase-by-phase)
 3. Run tests after each change
@@ -116,6 +111,7 @@ npm run build
 **Risk:** LOW
 
 **Approach:**
+
 1. Fix violations as you touch related files
 2. Add exemption annotations for deferred work
 3. Track progress with periodic audits
@@ -130,6 +126,7 @@ npm run build
 
 **Approach:**
 Add exemption to affected files:
+
 ```typescript
 // @constitutional-exemption: Article II §2.7 issue:#999
 // Justification: [Reason for exemption]
@@ -144,11 +141,13 @@ Add exemption to affected files:
 ### 🟡 MEDIUM RISK
 
 **Dependency Risks:**
-- Adding 5 new packages to bundle (+209KB)
+
+- Adding 3 new packages to bundle (+203KB)
 - Version compatibility with existing dependencies
 - Potential transitive dependency conflicts
 
 **Mitigation:**
+
 - Run `npm install --dry-run` to check for conflicts before installation
 - Test thoroughly after installation
 - Monitor bundle size with `npm run build`
@@ -166,6 +165,7 @@ Add exemption to affected files:
 MEDIUM priority violations can be addressed incrementally. Fix them as you touch related code during normal feature development.
 
 **Cost-Benefit Analysis:**
+
 - Dependencies: LOW
 - Risk: MEDIUM
 - Timeline: 1-2 weeks
@@ -180,16 +180,16 @@ MEDIUM priority violations can be addressed incrementally. Fix them as you touch
 1. **Review this analysis** and choose an option (A, B, or C)
 2. **Create git branch:** `feature/${category.folderName}`
 3. **Install dependencies:**
-   ```bash
-   npm install clsx@^2.1.1 tailwind-merge@^2.5.5 tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
-   npm install -D shadcn-svelte@latest
-   npx shadcn-svelte@latest init
-   ```
+    ```bash
+    npm install tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
+    npm install -D shadcn-svelte@latest
+    npx shadcn-svelte@latest init
+    ```
 4. **Verify installation:**
-   ```bash
-   npm run typecheck
-   npm run build
-   ```
+    ```bash
+    npm run typecheck
+    npm run build
+    ```
 5. **Begin implementation** following the chosen option
 6. **Re-run audit** after completion: `npm run constitutional-audit`
 

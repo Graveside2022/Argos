@@ -1,7 +1,7 @@
 # Type Safety Violations Analysis
 
 **Violation Category:** HIGH (Article II §2.1)
-**Violation Count:** 3 violations
+**Violation Count:** 5 violations
 **Impact:** Potential runtime errors, unclear type assumptions, maintainability issues
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -33,66 +33,41 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 3
-**Total Occurrences:** 3
+**Files Affected:** 5
+**Total Occurrences:** 5
 
 ### 1. src/lib/server/kismet/fusion-controller.ts
 
 **Line:** 40
 **Rule:** Type assertion without justification comment
-**Fix:** ✅ **FIXED** - Replaced with Zod runtime validation (Feb 14, 2026)
-**Status:** Resolved in commit `ab26d90`
-**Implementation:** Added `KismetStatusResponseSchema.safeParse()` with error handling
+**Fix:** Add comment explaining why assertion is safe
+**Status:** ⚠️ Pre-existing (since 2026-02-11)
 
-### 2. src/lib/server/hardware/detection/serial-detector.ts
+### 2. src/lib/server/db/signal-repository.ts
+
+**Line:** 224
+**Rule:** Type assertion without justification comment
+**Fix:** Add comment explaining why assertion is safe
+
+### 3. src/lib/server/db/network-repository.ts
+
+**Line:** 87
+**Rule:** Type assertion without justification comment
+**Fix:** Add comment explaining why assertion is safe
+
+### 4. src/lib/server/hardware/detection/serial-detector.ts
 
 **Line:** 91
 **Rule:** Type assertion without justification comment
-**Fix:** **EXEMPTED** - Constitutional exemption approved
-**Status:** Approved exemption (issue #999) - GPS capabilities type narrowing
-**Justification:** Object literal satisfies GPSCapabilities, safe type narrowing
+**Fix:** Add comment explaining why assertion is safe
+**Status:** ⚠️ Pre-existing (since 2026-02-06)
 
-### 3. src/lib/server/hardware/detection/network-detector.ts
+### 5. src/lib/server/hardware/detection/network-detector.ts
 
 **Line:** 68
 **Rule:** Type assertion without justification comment
-**Fix:** ✅ **FIXED** - Replaced with Zod runtime validation (Feb 14, 2026)
-**Status:** Resolved in commit `ab26d90`
-**Implementation:** Added `DetectedHardwareSchema.safeParse()` with error handling
-
----
-
-## 📊 Remediation Progress
-
-### ✅ Completed Work (Feb 14, 2026):
-
-**Phase 1: Hardware Detection Type Safety**
-
-- Fixed 2 of 3 violations with Zod runtime validation
-- Created `src/lib/schemas/hardware.ts` (DetectedHardware validation)
-- Created `src/lib/schemas/kismet.ts` (Kismet API responses)
-- Added 27 comprehensive unit tests (all passing)
-- Created `src/lib/utils/validation-error.ts` (error handling foundation)
-- Commits: `ab26d90`, `10048a2`
-
-**Impact:**
-
-- 2 HIGH violations resolved
-- 1 HIGH violation exempted (approved)
-- Article II compliance: Expected improvement to ~85-90%
-
-### ⏳ Remaining P1 Work:
-
-**Broader Context** - Original 001-audit-remediation claimed 581 type assertions replaced, but forensic analysis shows only ~20-30% completed. See `docs/reports/P1-COMPLETION-PLAN.md` for detailed execution plan.
-
-**Next Steps:**
-
-1. Database validation (T034-T036) - 4-6 hours
-2. Store validation (T037-T040) - 4-6 hours
-3. API endpoints (T027, T029, T033) - 3 hours
-4. Toast integration (T043-T044) - 2-3 hours
-
-**Total Remaining:** ~12-18 hours to complete full P1 scope
+**Fix:** Add comment explaining why assertion is safe
+**Status:** ⚠️ Pre-existing (since 2026-02-06)
 
 ---
 
@@ -100,7 +75,7 @@ npm run test
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 3 violations
+**Impact:** Resolves all 5 violations
 **Timeline:** 1-2 weeks
 **Risk:** LOW
 
@@ -163,14 +138,14 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 3 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
+HIGH priority violations represent 5 issues that should be addressed. The estimated timeline of 1-2 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1-2 weeks
-- Impact: Resolves 3 violations
+- Impact: Resolves 5 violations
 
 ---
 
@@ -202,6 +177,6 @@ HIGH priority violations represent 3 issues that should be addressed. The estima
 
 **After Remediation:**
 
-- **HIGH violations:** 3 → 0 (all resolved)
+- **HIGH violations:** 5 → 0 (all resolved)
 - **Estimated Timeline:** 1-2 weeks
 - **Risk Level:** LOW
