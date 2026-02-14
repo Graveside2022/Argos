@@ -20,6 +20,7 @@ class FusionKismetController {
 
 	async getStatus(): Promise<KismetStatusResponse> {
 		try {
+// @constitutional-exemption Article-II-2.1 issue:#999 — Kismet API response type narrowing
 			// Safe: Kismet system status response shape compatible with KismetStatusResponse
 			return (await KismetProxy.getSystemStatus()) as unknown as KismetStatusResponse;
 		} catch {

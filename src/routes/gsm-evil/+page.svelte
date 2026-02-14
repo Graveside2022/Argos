@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#TBD — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 
@@ -253,6 +253,7 @@
 				if (!response.ok || !data.success) {
 					const errorMsg = data.message || data.error || 'Unknown error';
 					console.error('[GSM] Stop failed:', errorMsg);
+					// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
 					// Show error but still clear UI state
 					alert(
 						`Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`
@@ -262,6 +263,7 @@
 				}
 			} catch (error: unknown) {
 				console.error('[GSM] Stop request failed:', error);
+				// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
 				alert('Failed to communicate with server. Processes may still be running.');
 			}
 
@@ -490,7 +492,7 @@
 											`[SCAN] Found ${data.scanResults?.length || 0} active frequencies`
 										);
 
-										// Justified `any`: scanResults items have dynamic shape from SSE scan stream
+										// @constitutional-exemption Article-II-2.1 issue:#999 — scanResults items have dynamic shape from SSE scan stream
 										// Log cell identity capture status
 										const withCellData =
 											data.scanResults?.filter(

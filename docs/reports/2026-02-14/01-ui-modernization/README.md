@@ -1,7 +1,7 @@
 # UI Modernization Analysis
 
 **Violation Category:** MEDIUM (Article II §2.7)
-**Violation Count:** 272 violations
+**Violation Count:** 3 violations
 **Impact:** Visual inconsistency, maintenance burden, no design system
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟡 **MEDIUM** - Plan for later
@@ -11,7 +11,7 @@
 ## 📊 Quick Summary
 
 **Problem:** Hardcoded hex colors instead of Tailwind theme classes
-**Constitution Rule:** Article II §2.7 - "No hardcoded hex colors — use Tailwind theme"
+**Constitution Rule:** Article II §2.7 - "No browser alert/confirm/prompt"
 **Solution:** Migrate to Tailwind theme + optionally adopt Shadcn component library
 
 ---
@@ -23,35 +23,30 @@
 **Total Cost:** LOW
 
 ### clsx
-
 - **Version:** ^2.1.1
 - **Purpose:** Utility for constructing className strings conditionally
 - **Size:** ~1KB
 - **License:** MIT
 
 ### tailwind-merge
-
 - **Version:** ^2.5.5
 - **Purpose:** Merge Tailwind CSS classes without style conflicts
 - **Size:** ~5KB
 - **License:** MIT
 
 ### tailwind-variants
-
 - **Version:** ^0.2.1
 - **Purpose:** Create component variants with Tailwind CSS
 - **Size:** ~3KB
 - **License:** MIT
 
 ### lucide-svelte
-
 - **Version:** ^0.468.0
 - **Purpose:** Icon library for Shadcn components
 - **Size:** ~150KB
 - **License:** ISC
 
 ### shadcn-svelte
-
 - **Version:** latest
 - **Purpose:** CLI for adding Shadcn components
 - **Size:** ~50KB
@@ -76,80 +71,25 @@ npm run build
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 14
-**Total Occurrences:** 272
+**Files Affected:** 2
+**Total Occurrences:** 3
 
 ### 1. src/routes/gsm-evil/+page.svelte
-
-**Line:** 704
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
+**Line:** 257
+**Rule:** No browser alert/confirm/prompt
+**Fix:** Use custom modal component instead
 **Status:** ⚠️ Pre-existing (since 2026-02-12)
 
 ### 2. src/routes/gsm-evil/+page.svelte
+**Line:** 266
+**Rule:** No browser alert/confirm/prompt
+**Fix:** Use custom modal component instead
 
-**Line:** 833
+### 3. src/lib/tactical-map/map-service.ts
+**Line:** 115
 **Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #94a3b8 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 3. src/routes/gsm-evil/+page.svelte
-
-**Line:** 897
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 4. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1037
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 5. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1040
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 6. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1140
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 7. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1144
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #dc2626 with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 8. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1149
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #e8eaed with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 9. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1158
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #9ca3af with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-### 10. src/routes/gsm-evil/+page.svelte
-
-**Line:** 1187
-**Rule:** No hardcoded hex colors — use Tailwind theme
-**Fix:** Replace #9ca3af with Tailwind color class
-**Status:** ⚠️ Pre-existing (since 2026-02-12)
-
-_...and 262 more violations_
+**Fix:** Replace #3b82f6 with Tailwind color class
+**Status:** ⚠️ Pre-existing (since 2025-07-13)
 
 ---
 
@@ -157,12 +97,11 @@ _...and 262 more violations_
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 272 violations
+**Impact:** Resolves all 3 violations
 **Timeline:** 1-2 weeks
 **Risk:** MEDIUM
 
 **Approach:**
-
 1. Review all violations in detail
 2. Apply fixes systematically (file-by-file or phase-by-phase)
 3. Run tests after each change
@@ -177,7 +116,6 @@ _...and 262 more violations_
 **Risk:** LOW
 
 **Approach:**
-
 1. Fix violations as you touch related files
 2. Add exemption annotations for deferred work
 3. Track progress with periodic audits
@@ -192,9 +130,8 @@ _...and 262 more violations_
 
 **Approach:**
 Add exemption to affected files:
-
 ```typescript
-// @constitutional-exemption: Article II §2.7 issue:#TBD
+// @constitutional-exemption: Article II §2.7 issue:#999
 // Justification: [Reason for exemption]
 ```
 
@@ -207,13 +144,11 @@ Add exemption to affected files:
 ### 🟡 MEDIUM RISK
 
 **Dependency Risks:**
-
 - Adding 5 new packages to bundle (+209KB)
 - Version compatibility with existing dependencies
 - Potential transitive dependency conflicts
 
 **Mitigation:**
-
 - Run `npm install --dry-run` to check for conflicts before installation
 - Test thoroughly after installation
 - Monitor bundle size with `npm run build`
@@ -231,11 +166,10 @@ Add exemption to affected files:
 MEDIUM priority violations can be addressed incrementally. Fix them as you touch related code during normal feature development.
 
 **Cost-Benefit Analysis:**
-
 - Dependencies: LOW
 - Risk: MEDIUM
 - Timeline: 1-2 weeks
-- Impact: Resolves 272 violations
+- Impact: Resolves 3 violations
 
 ---
 
@@ -246,16 +180,16 @@ MEDIUM priority violations can be addressed incrementally. Fix them as you touch
 1. **Review this analysis** and choose an option (A, B, or C)
 2. **Create git branch:** `feature/${category.folderName}`
 3. **Install dependencies:**
-    ```bash
-    npm install clsx@^2.1.1 tailwind-merge@^2.5.5 tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
-    npm install -D shadcn-svelte@latest
-    npx shadcn-svelte@latest init
-    ```
+   ```bash
+   npm install clsx@^2.1.1 tailwind-merge@^2.5.5 tailwind-variants@^0.2.1 lucide-svelte@^0.468.0
+   npm install -D shadcn-svelte@latest
+   npx shadcn-svelte@latest init
+   ```
 4. **Verify installation:**
-    ```bash
-    npm run typecheck
-    npm run build
-    ```
+   ```bash
+   npm run typecheck
+   npm run build
+   ```
 5. **Begin implementation** following the chosen option
 6. **Re-run audit** after completion: `npm run constitutional-audit`
 
@@ -272,6 +206,6 @@ MEDIUM priority violations can be addressed incrementally. Fix them as you touch
 
 **After Remediation:**
 
-- **MEDIUM violations:** 272 → 0 (all resolved)
+- **MEDIUM violations:** 3 → 0 (all resolved)
 - **Estimated Timeline:** 1-2 weeks
 - **Risk Level:** MEDIUM

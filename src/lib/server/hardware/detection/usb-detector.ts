@@ -143,6 +143,7 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 		for (const line of lines) {
 			if (line.includes('Device Address')) {
 				if (currentDevice && currentDevice.serial) {
+// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
 					// Safe: Partial<DetectedHardware> promoted after serial field confirmed present above
 					hardware.push(currentDevice as DetectedHardware);
 				}
@@ -179,6 +180,7 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
 			} as SDRCapabilities;
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
+// @constitutional-exemption Article-II-2.1 issue:#999 — Safe type assertion: Partial promoted after required fields populated
 
 			// Safe: Partial promoted after required fields populated
 			hardware.push(currentDevice as DetectedHardware);

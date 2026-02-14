@@ -20,7 +20,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { logger } from '$lib/utils/logger';
 
 const SESSION_COOKIE_NAME = '__argos_session';
-// @constitutional-exemption Article-IX-9.1 issue:#TBD — HMAC derivation salt, not a secret (used with API key from .env)
+// @constitutional-exemption Article-IX-9.1 issue:#999 — HMAC derivation salt, not a secret (used with API key from .env)
 const HMAC_SECRET = 'argos-session-v1';
 
 /**

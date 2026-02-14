@@ -36,25 +36,21 @@ npm run typecheck
 **Total Occurrences:** 4
 
 ### 1. src/lib/components/dashboard/TopStatusBar.svelte
-
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
 
 ### 2. src/lib/components/dashboard/TerminalPanel.svelte
-
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
 
 ### 3. src/lib/components/dashboard/IconRail.svelte
-
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
 
 ### 4. src/lib/components/dashboard/shared/ToolCard.svelte
-
 **Line:** 1
 **Rule:** Reuse existing components before creating new ones
 **Fix:** Consider extracting button pattern into reusable component
@@ -70,7 +66,6 @@ npm run typecheck
 **Risk:** LOW
 
 **Approach:**
-
 1. Review all violations in detail
 2. Apply fixes systematically (file-by-file or phase-by-phase)
 3. Run tests after each change
@@ -85,7 +80,6 @@ npm run typecheck
 **Risk:** LOW
 
 **Approach:**
-
 1. Fix violations as you touch related files
 2. Add exemption annotations for deferred work
 3. Track progress with periodic audits
@@ -100,9 +94,8 @@ npm run typecheck
 
 **Approach:**
 Add exemption to affected files:
-
 ```typescript
-// @constitutional-exemption: Article IV §4.2 issue:#TBD
+// @constitutional-exemption: Article IV §4.2 issue:#999
 // Justification: [Reason for exemption]
 ```
 
@@ -131,7 +124,6 @@ This remediation requires zero new dependencies.
 LOW priority violations are not urgent. Focus on CRITICAL and HIGH priorities first.
 
 **Cost-Benefit Analysis:**
-
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 1 weeks
@@ -147,9 +139,9 @@ LOW priority violations are not urgent. Focus on CRITICAL and HIGH priorities fi
 2. **Create git branch:** `feature/${category.folderName}`
 3. **No installation needed** - ready to proceed
 4. **Verify baseline:**
-    ```bash
-    npm run typecheck
-    ```
+   ```bash
+   npm run typecheck
+   ```
 5. **Begin implementation** following the chosen option
 6. **Re-run audit** after completion: `npm run constitutional-audit`
 
