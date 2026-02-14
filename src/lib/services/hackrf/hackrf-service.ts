@@ -14,9 +14,9 @@ import type {
 	SpectrumData,
 	SweepResult
 } from '$lib/services/api/hackrf';
-import type { WebSocketEvent, WebSocketEventType } from '$lib/services/websocket/base';
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 import { logWarn } from '$lib/utils/logger';
+import type { WebSocketEvent, WebSocketEventType } from '$lib/websocket/base';
 
 interface HackRFServiceState {
 	status: HackRFStatus;
