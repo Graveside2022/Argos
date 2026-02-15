@@ -178,6 +178,39 @@ components.json                          # CREATE: shadcn config
 3. `.badge-*` (1 usage) → shadcn `<Badge>`
 4. `.btn-*` (20 usages) → shadcn `<Button>`
 
+### Phase 5: Theme Switcher (P5) — Future
+
+**Goal**: Add a theme color palette selector and dark/light mode toggle to the Settings panel. Operator can customize the app's color scheme without affecting layouts or functionality.
+
+**Depends on**: Phase 1-3 complete (unified CSS variable system + shadcn installed). Phase 4 (component adoption) is independent — theme switcher works regardless of whether palantir classes are replaced with shadcn components, because both systems consume the same CSS variables.
+
+**Tasks** (high-level, to be detailed in tasks.md when implementation begins):
+
+1. Create 8 palette definition files (Blue, Green, Orange, Red, Rose, Violet, Yellow, Zinc) — each is a JS object mapping all ~30+ CSS variable names to HSL values for both dark and light mode
+2. Source standard shadcn variable values from the shadcn-svelte themes page; extend with Argos-custom tokens (signal, feature, chart) harmonized to each palette
+3. Create `src/lib/stores/dashboard/theme-store.ts` — Svelte store managing active palette name + mode (dark/light), persists to `localStorage`
+4. Add FOUC-prevention script to `app.html` — reads `localStorage` before first paint and applies saved palette/mode
+5. Install shadcn `<Select>` and `<Switch>` components for the settings UI
+6. Implement theme section in `SettingsPanel.svelte` — palette dropdown with color swatches + dark/light toggle
+7. Wire theme store to CSS variable application — on change, iterate palette object and call `document.documentElement.style.setProperty()` for each variable
+8. Wire mode toggle to `class="dark"` on `<html>` element
+9. Update `resolveThemeColor()` to re-resolve colors when theme changes (invalidate cached hex values)
+10. Verify: all routes render correctly with each palette in both dark and light modes, no layout shifts, no broken features
+
+**Key files**:
+
+```text
+src/lib/stores/dashboard/theme-store.ts          # CREATE: palette + mode store
+src/lib/themes/palettes.ts                       # CREATE: 8 palette definitions
+src/lib/components/dashboard/panels/SettingsPanel.svelte  # MODIFY: add theme section
+src/app.html                                     # MODIFY: add FOUC-prevention script
+src/lib/utils/theme-colors.ts                    # MODIFY: invalidate cache on theme change
+src/lib/components/ui/select/                    # CREATE: shadcn Select component
+src/lib/components/ui/switch/                    # CREATE: shadcn Switch component
+```
+
+**Design reference**: `docs/prompts/Prompt - UI Construction.md` — the UI Feature Construction Engine provides the HCI research-backed methodology for building the settings panel UI (Tier 0: Requirements, Tier 3: Component Selection, Tier 4: Interaction Design)
+
 ## Target app.css Structure
 
 ```css

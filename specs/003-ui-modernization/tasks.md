@@ -138,10 +138,11 @@
 
 ### User Story Dependencies
 
-- **US1+US2 (P1)**: Can start after Foundational -- no dependencies on other stories
-- **US3 (P2)**: Depends on US1+US2 completion (unified color system required for shadcn theme mapping)
-- **US4 (P3)**: Depends on US1+US2 completion (CSS variables must exist). Independent of US3.
-- **US5 (P4)**: NOT in scope. Depends on US3. Tracked for future implementation.
+- **US1+US2 (P1)**: Can start after Foundational -- no dependencies on other stories — **COMPLETE**
+- **US3 (P2)**: Depends on US1+US2 completion (unified color system required for shadcn theme mapping) — **COMPLETE**
+- **US4 (P3)**: Depends on US1+US2 completion (CSS variables must exist). Independent of US3. — **COMPLETE**
+- **US5 (P4)**: Depends on US3. Tracked for future implementation. — **NOT STARTED**
+- **US6 (P5)**: Depends on US1-US4 (unified CSS variable system + theme bridge). Independent of US5. — **NOT STARTED**
 
 ### Within Each Phase
 
@@ -213,9 +214,32 @@ With 2 developers after Phase 3:
 
 ---
 
-## Out of Scope
+## Future Work: US5 — Incremental Component Adoption (P4)
 
-**US5 (Incremental Component Adoption, Priority P4)** is explicitly marked as future work in plan.md Phase 4. It involves replacing palantir CSS class-based components (`.btn-*` 6 elements across 3 files, `.badge-*` 1 usage in 1 file, `.input-field` 3 usages in 1 file, `.data-table` 1 usage in 1 file) with shadcn Svelte components (Button, Badge, Input, Table). This work depends on US3 completion and will be tracked in a separate feature branch.
+**Status**: Not started. Depends on US3 completion (shadcn installed).
+
+**US5** involves replacing palantir CSS class-based components (`.btn-*` 6 elements across 3 files, `.badge-*` 1 usage in 1 file, `.input-field` 3 usages in 1 file, `.data-table` 1 usage in 1 file) with shadcn Svelte components (Button, Badge, Input, Table). This work depends on US3 completion and will be tracked in a separate feature branch.
+
+---
+
+## Future Work: US6 — Theme Switcher (P5)
+
+**Status**: Not started. Depends on US1-US4 completion (unified CSS variable system + theme bridge).
+
+**US6** adds a theme color palette selector and dark/light mode toggle to the Settings panel (gear icon on the icon rail). The operator selects from 8 pre-built color palettes (Blue, Green, Orange, Red, Rose, Violet, Yellow, Zinc) and can toggle between dark and light modes. Selection persists to `localStorage`. Only CSS variable values change — no layouts, buttons, or features are affected.
+
+### Planned Tasks (to be detailed when implementation begins)
+
+- [ ] T034 [US6] Create palette definition module (`src/lib/themes/palettes.ts`) with 8 palette objects, each mapping all ~30+ CSS variable names to HSL values for dark and light modes — source standard variables from shadcn-svelte themes page, extend with Argos-custom tokens harmonized per palette
+- [ ] T035 [US6] Create theme store (`src/lib/stores/dashboard/theme-store.ts`) managing active palette name + mode (dark/light), with `localStorage` persistence and `document.documentElement.style.setProperty()` application
+- [ ] T036 [US6] Add FOUC-prevention script to `src/app.html` — inline `<script>` that reads `localStorage` and applies saved palette + mode before first paint
+- [ ] T037 [US6] Install shadcn Select and Switch components (`npx shadcn add select switch`)
+- [ ] T038 [US6] Implement theme section in `SettingsPanel.svelte` — palette dropdown (shadcn Select with color swatches) + dark/light toggle (shadcn Switch), wired to theme store
+- [ ] T039 [US6] Update `resolveThemeColor()` in `src/lib/utils/theme-colors.ts` to invalidate cached hex values when theme changes (subscribe to theme store or re-resolve on each call)
+- [ ] T040 [US6] Verify: all routes render correctly with each of the 8 palettes in both dark and light modes, zero layout changes, zero broken features, zero console errors
+- [ ] T041 [US6] Verify: Docker build succeeds, typecheck 0 errors, lint 0 errors, all tests pass
+
+**Key constraint**: The operator is not a developer. The theme section must be dead simple — one dropdown, one toggle. No color pickers, no custom CSS input, no technical jargon. Pick a color, see the change, done.
 
 ---
 
