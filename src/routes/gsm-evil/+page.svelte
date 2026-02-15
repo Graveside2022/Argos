@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import type { FrequencyTestResult } from '$lib/types/gsm';
@@ -25,6 +26,10 @@
 	// Button shows "Stop Scan" (red) when scanning OR when IMSI capture is running
 	$: isActive = isScanning || imsiCaptureActive;
 	$: buttonText = isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan';
+
+	// Error dialog state
+	let errorDialogOpen = false;
+	let errorDialogMessage = '';
 
 	// Non-store managed state
 	let gsmFrames: string[] = [];
@@ -253,18 +258,17 @@
 				if (!response.ok || !data.success) {
 					const errorMsg = data.message || data.error || 'Unknown error';
 					console.error('[GSM] Stop failed:', errorMsg);
-					// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
 					// Show error but still clear UI state
-					alert(
-						`Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`
-					);
+					errorDialogMessage = `Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`;
+					errorDialogOpen = true;
 				} else {
 					console.log('[GSM] Stop successful:', data.message);
 				}
 			} catch (error: unknown) {
 				console.error('[GSM] Stop request failed:', error);
-				// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
-				alert('Failed to communicate with server. Processes may still be running.');
+				errorDialogMessage =
+					'Failed to communicate with server. Processes may still be running.';
+				errorDialogOpen = true;
 			}
 
 			// Clear UI state after attempting stop
@@ -1078,6 +1082,18 @@
 		</div>
 	{/if}
 </div>
+
+<AlertDialog.Root bind:open={errorDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>GSM Evil Error</AlertDialog.Title>
+			<AlertDialog.Description>{errorDialogMessage}</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Action>OK</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <style>
 	.gsm-evil-container {
