@@ -82,7 +82,7 @@ As an operator, I want my selected color scheme to be remembered when I refresh 
 **Acceptance Scenarios**:
 
 1. **Given** the operator selects a palette, **When** they refresh the page, **Then** the selected palette persists.
-2. **Given** a saved theme preference, **When** the page loads, **Then** the theme is applied before the screen renders — no flash of the default Blue theme.
+2. **Given** a saved theme preference, **When** the page loads, **Then** the theme is applied before the screen renders — no flash of the default theme.
 3. **Given** the browser's local storage is unavailable (private browsing), **When** the page loads, **Then** the app falls back gracefully to Blue/Dark with no errors.
 
 ---
@@ -141,7 +141,7 @@ As an operator viewing the tactical map or spectrum display while changing theme
 
 - What happens if the operator selects Light mode but some panels have hardcoded dark styling? Any panel using the unified color system will adapt automatically. Panels with hardcoded dark colors in their own style blocks will be identified and corrected during implementation.
 - What happens if the operator changes theme mid-scan (HackRF sweep or Kismet running)? Only color values change — no scan state, WebSocket connections, or data flows are affected.
-- What happens if local storage is unavailable (private browsing)? The app falls back to the default Blue/Dark/Semantic-ON theme with no errors.
+- What happens if local storage is unavailable (private browsing)? The app falls back to the Default/Dark/Semantic-ON theme with no errors.
 - What happens if a component upgrade changes the visual spacing or sizing? Each upgrade is verified independently — before/after comparison confirms identical layout. Interactive states (hover, focus, disabled) are tested for each upgraded element.
 - What happens if the operator selects the "Red" palette with Semantic Colors OFF? Destructive buttons will blend with the accent color. This is by design — the operator has explicitly opted out of semantic color safety and accepts the visual tradeoff.
 
@@ -175,7 +175,7 @@ As an operator viewing the tactical map or spectrum display while changing theme
 - **FR-014**: When the Semantic Colors toggle is OFF, system MUST harmonize all colors — including signal strength, status indicators, chart colors, and feature category colors — with the selected palette.
 - **FR-015**: System MUST persist the Semantic Colors toggle state alongside palette and mode preferences.
 - **FR-016**: System MUST notify the map and spectrum displays when colors change (palette, mode, or semantic toggle) so they re-render with updated colors.
-- **FR-017**: System MUST gracefully handle unavailable local storage by falling back to the default Blue/Dark/Semantic-ON theme.
+- **FR-017**: System MUST gracefully handle unavailable local storage by falling back to the Default/Dark/Semantic-ON theme (neutral gray).
 - **FR-018**: System MUST pass all quality checks (type safety, code quality, unit tests, build) after each story is completed.
 
 ### Key Entities

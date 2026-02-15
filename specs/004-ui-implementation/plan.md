@@ -71,23 +71,23 @@ src/lib/themes/                            # Theme palette CSS definitions
   └── palettes.ts                          # 8 palette objects with CSS variable overrides
 
 # MODIFIED FILES (Component Upgrades — US1, US2)
-src/lib/components/dashboard/panels/ToolsNavigationView.svelte   # Button upgrades
-src/lib/components/dashboard/panels/DevicesPanel.svelte           # Table, Input, Badge upgrades
-src/lib/components/dashboard/views/ToolViewWrapper.svelte         # Button upgrade (Back, status badge)
-src/lib/components/dashboard/shared/ToolCard.svelte               # Button upgrades (if applicable)
+src/lib/components/dashboard/shared/ToolCard.svelte               # Button + badge upgrades (US1, US2)
+src/lib/components/dashboard/views/ToolViewWrapper.svelte         # Button + badge upgrades (US1, US2)
+src/lib/components/dashboard/panels/DevicesPanel.svelte           # Table, Input upgrades (US2)
 src/lib/styles/palantir-design-system.css                         # Remove replaced CSS classes
 
 # MODIFIED FILES (Theme System — US3-US7)
 src/lib/components/dashboard/panels/SettingsPanel.svelte          # Full Settings panel UI
 src/app.css                                                       # Add palette CSS variable blocks
 src/app.html                                                      # FOUC prevention script + dynamic class
-src/lib/utils/theme-colors.ts                                     # Support palette-aware color resolution
-src/lib/utils/signal-utils.ts                                     # Semantic colors toggle support
-src/lib/components/dashboard/DashboardMap.svelte                  # Replace ALL hardcoded hex colors (~30)
-src/lib/components/dashboard/AgentChatPanel.svelte                # Replace hardcoded hex colors (~40)
-src/lib/components/dashboard/TerminalTabContent.svelte            # Replace xterm.js ANSI hex colors (18)
+src/lib/components/dashboard/DashboardMap.svelte                  # Replace hardcoded hex colors (25)
+src/lib/components/dashboard/AgentChatPanel.svelte                # Replace hardcoded hex colors (28+)
+src/lib/components/dashboard/TerminalTabContent.svelte            # Theme-map 5 UI chrome colors (16 ANSI fixed)
 src/lib/components/dashboard/panels/LayersPanel.svelte            # Replace hardcoded hex color (1)
-src/routes/+layout.svelte                                         # mode-watcher integration (if needed)
+src/routes/+layout.svelte                                         # mode-watcher integration
+
+# ALREADY THEME-AWARE (no changes needed — use resolveThemeColor() with CSS vars)
+# src/lib/utils/theme-colors.ts, src/lib/utils/signal-utils.ts, spectrum.ts, map-utils.ts, map-service.ts
 
 # SHADCN COMPONENTS TO INSTALL (via CLI)
 src/lib/components/ui/table/                                      # shadcn Table (new)
@@ -280,22 +280,22 @@ app.css structure:
 
 ### Component Migration Map
 
-| Old CSS Class              | Replacement                                    | Files Affected                       |
-| -------------------------- | ---------------------------------------------- | ------------------------------------ |
-| `.btn` (base)              | `<Button>` component                           | ToolsNavigationView, ToolViewWrapper |
-| `.btn-primary`             | `<Button variant="default">`                   | ToolsNavigationView                  |
-| `.btn-secondary`           | `<Button variant="secondary">`                 | DevicesPanel                         |
-| `.btn-ghost`               | `<Button variant="ghost">`                     | ToolViewWrapper (Back button)        |
-| `.btn-start` / `.btn-open` | `<Button variant="default">` (green/primary)   | ToolsNavigationView                  |
-| `.btn-danger`              | `<Button variant="destructive">`               | ToolsNavigationView                  |
-| `.btn-sm`                  | `<Button size="sm">`                           | All                                  |
-| `.data-table`              | `<Table.Root>` + sub-components                | DevicesPanel                         |
-| `.data-table-compact`      | `<Table.Root class="text-xs">`                 | DevicesPanel                         |
-| `.input-field`             | `<Input>`                                      | DevicesPanel (search)                |
-| `.badge`                   | `<Badge>`                                      | ToolsNavigationView, ToolViewWrapper |
-| `.badge-success`           | `<Badge variant="default" class="bg-success">` | Status badges                        |
-| `.badge-warning`           | `<Badge variant="default" class="bg-warning">` | Warning badges                       |
-| `.badge-error`             | `<Badge variant="destructive">`                | Error badges                         |
+| Old CSS Class              | Replacement                                    | Files Affected                |
+| -------------------------- | ---------------------------------------------- | ----------------------------- |
+| `.btn` (base)              | `<Button>` component                           | ToolCard, ToolViewWrapper     |
+| `.btn-primary`             | `<Button variant="default">`                   | ToolCard                      |
+| `.btn-secondary`           | `<Button variant="secondary">`                 | DevicesPanel (whitelist Add)  |
+| `.btn-ghost`               | `<Button variant="ghost">`                     | ToolViewWrapper (Back button) |
+| `.btn-start` / `.btn-open` | `<Button variant="default">` (green/primary)   | ToolCard                      |
+| `.btn-danger`              | `<Button variant="destructive">`               | ToolCard                      |
+| `.btn-sm`                  | `<Button size="sm">`                           | All                           |
+| `.data-table`              | `<Table.Root>` + sub-components                | DevicesPanel                  |
+| `.data-table-compact`      | `<Table.Root class="text-xs">`                 | DevicesPanel                  |
+| `.input-field`             | `<Input>`                                      | DevicesPanel (search)         |
+| `.badge`                   | `<Badge>`                                      | ToolCard, ToolViewWrapper     |
+| `.badge-success`           | `<Badge variant="default" class="bg-success">` | Status badges                 |
+| `.badge-warning`           | `<Badge variant="default" class="bg-warning">` | Warning badges                |
+| `.badge-error`             | `<Badge variant="destructive">`                | Error badges                  |
 
 ### Settings Panel UI Design
 
@@ -333,15 +333,13 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 | `src/app.html`                  | MODIFY | Add FOUC prevention script, dynamic data-palette attr |
 | `src/routes/+layout.svelte`     | MODIFY | mode-watcher integration                              |
 | `SettingsPanel.svelte`          | MODIFY | Full theme settings UI                                |
-| `ToolsNavigationView.svelte`    | MODIFY | Replace .btn-\* with shadcn Button                    |
-| `DevicesPanel.svelte`           | MODIFY | Replace table, input, badges with shadcn              |
+| `ToolCard.svelte`               | MODIFY | Replace .btn-\* and .badge with shadcn components     |
 | `ToolViewWrapper.svelte`        | MODIFY | Replace .btn-ghost, .badge with shadcn                |
-| `DashboardMap.svelte`           | MODIFY | Replace ALL hardcoded hex colors (~30) with CSS vars  |
-| `AgentChatPanel.svelte`         | MODIFY | Replace hardcoded hex colors (~40) with CSS vars      |
-| `TerminalTabContent.svelte`     | MODIFY | Replace xterm.js ANSI hex colors (18) with CSS vars   |
+| `DevicesPanel.svelte`           | MODIFY | Replace table, input with shadcn; Add button upgrade  |
+| `DashboardMap.svelte`           | MODIFY | Replace hardcoded hex colors (25) with CSS vars       |
+| `AgentChatPanel.svelte`         | MODIFY | Replace hardcoded hex colors (28+) with CSS vars      |
+| `TerminalTabContent.svelte`     | MODIFY | Theme-map 5 UI chrome colors (16 ANSI kept fixed)     |
 | `LayersPanel.svelte`            | MODIFY | Replace hardcoded hex color (1) with CSS var          |
-| `signal-utils.ts`               | MODIFY | Semantic toggle awareness                             |
-| `theme-colors.ts`               | MODIFY | Palette-aware color resolution                        |
 | `palantir-design-system.css`    | MODIFY | Remove replaced CSS class definitions                 |
 | `package.json`                  | MODIFY | Add mode-watcher dependency                           |
 
@@ -368,42 +366,44 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 ### Critical Path
 
 ```
-[Install mode-watcher] ──FS──┐
-                              ├──> [Create theme store] ──FS──> [Build Settings panel] ──FS──> [Wire FOUC prevention]
-[Install shadcn components] ──┘                                         │
-        │                                                               │
-        ├──FS──> [Upgrade buttons (US1)] ──FS──> [Remove old btn CSS]   │
-        │                                                               │
-        └──FS──> [Upgrade table/inputs/badges (US2)] ──FS──> [Remove old CSS]
-                                                                        │
-[Define palette CSS] ──FS──> [Theme persistence] ──FS──> [Hex color replacement]
+[Create theme store] ──FS──┐
+                            ├──> [Build Settings panel] ──FS──> [Semantic toggle CSS]
+[Define palette CSS] ──FS──┘                                         │
+[FOUC script] ─────────────────────────────────────────────────      │
+[Install mode-watcher] ──FS──> [Wire mode-watcher] ────────────     │
+                                                                     │
+                                                          [Hex color replacement]
                                                                 │
                                                     ┌───────────┼───────────┐──────────┐
                                               [DashboardMap] [AgentChat] [Terminal] [Layers]
                                                     └───────────┼───────────┘──────────┘
                                                                 │
-                                                    [Semantic toggle] ──FS──> [Final verification]
+                                                    [Final verification]
+
+[Upgrade buttons (US1)] ──────────────────────────────── (independent, no deps)
+[Install shadcn components] ──FS──> [Upgrade table/inputs/badges (US2)] ──FS──> [Remove old CSS]
 ```
 
-**Critical path**: Install deps → Create theme store → Define palettes → Build Settings panel → Wire FOUC → Hex color replacement → Semantic toggle → Final verification.
+**Critical path (Track B)**: Create theme store → Define palette CSS → Build Settings panel → Semantic toggle CSS → Hex color replacement (4 files parallel) → Final verification.
 
 **Parallel tracks** (independent of critical path):
 
-- Component upgrades (US1, US2) can proceed in parallel with theme system (US3-US7) since they only require the installed shadcn components, not the theme store.
+- Track A: Component upgrades (US1, US2) proceed independently. US1 has zero dependencies. US2 needs T002 (shadcn component install) only.
+- Theme store (T003), palette CSS (T005), FOUC script (T006), and palette definitions (T004) can all start immediately — no Phase 1 dependency. Only mode-watcher wiring (T007) depends on T001.
 - Hex color replacement across 4 files (DashboardMap, AgentChatPanel, TerminalTabContent, LayersPanel) can run in parallel with each other, but depends on theme store + palette CSS being in place first.
 
 ### Risk Register
 
-| Risk                                                                  | Impact | Likelihood | Mitigation                                                                                                                   |
-| --------------------------------------------------------------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| mode-watcher incompatible with SvelteKit 2.22.3 / Svelte 5            | HIGH   | LOW        | Check compatibility before install; fallback: manual FOUC script                                                             |
-| shadcn component visual mismatch with Palantir aesthetic              | MEDIUM | MEDIUM     | Test each component in isolation; use Tailwind classes to adjust                                                             |
-| Hex color replacement breaks component rendering (~90 values)         | HIGH   | MEDIUM     | Incremental: replace per-component, verify after each. `resolveThemeColor` fallback mechanism proven for map colors          |
-| xterm.js ANSI colors don't support CSS variables                      | MEDIUM | MEDIUM     | xterm.js theme accepts hex strings; resolve CSS vars to hex at init + re-resolve on theme change via store subscription      |
-| AgentChatPanel hex replacement scope (~40 values)                     | MEDIUM | LOW        | Define new CSS variables for chat surfaces; map VS Code-style colors to shadcn tokens (muted, card, accent)                  |
-| CSS specificity conflicts between palette overrides and Palantir vars | MEDIUM | MEDIUM     | Use `data-palette` attribute selector (higher specificity than class)                                                        |
-| localStorage quota exceeded (unlikely with <1KB theme data)           | LOW    | VERY LOW   | Catch QuotaExceededError, fall back to defaults (pattern from gsm-evil-store)                                                |
-| Light mode reveals hardcoded dark colors in un-upgraded components    | MEDIUM | HIGH       | Known: Palantir vars use hardcoded hex. Mitigation: light mode is P3 priority, document which components need future updates |
+| Risk                                                                  | Impact | Likelihood | Mitigation                                                                                                                            |
+| --------------------------------------------------------------------- | ------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| mode-watcher incompatible with SvelteKit 2.22.3 / Svelte 5            | HIGH   | LOW        | Check compatibility before install; fallback: manual FOUC script                                                                      |
+| shadcn component visual mismatch with Palantir aesthetic              | MEDIUM | MEDIUM     | Test each component in isolation; use Tailwind classes to adjust                                                                      |
+| Hex color replacement breaks component rendering (~90 values)         | HIGH   | MEDIUM     | Incremental: replace per-component, verify after each. `resolveThemeColor` fallback mechanism proven for map colors                   |
+| xterm.js ANSI colors don't support CSS variables                      | MEDIUM | MEDIUM     | xterm.js theme accepts hex strings; resolve CSS vars to hex at init + re-resolve on theme change via store subscription               |
+| AgentChatPanel hex replacement scope (28+ values)                     | MEDIUM | LOW        | Define new CSS variables for chat surfaces; map VS Code-style colors to shadcn tokens (muted, card, accent). See mapping table below. |
+| CSS specificity conflicts between palette overrides and Palantir vars | MEDIUM | MEDIUM     | Use `data-palette` attribute selector (higher specificity than class)                                                                 |
+| localStorage quota exceeded (unlikely with <1KB theme data)           | LOW    | VERY LOW   | Catch QuotaExceededError, fall back to defaults (pattern from gsm-evil-store)                                                         |
+| Light mode reveals hardcoded dark colors in un-upgraded components    | MEDIUM | HIGH       | Known: Palantir vars use hardcoded hex. Mitigation: light mode is P3 priority, document which components need future updates          |
 
 ### Pre-Mortem Analysis
 

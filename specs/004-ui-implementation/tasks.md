@@ -26,15 +26,15 @@
 
 ## Phase 2: Foundational (Theme Infrastructure)
 
-**Purpose**: Core theme system that US3-US7 depend on. US1 and US2 do NOT depend on this phase — they can start after Phase 1.
+**Purpose**: Core theme system that US3-US7 depend on. US1 can start immediately (no dependencies); US2 can start after Phase 1 (needs T002 components).
 
 **CRITICAL**: US3-US7 cannot begin until this phase is complete.
 
 - [ ] T003 Create theme store with reactive Svelte 5 state ($state for palette/mode/semanticColors), DOM attribute management (data-palette on `<html>`, dark class toggle, semantic-colors-off class toggle), localStorage persistence under key 'argos-theme' (JSON-serialized ThemeState), and QuotaExceededError fallback to defaults `{palette:'default', mode:'dark', semanticColors:true}`. Export `setPalette()`, `setMode()`, `setSemanticColors()` methods. Follow terminal-store.ts pattern for localStorage serialization. File: src/lib/stores/theme-store.ts
-- [ ] T003b [P] Create unit tests for theme store in src/lib/stores/theme-store.test.ts — test cases: (1) default state is {palette:'default', mode:'dark', semanticColors:true}, (2) setPalette('green') updates state and sets document.documentElement.dataset.palette='green', (3) setPalette('default') removes data-palette attribute, (4) setMode('light') removes 'dark' class from html, (5) setMode('dark') adds 'dark' class, (6) setSemanticColors(false) adds 'semantic-colors-off' class, (7) state persists to localStorage under 'argos-theme' key as JSON, (8) reads saved state from localStorage on initialization, (9) falls back to defaults when localStorage throws QuotaExceededError, (10) falls back to defaults when localStorage contains invalid JSON. Mock document.documentElement and localStorage. Follow vitest patterns from existing test files.
+- [ ] T003b Create unit tests for theme store (depends on T003) in src/lib/stores/theme-store.test.ts — test cases: (1) default state is {palette:'default', mode:'dark', semanticColors:true}, (2) setPalette('green') updates state and sets document.documentElement.dataset.palette='green', (3) setPalette('default') removes data-palette attribute, (4) setMode('light') removes 'dark' class from html, (5) setMode('dark') adds 'dark' class, (6) setSemanticColors(false) adds 'semantic-colors-off' class, (7) state persists to localStorage under 'argos-theme' key as JSON, (8) reads saved state from localStorage on initialization, (9) falls back to defaults when localStorage throws QuotaExceededError, (10) falls back to defaults when localStorage contains invalid JSON. Mock document.documentElement and localStorage. Follow vitest patterns from existing test files.
 - [ ] T004 [P] Create PaletteDefinition[] array with complete HSL CSS variable values for all 8 palettes (Default/Zinc, Blue/Slate, Green/Zinc+custom, Orange/Stone, Red/Neutral, Rose/Zinc+custom, Violet/Gray, Yellow/Stone) — both dark and light mode values sourced from research.md R2. Include name (display), label (ThemePalette key), and cssVars.light + cssVars.dark Record<string, string> maps. File: src/lib/themes/palettes.ts
-- [ ] T005 Add [data-palette] CSS variable override blocks for 7 non-default palettes to src/app.css — each palette gets both `:root[data-palette="X"]` (light) and `.dark[data-palette="X"]` (dark) selectors overriding --background, --foreground, --card, --card-foreground, --popover, --popover-foreground, --primary, --primary-foreground, --secondary, --secondary-foreground, --muted, --muted-foreground, --accent, --accent-foreground, --destructive, --destructive-foreground, --border, --input, --ring. Add universal chart colors (--chart-1 through --chart-5) to base :root and .dark blocks. Default palette uses existing :root/.dark block with no data-palette attribute. File: src/app.css
-- [ ] T006 Add FOUC prevention inline `<script>` block to `<head>` in src/app.html — synchronously reads `localStorage.getItem('argos-theme')`, parses JSON, sets `document.documentElement.dataset.palette` to saved palette value (omit attribute for 'default'), and adds 'dark' class if saved mode is 'dark' or mode key is absent. Must execute before any CSS loads. Wrap in try/catch for JSON parse errors. File: src/app.html
+- [ ] T005 [P] Add [data-palette] CSS variable override blocks for 7 non-default palettes to src/app.css — each palette gets both `:root[data-palette="X"]` (light) and `.dark[data-palette="X"]` (dark) selectors overriding --background, --foreground, --card, --card-foreground, --popover, --popover-foreground, --primary, --primary-foreground, --secondary, --secondary-foreground, --muted, --muted-foreground, --accent, --accent-foreground, --destructive, --destructive-foreground, --border, --input, --ring. Add universal chart colors (--chart-1 through --chart-5) to base :root and .dark blocks. Default palette uses existing :root/.dark block with no data-palette attribute. File: src/app.css
+- [ ] T006 [P] Add FOUC prevention inline `<script>` block to `<head>` in src/app.html — synchronously reads `localStorage.getItem('argos-theme')`, parses JSON, sets `document.documentElement.dataset.palette` to saved palette value (omit attribute for 'default'), and adds 'dark' class if saved mode is 'dark' or mode key is absent. Must execute before any CSS loads. Wrap in try/catch for JSON parse errors. File: src/app.html
 - [ ] T007 Wire mode-watcher ModeWatcher component into root layout for dark/light class synchronization — import and render `<ModeWatcher />` component. Keep existing markCSSLoaded() call (it handles CSS custom property detection, complementary to mode-watcher's dark/light class management). File: src/routes/+layout.svelte
 
 **Checkpoint**: Theme infrastructure ready — palette switching works programmatically via theme store, CSS cascade responds to data-palette attribute, theme persists across refresh with no FOUC
@@ -47,7 +47,7 @@
 
 **Independent Test**: Open Tools panel -> Start, Stop, Open buttons render with consistent border radius, smooth color transitions on hover, clear focus rings. Navigate to a tool view -> Back button has subtle ghost styling. All button actions (start/stop scan, open tool, go back) still work exactly as before.
 
-- [ ] T008 [US1] Replace .btn-start, .btn-danger, .btn-open buttons with shadcn Button components in src/lib/components/dashboard/panels/ToolsNavigationView.svelte — Start buttons use variant="default" with green accent class, Stop buttons use variant="destructive", Open buttons use variant="outline". Preserve all onclick handlers and disabled states. Use size="sm" to match existing compact layout.
+- [ ] T008 [US1] Replace .btn-start, .btn-danger, .btn-open buttons with shadcn Button components in src/lib/components/dashboard/shared/ToolCard.svelte — Start buttons use variant="default" with green accent class, Stop buttons use variant="destructive", Open buttons use variant="outline". Preserve all onclick handlers and disabled states. Use size="sm" to match existing compact layout. Note: ToolsNavigationView.svelte has NO button elements — it delegates rendering to ToolCard via {#each} blocks.
 - [ ] T009 [P] [US1] Replace .btn-ghost Back button with shadcn Button variant="ghost" size="sm" in src/lib/components/dashboard/views/ToolViewWrapper.svelte — preserve navigation onclick handler, maintain icon + text layout
 
 **Checkpoint**: All dashboard buttons render with modern shadcn styling, identical click behavior
@@ -60,10 +60,10 @@
 
 **Independent Test**: Open Devices panel -> device list table has clean row spacing, subtle hover highlights, consistent header styling. Search input has sharp focus ring and smooth transitions. Status badges use consistent pill shapes with appropriate color variants. Everything looks unified with the upgraded buttons.
 
-- [ ] T010 [US2] Replace .data-table-compact device list with shadcn Table.Root + Table.Header + Table.Row + Table.Head + Table.Body + Table.Cell components in src/lib/components/dashboard/panels/DevicesPanel.svelte — preserve column structure, row click handlers, hover highlight behavior, and selected row indicator. Use class="text-xs" for compact sizing.
+- [ ] T010 [US2] Replace .data-table-compact device list with shadcn Table.Root + Table.Header + Table.Row + Table.Head + Table.Body + Table.Cell components in src/lib/components/dashboard/panels/DevicesPanel.svelte — preserve column structure, row click handlers, hover highlight behavior, and selected row indicator. Use class="text-xs" for compact sizing. Also replace the whitelist "Add" button (.btn .btn-secondary .btn-sm, ~line 607) with shadcn Button variant="secondary" size="sm".
 - [ ] T011 [US2] Replace .input-field search/filter inputs with shadcn Input component in src/lib/components/dashboard/panels/DevicesPanel.svelte — preserve placeholder text, onInput/bind:value handlers, and monospace font class if used for technical data entry
-- [ ] T012 [US2] Replace all .badge, .badge-success, .badge-warning, .badge-error, .badge-info, .badge-neutral instances with shadcn Badge component across dashboard: variant mappings are success->default with green class, warning->default with yellow class, error->destructive, info->secondary, neutral->outline. Files: src/lib/components/dashboard/panels/DevicesPanel.svelte, src/lib/components/dashboard/panels/ToolsNavigationView.svelte, src/lib/components/dashboard/views/ToolViewWrapper.svelte
-- [ ] T013 [US2] Remove replaced CSS class definitions from src/lib/styles/palantir-design-system.css — remove .btn through .btn-full (lines ~170-262), .data-table blocks (lines ~140-168, ~471-500), .input-field blocks (lines ~502-529), .badge blocks (lines ~97-138). Keep any classes still used by un-upgraded components (e.g., GSM Evil page). Verify net CSS reduction >= 100 lines.
+- [ ] T012 [US2] Replace all .badge, .badge-success, .badge-warning, .badge-error, .badge-info, .badge-neutral instances with shadcn Badge component across dashboard: variant mappings are success->default with green class, warning->default with yellow class, error->destructive, info->secondary, neutral->outline. Files: src/lib/components/dashboard/shared/ToolCard.svelte, src/lib/components/dashboard/views/ToolViewWrapper.svelte. Note: DevicesPanel badges (.type-badge, .enc-badge, .filter-badge) are component-scoped custom CSS, NOT Palantir .badge classes — they are out of scope for this task.
+- [ ] T013 [US2] Remove replaced CSS class definitions from src/lib/styles/palantir-design-system.css — remove .btn through .btn-full (lines ~170-262), .data-table blocks (lines ~140-168, ~471-500), .input-field blocks (lines ~502-529), .badge blocks (lines ~97-138). GSM Evil page (/gsm-evil) uses its own scoped button/badge classes (.control-btn, .scan-btn-red, .scan-btn-green, .back-btn-style) — no Palantir design system class dependencies to preserve. All targeted class blocks can be safely removed. Verify net CSS reduction >= 100 lines.
 
 **Checkpoint**: All interactive elements share unified modern styling, old CSS removed, zero visual regressions
 
@@ -140,7 +140,7 @@
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies — start immediately
-- **Foundational (Phase 2)**: Depends on Phase 1 — BLOCKS US3-US7
+- **Foundational (Phase 2)**: Only T007 depends on Phase 1 (T001 mode-watcher install); T003-T006 can start immediately in parallel with Phase 1 — BLOCKS US3-US7
 - **US1 (Phase 3)**: No dependencies — Button component already installed from spec 003. Can start immediately, in parallel with Phase 1 and Phase 2.
 - **US2 (Phase 4)**: Depends on Phase 1 ONLY — can start in parallel with Phase 2
 - **US3+US4 (Phase 5)**: Depends on Phase 2 completion
@@ -152,15 +152,19 @@
 ### User Story Dependencies
 
 ```
-Phase 1 (Setup)
-    |
-    +---> Phase 2 (Foundational) ---> US3+US4 ---> US5 ---> US7 ---> Polish
-    |                                    |                    ^
-    |                                    +---> US6 ----------+
-    |
-    +---> US1 (parallel with Phase 2 and Track B)
-    |
-    +---> US2 (parallel with Phase 2 and Track B)
+Start
+  |
+  +---> US1 (no dependencies — Button already installed from spec 003)
+  |
+  +---> Phase 1 (T001 mode-watcher, T002 shadcn components)
+  |       |
+  |       +---> US2 (needs T002: table/input/badge components)
+  |
+  +---> Phase 2 (T003-T006 start immediately; T007 waits for T001)
+          |
+          +---> US3+US4 ---> US5 ---> US7 ---> Polish
+          |                    |                    ^
+          |                    +---> US6 ----------+
 ```
 
 - **US1 (P1)**: No dependencies — Button already installed from spec 003. Can start immediately.
@@ -180,12 +184,13 @@ Phase 1 (Setup)
 
 **Track-level parallelism**:
 - Track A (US1 + US2) runs entirely in parallel with Track B (Phase 2 -> US3 -> US5 -> US6 -> US7)
-- Within Track A: US1 and US2 share files (badges in T012 touch ToolsNavigationView + ToolViewWrapper) — run US1 first, then US2
+- Within Track A: US1 and US2 share files (badges in T012 touch ToolCard + ToolViewWrapper) — run US1 first, then US2
 
 **Task-level parallelism** (marked [P]):
 - T001 || T002 (npm install vs npx shadcn CLI — independent tools)
 - T003 || T004 (theme-store.ts vs palettes.ts — different new files)
-- T008 || T009 (ToolsNavigationView.svelte vs ToolViewWrapper.svelte)
+- T005 || T006 || T007 (app.css vs app.html vs +layout.svelte — all different files, no import dependencies)
+- T008 || T009 (ToolCard.svelte vs ToolViewWrapper.svelte)
 - T022 || T023 || T024 (AgentChatPanel vs TerminalTabContent vs LayersPanel — all different files, all [P])
 
 ---
@@ -194,11 +199,11 @@ Phase 1 (Setup)
 
 ```bash
 # Agent A — Track A (Component Upgrades):
-T008 (US1 buttons in ToolsNavigationView)
+T008 (US1 buttons in ToolCard)
   -> T009 (US1 button in ToolViewWrapper)
   -> T010 (US2 table in DevicesPanel)
   -> T011 (US2 inputs in DevicesPanel)
-  -> T012 (US2 badges across 3 files)
+  -> T012 (US2 badges across 2 files: ToolCard + ToolViewWrapper)
   -> T013 (US2 remove old CSS)
 
 # Agent B — Track B (Theme System):
