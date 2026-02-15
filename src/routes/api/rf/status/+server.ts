@@ -4,7 +4,6 @@ import { promisify } from 'util';
 
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
-import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 
 import type { RequestHandler } from './$types';
 
@@ -20,12 +19,10 @@ interface DeviceInfo {
 
 async function detectConnectedDevices(): Promise<{
 	hackrf: boolean;
-	usrp: boolean;
 	deviceInfo: Record<string, DeviceInfo>;
 }> {
 	const deviceInfo: Record<string, DeviceInfo> = {};
 	let hackrfConnected = false;
-	let usrpConnected = false;
 
 	// Check for HackRF
 	try {
@@ -43,103 +40,26 @@ async function detectConnectedDevices(): Promise<{
 		deviceInfo.hackrf = { connected: false, error: 'Not detected' };
 	}
 
-	// Check for USRP - also check USB device
-	try {
-		// First try uhd_find_devices
-		const { stdout } = await execAsync(
-			'UHD_IMAGES_DIR=/usr/share/uhd/images timeout 3 uhd_find_devices'
-		);
-		if (stdout.includes('Device Address') || stdout.includes('B205')) {
-			usrpConnected = true;
-			deviceInfo.usrp = {
-				connected: true,
-				info: stdout.trim()
-			};
-		}
-	} catch (_error) {
-		// If uhd_find_devices fails, check if USB device is present
-		try {
-			const { stdout: usbOut } = await execAsync(
-				'lsusb | grep -i "2500:0022\\|ettus\\|b205"'
-			);
-			if (
-				usbOut.includes('Ettus') ||
-				usbOut.includes('B205') ||
-				usbOut.includes('2500:0022')
-			) {
-				// USB device is present but UHD can't detect it - assume it's connected
-				usrpConnected = true;
-				deviceInfo.usrp = {
-					connected: true,
-					info: 'USRP B205 mini detected via USB (UHD detection failed)',
-					usbInfo: usbOut.trim()
-				};
-			} else {
-				deviceInfo.usrp = { connected: false, error: 'Not detected' };
-			}
-		} catch (_usbError) {
-			deviceInfo.usrp = { connected: false, error: 'Not detected' };
-		}
-	}
-
-	return { hackrf: hackrfConnected, usrp: usrpConnected, deviceInfo };
+	return { hackrf: hackrfConnected, deviceInfo };
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async () => {
 	try {
-		const deviceType = url.searchParams.get('device') || 'auto';
+		// Detect connected devices (HackRF only)
+		const { hackrf, deviceInfo } = await detectConnectedDevices();
 
-		// Detect connected devices
-		const { hackrf, usrp, deviceInfo } = await detectConnectedDevices();
-
-		// Determine which device to check status for
-		let activeDevice = deviceType;
-		if (deviceType === 'auto') {
-			if (usrp) {
-				activeDevice = 'usrp';
-			} else if (hackrf) {
-				activeDevice = 'hackrf';
-			} else {
-				activeDevice = 'none';
-			}
-		}
-
-		let status: Record<string, unknown> = {
+		const hackrfStatus = sweepManager.getStatus();
+		const status: Record<string, unknown> = {
 			connectedDevices: {
-				hackrf,
-				usrp
+				hackrf
 			},
 			deviceInfo,
-			activeDevice
+			activeDevice: hackrf ? 'hackrf' : 'none',
+			device: hackrf ? 'hackrf' : 'none',
+			...hackrfStatus,
+			bufferStats: null,
+			bufferHealth: null
 		};
-
-		if (activeDevice === 'usrp') {
-			const usrpManager = UsrpSweepManager.getInstance();
-			const usrpStatus = usrpManager.getStatus();
-			status = {
-				...status,
-				device: 'usrp',
-				...usrpStatus,
-				bufferStats: usrpManager.getBufferStats(),
-				bufferHealth: usrpManager.getBufferHealth()
-			};
-		} else if (activeDevice === 'hackrf') {
-			const hackrfStatus = sweepManager.getStatus();
-			status = {
-				...status,
-				device: 'hackrf',
-				...hackrfStatus,
-				bufferStats: null, // sweepManager.getBufferStats() - method doesn't exist
-				bufferHealth: null // sweepManager.getBufferHealth() - method doesn't exist
-			};
-		} else {
-			status = {
-				...status,
-				device: 'none',
-				isRunning: false,
-				state: 'No device connected'
-			};
-		}
 
 		return json({
 			status: 'success',

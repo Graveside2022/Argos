@@ -1,38 +1,30 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 
+import { EmergencyStopRequestSchema } from '$lib/schemas/rf';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
-import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const body = (await request.json()) as Record<string, unknown>;
-		const deviceType = (body.deviceType as string) || 'hackrf';
+		const rawBody = await request.json();
+		const validated = safeParseWithHandling(EmergencyStopRequestSchema, rawBody, 'user-action');
 
-		if (deviceType === 'usrp') {
-			// Emergency stop USRP
-			const usrpManager = UsrpSweepManager.getInstance();
-			await usrpManager.emergencyStop();
-
-			return json({
-				status: 'success',
-				message: 'USRP emergency stop executed',
-				device: 'usrp',
-				stopped: true
-			});
-		} else {
-			// Emergency stop HackRF
-			await sweepManager.emergencyStop();
-
-			return json({
-				status: 'success',
-				message: 'HackRF emergency stop executed',
-				device: 'hackrf',
-				stopped: true
-			});
+		if (!validated) {
+			return error(400, 'Invalid emergency stop request');
 		}
+
+		// Emergency stop HackRF (USRP support removed - duplicate code)
+		await sweepManager.emergencyStop();
+
+		return json({
+			status: 'success',
+			message: 'HackRF emergency stop executed',
+			device: 'hackrf',
+			stopped: true
+		});
 	} catch (error: unknown) {
 		console.error('Error in rf/emergency-stop endpoint:', error);
 		return json(

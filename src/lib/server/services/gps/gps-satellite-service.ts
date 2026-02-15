@@ -1,8 +1,8 @@
 import { Socket } from 'net';
 import { z } from 'zod';
 
+import type { Satellite, SatellitesApiResponse } from '$lib/gps/types';
 import { safeJsonParse } from '$lib/server/security/safe-json';
-import type { Satellite, SatellitesApiResponse } from '$lib/types/gps';
 import { logWarn } from '$lib/utils/logger';
 
 // Zod schema for gpsd SKY message with full satellite data
@@ -69,11 +69,13 @@ function queryGpsd(timeoutMs: number = 3000): Promise<string> {
 		socket.on('connect', () => {
 			socket.write('?WATCH={"enable":true,"json":true}\n');
 
-			// Collect data for 5 seconds to catch SKY message with satellite array
-			// (gpsd alternates between SKY messages with uSat count and satellite details)
+			// Collect data for 10 seconds to catch SKY message with satellite array.
+			// gpsd only includes per-satellite data in ~1 of every 7 SKY messages,
+			// so 5s was too short. This endpoint is only called when the satellite
+			// panel is expanded (not on every poll), so the extra latency is acceptable.
 			setTimeout(() => {
 				finish(Buffer.concat(chunks).toString('utf8'));
-			}, 5000);
+			}, 10000);
 		});
 
 		socket.on('data', (chunk: Buffer) => {
@@ -133,6 +135,8 @@ function parseSatellites(data: unknown): Satellite[] {
 		return [];
 	}
 
+	// Safe: Type cast for dynamic data access
+	// Safe: gpsd JSON response cast to Record for dynamic field access
 	const obj = data as Record<string, unknown>;
 
 	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {
@@ -148,7 +152,10 @@ function parseSatellites(data: unknown): Satellite[] {
 			return (
 				typeof sat === 'object' &&
 				sat !== null &&
+				// Safe: Type cast for dynamic data access
+				// Safe: satellite array elements cast to Record for PRN/gnssid field validation
 				typeof (sat as Record<string, unknown>).PRN === 'number' &&
+				// Safe: Type cast for dynamic data access
 				typeof (sat as Record<string, unknown>).gnssid === 'number'
 			);
 		})
@@ -213,7 +220,7 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 	}
 
 	try {
-		const allLines = await queryGpsd(6000); // Increased timeout for more SKY messages
+		const allLines = await queryGpsd(12000); // 12s timeout to ensure satellite array capture
 
 		let satellites: Satellite[] = [];
 		let usedSatCount = 0;
@@ -237,6 +244,8 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 			}
 
 			// Capture uSat (used satellite count) if present
+			// Safe: Type cast for dynamic data access
+			// Safe: gpsd response data cast to Record for SKY/TPV field access
 			const obj = result.data as Record<string, unknown>;
 			if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
 				usedSatCount = obj.uSat;

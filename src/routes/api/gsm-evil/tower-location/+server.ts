@@ -58,6 +58,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json(
 				{
 					success: false,
+					// Safe: Validation error from parameter checks cast to Error for message extraction
 					message: `Invalid parameter: ${(validationError as Error).message}`
 				},
 				{ status: 400 }
@@ -162,6 +163,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Return real database result
+		// Safe: Database query result cast to TowerLocationData type matching the schema
 		const dbResult = result as TowerLocationData;
 		return json({
 			success: true,

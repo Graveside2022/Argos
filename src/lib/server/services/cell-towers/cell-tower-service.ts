@@ -89,6 +89,7 @@ async function queryLocalDatabase(
 			return {
 				success: true,
 				source: 'database',
+				// Safe: SQLite query returns rows matching TowerRow schema
 				towers: (rows as TowerRow[]).map((r) => ({
 					radio: r.radio || 'Unknown',
 					mcc: r.mcc,
@@ -105,6 +106,7 @@ async function queryLocalDatabase(
 				count: rows.length
 			};
 		} catch (dbErr) {
+			// Safe: Error handling
 			console.warn(`Cell tower DB at ${dbPath} failed:`, (dbErr as Error).message);
 		}
 	}

@@ -411,3 +411,8 @@ wideband_cache/
 
 # Claude Code artifacts
 .claude-container/
+
+# Constitutional Audit System (development tool, not shipped with production)
+src/lib/constitution/
+scripts/run-audit.ts
+.specify/

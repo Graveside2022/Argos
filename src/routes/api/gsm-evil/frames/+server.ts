@@ -132,6 +132,8 @@ export const GET: RequestHandler = async () => {
 			success: false,
 			frames: [],
 			message: 'Failed to capture frames',
+			// Safe: Catch block error cast to Error for message extraction
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		});
 	}

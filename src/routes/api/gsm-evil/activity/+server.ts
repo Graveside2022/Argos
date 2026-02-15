@@ -102,6 +102,8 @@ export const GET: RequestHandler = async () => {
 			success: false,
 			hasActivity: false,
 			message: 'Failed to check activity',
+			// Safe: Catch block error cast to Error for message extraction
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		});
 	}

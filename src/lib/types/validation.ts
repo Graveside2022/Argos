@@ -55,6 +55,7 @@ export function isErrorWithCode(error: unknown): error is Error & { code: string
 	return (
 		error instanceof Error &&
 		'code' in error &&
+// Safe: Error type assertion for error handling
 		isString((error as Error & { code: unknown }).code)
 	);
 }

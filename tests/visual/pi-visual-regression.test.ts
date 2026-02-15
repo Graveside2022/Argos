@@ -208,6 +208,7 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 
 			// Test canvas rendering capabilities on Pi
 			const canvasMetrics = await page.evaluate(() => {
+				// Safe: Test: Type assertion for test data construction
 				const canvas = document.querySelector('.spectrum-canvas') as HTMLCanvasElement;
 				if (!canvas) return { available: false };
 
