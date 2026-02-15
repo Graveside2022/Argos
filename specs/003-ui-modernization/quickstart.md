@@ -183,6 +183,47 @@ npm run build                  # built successfully
 npm run dev                    # Compare every route against pre-migration screenshots
 ```
 
+---
+
+## Phase 5: Theme Switcher (P5) — Future
+
+### Step 1: Create palette definitions
+
+Create `src/lib/themes/palettes.ts` with 8 palette objects (Blue, Green, Orange, Red, Rose, Violet, Yellow, Zinc). Each palette maps all ~30+ CSS variable names to HSL values for dark and light modes. Source standard shadcn variables from https://www.shadcn-svelte.com/themes, extend with Argos-custom tokens.
+
+### Step 2: Create theme store
+
+Create `src/lib/stores/dashboard/theme-store.ts` — manages active palette + mode, persists to `localStorage`, applies CSS variables via `document.documentElement.style.setProperty()`.
+
+### Step 3: Add FOUC-prevention to app.html
+
+Add inline `<script>` before `</head>` that reads `localStorage` and applies saved palette + mode before first paint.
+
+### Step 4: Install shadcn Select + Switch
+
+```bash
+npx shadcn add select switch
+```
+
+### Step 5: Implement Settings panel theme section
+
+Update `SettingsPanel.svelte` — add palette dropdown (Select with color swatches) + dark/light toggle (Switch).
+
+### Step 6: Update resolveThemeColor()
+
+Modify `src/lib/utils/theme-colors.ts` to invalidate cached hex values when theme changes.
+
+### Step 7: Verify
+
+```bash
+npm run dev          # Test all 8 palettes in dark + light modes
+npm run build        # Must build successfully
+npm run typecheck    # Must pass
+npm run test:unit    # Must pass
+```
+
+---
+
 ## Rollback
 
 Each phase has its own commit. If a phase breaks:

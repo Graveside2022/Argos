@@ -116,6 +116,52 @@ export function resolveThemeColor(varName: string, fallback?: string): string;
 
 ---
 
+## Entity 5: Theme Palette (US6 — Future)
+
+**Definition**: A JavaScript object containing a complete set of CSS variable name-to-value mappings for one color scheme. Each palette defines dark mode and light mode values for all standard shadcn variables plus Argos-custom tokens.
+
+**Location**: `src/lib/themes/palettes.ts`
+
+**Structure**:
+
+```typescript
+interface ThemePalette {
+	name: string; // e.g., "Blue", "Green", "Zinc"
+	dark: Record<string, string>; // CSS var name → HSL value for dark mode
+	light: Record<string, string>; // CSS var name → HSL value for light mode
+}
+```
+
+**Validation Rules**:
+
+- Every palette must define values for all ~30+ CSS variables (standard + Argos-custom)
+- HSL values must be valid CSS `hsl()` format
+- Standard shadcn variables sourced from shadcn-svelte themes page
+- Argos-custom tokens (signal, feature, chart) harmonized to each palette
+
+---
+
+## Entity 6: Theme Store (US6 — Future)
+
+**Definition**: A Svelte store managing the active palette name and dark/light mode preference.
+
+**Location**: `src/lib/stores/dashboard/theme-store.ts`
+
+**State Shape**:
+
+```typescript
+interface ThemeState {
+	palette: string; // "blue" | "green" | "orange" | "red" | "rose" | "violet" | "yellow" | "zinc"
+	mode: 'dark' | 'light';
+}
+```
+
+**Persistence**: `localStorage` key `argos-theme` (JSON serialized)
+
+**State Transitions**: User selects palette → store updates → CSS variables applied via `setProperty()` → UI re-renders. User toggles mode → store updates → `class="dark"` toggled on `<html>` → CSS variables switch between `:root` and `.dark` values.
+
+---
+
 ## Relationships
 
 ```
@@ -126,6 +172,12 @@ CSS Variable Tokens ──consumed-by──► shadcn Components        │
         └──consumed-by──► @theme block ──generates──► Tailwind Utilities
         │
         └──consumed-by──► resolveThemeColor() ──provides-hex──► Leaflet/Canvas APIs
+
+Theme Palette ──defines-values-for──► CSS Variable Tokens
+        │
+Theme Store ──selects──► Theme Palette ──applies-via──► document.documentElement.style.setProperty()
+        │
+        └──persists-to──► localStorage ──restores-on──► page load (FOUC-prevention script)
 ```
 
 ---

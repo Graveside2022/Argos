@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-ui-modernization`
 **Created**: 2026-02-15
-**Status**: Draft
+**Status**: Complete (US1-US4 implemented, US5 deferred to future spec)
 **Input**: User description: "UI modernization to Tailwind 4 and shadcn - preserve existing layout, no functionality breakage, modern UI component library"
 
 ## User Scenarios & Testing _(mandatory)_
@@ -96,6 +96,47 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 
 ---
 
+### User Story 6 - Theme Switcher (Priority: P5)
+
+As an operator using the Argos dashboard, I want to click the Settings gear icon on the left icon rail, see a "Theme" section in the settings panel, and select a color palette from a dropdown menu so I can customize the look of the application without breaking any layouts or functionality.
+
+**Why this priority**: Depends on US1-US4 (the unified CSS variable system must exist for theme switching to work). The infrastructure built in US1-US4 was specifically designed to make this feature straightforward — every color in the app flows through ~30 CSS variables. Swapping those variable values changes the entire app's appearance instantly without touching layouts, buttons, or component structure.
+
+**Context**: The operator is not a software engineer or UI developer. They want to pick a color and have everything "just work." No technical knowledge required. The current cyberpunk blue theme looks good, but operators want the ability to personalize their console appearance — especially when multiple operators share a device and want visual differentiation between sessions.
+
+**Independent Test**: Click the gear icon on the icon rail. The settings panel opens. A "Theme" section shows a dropdown with color palette options. Select "Green." All panels, buttons, borders, charts, map markers, and signal indicators shift to green-tinted colors. No layout shifts, no broken buttons, no missing elements. Refresh the page — the green theme persists. Switch to "Zinc" — the app shifts to neutral gray tones. Toggle "Light Mode" — backgrounds go white, text goes dark. Toggle back to "Dark Mode" — returns to dark backgrounds. At no point does any button, panel, or feature stop working.
+
+**Acceptance Scenarios**:
+
+1. **Given** the Settings panel currently shows "Settings options coming soon" (`src/lib/components/dashboard/panels/SettingsPanel.svelte`), **When** the theme switcher is implemented, **Then** the panel displays a "Theme" section with a labeled dropdown/select component.
+2. **Given** the available color palettes are Blue (current default), Green, Orange, Red, Rose, Violet, Yellow, and Zinc, **When** the operator selects a palette from the dropdown, **Then** all CSS variables in the `.dark` block (or `:root` for light mode) update to the corresponding palette values and the entire UI reflects the new colors instantly (no page reload required).
+3. **Given** the operator selects a theme, **When** they refresh the page or close and reopen the browser, **Then** the selected theme persists (stored in `localStorage`).
+4. **Given** each color palette defines values for all ~30 CSS variables (background, foreground, primary, secondary, muted, accent, destructive, border, input, ring, chart-1 through chart-6), **When** a palette is applied, **Then** all shadcn components, glass effects, palantir CSS classes, status indicators, and map markers render with the new palette colors.
+5. **Given** the theme switcher changes only CSS variable values, **When** any palette is selected, **Then** zero layout changes occur — no panels resize, no buttons move, no text reflows, no icons disappear, no features break.
+6. **Given** Argos has custom domain-specific CSS variables (--signal-critical through --signal-weak, --feature-rf/drone/radio, --success/warning/info), **When** a palette is applied, **Then** these domain tokens also update to harmonize with the selected palette (e.g., Green palette uses green-tinted signal indicators, not the Blue palette's blue-tinted ones).
+7. **Given** a "Mode" toggle (Dark / Light) in the settings panel, **When** the operator toggles to Light mode, **Then** the `class="dark"` is removed from `<html>`, the `:root` CSS variables activate, backgrounds become light, and text becomes dark. **When** toggled back to Dark, **Then** `class="dark"` is restored and the cyberpunk dark aesthetic returns.
+8. **Given** the shadcn-svelte themes page (https://www.shadcn-svelte.com/themes) provides pre-built color palettes as CSS variable blocks, **When** generating palette definitions for Argos, **Then** the standard shadcn variables use the official palette values and the Argos-custom variables (signal, feature, chart) are extended with palette-harmonized values.
+
+**UI Design Notes** (for the Settings Panel):
+
+- The theme section should appear as the first section in the Settings panel
+- Use a shadcn `<Select>` component for the palette dropdown (consistent with the component library)
+- Show a small color swatch preview next to each palette name in the dropdown
+- The Dark/Light mode toggle should use a shadcn `<Switch>` component
+- Consider showing a mini preview of the selected palette (e.g., 4-5 color dots) below the dropdown
+- The settings panel structure should accommodate future settings sections below the theme section
+
+**Technical Approach** (high-level, for planning reference):
+
+- Each palette is a JavaScript object mapping CSS variable names to HSL values
+- A Svelte store (`theme-store.ts`) manages the active palette name and mode (dark/light)
+- On palette change: iterate over the palette object, call `document.documentElement.style.setProperty()` for each variable
+- On mode change: toggle `class="dark"` on `<html>` element
+- On page load: read `localStorage`, apply saved palette before first paint (in `app.html` to prevent flash)
+- Palette definitions can be sourced from the shadcn-svelte themes page and extended with Argos-custom tokens
+
+---
+
 ### Edge Cases
 
 - What happens if the Tailwind v4 upgrade tool fails on a specific Svelte file? Manual fix required -- the upgrade tool does not handle all Svelte template syntax. Run `git diff` to review all changes before committing.
@@ -103,6 +144,9 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 - What happens if `npx shadcn init` overwrites `app.css`? Use `--no` flag to skip CSS generation, or immediately restore from git and apply theme mapping manually.
 - What happens if `resolveThemeColor()` is called before the DOM is ready (SSR context)? Return a hardcoded fallback hex value since Leaflet/Canvas only run client-side. Guard with `typeof document !== 'undefined'` check.
 - What happens if a palantir utility class (`.text-primary`) is used alongside a Tailwind utility (`text-primary`) on the same element? The shadowing palantir classes (`.text-primary`, `.bg-panel`, `.text-secondary`, `.border-default`) are removed during P1 color consolidation and all usage sites updated to Tailwind utilities, eliminating this conflict before it can occur.
+- What happens if the operator selects Light mode but some components only have dark-specific styling? The `:root` block already contains valid light mode values (shadcn zinc defaults). Components using Tailwind utilities (`bg-background`, `text-foreground`, etc.) will automatically pick up light values. Components with hardcoded dark colors in `<style>` blocks using `--palantir-*` variables will need their CSS variables to also respond to light mode — this is a known gap to address during implementation.
+- What happens if `localStorage` is unavailable (private browsing)? Fall back to the default Blue/Dark theme. Wrap `localStorage` access in try/catch.
+- What happens if the operator changes theme mid-scan (HackRF sweep or Kismet running)? Only CSS variable values change — no JavaScript state, WebSocket connections, or data flows are affected. Canvas/Leaflet elements using `resolveThemeColor()` will pick up new colors on their next render cycle.
 
 ## Clarifications
 
@@ -111,7 +155,9 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 - Q: How should palantir CSS classes that shadow Tailwind utility names (`.text-primary`, `.bg-panel`, `.text-secondary`, `.border-default`) be resolved? → A: Remove classes entirely and update all Svelte usage sites to use corresponding Tailwind utilities (`text-foreground`, `bg-card`, etc.).
 - Q: How should visual regression be verified (SC-001)? → A: Manual side-by-side screenshot comparison per route. No automated visual regression tooling needed for this one-time migration.
 - Q: Which shadcn components should be generated during P2 (installation phase)? → A: AlertDialog only. Other components (Button, Badge, Input, Table) generated on-demand during P4 adoption.
-- Q: What values should the `:root` (light mode) CSS variable block contain? → A: shadcn defaults (zinc/slate). Standard convention; never visible to users since Argos is dark-mode only.
+- Q: What values should the `:root` (light mode) CSS variable block contain? → A: shadcn defaults (zinc/slate). Standard convention; originally never visible to users since Argos was dark-mode only, but US6 (Theme Switcher) will enable light mode as an option.
+- Q: How does the shadcn-svelte themes page (https://www.shadcn-svelte.com/themes) relate to Argos? → A: The themes page generates CSS variable blocks in the exact same format Argos uses (`:root` + `.dark` blocks with `--background`, `--primary`, `--border`, etc.). The "Copy Code" button gives pre-built color palettes that can be used as palette definitions for US6. Argos extends these with domain-specific tokens (signal strength, feature categories) that shadcn doesn't include.
+- Q: How exactly will the UI update when a theme is selected? → A: Only CSS variable _values_ change. The variable _names_ (`--background`, `--primary`, etc.) stay the same. Every component already references these names through Tailwind utilities (`bg-background`, `text-primary`) and `resolveThemeColor()`. Changing the values is like changing the paint on a building — the building structure stays identical.
 
 ## Requirements _(mandatory)_
 
@@ -132,6 +178,12 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 - **FR-013**: System MUST pass `npm run typecheck`, `npm run lint`, `npm run test:unit`, and `npm run build` after each phase.
 - **FR-014**: System MUST delete dead CSS classes from palantir-design-system.css and app.html that have zero references in Svelte components.
 - **FR-015**: System MUST provide a `resolveThemeColor()` utility for Leaflet/Canvas APIs that require hex color strings.
+- **FR-016**: System MUST provide a theme switcher in the Settings panel accessible via the gear icon on the icon rail.
+- **FR-017**: System MUST support 8 color palettes: Blue (default), Green, Orange, Red, Rose, Violet, Yellow, Zinc.
+- **FR-018**: System MUST support Dark/Light mode toggle.
+- **FR-019**: System MUST persist the selected palette and mode to `localStorage` and restore on page load without visual flash.
+- **FR-020**: System MUST NOT cause any layout changes, button breakage, or feature disruption when switching themes — only color values change.
+- **FR-021**: System MUST update all domain-specific tokens (signal strength, feature categories, chart colors) to harmonize with the selected palette.
 
 ### Key Entities
 
@@ -139,6 +191,8 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 - **shadcn Component**: A Svelte component source file in `src/lib/components/ui/` generated by the shadcn CLI, using bits-ui for headless behavior and Tailwind for styling. Owned by the project, not an npm dependency.
 - **Palantir CSS Class**: A utility CSS class defined in `src/lib/styles/palantir-design-system.css` that is being incrementally replaced by shadcn components. Active palantir class usages in Svelte templates: `.btn-*` (6 elements across 3 files), `.badge-*` (1 element in 1 file), `.input-field` (3 usages in 1 file), `.data-table` (1 usage in 1 file).
 - **Theme Color Bridge**: A runtime utility (`resolveThemeColor()`) that converts CSS variable names to hex strings for APIs that cannot consume CSS variables directly (Leaflet, Canvas 2D).
+- **Theme Palette**: A JavaScript object containing a complete set of CSS variable name-to-value mappings for one color scheme. Each palette defines values for all ~30+ standard and Argos-custom variables. Palettes are stored as static data in the application code.
+- **Theme Store**: A Svelte store (`src/lib/stores/dashboard/theme-store.ts`) that manages the active palette name and dark/light mode preference, persisting to `localStorage`.
 
 ## Success Criteria _(mandatory)_
 
@@ -154,10 +208,15 @@ As a developer, I can incrementally replace palantir CSS class-based components 
 - **SC-008**: Zero browser console errors related to missing CSS classes, broken imports, or CSS variable resolution on any route.
 - **SC-009**: Docker build succeeds with updated dependencies.
 - **SC-010**: Bundle size increase from new dependencies is less than 250KB gzipped.
+- **SC-011**: Settings panel gear icon opens a panel with a functional "Theme" section containing a palette dropdown and dark/light mode toggle.
+- **SC-012**: Selecting any of the 8 palettes updates all UI colors instantly without layout changes, button breakage, or feature disruption.
+- **SC-013**: Selected theme persists across page refreshes via `localStorage`.
+- **SC-014**: Dark/Light mode toggle correctly switches between `.dark` and `:root` CSS variable sets.
+- **SC-015**: Map markers, signal indicators, and chart colors update to match the selected palette.
 
 ## Assumptions
 
-- Argos operates exclusively in dark mode. The `:root` (light mode) CSS variables use shadcn's default zinc/slate values for convention compliance but are never displayed to users.
+- Argos defaults to dark mode but US6 enables light mode as an option. The `:root` (light mode) CSS variables will need proper palette-specific values for each of the 8 color palettes.
 - The `@tailwindcss/forms` plugin will continue to work in Tailwind v4 via the `@plugin` directive, as confirmed by community testing (GitHub Discussion #15816) and peer dependency declarations supporting `>=4.0.0-beta.1`.
 - The Tailwind v4 upgrade tool (`npx @tailwindcss/upgrade`) will correctly handle Svelte template files. Any files it misses will be manually corrected.
 - Leaflet and MapLibre-GL APIs require hex color strings and cannot consume CSS variable references directly. A runtime bridge function is needed.
