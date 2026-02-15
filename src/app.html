@@ -9,6 +9,19 @@
 		/>
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<!-- Theme FOUC prevention — runs synchronously before first paint -->
+		<script>
+			try {
+				var t = JSON.parse(localStorage.getItem('argos-theme') || '{}');
+				if (t.palette && t.palette !== 'default')
+					document.documentElement.dataset.palette = t.palette;
+				if (t.mode !== 'light') document.documentElement.classList.add('dark');
+				if (t.semanticColors === false)
+					document.documentElement.classList.add('semantic-colors-off');
+			} catch (e) {
+				document.documentElement.classList.add('dark');
+			}
+		</script>
 		<!-- Critical CSS - FOUC prevention only -->
 		<style>
 			body {
