@@ -4,7 +4,10 @@
 
 import type Database from 'better-sqlite3';
 
-import type { NetworkEdge,NetworkNode } from '$lib/types/network';
+import { DbRelationshipSchema } from '$lib/schemas/database';
+import type { NetworkEdge, NetworkNode } from '$lib/types/network';
+import { logError } from '$lib/utils/logger';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { DbRelationship } from './types';
 
@@ -29,7 +32,7 @@ export function storeNetworkGraph(
 
 	const storeGraph = db.transaction(() => {
 		edges.forEach((edge) => {
-			insertRelationship.run({
+			const relationshipData = {
 				source_device_id: edge.source,
 				target_device_id: edge.target,
 				network_id: null, // TODO: Implement network detection
@@ -37,7 +40,23 @@ export function storeNetworkGraph(
 				strength: edge.strength,
 				first_seen: edge.metadata.lastSeen,
 				last_seen: edge.metadata.lastSeen
-			});
+			};
+
+			// Validate relationship data before insertion (T035)
+			const validated = safeParseWithHandling(
+				DbRelationshipSchema,
+				relationshipData,
+				'background'
+			);
+			if (validated) {
+				insertRelationship.run(validated);
+			} else {
+				logError(
+					'Invalid relationship data, skipping',
+					{ edge_id: edge.id },
+					'relationship-validation-failed'
+				);
+			}
 		});
 	});
 
@@ -65,5 +84,22 @@ export function getNetworkRelationships(
 	query += ` ORDER BY last_seen DESC LIMIT 1000`;
 
 	const stmt = db.prepare(query);
-	return stmt.all(...params) as DbRelationship[];
+	const rawRows = stmt.all(...params) as unknown[];
+
+	// Validate all returned rows (T035)
+	const validatedRows: DbRelationship[] = [];
+	for (const row of rawRows) {
+		const validated = safeParseWithHandling(DbRelationshipSchema, row, 'background');
+		if (validated) {
+			validatedRows.push(validated);
+		} else {
+			logError(
+				'Invalid relationship data returned from database query',
+				{ row },
+				'relationship-query-validation-failed'
+			);
+		}
+	}
+
+	return validatedRows;
 }

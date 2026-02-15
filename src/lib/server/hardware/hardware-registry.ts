@@ -121,6 +121,7 @@ export class HardwareRegistry {
 			}
 		}
 
+		// Safe: Object built from HardwareCategory enum keys — guaranteed complete
 		return byCategory as Record<HardwareCategory, DetectedHardware[]>;
 	}
 
@@ -140,6 +141,7 @@ export class HardwareRegistry {
 			}
 		}
 
+		// Safe: Object built from ConnectionType enum keys — guaranteed complete
 		return byConnection as Record<ConnectionType, DetectedHardware[]>;
 	}
 

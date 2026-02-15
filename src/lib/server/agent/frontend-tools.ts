@@ -314,6 +314,7 @@ export function getFrontendToolsForAgent(): Array<{
 		name: tool.name,
 		description: tool.description,
 		input_schema: {
+			// Safe: Type literal narrowed to const for JSON schema type definition
 			type: 'object' as const,
 			properties: Object.entries(tool.parameters).reduce(
 				(acc, [key, param]) => ({

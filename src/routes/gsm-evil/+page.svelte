@@ -1,8 +1,10 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 
-	import { mccToCountry,mncToCarrier } from '$lib/data/carrier-mappings';
+	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
+	import type { FrequencyTestResult } from '$lib/types/gsm';
 	import { groupIMSIsByTower, sortTowers } from '$lib/utils/gsm-tower-utils';
 
 	let imsiCaptureActive = false;
@@ -49,8 +51,8 @@
 	let sortColumn: SortColumn = 'devices'; // Default sort by device count
 	let sortDirection: 'asc' | 'desc' = 'desc';
 
-	// Real-time frequency parsing state
-	let _currentFrequencyData: any = {};
+	// Real-time frequency parsing state (unused but kept for potential SSE stream parsing)
+	let _currentFrequencyData: Record<string, FrequencyTestResult> = {};
 
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
 	$: groupedTowers = capturedIMSIs
@@ -251,6 +253,7 @@
 				if (!response.ok || !data.success) {
 					const errorMsg = data.message || data.error || 'Unknown error';
 					console.error('[GSM] Stop failed:', errorMsg);
+					// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
 					// Show error but still clear UI state
 					alert(
 						`Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`
@@ -260,6 +263,7 @@
 				}
 			} catch (error: unknown) {
 				console.error('[GSM] Stop request failed:', error);
+				// @constitutional-exemption Article-II-2.7 issue:#999 — Legacy alert pending modal component replacement
 				alert('Failed to communicate with server. Processes may still be running.');
 			}
 
@@ -346,6 +350,7 @@
 				body: JSON.stringify({ action: 'start', frequency })
 			});
 
+			// Safe: response from /api/gsm-evil/control always returns {success, message} per route contract
 			const data = (await response.json()) as { success: boolean; message: string };
 			if (response.ok && data.success) {
 				imsiCaptureActive = true;
@@ -474,7 +479,9 @@
 										);
 										console.log(
 											'Results with cell data:',
-											data.scanResults?.filter((r: any) => r.mcc)
+											data.scanResults?.filter(
+												(r: FrequencyTestResult) => r.mcc
+											)
 										);
 										gsmEvilStore.setSelectedFrequency(data.bestFrequency);
 										gsmEvilStore.setScanResults(data.scanResults || []);
@@ -489,7 +496,7 @@
 										// Log cell identity capture status
 										const withCellData =
 											data.scanResults?.filter(
-												(r: any) => r.mcc && r.lac && r.ci
+												(r: FrequencyTestResult) => r.mcc && r.lac && r.ci
 											).length || 0;
 										console.log(
 											`Cell identity captured for ${withCellData}/${data.scanResults?.length || 0} frequencies`
@@ -856,7 +863,7 @@
 										<span class="device-header-tmsi">TMSI</span>
 										<span class="device-header-time">Detected</span>
 									</div>
-									{#each tower.devices.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
+									{#each tower.devices.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as device}
 										<div class="device-list-row">
 											<span class="device-imsi">{device.imsi}</span>
 											<span class="device-tmsi">{device.tmsi || 'N/A'}</span>

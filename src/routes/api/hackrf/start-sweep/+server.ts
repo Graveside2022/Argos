@@ -1,74 +1,85 @@
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 
 import type { RequestHandler } from './$types';
 
+/**
+ * Zod schema for HackRF start-sweep POST request
+ * Task: T024 - Constitutional Audit Remediation (P1)
+ */
+const StartSweepRequestSchema = z.object({
+	frequencies: z
+		.array(
+			z.union([
+				z.number().min(1).max(6000).describe('Single frequency in MHz'),
+				z
+					.object({
+						start: z.number().min(1).max(6000),
+						stop: z.number().min(1).max(6000)
+					})
+					.refine((data) => data.stop > data.start, {
+						message: 'stop must be greater than start'
+					}),
+				z
+					.object({
+						start: z.number().min(1).max(6000),
+						end: z.number().min(1).max(6000)
+					})
+					.refine((data) => data.end > data.start, {
+						message: 'end must be greater than start'
+					})
+			])
+		)
+		.min(1, 'At least one frequency range required'),
+	cycleTime: z.number().positive().default(10).describe('Cycle time in seconds')
+});
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const body = (await request.json()) as Record<string, unknown>;
+		const rawBody = await request.json();
+
+		// Validate request body with Zod (T024)
+		const validationResult = StartSweepRequestSchema.safeParse(rawBody);
+
+		if (!validationResult.success) {
+			console.error('[start-sweep] Validation failed:', validationResult.error.format());
+			return json(
+				{
+					status: 'error',
+					message: 'Invalid request body',
+					errors: validationResult.error.format()
+				},
+				{ status: 400 }
+			);
+		}
+
+		const body = validationResult.data;
 		console.warn('[start-sweep] Request body:', JSON.stringify(body, null, 2));
 
-		// Extract frequencies from request
-		const frequencyRanges = (body.frequencies as unknown[]) || [];
-		const cycleTime = (body.cycleTime as number) || 10; // Default 10 seconds
+		// Extract validated frequencies from request
+		const frequencyRanges = body.frequencies;
+		const cycleTime = body.cycleTime;
 
-		if (!frequencyRanges || frequencyRanges.length === 0) {
-			return json(
-				{
-					status: 'error',
-					message: 'No frequencies provided'
-				},
-				{ status: 400 }
-			);
-		}
-
-		// Convert frequency ranges to center frequencies
-		const frequencies = frequencyRanges
-			.map((range: unknown) => {
-				// Handle multiple formats:
-				// 1. Object with start/stop/step
-				// 2. Object with start/end
-				// 3. Plain number
-				if (typeof range === 'object' && range !== null) {
-					let centerFreq;
-					const rangeObj = range as Record<string, unknown>;
-					if (rangeObj.start !== undefined && rangeObj.stop !== undefined) {
-						centerFreq = ((rangeObj.start as number) + (rangeObj.stop as number)) / 2;
-					} else if (rangeObj.start !== undefined && rangeObj.end !== undefined) {
-						centerFreq = ((rangeObj.start as number) + (rangeObj.end as number)) / 2;
-					} else {
-						console.warn('Invalid frequency range format:', range);
-						return null;
-					}
-					return {
-						value: centerFreq,
-						unit: 'MHz'
-					};
-				} else if (typeof range === 'number') {
-					return {
-						value: range,
-						unit: 'MHz'
-					};
-				} else {
-					console.warn('Invalid frequency range format:', range);
-					return null;
-				}
-			})
-			.filter((freq): freq is { value: number; unit: string } => freq !== null); // Remove any null values
-
-		if (frequencies.length === 0) {
-			console.error('[start-sweep] No valid frequencies after parsing');
-			return json(
-				{
-					status: 'error',
-					message: 'No valid frequencies after parsing',
-					rawFrequencies: frequencyRanges
-				},
-				{ status: 400 }
-			);
-		}
+		// Convert validated frequency ranges to center frequencies
+		// Zod validation ensures all types are correct - no assertions needed
+		const frequencies = frequencyRanges.map((range) => {
+			if (typeof range === 'number') {
+				return { value: range, unit: 'MHz' };
+			} else if ('stop' in range && range.stop !== undefined) {
+				const centerFreq = (range.start + range.stop) / 2;
+				return { value: centerFreq, unit: 'MHz' };
+			} else if ('end' in range && range.end !== undefined) {
+				// 'end' variant (validated by Zod)
+				const centerFreq = (range.start + range.end) / 2;
+				return { value: centerFreq, unit: 'MHz' };
+			} else {
+				// Fallback (should never reach here due to Zod validation)
+				throw new Error('Invalid frequency range format');
+			}
+		});
 
 		// Convert cycleTime from seconds to milliseconds
 		const cycleTimeMs = cycleTime * 1000;

@@ -39,6 +39,7 @@ export const GET: RequestHandler = async () => {
 				timestamp: new Date().toISOString(),
 				health: null,
 				error: 'Health check failed',
+				// Safe: Catch block error cast to Error for health check failure message
 				message: (error as Error).message
 			},
 			{ status: 500 }

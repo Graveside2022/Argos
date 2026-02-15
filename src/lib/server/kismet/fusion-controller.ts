@@ -1,4 +1,5 @@
 // Simplified Kismet controller — delegates to KismetProxy
+import { KismetStatusResponseSchema } from '$lib/schemas/kismet.js';
 import type { KismetStatusResponse } from '$lib/types/service-responses';
 
 import { KismetProxy } from './kismet-proxy';
@@ -20,7 +21,21 @@ class FusionKismetController {
 
 	async getStatus(): Promise<KismetStatusResponse> {
 		try {
-			return (await KismetProxy.getSystemStatus()) as unknown as KismetStatusResponse;
+			const rawStatus = await KismetProxy.getSystemStatus();
+
+			// Runtime validation with Zod (replaces unsafe type assertion)
+			const result = KismetStatusResponseSchema.safeParse(rawStatus);
+			if (!result.success) {
+				console.error(
+					'[fusion-controller] Invalid Kismet status response, using fallback:',
+					{
+						errors: result.error.format()
+					}
+				);
+				throw new Error('Invalid Kismet status response format');
+			}
+
+			return result.data;
 		} catch {
 			return {
 				running: false,
@@ -35,6 +50,7 @@ class FusionKismetController {
 				},
 				channels: [],
 				monitorInterfaces: []
+				// Safe: Fallback status object constructed with all required KismetStatusResponse fields
 			} as KismetStatusResponse;
 		}
 	}

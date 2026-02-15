@@ -1,11 +1,18 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import {
 	getKismetStatus,
 	startKismetExtended,
-	stopKismetExtended} from '$lib/server/services/kismet/kismet-control-service-extended';
+	stopKismetExtended
+} from '$lib/server/services/kismet/kismet-control-service-extended';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
+
+const KismetControlSchema = z.object({
+	action: z.enum(['start', 'stop', 'status']).describe('Kismet control action')
+});
 
 /**
  * POST /api/kismet/control
@@ -15,9 +22,12 @@ import type { RequestHandler } from './$types';
  */
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
-		const { action } = (await request.json()) as {
-			action: unknown;
-		};
+		const rawBody = await request.json();
+		const validated = safeParseWithHandling(KismetControlSchema, rawBody, 'user-action');
+		if (!validated) {
+			return error(400, 'Invalid Kismet control request');
+		}
+		const { action } = validated;
 
 		// Only use mock responses if explicitly requested via ?mock=true
 		const useMock = url.searchParams.get('mock') === 'true';
@@ -66,6 +76,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			{
 				success: false,
 				message: 'Server error',
+				// Safe: Error object cast to extract optional message property for user-friendly error response
 				error: (error as { message?: string }).message
 			},
 			{ status: 500 }

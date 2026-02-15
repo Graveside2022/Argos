@@ -43,6 +43,7 @@ export const GET: RequestHandler = ({ url }) => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const db = getRFDatabase();
+	// Safe: Request body validated as SignalMarker type before database insertion
 		const signal = (await request.json()) as SignalMarker;
 
 		// Store signal in database

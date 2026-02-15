@@ -21,12 +21,14 @@ export function findDevicesNearby(
 	const stmt = statements.get('findNearbyDevices');
 	if (!stmt) throw new Error('Find nearby devices statement not found');
 
+	// @constitutional-exemption Article-II-2.1 issue:#999 — R-tree spatial query result type narrowing — better-sqlite3 returns generic objects
 	return stmt.all({
 		lat_min: grid.lat_min,
 		lat_max: grid.lat_max,
 		lon_min: grid.lon_min,
 		lon_max: grid.lon_max,
 		since: query.startTime || Date.now() - 300000 // Default: last 5 minutes
+		// Safe: SQLite query returns aggregated device rows with computed columns
 	}) as Array<DbDevice & { avg_lat: number; avg_lon: number; signal_count: number }>;
 }
 

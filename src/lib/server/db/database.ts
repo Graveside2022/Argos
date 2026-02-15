@@ -15,9 +15,9 @@ import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import type { NetworkEdge,NetworkNode } from '$lib/types/network';
+import type { NetworkEdge, NetworkNode } from '$lib/types/network';
 import type { SignalMarker } from '$lib/types/signals';
-import { logError, logInfo,logWarn } from '$lib/utils/logger';
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import { DatabaseCleanupService } from './cleanup-service';
 import { runMigrations } from './migrations/run-migrations';
@@ -36,7 +36,7 @@ export type {
 	TimeQuery
 } from './types';
 
-import type { DbDevice, DbRelationship,DbSignal, SpatialQuery, TimeQuery } from './types';
+import type { DbDevice, DbRelationship, DbSignal, SpatialQuery, TimeQuery } from './types';
 
 export class RFDatabase {
 	private db: Database.Database;
@@ -337,7 +337,9 @@ export function getRFDatabase(): RFDatabase {
 // accumulation on Vite HMR reloads. Each re-evaluation of this module would
 // otherwise add duplicate SIGTERM/SIGINT handlers to process.
 const DB_SHUTDOWN_KEY = '__argos_db_shutdown_registered';
+// Safe: globalThis typed as Record for HMR singleton guard check
 if (!(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY]) {
+	// Safe: globalThis typed as Record for HMR singleton guard assignment
 	(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY] = true;
 	process.on('SIGTERM', () => {
 		logInfo('SIGTERM received, closing database', {}, 'sigterm-database-close');

@@ -16,7 +16,6 @@ export default [
 			'.svelte-kit/**',
 			'.next/**',
 			'package/**',
-			'hackrf_emitter/**',
 			'**/.venv/**',
 			'**/venv/**',
 			'**/dist/**',

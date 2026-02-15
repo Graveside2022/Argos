@@ -148,6 +148,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		return {
 			success: false,
 			message: 'Failed to start GSM Evil',
+			// Safe: Catch block error from spawn/exec failures cast to Error for message extraction
 			error: (error as Error).message
 		};
 	}
@@ -215,7 +216,9 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 		console.error('Stop error:', error);
 
 		if (
+			// Safe: Error object cast to check for optional signal property (timeout detection)
 			(error as { signal?: string }).signal === 'SIGTERM' ||
+			// Safe: Error object cast to Error for message string access
 			(error as Error).message.includes('timeout')
 		) {
 			stopResult = {
@@ -228,6 +231,7 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 			stopResult = {
 				success: false,
 				message: 'Failed to stop GSM Evil',
+				// Safe: Catch block error cast to Error for message extraction in failure response
 				error: (error as Error).message,
 				suggestion: 'Check system logs or try nuclear stop option'
 			};

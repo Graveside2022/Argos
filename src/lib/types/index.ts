@@ -37,7 +37,7 @@ export type {
 	KismetNetwork,
 	KismetStatus,
 	KismetStore
-} from './kismet';
+} from '$lib/kismet/types';
 
 // shared.ts — cross-cutting domain types
 // Note: SignalSource and WebSocketState from shared.ts are intentionally excluded
@@ -116,7 +116,7 @@ export {
 } from './validation';
 
 // gps.ts — GPS position and response types
-export type { GPSApiResponse, GPSPositionData } from './gps';
+export type { GPSApiResponse, GPSPositionData } from '$lib/gps/types';
 
 // map.ts — Leaflet map interface types
 export type {

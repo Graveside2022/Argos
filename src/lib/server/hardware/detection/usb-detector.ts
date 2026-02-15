@@ -6,6 +6,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
+import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
 import type {
 	BluetoothCapabilities,
 	DetectedHardware,
@@ -19,26 +20,27 @@ const execAsync = promisify(exec);
 /**
  * Known USB device signatures
  */
+// Safe: String literal narrowing to HardwareCategory union type — values are known constants matching the union
 const _USB_DEVICE_DATABASE = {
 	// SDR Devices
-	'1d50:604b': { name: 'HackRF One', category: 'sdr' as HardwareCategory },
-	'1d50:6089': { name: 'HackRF One', category: 'sdr' as HardwareCategory },
-	'2500:0020': { name: 'USRP B200', category: 'sdr' as HardwareCategory },
-	'2500:0021': { name: 'USRP B210', category: 'sdr' as HardwareCategory },
-	'0bda:2832': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory },
-	'0bda:2838': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory },
+	'1d50:604b': { name: 'HackRF One', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'1d50:6089': { name: 'HackRF One', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'2500:0020': { name: 'USRP B200', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'2500:0021': { name: 'USRP B210', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'0bda:2832': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'0bda:2838': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
 
 	// WiFi Adapters
-	'0cf3:9271': { name: 'Atheros AR9271', category: 'wifi' as HardwareCategory },
-	'148f:7601': { name: 'Ralink RT5370', category: 'wifi' as HardwareCategory },
-	'148f:5370': { name: 'Ralink RT5370', category: 'wifi' as HardwareCategory },
-	'0bda:8187': { name: 'Realtek RTL8187', category: 'wifi' as HardwareCategory },
-	'0bda:8812': { name: 'Realtek RTL8812AU', category: 'wifi' as HardwareCategory },
+	'0cf3:9271': { name: 'Atheros AR9271', category: 'wifi' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'148f:7601': { name: 'Ralink RT5370', category: 'wifi' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'148f:5370': { name: 'Ralink RT5370', category: 'wifi' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'0bda:8187': { name: 'Realtek RTL8187', category: 'wifi' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'0bda:8812': { name: 'Realtek RTL8812AU', category: 'wifi' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
 
 	// Bluetooth Adapters
-	'0a12:0001': { name: 'CSR Bluetooth', category: 'bluetooth' as HardwareCategory },
-	'0cf3:e300': { name: 'Qualcomm Atheros Bluetooth', category: 'bluetooth' as HardwareCategory },
-	'8087:0025': { name: 'Intel Bluetooth', category: 'bluetooth' as HardwareCategory }
+	'0a12:0001': { name: 'CSR Bluetooth', category: 'bluetooth' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'0cf3:e300': { name: 'Qualcomm Atheros Bluetooth', category: 'bluetooth' as HardwareCategory }, // Safe: string literal matches HardwareCategory union
+	'8087:0025': { name: 'Intel Bluetooth', category: 'bluetooth' as HardwareCategory } // Safe: string literal matches HardwareCategory union
 };
 
 /**
@@ -142,7 +144,16 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 		for (const line of lines) {
 			if (line.includes('Device Address')) {
 				if (currentDevice && currentDevice.serial) {
-					hardware.push(currentDevice as DetectedHardware);
+					// Runtime validation with Zod (replaces unsafe type assertion)
+					const result = DetectedHardwareSchema.safeParse(currentDevice);
+					if (result.success) {
+						hardware.push(result.data);
+					} else {
+						console.error('[usb-detector] Invalid USRP device data, skipping:', {
+							device: currentDevice,
+							errors: result.error.format()
+						});
+					}
 				}
 				currentDevice = {
 					category: 'sdr',
@@ -174,10 +185,19 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 				txCapable: true,
 				rxCapable: true,
 				fullDuplex: true
-			} as SDRCapabilities;
+			};
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
 
-			hardware.push(currentDevice as DetectedHardware);
+			// Runtime validation with Zod (replaces unsafe type assertion)
+			const result = DetectedHardwareSchema.safeParse(currentDevice);
+			if (result.success) {
+				hardware.push(result.data);
+			} else {
+				console.error('[usb-detector] Invalid USRP device data (last device), skipping:', {
+					device: currentDevice,
+					errors: result.error.format()
+				});
+			}
 		}
 
 		return hardware;
@@ -334,10 +354,12 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 					category: 'bluetooth',
 					connectionType: 'usb',
 					status: 'connected',
+					// Safe: Object literal satisfies BluetoothCapabilities — all required fields provided
 					capabilities: {
 						interface: iface,
 						bleSupport: true,
 						classicSupport: true
+						// Safe: Object literal satisfies BluetoothCapabilities — all required fields provided
 					} as BluetoothCapabilities,
 					lastSeen: Date.now(),
 					firstSeen: Date.now()

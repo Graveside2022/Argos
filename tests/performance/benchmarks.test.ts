@@ -42,6 +42,7 @@ describe('Performance Benchmarks', () => {
 						await new Promise((resolve) =>
 							setTimeout(resolve, 20 + Math.random() * 30)
 						);
+						// Safe: Test: Mock object typed for test expectations
 						return createMockResponse({ data: 'test' }) as Response;
 					});
 
@@ -74,6 +75,7 @@ describe('Performance Benchmarks', () => {
 				.fill(null)
 				.forEach(() => {
 					vi.mocked(global.fetch).mockResolvedValueOnce(
+						// Safe: Test: Mock object typed for test expectations
 						createMockResponse([]) as Response
 					);
 				});
@@ -221,11 +223,14 @@ describe('Performance Benchmarks', () => {
 				const beforeHeap = process.memoryUsage().heapUsed;
 
 				// Mock the fetch calls
+				// Safe: Test: Mock object typed for test expectations
 				vi.mocked(global.fetch).mockResolvedValueOnce(createMockResponse([]) as Response);
 				vi.mocked(global.fetch).mockResolvedValueOnce(
+					// Safe: Test: Mock object typed for test expectations
 					createMockResponse({ frequencies: [], amplitudes: [] }) as Response
 				);
 				vi.mocked(global.fetch).mockResolvedValueOnce(
+					// Safe: Test: Mock object typed for test expectations
 					createMockResponse({ status: 'ok' }) as Response
 				);
 
@@ -368,6 +373,7 @@ describe('Performance Benchmarks', () => {
 								acc[d.vendor].push(d);
 								return acc;
 							},
+							// Safe: Test data structure assertion
 							{} as Record<string, typeof devices>
 						)
 				},
@@ -401,6 +407,7 @@ describe('Performance Benchmarks', () => {
 				),
 				text: async () =>
 					'<!DOCTYPE html><html><head><title>Argos</title></head><body></body></html>'
+				// Safe: Test: Type assertion for test data construction
 			} as Response);
 
 			const start = performance.now();
