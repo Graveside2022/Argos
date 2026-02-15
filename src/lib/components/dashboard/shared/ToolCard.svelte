@@ -1,6 +1,8 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button';
+
 	interface Props {
 		name: string;
 		description?: string;
@@ -79,28 +81,32 @@
 		<div class="tool-actions">
 			{#if canOpen}
 				{#if externalUrl}
-					<a
-						class="btn btn-open btn-sm"
+					<Button
+						variant="outline"
+						size="sm"
 						href={externalUrl}
 						target="_blank"
-						rel="noopener noreferrer">Open</a
+						rel="noopener noreferrer">Open</Button
 					>
 				{:else}
-					<button class="btn btn-open btn-sm" onclick={() => onOpen?.()}>Open</button>
+					<Button variant="outline" size="sm" onclick={() => onOpen?.()}>Open</Button>
 				{/if}
 			{/if}
 			{#if showControls}
 				{#if isRunning}
-					<button
-						class="btn btn-danger btn-sm"
+					<Button
+						variant="destructive"
+						size="sm"
 						disabled={isTransitioning}
-						onclick={() => onStop?.()}>Stop</button
+						onclick={() => onStop?.()}>Stop</Button
 					>
 				{:else}
-					<button
-						class="btn btn-start btn-sm"
+					<Button
+						variant="default"
+						size="sm"
+						class="bg-green-600 hover:bg-green-700 text-white"
 						disabled={isTransitioning}
-						onclick={() => onStart?.()}>Start</button
+						onclick={() => onStart?.()}>Start</Button
 					>
 				{/if}
 			{/if}
@@ -221,19 +227,7 @@
 
 	.tool-actions {
 		display: flex;
-		gap: 0;
-	}
-
-	.tool-actions :global(.btn-sm) {
-		padding: var(--space-1) var(--space-2);
-	}
-
-	.tool-actions :global(.btn-sm:first-child) {
-		padding-left: 0;
-	}
-
-	.tool-actions a {
-		text-decoration: none;
+		gap: var(--space-2);
 	}
 
 	@keyframes pulse {
