@@ -170,7 +170,7 @@ export class KismetService {
 					console.error('Invalid Kismet devices response');
 					return [];
 				}
-				const devices = data.devices;
+				const devices = data.devices as unknown as KismetDevice[];
 
 				// Track which devices we've seen this fetch
 				const currentDeviceMACs = new Set(devices.map((d) => d.mac));
