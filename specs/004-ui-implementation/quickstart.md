@@ -43,7 +43,7 @@ npm run build        # Builds successfully
 ### Track A: Component Upgrades (US1, US2) — can run in parallel with Track B
 
 1. **T-A1**: Install shadcn components (table, input, badge)
-2. **T-A2**: Upgrade buttons in ToolsNavigationView (Start, Stop, Open)
+2. **T-A2**: Upgrade buttons in ToolCard (Start, Stop, Open)
 3. **T-A3**: Upgrade button in ToolViewWrapper (Back, status badge)
 4. **T-A4**: Upgrade table in DevicesPanel
 5. **T-A5**: Upgrade inputs in DevicesPanel
@@ -59,28 +59,28 @@ npm run build        # Builds successfully
 5. **T-B5**: Build Settings panel UI (palette dropdown, mode toggle, semantic toggle)
 6. **T-B6**: Wire mode-watcher into +layout.svelte
 7. **T-B7**: Add semantic colors toggle CSS (signal/status variable overrides)
-8. **T-B8**: Replace hardcoded hex colors in DashboardMap (~30 values)
-9. **T-B9**: Replace hardcoded hex colors in AgentChatPanel (~40 values)
-10. **T-B10**: Replace hardcoded hex colors in TerminalTabContent (18 xterm.js ANSI colors)
+8. **T-B8**: Replace hardcoded hex colors in DashboardMap (25 values)
+9. **T-B9**: Replace hardcoded hex colors in AgentChatPanel (28+ values)
+10. **T-B10**: Theme-map 5 xterm.js UI chrome colors in TerminalTabContent (keep 16 ANSI fixed)
 11. **T-B11**: Replace hardcoded hex color in LayersPanel (1 value)
 12. **T-B12**: Final verification across all palettes and modes
 
 ## Key Files
 
-| File                                                             | Purpose                                      |
-| ---------------------------------------------------------------- | -------------------------------------------- |
-| `src/lib/stores/theme-store.ts`                                  | Theme state management (NEW)                 |
-| `src/lib/themes/palettes.ts`                                     | 8 palette CSS variable definitions (NEW)     |
-| `src/app.css`                                                    | CSS variable definitions + palette overrides |
-| `src/app.html`                                                   | FOUC prevention script                       |
-| `src/lib/components/dashboard/panels/SettingsPanel.svelte`       | Theme settings UI                            |
-| `src/lib/components/dashboard/panels/ToolsNavigationView.svelte` | Button upgrades                              |
-| `src/lib/components/dashboard/panels/DevicesPanel.svelte`        | Table, input, badge upgrades                 |
-| `src/lib/components/dashboard/views/ToolViewWrapper.svelte`      | Button + badge upgrades                      |
-| `src/lib/components/dashboard/DashboardMap.svelte`               | Theme-aware map colors (~30 hex → CSS vars)  |
-| `src/lib/components/dashboard/AgentChatPanel.svelte`             | Theme-aware chat colors (~40 hex → CSS vars) |
-| `src/lib/components/dashboard/TerminalTabContent.svelte`         | Theme-aware terminal ANSI colors (18 hex)    |
-| `src/lib/components/dashboard/panels/LayersPanel.svelte`         | Theme-aware band dot color (1 hex)           |
+| File                                                        | Purpose                                           |
+| ----------------------------------------------------------- | ------------------------------------------------- |
+| `src/lib/stores/theme-store.ts`                             | Theme state management (NEW)                      |
+| `src/lib/themes/palettes.ts`                                | 8 palette CSS variable definitions (NEW)          |
+| `src/app.css`                                               | CSS variable definitions + palette overrides      |
+| `src/app.html`                                              | FOUC prevention script                            |
+| `src/lib/components/dashboard/panels/SettingsPanel.svelte`  | Theme settings UI                                 |
+| `src/lib/components/dashboard/shared/ToolCard.svelte`       | Button + badge upgrades                           |
+| `src/lib/components/dashboard/panels/DevicesPanel.svelte`   | Table, input upgrades                             |
+| `src/lib/components/dashboard/views/ToolViewWrapper.svelte` | Button + badge upgrades                           |
+| `src/lib/components/dashboard/DashboardMap.svelte`          | Theme-aware map colors (25 hex → CSS vars)        |
+| `src/lib/components/dashboard/AgentChatPanel.svelte`        | Theme-aware chat colors (28+ hex → CSS vars)      |
+| `src/lib/components/dashboard/TerminalTabContent.svelte`    | Theme-aware terminal (5 UI chrome, 16 ANSI fixed) |
+| `src/lib/components/dashboard/panels/LayersPanel.svelte`    | Theme-aware band dot color (1 hex)                |
 
 ## Common Patterns
 
