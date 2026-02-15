@@ -1,7 +1,8 @@
-import type { GPSApiResponse } from '$lib/gps/types';
+import { GPSApiResponseSchema } from '$lib/schemas/rf';
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 // Re-export for backward compatibility (barrel and consumers that import from this module)
 export type { GPSApiResponse, GPSPositionData } from '$lib/gps/types';
@@ -13,8 +14,19 @@ export class GPSService {
 	async updateGPSPosition(): Promise<void> {
 		try {
 			const response = await fetch('/api/gps/position');
-			// Safe: GPS API response matches GPSApiResponse shape per route contract
-			const result = (await response.json()) as GPSApiResponse;
+			const rawData = await response.json();
+			const result = safeParseWithHandling(GPSApiResponseSchema, rawData, 'background');
+
+			if (!result) {
+				console.error('Invalid GPS API response');
+				updateGPSStatus({
+					hasGPSFix: false,
+					gpsStatus: 'GPS: Invalid Response',
+					satellites: 0,
+					fixType: 'No'
+				});
+				return;
+			}
 
 			if (result.success && result.data) {
 				const position = {
