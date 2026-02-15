@@ -2,6 +2,8 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import type { KismetDevice } from '$lib/kismet/types';
 	import { isolatedDeviceMAC, isolateDevice } from '$lib/stores/dashboard/dashboard-store';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
@@ -275,8 +277,8 @@
 
 		<div class="toolbar-separator"></div>
 
-		<input
-			class="input-field input-field-sm toolbar-search"
+		<Input
+			class="toolbar-search h-7 text-xs"
 			type="text"
 			placeholder="Search MAC, SSID, manufacturer..."
 			bind:value={searchQuery}
@@ -597,14 +599,14 @@
 		<div class="section-label">WHITELIST ({whitelistedMACs.length})</div>
 
 		<div class="whitelist-input-row">
-			<input
-				class="input-field input-field-sm"
+			<Input
+				class="h-7 text-xs flex-1"
 				type="text"
 				placeholder="MAC address..."
 				bind:value={whitelistInput}
 				onkeydown={(e) => e.key === 'Enter' && addToWhitelist()}
 			/>
-			<button class="btn btn-secondary btn-sm" onclick={addToWhitelist}>Add</button>
+			<Button variant="secondary" size="sm" onclick={addToWhitelist}>Add</Button>
 		</div>
 
 		{#if whitelistedMACs.length > 0}
@@ -981,10 +983,6 @@
 	.whitelist-input-row {
 		display: flex;
 		gap: var(--space-2);
-	}
-
-	.whitelist-input-row .input-field {
-		flex: 1;
 	}
 
 	.whitelist-items {
