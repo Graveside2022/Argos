@@ -4,7 +4,7 @@
  * Task: T018
  *
  * Validation rules:
- * - frequency: 1-6000 MHz (HackRF/USRP operating range)
+ * - frequency: 1-6000 MHz (HackRF operating range)
  * - power: -120 to 0 dBm (realistic signal power range)
  * - timestamp: positive integer (Unix timestamp in ms)
  * - source: enum of valid SDR sources
@@ -20,7 +20,7 @@ export const SignalReadingSchema = z.object({
 	frequency: z.number().min(1).max(6000).describe('Frequency in MHz (1-6000)'),
 	power: z.number().min(-120).max(0).describe('Signal power in dBm (-120 to 0)'),
 	timestamp: z.number().int().positive().describe('Unix timestamp in milliseconds'),
-	source: z.enum(['hackrf', 'usrp', 'kismet']).describe('SDR hardware source'),
+	source: z.enum(['hackrf', 'kismet']).describe('SDR hardware source'),
 	metadata: z.record(z.unknown()).optional().describe('Additional signal metadata')
 });
 
