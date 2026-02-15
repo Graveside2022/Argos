@@ -1,19 +1,20 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
-const COMPOSE_FILE = '/home/kali/Documents/Argos/Argos/docker/docker-compose.portainer-dev.yml';
 const CONTAINER_NAME = 'openwebrx-hackrf';
-const SERVICE_NAME = 'openwebrx';
 
 /**
  * POST /api/openwebrx/control
  * Control OpenWebRX Docker container
  * Body: { action: 'start' | 'stop' | 'restart' | 'status' }
+ *
+ * Uses plain docker commands (not compose) because the dev server
+ * runs inside a container that has Docker CLI but not the compose plugin.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -25,11 +26,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (action === 'status') {
-			// Check if container is running
 			try {
-				const { stdout } = await execAsync(
-					`docker ps --filter "name=${CONTAINER_NAME}" --format "{{.State}}"`
-				);
+				const { stdout } = await execFileAsync('docker', [
+					'ps',
+					'--filter',
+					`name=${CONTAINER_NAME}`,
+					'--format',
+					'{{.State}}'
+				]);
 				const running = stdout.trim() === 'running';
 
 				return json({
@@ -47,10 +51,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (action === 'start') {
-			// Start container with tools profile
-			await execAsync(
-				`docker compose -f ${COMPOSE_FILE} --profile tools up -d ${SERVICE_NAME}`
-			);
+			await execFileAsync('docker', ['start', CONTAINER_NAME]);
 
 			// Wait for container to be ready
 			await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -64,8 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (action === 'stop') {
-			// Stop container
-			await execAsync(`docker compose -f ${COMPOSE_FILE} stop ${SERVICE_NAME}`);
+			await execFileAsync('docker', ['stop', CONTAINER_NAME]);
 
 			return json({
 				success: true,
@@ -75,8 +75,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (action === 'restart') {
-			// Restart container
-			await execAsync(`docker compose -f ${COMPOSE_FILE} restart ${SERVICE_NAME}`);
+			await execFileAsync('docker', ['restart', CONTAINER_NAME]);
 
 			return json({
 				success: true,
