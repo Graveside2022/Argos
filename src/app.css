@@ -395,6 +395,30 @@
 	--ring: hsl(35.5 91.7% 32.9%);
 }
 
+/* ---- Semantic Colors Override ---- */
+/* When OFF, signal indicators harmonize with the active palette instead of fixed red/yellow/green */
+.semantic-colors-off {
+	--palantir-signal-critical: var(--primary);
+	--palantir-signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
+	--palantir-signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
+	--palantir-signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
+	--palantir-signal-weak: var(--muted-foreground);
+}
+
+.dark.semantic-colors-off {
+	--signal-critical: var(--primary);
+	--signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
+	--signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
+	--signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
+	--signal-weak: var(--muted-foreground);
+
+	--palantir-signal-critical: var(--primary);
+	--palantir-signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
+	--palantir-signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
+	--palantir-signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
+	--palantir-signal-weak: var(--muted-foreground);
+}
+
 /* ---- Theme mapping for Tailwind utilities ---- */
 @theme inline {
 	--color-background: var(--background);
