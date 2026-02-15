@@ -1,4 +1,5 @@
 import type { KismetDevice } from '$lib/kismet/types';
+import { KismetControlResponseSchema, KismetDevicesResponseSchema } from '$lib/schemas/rf';
 import {
 	addKismetDevice,
 	clearAllKismetDevices,
@@ -7,6 +8,7 @@ import {
 	setKismetStatus,
 	updateDistributions
 } from '$lib/stores/tactical-map/kismet-store';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 export interface KismetDevicesResponse {
 	devices: KismetDevice[];
@@ -33,8 +35,16 @@ export class KismetService {
 			});
 
 			if (response.ok) {
-				// Safe: Kismet API response matches KismetControlResponse per route contract
-				const data = (await response.json()) as KismetControlResponse;
+				const rawData = await response.json();
+				const data = safeParseWithHandling(
+					KismetControlResponseSchema,
+					rawData,
+					'background'
+				);
+				if (!data) {
+					console.error('Invalid Kismet status response');
+					return;
+				}
 
 				// Get current status
 				let currentStatus: string = 'stopped';
@@ -114,9 +124,13 @@ export class KismetService {
 					clearAllKismetDevices(); // Clear all devices and signals from the map
 				}, 2000);
 			} else {
-				// Safe: Kismet API response matches KismetControlResponse per route contract
-				const data = (await response.json()) as KismetControlResponse;
-				throw new Error(data.message || 'Failed to stop Kismet');
+				const rawData = await response.json();
+				const data = safeParseWithHandling(
+					KismetControlResponseSchema,
+					rawData,
+					'background'
+				);
+				throw new Error(data?.message || 'Failed to stop Kismet');
 			}
 		} catch (error: unknown) {
 			console.error('Error stopping Kismet:', error);
@@ -146,10 +160,16 @@ export class KismetService {
 		try {
 			const response = await fetch('/api/kismet/devices');
 			if (response.ok) {
-				// Safe: Kismet API response matches KismetDevicesResponse per route contract
-				const data = (await response.json()) as KismetDevicesResponse;
-
-				// Update devices in store
+				const rawData = await response.json();
+				const data = safeParseWithHandling(
+					KismetDevicesResponseSchema,
+					rawData,
+					'background'
+				);
+				if (!data || !data.devices) {
+					console.error('Invalid Kismet devices response');
+					return [];
+				}
 				const devices = data.devices;
 
 				// Track which devices we've seen this fetch

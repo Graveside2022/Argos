@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { WebSocket } from 'ws';
 
+import { KismetRawDeviceSchema, KismetSystemStatusSchema } from '$lib/schemas/rf';
 import { logError, logInfo } from '$lib/utils/logger';
 
 import type { KismetDevice, WebSocketMessage } from './types';
@@ -35,16 +36,6 @@ interface KismetRawDevice {
 		'kismet.common.location.lon'?: number;
 		'kismet.common.location.alt'?: number;
 	};
-}
-
-// Kismet system status interface
-interface KismetSystemStatus {
-	'kismet.system.packets.rate'?: number;
-	'kismet.system.memory.rss'?: number;
-	'kismet.system.cpu.system'?: number;
-	'kismet.system.timestamp.start_sec'?: number;
-	'kismet.system.channels.channels'?: unknown[];
-	'kismet.system.interfaces'?: unknown[];
 }
 
 // Client message interface
@@ -165,9 +156,16 @@ export class WebSocketManager extends EventEmitter {
 			if (!response.ok) {
 				throw new Error(`Kismet API error: ${response.status}`);
 			}
-
-			// Safe: Kismet REST API returns array of device objects per API contract
-			const devices = (await response.json()) as KismetRawDevice[];
+			// Defensive validation: External Kismet API may return unexpected data
+			const rawDevices = await response.json();
+			const devices = Array.isArray(rawDevices)
+				? rawDevices
+						.map((d: unknown) => {
+							const result = KismetRawDeviceSchema.safeParse(d);
+							return result.success ? result.data : null;
+						})
+						.filter((d): d is NonNullable<typeof d> => d !== null)
+				: [];
 
 			// Process device updates
 			for (const device of devices) {
@@ -362,8 +360,14 @@ export class WebSocketManager extends EventEmitter {
 			}
 
 			// Safe: Kismet system status endpoint returns KismetSystemStatus per API contract
-			const status = (await response.json()) as KismetSystemStatus;
-
+			// Defensive validation: External Kismet API may return unexpected data
+			const rawStatus = await response.json();
+			const statusResult = KismetSystemStatusSchema.safeParse(rawStatus);
+			if (!statusResult.success) {
+				logError('Invalid Kismet system status response', { error: statusResult.error });
+				return;
+			}
+			const status = statusResult.data;
 			const message: WebSocketMessage = {
 				type: 'status_change',
 				data: {
