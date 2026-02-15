@@ -126,7 +126,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 - [X] T026 [US1] Add Zod validation to `src/routes/api/kismet/devices/+server.ts` for GET response
 - [X] T027 [US1] Add Zod validation to `src/routes/api/signals/batch/+server.ts` — CRITICAL SECURITY FIX (commit 8debc15)
 - [X] T028 [US1] Add Zod validation to `src/routes/api/gps/position/+server.ts` for GET response
-- [ ] T029 [US1] Add Zod validation to `src/routes/api/usrp/power/+server.ts` for POST request body
+- [N/A] T029 [US1] ~~Add Zod validation to `src/routes/api/usrp/power/+server.ts` for POST request body~~ — **N/A**: Endpoint not implemented (empty file). Will add validation when endpoint is built (future work).
 - [X] T030 [US1] Add Zod validation to `src/routes/api/gsm-evil/control/+server.ts` for POST request body
 
 **Verification**: Run `npm run typecheck && npm run test:integration` after each API migration
@@ -135,7 +135,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"`
 
 - [X] T031 [US1] Add Zod validation to HackRF WebSocket message handler in `src/lib/server/websocket-server.ts`
 - [X] T032 [US1] Add Zod validation to Kismet WebSocket message handler in `src/lib/server/websocket-server.ts`
-- [ ] T033 [US1] Add Zod validation to GPS WebSocket message handler in `src/lib/server/websocket-server.ts`
+- [N/A] T033 [US1] ~~Add Zod validation to GPS WebSocket message handler in `src/lib/server/websocket-server.ts`~~ — **N/A**: GPS WebSocket doesn't exist. GPS uses HTTP API polling via `/api/gps/position` (already validated per T028).
 
 **Verification**: Test WebSocket connections manually via browser DevTools after each migration
 
