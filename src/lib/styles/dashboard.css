@@ -109,6 +109,6 @@
 
 /* ---- Panel header ---- */
 .dashboard-shell .panel-header {
-	background: rgba(26, 29, 35, 0.6);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	background: var(--palantir-bg-surface);
+	border-bottom: 1px solid var(--palantir-border-subtle);
 }

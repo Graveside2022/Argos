@@ -218,7 +218,7 @@
 		align-items: center;
 		justify-content: center;
 		color: var(--palantir-accent);
-		background-color: rgba(74, 158, 255, 0.12);
+		background-color: color-mix(in srgb, var(--palantir-accent) 12%, transparent);
 	}
 
 	.rail-btn.active::before {
@@ -240,7 +240,12 @@
 		transform: translateY(-50%);
 		width: 1px;
 		height: 24px;
-		background: linear-gradient(to bottom, transparent, rgba(74, 158, 255, 0.5), transparent);
+		background: linear-gradient(
+			to bottom,
+			transparent,
+			color-mix(in srgb, var(--palantir-accent) 50%, transparent),
+			transparent
+		);
 		opacity: 0.6;
 	}
 </style>

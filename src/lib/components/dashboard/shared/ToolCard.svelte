@@ -184,7 +184,7 @@
 
 	.dot-active {
 		background: var(--palantir-success);
-		box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
+		box-shadow: 0 0 4px color-mix(in srgb, var(--palantir-success) 50%, transparent);
 	}
 
 	.dot-transition {

@@ -1,55 +1,60 @@
 /* ============================================================
    PALANTIR DESIGN SYSTEM
    Enterprise-grade military dashboard aesthetic
+   
+   Colors are bridged to shadcn CSS variables so the entire
+   dashboard responds to palette/mode changes from the theme
+   store. Fallback hex values preserve appearance if shadcn
+   vars are not yet loaded.
    ============================================================ */
 
-/* ---- Color Palette ---- */
+/* ---- Color Palette (bridged to shadcn theme) ---- */
 :root {
-	/* Backgrounds - dark hierarchy */
-	--palantir-bg-app: #0e1116;
-	--palantir-bg-surface: #16181d;
-	--palantir-bg-panel: #1c1f26;
-	--palantir-bg-elevated: #25282f;
-	--palantir-bg-input: #1a1d23;
-	--palantir-bg-hover: #2a2d35;
-	--palantir-bg-button: #2a2d35;
+	/* Backgrounds — mapped to shadcn surface hierarchy */
+	--palantir-bg-app: var(--background, #0e1116);
+	--palantir-bg-surface: var(--card, #16181d);
+	--palantir-bg-panel: var(--card, #1c1f26);
+	--palantir-bg-elevated: var(--accent, #25282f);
+	--palantir-bg-input: var(--input, #1a1d23);
+	--palantir-bg-hover: var(--accent, #2a2d35);
+	--palantir-bg-button: var(--secondary, #2a2d35);
 
-	/* Borders */
-	--palantir-border-subtle: rgba(255, 255, 255, 0.06);
-	--palantir-border-default: rgba(255, 255, 255, 0.1);
-	--palantir-border-strong: rgba(255, 255, 255, 0.15);
+	/* Borders — mapped to shadcn border */
+	--palantir-border-subtle: var(--border, rgba(255, 255, 255, 0.06));
+	--palantir-border-default: var(--border, rgba(255, 255, 255, 0.1));
+	--palantir-border-strong: var(--border, rgba(255, 255, 255, 0.15));
 
-	/* Text */
-	--palantir-text-primary: #e8eaed;
-	--palantir-text-secondary: #9aa0a6;
-	--palantir-text-tertiary: #5f6368;
-	--palantir-text-on-accent: #ffffff;
+	/* Text — mapped to shadcn foreground hierarchy */
+	--palantir-text-primary: var(--foreground, #e8eaed);
+	--palantir-text-secondary: var(--muted-foreground, #9aa0a6);
+	--palantir-text-tertiary: var(--muted-foreground, #5f6368);
+	--palantir-text-on-accent: var(--primary-foreground, #ffffff);
 
-	/* Accent */
-	--palantir-accent: #4a9eff;
-	--palantir-accent-hover: #3a8eef;
-	--palantir-accent-muted: rgba(74, 158, 255, 0.15);
+	/* Accent — mapped to shadcn primary */
+	--palantir-accent: var(--primary, #4a9eff);
+	--palantir-accent-hover: var(--ring, #3a8eef);
+	--palantir-accent-muted: color-mix(in srgb, var(--primary, #4a9eff) 15%, transparent);
 
-	/* Status */
-	--palantir-success: #4ade80;
-	--palantir-warning: #fbbf24;
-	--palantir-error: #f87171;
-	--palantir-info: #60a5fa;
+	/* Status — mapped to shadcn semantic tokens */
+	--palantir-success: var(--success, #4ade80);
+	--palantir-warning: var(--warning, #fbbf24);
+	--palantir-error: var(--destructive, #f87171);
+	--palantir-info: var(--info, #60a5fa);
 
-	/* Signal strength scale */
-	--palantir-signal-critical: #dc2626;
-	--palantir-signal-strong: #f97316;
-	--palantir-signal-good: #fbbf24;
-	--palantir-signal-fair: #10b981;
-	--palantir-signal-weak: #4a90e2;
+	/* Signal strength scale — mapped to shadcn signal tokens */
+	--palantir-signal-critical: var(--signal-critical, #dc2626);
+	--palantir-signal-strong: var(--signal-strong, #f97316);
+	--palantir-signal-good: var(--signal-good, #fbbf24);
+	--palantir-signal-fair: var(--signal-fair, #10b981);
+	--palantir-signal-weak: var(--signal-weak, #4a90e2);
 
-	/* Chart / data viz */
-	--palantir-chart-1: #4a9eff;
-	--palantir-chart-2: #10b981;
-	--palantir-chart-3: #f97316;
-	--palantir-chart-4: #a78bfa;
-	--palantir-chart-5: #f87171;
-	--palantir-chart-6: #fbbf24;
+	/* Chart / data viz — mapped to shadcn chart tokens */
+	--palantir-chart-1: var(--chart-1, #4a9eff);
+	--palantir-chart-2: var(--chart-2, #10b981);
+	--palantir-chart-3: var(--chart-3, #f97316);
+	--palantir-chart-4: var(--chart-4, #a78bfa);
+	--palantir-chart-5: var(--chart-5, #f87171);
+	--palantir-chart-6: var(--chart-6, #fbbf24);
 
 	/* Spacing scale (8px grid) */
 	--space-1: 0.25rem; /* 4px */
@@ -89,9 +94,9 @@
 	--radius-xl: 12px;
 
 	/* Feature category colors (for mission cards) */
-	--feature-rf: #f97316; /* RF/Hardware features (orange) */
-	--feature-drone: #06b6d4; /* Drone/Aviation features (cyan) */
-	--feature-radio: #a855f7; /* Radio/SDR features (purple) */
+	--feature-rf: var(--feature-rf, #f97316);
+	--feature-drone: var(--feature-drone, #06b6d4);
+	--feature-radio: var(--feature-radio, #a855f7);
 }
 
 /* ---- Map Popup ---- */
