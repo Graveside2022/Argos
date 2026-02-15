@@ -21,6 +21,7 @@
 		"lint:fix": "eslint . --config config/eslint.config.js --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
+		"postinstall": "node -e \"try{require('node-pty')}catch{process.exit(1)}\" 2>/dev/null || npx node-gyp rebuild --directory=node_modules/node-pty 2>/dev/null || true",
 		"prepare": "husky install",
 		"framework:check-css": "node ./scripts/build/css-integrity-check.cjs",
 		"framework:check-html": "node ./scripts/build/html-structure-validator.cjs",
