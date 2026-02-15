@@ -3,7 +3,8 @@
 		activeBands,
 		layerVisibility,
 		toggleBand,
-		toggleLayerVisibility	} from '$lib/stores/dashboard/dashboard-store';
+		toggleLayerVisibility
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { signalBands } from '$lib/utils/signal-utils';
 </script>
 
@@ -94,7 +95,7 @@
 
 		<label class="toggle-row">
 			<div class="band-label">
-				<span class="band-dot" style="background: #9a9a9a"></span>
+				<span class="band-dot" style="background: var(--muted-foreground)"></span>
 				<span class="toggle-label">No RSSI</span>
 			</div>
 			<button
