@@ -130,8 +130,6 @@
 					<ToolUnavailableView title="Pagermon" />
 				{:else if $activeView === 'rf-emitter'}
 					<ToolUnavailableView title="RF Emitter" />
-				{:else if $activeView === 'rfsweep'}
-					<ToolUnavailableView title="RF Sweep" />
 				{:else if $activeView === 'wifite'}
 					<ToolUnavailableView title="Wifite2" />
 				{:else if $activeView === 'wigletotak'}

@@ -69,11 +69,13 @@ function queryGpsd(timeoutMs: number = 3000): Promise<string> {
 		socket.on('connect', () => {
 			socket.write('?WATCH={"enable":true,"json":true}\n');
 
-			// Collect data for 5 seconds to catch SKY message with satellite array
-			// (gpsd alternates between SKY messages with uSat count and satellite details)
+			// Collect data for 10 seconds to catch SKY message with satellite array.
+			// gpsd only includes per-satellite data in ~1 of every 7 SKY messages,
+			// so 5s was too short. This endpoint is only called when the satellite
+			// panel is expanded (not on every poll), so the extra latency is acceptable.
 			setTimeout(() => {
 				finish(Buffer.concat(chunks).toString('utf8'));
-			}, 5000);
+			}, 10000);
 		});
 
 		socket.on('data', (chunk: Buffer) => {
@@ -218,7 +220,7 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 	}
 
 	try {
-		const allLines = await queryGpsd(6000); // Increased timeout for more SKY messages
+		const allLines = await queryGpsd(12000); // 12s timeout to ensure satellite array capture
 
 		let satellites: Satellite[] = [];
 		let usedSatCount = 0;

@@ -28,7 +28,12 @@ export class GPSService {
 				return;
 			}
 
-			if (result.success && result.data) {
+			if (
+				result.success &&
+				result.data &&
+				result.data.latitude != null &&
+				result.data.longitude != null
+			) {
 				const position = {
 					lat: result.data.latitude,
 					lon: result.data.longitude

@@ -1,7 +1,7 @@
 # Test Coverage Analysis
 
 **Violation Category:** HIGH (Article III §3.2)
-**Violation Count:** 7 violations
+**Violation Count:** 8 violations
 **Impact:** Reduced confidence in code changes, potential regressions
 **Status:** Pre-existing (created before constitution ratification)
 **Priority:** 🟠 **HIGH** - Should be fixed soon
@@ -34,8 +34,8 @@ npm run test
 
 ## 🔍 Detected Violations
 
-**Files Affected:** 5
-**Total Occurrences:** 7
+**Files Affected:** 6
+**Total Occurrences:** 8
 
 ### 1. src/lib/schemas/api.ts
 
@@ -55,7 +55,7 @@ npm run test
 **Rule:** Test coverage must be ≥ 80%
 **Fix:** Increase coverage from 0% to 80% (add unit tests for uncovered functions)
 
-### 4. src/lib/schemas/kismet.ts
+### 4. src/lib/schemas/rf.ts
 
 **Line:** 1
 **Rule:** Test coverage must be ≥ 80%
@@ -73,7 +73,13 @@ npm run test
 **Rule:** Components and utilities must have tests
 **Fix:** Create test file: tests/lib/schemas/stores.test.ts
 
-### 7. src/lib/schemas/kismet.ts
+### 7. src/lib/schemas/rf.ts
+
+**Line:** 1
+**Rule:** Components and utilities must have tests
+**Fix:** Create test file: tests/lib/schemas/rf.test.ts
+
+### 8. src/lib/schemas/kismet.ts
 
 **Line:** 1
 **Rule:** Components and utilities must have tests
@@ -85,7 +91,7 @@ npm run test
 
 ### Option A: Full Remediation
 
-**Impact:** Resolves all 7 violations
+**Impact:** Resolves all 8 violations
 **Timeline:** 2-3 weeks
 **Risk:** LOW
 
@@ -148,14 +154,14 @@ This remediation requires zero new dependencies.
 
 **Recommendation:** Option A (Full Remediation) - High ROI
 
-HIGH priority violations represent 7 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
+HIGH priority violations represent 8 issues that should be addressed. The estimated timeline of 2-3 weeks is reasonable for the impact gained.
 
 **Cost-Benefit Analysis:**
 
 - Dependencies: ZERO
 - Risk: LOW
 - Timeline: 2-3 weeks
-- Impact: Resolves 7 violations
+- Impact: Resolves 8 violations
 
 ---
 
@@ -188,6 +194,6 @@ HIGH priority violations represent 7 issues that should be addressed. The estima
 
 **After Remediation:**
 
-- **HIGH violations:** 7 → 0 (all resolved)
+- **HIGH violations:** 8 → 0 (all resolved)
 - **Estimated Timeline:** 2-3 weeks
 - **Risk Level:** LOW

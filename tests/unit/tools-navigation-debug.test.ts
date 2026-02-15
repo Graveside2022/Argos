@@ -112,14 +112,14 @@ describe('Tool Navigation Debug', () => {
 
 	// ──────────────── Tool Count Validation ────────────────
 
-	it('total tools across all categories is 91', () => {
-		expect(countTools(toolHierarchy.root).total).toBe(91);
+	it('total tools across all categories is 90', () => {
+		expect(countTools(toolHierarchy.root).total).toBe(90);
 	});
 
-	it('OFFNET has exactly 83 tools', () => {
+	it('OFFNET has exactly 82 tools', () => {
 		// Safe: Test: Type assertion for test data construction
 		const offnet = findByPath(['offnet'], toolHierarchy.root) as ToolCategory;
-		expect(countTools(offnet).total).toBe(83);
+		expect(countTools(offnet).total).toBe(82);
 	});
 
 	it('ONNET has exactly 8 tools', () => {
@@ -128,10 +128,10 @@ describe('Tool Navigation Debug', () => {
 		expect(countTools(onnet).total).toBe(8);
 	});
 
-	it('RECON has 37 tools', () => {
+	it('RECON has 36 tools', () => {
 		// Safe: Test: Type assertion for test data construction
 		const recon = findByPath(['offnet', 'recon'], toolHierarchy.root) as ToolCategory;
-		expect(countTools(recon).total).toBe(37);
+		expect(countTools(recon).total).toBe(36);
 	});
 
 	it('ATTACK has 27 tools', () => {

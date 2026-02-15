@@ -3,7 +3,7 @@
  * Organized as: TOOLS → OFFNET/ONNET → Workflow → Categories → Tools
  */
 
-import type { ToolCategory, ToolDefinition,ToolHierarchy } from '$lib/types/tools';
+import type { ToolCategory, ToolDefinition, ToolHierarchy } from '$lib/types/tools';
 
 import { toolIcons } from './tool-icons';
 
@@ -50,18 +50,6 @@ export const toolHierarchy: ToolHierarchy = {
 										installed: true,
 										deployment: 'native',
 										viewName: 'hackrf',
-										canOpen: true,
-										showControls: false
-									},
-									{
-										id: 'rf-sweep',
-										name: 'RF Sweep',
-										description:
-											'Argos built-in RF spectrum sweep module supporting HackRF and USRP hardware',
-										icon: toolIcons.rfsweep,
-										installed: true,
-										deployment: 'native',
-										viewName: 'rfsweep',
 										canOpen: true,
 										showControls: false
 									},

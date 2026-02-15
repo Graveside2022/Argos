@@ -135,15 +135,18 @@ export const GPSApiResponseSchema = z.object({
 	success: z.boolean(),
 	data: z
 		.object({
-			latitude: z.number().min(-90).max(90),
-			longitude: z.number().min(-180).max(180),
-			accuracy: z.number().optional(),
-			satellites: z.number().optional(),
+			latitude: z.number().min(-90).max(90).nullable(),
+			longitude: z.number().min(-180).max(180).nullable(),
+			accuracy: z.number().nullable().optional(),
+			satellites: z.number().nullable().optional(),
 			fix: z.number().optional(),
-			heading: z.number().optional(),
-			speed: z.number().optional()
+			heading: z.number().nullable().optional(),
+			speed: z.number().nullable().optional(),
+			time: z.string().nullable().optional(),
+			altitude: z.number().nullable().optional()
 		})
-		.optional()
+		.optional(),
+	error: z.string().optional()
 });
 
 /**
