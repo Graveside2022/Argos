@@ -10,8 +10,6 @@
 
 import { z } from 'zod';
 
-import { KismetDeviceSchema } from '$lib/kismet/types';
-
 /**
  * Device Type Schema - Validates SDR device type (HackRF only)
  */
@@ -104,7 +102,7 @@ export type EmergencyStopRequest = z.infer<typeof EmergencyStopRequestSchema>;
  * Kismet Devices Response Schema - Validates Kismet API responses
  */
 export const KismetDevicesResponseSchema = z.object({
-	devices: z.array(KismetDeviceSchema).optional(),
+	devices: z.array(z.record(z.unknown())).optional(),
 	error: z.string().optional()
 });
 
