@@ -14,7 +14,7 @@ export default defineConfig({
 		include: ['leaflet', 'cytoscape', 'mgrs']
 	},
 	ssr: {
-		noExternal: ['mgrs']
+		noExternal: ['mgrs', 'mode-watcher']
 	},
 	define: {
 		// Helps with Node.js compatibility issues

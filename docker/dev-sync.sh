@@ -41,7 +41,7 @@ if [ ! -d "/app/node_modules" ]; then
     error "node_modules directory not found. Running initial install..."
     cd /app
     npm ci --ignore-scripts 2>&1 | tee "$SYNC_LOG"
-    npm rebuild better-sqlite3 2>&1 | tee -a "$SYNC_LOG"
+    npm rebuild better-sqlite3 node-pty 2>&1 | tee -a "$SYNC_LOG"
     npx svelte-kit sync 2>&1 | tee -a "$SYNC_LOG"
     md5sum "$LOCK_FILE" | cut -d' ' -f1 > "$HASH_FILE"
     log "Initial install complete."
@@ -67,8 +67,9 @@ if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
     npm ci --ignore-scripts 2>&1 | tee "$SYNC_LOG"
 
     # Rebuild native modules for the container's Node.js ABI.
-    # better-sqlite3 is the primary native module in this project.
-    npm rebuild better-sqlite3 2>&1 | tee -a "$SYNC_LOG"
+    # better-sqlite3: SQLite database driver with native bindings
+    # node-pty: terminal emulator for dashboard terminal (host binary won't load in container)
+    npm rebuild better-sqlite3 node-pty 2>&1 | tee -a "$SYNC_LOG"
 
     # Store the new hash AFTER successful install
     echo "$CURRENT_HASH" > "$HASH_FILE"
