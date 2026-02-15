@@ -19,8 +19,8 @@
 
 **Purpose**: Install all new dependencies and scaffold shadcn components
 
-- [ ] T001 Install mode-watcher npm dependency via `npm install mode-watcher` (FOUC prevention library from svecosystem, Svelte 5 compatible)
-- [ ] T002 [P] Install 5 shadcn components via `npx shadcn@latest add table input badge select switch` into src/lib/components/ui/
+- [x] T001 Install mode-watcher npm dependency via `npm install mode-watcher` (FOUC prevention library from svecosystem, Svelte 5 compatible)
+- [x] T002 [P] Install 5 shadcn components via `npx shadcn@latest add table input badge select switch` into src/lib/components/ui/
 
 ---
 
