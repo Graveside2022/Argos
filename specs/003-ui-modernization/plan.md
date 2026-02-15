@@ -91,21 +91,7 @@ src/
 │       └── css-loader.ts               # MODIFY: hex check→CSS variable
 ├── routes/
 │   └── gsm-evil/+page.svelte           # MODIFY: alert()→AlertDialog
-├── Svelte files with palantir class updates:
-│   ├── routes/dashboard/+page.svelte
-│   ├── lib/components/dashboard/DashboardMap.svelte
-│   ├── lib/components/dashboard/TerminalPanel.svelte
-│   ├── lib/components/dashboard/TopStatusBar.svelte
-│   ├── lib/components/dashboard/ResizableBottomPanel.svelte
-│   ├── lib/components/dashboard/TerminalTabContent.svelte
-│   ├── lib/components/dashboard/IconRail.svelte
-│   ├── lib/components/dashboard/panels/OverviewPanel.svelte
-│   ├── lib/components/dashboard/panels/DevicesPanel.svelte
-│   ├── lib/components/dashboard/panels/LayersPanel.svelte
-│   ├── lib/components/dashboard/panels/SettingsPanel.svelte
-│   ├── lib/components/dashboard/panels/ToolsPanelHeader.svelte
-│   ├── lib/components/dashboard/shared/ToolCard.svelte
-│   └── lib/components/dashboard/shared/ToolCategoryCard.svelte
+├── (20 Svelte files)                    # MODIFY: text-primary→text-foreground, etc.
 
 config/
 ├── postcss.config.js                    # DELETE
@@ -132,12 +118,12 @@ components.json                          # CREATE: shadcn config
 5. Rewrite `src/app.css` with CSS-first config:
     - `@import "tailwindcss"` + `@import "tw-animate-css"`
     - `:root` block (shadcn zinc defaults)
-    - `.dark` block (Argos theme in full `hsl()` values — see research.md R5)
+    - `.dark` block (Argos theme HSL values — see research.md R5)
     - `@custom-variant dark (&:is(.dark *))`
-    - `@theme inline` block mapping CSS vars to Tailwind colors via `var()` (no `hsl()` wrapper)
+    - `@theme inline` block mapping CSS vars to Tailwind colors
     - `@plugin "@tailwindcss/forms"` + `@plugin "@tailwindcss/typography"`
-    - `@layer base` with `@apply border-border outline-ring/50`, cursor-pointer fix
-    - `@layer components` with glass effects (migrated from `rgb(var())` to `var()`)
+    - `@layer base` with border-color fix, cursor-pointer fix
+    - `@layer components` with glass effects (migrated from rgb() to hsl())
 6. Add `class="dark"` to `<html>` in `app.html`
 7. Slim `app.html` inline CSS to FOUC-prevention only
 8. Update shadowing palantir utility classes in all Svelte files:
@@ -149,7 +135,7 @@ components.json                          # CREATE: shadcn config
 10. Delete `tailwind.config.js`, `postcss.config.js` (symlink + target)
 11. Verify: typecheck + lint + build + visual comparison
 
-**Critical path**: Tasks 2→3→4→5 must be sequential. Task 6 then 7 sequentially (app.html removes old CSS vars that app.css recreates). Tasks 8-9 after 5+7. Task 10-11 last.
+**Critical path**: Tasks 2→3→4→5 must be sequential. Task 6-7 can parallel with 5. Tasks 8-9 after 5. Task 10-11 last.
 
 ### Phase 2: shadcn Component Library Installation (P2)
 
@@ -178,7 +164,7 @@ components.json                          # CREATE: shadcn config
 4. Update `src/lib/hackrf/spectrum.ts` (4 hex values)
 5. Update `src/lib/tactical-map/utils/map-utils.ts` (7 hex values)
 6. Update `src/lib/tactical-map/map-service.ts` (2 hex values)
-7. Update `src/lib/utils/css-loader.ts`: change `isCriticalCSSLoaded()` from checking `--bg-primary === '#0a0a0a'` to checking `--background` for a non-empty value (the new variable contains `hsl(220 24% 7%)`, not a hex string)
+7. Update `src/lib/utils/css-loader.ts` (1 hex check)
 8. Verify: typecheck + lint + test:unit + build + visual comparison
 
 ### Phase 4: Incremental Component Adoption (P4) — Future
@@ -187,15 +173,12 @@ components.json                          # CREATE: shadcn config
 
 **Order of adoption** (by impact):
 
-1. `.data-table` (1 usage in 1 file) → shadcn `<Table>`
-2. `.input-field` (3 usages in 1 file) → shadcn `<Input>`
-3. `.badge-*` (1 palantir class usage in 1 file) → shadcn `<Badge>`
-4. `.btn-*` (6 elements across 3 files using palantir btn classes) → shadcn `<Button>`
+1. `.data-table` (1 usage) → shadcn `<Table>`
+2. `.input-field` (3 usages) → shadcn `<Input>`
+3. `.badge-*` (1 usage) → shadcn `<Badge>`
+4. `.btn-*` (20 usages) → shadcn `<Button>`
 
 ## Target app.css Structure
-
-> **UPDATED 2026-02-15**: CSS variables use full `hsl()` wrapped values (not bare channels).
-> `@theme inline` uses `var()` directly (not `hsl(var())`). Matches current shadcn-svelte convention.
 
 ```css
 @import 'tailwindcss';
@@ -206,130 +189,127 @@ components.json                          # CREATE: shadcn config
 
 /* ---- Light Mode (convention only — never visible) ---- */
 :root {
+	--background: 0 0% 100%;
+	--foreground: 240 10% 4%;
+	--card: 0 0% 100%;
+	--card-foreground: 240 10% 4%;
+	--popover: 0 0% 100%;
+	--popover-foreground: 240 10% 4%;
+	--primary: 240 6% 10%;
+	--primary-foreground: 0 0% 98%;
+	--secondary: 240 5% 96%;
+	--secondary-foreground: 240 6% 10%;
+	--muted: 240 5% 96%;
+	--muted-foreground: 240 4% 46%;
+	--accent: 240 5% 96%;
+	--accent-foreground: 240 6% 10%;
+	--destructive: 0 84% 60%;
+	--destructive-foreground: 0 0% 98%;
+	--border: 240 6% 90%;
+	--input: 240 6% 90%;
+	--ring: 240 6% 10%;
 	--radius: 0.5rem;
-	--background: hsl(0 0% 100%);
-	--foreground: hsl(240 10% 4%);
-	--card: hsl(0 0% 100%);
-	--card-foreground: hsl(240 10% 4%);
-	--popover: hsl(0 0% 100%);
-	--popover-foreground: hsl(240 10% 4%);
-	--primary: hsl(240 6% 10%);
-	--primary-foreground: hsl(0 0% 98%);
-	--secondary: hsl(240 5% 96%);
-	--secondary-foreground: hsl(240 6% 10%);
-	--muted: hsl(240 5% 96%);
-	--muted-foreground: hsl(240 4% 46%);
-	--accent: hsl(240 5% 96%);
-	--accent-foreground: hsl(240 6% 10%);
-	--destructive: hsl(0 84% 60%);
-	--destructive-foreground: hsl(0 0% 98%);
-	--border: hsl(240 6% 90%);
-	--input: hsl(240 6% 90%);
-	--ring: hsl(240 6% 10%);
-	--chart-1: hsl(12 76% 61%);
-	--chart-2: hsl(173 58% 39%);
-	--chart-3: hsl(197 37% 24%);
-	--chart-4: hsl(43 74% 66%);
-	--chart-5: hsl(27 87% 67%);
-	--chart-6: hsl(43 74% 66%);
+	--chart-1: 12 76% 61%;
+	--chart-2: 173 58% 39%;
+	--chart-3: 197 37% 24%;
+	--chart-4: 43 74% 66%;
+	--chart-5: 27 87% 67%;
 }
 
 /* ---- Dark Mode (Argos cyberpunk theme) ---- */
 .dark {
-	--background: hsl(220 24% 7%);
-	--foreground: hsl(216 12% 92%);
-	--card: hsl(222 16% 13%);
-	--card-foreground: hsl(216 12% 92%);
-	--popover: hsl(222 16% 13%);
-	--popover-foreground: hsl(216 12% 92%);
-	--primary: hsl(212 100% 64%);
-	--primary-foreground: hsl(0 0% 100%);
-	--secondary: hsl(224 13% 19%);
-	--secondary-foreground: hsl(216 12% 92%);
-	--muted: hsl(223 15% 10%);
-	--muted-foreground: hsl(210 5% 63%);
-	--accent: hsl(222 12% 16%);
-	--accent-foreground: hsl(216 12% 92%);
-	--destructive: hsl(0 91% 71%);
-	--destructive-foreground: hsl(0 0% 100%);
-	--border: hsl(222 10% 19%);
-	--input: hsl(220 15% 12%);
-	--ring: hsl(212 100% 64%);
+	--background: 220 24% 7%;
+	--foreground: 216 12% 92%;
+	--card: 222 16% 13%;
+	--card-foreground: 216 12% 92%;
+	--popover: 222 16% 13%;
+	--popover-foreground: 216 12% 92%;
+	--primary: 212 100% 64%;
+	--primary-foreground: 0 0% 100%;
+	--secondary: 224 13% 19%;
+	--secondary-foreground: 216 12% 92%;
+	--muted: 223 15% 10%;
+	--muted-foreground: 210 5% 63%;
+	--accent: 222 12% 16%;
+	--accent-foreground: 216 12% 92%;
+	--destructive: 0 91% 71%;
+	--destructive-foreground: 0 0% 100%;
+	--border: 222 10% 19%;
+	--input: 220 15% 12%;
+	--ring: 212 100% 64%;
+	--radius: 0.5rem;
 
 	/* Chart colors */
-	--chart-1: hsl(212 100% 64%);
-	--chart-2: hsl(160 84% 39%);
-	--chart-3: hsl(25 95% 53%);
-	--chart-4: hsl(263 90% 76%);
-	--chart-5: hsl(0 91% 71%);
-	--chart-6: hsl(43 96% 56%);
+	--chart-1: 212 100% 64%;
+	--chart-2: 160 84% 39%;
+	--chart-3: 25 95% 53%;
+	--chart-4: 263 90% 76%;
+	--chart-5: 0 91% 71%;
 
 	/* Argos custom tokens */
-	--success: hsl(142 69% 58%);
-	--success-foreground: hsl(220 24% 7%);
-	--warning: hsl(43 96% 56%);
-	--warning-foreground: hsl(220 24% 7%);
-	--info: hsl(217 92% 68%);
-	--info-foreground: hsl(220 24% 7%);
-	--text-muted: hsl(213 4% 39%);
+	--success: 142 69% 58%;
+	--success-foreground: 220 24% 7%;
+	--warning: 43 96% 56%;
+	--warning-foreground: 220 24% 7%;
+	--info: 217 92% 68%;
+	--info-foreground: 220 24% 7%;
+	--text-muted: 213 4% 39%;
 
 	/* Signal strength scale */
-	--signal-critical: hsl(0 72% 51%);
-	--signal-strong: hsl(25 95% 53%);
-	--signal-good: hsl(43 96% 56%);
-	--signal-fair: hsl(160 84% 39%);
-	--signal-weak: hsl(212 72% 59%);
+	--signal-critical: 0 72% 51%;
+	--signal-strong: 25 95% 53%;
+	--signal-good: 43 96% 56%;
+	--signal-fair: 160 84% 39%;
+	--signal-weak: 212 72% 59%;
 
 	/* Feature categories */
-	--feature-rf: hsl(25 95% 53%);
-	--feature-drone: hsl(189 95% 43%);
-	--feature-radio: hsl(272 91% 65%);
+	--feature-rf: 25 95% 53%;
+	--feature-drone: 189 95% 43%;
+	--feature-radio: 272 91% 65%;
 }
 
 /* ---- Theme mapping for Tailwind utilities ---- */
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--color-card: var(--card);
-	--color-card-foreground: var(--card-foreground);
-	--color-popover: var(--popover);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-primary: var(--primary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-secondary: var(--secondary);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-accent: var(--accent);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-destructive: var(--destructive);
-	--color-destructive-foreground: var(--destructive-foreground);
-	--color-border: var(--border);
-	--color-input: var(--input);
-	--color-ring: var(--ring);
-	--color-chart-1: var(--chart-1);
-	--color-chart-2: var(--chart-2);
-	--color-chart-3: var(--chart-3);
-	--color-chart-4: var(--chart-4);
-	--color-chart-5: var(--chart-5);
-	--color-chart-6: var(--chart-6);
+	--color-background: hsl(var(--background));
+	--color-foreground: hsl(var(--foreground));
+	--color-card: hsl(var(--card));
+	--color-card-foreground: hsl(var(--card-foreground));
+	--color-popover: hsl(var(--popover));
+	--color-popover-foreground: hsl(var(--popover-foreground));
+	--color-primary: hsl(var(--primary));
+	--color-primary-foreground: hsl(var(--primary-foreground));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-foreground: hsl(var(--secondary-foreground));
+	--color-muted: hsl(var(--muted));
+	--color-muted-foreground: hsl(var(--muted-foreground));
+	--color-accent: hsl(var(--accent));
+	--color-accent-foreground: hsl(var(--accent-foreground));
+	--color-destructive: hsl(var(--destructive));
+	--color-destructive-foreground: hsl(var(--destructive-foreground));
+	--color-border: hsl(var(--border));
+	--color-input: hsl(var(--input));
+	--color-ring: hsl(var(--ring));
+	--color-chart-1: hsl(var(--chart-1));
+	--color-chart-2: hsl(var(--chart-2));
+	--color-chart-3: hsl(var(--chart-3));
+	--color-chart-4: hsl(var(--chart-4));
+	--color-chart-5: hsl(var(--chart-5));
 
 	/* Argos custom colors */
-	--color-success: var(--success);
-	--color-success-foreground: var(--success-foreground);
-	--color-warning: var(--warning);
-	--color-warning-foreground: var(--warning-foreground);
-	--color-info: var(--info);
-	--color-info-foreground: var(--info-foreground);
-	--color-text-muted: var(--text-muted);
-	--color-signal-critical: var(--signal-critical);
-	--color-signal-strong: var(--signal-strong);
-	--color-signal-good: var(--signal-good);
-	--color-signal-fair: var(--signal-fair);
-	--color-signal-weak: var(--signal-weak);
-	--color-feature-rf: var(--feature-rf);
-	--color-feature-drone: var(--feature-drone);
-	--color-feature-radio: var(--feature-radio);
+	--color-success: hsl(var(--success));
+	--color-success-foreground: hsl(var(--success-foreground));
+	--color-warning: hsl(var(--warning));
+	--color-warning-foreground: hsl(var(--warning-foreground));
+	--color-info: hsl(var(--info));
+	--color-info-foreground: hsl(var(--info-foreground));
+	--color-signal-critical: hsl(var(--signal-critical));
+	--color-signal-strong: hsl(var(--signal-strong));
+	--color-signal-good: hsl(var(--signal-good));
+	--color-signal-fair: hsl(var(--signal-fair));
+	--color-signal-weak: hsl(var(--signal-weak));
+	--color-feature-rf: hsl(var(--feature-rf));
+	--color-feature-drone: hsl(var(--feature-drone));
+	--color-feature-radio: hsl(var(--feature-radio));
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -341,17 +321,25 @@ components.json                          # CREATE: shadcn config
 @plugin "@tailwindcss/typography";
 
 @layer base {
-	* {
-		@apply border-border outline-ring/50;
+	*,
+	::after,
+	::before,
+	::backdrop {
+		border-color: var(--color-border);
 	}
 
-	button:not(:disabled),
-	[role='button']:not(:disabled) {
+	button,
+	[role='button'],
+	[type='button'],
+	[type='submit'],
+	[type='reset'],
+	select {
 		cursor: pointer;
 	}
 
 	body {
-		@apply bg-background text-foreground;
+		background-color: hsl(var(--background));
+		color: hsl(var(--foreground));
 		font-family:
 			'Inter',
 			system-ui,
@@ -361,40 +349,40 @@ components.json                          # CREATE: shadcn config
 }
 
 @layer components {
-	/* Glass effects (migrated from rgb(var()) to var() — CSS vars now contain full color values) */
+	/* Glass effects (migrated from rgb() to hsl()) */
 	.glass-panel {
 		@apply backdrop-blur-xl border;
-		background-color: color-mix(in srgb, var(--card) 80%, transparent);
-		border-color: color-mix(in srgb, var(--border) 40%, transparent);
+		background-color: color-mix(in srgb, hsl(var(--card)) 80%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--border)) 40%, transparent);
 	}
 
 	.glass-panel-light {
 		@apply backdrop-blur-md border;
-		background-color: color-mix(in srgb, var(--card) 60%, transparent);
-		border-color: color-mix(in srgb, var(--border) 30%, transparent);
+		background-color: color-mix(in srgb, hsl(var(--card)) 60%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--border)) 30%, transparent);
 	}
 
 	.glass-button {
 		@apply backdrop-blur-sm border transition-all duration-200;
-		background-color: color-mix(in srgb, var(--secondary) 20%, transparent);
-		border-color: color-mix(in srgb, var(--border) 40%, transparent);
+		background-color: color-mix(in srgb, hsl(var(--secondary)) 20%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--border)) 40%, transparent);
 	}
 	.glass-button:hover {
-		background-color: color-mix(in srgb, var(--secondary) 40%, transparent);
-		border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+		background-color: color-mix(in srgb, hsl(var(--secondary)) 40%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--primary)) 60%, transparent);
 	}
 
 	.glass-input {
-		@apply backdrop-blur-sm border text-foreground focus:outline-hidden transition-all duration-200;
-		background-color: color-mix(in srgb, var(--input) 60%, transparent);
-		border-color: color-mix(in srgb, var(--border) 40%, transparent);
+		@apply backdrop-blur-sm border text-foreground focus:outline-none transition-all duration-200;
+		background-color: color-mix(in srgb, hsl(var(--input)) 60%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--border)) 40%, transparent);
 	}
 	.glass-input:focus {
-		background-color: color-mix(in srgb, var(--input) 80%, transparent);
-		border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+		background-color: color-mix(in srgb, hsl(var(--input)) 80%, transparent);
+		border-color: color-mix(in srgb, hsl(var(--primary)) 60%, transparent);
 	}
 	.glass-input::placeholder {
-		color: var(--text-muted);
+		color: hsl(var(--text-muted));
 	}
 
 	/* Status indicators */
@@ -413,7 +401,7 @@ components.json                          # CREATE: shadcn config
 
 	/* Brand styles */
 	.hackrf-brand {
-		color: var(--feature-rf) !important;
+		color: hsl(var(--feature-rf)) !important;
 	}
 	.sweep-brand {
 		color: #ffffff !important;
@@ -421,7 +409,7 @@ components.json                          # CREATE: shadcn config
 
 	/* Shadow effects */
 	.shadow-red-glow {
-		box-shadow: 0 0 16px color-mix(in srgb, var(--destructive) 30%, transparent);
+		box-shadow: 0 0 16px hsl(var(--destructive) / 0.3);
 	}
 	.shadow-mono-glow {
 		box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
@@ -445,10 +433,3 @@ components.json                          # CREATE: shadcn config
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/lib/utils.ts` (catch-all name, Art II §2.7) | shadcn CLI generates this file; all shadcn components import `cn` from `$lib/utils`. Renaming breaks the CLI's component generation.                                                          | Renaming to `src/lib/class-names.ts` and updating `components.json` aliases was considered but rejected because every `npx shadcn add` command would need manual path fixes. The file contains exactly one function with a clear purpose — it is not a generic catch-all. |
 | Modifying config files (Art IX §9.3)             | Migration requires changes to `vite.config.ts`, `package.json`, deletion of `tailwind.config.js`, `postcss.config.js`. These are core infrastructure changes required by the TW v4 migration. | N/A — no alternative exists. Config changes are inherent to a framework upgrade. User approval required per §9.3.                                                                                                                                                         |
-| Pre-existing hardcoded `#ffffff` (Art II §2.7)   | `.sweep-brand { color: #ffffff }` and `.shadow-mono-glow { box-shadow: rgba(255,255,255,0.2) }` in app.css use hardcoded white. These are migrated from existing code, not newly introduced.  | Converting to `var(--foreground)` was considered but rejected: sweep-brand requires pure white regardless of foreground color, and shadow-mono-glow needs a white glow effect. Both are legitimate pure-color constants, not theme-variable candidates.                   |
-| shadcn barrel files (Art II §2.7)                | shadcn CLI generates `index.ts` in each component directory (`src/lib/components/ui/*/index.ts`). All shadcn components require imports via these files. No configuration option to disable.  | Importing from individual `.svelte` files is not supported by shadcn. Deleting `index.ts` after generation breaks all `npx shadcn add` commands and diverges from all documentation examples. Constitution updated (v2.1.0) to add shadcn exception.                      |
-
-## Post-Migration Constitution Update
-
-> **COMPLETED 2026-02-15** — Constitution updated to v2.1.0 per Art X §10.3 trigger #6 (Dependency change).
-> Updated: Preamble (tailwind.config.js → src/app.css), Art II §2.7 (barrel file exception for shadcn, theme location), Art IV §4.1 (theme location), Art VI §6.2 (theme extension location).

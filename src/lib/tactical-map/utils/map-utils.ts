@@ -1,4 +1,5 @@
 import type { SignalMarker } from '$lib/types/signals';
+import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 // Define Leaflet types
 interface LeafletIcon {
@@ -45,7 +46,7 @@ export function createSignalMarker(L: LeafletLibrary, signal: SignalMarker): Lea
 	return L.circleMarker([signal.lat, signal.lon], {
 		radius: 8,
 		fillColor: color,
-		color: '#000',
+		color: resolveThemeColor('--background', '#000'),
 		weight: 1,
 		opacity: 1,
 		fillOpacity: 0.8,
@@ -98,12 +99,12 @@ export function createSignalPopup(signal: SignalMarker): string {
 
 // Get color based on signal strength
 export function getSignalColor(power: number): string {
-	if (power >= -50) return '#ff0000'; // Strong - Red
-	if (power >= -60) return '#ff6600'; // Good - Orange
-	if (power >= -70) return '#ffcc00'; // Medium - Yellow
-	if (power >= -80) return '#66ff00'; // Fair - Light Green
-	if (power >= -90) return '#00ff00'; // Weak - Green
-	return '#0066ff'; // Very Weak - Blue
+	if (power >= -50) return resolveThemeColor('--signal-critical', '#ff0000');
+	if (power >= -60) return resolveThemeColor('--signal-strong', '#ff6600');
+	if (power >= -70) return resolveThemeColor('--signal-good', '#ffcc00');
+	if (power >= -80) return resolveThemeColor('--signal-fair', '#66ff00');
+	if (power >= -90) return resolveThemeColor('--signal-fair', '#00ff00');
+	return resolveThemeColor('--signal-weak', '#0066ff');
 }
 
 // Convert signal strength to opacity

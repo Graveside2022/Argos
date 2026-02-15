@@ -6,6 +6,7 @@
 import { derived, get, type Readable, type Writable, writable } from 'svelte/store';
 
 import type { SignalDetection } from '$lib/api/hackrf';
+import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 export interface TimeWindowConfig {
 	windowDuration: number; // Duration in seconds
@@ -476,10 +477,10 @@ export function formatAge(seconds: number): string {
 }
 
 export function getAgeColor(agePercent: number): string {
-	if (agePercent < 30) return '#10b981'; // Green
-	if (agePercent < 60) return '#f59e0b'; // Amber
-	if (agePercent < 80) return '#ef4444'; // Red
-	return '#6b7280'; // Gray (expiring)
+	if (agePercent < 30) return resolveThemeColor('--success', '#10b981');
+	if (agePercent < 60) return resolveThemeColor('--warning', '#f59e0b');
+	if (agePercent < 80) return resolveThemeColor('--destructive', '#ef4444');
+	return resolveThemeColor('--muted-foreground', '#6b7280');
 }
 
 export function getRelevanceIcon(relevance: number): string {
