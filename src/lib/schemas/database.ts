@@ -25,7 +25,7 @@ import { z } from 'zod';
  * - longitude: -180 to 180 degrees
  * - altitude: optional number (meters)
  * - power: -120 to 0 dBm (realistic signal power range)
- * - frequency: 1 to 6000 MHz (HackRF/USRP operating range)
+ * - frequency: 1 to 6000 MHz (HackRF operating range)
  * - bandwidth: optional positive number or null
  * - modulation: optional non-empty string or null
  * - source: non-empty string (SDR hardware source)

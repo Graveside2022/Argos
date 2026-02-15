@@ -13,9 +13,9 @@ import { z } from 'zod';
 import { KismetDeviceSchema } from '$lib/kismet/types';
 
 /**
- * Device Type Schema - Validates SDR device type
+ * Device Type Schema - Validates SDR device type (HackRF only)
  */
-export const DeviceTypeSchema = z.enum(['hackrf', 'usrp', 'auto']).default('hackrf');
+export const DeviceTypeSchema = z.enum(['hackrf', 'auto']).default('hackrf');
 
 /**
  * Frequency Range Schema - Validates frequency range objects
@@ -58,7 +58,7 @@ export type FrequencyRange = z.infer<typeof FrequencyRangeSchema>;
  * Start Sweep Request Schema - Validates sweep start requests
  *
  * Validation rules:
- * - deviceType: hackrf, usrp, or auto
+ * - deviceType: hackrf or auto (defaults to hackrf)
  * - frequencies: array of 1-50 frequency ranges
  * - cycleTime: 1-300 seconds per frequency
  */
