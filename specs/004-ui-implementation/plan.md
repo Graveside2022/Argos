@@ -31,20 +31,20 @@ Replace hand-crafted CSS components (buttons, tables, inputs, badges) across the
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Article                         | Status         | Notes                                                                                  |
-| ------------------------------- | -------------- | -------------------------------------------------------------------------------------- |
-| I — Comprehension Before Action | PASS           | Full codebase inventory completed (4 parallel agents), all files read                  |
-| II — Code Quality Standards     | PASS           | TypeScript strict, no `any`, shadcn barrel files exempt per constitution §2.7          |
-| III — Testing Standards         | PASS           | Unit tests for theme store, visual regression for component upgrades                   |
-| IV — UX Consistency             | PASS           | Reuse-before-create: using shadcn components (not creating custom), all states handled |
-| V — Performance                 | PASS           | Theme CSS is lightweight (<5KB), localStorage access is synchronous                    |
-| VI — Dependency Management      | NEEDS APPROVAL | mode-watcher package must be installed (requires user approval per §6.3/§9.3)          |
-| VII — Debugging                 | PASS           | Theme changes are purely visual, no hardware/network impact                            |
-| VIII — Verification             | PASS           | Verification commands defined per task                                                 |
-| IX — Security                   | PASS           | No secrets, no hardware changes, localStorage only                                     |
-| X — Governance                  | PASS           | Constitution check present                                                             |
-| XI — Spec-Kit Workflow          | PASS           | Spec is technology-agnostic, plan contains all technical details                       |
-| XII — Git Workflow              | PASS           | One commit per task, structured messages                                               |
+| Article                         | Status              | Notes                                                                                                                                                                                                                                                                           |
+| ------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I — Comprehension Before Action | PASS                | Full codebase inventory completed (4 parallel agents), all files read                                                                                                                                                                                                           |
+| II — Code Quality Standards     | PASS                | TypeScript strict, no `any`, shadcn barrel files exempt per constitution §2.7                                                                                                                                                                                                   |
+| III — Testing Standards         | PASS                | Unit tests for theme store, visual regression for component upgrades                                                                                                                                                                                                            |
+| IV — UX Consistency             | PASS (w/ deviation) | Reuse-before-create: using shadcn components (not creating custom), all states handled. Deviation: US5 adds light mode — constitution Preamble amended from "not a consideration" to "secondary option for daylight operations" per Art X §10.3 trigger #6 (dependency change). |
+| V — Performance                 | PASS                | Theme CSS is lightweight (<5KB), localStorage access is synchronous                                                                                                                                                                                                             |
+| VI — Dependency Management      | NEEDS APPROVAL      | mode-watcher package must be installed (requires user approval per §6.3/§9.3)                                                                                                                                                                                                   |
+| VII — Debugging                 | PASS                | Theme changes are purely visual, no hardware/network impact                                                                                                                                                                                                                     |
+| VIII — Verification             | PASS                | Verification commands defined per task                                                                                                                                                                                                                                          |
+| IX — Security                   | PASS                | No secrets, no hardware changes, localStorage only                                                                                                                                                                                                                              |
+| X — Governance                  | PASS                | Constitution check present                                                                                                                                                                                                                                                      |
+| XI — Spec-Kit Workflow          | PASS                | Spec is technology-agnostic, plan contains all technical details                                                                                                                                                                                                                |
+| XII — Git Workflow              | PASS                | One commit per task, structured messages                                                                                                                                                                                                                                        |
 
 **Deviation**: Article VI §6.3 — `mode-watcher` is a new npm package. Justified because: (1) it's the shadcn-svelte recommended library for dark mode FOUC prevention, (2) it's from the svecosystem (same org as bits-ui), (3) it provides synchronous `<script>` injection that prevents theme flash, (4) alternative would be hand-rolling the same functionality.
 
@@ -83,7 +83,10 @@ src/app.css                                                       # Add palette 
 src/app.html                                                      # FOUC prevention script + dynamic class
 src/lib/utils/theme-colors.ts                                     # Support palette-aware color resolution
 src/lib/utils/signal-utils.ts                                     # Semantic colors toggle support
-src/lib/components/dashboard/DashboardMap.svelte                  # Replace hardcoded RANGE_BANDS hex colors
+src/lib/components/dashboard/DashboardMap.svelte                  # Replace ALL hardcoded hex colors (~30)
+src/lib/components/dashboard/AgentChatPanel.svelte                # Replace hardcoded hex colors (~40)
+src/lib/components/dashboard/TerminalTabContent.svelte            # Replace xterm.js ANSI hex colors (18)
+src/lib/components/dashboard/panels/LayersPanel.svelte            # Replace hardcoded hex color (1)
 src/routes/+layout.svelte                                         # mode-watcher integration (if needed)
 
 # SHADCN COMPONENTS TO INSTALL (via CLI)
@@ -109,13 +112,13 @@ src/lib/components/ui/switch/                                     # shadcn Switc
 
 ### R1: shadcn Theme Architecture
 
-**Decision**: shadcn themes use a layered approach — a base neutral color scheme defines backgrounds, borders, text, cards, etc., while the "theme color" (blue, green, etc.) primarily overrides `--primary`, `--primary-foreground`, `--ring`, and `--chart-*` variables.
+**Decision**: shadcn themes use full variable redefinition per palette. Each palette overrides ALL ~25 CSS variables (background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, sidebar-_, chart-_) — not just accent vars. Each palette is paired with a specific neutral base (Blue→Slate, Green→Zinc, Orange→Stone, Red→Slate, Rose→Stone, Violet→Gray, Yellow→Zinc, Default→Zinc).
 
-**Rationale**: This means palette switching is lightweight — we don't need to redefine all ~30 CSS variables per palette. Only the accent-related variables change. The background/surface colors stay consistent across palettes (controlled by the base neutral).
+**Rationale**: This was verified from the official source (`shadcn-ui/ui` repo, `apps/v4/registry/_legacy-base-colors.ts`). The full redefinition approach ensures each palette feels cohesive — background tones are tuned to complement the accent color. Chart colors are universal across all palettes.
 
 **Alternatives considered**:
 
-- Full variable redefinition per palette (rejected: 480+ lines of CSS, maintenance burden)
+- Accent-only overrides with shared neutral base (rejected: doesn't match how shadcn actually works — verified from source)
 - Single-hue generation from a base hue value (rejected: doesn't match shadcn's carefully tuned palettes)
 
 ### R2: FOUC Prevention Mechanism
@@ -151,16 +154,29 @@ src/lib/components/ui/switch/                                     # shadcn Switc
 - JavaScript-level color switching in each component (rejected: invasive, fragile)
 - Separate CSS file per semantic mode (rejected: unnecessary complexity)
 
-### R5: Map/Spectrum Theme Notification
+### R5: Dashboard Hardcoded Hex Color Replacement
 
-**Decision**: Replace hardcoded hex colors in `DashboardMap.svelte` RANGE_BANDS with calls to `resolveThemeColor()`. Subscribe the map component to theme store changes to trigger re-resolution of colors.
+**Decision**: Replace ALL hardcoded hex colors across dashboard components with CSS variable references via `resolveThemeColor()` or direct `var()` usage. Subscribe affected components to theme store changes. Scope: ~90 hex values across 4 files. GSM Evil page (~120 hex values) deferred to spec 006.
 
-**Rationale**: The existing `resolveThemeColor()` utility already handles CSS-to-hex conversion. RANGE_BANDS currently has 5 hardcoded hex values (`#dc2626`, `#f97316`, `#fbbf24`, `#10b981`, `#4a90e2`) that bypass the CSS variable system. Converting them to use CSS variables makes them automatically theme-aware.
+**Files and counts** (verified 2026-02-15):
+
+- `DashboardMap.svelte` (25 hex): RANGE_BANDS (5), SVG gradients/radio-type colors (6+), MapLibre paint properties (8), CSS style block (6). Note: some inline styles already use `var(--palantir-*, #hex)` fallback pattern.
+- `AgentChatPanel.svelte` (28+ hex): VS Code-inspired chat styling — backgrounds (#1e1e1e, #252526), borders (#3c3c3c), text (#cccccc, #888), role colors (#4ec9b0, #dcdcaa, #569cd6), status (#3fb950, #0e4429), interactive (#007acc, #0e639c), scrollbar (#424242, #4e4e4e). See AgentChatPanel Hex Mapping table below.
+- `TerminalTabContent.svelte` (22 hex total, 5 theme-mapped): UI chrome (background, foreground, cursor, cursorAccent, selection) mapped to CSS vars; 16 ANSI standard colors kept fixed — terminal color standards for CLI output must not change with palette.
+- `LayersPanel.svelte` (1 hex): Band dot color (#9a9a9a)
+
+**Already theme-aware (no changes needed)**:
+
+- Files using `resolveThemeColor()` with hex fallbacks: `signal-utils.ts`, `spectrum.ts`, `map-utils.ts`, `map-service.ts`, `theme-colors.ts`
+- Files using `var(--palantir-*, #hex)` pattern: `ResizableBottomPanel.svelte`, `TerminalPanel.svelte`, `dashboard/+page.svelte`
+
+**Rationale**: The existing `resolveThemeColor()` utility handles CSS-to-hex conversion. Files already using it with hex fallbacks are already theme-aware. The ~90 pure hardcoded hex values bypass the CSS variable system entirely, meaning they won't respond to palette or mode changes. Converting them is essential for US3 (palette selector) and US5 (dark/light mode) to deliver a consistent experience.
 
 **Alternatives considered**:
 
 - Map tile re-theming (rejected: out of scope, map tiles are external)
 - Complete map re-render on theme change (rejected: heavy, data loss risk)
+- Only fix RANGE_BANDS (rejected: user directed "Everything except GSM Evil" — leaving 85 other hex values would create visual inconsistency)
 
 ### R6: Dual Color System (Palantir + Tailwind)
 
@@ -225,14 +241,20 @@ interface PaletteDefinition {
 }
 ```
 
-Each palette overrides these variables (subset of the full set):
+Each palette overrides ALL CSS variables (full redefinition per palette, per R1):
 
+- `--background`, `--foreground` (base surface + text)
+- `--card`, `--card-foreground`, `--popover`, `--popover-foreground`
 - `--primary`, `--primary-foreground`
-- `--ring`
-- `--chart-1` through `--chart-5`
-- `--accent`, `--accent-foreground` (optional, some palettes)
+- `--secondary`, `--secondary-foreground`
+- `--muted`, `--muted-foreground`
+- `--accent`, `--accent-foreground`
+- `--destructive`, `--destructive-foreground`
+- `--border`, `--input`, `--ring`
+- `--sidebar-*` (7 sidebar variants)
+- `--chart-1` through `--chart-5` (universal across palettes)
 
-Background, card, popover, border, input, muted, secondary, foreground, destructive — these stay constant per mode (light/dark), not per palette. They come from the base neutral scheme.
+Each palette is paired with a harmonized neutral base (e.g., Blue→Slate, Orange→Stone). Values sourced from official `shadcn-ui/ui` repo (see research.md R2).
 
 ### CSS Architecture
 
@@ -314,7 +336,10 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 | `ToolsNavigationView.svelte`    | MODIFY | Replace .btn-\* with shadcn Button                    |
 | `DevicesPanel.svelte`           | MODIFY | Replace table, input, badges with shadcn              |
 | `ToolViewWrapper.svelte`        | MODIFY | Replace .btn-ghost, .badge with shadcn                |
-| `DashboardMap.svelte`           | MODIFY | Replace hardcoded RANGE_BANDS hex colors              |
+| `DashboardMap.svelte`           | MODIFY | Replace ALL hardcoded hex colors (~30) with CSS vars  |
+| `AgentChatPanel.svelte`         | MODIFY | Replace hardcoded hex colors (~40) with CSS vars      |
+| `TerminalTabContent.svelte`     | MODIFY | Replace xterm.js ANSI hex colors (18) with CSS vars   |
+| `LayersPanel.svelte`            | MODIFY | Replace hardcoded hex color (1) with CSS var          |
 | `signal-utils.ts`               | MODIFY | Semantic toggle awareness                             |
 | `theme-colors.ts`               | MODIFY | Palette-aware color resolution                        |
 | `palantir-design-system.css`    | MODIFY | Remove replaced CSS class definitions                 |
@@ -351,16 +376,21 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
         │                                                               │
         └──FS──> [Upgrade table/inputs/badges (US2)] ──FS──> [Remove old CSS]
                                                                         │
-[Define palette CSS] ──FS──> [Theme persistence] ──FS──> [Map/spectrum color update]
-                                                                        │
-                                                         [Semantic toggle] ──FS──> [Final verification]
+[Define palette CSS] ──FS──> [Theme persistence] ──FS──> [Hex color replacement]
+                                                                │
+                                                    ┌───────────┼───────────┐──────────┐
+                                              [DashboardMap] [AgentChat] [Terminal] [Layers]
+                                                    └───────────┼───────────┘──────────┘
+                                                                │
+                                                    [Semantic toggle] ──FS──> [Final verification]
 ```
 
-**Critical path**: Install deps → Create theme store → Define palettes → Build Settings panel → Wire FOUC → Semantic toggle → Final verification.
+**Critical path**: Install deps → Create theme store → Define palettes → Build Settings panel → Wire FOUC → Hex color replacement → Semantic toggle → Final verification.
 
 **Parallel tracks** (independent of critical path):
 
 - Component upgrades (US1, US2) can proceed in parallel with theme system (US3-US7) since they only require the installed shadcn components, not the theme store.
+- Hex color replacement across 4 files (DashboardMap, AgentChatPanel, TerminalTabContent, LayersPanel) can run in parallel with each other, but depends on theme store + palette CSS being in place first.
 
 ### Risk Register
 
@@ -368,7 +398,9 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 | --------------------------------------------------------------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | mode-watcher incompatible with SvelteKit 2.22.3 / Svelte 5            | HIGH   | LOW        | Check compatibility before install; fallback: manual FOUC script                                                             |
 | shadcn component visual mismatch with Palantir aesthetic              | MEDIUM | MEDIUM     | Test each component in isolation; use Tailwind classes to adjust                                                             |
-| RANGE_BANDS hex replacement breaks map rendering                      | HIGH   | LOW        | Test with each palette; `resolveThemeColor` has proven fallback mechanism                                                    |
+| Hex color replacement breaks component rendering (~90 values)         | HIGH   | MEDIUM     | Incremental: replace per-component, verify after each. `resolveThemeColor` fallback mechanism proven for map colors          |
+| xterm.js ANSI colors don't support CSS variables                      | MEDIUM | MEDIUM     | xterm.js theme accepts hex strings; resolve CSS vars to hex at init + re-resolve on theme change via store subscription      |
+| AgentChatPanel hex replacement scope (~40 values)                     | MEDIUM | LOW        | Define new CSS variables for chat surfaces; map VS Code-style colors to shadcn tokens (muted, card, accent)                  |
 | CSS specificity conflicts between palette overrides and Palantir vars | MEDIUM | MEDIUM     | Use `data-palette` attribute selector (higher specificity than class)                                                        |
 | localStorage quota exceeded (unlikely with <1KB theme data)           | LOW    | VERY LOW   | Catch QuotaExceededError, fall back to defaults (pattern from gsm-evil-store)                                                |
 | Light mode reveals hardcoded dark colors in un-upgraded components    | MEDIUM | HIGH       | Known: Palantir vars use hardcoded hex. Mitigation: light mode is P3 priority, document which components need future updates |
@@ -387,6 +419,36 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 
 5. **DashboardMap doesn't re-render on theme change** — MapLibre uses pre-rendered tiles and data-driven styling. Changing CSS variables doesn't trigger map layer re-paint. **Mitigation**: Subscribe map component to theme store, call `map.setPaintProperty()` to update fill/stroke colors when theme changes.
 
+6. **xterm.js terminal colors can't use CSS variables directly** — xterm.js `theme` option accepts hex strings, not CSS `var()` references. Simply replacing hex values with `var()` won't work. **Mitigation**: Resolve CSS variables to hex values at terminal init using `resolveThemeColor()`. Subscribe to theme store to re-apply the resolved theme when palette/mode changes.
+
+7. **AgentChatPanel loses visual distinction after hex replacement** — The VS Code-inspired styling uses specific grays (#1e1e1e, #252526) that create a distinct chat aesthetic. Replacing with generic shadcn tokens (card, muted) may flatten the visual hierarchy. **Mitigation**: Map to appropriate shadcn semantic tokens that preserve the layered surface hierarchy (background → card → muted). Test each palette visually. See AgentChatPanel Hex Mapping table below.
+
+### AgentChatPanel Hex → CSS Variable Mapping
+
+| Hex Value | Usage                                          | Target CSS Variable / Tailwind Class           |
+| --------- | ---------------------------------------------- | ---------------------------------------------- |
+| `#1e1e1e` | Panel background, input bg, scrollbar track    | `--background` / `bg-background`               |
+| `#252526` | Toolbar bg, input area bg                      | `--card` / `bg-card`                           |
+| `#3c3c3c` | Toolbar border, input border, badge offline bg | `--border` / `border-border`                   |
+| `#cccccc` | Panel text, toolbar title, button text, input  | `--foreground` / `text-foreground`             |
+| `#888`    | Badge offline text, timestamp, typing dots     | `--muted-foreground` / `text-muted-foreground` |
+| `#2a2d2e` | Button hover                                   | `--accent` / `hover:bg-accent`                 |
+| `#00d4ff` | Agent icon                                     | `--primary` / `text-primary`                   |
+| `#4ec9b0` | User role color, user border-left              | `--chart-2` (teal/green)                       |
+| `#dcdcaa` | Assistant role color, assistant border-left    | `--chart-4` (yellow)                           |
+| `#569cd6` | System role color, system border-left          | `--chart-1` (blue)                             |
+| `#6a737d` | Timestamp color                                | `--muted-foreground`                           |
+| `#1a3a52` | User message bg                                | `--accent` with opacity                        |
+| `#2d2d2d` | Assistant message bg                           | `--card` / `bg-card`                           |
+| `#1f2937` | System message bg                              | `--muted` / `bg-muted`                         |
+| `#007acc` | Input focus border                             | `--ring` / `focus:ring-ring`                   |
+| `#0e639c` | Send button bg                                 | `--primary` / `bg-primary`                     |
+| `#1177bb` | Send button hover                              | `--primary` with brightness modifier           |
+| `#3fb950` | Online badge text                              | `--success` (existing var)                     |
+| `#0e4429` | Online badge bg                                | `--success` with low opacity                   |
+| `#424242` | Scrollbar thumb                                | `--muted`                                      |
+| `#4e4e4e` | Scrollbar thumb hover                          | `--muted-foreground` with opacity              |
+
 ### Definition of Done
 
 **Overall task DONE when**:
@@ -397,6 +459,7 @@ Components used: `Select` (palette dropdown), `Switch` (mode toggle, semantic to
 - Settings panel functional with palette selector, mode toggle, semantic toggle (SC-004)
 - Theme persists across refresh with no FOUC (SC-006)
 - Map/spectrum colors update on theme change (SC-009)
+- All hardcoded hex colors across dashboard replaced with CSS variable references (~90 values across 4 files)
 - `npm run typecheck` — 0 errors
 - `npm run lint` — 0 errors
 - `npm run test:unit` — all pass
