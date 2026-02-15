@@ -75,7 +75,7 @@ This ensures you understand the project state before making changes.
 
 ## Tech Stack
 
-TypeScript 5.8.3, SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 3.4.15, SQLite (better-sqlite3), Vite 7.0.3, Vitest 3.2.4, Playwright 1.53.2
+TypeScript 5.8.3, SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 3.4.19, SQLite (better-sqlite3), Vite 7.0.3, Vitest 3.2.4, Playwright 1.53.2
 
 **Deployed on:** Raspberry Pi 5 (8GB RAM, NVMe SSD), Kali Linux 2025.4, Docker v27.5.1
 
@@ -301,6 +301,8 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 - JSON files in `.specify/audit-reports/` (timestamped filenames: `audit-YYYY-MM-DD-HHmmss.json`) (001-constitution-audit)
 - TypeScript 5.8.3 (strict mode), SvelteKit 2.22.3, Svelte 5.35.5 (001-audit-remediation)
 - SQLite (rf_signals.db) - no changes (001-audit-remediation)
+- TypeScript 5.8.3 (strict mode) + SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 4.1.18 (upgrading from 3.4.19), @tailwindcss/vite 4.1.18, bits-ui 2.15.5, shadcn 3.8.4 (CLI) (003-ui-modernization)
+- SQLite (rf_signals.db) — no changes (003-ui-modernization)
 
 ## Recent Changes
 - 001-constitution-audit: Added TypeScript 5.8.3 (strict mode), automated violation analysis with dependency investigation (Rulebook v2.0)
