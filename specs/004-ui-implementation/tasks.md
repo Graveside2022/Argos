@@ -130,7 +130,7 @@
 
 **Purpose**: Final verification and cleanup across all stories
 
-- [ ] T025 Run full verification suite per Definition of Done: `npm run typecheck` (0 errors) && `npm run lint` (0 errors) && `npm run test:unit` (all pass) && `npm run build` (builds successfully)
+- [x] T025 Run full verification suite per Definition of Done: `npm run typecheck` (0 errors) && `npm run lint` (0 errors) && `npm run test:unit` (all pass) && `npm run build` (builds successfully)
 - [ ] T026 Manually verify each palette (8) x mode (2) on /dashboard — confirm zero browser console errors, no layout shifts, all interactive elements functional, all rendered graphics (map, chat, terminal) reflect active theme colors
 
 ---
