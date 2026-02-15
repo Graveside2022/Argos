@@ -672,8 +672,8 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 2px;
-		background: rgba(74, 158, 255, 0.1);
-		border: 1px solid rgba(74, 158, 255, 0.25);
+		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--palantir-accent) 25%, transparent);
 		border-radius: var(--radius-sm);
 		color: var(--palantir-accent);
 		font-size: 10px;
@@ -684,7 +684,7 @@
 	}
 
 	.back-btn:hover {
-		background: rgba(74, 158, 255, 0.2);
+		background: color-mix(in srgb, var(--palantir-accent) 20%, transparent);
 	}
 
 	.toolbar-separator {
@@ -752,7 +752,7 @@
 		opacity: 1;
 		border-color: var(--palantir-accent);
 		color: var(--palantir-accent);
-		background: rgba(74, 158, 255, 0.1);
+		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
 	}
 
 	.filter-badge {
@@ -920,7 +920,7 @@
 		font-family: var(--font-mono);
 		font-size: 9px;
 		color: var(--palantir-accent);
-		background: rgba(74, 144, 226, 0.15);
+		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
 		padding: 0 4px;
 		border-radius: 3px;
 		margin-left: 4px;
@@ -952,8 +952,8 @@
 	}
 
 	.isolated-parent {
-		background: rgba(74, 158, 255, 0.06);
-		border-bottom: 1px solid rgba(74, 158, 255, 0.15);
+		background: color-mix(in srgb, var(--palantir-accent) 6%, transparent);
+		border-bottom: 1px solid color-mix(in srgb, var(--palantir-accent) 15%, transparent);
 	}
 
 	.empty-row {

@@ -657,12 +657,12 @@
 
 	.scan-dot.active {
 		background: var(--palantir-success);
-		box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
+		box-shadow: 0 0 4px color-mix(in srgb, var(--palantir-success) 50%, transparent);
 	}
 
 	.scan-dot.standby {
 		background: var(--palantir-warning);
-		box-shadow: 0 0 4px rgba(251, 191, 36, 0.4);
+		box-shadow: 0 0 4px color-mix(in srgb, var(--palantir-warning) 40%, transparent);
 	}
 
 	.scan-name {
