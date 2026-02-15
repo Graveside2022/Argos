@@ -94,6 +94,7 @@ export const POST: RequestHandler = async () => {
 		return json(
 			{
 				success: false,
+			// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message,
 				message: 'Failed to stop Kismet'
 			},

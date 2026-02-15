@@ -1,4 +1,8 @@
-import { type Writable,writable } from 'svelte/store';
+import { type Writable, writable } from 'svelte/store';
+
+import { GPSPositionSchema, GPSStatusSchema } from '$lib/schemas/stores';
+import { logError } from '$lib/utils/logger';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 export interface GPSPosition {
 	lat: number;
@@ -42,12 +46,25 @@ const initialGPSState: GPSState = {
 export const gpsStore: Writable<GPSState> = writable(initialGPSState);
 
 export const updateGPSPosition = (position: GPSPosition) => {
-	gpsStore.update((state) => ({ ...state, position }));
+	// Validate GPS position before updating store (T039)
+	const validated = safeParseWithHandling(GPSPositionSchema, position, 'background');
+	if (!validated) {
+		logError('Invalid GPS position data', { position }, 'gps-position-validation-failed');
+		return;
+	}
+	gpsStore.update((state) => ({ ...state, position: validated }));
 };
 
 export const updateGPSStatus = (status: Partial<GPSStatus>) => {
-	gpsStore.update((state) => ({
-		...state,
-		status: { ...state.status, ...status }
-	}));
+	// Validate GPS status update before applying to store (T039)
+	// For partial updates, merge with existing state first, then validate
+	gpsStore.update((state) => {
+		const mergedStatus = { ...state.status, ...status };
+		const validated = safeParseWithHandling(GPSStatusSchema, mergedStatus, 'background');
+		if (!validated) {
+			logError('Invalid GPS status data', { status }, 'gps-status-validation-failed');
+			return state; // Return unchanged state if validation fails
+		}
+		return { ...state, status: validated };
+	});
 };

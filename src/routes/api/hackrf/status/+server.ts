@@ -13,7 +13,7 @@ export const GET: RequestHandler = () => {
 		return json({
 			connected: status.state !== SystemStatus.Idle,
 			sweeping: status.state === SystemStatus.Running,
-			deviceInfo: null, // Not available in current implementation
+			deviceInfo: null,
 			currentFrequency: status.currentFrequency || null,
 			sweepConfig: {
 				startFreq: null,
@@ -25,6 +25,7 @@ export const GET: RequestHandler = () => {
 		});
 	} catch (error: unknown) {
 		console.error('Error getting HackRF status:', error);
+
 		return json(
 			{
 				connected: false,

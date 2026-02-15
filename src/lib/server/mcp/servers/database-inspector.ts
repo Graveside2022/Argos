@@ -115,6 +115,7 @@ class DatabaseInspector extends BaseMCPServer {
 			},
 			execute: async (args: Record<string, unknown>) => {
 				const query = args.query as string;
+				// Safe: MCP tool args.params validated as array by schema
 				const params = (args.params as Array<string | number>) || [];
 
 				const resp = await apiFetch('/api/database/query', {

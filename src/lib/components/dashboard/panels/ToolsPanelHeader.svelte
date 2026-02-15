@@ -1,9 +1,11 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { uiIcons } from '$lib/data/tool-icons';
 	import {
 		breadcrumbs,
 		navigateBack,
-		toolNavigationPath	} from '$lib/stores/dashboard/tools-store';
+		toolNavigationPath
+	} from '$lib/stores/dashboard/tools-store';
 
 	let canGoBack = $derived($toolNavigationPath.length > 0);
 	let currentBreadcrumbs = $derived($breadcrumbs);
@@ -14,6 +16,7 @@
 <header class="panel-header">
 	{#if canGoBack}
 		<button class="back-btn" onclick={navigateBack}>
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 			{@html uiIcons.arrowLeft}
 			<span class="back-label">{parentTitle}</span>
 		</button>

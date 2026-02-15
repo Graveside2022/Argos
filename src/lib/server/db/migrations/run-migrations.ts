@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { readdirSync,readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 export async function runMigrations(db: Database.Database, migrationsPath: string) {
@@ -14,6 +14,7 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 
 	// Get list of applied migrations
 	const appliedMigrations = new Set(
+		// Safe: migrations table has filename column — schema guaranteed
 		(db.prepare('SELECT filename FROM migrations').all() as Array<{ filename: string }>).map(
 			(row) => row.filename
 		)
@@ -22,7 +23,8 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 	// Get all migration files (SQL and TypeScript, but exclude the migration runner itself)
 	const migrationFiles = readdirSync(migrationsPath)
 		.filter(
-			(file) => (file.endsWith('.sql') || file.endsWith('.ts')) && file !== 'run-migrations.ts'
+			(file) =>
+				(file.endsWith('.sql') || file.endsWith('.ts')) && file !== 'run-migrations.ts'
 		)
 		.sort(); // Ensure migrations run in order
 

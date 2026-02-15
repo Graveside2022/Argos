@@ -37,6 +37,7 @@ const localStorageMock = {
 	removeItem: vi.fn(),
 	clear: vi.fn()
 };
+// Safe: Test: Mock object typed for test expectations
 global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock canvas with complete CanvasRenderingContext2D interface
@@ -152,6 +153,7 @@ HTMLCanvasElement.prototype.getContext = vi
 				filter: 'none',
 				imageSmoothingEnabled: true,
 				imageSmoothingQuality: 'low'
+				// Safe: Test: Type bridge for mock data
 			} as unknown as CanvasRenderingContext2D;
 		}
 		return null;

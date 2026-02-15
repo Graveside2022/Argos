@@ -10,6 +10,7 @@ export const GET: RequestHandler = async () => {
 	const position = await getGpsPosition();
 
 	return new Response(JSON.stringify(position), {
+		status: position.success ? 200 : 503,
 		headers: { 'Content-Type': 'application/json' }
 	});
 };

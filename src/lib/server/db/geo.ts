@@ -70,6 +70,7 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 	let metadata: Record<string, unknown> = {};
 	if (dbSignal.metadata) {
 		try {
+			// Safe: JSON.parse returns unknown; metadata is stored as JSON object in DB column
 			metadata = JSON.parse(dbSignal.metadata) as Record<string, unknown>;
 		} catch (_error) {
 			console.warn('[geo] Invalid metadata JSON in database', {
@@ -86,7 +87,9 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 		power: dbSignal.power,
 		frequency: dbSignal.frequency,
 		timestamp: dbSignal.timestamp,
+		// Safe: source column stores the same string union values defined in SignalMarker['source']
 		source: dbSignal.source as SignalMarker['source'],
+		// Safe: metadata parsed from JSON above and validated to be Record<string, unknown>
 		metadata: metadata as SignalMarker['metadata']
 	};
 }

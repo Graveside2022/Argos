@@ -54,8 +54,10 @@ export const GET: RequestHandler = async () => {
 		const ALLOWED_IMSI_DB_PATHS = [
 			'/usr/src/gsmevil2/database/imsi.db',
 			'/home/kali/gsmevil-user/database/imsi.db'
+			// Safe: Array literal narrowed to const readonly tuple for strict allowlist matching
 		] as const;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+		// Safe: dbPath cast to any for includes() check against readonly const array (TypeScript limitation)
 		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
 			return json({ success: false, message: 'Invalid database path', data: [] });
 		}

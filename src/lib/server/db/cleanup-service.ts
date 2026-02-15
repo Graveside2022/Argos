@@ -419,12 +419,14 @@ export class DatabaseCleanupService {
 	 */
 	vacuum() {
 		logInfo('Running VACUUM', {}, 'vacuum-start');
+		// Safe: page_count * page_size always returns a single numeric 'size' column
 		const before = this.db
 			.prepare(
 				'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()'
 			)
 			.get() as { size: number };
 		this.db.exec('VACUUM');
+		// Safe: same page_count * page_size query as above, returns numeric 'size' column
 		const after = this.db
 			.prepare(
 				'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()'

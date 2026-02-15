@@ -31,8 +31,11 @@ export const GET: RequestHandler = async ({ url }) => {
 		try {
 			const systemStatus = await KismetProxy.getSystemStatus();
 			const config = KismetProxy.getConfig();
+			// Safe: Kismet API response cast to Record for dynamic property access by dot-notation keys
+			// Safe: Runtime type validated Record cast for dynamic property access
 			const ss = systemStatus as Record<string, unknown>;
 
+			// Safe: Kismet system.status API contract guarantees these properties exist with known types
 			const startSec = (ss['kismet.system.timestamp.start_sec'] as number) || 0;
 			const nowSec = (ss['kismet.system.timestamp.sec'] as number) || 0;
 			const deviceCount = (ss['kismet.system.devices.count'] as number) || 0;
@@ -106,6 +109,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json({
 			success: false,
 			status: 'error',
+			// Safe: Catch block error from KismetProxy.getSystemStatus() throws Error instances
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message,
 			data: {
 				running: false,

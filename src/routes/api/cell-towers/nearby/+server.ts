@@ -21,6 +21,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			{
 				success: false,
 				towers: [],
+			// Safe: Validation error from parameter checks cast to Error for message extraction
 				message: `Invalid parameter: ${(validationError as Error).message}`
 			},
 			{ status: 400 }

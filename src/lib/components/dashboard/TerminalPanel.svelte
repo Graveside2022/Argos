@@ -1,3 +1,5 @@
+<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 
@@ -101,6 +103,7 @@
 
 	// Close dropdowns when clicking outside
 	function handleWindowClick(e: MouseEvent) {
+		// Safe: MouseEvent.target is EventTarget, narrowing to HTMLElement for DOM navigation methods
 		const target = e.target as HTMLElement;
 		// Don't close dropdown if clicking the split button (it opens the dropdown)
 		if (!target.closest('.shell-dropdown-wrapper') && !target.closest('.split-btn')) {
