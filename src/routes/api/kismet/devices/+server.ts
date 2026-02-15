@@ -1,29 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { z } from 'zod';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetService } from '$lib/server/services';
 
 import type { RequestHandler } from './$types';
-
-/**
- * Zod schema for Kismet devices GET response
- * Task: T026 - Constitutional Audit Remediation (P1)
- */
-const KismetDevicesResponseSchema = z.object({
-	devices: z.array(z.record(z.unknown())).describe('Array of Kismet device objects'),
-	source: z.enum(['kismet', 'fallback']).optional().describe('Data source'),
-	status: z
-		.object({
-			running: z.boolean(),
-			deviceCount: z.number().int().nonnegative(),
-			interface: z.string().optional(),
-			uptime: z.number().nonnegative().optional()
-		})
-		.optional()
-		.describe('Kismet service status'),
-	error: z.string().optional().describe('Error message if any')
-});
 
 /**
  * Fetch current GPS position for fallback when devices lack their own location.
@@ -128,14 +108,13 @@ export const GET: RequestHandler = async ({ fetch }) => {
 			]);
 			const status = await fusionKismetController.getStatus();
 
-			const responseData = {
+			return json({
 				devices: normalizeFusionDevices(
 					// Safe: Kismet device array cast to Record array for normalizeFusionDevices function signature
 					// Safe: devices array elements double-cast for Kismet raw device transformation
 					(devices || []) as unknown as Record<string, unknown>[],
 					gps
 				),
-				// Safe: Literal string narrowed to const for source discriminated union type
 				source: 'kismet' as const,
 				status: {
 					running: status.running,
@@ -143,41 +122,25 @@ export const GET: RequestHandler = async ({ fetch }) => {
 					interface: status.interface,
 					uptime: status.uptime
 				}
-			};
-
-			// Validate response with Zod (T026)
-			const validated = KismetDevicesResponseSchema.parse(responseData);
-			return json(validated);
+			});
 		}
 
 		// Fallback to existing service implementation (GPS fallback handled inside KismetService)
 		const response = await KismetService.getDevices(fetch);
-
-		// Validate response with Zod (T026)
-		const validated = KismetDevicesResponseSchema.parse(response);
-		return json(validated);
+		return json(response);
 	} catch (error: unknown) {
 		console.error('Error in Kismet devices endpoint:', error);
 
 		// Fallback to existing service implementation on error
 		try {
 			const response = await KismetService.getDevices(fetch);
-
-			// Validate fallback response with Zod (T026)
-			const validated = KismetDevicesResponseSchema.parse(response);
-			return json(validated);
-		} catch (error: unknown) {
-			const errorResponse = {
+			return json(response);
+		} catch (fallbackError: unknown) {
+			return json({
 				devices: [],
-				// Safe: Catch block error cast to extract optional message property for error response
-				error: (error as { message?: string }).message || 'Unknown error',
-				// Safe: Literal string narrowed to const for source discriminated union type
+				error: (fallbackError as { message?: string }).message || 'Unknown error',
 				source: 'fallback' as const
-			};
-
-			// Validate error response with Zod (T026)
-			const validated = KismetDevicesResponseSchema.parse(errorResponse);
-			return json(validated);
+			});
 		}
 	}
 };
