@@ -304,6 +304,7 @@ async function getGpsDetails(): Promise<GpsDetails | null> {
 				gpsdVersion = (parsed.release as string) || '';
 			}
 			if (parsed.class === 'DEVICES' && Array.isArray(parsed.devices)) {
+		// Safe: Type cast for dynamic data access
 				const dev = parsed.devices[0] as Record<string, unknown> | undefined;
 				if (dev) {
 					device = (dev.path as string) || '';

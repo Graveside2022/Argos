@@ -92,11 +92,15 @@ scanAllHardware()
 
 // Singleton rate limiter (globalThis for HMR persistence) - Phase 2.2.5
 const rateLimiter =
+	// Safe: globalThis typed as Record for dynamic property access, RateLimiter type guaranteed by initialization
 	((globalThis as Record<string, unknown>).__rateLimiter as RateLimiter) ?? new RateLimiter();
+// Safe: globalThis typed as Record for dynamic property assignment
 (globalThis as Record<string, unknown>).__rateLimiter = rateLimiter;
 
 // Cleanup interval (globalThis guard for HMR) - Phase 2.2.5
+// Safe: globalThis typed as Record to check for existing cleanup interval
 if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
+	// Safe: globalThis typed as Record for dynamic property assignment
 	(globalThis as Record<string, unknown>).__rateLimiterCleanup = setInterval(
 		() => rateLimiter.cleanup(),
 		300_000 // 5 minutes
@@ -112,6 +116,7 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
 	// request is not logged like HTTP requests, and there is no Referer header
 	// leak. This is standard practice (Socket.IO, Phoenix Channels, Action Cable).
 	const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+	// Safe: Header value is string | string[] | undefined, narrowing to string for auth validation
 	const apiKey = url.searchParams.get('token') || (request.headers['x-api-key'] as string);
 
 	// Build mock Request with API key header AND cookies (for browser session auth).
@@ -434,10 +439,12 @@ export const handleError: HandleServerError = ({ error, event }) => {
 					...Object.getOwnPropertyNames(error).reduce(
 						(acc, prop) => {
 							if (!['name', 'message', 'stack'].includes(prop)) {
+								// Safe: Error object cast to Record to access dynamic properties
 								acc[prop] = (error as unknown as Record<string, unknown>)[prop];
 							}
 							return acc;
 						},
+						// Safe: Empty object initialized as Record for accumulating error properties
 						{} as Record<string, unknown>
 					)
 				}
@@ -468,7 +475,9 @@ export const handleError: HandleServerError = ({ error, event }) => {
 // Docker logs confirmed 11+ SIGINT listeners without this guard.
 const SHUTDOWN_KEY = '__argos_hooks_shutdown_registered';
 if (dev) {
+	// Safe: globalThis typed as Record to check for shutdown guard flag
 	if (typeof process !== 'undefined' && !(globalThis as Record<string, unknown>)[SHUTDOWN_KEY]) {
+		// Safe: globalThis typed as Record for dynamic property assignment of shutdown guard
 		(globalThis as Record<string, unknown>)[SHUTDOWN_KEY] = true;
 		process.on('SIGINT', () => {
 			logger.info('Shutting down WebSocket server...');

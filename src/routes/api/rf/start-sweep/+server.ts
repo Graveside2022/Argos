@@ -1,31 +1,23 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 
+import { StartSweepRequestSchema } from '$lib/schemas/rf';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const body = (await request.json()) as Record<string, unknown>;
-		console.warn('[rf/start-sweep] Request body:', JSON.stringify(body, null, 2));
+		const rawBody = await request.json();
+		const validated = safeParseWithHandling(StartSweepRequestSchema, rawBody, 'user-action');
 
-		// Extract device type (default to hackrf for backward compatibility)
-		const _deviceType = (body.deviceType as string) || 'hackrf';
-
-		// Extract frequencies from request
-		const frequencyRanges = (body.frequencies as unknown[]) || [];
-		const cycleTime = (body.cycleTime as number) || 10; // Default 10 seconds
-
-		if (!frequencyRanges || frequencyRanges.length === 0) {
-			return json(
-				{
-					status: 'error',
-					message: 'No frequencies provided'
-				},
-				{ status: 400 }
-			);
+		if (!validated) {
+			return error(400, 'Invalid sweep configuration');
 		}
+
+		const { frequencies: frequencyRanges, cycleTime } = validated;
+		console.warn('[rf/start-sweep] Validated request:', { frequencyRanges, cycleTime });
 
 		// Always use the HackRF sweep manager which will auto-detect and use USRP if available
 		{
@@ -39,6 +31,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					// 3. Plain number
 					if (typeof range === 'object' && range !== null) {
 						let centerFreq;
+						// Safe: Record type for dynamic access
+						// Safe: Range property cast to Record for dynamic min/max property extraction
 						const rangeObj = range as Record<string, unknown>;
 						if (rangeObj.start !== undefined && rangeObj.stop !== undefined) {
 							centerFreq =

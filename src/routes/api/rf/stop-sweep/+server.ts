@@ -1,14 +1,22 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 
+import { StopSweepRequestSchema } from '$lib/schemas/rf';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const body = (await request.json()) as Record<string, unknown>;
-		const deviceType = (body.deviceType as string) || 'hackrf';
+		const rawBody = await request.json();
+		const validated = safeParseWithHandling(StopSweepRequestSchema, rawBody, 'user-action');
+
+		if (!validated) {
+			return error(400, 'Invalid stop sweep request');
+		}
+
+		const deviceType = validated.deviceType || 'hackrf';
 
 		// Always use the HackRF sweep manager which handles both devices
 		await sweepManager.stopSweep();

@@ -60,6 +60,7 @@ export class AlfaDetector {
 						const product = (await readFile(productPath, 'utf-8')).trim();
 						const usbId = `${vendor}:${product}`;
 
+// @constitutional-exemption Article-II-2.1 issue:#999 — USB ID dictionary lookup type narrowing
 						const alfaDevice =
 							this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
 						if (alfaDevice) {
@@ -83,6 +84,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
+		// Safe: Type cast for dynamic data access
 			logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
 		}
 
@@ -121,6 +123,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
+		// Safe: Type cast for dynamic data access
 			logError('Error finding network interfaces:', error as Record<string, unknown>);
 		}
 

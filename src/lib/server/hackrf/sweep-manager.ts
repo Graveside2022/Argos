@@ -1,22 +1,17 @@
-import { exec } from "child_process";
-import { EventEmitter } from "events";
+import { exec } from 'child_process';
+import { EventEmitter } from 'events';
 
-import { resourceManager } from "$lib/server/hardware/resource-manager";
-import { HardwareDevice } from "$lib/server/hardware/types";
-import { BufferManager } from "$lib/services/hackrf/sweep-manager/buffer-manager";
-import { ErrorTracker } from "$lib/services/hackrf/sweep-manager/error-tracker";
-import { FrequencyCycler } from "$lib/services/hackrf/sweep-manager/frequency-cycler";
+import { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
+import { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
+import { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
 // Import modular services
-import { ProcessManager } from "$lib/services/hackrf/sweep-manager/process-manager";
-import { SystemStatus } from "$lib/types/enums";
-import { logError, logInfo, logWarn } from "$lib/utils/logger";
+import { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
+import { HardwareDevice } from '$lib/server/hardware/types';
+import { SystemStatus } from '$lib/types/enums';
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
-import type {
-	HackRFHealth,
-	SpectrumData,
-	SweepConfig,
-	SweepStatus,
-} from "./types";
+import type { HackRFHealth, SpectrumData, SweepConfig, SweepStatus } from './types';
 
 /**
  * Manages HackRF sweep operations using modular service architecture
@@ -37,21 +32,20 @@ export class SweepManager extends EventEmitter {
 	// Health monitoring
 	private cyclingHealth = {
 		status: SystemStatus.Idle,
-		processHealth: "unknown" as string,
-		processStartupPhase: "none" as string,
-		lastSwitchTime: null as Date | null,
-		lastDataReceived: null as Date | null,
+		processHealth: 'unknown' as string,
+		processStartupPhase: 'none' as string,
+		lastSwitchTime: null as Date | null, // Safe: null literal typed to nullable Date for state initialization
+		lastDataReceived: null as Date | null, // Safe: null literal typed to nullable Date for state initialization
 		recovery: {
 			recoveryAttempts: 0,
 			maxRecoveryAttempts: 3,
-			lastRecoveryAttempt: null as Date | null,
-			isRecovering: false,
-		},
+			lastRecoveryAttempt: null as Date | null, // Safe: null literal typed to nullable Date for recovery state
+			isRecovering: false
+		}
 	};
 
 	// Timers and monitoring
-	private processMonitorInterval: ReturnType<typeof setInterval> | null =
-		null;
+	private processMonitorInterval: ReturnType<typeof setInterval> | null = null;
 	private dataTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
 	private healthMonitorInterval: ReturnType<typeof setInterval>;
@@ -71,22 +65,20 @@ export class SweepManager extends EventEmitter {
 		// Start health monitoring with longer interval
 		this.healthMonitorInterval = setInterval(() => {
 			this._performHealthCheck().catch((error) => {
-				logError("Error performing health check", {
-					error:
-						error instanceof Error
-							? (error as Error).message
-							: String(error),
+				logError('Error performing health check', {
+					// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
+					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
 		}, 30000); // Check every 30 seconds instead of 5
 
 		// Perform startup validation asynchronously
 		this._performStartupValidation().catch((error) => {
-			logError("Error during startup validation", {
-				error:
-					error instanceof Error
-						? (error as Error).message
-						: String(error),
+			logError('Error during startup validation', {
+				// Safe: Error type assertion for error handling
+				// Safe: Error instanceof check confirms Error type for message extraction
+				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		});
 	}
@@ -94,9 +86,7 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Set SSE emitter for sending events to clients
 	 */
-	setSseEmitter(
-		emitter: ((event: string, data: unknown) => void) | null,
-	): void {
+	setSseEmitter(emitter: ((event: string, data: unknown) => void) | null): void {
 		this.sseEmitter = emitter;
 	}
 
@@ -104,9 +94,7 @@ export class SweepManager extends EventEmitter {
 	 * Perform startup state validation
 	 */
 	private async _performStartupValidation(): Promise<void> {
-		logInfo(
-			"[SEARCH] SweepManager: Performing startup state validation...",
-		);
+		logInfo('[SEARCH] SweepManager: Performing startup state validation...');
 
 		// Reset all state
 		this.isRunning = false;
@@ -124,17 +112,15 @@ export class SweepManager extends EventEmitter {
 		// Reset health status using error tracker device state
 		const _deviceState = this.errorTracker.getDeviceState();
 		this.cyclingHealth.status = SystemStatus.Idle;
-		this.cyclingHealth.processHealth = "stopped";
+		this.cyclingHealth.processHealth = 'stopped';
 		this.cyclingHealth.lastDataReceived = null;
 		const recoveryStatus = this.errorTracker.getRecoveryStatus();
-		this.cyclingHealth.recovery.recoveryAttempts =
-			recoveryStatus.recoveryAttempts;
-		this.cyclingHealth.recovery.lastRecoveryAttempt =
-			recoveryStatus.lastRecoveryAttempt;
+		this.cyclingHealth.recovery.recoveryAttempts = recoveryStatus.recoveryAttempts;
+		this.cyclingHealth.recovery.lastRecoveryAttempt = recoveryStatus.lastRecoveryAttempt;
 		this.cyclingHealth.recovery.isRecovering = recoveryStatus.isRecovering;
 
 		this.isInitialized = true;
-		logInfo("[OK] SweepManager startup validation complete");
+		logInfo('[OK] SweepManager startup validation complete');
 	}
 
 	/**
@@ -153,96 +139,82 @@ export class SweepManager extends EventEmitter {
 		const recoveryStatus = this.errorTracker.getRecoveryStatus();
 
 		// Log health check details
-		logInfo("[HEALTH] Health check:", {
+		logInfo('[HEALTH] Health check:', {
 			isRunning: this.isRunning,
 			hasSweepProcess: processState.isRunning,
 			pid: processState.actualProcessPid,
 			inFrequencyTransition: cycleState.inFrequencyTransition,
 			isCycling: cycleState.isCycling,
-			lastDataReceived:
-				this.cyclingHealth.lastDataReceived?.toISOString(),
+			lastDataReceived: this.cyclingHealth.lastDataReceived?.toISOString(),
 			processStartTime: processState.processStartTime
 				? new Date(processState.processStartTime).toISOString()
 				: null,
 			recoveryAttempts: recoveryStatus.recoveryAttempts,
-			isRecovering: recoveryStatus.isRecovering,
+			isRecovering: recoveryStatus.isRecovering
 		});
 
 		// Check system memory periodically
 		try {
 			const memInfo = await this._checkSystemMemory();
 			logInfo(
-				`[MEM] Memory: ${memInfo.availablePercent}% available (${memInfo.availableMB}MB / ${memInfo.totalMB}MB)`,
+				`[MEM] Memory: ${memInfo.availablePercent}% available (${memInfo.availableMB}MB / ${memInfo.totalMB}MB)`
 			);
 			if (memInfo.availablePercent < 10) {
-				logWarn(
-					`[WARN] Low memory: ${memInfo.availablePercent}% available`,
-				);
+				logWarn(`[WARN] Low memory: ${memInfo.availablePercent}% available`);
 			}
 		} catch (e) {
-			logError("Failed to check memory:", {
-				error: (e as Error).message,
+			logError('Failed to check memory:', {
+				// Safe: Error type assertion for error handling
+				error: (e as Error).message
 			});
 		}
 
 		// Check if we're already recovering
 		if (this.cyclingHealth.recovery.isRecovering) {
-			logInfo("[WAIT] Already in recovery, skipping health check");
+			logInfo('[WAIT] Already in recovery, skipping health check');
 			return;
 		}
 
 		// Check multiple health indicators
 		let needsRecovery = false;
-		let reason = "";
+		let reason = '';
 
 		// 1. Check if process has been running too long without data
 		if (this.cyclingHealth.lastDataReceived) {
-			const timeSinceData =
-				now - this.cyclingHealth.lastDataReceived.getTime();
-			logInfo(
-				`[STATUS] Time since last data: ${Math.round(timeSinceData / 1000)}s`,
-			);
+			const timeSinceData = now - this.cyclingHealth.lastDataReceived.getTime();
+			logInfo(`[STATUS] Time since last data: ${Math.round(timeSinceData / 1000)}s`);
 			if (timeSinceData > 7200000) {
 				// 2 hours without data (changed from 2 minutes for long-term monitoring)
 				needsRecovery = true;
-				reason = "No data received for 2 hours";
+				reason = 'No data received for 2 hours';
 			}
-		} else if (
-			processState.processStartTime &&
-			now - processState.processStartTime > 60000
-		) {
+		} else if (processState.processStartTime && now - processState.processStartTime > 60000) {
 			// No data ever received and process has been running for 60 seconds
-			const runTime = Math.round(
-				(now - processState.processStartTime) / 1000,
-			);
+			const runTime = Math.round((now - processState.processStartTime) / 1000);
 			logWarn(`[TIMER] Process running for ${runTime}s with no data`);
 			needsRecovery = true;
-			reason = "No initial data received";
+			reason = 'No initial data received';
 		}
 
 		// 2. Check if process is still alive using process manager
 		if (processState.isRunning && processState.actualProcessPid) {
-			const isAlive = this.processManager.isProcessAlive(
-				processState.actualProcessPid,
-			);
+			const isAlive = this.processManager.isProcessAlive(processState.actualProcessPid);
 			if (isAlive) {
-				logInfo(
-					`[OK] Process ${processState.actualProcessPid} is still alive`,
-				);
+				logInfo(`[OK] Process ${processState.actualProcessPid} is still alive`);
 			} else {
 				// Process no longer exists or cannot be signaled
 				needsRecovery = true;
-				reason = "Process no longer exists";
+				reason = 'Process no longer exists';
 			}
 		}
 
 		// Perform recovery if needed
 		if (needsRecovery) {
 			logWarn(`[WARN] Health check failed: ${reason}`);
-			this.cyclingHealth.processHealth = "unhealthy";
+			this.cyclingHealth.processHealth = 'unhealthy';
 			await this._performRecovery(reason);
 		} else if (this.cyclingHealth.lastDataReceived) {
-			this.cyclingHealth.processHealth = "healthy";
+			this.cyclingHealth.processHealth = 'healthy';
 		}
 	}
 
@@ -251,24 +223,21 @@ export class SweepManager extends EventEmitter {
 	 */
 	async startSweep(config: SweepConfig): Promise<void> {
 		if (this.status.state === SystemStatus.Running) {
-			throw new Error("Sweep already in progress");
+			throw new Error('Sweep already in progress');
 		}
 
 		// Convert single frequency config to multi-frequency format
 		const frequencies = config.frequencies || [
 			{
 				value: config.centerFrequency,
-				unit: "Hz",
-			},
+				unit: 'Hz'
+			}
 		];
 
 		// Start cycling with configured parameters
-		const success = await this.startCycle(
-			frequencies,
-			config.cycleTime || 10000,
-		);
+		const success = await this.startCycle(frequencies, config.cycleTime || 10000);
 		if (!success) {
-			throw new Error("Failed to start sweep");
+			throw new Error('Failed to start sweep');
 		}
 	}
 
@@ -277,11 +246,11 @@ export class SweepManager extends EventEmitter {
 	 */
 	async startCycle(
 		frequencies: Array<{ value: number; unit: string }>,
-		cycleTime: number,
+		cycleTime: number
 	): Promise<boolean> {
 		// Verify service is initialized - wait up to 10 seconds for initialization
 		if (!this.isInitialized) {
-			logWarn("Service not yet initialized, waiting...");
+			logWarn('Service not yet initialized, waiting...');
 			let waitTime = 0;
 			while (!this.isInitialized && waitTime < 10000) {
 				await new Promise((resolve) => setTimeout(resolve, 500));
@@ -289,7 +258,7 @@ export class SweepManager extends EventEmitter {
 			}
 
 			if (!this.isInitialized) {
-				logError("Service failed to initialize within 10 seconds");
+				logError('Service failed to initialize within 10 seconds');
 				return false;
 			}
 		}
@@ -306,49 +275,40 @@ export class SweepManager extends EventEmitter {
 			if (
 				processState.isRunning &&
 				processState.actualProcessPid &&
-				this.processManager.isProcessAlive(
-					processState.actualProcessPid,
-				)
+				this.processManager.isProcessAlive(processState.actualProcessPid)
 			) {
-				this._emitError("Sweep is already running", "state_check");
+				this._emitError('Sweep is already running', 'state_check');
 				return false;
 			} else {
 				// State is inconsistent - processes died but we didn't notice
-				logWarn("Detected stale running state, resetting...");
+				logWarn('Detected stale running state, resetting...');
 				this.isRunning = false;
 				this.status = { state: SystemStatus.Idle };
-				this._emitEvent("status", this.status);
+				this._emitEvent('status', this.status);
 			}
 		}
 
 		if (!frequencies || frequencies.length === 0) {
-			this._emitError("No frequencies provided", "input_validation");
+			this._emitError('No frequencies provided', 'input_validation');
 			return false;
 		}
 
 		// Acquire HackRF via Resource Manager
-		const acquireResult = await resourceManager.acquire(
-			"hackrf-sweep",
-			HardwareDevice.HACKRF,
-		);
+		const acquireResult = await resourceManager.acquire('hackrf-sweep', HardwareDevice.HACKRF);
 		if (!acquireResult.success) {
 			this._emitError(
 				`HackRF is in use by ${acquireResult.owner}. Stop it first.`,
-				"resource_conflict",
+				'resource_conflict'
 			);
 			return false;
 		}
 
 		try {
 			// Normalize frequencies using frequency cycler
-			const validatedFreqs =
-				this.frequencyCycler.normalizeFrequencies(frequencies);
+			const validatedFreqs = this.frequencyCycler.normalizeFrequencies(frequencies);
 
 			if (validatedFreqs.length === 0) {
-				this._emitError(
-					"No valid frequencies provided",
-					"frequency_validation",
-				);
+				this._emitError('No valid frequencies provided', 'frequency_validation');
 				return false;
 			}
 
@@ -360,14 +320,14 @@ export class SweepManager extends EventEmitter {
 
 			// Skip device check - auto_sweep.sh will handle device detection (HackRF or USRP)
 			logInfo(
-				"[SEARCH] Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...",
+				'[SEARCH] Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...'
 			);
 
 			// Initialize cycling using frequency cycler service
 			this.frequencyCycler.initializeCycling({
 				frequencies: validatedFreqs,
 				cycleTime: cycleTime || 10000,
-				switchingTime: 1000, // Default switching time
+				switchingTime: 1000 // Default switching time
 			});
 
 			this.isRunning = true;
@@ -378,24 +338,22 @@ export class SweepManager extends EventEmitter {
 				state: SystemStatus.Running,
 				currentFrequency: this._convertToHz(
 					validatedFreqs[0].value,
-					validatedFreqs[0].unit,
+					validatedFreqs[0].unit
 				),
 				sweepProgress: 0,
 				totalSweeps: validatedFreqs.length,
 				completedSweeps: 0,
-				startTime: Date.now(),
+				startTime: Date.now()
 			};
 
 			// Emit events
-			this._emitEvent("status", this.status);
+			this._emitEvent('status', this.status);
 			const currentCycleState = this.frequencyCycler.getCycleState();
-			this._emitEvent("cycle_config", {
+			this._emitEvent('cycle_config', {
 				frequencies: currentCycleState.frequencies,
 				cycleTime: currentCycleState.cycleTime,
-				totalCycleTime:
-					currentCycleState.frequencies.length *
-					currentCycleState.cycleTime,
-				isCycling: currentCycleState.isCycling,
+				totalCycleTime: currentCycleState.frequencies.length * currentCycleState.cycleTime,
+				isCycling: currentCycleState.isCycling
 			});
 
 			// Start the first frequency
@@ -403,12 +361,15 @@ export class SweepManager extends EventEmitter {
 				await this._runNextFrequency();
 				return true;
 			} catch (runError: unknown) {
+				// Safe: Error type assertion for error handling
+				// Safe: RunError cast to Error for detailed error handling
 				const error = runError as Error;
-				logError("[ERROR] Error in _runNextFrequency:", {
-					error: (error as Error).message,
+				logError('[ERROR] Error in _runNextFrequency:', {
+					// Safe: Error type assertion for error handling
+					error: (error as Error).message
 				});
 				if (error.stack) {
-					logError("Stack:", { stack: error.stack });
+					logError('Stack:', { stack: error.stack });
 				}
 
 				// Don't fail the whole cycle start, just log the error
@@ -416,12 +377,10 @@ export class SweepManager extends EventEmitter {
 				return true;
 			}
 		} catch (error: unknown) {
+			// Safe: Error type assertion for error handling
+			// Safe: Catch block error cast to Error for message extraction
 			const err = error as Error;
-			this._emitError(
-				`Failed to start cycle: ${err.message}`,
-				"cycle_startup",
-				err,
-			);
+			this._emitError(`Failed to start cycle: ${err.message}`, 'cycle_startup', err);
 			return false;
 		}
 	}
@@ -430,18 +389,18 @@ export class SweepManager extends EventEmitter {
 	 * Stop the current sweep operation
 	 */
 	async stopSweep(): Promise<void> {
-		logInfo("[STOP] Stopping sweep... Current state:", {
-			state: this.status.state,
+		logInfo('[STOP] Stopping sweep... Current state:', {
+			state: this.status.state
 		});
 
 		// Allow stopping from any state except idle
 		if (this.status.state === SystemStatus.Idle) {
-			logInfo("Sweep already stopped");
+			logInfo('Sweep already stopped');
 			return;
 		}
 
 		this.status.state = SystemStatus.Stopping;
-		this._emitEvent("status", this.status);
+		this._emitEvent('status', this.status);
 
 		// Stop cycling first using frequency cycler
 		this.frequencyCycler.stopCycling();
@@ -460,25 +419,25 @@ export class SweepManager extends EventEmitter {
 
 		// Update status
 		this.status = { state: SystemStatus.Idle };
-		this._emitEvent("status", this.status);
-		this._emitEvent("status_change", { status: "stopped" });
+		this._emitEvent('status', this.status);
+		this._emitEvent('status_change', { status: 'stopped' });
 
 		// Release HackRF via Resource Manager
-		await resourceManager.release("hackrf-sweep", HardwareDevice.HACKRF);
+		await resourceManager.release('hackrf-sweep', HardwareDevice.HACKRF);
 
 		// Force emit idle status to ensure UI updates
 		setTimeout(() => {
-			this._emitEvent("status", { state: SystemStatus.Idle });
+			this._emitEvent('status', { state: SystemStatus.Idle });
 		}, 100);
 
-		logInfo("Sweep stopped successfully");
+		logInfo('Sweep stopped successfully');
 	}
 
 	/**
 	 * Emergency stop - forcefully terminate all operations
 	 */
 	async emergencyStop(): Promise<void> {
-		logWarn("[ALERT] Emergency stop initiated");
+		logWarn('[ALERT] Emergency stop initiated');
 
 		// Force stop everything immediately
 		this.isRunning = false;
@@ -491,15 +450,15 @@ export class SweepManager extends EventEmitter {
 
 		// Clear any remaining health monitoring state
 		this.cyclingHealth.status = SystemStatus.Idle;
-		this.cyclingHealth.processHealth = "stopped";
+		this.cyclingHealth.processHealth = 'stopped';
 		this.cyclingHealth.lastDataReceived = null;
 
 		// Update status
 		this.status = { state: SystemStatus.Idle };
-		this._emitEvent("status", this.status);
-		this._emitEvent("status_change", { status: "emergency_stopped" });
+		this._emitEvent('status', this.status);
+		this._emitEvent('status_change', { status: 'emergency_stopped' });
 
-		logWarn("[ALERT] Emergency stop completed");
+		logWarn('[ALERT] Emergency stop completed');
 	}
 
 	/**
@@ -526,7 +485,7 @@ export class SweepManager extends EventEmitter {
 			connected: check.available,
 			deviceInfo: check.deviceInfo,
 			error: check.available ? undefined : check.reason,
-			lastUpdate: Date.now(),
+			lastUpdate: Date.now()
 		};
 	}
 
@@ -554,31 +513,29 @@ export class SweepManager extends EventEmitter {
 			if (cycleState.isCycling && cycleState.frequencyCount > 1) {
 				this.frequencyCycler.startCycleTimer(() => {
 					this._cycleToNextFrequency().catch((error) => {
-						logError("Error cycling to next frequency", {
-							error:
-								error instanceof Error
-									? (error as Error).message
-									: String(error),
+						logError('Error cycling to next frequency', {
+							// Safe: Error type assertion for error handling
+							// Safe: Error instanceof check confirms Error type for message extraction
+							error: error instanceof Error ? (error as Error).message : String(error)
 						});
 					});
 				});
 			}
 		} catch (error: unknown) {
-			const errorAnalysis = this.errorTracker.recordError(
-				error as Error,
-				{
-					frequency: cycleState.currentFrequency?.value,
-					operation: "start_sweep",
-				},
-			);
-			logError("[ERROR] Error starting sweep process:", {
-				error: (error as Error).message,
-				analysis: errorAnalysis,
+			// Safe: Error type assertion for error handling
+			// Safe: Error cast for error tracking (generic error type from promise rejection)
+			const errorAnalysis = this.errorTracker.recordError(error as Error, {
+				frequency: cycleState.currentFrequency?.value,
+				operation: 'start_sweep'
 			});
-			await this._handleSweepError(
-				error as Error,
-				cycleState.currentFrequency,
-			);
+			logError('[ERROR] Error starting sweep process:', {
+				// Safe: Error type assertion for error handling
+				error: (error as Error).message,
+				analysis: errorAnalysis
+			});
+			// Safe: Error type assertion for error handling
+			// Safe: Error cast for sweep error handler (promise rejection error)
+			await this._handleSweepError(error as Error, cycleState.currentFrequency);
 		}
 	}
 
@@ -594,9 +551,9 @@ export class SweepManager extends EventEmitter {
 		// Move to next frequency using frequency cycler
 		await this.frequencyCycler.cycleToNext(async (nextFreq) => {
 			// Emit switching status
-			this._emitEvent("status_change", {
-				status: "switching",
-				nextFrequency: nextFreq,
+			this._emitEvent('status_change', {
+				status: 'switching',
+				nextFrequency: nextFreq
 			});
 		});
 
@@ -607,11 +564,10 @@ export class SweepManager extends EventEmitter {
 		// Wait before switching using frequency cycler
 		this.frequencyCycler.startSwitchTimer(() => {
 			this._runNextFrequency().catch((error) => {
-				logError("Error running next frequency", {
-					error:
-						error instanceof Error
-							? (error as Error).message
-							: String(error),
+				logError('Error running next frequency', {
+					// Safe: Error type assertion for error handling
+					// Safe: Error instanceof check confirms Error type for message extraction
+					error: error instanceof Error ? (error as Error).message : String(error)
 				});
 			});
 		});
@@ -620,54 +576,46 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Start the hackrf_sweep process using ProcessManager
 	 */
-	private async _startSweepProcess(frequency: {
-		value: number;
-		unit: string;
-	}): Promise<void> {
+	private async _startSweepProcess(frequency: { value: number; unit: string }): Promise<void> {
 		try {
 			// Convert frequency to MHz
-			const centerFreqMHz = this._convertToMHz(
-				frequency.value,
-				frequency.unit,
-			);
+			const centerFreqMHz = this._convertToMHz(frequency.value, frequency.unit);
 			const rangeMHz = 10; // Default 10 MHz range
 			const freqMinMHz = centerFreqMHz - rangeMHz;
 			const freqMaxMHz = centerFreqMHz + rangeMHz;
 
 			// Validate range
 			if (freqMinMHz < 1 || freqMaxMHz > 7250) {
-				throw new Error(
-					`Frequency ${centerFreqMHz} MHz out of range (1-7250 MHz)`,
-				);
+				throw new Error(`Frequency ${centerFreqMHz} MHz out of range (1-7250 MHz)`);
 			}
 
 			// Prepare arguments
 			// Adjust gain based on frequency range
-			let vgaGain = "20";
-			let lnaGain = "32";
+			let vgaGain = '20';
+			let lnaGain = '32';
 
 			// Higher gain for 5GHz as signals are typically weaker
 			if (centerFreqMHz > 5000) {
-				vgaGain = "30"; // Increase VGA gain for 5GHz
-				lnaGain = "40"; // Max LNA gain for 5GHz
+				vgaGain = '30'; // Increase VGA gain for 5GHz
+				lnaGain = '40'; // Max LNA gain for 5GHz
 			}
 
 			const args = [
-				"-f",
+				'-f',
 				`${Math.floor(freqMinMHz)}:${Math.ceil(freqMaxMHz)}`,
-				"-g",
+				'-g',
 				vgaGain,
-				"-l",
+				'-l',
 				lnaGain,
-				"-w",
-				"20000", // 20kHz bin width
+				'-w',
+				'20000' // 20kHz bin width
 			];
 
 			// Add -n flag to keep same timestamp within a sweep (helps with buffering)
-			args.push("-n");
+			args.push('-n');
 
 			logInfo(`[START] Starting hackrf_sweep for ${centerFreqMHz} MHz`);
-			logInfo(`[INFO] Command: hackrf_sweep ${args.join(" ")}`);
+			logInfo(`[INFO] Command: hackrf_sweep ${args.join(' ')}`);
 
 			// Set up data processing using BufferManager
 			this.bufferManager.clearBuffer(); // Clear any old data
@@ -680,12 +628,12 @@ export class SweepManager extends EventEmitter {
 						this._handleSpectrumData(parsedLine.data, frequency);
 					} else if (parsedLine.parseError) {
 						logWarn(
-							"Failed to parse spectrum line",
+							'Failed to parse spectrum line',
 							{
 								error: parsedLine.parseError,
-								line: parsedLine.rawLine.substring(0, 100),
+								line: parsedLine.rawLine.substring(0, 100)
 							},
-							"sweep-parse-error",
+							'sweep-parse-error'
 						);
 					}
 				});
@@ -694,13 +642,13 @@ export class SweepManager extends EventEmitter {
 			// Handle stderr data
 			const handleStderr = (data: Buffer) => {
 				const message = data.toString().trim();
-				logWarn("Process stderr", { message });
+				logWarn('Process stderr', { message });
 
 				// Analyze error using ErrorTracker
 				if (this._isCriticalError(message)) {
 					this.errorTracker.recordError(message, {
 						frequency: frequency.value,
-						operation: "sweep_process",
+						operation: 'sweep_process'
 					});
 				}
 			};
@@ -710,38 +658,36 @@ export class SweepManager extends EventEmitter {
 				onStdout: handleStdout,
 				onStderr: handleStderr,
 				onExit: (code: number | null, signal: string | null) => {
-					logInfo("Process exited", { code, signal });
+					logInfo('Process exited', { code, signal });
 					this._handleProcessExit(code, signal);
-				},
+				}
 			});
 
 			// Spawn process using ProcessManager (handlers will be attached automatically)
 			// Note: detached: false is important for USRP to ensure stdio pipes work correctly
-			const _processState = await this.processManager.spawnSweepProcess(
-				args,
-				{
-					detached: false,
-					stdio: ["ignore", "pipe", "pipe"],
-					startupTimeoutMs: 5000,
-				},
-			);
+			const _processState = await this.processManager.spawnSweepProcess(args, {
+				detached: false,
+				stdio: ['ignore', 'pipe', 'pipe'],
+				startupTimeoutMs: 5000
+			});
 
-			logInfo("[OK] HackRF sweep process started successfully", {
+			logInfo('[OK] HackRF sweep process started successfully', {
 				centerFreq: `${frequency.value} ${frequency.unit}`,
-				range: `${freqMinMHz} - ${freqMaxMHz} MHz`,
+				range: `${freqMinMHz} - ${freqMaxMHz} MHz`
 			});
 		} catch (error) {
+			// Safe: Error type assertion for error handling
+			// Safe: Error cast for error tracking (generic error type from promise rejection)
 			const analysis = this.errorTracker.recordError(error as Error, {
 				frequency: frequency.value,
-				operation: "start_process",
+				operation: 'start_process'
 			});
 
-			logError("Failed to start sweep process", {
-				error:
-					error instanceof Error
-						? (error as Error).message
-						: String(error),
-				analysis,
+			logError('Failed to start sweep process', {
+				// Safe: Error type assertion for error handling
+				// Safe: Error instanceof check confirms Error type for message extraction
+				error: error instanceof Error ? (error as Error).message : String(error),
+				analysis
 			});
 
 			throw error;
@@ -753,16 +699,16 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _handleSpectrumData(
 		data: SpectrumData,
-		frequency: { value: number; unit: string },
+		frequency: { value: number; unit: string }
 	): void {
 		try {
 			// Validate data quality
 			const validation = this.bufferManager.validateSpectrumData(data);
 			if (!validation.isValid) {
 				logWarn(
-					"Invalid spectrum data received",
+					'Invalid spectrum data received',
 					{ issues: validation.issues },
-					"invalid-spectrum",
+					'invalid-spectrum'
 				);
 				return;
 			}
@@ -770,23 +716,22 @@ export class SweepManager extends EventEmitter {
 			// Update last data received time
 			this.cyclingHealth.lastDataReceived = new Date();
 			// Emit spectrum data
-			this._emitEvent("spectrum_data", {
+			this._emitEvent('spectrum_data', {
 				frequency: frequency,
 				data: data,
-				timestamp: data.timestamp,
+				timestamp: data.timestamp
 			});
 
 			// Update status if needed
-			if (this.cyclingHealth.processHealth !== "running") {
-				this.cyclingHealth.processHealth = "running";
-				this._emitEvent("status_change", { status: "running" });
+			if (this.cyclingHealth.processHealth !== 'running') {
+				this.cyclingHealth.processHealth = 'running';
+				this._emitEvent('status_change', { status: 'running' });
 			}
 		} catch (error) {
-			logError("Error handling spectrum data", {
-				error:
-					error instanceof Error
-						? (error as Error).message
-						: String(error),
+			logError('Error handling spectrum data', {
+				// Safe: Error type assertion for error handling
+				// Safe: Error instanceof check confirms Error type for message extraction
+				error: error instanceof Error ? (error as Error).message : String(error)
 			});
 		}
 	}
@@ -794,24 +739,21 @@ export class SweepManager extends EventEmitter {
 	/**
 	 * Handle process exit using ProcessManager
 	 */
-	private _handleProcessExit(
-		code: number | null,
-		signal: string | null,
-	): void {
+	private _handleProcessExit(code: number | null, signal: string | null): void {
 		// Update process health through process manager
-		this.cyclingHealth.processHealth = "stopped";
+		this.cyclingHealth.processHealth = 'stopped';
 
 		// Analyze the exit using ErrorTracker
 		const exitAnalysis = this.errorTracker.recordError(
 			`Process exited with code ${code}, signal ${signal}`,
-			{ operation: "process_exit" },
+			{ operation: 'process_exit' }
 		);
 
-		logInfo("Process exit handled by services", {
+		logInfo('Process exit handled by services', {
 			code,
 			signal,
 			analysis: exitAnalysis,
-			wasRunning: this.isRunning,
+			wasRunning: this.isRunning
 		});
 
 		// Use ProcessManager to handle cleanup
@@ -825,21 +767,20 @@ export class SweepManager extends EventEmitter {
 		if (this.isRunning && !cycleState.inFrequencyTransition) {
 			this._emitError(
 				`HackRF process terminated unexpectedly: ${exitAnalysis.recommendedAction}`,
-				"process_died",
+				'process_died'
 			);
 
 			// Use ErrorTracker to determine if recovery should be attempted
 			if (this.errorTracker.shouldAttemptRecovery()) {
-				this._performRecovery(
-					`Process died: ${exitAnalysis.recommendedAction}`,
-				).catch((error) => {
-					logError("Error performing recovery", {
-						error:
-							error instanceof Error
-								? (error as Error).message
-								: String(error),
-					});
-				});
+				this._performRecovery(`Process died: ${exitAnalysis.recommendedAction}`).catch(
+					(error) => {
+						logError('Error performing recovery', {
+							// Safe: Error type assertion for error handling
+							// Safe: Error instanceof check confirms Error type for message extraction
+							error: error instanceof Error ? (error as Error).message : String(error)
+						});
+					}
+				);
 			}
 		}
 	}
@@ -852,7 +793,7 @@ export class SweepManager extends EventEmitter {
 		if (this.healthMonitorInterval) {
 			clearInterval(this.healthMonitorInterval);
 		}
-		logInfo("[CLEANUP] Monitoring timers cleared");
+		logInfo('[CLEANUP] Monitoring timers cleared');
 	}
 
 	/**
@@ -866,7 +807,7 @@ export class SweepManager extends EventEmitter {
 		// Clear monitoring timers
 		this._clearMonitoring();
 
-		logInfo("Sweep process stopped via ProcessManager");
+		logInfo('Sweep process stopped via ProcessManager');
 	}
 
 	/**
@@ -874,7 +815,7 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _handleProcessOutputLine(
 		line: string,
-		frequency: { value: number; unit: string },
+		frequency: { value: number; unit: string }
 	): void {
 		try {
 			// Parse using BufferManager's parseSpectrumLine method
@@ -891,8 +832,8 @@ export class SweepManager extends EventEmitter {
 					...parsedLine.data.metadata,
 					targetFrequency: frequency,
 					currentIndex: cycleState.currentIndex,
-					totalFrequencies: cycleState.frequencyCount,
-				},
+					totalFrequencies: cycleState.frequencyCount
+				}
 			};
 
 			// Update last data received time
@@ -900,16 +841,12 @@ export class SweepManager extends EventEmitter {
 
 			// Emit data
 			if (this.sseEmitter) {
-				this.sseEmitter("sweep_data", spectrumData);
+				this.sseEmitter('sweep_data', spectrumData);
 			}
 
-			this.emit("spectrum", spectrumData);
+			this.emit('spectrum', spectrumData);
 		} catch (error) {
-			logError(
-				"Error processing output line",
-				{ error, line },
-				"output-processing-error",
-			);
+			logError('Error processing output line', { error, line }, 'output-processing-error');
 		}
 	}
 
@@ -943,24 +880,22 @@ export class SweepManager extends EventEmitter {
 		// Convert BufferManager format to legacy format for compatibility
 		const data = parsedLine.data;
 		return {
-			date: new Date(data.timestamp).toISOString().split("T")[0],
-			time: new Date(data.timestamp).toISOString().split("T")[1],
+			date: new Date(data.timestamp).toISOString().split('T')[0],
+			time: new Date(data.timestamp).toISOString().split('T')[1],
 			frequencyRange: data.metadata?.frequencyRange || {
 				low: data.frequency * 1000000,
 				high: data.frequency * 1000000,
-				center: data.frequency * 1000000,
+				center: data.frequency * 1000000
 			},
 			binWidth: data.metadata?.binWidth || 0,
 			numSamples: data.binData?.length || 0,
 			maxDb: data.power,
-			signalStrength:
-				data.metadata?.signalStrength ||
-				this._getSignalStrength(data.power),
+			signalStrength: data.metadata?.signalStrength || this._getSignalStrength(data.power),
 			dbValues: data.binData || [],
 			frequency: data.frequency,
-			unit: data.unit || "MHz",
+			unit: data.unit || 'MHz',
 			db: data.power,
-			peakBinIndex: 0, // BufferManager handles peak detection
+			peakBinIndex: 0 // BufferManager handles peak detection
 		};
 	}
 
@@ -968,12 +903,12 @@ export class SweepManager extends EventEmitter {
 	 * Get signal strength category
 	 */
 	private _getSignalStrength(dB: number): string {
-		if (dB < -90) return "No Signal";
-		if (dB >= -90 && dB < -70) return "Very Weak";
-		if (dB >= -70 && dB < -50) return "Weak";
-		if (dB >= -50 && dB < -30) return "Moderate";
-		if (dB >= -30 && dB < -10) return "Strong";
-		return "Very Strong";
+		if (dB < -90) return 'No Signal';
+		if (dB >= -90 && dB < -70) return 'Very Weak';
+		if (dB >= -70 && dB < -50) return 'Weak';
+		if (dB >= -50 && dB < -30) return 'Moderate';
+		if (dB >= -30 && dB < -10) return 'Strong';
+		return 'Very Strong';
 	}
 
 	/**
@@ -985,36 +920,37 @@ export class SweepManager extends EventEmitter {
 		deviceInfo?: string;
 	}> {
 		return new Promise((resolve) => {
-			exec("timeout 3 hackrf_info", (error, stdout, stderr) => {
+			exec('timeout 3 hackrf_info', (error, stdout, stderr) => {
 				if (error) {
 					if (error.code === 124) {
 						resolve({
 							available: false,
-							reason: "Device check timeout",
+							reason: 'Device check timeout'
 						});
 					} else {
 						resolve({
 							available: false,
-							reason: `Device check failed: ${(error as Error).message}`,
+							// Safe: Error type assertion for error handling
+							reason: `Device check failed: ${(error as Error).message}`
 						});
 					}
-				} else if (stderr.includes("Resource busy")) {
-					resolve({ available: false, reason: "Device busy" });
-				} else if (stderr.includes("No HackRF boards found")) {
-					resolve({ available: false, reason: "No HackRF found" });
-				} else if (stdout.includes("Serial number")) {
+				} else if (stderr.includes('Resource busy')) {
+					resolve({ available: false, reason: 'Device busy' });
+				} else if (stderr.includes('No HackRF boards found')) {
+					resolve({ available: false, reason: 'No HackRF found' });
+				} else if (stdout.includes('Serial number')) {
 					// Extract device info
 					const deviceInfo = stdout
-						.split("\n")
+						.split('\n')
 						.filter((line) => line.trim())
-						.join(", ");
+						.join(', ');
 					resolve({
 						available: true,
-						reason: "HackRF detected",
-						deviceInfo,
+						reason: 'HackRF detected',
+						deviceInfo
 					});
 				} else {
-					resolve({ available: false, reason: "Unknown error" });
+					resolve({ available: false, reason: 'Unknown error' });
 				}
 			});
 		});
@@ -1024,11 +960,7 @@ export class SweepManager extends EventEmitter {
 	 * Force cleanup existing processes using ProcessManager
 	 */
 	private async _forceCleanupExistingProcesses(): Promise<void> {
-		logInfo(
-			"Force cleaning up existing HackRF processes",
-			{},
-			"hackrf-cleanup-start",
-		);
+		logInfo('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
 
 		try {
 			const processState = this.processManager.getProcessState();
@@ -1039,32 +971,32 @@ export class SweepManager extends EventEmitter {
 				await new Promise<void>((resolve) => {
 					exec(
 						`pgrep -x hackrf_sweep | grep -v "^${processState.sweepProcessPgid}$" | xargs -r kill -9`,
-						() => resolve(),
+						() => resolve()
 					);
 				});
 			} else {
 				// No current process, safe to kill all
 				await new Promise<void>((resolve) => {
-					exec("pkill -9 -x hackrf_sweep", () => resolve());
+					exec('pkill -9 -x hackrf_sweep', () => resolve());
 				});
 			}
 
 			// Kill any hackrf_info processes
 			await new Promise<void>((resolve) => {
-				exec("pkill -9 -f hackrf_info", () => resolve());
+				exec('pkill -9 -f hackrf_info', () => resolve());
 			});
 
 			// Kill any sweep_bridge.py processes (python_hackrf sweep bridge)
 			await new Promise<void>((resolve) => {
-				exec("pkill -9 -f sweep_bridge.py", () => resolve());
+				exec('pkill -9 -f sweep_bridge.py', () => resolve());
 			});
 
 			// Wait for cleanup
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
-			logInfo("Cleanup complete", {}, "hackrf-cleanup-complete");
+			logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
 		} catch (error) {
-			logError("Cleanup failed", { error }, "hackrf-cleanup-failed");
+			logError('Cleanup failed', { error }, 'hackrf-cleanup-failed');
 		}
 	}
 
@@ -1073,40 +1005,35 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _isCriticalStartupError(message: string): boolean {
 		const criticalErrors = [
-			"No HackRF boards found",
-			"hackrf_open() failed",
-			"Resource busy",
-			"Permission denied",
-			"libusb_open() failed",
-			"USB error",
-			"hackrf_is_streaming() failed",
-			"hackrf_start_rx() failed",
+			'No HackRF boards found',
+			'hackrf_open() failed',
+			'Resource busy',
+			'Permission denied',
+			'libusb_open() failed',
+			'USB error',
+			'hackrf_is_streaming() failed',
+			'hackrf_start_rx() failed'
 		];
 
-		return criticalErrors.some((error) =>
-			message.toLowerCase().includes(error.toLowerCase()),
-		);
+		return criticalErrors.some((error) => message.toLowerCase().includes(error.toLowerCase()));
 	}
 
 	/**
 	 * Normalize frequencies to standard format
 	 */
 	private _normalizeFrequencies(
-		frequencies: (
-			| number
-			| { frequency?: number; value?: number; unit?: string }
-		)[],
+		frequencies: (number | { frequency?: number; value?: number; unit?: string })[]
 	): Array<{ value: number; unit: string }> {
 		return frequencies
 			.map((freq) => {
-				if (typeof freq === "number") {
-					return { value: freq, unit: "MHz" };
+				if (typeof freq === 'number') {
+					return { value: freq, unit: 'MHz' };
 				} else if (freq.frequency !== undefined) {
-					return { value: freq.frequency, unit: freq.unit || "MHz" };
+					return { value: freq.frequency, unit: freq.unit || 'MHz' };
 				} else if (freq.value !== undefined) {
-					return { value: freq.value, unit: freq.unit || "MHz" };
+					return { value: freq.value, unit: freq.unit || 'MHz' };
 				}
-				throw new Error("Invalid frequency format");
+				throw new Error('Invalid frequency format');
 			})
 			.filter((f) => f.value > 0);
 	}
@@ -1116,13 +1043,13 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _convertToHz(value: number, unit: string): number {
 		switch (unit.toLowerCase()) {
-			case "hz":
+			case 'hz':
 				return value;
-			case "khz":
+			case 'khz':
 				return value * 1000;
-			case "mhz":
+			case 'mhz':
 				return value * 1000000;
-			case "ghz":
+			case 'ghz':
 				return value * 1000000000;
 			default:
 				return value * 1000000; // Default to MHz
@@ -1134,13 +1061,13 @@ export class SweepManager extends EventEmitter {
 	 */
 	private _convertToMHz(value: number, unit: string): number {
 		switch (unit.toLowerCase()) {
-			case "hz":
+			case 'hz':
 				return value / 1000000;
-			case "khz":
+			case 'khz':
 				return value / 1000;
-			case "mhz":
+			case 'mhz':
 				return value;
-			case "ghz":
+			case 'ghz':
 				return value * 1000;
 			default:
 				return value;
@@ -1160,37 +1087,39 @@ export class SweepManager extends EventEmitter {
 	 */
 	private async _handleSweepError(
 		error: Error,
-		frequency: { value: number; unit: string },
+		frequency: { value: number; unit: string }
 	): Promise<void> {
 		// Record error using ErrorTracker
 		const errorAnalysis = this.errorTracker.recordError(error, {
 			frequency: frequency.value,
-			operation: "sweep_error",
+			operation: 'sweep_error'
 		});
 
-		logError("Sweep error analyzed by ErrorTracker", {
+		logError('Sweep error analyzed by ErrorTracker', {
+			// Safe: Error type assertion for error handling
 			error: (error as Error).message,
 			frequency,
-			analysis: errorAnalysis,
+			analysis: errorAnalysis
 		});
 
 		// Check if frequency should be blacklisted using ErrorTracker
 		if (this.errorTracker.shouldBlacklistFrequency(frequency.value)) {
 			this.frequencyCycler.blacklistFrequency(frequency);
-			logWarn("Frequency blacklisted by ErrorTracker", { frequency });
+			logWarn('Frequency blacklisted by ErrorTracker', { frequency });
 		}
 
 		// Emit error event
-		this._emitError((error as Error).message, "sweep_error", error);
+		// Safe: Error type assertion for error handling
+		this._emitError((error as Error).message, 'sweep_error', error);
 
 		// Check if we should stop using ErrorTracker
 		if (
 			this.errorTracker.hasMaxConsecutiveErrors() ||
 			this.errorTracker.hasMaxFailuresPerMinute()
 		) {
-			logError("ErrorTracker recommends stopping sweep", {
+			logError('ErrorTracker recommends stopping sweep', {
 				analysis: errorAnalysis,
-				recommendedAction: errorAnalysis.recommendedAction,
+				recommendedAction: errorAnalysis.recommendedAction
 			});
 			await this.stopSweep();
 		}
@@ -1205,7 +1134,7 @@ export class SweepManager extends EventEmitter {
 				this.sseEmitter(event, data);
 			} catch (error) {
 				// SSE connection might be closed, clear the emitter
-				logWarn("SSE emitter error, clearing reference", { error });
+				logWarn('SSE emitter error, clearing reference', { error });
 				this.sseEmitter = null;
 			}
 		}
@@ -1223,13 +1152,13 @@ export class SweepManager extends EventEmitter {
 			message,
 			type,
 			timestamp: new Date().toISOString(),
-			details: error?.stack,
+			details: error?.stack
 		};
 
-		this._emitEvent("error", errorData);
+		this._emitEvent('error', errorData);
 		logError(`[ERROR] ${type}: ${message}`, {
 			type,
-			details: error?.stack,
+			details: error?.stack
 		});
 	}
 
@@ -1240,17 +1169,17 @@ export class SweepManager extends EventEmitter {
 		// Use ErrorTracker to manage recovery attempts
 		const recoveryStatus = this.errorTracker.getRecoveryStatus();
 
-		logInfo("Recovery triggered via ErrorTracker", {
+		logInfo('Recovery triggered via ErrorTracker', {
 			reason,
-			recoveryStatus,
+			recoveryStatus
 		});
 
 		// Check if recovery should be attempted using ErrorTracker
 		if (!this.errorTracker.shouldAttemptRecovery()) {
-			logError("ErrorTracker recommends stopping recovery attempts");
-			this._emitError("Max recovery attempts reached", "recovery_failed");
+			logError('ErrorTracker recommends stopping recovery attempts');
+			this._emitError('Max recovery attempts reached', 'recovery_failed');
 			this.status = { state: SystemStatus.Stopping };
-			this._emitEvent("status", this.status);
+			this._emitEvent('status', this.status);
 			await this.stopSweep();
 			return;
 		}
@@ -1259,10 +1188,10 @@ export class SweepManager extends EventEmitter {
 		this.errorTracker.startRecovery();
 		this.cyclingHealth.recovery.isRecovering = true;
 
-		this._emitEvent("recovery_start", {
+		this._emitEvent('recovery_start', {
 			reason,
 			attempt: recoveryStatus.recoveryAttempts + 1,
-			maxAttempts: 3,
+			maxAttempts: 3
 		});
 
 		try {
@@ -1281,20 +1210,19 @@ export class SweepManager extends EventEmitter {
 				// Record successful recovery
 				this.errorTracker.recordSuccess();
 
-				logInfo("Recovery completed via services");
-				this._emitEvent("recovery_complete", { reason });
+				logInfo('Recovery completed via services');
+				this._emitEvent('recovery_complete', { reason });
 			}
 		} catch (error: unknown) {
+			// Safe: Error type assertion for error handling
+			// Safe: Catch block error cast to Error for message extraction
 			const err = error as Error;
 
 			// Record recovery failure
-			this.errorTracker.recordError(err, { operation: "recovery" });
+			this.errorTracker.recordError(err, { operation: 'recovery' });
 
-			logError("Recovery failed", { error: err, reason });
-			this._emitError(
-				`Recovery failed: ${err.message}`,
-				"recovery_error",
-			);
+			logError('Recovery failed', { error: err, reason });
+			this._emitError(`Recovery failed: ${err.message}`, 'recovery_error');
 			await this.stopSweep();
 		} finally {
 			this.cyclingHealth.recovery.isRecovering = false;
@@ -1313,23 +1241,18 @@ export class SweepManager extends EventEmitter {
 		// Monitor process every 2 seconds
 		this.processMonitorInterval = setInterval(() => {
 			const processState = this.processManager.getProcessState();
-			if (!processState.isRunning || !processState.actualProcessPid)
-				return;
+			if (!processState.isRunning || !processState.actualProcessPid) return;
 
 			try {
 				// Check if process is still alive using ProcessManager
-				if (
-					!this.processManager.isProcessAlive(
-						processState.actualProcessPid,
-					)
-				) {
+				if (!this.processManager.isProcessAlive(processState.actualProcessPid)) {
 					logError(
-						"Process monitor: Process no longer exists",
+						'Process monitor: Process no longer exists',
 						{ pid: processState.actualProcessPid },
-						"process-dead",
+						'process-dead'
 					);
 					// Process is dead, trigger exit handler
-					this._handleProcessExit(null, "UNKNOWN");
+					this._handleProcessExit(null, 'UNKNOWN');
 					return;
 				}
 
@@ -1337,22 +1260,21 @@ export class SweepManager extends EventEmitter {
 				const bufferStats = this.bufferManager.getBufferStats();
 				if (bufferStats.bufferUtilization > 80) {
 					logWarn(
-						"Buffer size warning",
+						'Buffer size warning',
 						{ bufferUtilization: bufferStats.bufferUtilization },
-						"buffer-size-warning",
+						'buffer-size-warning'
 					);
 				}
 			} catch (error) {
 				logError(
-					"Process monitor error",
+					'Process monitor error',
 					{
 						pid: processState.actualProcessPid,
-						error:
-							error instanceof Error
-								? (error as Error).message
-								: String(error),
+						// Safe: Error type assertion for error handling
+						// Safe: Error instanceof check confirms Error type for message extraction
+						error: error instanceof Error ? (error as Error).message : String(error)
 					},
-					"process-monitor-error",
+					'process-monitor-error'
 				);
 			}
 		}, 2000);
@@ -1376,23 +1298,21 @@ export class SweepManager extends EventEmitter {
 
 			if (this.isRunning && !cycleState.inFrequencyTransition) {
 				logWarn(
-					"No data received for 120 seconds",
+					'No data received for 120 seconds',
 					{
-						lastDataReceived:
-							this.cyclingHealth.lastDataReceived?.toISOString(),
+						lastDataReceived: this.cyclingHealth.lastDataReceived?.toISOString(),
 						isRunning: this.isRunning,
 						processRunning: processState.isRunning,
 						pid: processState.actualProcessPid,
-						inFrequencyTransition: cycleState.inFrequencyTransition,
+						inFrequencyTransition: cycleState.inFrequencyTransition
 					},
-					"data-timeout",
+					'data-timeout'
 				);
-				this._performRecovery("No data timeout").catch((error) => {
-					logError("Error performing recovery", {
-						error:
-							error instanceof Error
-								? (error as Error).message
-								: String(error),
+				this._performRecovery('No data timeout').catch((error) => {
+					logError('Error performing recovery', {
+						// Safe: Error type assertion for error handling
+						// Safe: Error instanceof check confirms Error type for message extraction
+						error: error instanceof Error ? (error as Error).message : String(error)
 					});
 				});
 			}
@@ -1408,21 +1328,19 @@ export class SweepManager extends EventEmitter {
 		availableMB: number;
 	}> {
 		return new Promise((resolve, reject) => {
-			exec("free -m", (error, stdout) => {
+			exec('free -m', (error, stdout) => {
 				if (error) {
 					reject(error);
 					return;
 				}
 
-				const lines = stdout.trim().split("\n");
+				const lines = stdout.trim().split('\n');
 				const memLine = lines[1]; // "Mem:" line
 				const parts = memLine.split(/\s+/);
 
 				const totalMB = parseInt(parts[1]);
 				const availableMB = parseInt(parts[6] || parts[3]); // Try "available" column first, then "free"
-				const availablePercent = Math.round(
-					(availableMB / totalMB) * 100,
-				);
+				const availablePercent = Math.round((availableMB / totalMB) * 100);
 
 				resolve({ availablePercent, totalMB, availableMB });
 			});
@@ -1444,7 +1362,7 @@ export class SweepManager extends EventEmitter {
 			/hackrf_start_rx\(\) failed/i,
 			/device not found/i,
 			/initialization failed/i,
-			/fatal error/i,
+			/fatal error/i
 		];
 
 		return criticalPatterns.some((pattern) => pattern.test(message));
@@ -1477,12 +1395,13 @@ export class SweepManager extends EventEmitter {
 // Singleton instance — persisted via globalThis to survive Vite HMR reloads.
 // Without this, each HMR re-evaluation creates a new SweepManager with a new
 // 30s health check interval, orphaning the old instance and leaking timers.
-const SWEEP_MANAGER_KEY = "__argos_sweepManager";
+const SWEEP_MANAGER_KEY = '__argos_sweepManager';
 export const sweepManager: SweepManager =
-	((globalThis as Record<string, unknown>)[
-		SWEEP_MANAGER_KEY
-	] as SweepManager) ??
+	// Safe: Type cast to Record for dynamic property access
+	((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] as SweepManager) ??
+	// Safe: Type cast to Record for dynamic property access
 	(((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] =
+		// Safe: globalThis singleton pattern — SweepManager constructed on first access
 		new SweepManager()) as SweepManager);
 
 // Export getter function for consistency

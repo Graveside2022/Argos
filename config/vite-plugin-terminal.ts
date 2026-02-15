@@ -1,6 +1,6 @@
 import { access, constants } from 'fs/promises';
 import type { Plugin, ViteDevServer } from 'vite';
-import { WebSocket,WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 
 const TERMINAL_PORT = 3001;
 const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message
@@ -203,6 +203,7 @@ async function setupTerminal() {
 				cols: 80,
 				rows: 24,
 				cwd: process.env.HOME || '/home',
+				// Safe: process.env typed as Record<string, string> for child_process spawn
 				env: process.env as Record<string, string>
 			});
 

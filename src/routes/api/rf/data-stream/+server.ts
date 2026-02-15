@@ -1,6 +1,5 @@
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
-import { UsrpSweepManager } from '$lib/server/usrp/sweep-manager';
 
 import type { RequestHandler } from './$types';
 
@@ -28,7 +27,7 @@ interface StatusEvent {
 	[key: string]: unknown;
 }
 
-export const GET: RequestHandler = async ({ url, request }) => {
+export const GET: RequestHandler = async ({ request }) => {
 	const origin = request.headers.get('origin');
 	const corsHeaders = getCorsHeaders(origin);
 	const headers = {
@@ -38,10 +37,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 		...corsHeaders
 	};
 
-	const deviceType = url.searchParams.get('device') || 'auto';
-
 	// Shared state between start() and cancel() — hoisted so cancel() can clean up
-	let activeDevice: string = deviceType;
 	let dataHandler: ((data: SpectrumData) => void) | null = null;
 	let errorHandler: ((error: ErrorEvent) => void) | null = null;
 	let statusHandler: ((status: StatusEvent) => void) | null = null;
@@ -51,141 +47,74 @@ export const GET: RequestHandler = async ({ url, request }) => {
 		async start(controller) {
 			const encoder = new TextEncoder();
 
-			// Send initial connection message
-			controller.enqueue(
-				encoder.encode(`event: connected\ndata: {"device": "${deviceType}"}\n\n`)
-			);
+			// Send initial connection message (HackRF only, USRP support removed)
+			controller.enqueue(encoder.encode(`event: connected\ndata: {"device": "hackrf"}\n\n`));
 
-			if (deviceType === 'auto') {
-				// Auto-detect which device is active
-				const usrpManager = UsrpSweepManager.getInstance();
-				const usrpStatus = usrpManager.getStatus() as StatusEvent;
-				const hackrfStatus = sweepManager.getStatus();
+			// HackRF data handler
+			dataHandler = (data: SpectrumData) => {
+				try {
+					// Transform the data if needed
+					const transformedData = {
+						frequencies:
+							data.powerValues &&
+							data.startFreq !== undefined &&
+							data.endFreq !== undefined &&
+							data.powerValues !== undefined
+								? (() => {
+										const startFreq = data.startFreq;
+										const endFreq = data.endFreq;
+										const powerValues = data.powerValues;
+										return powerValues.map((_: number, index: number) => {
+											const freqStep =
+												(endFreq - startFreq) / (powerValues.length - 1);
+											return startFreq + index * freqStep;
+										});
+									})()
+								: [],
+						power: data.powerValues || [],
+						power_levels: data.powerValues || [],
+						start_freq: data.startFreq,
+						stop_freq: data.endFreq,
+						center_freq: data.frequency,
+						peak_freq: data.frequency,
+						peak_power: data.power,
+						timestamp: data.timestamp,
+						device: 'hackrf'
+					};
 
-				if (usrpStatus.isRunning) {
-					activeDevice = 'usrp';
-				} else if (hackrfStatus.state === 'running' || hackrfStatus.state === 'sweeping') {
-					activeDevice = 'hackrf';
+					const message = `event: spectrumData\ndata: ${JSON.stringify(transformedData)}\n\n`;
+					controller.enqueue(encoder.encode(message));
+				} catch (error) {
+					console.error('Error processing HackRF spectrum data:', error);
 				}
-			}
+			};
 
-			if (activeDevice === 'usrp') {
-				const usrpManager = UsrpSweepManager.getInstance();
+			// Error handler
+			errorHandler = (error: ErrorEvent) => {
+				const message = `event: error\ndata: ${JSON.stringify({
+					message: error.message || 'Unknown error',
+					device: 'hackrf'
+				})}\n\n`;
+				controller.enqueue(encoder.encode(message));
+			};
 
-				// USRP data handler
-				dataHandler = (data: SpectrumData) => {
-					try {
-						// Transform USRP data to frontend format
-						const transformedData = {
-							frequencies: data.frequency ? [data.frequency] : [],
-							power: data.power ? [data.power] : [],
-							power_levels: data.powerValues || [data.power],
-							start_freq: data.startFreq || data.frequency,
-							stop_freq: data.endFreq || data.frequency,
-							center_freq: data.frequency,
-							peak_freq: data.frequency,
-							peak_power: data.power,
-							timestamp: data.timestamp,
-							device: 'usrp'
-						};
+			// Status handler
+			statusHandler = (status: StatusEvent) => {
+				const message = `event: status\ndata: ${JSON.stringify({
+					...status,
+					device: 'hackrf'
+				})}\n\n`;
+				controller.enqueue(encoder.encode(message));
+			};
 
-						const message = `event: spectrumData\ndata: ${JSON.stringify(transformedData)}\n\n`;
-						controller.enqueue(encoder.encode(message));
-					} catch (error) {
-						console.error('Error processing USRP spectrum data:', error);
-					}
-				};
-
-				// Error handler
-				errorHandler = (error: ErrorEvent) => {
-					const message = `event: error\ndata: ${JSON.stringify({
-						message: error.message || 'Unknown error',
-						device: 'usrp'
-					})}\n\n`;
-					controller.enqueue(encoder.encode(message));
-				};
-
-				// Status handler
-				statusHandler = (status: StatusEvent) => {
-					const message = `event: status\ndata: ${JSON.stringify({
-						...status,
-						device: 'usrp'
-					})}\n\n`;
-					controller.enqueue(encoder.encode(message));
-				};
-
-				// Subscribe to USRP events
-				usrpManager.on('spectrumData', dataHandler);
-				usrpManager.on('error', errorHandler);
-				usrpManager.on('status', statusHandler);
-			} else {
-				// HackRF data handler (default)
-				dataHandler = (data: SpectrumData) => {
-					try {
-						// Transform the data if needed
-						const transformedData = {
-							frequencies:
-								data.powerValues &&
-								data.startFreq !== undefined &&
-								data.endFreq !== undefined &&
-								data.powerValues !== undefined
-									? (() => {
-											const startFreq = data.startFreq;
-											const endFreq = data.endFreq;
-											const powerValues = data.powerValues;
-											return powerValues.map((_: number, index: number) => {
-												const freqStep =
-													(endFreq - startFreq) /
-													(powerValues.length - 1);
-												return startFreq + index * freqStep;
-											});
-										})()
-									: [],
-							power: data.powerValues || [],
-							power_levels: data.powerValues || [],
-							start_freq: data.startFreq,
-							stop_freq: data.endFreq,
-							center_freq: data.frequency,
-							peak_freq: data.frequency,
-							peak_power: data.power,
-							timestamp: data.timestamp,
-							device: 'hackrf'
-						};
-
-						const message = `event: spectrumData\ndata: ${JSON.stringify(transformedData)}\n\n`;
-						controller.enqueue(encoder.encode(message));
-					} catch (error) {
-						console.error('Error processing HackRF spectrum data:', error);
-					}
-				};
-
-				// Error handler
-				errorHandler = (error: ErrorEvent) => {
-					const message = `event: error\ndata: ${JSON.stringify({
-						message: error.message || 'Unknown error',
-						device: 'hackrf'
-					})}\n\n`;
-					controller.enqueue(encoder.encode(message));
-				};
-
-				// Status handler
-				statusHandler = (status: StatusEvent) => {
-					const message = `event: status\ndata: ${JSON.stringify({
-						...status,
-						device: 'hackrf'
-					})}\n\n`;
-					controller.enqueue(encoder.encode(message));
-				};
-
-				// Subscribe to HackRF events
-				sweepManager.on('spectrumData', dataHandler);
-				sweepManager.on('error', errorHandler);
-				sweepManager.on('status', statusHandler);
-			}
+			// Subscribe to HackRF events
+			sweepManager.on('spectrumData', dataHandler);
+			sweepManager.on('error', errorHandler);
+			sweepManager.on('status', statusHandler);
 
 			// Send heartbeat every 30 seconds
 			heartbeatInterval = setInterval(() => {
-				const heartbeat = `event: heartbeat\ndata: {"time": "${new Date().toISOString()}", "device": "${activeDevice}"}\n\n`;
+				const heartbeat = `event: heartbeat\ndata: {"time": "${new Date().toISOString()}", "device": "hackrf"}\n\n`;
 				controller.enqueue(encoder.encode(heartbeat));
 			}, 30000);
 		},
@@ -199,16 +128,11 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				heartbeatInterval = null;
 			}
 
-			if (activeDevice === 'usrp') {
-				const usrpManager = UsrpSweepManager.getInstance();
-				if (dataHandler) usrpManager.off('spectrumData', dataHandler);
-				if (errorHandler) usrpManager.off('error', errorHandler);
-				if (statusHandler) usrpManager.off('status', statusHandler);
-			} else {
-				if (dataHandler) sweepManager.off('spectrumData', dataHandler);
-				if (errorHandler) sweepManager.off('error', errorHandler);
-				if (statusHandler) sweepManager.off('status', statusHandler);
-			}
+			// Cleanup HackRF event handlers
+			if (dataHandler) sweepManager.off('spectrumData', dataHandler);
+			if (errorHandler) sweepManager.off('error', errorHandler);
+			if (statusHandler) sweepManager.off('status', statusHandler);
+
 			dataHandler = null;
 			errorHandler = null;
 			statusHandler = null;

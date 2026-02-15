@@ -1,8 +1,22 @@
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import { startGsmEvil, stopGsmEvil } from '$lib/server/services/gsm-evil/gsm-evil-control-service';
 
 import type { RequestHandler } from './$types';
+
+/**
+ * Zod schema for GSM Evil control POST request
+ * Task: T030 - Constitutional Audit Remediation (P1)
+ */
+const GsmEvilControlRequestSchema = z.object({
+	action: z.enum(['start', 'stop']).describe('Control action: start or stop GSM monitoring'),
+	frequency: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/, 'Frequency must be a valid number')
+		.optional()
+		.describe('GSM frequency in MHz (e.g., "947.2")')
+});
 
 /**
  * POST /api/gsm-evil/control
@@ -11,10 +25,23 @@ import type { RequestHandler } from './$types';
  */
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const { action, frequency } = (await request.json()) as {
-			action: string;
-			frequency?: string;
-		};
+		const rawBody = await request.json();
+
+		// Validate request body with Zod (T030)
+		const validationResult = GsmEvilControlRequestSchema.safeParse(rawBody);
+
+		if (!validationResult.success) {
+			return json(
+				{
+					success: false,
+					message: 'Invalid request body',
+					errors: validationResult.error.format()
+				},
+				{ status: 400 }
+			);
+		}
+
+		const { action, frequency } = validationResult.data;
 
 		if (action === 'start') {
 			const result = await startGsmEvil(frequency);
@@ -44,6 +71,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			{
 				success: false,
 				message: 'Invalid request',
+				// Safe: Catch block error cast to Error for message extraction
+			// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},
 			{ status: 400 }

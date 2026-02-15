@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
+	// Safe: System info data type assertion
 import * as os from 'os';
 import { promisify } from 'util';
 

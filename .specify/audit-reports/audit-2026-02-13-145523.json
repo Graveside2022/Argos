@@ -1,0 +1,199 @@
+{
+	"id": "550e8400-e29b-41d4-a716-446655440000",
+	"timestamp": "2026-02-13T14:55:23.123Z",
+	"constitutionVersion": "2.0.0",
+	"executionDurationMs": 3521,
+	"overallCompliancePercent": 67,
+	"totalViolations": 42,
+	"criticalViolations": 3,
+	"highViolations": 15,
+	"mediumViolations": 18,
+	"lowViolations": 6,
+	"filesScanned": 87,
+	"scope": "full",
+	"trendDirection": "baseline",
+	"articleScores": [
+		{
+			"articleId": "I",
+			"articleTitle": "Comprehension Before Action",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "II",
+			"articleTitle": "Code Quality Standards",
+			"totalChecks": 10,
+			"passingChecks": 7,
+			"failingChecks": 3,
+			"scorePercent": 72,
+			"violationCount": 15,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "III",
+			"articleTitle": "Testing Standards",
+			"totalChecks": 10,
+			"passingChecks": 6,
+			"failingChecks": 4,
+			"scorePercent": 58,
+			"violationCount": 8,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "IV",
+			"articleTitle": "User Experience Consistency",
+			"totalChecks": 10,
+			"passingChecks": 8,
+			"failingChecks": 2,
+			"scorePercent": 80,
+			"violationCount": 5,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "V",
+			"articleTitle": "Performance Requirements",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "VI",
+			"articleTitle": "Dependency Management",
+			"totalChecks": 10,
+			"passingChecks": 9,
+			"failingChecks": 1,
+			"scorePercent": 90,
+			"violationCount": 2,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "VII",
+			"articleTitle": "Debugging and Incident Response",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "VIII",
+			"articleTitle": "Dependency Verification and Planning",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "IX",
+			"articleTitle": "Security and Operational Safety",
+			"totalChecks": 10,
+			"passingChecks": 7,
+			"failingChecks": 3,
+			"scorePercent": 70,
+			"violationCount": 9,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "X",
+			"articleTitle": "Governance",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "XI",
+			"articleTitle": "Spec-Kit Workflow Governance",
+			"totalChecks": 10,
+			"passingChecks": 10,
+			"failingChecks": 0,
+			"scorePercent": 100,
+			"violationCount": 0,
+			"trendDirection": "baseline"
+		},
+		{
+			"articleId": "XII",
+			"articleTitle": "Git Workflow and Commit Strategy",
+			"totalChecks": 10,
+			"passingChecks": 7,
+			"failingChecks": 3,
+			"scorePercent": 70,
+			"violationCount": 3,
+			"trendDirection": "baseline"
+		}
+	],
+	"violations": [
+		{
+			"id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+			"severity": "CRITICAL",
+			"articleReference": "Article II §2.7",
+			"ruleViolated": "No service layer pattern",
+			"filePath": "src/lib/services/auth.ts",
+			"lineNumber": 12,
+			"violationType": "forbidden-pattern-service-layer",
+			"suggestedFix": "Move logic to src/lib/auth.ts",
+			"isPreExisting": false,
+			"commitDate": "2026-02-10T15:30:00Z"
+		},
+		{
+			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"severity": "HIGH",
+			"articleReference": "Article II §2.1",
+			"ruleViolated": "No any type usage",
+			"filePath": "src/lib/utils/legacy-parser.ts",
+			"lineNumber": 42,
+			"violationType": "any-type-usage",
+			"suggestedFix": "Replace `any` with `unknown` and add type guard",
+			"isPreExisting": true,
+			"commitDate": "2026-01-15T10:00:00Z"
+		},
+		{
+			"id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+			"severity": "CRITICAL",
+			"articleReference": "Article IX §9.4",
+			"ruleViolated": "No eval() or dynamic code execution",
+			"filePath": "src/routes/api/endpoint/+server.ts",
+			"lineNumber": 15,
+			"violationType": "forbidden-eval",
+			"suggestedFix": "Replace eval() with safe JSON.parse() or structured parser",
+			"isPreExisting": false,
+			"commitDate": "2026-02-12T08:00:00Z"
+		},
+		{
+			"id": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+			"severity": "HIGH",
+			"articleReference": "Article III §3.2",
+			"ruleViolated": "Test coverage must be >= 80%",
+			"filePath": "src/lib/signal-processing.ts",
+			"lineNumber": 1,
+			"violationType": "insufficient-coverage",
+			"suggestedFix": "Add unit tests for uncovered functions",
+			"isPreExisting": true,
+			"commitDate": "2026-01-20T12:00:00Z"
+		},
+		{
+			"id": "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
+			"severity": "CRITICAL",
+			"articleReference": "Article IX §9.1",
+			"ruleViolated": "No hardcoded secrets",
+			"filePath": "src/lib/config.ts",
+			"lineNumber": 8,
+			"violationType": "hardcoded-secret",
+			"suggestedFix": "Move secret to .env file and reference via process.env",
+			"isPreExisting": true,
+			"commitDate": "2026-01-10T09:00:00Z"
+		}
+	]
+}

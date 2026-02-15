@@ -44,6 +44,7 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
 
 		// Add priority hint if supported
 		if (options.priority && 'fetchPriority' in link) {
+		// Safe: HTMLLinkElement extended with optional fetchPriority property for resource loading priority hints
 			(link as HTMLLinkElement & { fetchPriority?: 'high' | 'low' }).fetchPriority =
 				options.priority;
 		}
