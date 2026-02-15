@@ -28,7 +28,9 @@
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	let map: maplibregl.Map | undefined = $state();
 	let initialViewSet = false;
@@ -40,35 +42,55 @@
 	// Live Kismet data: 241 devices, mean RSSI -78.6 dBm, range -12 to -100 dBm
 	// Five bands match device dot colors (getSignalHex in signalUtils.ts)
 	// Radii from log-distance model: d = 10^((-12 - rssiThreshold) / 33)
-	// Colors: red → orange → yellow → green → blue (strong → weak)
-	const RANGE_BANDS = [
-		{ outerR: 25, innerR: 0, band: 'vstrong', color: '#dc2626', rssi: '> -50', label: '25m' },
-		{
-			outerR: 60,
-			innerR: 25,
-			band: 'strong',
-			color: '#f97316',
-			rssi: '-50 to -60',
-			label: '60m'
-		},
-		{
-			outerR: 100,
-			innerR: 60,
-			band: 'good',
-			color: '#fbbf24',
-			rssi: '-60 to -70',
-			label: '100m'
-		},
-		{
-			outerR: 175,
-			innerR: 100,
-			band: 'fair',
-			color: '#10b981',
-			rssi: '-70 to -80',
-			label: '175m'
-		},
-		{ outerR: 300, innerR: 175, band: 'weak', color: '#4a90e2', rssi: '< -80', label: '300m' }
-	];
+	// Colors: resolved from CSS signal variables (respond to palette/semantic changes)
+	let RANGE_BANDS = $derived.by(() => {
+		// Depend on themeStore to re-resolve when palette/mode/semantic changes
+		const _p = themeStore.palette;
+		const _m = themeStore.mode;
+		const _s = themeStore.semanticColors;
+		return [
+			{
+				outerR: 25,
+				innerR: 0,
+				band: 'vstrong',
+				color: resolveThemeColor('--signal-critical', '#dc2626'),
+				rssi: '> -50',
+				label: '25m'
+			},
+			{
+				outerR: 60,
+				innerR: 25,
+				band: 'strong',
+				color: resolveThemeColor('--signal-strong', '#f97316'),
+				rssi: '-50 to -60',
+				label: '60m'
+			},
+			{
+				outerR: 100,
+				innerR: 60,
+				band: 'good',
+				color: resolveThemeColor('--signal-good', '#fbbf24'),
+				rssi: '-60 to -70',
+				label: '100m'
+			},
+			{
+				outerR: 175,
+				innerR: 100,
+				band: 'fair',
+				color: resolveThemeColor('--signal-fair', '#10b981'),
+				rssi: '-70 to -80',
+				label: '175m'
+			},
+			{
+				outerR: 300,
+				innerR: 175,
+				band: 'weak',
+				color: resolveThemeColor('--signal-weak', '#4a90e2'),
+				rssi: '< -80',
+				label: '300m'
+			}
+		];
+	});
 
 	// GPS derived state
 	let gpsLngLat: LngLatLike | null = $derived.by(() => {
@@ -419,30 +441,31 @@
 		const y1 = half - coneLength * Math.cos(rad1);
 		const x2 = half + coneLength * Math.sin(rad2);
 		const y2 = half - coneLength * Math.cos(rad2);
+		const coneColor = resolveThemeColor('--primary', '#4a9eff');
 		return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
 			<defs><radialGradient id="hc" cx="50%" cy="50%" r="50%">
-				<stop offset="0%" stop-color="#4a9eff" stop-opacity="0.5"/>
-				<stop offset="100%" stop-color="#4a9eff" stop-opacity="0"/>
+				<stop offset="0%" stop-color="${coneColor}" stop-opacity="0.5"/>
+				<stop offset="100%" stop-color="${coneColor}" stop-opacity="0"/>
 			</radialGradient></defs>
 			<path d="M ${half} ${half} L ${x1} ${y1} A ${coneLength} ${coneLength} 0 0 1 ${x2} ${y2} Z" fill="url(#hc)"/>
 		</svg>`;
 	}
 
-	// Cell tower radio type → color
+	// Cell tower radio type → color (resolved from chart CSS variables)
 	function getRadioColor(radio: string): string {
 		switch (radio?.toUpperCase()) {
 			case 'LTE':
-				return '#4a9eff';
+				return resolveThemeColor('--chart-1', '#4a9eff');
 			case 'NR':
-				return '#ec4899';
+				return resolveThemeColor('--chart-5', '#ec4899');
 			case 'UMTS':
-				return '#10b981';
+				return resolveThemeColor('--chart-2', '#10b981');
 			case 'GSM':
-				return '#f97316';
+				return resolveThemeColor('--chart-3', '#f97316');
 			case 'CDMA':
-				return '#8b5cf6';
+				return resolveThemeColor('--chart-4', '#8b5cf6');
 			default:
-				return '#9aa0a6';
+				return resolveThemeColor('--muted-foreground', '#9aa0a6');
 		}
 	}
 
@@ -819,6 +842,52 @@
 					dotsVisible ? 'visible' : 'none'
 				);
 			}
+		}
+	});
+
+	// Re-apply MapLibre paint properties when theme changes
+	$effect(() => {
+		const _p = themeStore.palette;
+		const _m = themeStore.mode;
+		const _s = themeStore.semanticColors;
+		if (!map) return;
+
+		const primary = resolveThemeColor('--primary', '#4a9eff');
+		const fg = resolveThemeColor('--foreground', '#e0e0e8');
+		const mutedFg = resolveThemeColor('--muted-foreground', '#888');
+		const bg = resolveThemeColor('--background', '#111119');
+		const secondary = resolveThemeColor('--secondary', '#3a3a5c');
+		const border = resolveThemeColor('--border', '#6a6a8e');
+
+		// Accuracy circle
+		if (map.getLayer('accuracy-fill')) {
+			map.setPaintProperty('accuracy-fill', 'fill-color', primary);
+		}
+		// Cluster circles
+		if (map.getLayer('device-clusters')) {
+			map.setPaintProperty('device-clusters', 'circle-color', secondary);
+			map.setPaintProperty('device-clusters', 'circle-stroke-color', border);
+		}
+		// Cluster count text
+		if (map.getLayer('device-cluster-count')) {
+			map.setPaintProperty('device-cluster-count', 'text-color', fg);
+		}
+		// Cell tower labels
+		if (map.getLayer('cell-tower-labels')) {
+			map.setPaintProperty('cell-tower-labels', 'text-color', mutedFg);
+			map.setPaintProperty('cell-tower-labels', 'text-halo-color', bg);
+		}
+		// Imperative layers (added in handleMapLoad)
+		if (map.getLayer('housenumber-labels')) {
+			map.setPaintProperty('housenumber-labels', 'text-color', mutedFg);
+			map.setPaintProperty('housenumber-labels', 'text-halo-color', bg);
+		}
+		if (map.getLayer('poi-labels-all')) {
+			map.setPaintProperty('poi-labels-all', 'text-color', fg);
+			map.setPaintProperty('poi-labels-all', 'text-halo-color', bg);
+		}
+		if (map.getLayer('building-outline-enhanced')) {
+			map.setPaintProperty('building-outline-enhanced', 'line-color', `${border}4D`);
 		}
 	});
 </script>
@@ -1221,10 +1290,10 @@
 	.gps-dot {
 		width: 16px;
 		height: 16px;
-		background: #4a9eff;
-		border: 2px solid #ffffff;
+		background: var(--primary);
+		border: 2px solid var(--primary-foreground);
 		border-radius: 50%;
-		box-shadow: 0 0 6px rgba(74, 158, 255, 0.5);
+		box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
 	}
 
 	/* Heading cone wrapper */
@@ -1240,23 +1309,23 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		background: #1a1a2e;
-		color: #4a9eff;
-		border: 1px solid #2a2a3e;
+		background: var(--card);
+		color: var(--primary);
+		border: 1px solid var(--border);
 		border-radius: 4px;
 		padding: 0;
 		margin: 0;
 	}
 
 	.locate-btn:hover {
-		background: #222244;
-		color: #6cb8ff;
+		background: var(--accent);
+		color: color-mix(in srgb, var(--primary) 80%, white);
 	}
 
-	/* MapLibre zoom controls — dark theme to match UI */
+	/* MapLibre zoom controls — theme-aware */
 	.map-area :global(.maplibregl-ctrl-group) {
-		background: rgba(20, 20, 32, 0.97) !important;
-		border: 1px solid #2a2a3e !important;
+		background: color-mix(in srgb, var(--card) 97%, transparent) !important;
+		border: 1px solid var(--border) !important;
 		border-radius: 6px !important;
 		box-shadow: none !important;
 	}
@@ -1266,8 +1335,8 @@
 		height: 34px !important;
 		background: transparent !important;
 		border: none !important;
-		border-bottom: 1px solid #2a2a3e !important;
-		color: #bbb !important;
+		border-bottom: 1px solid var(--border) !important;
+		color: var(--muted-foreground) !important;
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button:last-child) {
@@ -1275,8 +1344,8 @@
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button:hover) {
-		background: #222244 !important;
-		color: #6cb8ff !important;
+		background: var(--accent) !important;
+		color: var(--primary) !important;
 	}
 
 	.map-area :global(.maplibregl-ctrl-group button .maplibregl-ctrl-icon) {
@@ -1386,13 +1455,13 @@
 		top: 10px;
 		right: 10px;
 		z-index: 10;
-		background: rgba(20, 20, 32, 0.95);
+		background: color-mix(in srgb, var(--card) 95%, transparent);
 		border: 1px solid var(--palantir-border-default, #2a2a3e);
 		border-radius: 8px;
 		padding: 10px 12px;
 		min-width: 180px;
 		max-width: 220px;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--background) 50%, transparent);
 		backdrop-filter: blur(8px);
 		pointer-events: auto;
 	}

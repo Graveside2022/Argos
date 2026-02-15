@@ -360,8 +360,8 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: #1e1e1e;
-		color: #cccccc;
+		background: var(--background);
+		color: var(--foreground);
 		font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
 		font-size: 13px;
 	}
@@ -372,8 +372,8 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 8px 12px;
-		background: #252526;
-		border-bottom: 1px solid #3c3c3c;
+		background: var(--card);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.toolbar-left {
@@ -383,26 +383,26 @@
 	}
 
 	.agent-icon {
-		color: #00d4ff;
+		color: var(--primary);
 	}
 
 	.toolbar-title {
-		color: #cccccc;
+		color: var(--foreground);
 		font-weight: 500;
 	}
 
 	.llm-badge {
 		padding: 2px 8px;
 		border-radius: 3px;
-		background: #3c3c3c;
-		color: #888;
+		background: var(--border);
+		color: var(--muted-foreground);
 		font-size: 11px;
 		text-transform: uppercase;
 	}
 
 	.llm-badge.online {
-		background: #0e4429;
-		color: #3fb950;
+		background: color-mix(in srgb, var(--success) 20%, transparent);
+		color: var(--success);
 	}
 
 	.toolbar-right {
@@ -418,14 +418,14 @@
 		height: 28px;
 		background: transparent;
 		border: none;
-		color: #cccccc;
+		color: var(--foreground);
 		cursor: pointer;
 		border-radius: 4px;
 		transition: background 0.1s;
 	}
 
 	.toolbar-btn:hover {
-		background: #2a2d2e;
+		background: var(--accent);
 	}
 
 	/* Messages */
@@ -457,20 +457,20 @@
 	}
 
 	.message.user .message-role {
-		color: #4ec9b0;
+		color: var(--chart-2);
 	}
 
 	.message.assistant .message-role {
-		color: #dcdcaa;
+		color: var(--chart-4);
 	}
 
 	.message.system .message-role {
-		color: #569cd6;
+		color: var(--chart-1);
 	}
 
 	.message-timestamp {
 		font-size: 10px;
-		color: #6a737d;
+		color: var(--muted-foreground);
 	}
 
 	.message-content {
@@ -482,20 +482,20 @@
 	}
 
 	.message.user .message-content {
-		background: #1a3a52;
-		border-left: 3px solid #4ec9b0;
+		background: color-mix(in srgb, var(--accent) 60%, transparent);
+		border-left: 3px solid var(--chart-2);
 	}
 
 	.message.assistant .message-content {
-		background: #2d2d2d;
-		border-left: 3px solid #dcdcaa;
+		background: var(--card);
+		border-left: 3px solid var(--chart-4);
 	}
 
 	.message.system .message-content {
-		background: #1f2937;
-		border-left: 3px solid #569cd6;
+		background: var(--muted);
+		border-left: 3px solid var(--chart-1);
 		font-size: 12px;
-		color: #888;
+		color: var(--muted-foreground);
 	}
 
 	/* Typing indicator */
@@ -509,7 +509,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background: #888;
+		background: var(--muted-foreground);
 		animation: pulse 1.4s infinite;
 	}
 
@@ -537,16 +537,16 @@
 		display: flex;
 		gap: 8px;
 		padding: 8px 12px;
-		background: #252526;
-		border-top: 1px solid #3c3c3c;
+		background: var(--card);
+		border-top: 1px solid var(--border);
 	}
 
 	.chat-input {
 		flex: 1;
-		background: #1e1e1e;
-		border: 1px solid #3c3c3c;
+		background: var(--background);
+		border: 1px solid var(--border);
 		border-radius: 4px;
-		color: #cccccc;
+		color: var(--foreground);
 		padding: 8px 12px;
 		font-family: inherit;
 		font-size: 13px;
@@ -555,7 +555,7 @@
 	}
 
 	.chat-input:focus {
-		border-color: #007acc;
+		border-color: var(--ring);
 	}
 
 	.chat-input:disabled {
@@ -569,16 +569,16 @@
 		justify-content: center;
 		width: 40px;
 		height: auto;
-		background: #0e639c;
+		background: var(--primary);
 		border: none;
 		border-radius: 4px;
-		color: white;
+		color: var(--primary-foreground);
 		cursor: pointer;
 		transition: background 0.1s;
 	}
 
 	.send-btn:hover:not(:disabled) {
-		background: #1177bb;
+		background: color-mix(in srgb, var(--primary) 85%, white);
 	}
 
 	.send-btn:disabled {
@@ -605,15 +605,15 @@
 	}
 
 	.chat-messages::-webkit-scrollbar-track {
-		background: #1e1e1e;
+		background: var(--background);
 	}
 
 	.chat-messages::-webkit-scrollbar-thumb {
-		background: #424242;
+		background: var(--muted);
 		border-radius: 5px;
 	}
 
 	.chat-messages::-webkit-scrollbar-thumb:hover {
-		background: #4e4e4e;
+		background: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
 	}
 </style>
