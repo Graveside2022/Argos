@@ -4,9 +4,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "npm run kill-dev && NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort",
-		"dev:simple": "NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort",
-		"dev:tmux": "tmux kill-session -t argos-dev 2>/dev/null; tmux new-session -d -s argos-dev 'cd /home/kali/Documents/Argos/Argos && NODE_OPTIONS=--max-old-space-size=1024 npx vite dev --port 5173 --host 0.0.0.0 --strictPort' && echo 'Argos dev server running in tmux session argos-dev'",
+		"dev": "npm run kill-dev && CI=true NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort",
+		"dev:simple": "CI=true NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort",
+		"dev:tmux": "tmux kill-session -t argos-dev 2>/dev/null; tmux new-session -d -s argos-dev 'cd /home/kali/Documents/Argos/Argos && CI=true NODE_OPTIONS=--max-old-space-size=1024 npx vite dev --port 5173 --host 0.0.0.0 --strictPort' && echo 'Argos dev server running in tmux session argos-dev'",
 		"dev:auto-kismet": "./scripts/dev/auto-start-kismet.sh && npm run dev",
 		"dev:clean": "npm run kill-dev && npm run dev",
 		"dev:full": "./scripts/dev/start-all-services.sh",

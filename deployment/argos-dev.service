@@ -10,6 +10,7 @@ WorkingDirectory=/home/kali/Documents/Argos/Argos
 EnvironmentFile=/home/kali/Documents/Argos/Argos/.env
 Environment="NODE_ENV=development"
 Environment="NODE_OPTIONS=--max-old-space-size=1024"
+Environment="CI=true"
 ExecStart=/usr/bin/npm run dev
 Restart=on-failure
 RestartSec=10
