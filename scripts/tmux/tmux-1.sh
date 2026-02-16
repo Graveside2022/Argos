@@ -24,4 +24,11 @@ export LC_ALL=en_US.UTF-8
 # -s: Session name
 # -2: Force 256 color support
 # -u: Force UTF-8 support
-exec tmux -2 -u new-session -A -s "${TMUX_SESSION}" zsh
+# Resolve tmux config path (works in container and host)
+if [ -f "/app/scripts/tmux/tmux.conf" ]; then
+	TMUX_CONF="/app/scripts/tmux/tmux.conf"
+elif [ -f "$(dirname "$0")/tmux.conf" ]; then
+	TMUX_CONF="$(dirname "$0")/tmux.conf"
+fi
+
+exec tmux -2 -u ${TMUX_CONF:+-f "$TMUX_CONF"} new-session -A -s "${TMUX_SESSION}" zsh
