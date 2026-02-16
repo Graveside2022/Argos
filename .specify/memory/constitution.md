@@ -1,882 +1,100 @@
 # Argos Project Constitution
 
-<!--
-  SYNC IMPACT REPORT - 2026-02-13
-
-  Version Change: TEMPLATE → 2.0.0 (MAJOR - Initial ratification)
-
-  Modified Principles:
-  - ALL principles newly established (12 Articles)
-
-  Added Sections:
-  - Article I: Comprehension Before Action
-  - Article II: Code Quality Standards
-  - Article III: Testing Standards
-  - Article IV: User Experience Consistency
-  - Article V: Performance Requirements
-  - Article VI: Dependency Management
-  - Article VII: Debugging and Incident Response
-  - Article VIII: Dependency Verification and Planning
-  - Article IX: Security and Operational Safety
-  - Article X: Governance
-  - Article XI: Spec-Kit Workflow Governance (NEW)
-  - Article XII: Git Workflow and Commit Strategy (NEW)
-
-  Templates Status:
-  ✅ plan-template.md - Reviewed, constitution check section present
-  ✅ spec-template.md - Reviewed, technology-agnostic focus maintained
-  ✅ tasks-template.md - Reviewed, task granularity aligns with Article XI
-
-  Follow-up TODOs:
-  - None - All placeholders resolved
--->
-
-**Version**: 2.0.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-13
+**Version**: 2.3.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-16
 
 ---
 
 ## Preamble
 
-### Project Description
-
-Argos is a professional-grade tactical communications interface for Software Defined Radio (SDR) operations, WiFi network scanning, GPS tracking, and TAK integration. It is built with TypeScript, SvelteKit, Vite, and Tailwind CSS, targeting ParrotOS / /cDragon OS / Debian / Ubuntu systems with hardware integration (HackRF One, Alfa WiFi adapters, GPS receivers).
-
 ### Authority
-
-This constitution establishes non-negotiable principles governing all development on Argos. Every specification, plan, task, and implementation must comply with these articles. When an AI agent or human contributor makes a technical decision, they must reference these principles as the authoritative source of guidance.
+This constitution establishes non-negotiable principles governing all development on Argos. Every specification, plan, task, and implementation must comply with these articles.
 
 ### Core Philosophy
+Correctness over speed. Reliability over features. Clarity over cleverness.
 
-Argos operates in environments where incorrect behavior has real-world consequences — failed radio intercepts, missed signals, lost situational awareness. Every principle below flows from this reality: correctness over speed, reliability over features, clarity over cleverness.
-
-### Tech Stack (USER-SPECIFIED: Do not modify)
-
-- **Language**: TypeScript (strict mode)
-- **Framework**: SvelteKit
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Target OS**: Dragon OS / ParrotOS / Debian / Ubuntu
-- **Hardware**: HackRF One, Alfa WiFi adapters, GPS receivers, USRP B205
-- **Real-time**: WebSocket streaming
-- **Database**: SQLite (rf_signals.db)
-- **Integrations**: Kismet, TAK Server, OpenCellID, Spectrum Analyzers
-
-### Architectural Decisions (USER-SPECIFIED: Do not modify)
-
-These decisions are deliberate and final. AI agents must not suggest alternatives, add abstraction layers, or introduce competing patterns:
-
-- **SvelteKit is the framework.** No Next.js, no Nuxt, no Astro.
-- **Tailwind CSS is the styling system.** No CSS-in-JS, no styled-components, no Sass/SCSS. Custom theme tokens live in tailwind.config.js.
-- **No service layer pattern.** Routes call lib functions directly. Simple logic stays in the route; complex logic lives in domain-specific lib modules.
-- **No barrel files** (index.ts re-exports). Each module exports only what it needs to from its own file.
-- **SQLite for local persistence.** No PostgreSQL, no MongoDB, no ORMs.
-- **Dark theme first.** Argos is a cyberpunk-themed tactical tool. Light mode is not a consideration.
+### Tech Stack & Architecture (USER-SPECIFIED, DO NOT MODIFY)
+*   **Language**: TypeScript (strict mode)
+*   **Framework**: SvelteKit (No Next.js/Nuxt)
+*   **Build Tool**: Vite
+*   **Styling**: Tailwind CSS (No proprietary CSS/Sass). Tokens in `src/app.css` (Tailwind v4).
+*   **Target OS**: Dragon OS / ParrotOS / Debian / Ubuntu
+*   **Hardware**: HackRF One, Alfa WiFi adapters, GPS receivers, USRP B205
+*   **Database**: SQLite (rf_signals.db)
+*   **Theme**: Dark mode only. Light mode removed.
+*   **Architecture**: No service layer. No barrel files (except shadcn). No ORMs.
 
 ---
 
-## TL;DR — Critical Rules for Every Task
-
-_If the agent reads nothing else, it must read this. These are the rules whose violation causes the most damage, derived from community-reported AI agent failure patterns across thousands of spec-kit projects._
-
-1. **REUSE BEFORE CREATE** (Article IV §4.2): Before writing ANY new function, component, type, or utility, SEARCH src/lib/ for existing implementations. Code duplication is a constitution violation. AI agents default to writing new code over reading existing code — this is the single most common AI failure mode.
-
-2. **COMPREHENSION BEFORE ACTION** (Article I §1.1): No code until the problem is fully understood. Write a comprehension summary. Get it confirmed. Then and only then proceed.
-
-3. **TYPESCRIPT STRICT** (Article II §2.1): No `any`. No `@ts-ignore` without a linked issue. No type assertions without a justifying comment. strict: true, zero errors.
-
-4. **PERMISSION BOUNDARIES** (Article IX §9.3): Never modify hardware communication code, config files, or package.json without explicit user approval. Never enable radio transmission features by default. Never store secrets in source.
-
-5. **ALL STATES** (Article IV §4.3): Every UI feature must handle: empty, loading, default, active, error, success, disabled, disconnected. No blank screens. No silent failures. Domain-specific messages, not generic placeholders.
-
-6. **VERIFY BEFORE DONE** (Article VIII §8.3): Run: `npx tsc --noEmit`, `npx eslint src/`, `npx vitest run`. All must pass with zero errors before any task is marked complete.
-
-7. **COMMIT PER TASK** (Article XII §12.1): Every completed task gets its own commit with structured message. This enables precise rollback when something goes wrong.
-
-8. **FORBIDDEN PATTERNS** (Article II §2.7): No service layers. No barrel files. No abstraction layers over SvelteKit or Tailwind. No utils.ts catch-all files. No hardcoded hex colors. No alert() or window.confirm(). Read the full FORBIDDEN PATTERNS list in each article before writing any code.
+## Universal Verification Commands
+**Enforcement**: A task is NOT complete if any of these commands produce errors.
+*   File-Scoped: `npx tsc --noEmit src/lib/FILE.ts`, `npx eslint src/lib/FILE.ts`, `npx vitest run src/lib/FILE.test.ts`
+*   Full Project: `npx tsc --noEmit --strict`, `npx eslint src/`, `npm run build`
 
 ---
 
-## Article I — Comprehension Before Action
-
-### 1.1 The Comprehension Lock
-
-**Principle**: No code shall be written, no file created, no solution proposed until the problem is fully understood. This means the developer (human or AI) can state with certainty:
-
-1. What the desired end state is.
-2. What the current state is (files, systems, configurations, environment).
-3. What specifically is wrong or what specifically needs to be built, in observable terms.
-4. What constraints limit the solution (hardware compatibility, Dragon OS environment, real-time performance requirements, offline operation).
-5. What the user considers success.
-
-**Enforcement**: Every feature or fix begins with a written comprehension summary. The summary must be confirmed before implementation begins. If the problem is exploratory (e.g., "the system is slow sometimes"), lock the investigation plan, not the problem definition, and update after each investigation step.
-
-**Rationale**: Unresolved ambiguity during problem-solving consumes cognitive resources and produces errors. Research on cognitive load (Miller 1956, Sweller 1988) and confirmation bias in debugging (Wason 1960, Parnin & Orso 2011) demonstrates that developers who gather evidence before forming hypotheses spend less total time and produce better outcomes.
-
-### 1.2 Anti-Patterns
-
-The following are forbidden:
-
-- Starting with "I will" / "Let me" / "Here is" before understanding is confirmed.
-- Writing code before the problem is defined.
-- Proposing solutions before diagnosis is complete.
-- Assuming a problem is simple enough to skip the summary.
-- Combining the comprehension summary with a proposed solution in a single step.
-
-### 1.3 Codebase Inventory Before Modification
-
-**Principle**: Before modifying or extending any part of the codebase, the AI agent must demonstrate awareness of what already exists. This prevents the most common AI agent failure: creating duplicate implementations of existing functionality. (EPAM 2025, Chris Force 2024, Addy Osmani 2025)
-
-**Enforcement**: The comprehension summary for any task involving code changes must include:
-
-1. Files that will be modified (with current line counts).
-2. Files that contain related functionality (even if not being modified).
-3. Types, interfaces, and utilities that already exist in src/lib/types/ and src/lib/ that are relevant to the task.
-4. Components in src/lib/components/ that handle similar UI patterns.
-
-If the summary does not include this inventory, the comprehension lock is not satisfied.
-
----
-
-## Article II — Code Quality Standards
-
-### 2.1 TypeScript Strictness
-
-**Principle**: All TypeScript code must compile under `strict: true` with zero type errors.
-
-**Rules**:
-
-- **No `any` type.** Every variable, parameter, return value, and property must have an explicit or inferred type. If a type is genuinely unknown, use `unknown` with type guards.
-- **No type assertions (`as`)** unless the assertion is justified in a comment explaining why the type system cannot infer the correct type and what runtime guarantee exists.
-- **No `@ts-ignore` or `@ts-expect-error`** without a linked issue number tracking removal of the suppression.
-- **Null safety enforced.** All potentially null or undefined values must be handled explicitly with null checks, optional chaining, or nullish coalescing. Silent null propagation is a bug.
-
-### 2.2 Code Structure and Modularity
-
-**Rules**:
-
-- **Single Responsibility.** Each file, function, and component does one thing. A function that fetches data does not also format it for display.
-- **Maximum function length: 50 lines.** Functions longer than 50 lines must be decomposed. If decomposition would reduce clarity, document the justification.
-- **Maximum file length: 300 lines.** Files longer than 300 lines indicate a component is doing too much and should be split.
-- **No circular dependencies.** Import cycles between modules are forbidden. If two modules need each other, extract the shared dependency into a third module.
-- **Explicit exports.** Every module exports only what other modules need. No barrel files that re-export everything. Internal implementation details stay internal.
-
-### 2.3 Naming Conventions
-
-- **Variables and functions**: camelCase with descriptive names that reveal intent. Not `data` or `result` — instead `signalStrength` or `parsedFrequencyRange`.
-- **Types and interfaces**: PascalCase (e.g., SignalReading, WifiNetworkInfo, TakMarkerPosition).
-- **Constants**: UPPER_SNAKE_CASE (e.g., MAX_FREQUENCY_HZ, DEFAULT_SCAN_INTERVAL_MS).
-- **Files**: kebab-case for general files, PascalCase.svelte for Svelte components.
-- **Booleans**: Prefixed with is, has, should, can (e.g., isScanning, hasGpsLock, shouldAutoReconnect).
-- **Event handlers**: Prefixed with `handle` in components, `on` in props (e.g., handleFrequencyChange, onSignalDetected).
-
-### 2.4 Error Handling
-
-**Rules**:
-
-- **Explicit error handling.** Every external operation (API calls, WebSocket messages, hardware communication, file system access, database queries) must have explicit error handling.
-- **Typed errors.** Create specific error types for each failure domain: HardwareConnectionError, SignalProcessingError, TakSyncError, etc.
-- **No swallowed errors.** Every catch block must either recover meaningfully, re-throw with added context, or log at an appropriate severity level. Empty catch blocks are forbidden.
-- **User-visible errors** must state what went wrong in plain language, what the user can do about it, and use color AND icon AND text to communicate severity (never color alone — 8% of males have color vision deficiency).
-- **Hardware errors** require special handling: retry with backoff, state recovery, and clear indication of hardware status (connected, disconnected, erroring, initializing).
-
-### 2.5 Comments and Documentation
-
-**Rules**:
-
-- **No commented-out code.** Version control exists for this purpose. Dead code is deleted.
-- **Comments explain WHY, not WHAT.** The code itself shows what is happening. Comments explain the reasoning, constraints, or non-obvious decisions.
-- **JSDoc for public functions.** Every public function has a JSDoc comment describing parameters, return value, thrown errors, and any side effects.
-- **Algorithm documentation.** Complex algorithms (signal processing, frequency analysis, coordinate transformations) require a block comment explaining the approach and linking to the relevant standard or reference.
-
-### 2.6 Canonical Code Examples
-
-_One real code snippet showing the correct pattern beats three paragraphs describing it. AI agents should match these patterns when writing similar code._
-
-**Example: Correctly Typed Error Class**
-
-```typescript
-/** Domain-specific error for hardware connection failures. */
-export class HardwareConnectionError extends Error {
-	readonly device: string;
-	readonly code: 'TIMEOUT' | 'USB_DISCONNECT' | 'PERMISSION_DENIED' | 'UNKNOWN';
-	readonly isRetryable: boolean;
-
-	constructor(device: string, code: HardwareConnectionError['code'], message: string) {
-		super(`[${device}] ${message}`);
-		this.name = 'HardwareConnectionError';
-		this.device = device;
-		this.code = code;
-		this.isRetryable = code !== 'PERMISSION_DENIED';
-	}
-}
-```
-
-**Example: Correctly Typed WebSocket Message Handler**
-
-```typescript
-import type { SignalReading } from '$lib/types/signal';
-
-interface WebSocketMessage<T> {
-	type: string;
-	timestamp: number;
-	payload: T;
-}
-
-function handleSignalMessage(raw: unknown): SignalReading | null {
-	// Type guard — never trust external data
-	if (!isValidSignalMessage(raw)) {
-		console.warn('[WS] Malformed signal message received', raw);
-		return null;
-	}
-
-	const msg = raw as WebSocketMessage<SignalReading>;
-	return msg.payload;
-}
-
-function isValidSignalMessage(data: unknown): data is WebSocketMessage<SignalReading> {
-	if (typeof data !== 'object' || data === null) return false;
-	const obj = data as Record<string, unknown>;
-	return (
-		typeof obj.type === 'string' &&
-		typeof obj.timestamp === 'number' &&
-		typeof obj.payload === 'object' &&
-		obj.payload !== null
-	);
-}
-```
-
-**Example: Correct Empty State (Svelte Component Pattern)**
-
-```svelte
-<!-- SignalList.svelte -->
-{#if isLoading}
-	<div class="flex items-center justify-center p-8">
-		<Spinner size="md" />
-		<span class="ml-3 text-zinc-400 font-mono text-sm">Scanning {frequencyRange}...</span>
-	</div>
-{:else if error}
-	<ErrorPanel
-		title="Signal scan failed"
-		message={error.message}
-		action={{ label: 'Retry scan', onClick: handleRetry }}
-		icon="alert-triangle"
-	/>
-{:else if signals.length === 0}
-	<EmptyState
-		icon="radio"
-		title="No signals detected"
-		description="No signals found in {frequencyRange}. Try adjusting the frequency range or check your antenna connection."
-	/>
-{:else}
-	<ul class="divide-y divide-zinc-800">
-		{#each signals as signal (signal.id)}
-			<SignalRow {signal} on:select={handleSelect} />
-		{/each}
-	</ul>
-{/if}
-```
-
-### 2.7 Forbidden Patterns — Code Quality
-
-_AI agents default to common patterns from their training data regardless of project architecture. Without explicit prohibition, agents revert to these defaults._
-
-**USER-SPECIFIED — Do not modify these patterns:**
-
-- **No service layer pattern.** Do NOT create src/lib/services/\*.ts that wrap simple data access. Argos uses direct module imports. Routes and components call lib functions directly. If a module needs business logic, it belongs in a domain-specific lib file (e.g., src/lib/signal-processing.ts), not a generic service wrapper.
-- **No barrel files.** Do NOT create index.ts that re-export from other files. Each module exports its own members from its own file. Barrel files create hidden dependency coupling and break tree-shaking.
-- **No catch-all utils.** Do NOT create files named utils.ts, helpers.ts, common.ts, or shared.ts. Every utility has a descriptive, purpose-specific filename (e.g., src/lib/frequency-math.ts).
-- **No framework wrappers.** Do NOT create abstraction layers around SvelteKit features or Tailwind CSS classes. Use both frameworks directly as designed.
-- **No class-based components.** Svelte uses functional component patterns with reactive declarations ($: syntax) and stores. No class hierarchies for UI components.
-- **No hardcoded colors.** All colors come from the Tailwind theme defined in tailwind.config.js. If a new color is needed, add it to the theme config.
-- **No browser alerts.** Do NOT use alert(), window.confirm(), or window.prompt(). All user notifications use Argos's own UI components.
-- **No untracked TODOs.** Do NOT leave TODO, FIXME, HACK, or XXX comments unless they reference a tracked issue number.
-
----
-
-## Article III — Testing Standards
-
-### 3.1 Test-First Discipline
-
-**Rules**:
-
-- **No feature without tests.** A feature that passes manual testing but has no automated tests is not done.
-- **Write tests before or alongside implementation,** never after. Tests written after implementation tend to test the implementation rather than the requirement.
-- **Tests must fail without the implementation.** A test that passes regardless of whether the feature code exists does not actually test the feature.
-
-### 3.2 Test Coverage Requirements
-
-- **Unit tests** (src/lib/): 80% minimum coverage for all utility functions, data transformations, signal processing logic, coordinate calculations, and state management.
-- **Component tests** (src/lib/components/): Every Svelte component that handles user interaction, displays dynamic data, or manages local state. Test all states: empty, loading, default, active, error, success, disabled, overflow.
-- **Integration tests** (src/routes/api/): Every API endpoint, WebSocket handler, and hardware communication path.
-- **E2E tests**: Critical user workflows (starting a scan, viewing spectrum data, placing a TAK marker, connecting to hardware).
-
-### 3.3 Test Quality Standards
-
-**Rules**:
-
-- **Tests are independent.** No test depends on another test's execution or side effects. Each test sets up its own state and cleans up after itself.
-- **Tests are deterministic.** Flaky tests must be fixed immediately or quarantined with a linked issue.
-- **Tests use realistic data.** Prefer real signal data samples, actual frequency ranges, and genuine coordinate values. When hardware is unavailable, use recorded data fixtures.
-- **Mock boundaries, not internals.** Mock external services (Kismet API, TAK server, HackRF hardware interface) at the boundary. Do not mock internal functions.
-- **Descriptive test names.** Test names describe the scenario and expected outcome (e.g., "should return empty array when no signals detected in frequency range").
-- **Test business outcomes,** not implementation details.
-
-### 3.4 Regression Testing
-
-**Rules**:
-
-- **Every bug fix includes a regression test** that reproduces the exact failure condition and asserts the correct behavior.
-- **Hardware-related regressions** require documented reproduction cases including hardware model, firmware version, OS version, and exact sequence of operations.
-
-### 3.5 Test File Organization
-
-- Test files live alongside their source files with .test.ts or .test.svelte suffix.
-- Integration tests live in tests/.
-- Shared test fixtures live in tests/fixtures/ and are imported by name.
-
-### 3.6 Forbidden Patterns — Testing
-
-- **No implementation tests.** Do NOT write tests that verify internal implementation details. Test observable outcomes instead.
-- **No snapshot abuse.** Do NOT use snapshot testing as a substitute for assertion-based tests.
-- **No sleep in tests.** Do NOT use setTimeout or sleep(). Use proper async/await patterns, test library waitFor utilities, or fake timers.
-
----
-
-## Article IV — User Experience Consistency
-
-### 4.1 The Cyberpunk Design Language
-
-**Principle**: Argos has an established cyberpunk-themed visual identity. All new UI must conform to this identity.
-
-**Rules**:
-
-- **Colors from theme.** Use existing Tailwind CSS custom theme colors defined in tailwind.config.js. No hardcoded hex values.
-- **Typography.** Body text minimum 16px. Monospaced font for data readouts, frequency displays, and technical values.
-- **Data density.** High information density without clutter. Related data points grouped tightly (8-16px spacing), section boundaries use wider spacing (32-48px).
-- **Visual hierarchy.** Most important data (active signal, current frequency, GPS position) is always most visually prominent.
-
-### 4.2 Component Reuse — Mandatory Search Workflow
-
-**Principle**: AI agents prefer writing new code over reading existing code. This is the single most common AI failure mode. The following workflow is MANDATORY before creating any new component, function, type, or utility.
-
-**Reuse Workflow**:
-
-1. **Search Before Create**: BEFORE creating ANY new function, component, type, or utility module, search src/lib/components/, src/lib/types/, src/lib/, and src/routes/ for existing implementations.
-2. **Extend Over Duplicate**: If an existing implementation covers 80% or more of needed functionality, EXTEND it. Do NOT create a parallel implementation.
-3. **Document Reuse Decision**: If no suitable existing code is found, document what was searched and why nothing matched.
-
-**Critical Reuse Areas**:
-
-- Data transformation utilities (frequency conversion, coordinate math)
-- WebSocket message handlers (same pattern for all message types)
-- Hardware communication patterns (connection, retry, status reporting)
-- UI layout patterns (panels, cards, data tables, status indicators)
-- Error display components (toast notifications, error panels, status badges)
-- Form components (inputs, selects, toggles with consistent styling)
-
-**Additional Rules**:
-
-- **Same action, same pattern.** If "start scanning" is a primary button with an icon in one panel, it must be the same in every panel.
-- **All interactive elements** must have visible hover, focus, active, and disabled states.
-- **Touch targets** minimum 44×44px on all viewports. Spacing between targets minimum 8px.
-
-**Enforcement**: Code duplication is a constitution violation. The /speckit.analyze command must flag any duplicate functionality. If duplication is detected during review, the duplicate must be removed and the existing implementation extended instead.
-
-### 4.3 State Communication
-
-**Principle**: Every feature must design for ALL states, not just the happy path. Generic placeholder text is forbidden.
-
-**Required States**:
-
-- **Empty**: Clear message explaining what will appear and how to populate it. Domain-specific (e.g., "No signals detected in 88-108 MHz. Verify antenna connection or adjust frequency range."), NOT generic ("No data available.").
-- **Loading**: Visible indicator within 200ms. Progress indication for operations longer than 1 second. Domain-specific messaging.
-- **Default**: Data displayed with correct hierarchy. Primary action visible.
-- **Active**: Clear visual feedback that an operation is in progress.
-- **Error**: Plain-language description, actionable suggestion, color + icon + text.
-- **Success**: Confirmation that action completed. Auto-dismiss after 4-8 seconds unless persistent.
-- **Disabled**: Reduced opacity, no-pointer cursor, tooltip explaining why and what enables it.
-- **Disconnected**: Hardware status clearly shown. Reconnection attempt visible with attempt count and backoff timer.
-
-### 4.4 Accessibility Baseline
-
-**Rules**:
-
-- **Contrast ratios**: Normal text 4.5:1 minimum, large text 3:1 minimum, UI components 3:1 minimum.
-- **Semantic HTML**: Use button, nav, main, header, table with proper thead/tbody, label with for. No div with onClick pretending to be a button.
-- **Keyboard navigation**: Every feature fully operable by keyboard. Tab order matches visual order. No keyboard traps. Escape closes overlays.
-- **No color-only information**: Signal strength uses color AND numeric value or icon.
-- **Screen reader support**: All images have alt text. Icon-only buttons have aria-label. Form inputs have associated labels.
-- **Reduced motion**: Respect prefers-reduced-motion. No content flashes more than 3 times per second.
-
-### 4.5 Forbidden Patterns — User Experience
-
-- **No generic placeholders.** "Loading...", "No data", "Error", "Something went wrong" are forbidden. Every state message must be domain-specific.
-- **No light mode assumptions.** Argos is dark-theme-first. Do not use white or near-white backgrounds.
-- **No browser dialogs.** Do NOT use alert(), window.confirm(), or window.prompt().
-- **No inline styles.** All styling uses Tailwind utility classes. Exception: dynamically calculated values may use style:property={value} Svelte directives.
-- **No unstyled scrollbars.** Use the project's custom scrollbar styles that match the cyberpunk theme.
-
----
-
-## Article V — Performance Requirements
-
-### 5.1 Real-Time Data Standards
-
-**Principle**: Argos processes live radio frequency data. Performance is a functional requirement, not an optimization.
-
-**Budgets**:
-
-- **WebSocket message processing**: < 16ms per message (maintains 60fps rendering capability)
-- **Spectrum display update**: minimum 30fps when receiving continuous signal data
-- **UI interaction response**: < 100ms from user action to visible feedback
-- **Memory stability**: Zero leaks over 24-hour continuous operation
-
-### 5.2 Bundle and Load Performance
-
-**Budgets**:
-
-- **Initial page load**: < 3 seconds on target hardware (Dragon OS on modest hardware, typically 2GB+ RAM)
-
-**Rules**:
-
-- **No unused dependencies.** Every npm package must justify its inclusion.
-- **Lazy loading.** Routes and heavy components (spectrum visualizer, map display) must be code-split and loaded on demand.
-- **Asset optimization.** Images compressed. SVGs cleaned. No unoptimized assets in build output.
-
-### 5.3 Hardware Resource Awareness
-
-**Principle**: Argos runs alongside SDR software, Kismet, and other resource-intensive processes.
-
-**Budgets**:
-
-- **CPU usage**: < 15% during normal operation
-- **Memory heap**: < 200MB under normal operation with active scanning
-
-**Rules**:
-
-- **Network efficiency**: Minimize redundant API calls. Use WebSocket for real-time data instead of polling.
-- **File-scoped checks**: During development, prefer file-scoped lint/type/test commands over full project builds. Full builds required only before commit or when completing a phase.
-
-### 5.4 Forbidden Patterns — Performance
-
-- **No polling.** Do NOT use setInterval or polling for data available via WebSocket.
-- **No synchronous heavy computation.** Use Web Workers for operations that would block rendering for more than 16ms.
-- **No unbounded arrays.** All data buffers must have a maximum size. When buffer is full, oldest entries are evicted.
-
----
-
-## Article VI — Dependency Management
-
-### 6.1 Dependency Discipline
-
-**Rules**:
-
-- **Pin exact versions.** package.json uses exact version numbers, not ranges (e.g., "svelte": "4.2.8", not "^4.2.8").
-- **Justify every dependency.** Before adding a new package, answer: What specific capability does this provide? Can it be achieved with existing dependencies or a small local implementation?
-- **Audit transitive dependencies.** Run `npm ls --all` to understand the full dependency tree.
-- **No `latest`.** Every dependency reference must specify an exact version.
-- **Vulnerability scanning.** Run `npm audit` as part of CI. Known vulnerabilities with available fixes must be addressed within one week.
-
-### 6.2 Framework Trust
-
-**Rules**:
-
-- **Use SvelteKit directly.** Do not wrap framework features in abstraction layers unless three or more components would benefit.
-- **Use Tailwind directly.** Apply utility classes in component markup. Custom theme extensions in tailwind.config.js are the correct mechanism for project-specific design tokens.
-
-### 6.3 Forbidden Patterns — Dependencies
-
-**USER-SPECIFIED — Do not modify these patterns:**
-
-- **No npm install without approval.** Do NOT run `npm install` or `npm add` for any new package without explicit user approval. This is an AI agent permission boundary (see Article IX §9.3).
-- **No CSS frameworks.** Do NOT add CSS frameworks, CSS-in-JS libraries, or styling preprocessors beyond what Tailwind requires.
-- **No ORMs.** Argos uses SQLite directly with typed query builders or raw SQL.
-- **No state management libraries.** Do NOT add Redux, MobX, Zustand, etc. SvelteKit provides stores, context, and reactive declarations.
-- **No lodash/underscore.** Modern JavaScript/TypeScript provides Array methods and Object methods. If a specific utility is needed, write a purpose-specific function in src/lib/.
-
----
-
-## Article VII — Debugging and Incident Response
-
-### 7.1 Diagnostic Methodology
-
-When a bug is reported or discovered:
-
-1. **Reproduce First**: Establish deterministic reproduction steps before any diagnosis.
-2. **Classify the Failure**: Is it an explicit error or silent wrong behavior? Is it a regression or new implementation bug?
-3. **Gather Evidence Before Hypothesizing**: Collect logs, metrics, and trace data before forming theories.
-4. **Trace to Root Cause**: Apply the 5 Whys. Each "why" must be answered with a verified fact, not an assumption.
-5. **Assess Blast Radius Before Fixing**: List every file modified. List every component that depends on changed code. Define rollback plan.
-
-### 7.2 Fix Standards
-
-**Rules**:
-
-- **No net negative fixes.** A fix that corrects one defect while introducing another is a net negative.
-- **Fix includes regression test** (see Article III §3.4).
-- **Symptom fixes require root cause follow-up.** If urgency demands a symptom fix (null check, try/catch, timeout increase), file an issue for the root cause immediately.
-
-### 7.3 Forbidden Patterns — Debugging
-
-- **No console.log as logging.** Use structured logging with severity levels. console.log() acceptable during active development but must be replaced before task completion.
-- **No shotgun fixes.** Do NOT apply changes to multiple files simultaneously hoping one fixes the bug. Fix one thing at a time.
-- **No weakening error handling.** Do NOT "fix" an error by removing error handling (wrapping in try/catch and swallowing exception, removing type check).
-
----
-
-## Article VIII — Dependency Verification and Planning
-
-### 8.1 Plan Verification Before Execution
-
-Before any significant implementation begins (new feature, migration, refactor), the plan must survive verification:
-
-1. **Inventory What Exists**: Produce a complete list of files, functions, imports, exports, types, and state affected by the plan. This inventory also serves Article IV §4.2 (reuse-before-create).
-2. **Expand All Abstractions**: If the plan says "set up state management" or "configure routing," expand it to specific named items.
-3. **Trace Every Dependency Chain**: For every piece of code being created or modified, identify what it depends on (upstream) and what depends on it (downstream).
-4. **Verify Completeness**: For every component: Can it render? Can it fetch data? Can it navigate? Can it access state? Can it handle errors?
-5. **Pre-Mortem**: Assume the plan has already failed. Generate plausible failure reasons. For each: is it mitigated by the plan?
-
-### 8.2 Definition of Done
-
-A feature is DONE when:
-
-- All acceptance criteria from the specification are met.
-- All tests pass (unit, component, integration, E2E as applicable).
-- TypeScript compiles with zero errors under strict mode.
-- Linting passes with zero warnings.
-- All UI states are implemented (empty, loading, default, active, error, success, disabled, disconnected).
-- Accessibility checks pass (contrast, keyboard navigation, screen reader labels).
-- Performance within budget (WebSocket latency, memory, CPU).
-- No new `any` types, no `@ts-ignore`, no commented-out code, no untracked TODOs.
-- Reuse-before-create workflow was followed (Article IV §4.2) — no duplicate implementations.
-- All forbidden patterns from every relevant article were avoided.
-- Task committed with structured commit message (Article XII §12.1).
-- Peer review completed (or AI self-audit with documented checklist).
-
-### 8.3 Verification Commands
-
-The AI agent must run these commands and confirm zero errors before marking any task complete.
-
-**File-Scoped (during development — fast feedback)**:
-
-```bash
-npx tsc --noEmit src/lib/FILENAME.ts          # TypeScript strict compilation (single file)
-npx eslint src/lib/FILENAME.ts                # Lint single file
-npx prettier --check src/lib/FILENAME.ts      # Format check single file
-npx vitest run src/lib/FILENAME.test.ts       # Run single test file
-```
-
-**Full Project (before commit or phase completion)**:
-
-```bash
-npx tsc --noEmit --strict                     # TypeScript strict compilation (full project)
-npx eslint src/ --ext .ts,.svelte             # Lint entire source
-npx prettier --check src/                     # Format check entire source
-npx vitest run                                 # Run all tests
-npm run build                                  # Build verification
-npm audit                                      # Dependency audit
-```
-
-**Enforcement**: A task is NOT complete if any of these commands produce errors or warnings. The AI agent must run file-scoped commands after modifying each file and full project commands before committing.
-
----
-
-## Article IX — Security and Operational Safety
-
-### 9.1 Security Posture
-
-**Principle**: Argos operates with hardware that can interact with radio frequencies. Security is paramount.
-
-**Rules**:
-
-- **No secrets in code.** API keys, passwords, and tokens go in environment variables or secure configuration files, never in source code or version control.
-- **Validate all external input.** Data from WebSocket connections, API responses, hardware interfaces, and user input must be validated and sanitized before use.
-- **Least privilege.** Request only the system permissions needed. Document every elevated permission (USB device access, network interface control) and why it is required.
-- **Secure defaults.** Features that expose network interfaces, radio transmission capabilities, or system resources must be off by default and require explicit user action to enable.
-
-### 9.2 Operational Reliability
-
-**Rules**:
-
-- **Graceful degradation.** If a hardware device disconnects, the UI continues functioning with clear status indication.
-- **Auto-recovery.** WebSocket connections, hardware links, and service connections implement automatic reconnection with exponential backoff (1s, 2s, 4s, 8s, max 30s).
-- **State persistence.** Critical user configuration persists across browser refreshes and application restarts.
-
-### 9.3 AI Agent Operation Boundaries
-
-_Three-tier permission model for AI agent operations._
-
-**USER-SPECIFIED — Do not modify these tiers:**
-
-**ALLOWED — No Approval Required**:
-
-- Read any file in the project
-- Run TypeScript type checking (file-scoped or full project)
-- Run linting (file-scoped or full project)
-- Run formatting checks (file-scoped or full project)
-- Run tests (unit, component — file-scoped or full suite)
-- Create new files in src/lib/ (following reuse-before-create workflow)
-- Create new files in src/lib/components/ (following reuse-before-create workflow)
-- Create new files in src/lib/types/
-- Create new test files alongside source files
-- Modify files explicitly identified in the current task scope
-- Read .specify/ files for context
-
-**ASK FIRST — Requires Explicit User Approval**:
-
-- Install or remove npm packages (npm install, npm uninstall)
-- Modify package.json or package-lock.json
-- Modify tsconfig.json
-- Modify tailwind.config.js or tailwind.config.ts
-- Modify svelte.config.js
-- Modify vite.config.ts
-- Modify any file in src/routes/ (affects application routing)
-- Modify any file in .specify/ (affects spec-kit governance)
-- Delete any file
-- Rename any file or directory
-- Run full build commands (npm run build, npm run preview)
-- Modify .env or .env.\* files
-- Create or modify database schema or migration files
-- Modify CI/CD configuration
-- Execute git operations (commit, push, branch, merge)
-
-**NEVER — Constitution Violation If Attempted**:
-
-- Modify hardware communication code without explicit task assignment for that specific code
-- Enable radio transmission features by default or without explicit user action
-- Store secrets, API keys, credentials, or tokens in any source file
-- Bypass TypeScript strict mode with @ts-ignore without a linked issue number
-- Remove or weaken existing error handling (catch blocks, type guards, validation)
-- Delete test files or reduce test coverage
-- Force-push to any git branch
-- Modify the constitution without explicit user instruction
-- Create service layers, barrel files, or other forbidden patterns (Article II §2.7)
-- Add forbidden dependency categories (Article VI §6.3)
-- Use alert(), window.confirm(), or window.prompt()
-- Introduce polling where WebSocket is available
-
-### 9.4 Forbidden Patterns — Security
-
-- **No eval.** Do NOT use eval(), new Function(), or any dynamic code execution from string input.
-- **No innerHTML.** Do NOT use innerHTML or {@html} in Svelte without explicit sanitization.
-- **No CORS wildcard.** Do NOT configure CORS with wildcard (\*) origins. Explicitly list allowed origins.
-- **No debug in production.** Do NOT leave debug endpoints, development-only routes, or verbose logging enabled in production builds.
-
----
-
-## Article X — Governance
-
-### 10.1 Amendment Process
-
-Modifications to this constitution require:
-
-1. Explicit documentation of the rationale for change.
-2. Review and approval by the project maintainer.
-3. Backward compatibility assessment — will the change invalidate existing code that currently complies?
-4. Version increment:
-    - **MAJOR**: Principle removals or redefinitions
-    - **MINOR**: New principles or expanded guidance
-    - **PATCH**: Clarifications and typo fixes
-
-### 10.2 Constitutional Compliance in Development
-
-**Rules**:
-
-- **Plan compliance check**: Every /speckit.plan output must include a Constitution Check section showing compliance with each article. The check must specifically verify:
-    - Reuse-before-create workflow was applied (Article IV §4.2).
-    - No forbidden patterns from any article are present in the plan.
-    - All UI states are accounted for (Article IV §4.3).
-    - Permission boundaries are respected (Article IX §9.3).
-
-- **Deviation documentation**: If a plan must deviate from a constitutional principle, the deviation must be documented with: which article is being deviated from, why the deviation is necessary, what safeguard replaces the constitutional requirement, and when the deviation will be resolved.
-
-- **Analyze flagging**: The /speckit.analyze command should flag any specification, plan, or task that contradicts constitutional principles. Constitutional violations are always CRITICAL severity — they block implementation until resolved.
-
-### 10.3 Constitution Update Triggers
-
-**Principle**: This constitution is a living document that evolves from experience, not imagination. Constitutions are impossible to get right upfront. They improve through observable failures.
-
-Amend the constitution when any of the following triggers occur. Do NOT wait for a "good time" — update immediately when a trigger fires:
-
-**Triggers**:
-
-1. **Repeated mistake**: The AI agent makes the same mistake twice across different tasks. Response: Add the mistake to the FORBIDDEN PATTERNS section of the relevant article.
-
-2. **Unpreventable bug class**: A class of bugs is discovered that no existing article would have prevented. Response: Add a new rule or section addressing the specific bug pattern.
-
-3. **New hardware or integration**: A new hardware device, external service, or integration is added. Response: Update the tech_stack in the Preamble. Add hardware-specific error handling patterns to Article II §2.4. Add connection states to Article IV §4.3.
-
-4. **Analyze gap**: /speckit.analyze reveals a violation pattern that no article covers. Response: Add the missing rule.
-
-5. **Unrealistic budget**: A performance budget (Article V) is proven unrealistic through measurement. Response: Adjust the budget to a realistic value based on measured data.
-
-6. **Dependency change**: A dependency or framework upgrade changes available patterns. Response: Update canonical examples (Article II §2.6), naming conventions (Article II §2.3), and any rules that reference framework-specific patterns.
-
-7. **Unclear rule**: The AI agent follows a rule but produces the wrong outcome because the rule was ambiguous. Response: Rewrite the rule with more specificity. Add a canonical example.
-
-8. **Ignored rule**: The AI agent ignores a rule entirely. Response: Move the rule to a more prominent position. Add it to the TL;DR Executive Summary if not already there. Add the violation to the FORBIDDEN PATTERNS section.
-
-**Post-Update Procedure**:
-
-After any constitution amendment:
-
-1. Increment the version per §10.1 step 4.
-2. Update last_amended date in metadata.
-3. Run the constitution_update_checklist.md to propagate changes to plan-template.md, spec-template.md, and tasks-template.md.
-4. If the update added or changed FORBIDDEN PATTERNS, verify that existing code does not violate the new rules. If it does, file tasks to bring existing code into compliance.
-5. If the update changed the TL;DR Executive Summary, update the agent context file (CLAUDE.md, GEMINI.md, etc.) to reference the new critical rules.
-
-### 10.4 Cross-Validation Protocol
-
-After any significant constitution update, validate the constitution against the actual codebase using a fresh agent context:
-
-1. Open a new AI agent session (clean context, no conversation history).
-2. Provide the updated constitution and the current codebase.
-3. Ask: "Review this constitution against the codebase. Flag any rules that contradict existing code patterns, any rules that are ambiguous, and any gaps where the codebase does something not covered by the constitution."
-4. Resolve all flagged issues before proceeding with new feature work.
-
----
-
-## Article XI — Spec-Kit Workflow Governance
-
-### 11.1 Document Separation of Concerns
-
-**Principle**: AI agents frequently bleed technical implementation details into spec.md and put high-level descriptions into plan.md. This mixing destroys the value of spec-driven development. The constitution must govern not just code, but the spec-kit artifacts themselves.
-
-**spec.md (WHAT and WHY)**:
-
-- MUST remain technology-agnostic. No framework names, no library references, no architecture patterns, no file paths, no code snippets.
-- NO technical terminology except domain terms (e.g., "frequency range" is domain; "SvelteKit route" is technical).
-- Focus: User stories, requirements, success criteria, acceptance scenarios.
-- Question it answers: "What should the system do and why?"
-- Target audience: Product owner, stakeholders, domain experts.
-
-**plan.md (HOW)**:
-
-- Contains ALL technical details and implementation decisions.
-- Specifies frameworks, libraries, architecture patterns, file paths.
-- Defines Technical Context (language, dependencies, storage, testing).
-- Documents Constitution Checks and compliance with each article.
-- Documents the reuse-before-create inventory (Article IV §4.2).
-- Question it answers: "How do we implement the requirements from spec.md?"
-- Target audience: Developers, tech leads, code reviewers, AI agents.
-
-**tasks.md (WHAT TO DO, IN WHAT ORDER)**:
-
-- Each task is a single, focused unit of work that can be completed in one session and verified independently.
-- Tasks reference requirement IDs from spec.md for traceability.
-- Tasks include their verification criteria (what commands to run, what output to expect).
-- Tasks respect dependency order — no task depends on a later task.
-- Parallel-safe tasks are marked with [P].
-
-**Violations**:
-
-- Technical details in spec.md are a CRITICAL violation and block merge.
-- spec.md reviews MUST verify technology-agnosticism.
-- All "HOW" discussions belong in plan.md or code comments.
-- Vague or abstract tasks in tasks.md (e.g., "set up the frontend") are violations — every task must be concrete and verifiable.
-
-### 11.2 Task Granularity
-
-**Principle**: Tasks that are too small waste more time in SDD overhead than they save. Tasks that are too large exhaust AI agent context quality.
-
-**Rules**:
-
-- **Minimum task size**: A meaningful, testable unit of work. If a task would take less than 5 minutes to implement, combine it with a related task. For trivial fixes, skip the full spec-kit workflow and apply directly with a structured commit message.
-
-- **Maximum task size**: One focused component, module, or feature slice that can be completed and verified in a single AI agent session. If a task would require more than approximately 2 hours of work or touches more than 5 files, break it into smaller tasks with explicit dependencies.
-
-- **New context per phase**: Start a new AI agent context window for each implementation phase. Long sessions accumulate context clutter that degrades output quality.
-
-### 11.3 Spec Lifecycle
-
-**Description**: After a feature spec is implemented and merged, the spec becomes a historical record. The constitution and the code are the living sources of truth.
-
-**Rules**:
-
-- **Spec branch strategy**: Each feature gets its own spec branch (e.g., feature/001-spectrum-viewer). All spec-kit artifacts (spec.md, plan.md, tasks.md) live in the spec's directory under .specify/specs/NNN-feature-name/.
-
-- **Post-merge constitution review**: After merging a feature spec branch, review whether the constitution needs updating based on what was learned during implementation. Check: Did the agent deviate? Was a rule unclear? Was a forbidden pattern discovered? See Article X §10.3 for update triggers.
-
-- **Constitution update checklist**: After updating the constitution, run the constitution_update_checklist.md to propagate changes to plan-template.md, spec-template.md, and tasks-template.md. This ensures all future specs inherit the updated governance.
-
----
-
-## Article XII — Git Workflow and Commit Strategy
-
-### 12.1 Task-Based Commit Discipline
-
-**Principle**: Every completed task gets its own commit with a structured message. This is the primary rollback mechanism when an AI agent produces incorrect code. Without task-level commits, a bad implementation cascades across multiple files and becomes impossible to untangle.
-
-**Rules**:
-
-- **ONE commit per completed task.** Not one commit per session. Not one commit per file. One commit per logical unit of work as defined in tasks.md.
-
-- **Structured commit message format**:
-
-    ```
-    type(scope): TXXX — brief description
-    ```
-
-    Where:
-    - type: feat | fix | refactor | test | docs | chore | style | perf
-    - scope: the module or component area (e.g., spectrum, wifi, tak, ui, db)
-    - TXXX: the task ID from tasks.md (e.g., T001, T002)
-    - brief description: what changed, in imperative mood, under 60 characters
-
-    Examples:
-    - `feat(spectrum): T003 — implement WebSocket signal stream handler`
-    - `fix(wifi): T012 — handle null SSID in scan results`
-    - `test(tak): T007 — add integration tests for marker sync`
-    - `refactor(ui): T015 — extract StatusBadge from SignalRow component`
-    - `docs(constitution): amend Article V performance budgets`
-
-- **Commit timing**: Commit IMMEDIATELY after each task passes all verification commands (Article VIII §8.3). Do not batch multiple tasks into a single commit. Do not wait until "a good stopping point." The commit IS the stopping point.
-
-- **Commit before next task**: Never begin a new task with uncommitted changes from the previous task. If the previous task is incomplete, either complete it and commit, or stash/revert the changes and document why the task was abandoned.
-
-### 12.2 Branch Strategy
-
-**Rules**:
-
-- **Feature branches**: Follow the spec-kit naming convention: feature/NNN-feature-name (e.g., feature/001-spectrum-viewer). The branch name matches the spec directory name.
-
-- **No force-push**: Never force-push to any branch. If a commit needs to be undone, use git revert to create a new commit that reverses the change. History must be preserved for auditability.
-
-- **Squash merge to main**: Feature branches are squash-merged to main when the feature is complete. The squash commit message summarizes the feature and references the spec. Individual task commits are preserved in the branch history for debugging.
-
-### 12.3 Rollback Protocol
-
-When an AI agent produces incorrect code that is already committed, use this protocol to recover cleanly:
-
-1. **Identify the Last Good Commit**: Find the commit hash of the last task that was verified and correct. Task-based commits make this straightforward — look for the last TXXX commit where all verification commands passed.
-
-2. **Revert Bad Commits**: Use git revert to undo each bad commit in reverse order (newest first). Do NOT use git reset --hard in a shared environment.
-
-3. **Document the Failure**: Record what went wrong, which task produced the incorrect output, and what the AI agent did that was incorrect. This may trigger a constitution update (Article X §10.3 — repeated-mistake or unclear-rule triggers).
-
-4. **Restart from Clean State**: Open a fresh AI agent context window. Load the constitution, current spec, and the specific task that needs to be re-attempted. Provide the failure documentation as context so the agent does not repeat the mistake.
-
-### 12.4 Forbidden Patterns — Git
-
-- **No WIP commits.** Do NOT create "WIP" (work in progress) commits. Every commit must represent a complete, verified task. If work is incomplete at the end of a session, use git stash, not a half-finished commit.
-
-- **No mega commits.** Do NOT create commits that span multiple tasks or touch more than 10 files (unless the task genuinely requires it, e.g., a rename refactor). Large commits defeat the purpose of task-based rollback.
-
-- **No commit message generated code.** Do NOT include auto-generated or meaningless commit messages like "update files", "fix stuff", "changes", or AI-generated messages that do not follow the structured format in §12.1.
-
----
-
-## Governance
-
-**Authority**: This constitution supersedes all other development practices. All code reviews, pull requests, and technical decisions must verify compliance with these articles.
-
-**Compliance**: The /speckit.analyze command flags constitutional violations as CRITICAL severity issues that block implementation until resolved.
-
-**Amendments**: See Article X for the amendment process and update triggers.
-
-**Runtime Guidance**: For detailed implementation guidance, agent-specific instructions, and operational procedures, consult CLAUDE.md (or equivalent agent context files) and the documentation in docs/.
-
----
-
-**Version**: 2.0.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-13
+## Article I — Comprehension & Inventory
+**1.1 Comprehension Lock**: No code shall be written until the problem is fully understood. Start every task with a confirmed comprehension summary stating: End State, Current State, Problem/Goal, Constraints, and Success Criteria.
+**1.2 Codebase Inventory**: Before modifying code, search `src/lib/` for existing implementations. List modified files, related files, and relevant existing types/components in the summary.
+
+## Article II — Code Quality
+**2.1 TypeScript Strict**: `strict: true` always. No `any` (use `unknown` + guards). No `@ts-ignore` without issue ID. No type assertions without justification.
+**2.2 Modularity**: Single responsibility per file. Max function length: 50 lines. Max file length: 300 lines. No circular dependencies. Explicit exports (no barrel files).
+**2.3 Naming**: camelCase (vars/funcs), PascalCase (Types/Components), UPPER_SNAKE_CASE (constants), kebab-case (files). boolean `is/has/should`.
+**2.4 Error Handling**: Explicit handling for all external ops. Typed error classes. No swallowed errors. User-visible errors must suggest action.
+**2.5 Documentation**: JSDoc for public functions. Block comments for complex algorithms. No commented-out code.
+**2.6 Forbidden Patterns**:
+*   No service layers (wrappers around simple data access).
+*   No barrel files `index.ts` (except shadcn/ui).
+*   No catch-all utils (`utils.ts`, `helpers.ts`).
+*   No class-based UI components.
+*   No hardcoded hex colors (use Tailwind theme variables).
+*   No `alert()`, `confirm()`, `prompt()`.
+*   No untracked TODOs.
+
+## Article III — Testing
+**3.1 Test-First**: Write tests before/alongside implementation. Tests must fail without implementation.
+**3.2 Coverage**: Unit (80%), Component (all states), Integration (API/WebSocket), E2E (critical flows).
+**3.3 Quality**: Tests must be independent, deterministic, and use realistic data. Mock boundaries only.
+**3.4 Regression**: Every bug fix requires a reproduction test case.
+**3.5 Organization**: Tests live alongside source (`.test.ts`). Integration in `tests/`.
+
+## Article IV — User Experience
+**4.1 Design Language**: Cyberpunk theme. Monospaced data. High density. Visual hierarchy.
+**4.2 Reuse Workflow**: Search `src/lib/` -> Extend existing -> Create new only if necessary. Document decision.
+**4.3 State Communication**: Handle ALL states: Empty, Loading, Default, Active, Error, Success, Disabled, Disconnected. No generic placeholders.
+**4.4 Accessibility**: Contrast ratios. Semantic HTML. Keyboard navigation. Screen reader support. Reduced motion.
+
+## Article V — Performance
+**5.1 Real-Time**: WebSocket msg < 16ms. Spectrum display > 30fps. Interaction < 100ms. Zero memory leaks.
+**5.2 Load**: Initial load < 3s. No unused dependencies. Lazy load heavy components.
+**5.3 Resources**: < 15% CPU, < 200MB Heap. Use WebSockets over polling.
+
+## Article VI — Dependencies
+**6.1 Discipline**: Pin exact versions. Justify every package. Audit transitive deps.
+**6.2 Use Directly**: SvelteKit and Tailwind used directly. No abstraction layers.
+**6.3 Forbidden**: No `npm install` without approval. No CSS frameworks. No ORMs. No state libs (Redux/Zustand). No lodash.
+
+## Article VII — Debugging
+**7.1 Methodology**: Reproduce -> Classify -> Gather Evidence -> Trace -> Fix.
+**7.2 Fix Standards**: No net negative fixes. Fix includes regression test.
+**7.3 Forbidden**: No `console.log` in production. No shotgun fixes. No removing error handling to "fix" crashes.
+
+## Article VIII — Operations & Security
+**8.1 Security**: No secrets in code. Validate all inputs. Least privilege. Secure defaults (radio/network off by default).
+**8.2 Reliability**: Graceful degradation. Auto-recovery with backoff. State persistence.
+**8.3 AI Permissions**:
+*   **ALLOWED**: Read files, Run checks/tests, Create `src/lib` files (reuse-checked).
+*   **ASK FIRST**: Install packages, Modify config/routes/schemas, Delete/Rename files, git operations.
+*   **NEVER**: Modify hardware code w/o assignment, Enable TX default, Store secrets, Bypass strict mode, Delete tests.
+
+## Article IX — Spec-Kit Governance
+**9.1 Documents**:
+*   `spec.md`: WHAT/WHY. Tech-agnostic. No code/paths.
+*   `plan.md`: HOW. Tech details. Constitution check. Inventory. Structure.
+*   `tasks.md`: Steps. 1 task = 1 commit. Verifiable.
+**9.2 Task Granularity**: Min: 5 mins (merge trivial). Max: 2 hours/5 files (split complex). New context per phase.
+**9.3 Git Workflow**:
+*   **Commit**: One commit per task. Format: `type(scope): TXXX — description`.
+*   **Timing**: Commit verify-pass. Never commit broken code.
+*   **Branch**: `feature/NNN-feature-name`. Squash merge to main.
+*   **Forbidden**: WIP commits. Mega commits. Generic messages. Force-push.

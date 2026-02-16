@@ -1,110 +1,13 @@
-# Argos Development Stack - Portainer Compatible
-# With In-Container Kismet Support
+# Argos Third-Party Tool Containers - Portainer Compatible
+# Argos app runs natively on the host. Only third-party tools use Docker.
 #
 # Deploy this in Portainer as a Stack
 #
-# PREREQUISITE: Run setup-host.sh first — it builds images and generates docker/.env
-# Or build manually:
-#   docker build -t argos:dev -f docker/Dockerfile --target builder .
-#   docker build -t argos-hackrf-backend:dev -f hackrf_emitter/backend/Dockerfile hackrf_emitter/backend/
-
-version: '3.8'
+# Usage:
+#   docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d openwebrx
+#   docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d bettercap
 
 services:
-  # ============================================
-  # ARGOS SVELTEKIT APP - DEV MODE WITH KISMET
-  # ============================================
-  argos:
-    image: argos:dev
-    container_name: argos-dev
-    # Use host network to access WiFi interfaces (wlan1)
-    network_mode: host
-    # Use host PID namespace to manage Kismet processes
-    pid: host
-    environment:
-      - NODE_ENV=development
-      - PORT=5173
-      # Constrain Node.js heap to stay within container memory limit.
-      # With mem_limit=1536m, allow ~1024MB for V8 heap, leaving room for
-      # OS, Kismet, and other processes inside the container.
-      - NODE_OPTIONS=--max-old-space-size=1024
-      - PUBLIC_BASE_URL=http://localhost:5173
-      - PUBLIC_HACKRF_API_URL=http://localhost:8092
-      - PUBLIC_KISMET_API_URL=http://localhost:2501
-      - PUBLIC_OPENWEBRX_URL=http://localhost:8073
-      - PUBLIC_SPECTRUM_ANALYZER_URL=http://localhost:8092
-      - PUBLIC_HACKRF_WS_URL=ws://localhost:8092
-      - PUBLIC_ENABLE_DEBUG=true
-      # Kismet interface - MUST be external adapter (wlan1+), never wlan0 (Pi built-in)
-      - KISMET_INTERFACE=wlan1
-      # Kismet API credentials
-      - KISMET_USER=admin
-      - KISMET_PASSWORD=${KISMET_PASSWORD:?Set KISMET_PASSWORD in .env}
-    # USB device access for ALFA WiFi adapter
-    devices:
-      - "/dev/bus/usb:/dev/bus/usb"
-    # Required for wireless hardware access and monitor mode
-    privileged: true
-    volumes:
-      # Mount source code for hot reload
-      - ${ARGOS_DIR:?Run setup-host.sh first}:/app:rw
-      - argos-node-modules:/app/node_modules
-      - argos-svelte-kit:/app/.svelte-kit
-      # Docker access for container management (OpenWebRX, Bettercap, etc.)
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker:ro
-      # ZSH config now baked into image (removed host mounts to fix terminal errors)
-      # Atuin data persistence (shell history)
-      - argos-atuin-data:/root/.local/share/atuin
-      # Claude Code config persistence
-      - ${HOME}/.claude:/root/.claude:rw
-    # dev-sync.sh auto-installs deps when package-lock.json changes,
-    # preventing version skew between host and container Docker volumes.
-    command: sh -c "/app/docker/dev-sync.sh && exec npm run dev -- --host 0.0.0.0"
-    mem_limit: 1536m
-    memswap_limit: 2048m
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://0.0.0.0:5173/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # ============================================
-  # HACKRF BACKEND - DEV MODE
-  # ============================================
-  hackrf-backend:
-    image: argos-hackrf-backend:dev
-    container_name: hackrf-backend-dev
-    mem_limit: 256m
-    memswap_limit: 384m
-    ports:
-      - "8092:8092"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-    devices:
-      - "/dev/bus/usb:/dev/bus/usb"
-    volumes:
-      # Mount backend code for hot reload
-      - ${ARGOS_DIR:?Run setup-host.sh first}/hackrf_emitter/backend:/app:rw
-    privileged: true
-    networks:
-      - argos-dev-network
-    restart: unless-stopped
-    command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8092", "--reload"]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
 
   # ============================================
   # OPENWEBRX - SDR Web Interface (HackRF)
@@ -170,7 +73,4 @@ networks:
     name: argos-dev-network
 
 volumes:
-  argos-node-modules:
-  argos-svelte-kit:
-  argos-atuin-data:
   openwebrx-hackrf-settings:

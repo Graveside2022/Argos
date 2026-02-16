@@ -32,6 +32,19 @@
 	position: relative;
 }
 
+/* Rail position variants */
+.dashboard-body.rail-right {
+	flex-direction: row-reverse;
+}
+
+.dashboard-body.rail-top {
+	flex-direction: column;
+}
+
+.dashboard-body.rail-bottom {
+	flex-direction: column-reverse;
+}
+
 /* ---- Leaflet Popup Overrides ---- */
 .dashboard-shell .leaflet-popup-content-wrapper {
 	background: var(--palantir-bg-panel);
@@ -109,6 +122,6 @@
 
 /* ---- Panel header ---- */
 .dashboard-shell .panel-header {
-	background: rgba(26, 29, 35, 0.6);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	background: var(--palantir-bg-chrome);
+	border-bottom: 1px solid var(--palantir-border-subtle);
 }

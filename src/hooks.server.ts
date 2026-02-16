@@ -399,7 +399,7 @@ function isHardwareControlPath(path: string): boolean {
 	const hwPatterns = [
 		'/api/hackrf/',
 		'/api/kismet/control/',
-		'/api/gsm-evil/',
+		'/api/gsm-evil/control', // Only rate limit the control endpoint, not data polling
 		'/api/droneid/',
 		'/api/rf/',
 		'/api/openwebrx/control/'

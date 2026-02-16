@@ -4,6 +4,8 @@
 
 	import { browser } from '$app/environment';
 	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
+	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	interface Props {
 		sessionId: string;
@@ -34,6 +36,21 @@
 		}
 	});
 
+	// Re-apply terminal UI chrome colors when theme changes
+	$effect(() => {
+		// Subscribe to reactive theme state to trigger re-resolution
+		const _palette = themeStore.palette;
+		if (!terminal) return;
+		terminal.options.theme = {
+			...terminal.options.theme,
+			background: '#0a0a0a',
+			foreground: resolveThemeColor('--foreground', '#e8eaed'),
+			cursor: resolveThemeColor('--primary', '#4a9eff'),
+			cursorAccent: '#0a0a0a',
+			selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)')
+		};
+	});
+
 	onMount(async () => {
 		if (!browser || !terminalEl) return;
 
@@ -57,12 +74,14 @@
 			lineHeight: 1.2,
 			scrollback: 10000,
 			theme: {
-				background: '#0e1116',
-				foreground: '#e8eaed',
-				cursor: '#4a9eff',
-				cursorAccent: '#0e1116',
-				selectionBackground: 'rgba(74, 158, 255, 0.3)',
+				// UI chrome — near-black neutral to match dashboard aesthetic
+				background: '#0a0a0a',
+				foreground: resolveThemeColor('--foreground', '#e8eaed'),
+				cursor: resolveThemeColor('--primary', '#4a9eff'),
+				cursorAccent: '#0a0a0a',
+				selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
 				selectionForeground: '#ffffff',
+				// 16 ANSI standard colors — FIXED (terminal color standards for CLI output)
 				black: '#16181d',
 				red: '#f87171',
 				green: '#4ade80',

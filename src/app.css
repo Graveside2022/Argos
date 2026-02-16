@@ -1,48 +1,311 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tw-animate-css';
 @import './lib/styles/palantir-design-system.css';
 
+@custom-variant dark (&:is(.dark *));
+
+/* ---- Light Mode ---- */
 :root {
-	--neon-cyan: #4a9eff;
-	--neon-cyan-light: #6db3ff;
+	--radius: 0.65rem;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.141 0.005 285.823);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.141 0.005 285.823);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.141 0.005 285.823);
+	--primary: oklch(0.852 0.199 91.936);
+	--primary-foreground: oklch(0.421 0.095 57.708);
+	--secondary: oklch(0.967 0.001 286.375);
+	--secondary-foreground: oklch(0.21 0.006 285.885);
+	--muted: oklch(0.967 0.001 286.375);
+	--muted-foreground: oklch(0.552 0.016 285.938);
+	--accent: oklch(0.967 0.001 286.375);
+	--accent-foreground: oklch(0.21 0.006 285.885);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.92 0.004 286.32);
+	--input: oklch(0.92 0.004 286.32);
+	--ring: oklch(0.852 0.199 91.936);
+	--chart-1: oklch(0.905 0.182 98.111);
+	--chart-2: oklch(0.795 0.184 86.047);
+	--chart-3: oklch(0.681 0.162 75.834);
+	--chart-4: oklch(0.554 0.135 66.442);
+	--chart-5: oklch(0.476 0.114 61.907);
+	--sidebar: oklch(0.985 0 0);
+	--sidebar-foreground: oklch(0.141 0.005 285.823);
+	--sidebar-primary: oklch(0.681 0.162 75.834);
+	--sidebar-primary-foreground: oklch(0.987 0.026 102.212);
+	--sidebar-accent: oklch(0.967 0.001 286.375);
+	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+	--sidebar-border: oklch(0.92 0.004 286.32);
+	--sidebar-ring: oklch(0.852 0.199 91.936);
+}
+
+/* ---- Dark Mode (layered surface depth) ---- */
+.dark {
+	--background: oklch(0.141 0.005 285.823);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.21 0.006 285.885);
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.21 0.006 285.885);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.795 0.184 86.047);
+	--primary-foreground: oklch(0.421 0.095 57.708);
+	--secondary: oklch(0.274 0.006 286.033);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.274 0.006 286.033);
+	--muted-foreground: oklch(0.705 0.015 286.067);
+	--accent: oklch(0.274 0.006 286.033);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.421 0.095 57.708);
+	--sidebar: oklch(0.21 0.006 285.885);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.795 0.184 86.047);
+	--sidebar-primary-foreground: oklch(0.987 0.026 102.212);
+	--sidebar-accent: oklch(0.274 0.006 286.033);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.421 0.095 57.708);
+
+	/* Chart colors */
+	--chart-1: oklch(0.905 0.182 98.111);
+	--chart-2: oklch(0.795 0.184 86.047);
+	--chart-3: oklch(0.681 0.162 75.834);
+	--chart-4: oklch(0.554 0.135 66.442);
+	--chart-5: oklch(0.476 0.114 61.907);
+
+	/* Argos custom tokens */
+	--success: hsl(142 69% 58%);
+	--success-foreground: hsl(220 24% 7%);
+	--warning: hsl(43 96% 56%);
+	--warning-foreground: hsl(220 24% 7%);
+	--info: hsl(217 92% 68%);
+	--info-foreground: hsl(220 24% 7%);
+	--text-muted: hsl(213 4% 39%);
+
+	/* Signal strength scale */
+	--signal-critical: hsl(0 72% 51%);
+	--signal-strong: hsl(25 95% 53%);
+	--signal-good: hsl(43 96% 56%);
+	--signal-fair: hsl(160 84% 39%);
+	--signal-weak: hsl(212 72% 59%);
+
+	/* Feature categories */
+	--feature-rf: hsl(25 95% 53%);
+	--feature-drone: hsl(189 95% 43%);
+	--feature-radio: hsl(272 91% 65%);
+}
+
+/* ---- Palette Overrides ---- */
+/* Only --primary, --primary-foreground, and --ring change per palette.
+   Background, card, border, muted, etc. stay neutral so only the accent
+   color shifts — matching shadcn's design intent. */
+
+/* Blue */
+:root[data-palette='blue'] {
+	--primary: hsl(221.2 83.2% 53.3%);
+	--primary-foreground: hsl(210 40% 98%);
+	--ring: hsl(221.2 83.2% 53.3%);
+}
+
+.dark[data-palette='blue'] {
+	--primary: hsl(217.2 91.2% 59.8%);
+	--primary-foreground: hsl(222.2 47.4% 11.2%);
+	--ring: hsl(224.3 76.3% 48%);
+}
+
+/* Green */
+:root[data-palette='green'] {
+	--primary: hsl(142.1 76.2% 36.3%);
+	--primary-foreground: hsl(355.7 100% 97.3%);
+	--ring: hsl(142.1 76.2% 36.3%);
+}
+
+.dark[data-palette='green'] {
+	--primary: hsl(142.1 70.6% 45.3%);
+	--primary-foreground: hsl(144.9 80.4% 10%);
+	--ring: hsl(142.4 71.8% 29.2%);
+}
+
+/* Orange */
+:root[data-palette='orange'] {
+	--primary: hsl(24.6 95% 53.1%);
+	--primary-foreground: hsl(60 9.1% 97.8%);
+	--ring: hsl(24.6 95% 53.1%);
+}
+
+.dark[data-palette='orange'] {
+	--primary: hsl(20.5 90.2% 48.2%);
+	--primary-foreground: hsl(60 9.1% 97.8%);
+	--ring: hsl(20.5 90.2% 48.2%);
+}
+
+/* Red */
+:root[data-palette='red'] {
+	--primary: hsl(0 72.2% 50.6%);
+	--primary-foreground: hsl(0 85.7% 97.3%);
+	--ring: hsl(0 72.2% 50.6%);
+}
+
+.dark[data-palette='red'] {
+	--primary: hsl(0 72.2% 50.6%);
+	--primary-foreground: hsl(0 85.7% 97.3%);
+	--ring: hsl(0 72.2% 50.6%);
+}
+
+/* Rose */
+:root[data-palette='rose'] {
+	--primary: hsl(346.8 77.2% 49.8%);
+	--primary-foreground: hsl(355.7 100% 97.3%);
+	--ring: hsl(346.8 77.2% 49.8%);
+}
+
+.dark[data-palette='rose'] {
+	--primary: hsl(346.8 77.2% 49.8%);
+	--primary-foreground: hsl(355.7 100% 97.3%);
+	--ring: hsl(346.8 77.2% 49.8%);
+}
+
+/* Violet */
+:root[data-palette='violet'] {
+	--primary: hsl(262.1 83.3% 57.8%);
+	--primary-foreground: hsl(210 20% 98%);
+	--ring: hsl(262.1 83.3% 57.8%);
+}
+
+.dark[data-palette='violet'] {
+	--primary: hsl(263.4 70% 50.4%);
+	--primary-foreground: hsl(210 20% 98%);
+	--ring: hsl(263.4 70% 50.4%);
+}
+
+/* Yellow */
+:root[data-palette='yellow'] {
+	--primary: hsl(47.9 95.8% 53.1%);
+	--primary-foreground: hsl(26 83.3% 14.1%);
+	--ring: hsl(47.9 95.8% 53.1%);
+}
+
+.dark[data-palette='yellow'] {
+	--primary: hsl(47.9 95.8% 53.1%);
+	--primary-foreground: hsl(26 83.3% 14.1%);
+	--ring: hsl(35.5 91.7% 32.9%);
+}
+
+/* ---- Theme mapping for Tailwind utilities ---- */
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-chart-6: var(--chart-6);
+
+	/* Argos custom colors */
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+	--color-text-muted: var(--text-muted);
+	--color-signal-critical: var(--signal-critical);
+	--color-signal-strong: var(--signal-strong);
+	--color-signal-good: var(--signal-good);
+	--color-signal-fair: var(--signal-fair);
+	--color-signal-weak: var(--signal-weak);
+	--color-feature-rf: var(--feature-rf);
+	--color-feature-drone: var(--feature-drone);
+	--color-feature-radio: var(--feature-radio);
+
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	button:not(:disabled),
+	[role='button']:not(:disabled) {
+		cursor: pointer;
+	}
+
+	body {
+		@apply bg-background text-foreground;
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			sans-serif;
+	}
 }
 
 @layer components {
-	/* Glass effects */
+	/* Glass effects (migrated from rgb(var()) to var() — CSS vars now contain full color values) */
 	.glass-panel {
 		@apply backdrop-blur-xl border;
-		background-color: color-mix(in srgb, rgb(var(--bg-card)) 80%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+		background-color: color-mix(in srgb, var(--card) 80%, transparent);
+		border-color: color-mix(in srgb, var(--border) 40%, transparent);
 	}
 
 	.glass-panel-light {
 		@apply backdrop-blur-md border;
-		background-color: color-mix(in srgb, rgb(var(--bg-card)) 60%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--border-primary)) 30%, transparent);
+		background-color: color-mix(in srgb, var(--card) 60%, transparent);
+		border-color: color-mix(in srgb, var(--border) 30%, transparent);
 	}
 
 	.glass-button {
 		@apply backdrop-blur-sm border transition-all duration-200;
-		background-color: color-mix(in srgb, rgb(var(--bg-button)) 20%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+		background-color: color-mix(in srgb, var(--secondary) 20%, transparent);
+		border-color: color-mix(in srgb, var(--border) 40%, transparent);
 	}
+
 	.glass-button:hover {
-		background-color: color-mix(in srgb, rgb(var(--bg-button)) 40%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--border-hover)) 60%, transparent);
+		background-color: color-mix(in srgb, var(--secondary) 40%, transparent);
+		border-color: color-mix(in srgb, var(--primary) 60%, transparent);
 	}
 
 	.glass-input {
-		@apply backdrop-blur-sm border text-text-primary focus:outline-none transition-all duration-200;
-		background-color: color-mix(in srgb, rgb(var(--bg-input)) 60%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--border-primary)) 40%, transparent);
+		@apply backdrop-blur-sm border text-foreground focus:outline-hidden transition-all duration-200;
+		background-color: color-mix(in srgb, var(--input) 60%, transparent);
+		border-color: color-mix(in srgb, var(--border) 40%, transparent);
 	}
+
 	.glass-input:focus {
-		background-color: color-mix(in srgb, rgb(var(--bg-input)) 80%, transparent);
-		border-color: color-mix(in srgb, rgb(var(--accent-primary)) 60%, transparent);
+		background-color: color-mix(in srgb, var(--input) 80%, transparent);
+		border-color: color-mix(in srgb, var(--primary) 60%, transparent);
 	}
+
 	.glass-input::placeholder {
-		color: rgb(var(--text-muted));
+		color: var(--text-muted);
 	}
 
 	/* Status indicators */
@@ -64,18 +327,16 @@
 
 	/* Brand styles */
 	.hackrf-brand {
-		color: #f97316 !important;
-		text-shadow: none;
+		color: var(--feature-rf) !important;
 	}
 
 	.sweep-brand {
 		color: #ffffff !important;
-		text-shadow: none;
 	}
 
 	/* Shadow effects */
 	.shadow-red-glow {
-		box-shadow: 0 0 16px rgba(248, 113, 113, 0.3);
+		box-shadow: 0 0 16px color-mix(in srgb, var(--destructive) 30%, transparent);
 	}
 
 	.shadow-mono-glow {
@@ -84,7 +345,7 @@
 
 	/* Spectrum display */
 	.spectrum-container {
-		@apply bg-bg-card rounded-xl border border-border-primary p-6;
+		@apply bg-card rounded-xl border border-border p-6;
 	}
 
 	.signal-strength-bar {

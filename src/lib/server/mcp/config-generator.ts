@@ -1,6 +1,6 @@
 /**
  * MCP Configuration Generator
- * Auto-generates MCP configs for Context B (host) and Context C (container)
+ * Auto-generates MCP configs for the host Claude CLI
  */
 
 import { mkdir, writeFile } from 'fs/promises';
@@ -111,25 +111,6 @@ export async function generateContextBConfig(): Promise<MCPConfiguration> {
 }
 
 /**
- * Generate MCP configuration for Context C (Container Claude CLI)
- */
-export async function generateContextCConfig(): Promise<MCPConfiguration> {
-	const mcpServers: Record<string, MCPServerDefinition> = {};
-
-	// Add all modular servers with container-adjusted URLs
-	for (const server of MCP_SERVERS) {
-		const serverDef = generateMCPServer(server.id, server.serverFile);
-		// Container connects to host via host.docker.internal
-		if (serverDef.env) {
-			serverDef.env.ARGOS_API_URL = 'http://host.docker.internal:5173';
-		}
-		mcpServers[server.id] = serverDef;
-	}
-
-	return { mcpServers };
-}
-
-/**
  * Write MCP configuration to file
  */
 async function writeMCPConfig(config: MCPConfiguration, path: string): Promise<void> {
@@ -156,27 +137,10 @@ export async function installContextBConfig(): Promise<string> {
 }
 
 /**
- * Install MCP configuration for Context C (Container)
- */
-export async function installContextCConfig(containerConfigDir?: string): Promise<string> {
-	const config = await generateContextCConfig();
-
-	// Default to project root .claude directory for container
-	const configDir = containerConfigDir || join(process.cwd(), '.claude-container');
-	const configPath = join(configDir, 'mcp.json');
-
-	await writeMCPConfig(config, configPath);
-
-	return configPath;
-}
-
-/**
  * Generate MCP configuration content (for display/testing)
  */
-export async function generateMCPConfigContent(context: 'b' | 'c'): Promise<string> {
-	const config =
-		context === 'b' ? await generateContextBConfig() : await generateContextCConfig();
-
+export async function generateMCPConfigContent(): Promise<string> {
+	const config = await generateContextBConfig();
 	return JSON.stringify(config, null, 2);
 }
 
@@ -204,9 +168,7 @@ export async function updateExistingConfig(configPath: string): Promise<void> {
 	} catch (_error) {
 		// If file doesn't exist, create new one
 		console.warn('[MCP Config] Creating new configuration');
-		const context = configPath.includes('container') ? 'c' : 'b';
-		const config =
-			context === 'b' ? await generateContextBConfig() : await generateContextCConfig();
+		const config = await generateContextBConfig();
 		await writeMCPConfig(config, configPath);
 	}
 }
@@ -228,7 +190,7 @@ The Argos platform provides 5 specialized MCP servers:
 4. **argos-gsm-evil** - GSM monitoring and IMSI detection
 5. **argos-system** - System stats, hardware scanning, diagnostics
 
-## Context B (Host Claude CLI)
+## Installation (Host Claude CLI)
 
 1. Generate and install configuration:
    npm run mcp:install-b
@@ -240,19 +202,6 @@ The Argos platform provides 5 specialized MCP servers:
 
 4. Test with:
    claude "List available Argos tools"
-
-## Context C (Container Claude CLI)
-
-1. Generate and install configuration:
-   npm run mcp:install-c
-
-2. Configuration will be written to:
-   .claude-container/mcp.json
-
-3. Mount this directory in your container:
-   docker run -v $(pwd)/.claude-container:/root/.claude ...
-
-4. Restart container Claude CLI
 
 ## Running Individual Servers (Development)
 
@@ -268,11 +217,7 @@ npm run mcp:system    # System server only
 
 Generate the config and copy it manually:
 
-# Show config for Context B
 npm run mcp:config-b
-
-# Show config for Context C
-npm run mcp:config-c
 
 Then copy the output to ~/.claude/mcp.json
 `;

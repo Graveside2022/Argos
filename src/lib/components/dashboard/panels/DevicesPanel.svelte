@@ -2,6 +2,8 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import type { KismetDevice } from '$lib/kismet/types';
 	import { isolatedDeviceMAC, isolateDevice } from '$lib/stores/dashboard/dashboard-store';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
@@ -275,8 +277,8 @@
 
 		<div class="toolbar-separator"></div>
 
-		<input
-			class="input-field input-field-sm toolbar-search"
+		<Input
+			class="toolbar-search h-7 text-xs"
 			type="text"
 			placeholder="Search MAC, SSID, manufacturer..."
 			bind:value={searchQuery}
@@ -597,14 +599,14 @@
 		<div class="section-label">WHITELIST ({whitelistedMACs.length})</div>
 
 		<div class="whitelist-input-row">
-			<input
-				class="input-field input-field-sm"
+			<Input
+				class="h-7 text-xs flex-1"
 				type="text"
 				placeholder="MAC address..."
 				bind:value={whitelistInput}
 				onkeydown={(e) => e.key === 'Enter' && addToWhitelist()}
 			/>
-			<button class="btn btn-secondary btn-sm" onclick={addToWhitelist}>Add</button>
+			<Button variant="secondary" size="sm" onclick={addToWhitelist}>Add</Button>
 		</div>
 
 		{#if whitelistedMACs.length > 0}
@@ -641,6 +643,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		background: var(--palantir-bg-surface);
 	}
 
 	.panel-toolbar {
@@ -670,8 +673,8 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 2px;
-		background: rgba(74, 158, 255, 0.1);
-		border: 1px solid rgba(74, 158, 255, 0.25);
+		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--palantir-accent) 25%, transparent);
 		border-radius: var(--radius-sm);
 		color: var(--palantir-accent);
 		font-size: 10px;
@@ -682,7 +685,7 @@
 	}
 
 	.back-btn:hover {
-		background: rgba(74, 158, 255, 0.2);
+		background: color-mix(in srgb, var(--palantir-accent) 20%, transparent);
 	}
 
 	.toolbar-separator {
@@ -750,7 +753,7 @@
 		opacity: 1;
 		border-color: var(--palantir-accent);
 		color: var(--palantir-accent);
-		background: rgba(74, 158, 255, 0.1);
+		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
 	}
 
 	.filter-badge {
@@ -768,6 +771,34 @@
 	table {
 		width: max-content;
 		min-width: 100%;
+		border-collapse: collapse;
+	}
+
+	thead {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	th {
+		background: var(--palantir-bg-elevated);
+		font-size: var(--text-xs);
+		font-weight: var(--font-weight-semibold);
+		letter-spacing: var(--letter-spacing-wider);
+		color: var(--palantir-text-tertiary);
+		text-align: left;
+		padding: var(--space-2) var(--space-2);
+		border-bottom: 1px solid var(--palantir-border-default);
+		white-space: nowrap;
+	}
+
+	td {
+		padding: var(--space-1) var(--space-2);
+		border-bottom: 1px solid var(--palantir-border-subtle);
+	}
+
+	tbody tr:hover {
+		background: var(--palantir-bg-hover);
 	}
 
 	.sortable {
@@ -918,7 +949,7 @@
 		font-family: var(--font-mono);
 		font-size: 9px;
 		color: var(--palantir-accent);
-		background: rgba(74, 144, 226, 0.15);
+		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
 		padding: 0 4px;
 		border-radius: 3px;
 		margin-left: 4px;
@@ -950,8 +981,8 @@
 	}
 
 	.isolated-parent {
-		background: rgba(74, 158, 255, 0.06);
-		border-bottom: 1px solid rgba(74, 158, 255, 0.15);
+		background: color-mix(in srgb, var(--palantir-accent) 6%, transparent);
+		border-bottom: 1px solid color-mix(in srgb, var(--palantir-accent) 15%, transparent);
 	}
 
 	.empty-row {
@@ -981,10 +1012,6 @@
 	.whitelist-input-row {
 		display: flex;
 		gap: var(--space-2);
-	}
-
-	.whitelist-input-row .input-field {
-		flex: 1;
 	}
 
 	.whitelist-items {

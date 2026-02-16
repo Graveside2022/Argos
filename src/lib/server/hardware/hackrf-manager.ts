@@ -19,13 +19,7 @@ const HACKRF_BLOCKING_PROCESSES = [
 const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
 
 // All containers that may hold the HackRF USB device (for force-release cleanup)
-const HACKRF_ALL_CONTAINERS = [
-	'openwebrx',
-	'openwebrx-hackrf',
-	'pagermon',
-	'hackrf-backend-dev',
-	'hackrf-backend'
-];
+const HACKRF_ALL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
 
 export async function detectHackRF(): Promise<boolean> {
 	try {

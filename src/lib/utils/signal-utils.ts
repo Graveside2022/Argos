@@ -3,6 +3,8 @@
  * Maps RSSI values to Palantir design system signal colors.
  */
 
+import { resolveThemeColor } from '$lib/utils/theme-colors';
+
 export interface SignalBand {
 	key: string;
 	label: string;
@@ -84,11 +86,11 @@ export function getSignalColor(rssi: number): string {
 export function getSignalHex(rssi: number): string {
 	// 0 dBm means Kismet has no signal data — render as light grey (visible on dark map)
 	if (rssi === 0) return '#9a9a9a';
-	if (rssi > -50) return '#dc2626';
-	if (rssi > -60) return '#f97316';
-	if (rssi > -70) return '#fbbf24';
-	if (rssi > -80) return '#10b981';
-	return '#4a90e2';
+	if (rssi > -50) return resolveThemeColor('--signal-critical', '#dc2626');
+	if (rssi > -60) return resolveThemeColor('--signal-strong', '#f97316');
+	if (rssi > -70) return resolveThemeColor('--signal-good', '#fbbf24');
+	if (rssi > -80) return resolveThemeColor('--signal-fair', '#10b981');
+	return resolveThemeColor('--signal-weak', '#4a90e2');
 }
 
 /** Format "last seen" timestamp to human-readable relative time */

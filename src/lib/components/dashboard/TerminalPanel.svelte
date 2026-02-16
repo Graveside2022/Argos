@@ -620,7 +620,7 @@
 		border: 1px solid var(--palantir-border-default, #2a2f38);
 		border-radius: var(--radius-md);
 		padding: var(--space-2);
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--background) 40%, transparent);
 		z-index: 1000;
 		min-width: 140px;
 	}
@@ -657,7 +657,7 @@
 	}
 
 	.dropdown-item.danger:hover {
-		background: rgba(248, 113, 113, 0.1);
+		background: color-mix(in srgb, var(--palantir-error) 10%, transparent);
 		color: var(--palantir-error, #f87171);
 	}
 
