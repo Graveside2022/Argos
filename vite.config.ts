@@ -8,7 +8,10 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), terminalPlugin()],
 	server: {
 		host: '0.0.0.0',
-		port: 5173
+		port: 5173,
+		watch: {
+			ignored: ['**/*.db', '**/*.db-wal', '**/*.db-shm', '**/*.sqlite']
+		}
 	},
 	optimizeDeps: {
 		include: ['leaflet', 'cytoscape', 'mgrs']
