@@ -13,8 +13,8 @@
 	--card-foreground: oklch(0.141 0.005 285.823);
 	--popover: oklch(1 0 0);
 	--popover-foreground: oklch(0.141 0.005 285.823);
-	--primary: oklch(0.723 0.219 149.579);
-	--primary-foreground: oklch(0.982 0.018 155.826);
+	--primary: oklch(0.852 0.199 91.936);
+	--primary-foreground: oklch(0.421 0.095 57.708);
 	--secondary: oklch(0.967 0.001 286.375);
 	--secondary-foreground: oklch(0.21 0.006 285.885);
 	--muted: oklch(0.967 0.001 286.375);
@@ -24,20 +24,20 @@
 	--destructive: oklch(0.577 0.245 27.325);
 	--border: oklch(0.92 0.004 286.32);
 	--input: oklch(0.92 0.004 286.32);
-	--ring: oklch(0.723 0.219 149.579);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
+	--ring: oklch(0.852 0.199 91.936);
+	--chart-1: oklch(0.905 0.182 98.111);
+	--chart-2: oklch(0.795 0.184 86.047);
+	--chart-3: oklch(0.681 0.162 75.834);
+	--chart-4: oklch(0.554 0.135 66.442);
+	--chart-5: oklch(0.476 0.114 61.907);
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
-	--sidebar-primary: oklch(0.723 0.219 149.579);
-	--sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+	--sidebar-primary: oklch(0.681 0.162 75.834);
+	--sidebar-primary-foreground: oklch(0.987 0.026 102.212);
 	--sidebar-accent: oklch(0.967 0.001 286.375);
 	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
 	--sidebar-border: oklch(0.92 0.004 286.32);
-	--sidebar-ring: oklch(0.723 0.219 149.579);
+	--sidebar-ring: oklch(0.852 0.199 91.936);
 }
 
 /* ---- Dark Mode (layered surface depth) ---- */
@@ -48,8 +48,8 @@
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.21 0.006 285.885);
 	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.696 0.17 162.48);
-	--primary-foreground: oklch(0.393 0.095 152.535);
+	--primary: oklch(0.795 0.184 86.047);
+	--primary-foreground: oklch(0.421 0.095 57.708);
 	--secondary: oklch(0.274 0.006 286.033);
 	--secondary-foreground: oklch(0.985 0 0);
 	--muted: oklch(0.274 0.006 286.033);
@@ -59,22 +59,22 @@
 	--destructive: oklch(0.704 0.191 22.216);
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.527 0.154 150.069);
+	--ring: oklch(0.421 0.095 57.708);
 	--sidebar: oklch(0.21 0.006 285.885);
 	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.696 0.17 162.48);
-	--sidebar-primary-foreground: oklch(0.393 0.095 152.535);
+	--sidebar-primary: oklch(0.795 0.184 86.047);
+	--sidebar-primary-foreground: oklch(0.987 0.026 102.212);
 	--sidebar-accent: oklch(0.274 0.006 286.033);
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.527 0.154 150.069);
+	--sidebar-ring: oklch(0.421 0.095 57.708);
 
 	/* Chart colors */
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
+	--chart-1: oklch(0.905 0.182 98.111);
+	--chart-2: oklch(0.795 0.184 86.047);
+	--chart-3: oklch(0.681 0.162 75.834);
+	--chart-4: oklch(0.554 0.135 66.442);
+	--chart-5: oklch(0.476 0.114 61.907);
 
 	/* Argos custom tokens */
 	--success: hsl(142 69% 58%);
@@ -192,30 +192,6 @@
 	--primary: hsl(47.9 95.8% 53.1%);
 	--primary-foreground: hsl(26 83.3% 14.1%);
 	--ring: hsl(35.5 91.7% 32.9%);
-}
-
-/* ---- Semantic Colors Override ---- */
-/* When OFF, signal indicators harmonize with the active palette instead of fixed red/yellow/green */
-.semantic-colors-off {
-	--palantir-signal-critical: var(--primary);
-	--palantir-signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
-	--palantir-signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
-	--palantir-signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
-	--palantir-signal-weak: var(--muted-foreground);
-}
-
-.dark.semantic-colors-off {
-	--signal-critical: var(--primary);
-	--signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
-	--signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
-	--signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
-	--signal-weak: var(--muted-foreground);
-
-	--palantir-signal-critical: var(--primary);
-	--palantir-signal-strong: color-mix(in srgb, var(--primary) 80%, var(--muted-foreground));
-	--palantir-signal-good: color-mix(in srgb, var(--primary) 60%, var(--muted-foreground));
-	--palantir-signal-fair: color-mix(in srgb, var(--primary) 40%, var(--muted-foreground));
-	--palantir-signal-weak: var(--muted-foreground);
 }
 
 /* ---- Theme mapping for Tailwind utilities ---- */

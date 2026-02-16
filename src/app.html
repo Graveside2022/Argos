@@ -16,8 +16,6 @@
 				if (t.palette && t.palette !== 'default')
 					document.documentElement.dataset.palette = t.palette;
 				if (t.mode !== 'light') document.documentElement.classList.add('dark');
-				if (t.semanticColors === false)
-					document.documentElement.classList.add('semantic-colors-off');
 			} catch (e) {
 				document.documentElement.classList.add('dark');
 			}

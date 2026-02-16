@@ -1,7 +1,7 @@
 /**
- * Theme Store — Manages palette, mode, and semantic colors state
+ * Theme Store — Manages palette and mode state
  * Persists to localStorage under 'argos-theme' key
- * DOM attributes managed: data-palette on <html>, dark class, semantic-colors-off class
+ * DOM attributes managed: data-palette on <html>, dark class
  */
 
 import { browser } from '$app/environment';
@@ -21,15 +21,13 @@ export type ThemeMode = 'dark' | 'light';
 export interface ThemeState {
 	palette: ThemePalette;
 	mode: ThemeMode;
-	semanticColors: boolean;
 }
 
 const STORAGE_KEY = 'argos-theme';
 
 const DEFAULT_STATE: ThemeState = {
 	palette: 'default',
-	mode: 'dark',
-	semanticColors: true
+	mode: 'dark'
 };
 
 const VALID_PALETTES: ThemePalette[] = [
@@ -55,11 +53,7 @@ function loadState(): ThemeState {
 			palette: VALID_PALETTES.includes(parsed.palette)
 				? parsed.palette
 				: DEFAULT_STATE.palette,
-			mode: parsed.mode === 'light' ? 'light' : 'dark',
-			semanticColors:
-				typeof parsed.semanticColors === 'boolean'
-					? parsed.semanticColors
-					: DEFAULT_STATE.semanticColors
+			mode: parsed.mode === 'light' ? 'light' : 'dark'
 		};
 	} catch {
 		return { ...DEFAULT_STATE };
@@ -98,17 +92,6 @@ function applyMode(mode: ThemeMode): void {
 	}
 }
 
-function applySemanticColors(enabled: boolean): void {
-	if (!browser) return;
-	const el = document.documentElement;
-
-	if (enabled) {
-		el.classList.remove('semantic-colors-off');
-	} else {
-		el.classList.add('semantic-colors-off');
-	}
-}
-
 function createThemeStore() {
 	let state = $state<ThemeState>(loadState());
 
@@ -116,7 +99,6 @@ function createThemeStore() {
 	if (browser) {
 		applyPalette(state.palette);
 		applyMode(state.mode);
-		applySemanticColors(state.semanticColors);
 	}
 
 	return {
@@ -125,9 +107,6 @@ function createThemeStore() {
 		},
 		get mode() {
 			return state.mode;
-		},
-		get semanticColors() {
-			return state.semanticColors;
 		},
 
 		setPalette(palette: ThemePalette) {
@@ -141,12 +120,6 @@ function createThemeStore() {
 			if (mode !== 'dark' && mode !== 'light') return;
 			state.mode = mode;
 			applyMode(mode);
-			saveState(state);
-		},
-
-		setSemanticColors(enabled: boolean) {
-			state.semanticColors = enabled;
-			applySemanticColors(enabled);
 			saveState(state);
 		}
 	};

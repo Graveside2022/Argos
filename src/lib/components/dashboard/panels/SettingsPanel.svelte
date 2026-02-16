@@ -53,18 +53,6 @@
 				onCheckedChange={(checked) => themeStore.setMode(checked ? 'dark' : 'light')}
 			/>
 		</div>
-
-		<!-- Semantic Colors Toggle (T019, T020) -->
-		<div class="setting-row">
-			<div class="setting-label-group">
-				<span class="setting-label">Semantic Colors</span>
-				<span class="setting-hint">Fixed red/yellow/green for signal & status</span>
-			</div>
-			<Switch
-				checked={themeStore.semanticColors}
-				onCheckedChange={(checked) => themeStore.setSemanticColors(checked)}
-			/>
-		</div>
 	</section>
 </div>
 
