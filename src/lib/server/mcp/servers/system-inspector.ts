@@ -47,16 +47,10 @@ class SystemInspector extends BaseMCPServer {
 				const recommendations = [];
 				let overallStatus = 'HEALTHY';
 
-				// Check Docker
+				// Check Docker (only needed for third-party tools: OpenWebRX, Bettercap)
 				if (!docker.success || !docker.docker_running) {
-					overallStatus = 'CRITICAL';
 					recommendations.push(
-						'⚠️ CRITICAL: Docker not running. Start with: sudo systemctl start docker'
-					);
-				} else if (docker.argos_containers === 0) {
-					overallStatus = 'DEGRADED';
-					recommendations.push(
-						'⚠️ No Argos containers running. Start with: docker compose up -d'
+						'ℹ️ Docker not running. Only needed for third-party tools (OpenWebRX, Bettercap). Start with: sudo systemctl start docker'
 					);
 				}
 
@@ -141,7 +135,7 @@ class SystemInspector extends BaseMCPServer {
 		{
 			name: 'check_docker_health',
 			description:
-				'Check Docker container health for all Argos services. Returns container status, resource usage, and restart recommendations. Use when Docker containers are misbehaving or after system reboot.',
+				'Check Docker status for third-party tools (OpenWebRX, Bettercap). Argos itself runs natively on the host. Use when third-party tool containers are misbehaving.',
 			inputSchema: {
 				type: 'object' as const,
 				properties: {}
@@ -172,9 +166,8 @@ class SystemInspector extends BaseMCPServer {
 				}
 
 				if (data.argos_containers === 0) {
-					recommendations.push('⚠️ No Argos containers found');
 					recommendations.push(
-						'💡 Start all services: cd docker && docker compose -f docker-compose.portainer-dev.yml up -d'
+						'ℹ️ No tool containers running. Argos runs natively. Start tools with: docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d'
 					);
 				}
 
@@ -387,11 +380,11 @@ class SystemInspector extends BaseMCPServer {
 						details: devServerRunning ? 'Server responding' : 'Server not responding'
 					},
 					{
-						item: 'Docker daemon',
-						status: docker.docker_running ? 'PASS' : 'FAIL',
+						item: 'Docker daemon (third-party tools)',
+						status: docker.docker_running ? 'PASS' : 'WARN',
 						details: docker.docker_running
-							? `${docker.argos_containers} Argos containers`
-							: docker.error || 'Not running'
+							? `Running — ${docker.argos_containers || 0} tool containers`
+							: 'Not running (optional — only needed for OpenWebRX/Bettercap)'
 					},
 					{
 						item: 'Core services',

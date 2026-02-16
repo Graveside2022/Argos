@@ -6,13 +6,14 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver
+WorkingDirectory=/home/kali/Documents/Argos/RemoteIDReceiver/Receiver
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver/venv/bin/python3 /home/ubuntu/projects/Argos/RemoteIDReceiver/Receiver/backend/dronesniffer/main.py -p 80
+ExecStart=/home/kali/Documents/Argos/RemoteIDReceiver/Receiver/venv/bin/python3 /home/kali/Documents/Argos/RemoteIDReceiver/Receiver/backend/dronesniffer/main.py -p 80
 Restart=on-failure
 RestartSec=5
-StandardOutput=append:/home/ubuntu/projects/Argos/droneid.log
-StandardError=append:/home/ubuntu/projects/Argos/droneid.log
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-droneid
 Environment="PYTHONUNBUFFERED=1"
 
 [Install]

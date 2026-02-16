@@ -1,25 +1,18 @@
 [Unit]
 Description=Argos CPU Protector
-Documentation=https://github.com/yourusername/Argos
 After=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/projects/Argos
-
-# Run the CPU protector
+User=kali
+Group=kali
+WorkingDirectory=/home/kali/Documents/Argos/Argos
 ExecStart=/usr/local/bin/argos-cpu-protector.sh monitor
-
-# Restart configuration
 Restart=on-failure
 RestartSec=15
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=argos-cpu-protector
-
-# Security options
 NoNewPrivileges=true
 PrivateTmp=true
 

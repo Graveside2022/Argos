@@ -2,6 +2,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+
 	interface Props {
 		title: string;
 		status?: string;
@@ -14,7 +17,7 @@
 
 <div class="tool-view">
 	<div class="tool-view-header">
-		<button class="btn btn-ghost btn-sm" onclick={onBack}>
+		<Button variant="ghost" size="sm" onclick={onBack}>
 			<svg
 				width="16"
 				height="16"
@@ -28,10 +31,12 @@
 				<polyline points="15 18 9 12 15 6" />
 			</svg>
 			Back
-		</button>
+		</Button>
 		<span class="tool-view-title">{title}</span>
 		{#if status}
-			<span class="badge badge-success">{status}</span>
+			<Badge variant="default" class="bg-green-600/20 text-green-400 border-green-600/30"
+				>{status}</Badge
+			>
 		{/if}
 	</div>
 	<div class="tool-view-content">

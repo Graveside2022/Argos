@@ -34,6 +34,7 @@
 		terminalPanelState,
 		toggleTerminalPanel
 	} from '$lib/stores/dashboard/terminal-store';
+	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { GPSService } from '$lib/tactical-map/gps-service';
 	import { KismetService } from '$lib/tactical-map/kismet-service';
 
@@ -98,13 +99,20 @@
 
 <div class="dashboard-shell">
 	<TopStatusBar />
-	<div class="dashboard-body">
+	<div class="dashboard-body rail-{themeStore.railPosition}">
 		<IconRail />
 		<div class="dashboard-main">
+			<!-- Panel at top position (above content, inside dashboard-main) -->
+			{#if themeStore.railPosition === 'top' && $activeView === 'map'}
+				<PanelContainer />
+			{/if}
+
 			<!-- Main content area -->
-			<div class="dashboard-content">
+			<div class="dashboard-content content-{themeStore.railPosition}">
 				{#if $activeView === 'map'}
-					<PanelContainer />
+					{#if themeStore.railPosition === 'left' || themeStore.railPosition === 'right'}
+						<PanelContainer />
+					{/if}
 					<DashboardMap />
 				{:else if $activeView === 'kismet'}
 					<KismetView />
@@ -249,6 +257,11 @@
 					{/if}
 				</div>
 			</ResizableBottomPanel>
+
+			<!-- Panel at bottom position (below terminal, above bottom rail) -->
+			{#if themeStore.railPosition === 'bottom' && $activeView === 'map'}
+				<PanelContainer />
+			{/if}
 		</div>
 	</div>
 </div>
@@ -271,6 +284,19 @@
 		min-height: 0;
 	}
 
+	/* Panel follows rail position */
+	.dashboard-content.content-right {
+		flex-direction: row-reverse;
+	}
+
+	.dashboard-content.content-top {
+		flex-direction: column;
+	}
+
+	.dashboard-content.content-bottom {
+		flex-direction: column-reverse;
+	}
+
 	.tool-iframe {
 		width: 100%;
 		height: 100%;
@@ -285,7 +311,7 @@
 		justify-content: space-between;
 		height: 32px;
 		min-height: 32px;
-		background: var(--palantir-bg-surface, #16181d);
+		background: var(--palantir-bg-chrome, #0e1116);
 		border-bottom: 1px solid var(--palantir-border-subtle, #1e2228);
 		padding: 0 var(--space-2, 0.5rem);
 	}

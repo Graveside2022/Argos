@@ -10,7 +10,6 @@ export const GET: RequestHandler = async () => {
 	try {
 		const services = [
 			{ name: 'kismet', port: 2501, process: 'kismet' },
-			{ name: 'hackrf-backend', port: 8092, process: 'python.*app.py' },
 			{ name: 'argos-dev', port: 5173, process: 'vite' }
 		];
 

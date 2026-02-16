@@ -4,16 +4,19 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/projects/Argos
+User=kali
+Group=kali
+WorkingDirectory=/home/kali/Documents/Argos/Argos
+EnvironmentFile=/home/kali/Documents/Argos/Argos/.env
+Environment="NODE_ENV=development"
+Environment="NODE_OPTIONS=--max-old-space-size=1024"
+Environment="CI=true"
 ExecStart=/usr/bin/npm run dev
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=argos-dev
-Environment="NODE_ENV=development"
-Environment="PORT=5173"
 
 [Install]
 WantedBy=multi-user.target

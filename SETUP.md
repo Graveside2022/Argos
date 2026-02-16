@@ -4,82 +4,127 @@
 
 ### Required Software
 
-- **Node.js 20.x** (Required for Vite 7.0.3 compatibility)
-- **npm 10.x** (Usually comes with Node.js 20)
-- **Git** (for cloning repository)
+- **Node.js 22.x** (LTS)
+- **npm 10.x** (comes with Node.js)
+- **Git**
 
 ### System Requirements
 
-- Linux-based OS (Ubuntu 20.04+ recommended)
-- 2GB+ RAM (configured for Node.js with `--max-old-space-size=2048`)
-- Network access for hardware integration (HackRF, USRP, Kismet)
+- Raspberry Pi 5 (8GB RAM recommended) or Linux x86_64
+- Kali Linux 2025.4 or Parrot OS 7.1 (Debian-based)
+- NVMe SSD recommended for performance
+- USB 3.0 powered hub for multiple RF devices
 
 ## Quick Start
 
-### 1. Clone and Setup
+### Automated Setup
 
 ```bash
 # Clone the repository
 git clone <your-repo-url>
 cd Argos
 
-# Install dependencies
-npm install
-
-# Copy environment template
-cp .env.example .env
+# Run provisioning script (installs all dependencies)
+sudo bash scripts/ops/setup-host.sh
 
 # Start development server
-npm run dev:simple
+npm run dev
 ```
 
-### 2. Environment Configuration
+The provisioning script handles: Node.js, Kismet, gpsd, Docker (for third-party tools), udev rules, npm dependencies, and `.env` generation.
 
-Edit `.env` file with your specific configuration:
+### Manual Setup
 
 ```bash
-# Database Configuration
+# Install dependencies
+npm ci
+
+# Copy environment template and configure
+cp .env.example .env
+# Edit .env — set ARGOS_API_KEY (min 32 chars) and service passwords
+
+# Start development server
+npm run dev
+```
+
+### Environment Configuration
+
+Edit `.env` with your configuration:
+
+```bash
+# Authentication (REQUIRED — system will not start without this)
+ARGOS_API_KEY=<generate with: openssl rand -hex 32>
+
+# Database
 DATABASE_PATH=./rf_signals.db
 
-# API Endpoints
+# Kismet WiFi Scanner
 KISMET_API_URL=http://localhost:2501
-HACKRF_API_URL=http://localhost:8092
-GSM_EVIL_API_URL=http://localhost:3001
-
-# Environment
-NODE_ENV=development
+KISMET_PASSWORD=<set a strong password>
 ```
 
-### 3. Database Setup
+### Database Setup
 
 ```bash
-# Run database migrations
 npm run db:migrate
 ```
 
-### 4. Access the Application
+### Access the Application
 
-- **Local Development**: http://localhost:5173/
-- **Network Access**: http://[your-ip]:5173/
+- **Development**: http://localhost:5173/
+- **Network**: http://[device-ip]:5173/
+
+## Architecture
+
+### What Runs Where
+
+Argos runs **natively on the host** — no Docker container for the main application. RF tools (Kismet, HackRF, gr-gsm, etc.) also run natively. Docker is only used for third-party tools with complex dependencies:
+
+| Component           | Runs On       | Notes                                        |
+| ------------------- | ------------- | -------------------------------------------- |
+| Argos SvelteKit App | Host (native) | `npm run dev` or systemd service             |
+| Kismet              | Host (native) | WiFi scanning, installed via package manager |
+| HackRF tools        | Host (native) | `hackrf_sweep`, `hackrf_info`, etc.          |
+| gpsd                | Host (native) | GPS daemon                                   |
+| OpenWebRX           | Docker        | SDR web interface, on-demand                 |
+| Bettercap           | Docker        | Network recon, on-demand                     |
+
+### Service URLs
+
+| Service      | Port | Description                  |
+| ------------ | ---- | ---------------------------- |
+| Argos Web UI | 5173 | Main application             |
+| Kismet       | 2501 | WiFi/network scanning        |
+| OpenWebRX    | 8073 | Spectrum viewer (Docker)     |
+| Bettercap    | 8081 | Network recon API (Docker)   |
+| Portainer    | 9443 | Container management (HTTPS) |
+
+### Docker (Third-Party Tools Only)
+
+```bash
+# Start OpenWebRX
+docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d openwebrx
+
+# Start Bettercap
+docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d bettercap
+```
 
 ## Development Commands
 
-### Essential Commands
+### Essential
 
 ```bash
-npm run dev           # Full dev server with hardware auto-start
-npm run dev:simple    # Dev server without hardware auto-start
+npm run dev           # Development server (port 5173)
+npm run dev:clean     # Kill existing processes and start fresh
 npm run build         # Production build
-npm run preview       # Preview production build
 ```
 
 ### Code Quality
 
 ```bash
-npm run lint          # Run ESLint
-npm run lint:fix      # Fix ESLint errors
-npm run typecheck     # TypeScript type checking
-npm run format        # Format with Prettier
+npm run lint          # ESLint check
+npm run lint:fix      # Auto-fix lint errors
+npm run typecheck     # TypeScript validation
 ```
 
 ### Testing
@@ -87,159 +132,102 @@ npm run format        # Format with Prettier
 ```bash
 npm run test          # All tests
 npm run test:unit     # Unit tests only
-npm run test:e2e      # End-to-end tests
-npm run test:coverage # Coverage report
+npm run test:security # Security tests
+npm run test:e2e      # Playwright E2E tests
 ```
 
-### Database Management
+### Database
 
 ```bash
 npm run db:migrate    # Run migrations
 npm run db:rollback   # Rollback migration
 ```
 
-## Architecture
-
-### What Runs Where
-
-Argos runs as a Docker container with `privileged` access and `host` networking. The container holds the SvelteKit web app, Kismet, and basic networking tools. RF tools like `grgsm_livemon_headless`, `aircrack-ng`, and `tcpdump` run on the **host** (the Raspberry Pi itself), not inside the container.
-
-The bridge between container and host is `src/lib/server/hostExec.ts`, which uses `nsenter -t 1 -m` to execute commands on the host filesystem from inside Docker. This is why the Dockerfile does not install GNURadio or gr-gsm — those tools must exist on the host OS.
-
-### Service URLs
-
-| Service        | Port | Description                  |
-| -------------- | ---- | ---------------------------- |
-| Argos Web UI   | 5173 | Main application             |
-| Portainer      | 9443 | Container management (HTTPS) |
-| Kismet         | 2501 | WiFi/network scanning        |
-| HackRF Backend | 8092 | Spectrum analyzer API        |
-| GSM Evil       | 3001 | GSM monitoring API           |
-| OpenWebRX      | 8073 | Spectrum viewer web UI       |
-
-### Docker Compose
-
-Only one compose file matters for deployment: `docker/docker-compose.portainer-dev.yml`. It defines four services: `argos` (main app), `hackrf-backend`, `openwebrx`, and `bettercap`. All other compose files in `docker/` and `config/docker/` are legacy variants kept in `archive/docker-variants/`.
-
-The compose file uses `${ARGOS_DIR}` for volume mounts. This variable is set in `docker/.env`, which `setup-host.sh` generates automatically.
-
-## Hardware Integration
-
-### Supported Hardware
-
-- **HackRF One** - SDR for spectrum analysis
-- **Alfa AWUS036AXML** - WiFi adapter for Kismet scanning
-- **USB GPS dongle** - Location tracking (BU-353S4 or similar)
-- **USRP B205** - Alternative SDR platform (optional)
-
-### Hardware Services
-
-The application integrates with external services running on:
-
-- **Port 2501**: Kismet (WiFi/Network scanning)
-- **Port 8092**: HackRF spectrum analyzer
-- **Port 3001**: GSM Evil (GSM monitoring)
-
-## Troubleshooting
-
-### Common Issues
-
-#### Port 5173 Already in Use
-
-```bash
-npm run kill-dev     # Kill existing dev server
-npm run dev:simple   # Restart
-```
-
-#### Node.js Version Issues
-
-```bash
-node --version       # Should be 20.x
-npm --version        # Should be 10.x
-```
-
-#### Build Failures
-
-```bash
-npm run lint         # Check for linting errors
-npm run typecheck    # Check TypeScript errors
-npm run build        # Verify build works
-```
-
-#### Database Issues
-
-```bash
-# Reset database (WARNING: This deletes all data)
-rm rf_signals.db
-npm run db:migrate
-```
-
 ## Production Deployment
+
+### Systemd Services
+
+```bash
+# Install all services
+sudo bash scripts/ops/install-services.sh
+
+# Start production server
+sudo systemctl start argos-final
+
+# Start Kismet
+sudo systemctl start argos-kismet
+
+# Check status
+sudo systemctl status argos-final
+```
 
 ### Build for Production
 
 ```bash
 npm run build
-npm run preview      # Test production build locally
+node build
 ```
 
 ### Environment Variables
 
-Ensure production `.env` has:
+Production `.env` must have:
 
 - `NODE_ENV=production`
-- Correct API endpoints for your hardware setup
-- Security keys if using authentication
+- `ARGOS_API_KEY` (min 32 chars)
+- All service passwords configured
 
-### SystemD Services
+## Hardware Integration
 
-See `deployment/` directory for SystemD service files for:
+### Supported Hardware
 
-- Main Argos application
-- Hardware service management
-- Process monitoring
+- **HackRF One** — SDR for spectrum analysis
+- **Alfa AWUS036AXML** — WiFi adapter for Kismet
+- **USB GPS dongle** — Location tracking (BU-353S4 or similar)
+- **USRP B205** — Alternative SDR (optional)
+
+**USB 3.0 powered hub REQUIRED** — Pi 5 cannot power HackRF + Alfa + GPS simultaneously.
+
+## Troubleshooting
+
+### Port 5173 Already in Use
+
+```bash
+npm run dev:clean     # Kills existing processes and restarts
+```
+
+### Node.js Version Issues
+
+```bash
+node --version        # Should be 22.x
+```
+
+### Build Failures
+
+```bash
+npm run typecheck     # Check TypeScript errors
+npm run lint          # Check lint errors
+npm run build         # Verify build
+```
+
+### Database Reset
+
+```bash
+rm rf_signals.db
+npm run db:migrate
+```
 
 ## Project Structure
 
 ```
 Argos/
 ├── src/                    # Source code
-│   ├── routes/            # SvelteKit routes
-│   ├── lib/               # Components and utilities
-│   └── app.html          # Main HTML template
+│   ├── routes/            # SvelteKit routes + API
+│   ├── lib/               # Components, stores, server code
+│   └── app.html           # HTML template
 ├── static/                # Static assets
-├── scripts/               # Deployment and utility scripts
+├── scripts/               # Utility and ops scripts
 ├── tests/                 # Test files
-├── config/                # Configuration files
-└── deployment/           # SystemD services
+├── config/                # Vite, ESLint, terminal plugin
+├── deployment/            # Systemd service files
+└── docker/                # Docker (third-party tools only)
 ```
-
-## Development Notes
-
-- Uses **SvelteKit 2.22.3** with **Svelte 5.35.5**
-- **Vite 7.0.3** for fast development
-- **TypeScript 5.8.3** for type safety
-- **Tailwind CSS 3.4.15** for styling
-- **SQLite** database with R-tree spatial indexing
-
-## Getting Help
-
-### Check Status
-
-```bash
-npm run status           # If available
-git status              # Check git state
-npm run typecheck       # Check for errors
-```
-
-### Logs and Debugging
-
-- Development logs: Check browser console
-- Server logs: Check terminal where dev server runs
-- Hardware logs: See `scripts/` directory for diagnostics
-
-### Support
-
-- Check existing issues in the repository
-- Review documentation in `docs/` directory
-- Hardware setup guides in `docs/guides/`

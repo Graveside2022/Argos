@@ -1,19 +1,23 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import { terminalPlugin } from './config/vite-plugin-terminal';
 
 export default defineConfig({
-	plugins: [sveltekit(), terminalPlugin()],
+	plugins: [tailwindcss(), sveltekit(), terminalPlugin()],
 	server: {
 		host: '0.0.0.0',
-		port: 5173
+		port: 5173,
+		watch: {
+			ignored: ['**/*.db', '**/*.db-wal', '**/*.db-shm', '**/*.sqlite']
+		}
 	},
 	optimizeDeps: {
 		include: ['leaflet', 'cytoscape', 'mgrs']
 	},
 	ssr: {
-		noExternal: ['mgrs']
+		noExternal: ['mgrs', 'mode-watcher']
 	},
 	define: {
 		// Helps with Node.js compatibility issues

@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import { access, constants } from 'fs/promises';
 import type { Plugin, ViteDevServer } from 'vite';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -6,22 +7,16 @@ const TERMINAL_PORT = 3001;
 const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message
 const CLEANUP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes before killing orphaned PTY
 const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
+const PORT_RETRY_DELAY_MS = 1000; // Wait after killing stale port holder
+const MAX_PORT_RETRIES = 2;
 
 // Valid shell paths - Four independent tmux sessions (0-3)
 const VALID_SHELLS = [
-	// Tmux profiles (container paths)
-	'/app/scripts/tmux/tmux-0.sh',
-	'/app/scripts/tmux/tmux-1.sh',
-	'/app/scripts/tmux/tmux-2.sh',
-	'/app/scripts/tmux/tmux-3.sh',
-	// Tmux profiles (host paths)
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh',
-	// Keep legacy wrapper for backward compatibility
-	'/app/scripts/tmux-zsh-wrapper.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux-zsh-wrapper.sh'
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-zsh-wrapper.sh'
 ];
 
 /** Persistent PTY session that survives WebSocket disconnections */
@@ -50,6 +45,30 @@ export function terminalPlugin(): Plugin {
 			});
 		}
 	};
+}
+
+/**
+ * Normalize legacy paths cached by clients.
+ * - Docker container paths (/app/...) → native host paths
+ * - Old script locations (scripts/tmux-zsh-wrapper.sh) → new location (scripts/tmux/)
+ */
+function normalizeShellPath(shellPath: string): string {
+	let normalized = shellPath;
+
+	// Docker → native
+	if (normalized.startsWith('/app/')) {
+		normalized = normalized.replace(/^\/app\//, '/home/kali/Documents/Argos/Argos/');
+	}
+
+	// Old tmux-zsh-wrapper.sh location (moved during Phase 3 reorg)
+	if (normalized.endsWith('/scripts/tmux-zsh-wrapper.sh') && !normalized.includes('/tmux/')) {
+		normalized = normalized.replace(
+			'/scripts/tmux-zsh-wrapper.sh',
+			'/scripts/tmux/tmux-zsh-wrapper.sh'
+		);
+	}
+
+	return normalized;
 }
 
 /**
@@ -119,6 +138,71 @@ function detachSession(sessionId: string): void {
 	}, CLEANUP_TIMEOUT_MS);
 }
 
+/**
+ * Kill whatever is holding a port. Returns true if something was killed.
+ */
+function killPortHolder(port: number): boolean {
+	try {
+		const output = execFileSync('lsof', ['-ti', `:${port}`], {
+			encoding: 'utf8',
+			timeout: 3000
+		}).trim();
+		if (!output) return false;
+
+		const pids = output
+			.split('\n')
+			.map((p) => parseInt(p, 10))
+			.filter((p) => p > 0 && p !== process.pid);
+		for (const pid of pids) {
+			try {
+				process.kill(pid, 'SIGKILL');
+				console.warn(`[argos-terminal] Killed stale process ${pid} on port ${port}`);
+			} catch {
+				// Already dead
+			}
+		}
+		return pids.length > 0;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Create WebSocket server with retry on EADDRINUSE.
+ * Kills stale port holders and retries.
+ */
+function createWssWithRetry(port: number, retries = MAX_PORT_RETRIES): Promise<WebSocketServer> {
+	return new Promise((resolve, reject) => {
+		const wss = new WebSocketServer({ port, host: '0.0.0.0' });
+
+		wss.on('listening', () => {
+			console.warn(`[argos-terminal] Shell server listening on port ${port}`);
+			resolve(wss);
+		});
+
+		wss.on('error', (err: Error & { code?: string }) => {
+			if (err.code === 'EADDRINUSE' && retries > 0) {
+				console.warn(
+					`[argos-terminal] Port ${port} in use, killing stale holder and retrying...`
+				);
+				wss.close();
+				killPortHolder(port);
+				setTimeout(() => {
+					createWssWithRetry(port, retries - 1).then(resolve, reject);
+				}, PORT_RETRY_DELAY_MS);
+			} else if (err.code === 'EADDRINUSE') {
+				console.error(
+					`[argos-terminal] Port ${port} still in use after retries — terminal disabled`
+				);
+				wss.close();
+				reject(err);
+			} else {
+				console.error('[argos-terminal] Server error:', err.message);
+			}
+		});
+	});
+}
+
 async function setupTerminal() {
 	let ptyModule: typeof import('node-pty');
 	try {
@@ -129,15 +213,34 @@ async function setupTerminal() {
 		return;
 	}
 
-	const wss = new WebSocketServer({ port: TERMINAL_PORT, host: '0.0.0.0' });
+	let wss: WebSocketServer;
+	try {
+		wss = await createWssWithRetry(TERMINAL_PORT);
+	} catch {
+		// Terminal disabled but Vite continues running
+		return;
+	}
 
-	wss.on('listening', () => {
-		console.warn(`[argos-terminal] Shell server listening on port ${TERMINAL_PORT}`);
-	});
-
-	wss.on('error', (err: Error) => {
-		console.error('[argos-terminal] Server error:', err.message);
-	});
+	// Graceful shutdown: clean up all PTY sessions when Vite exits
+	const cleanup = () => {
+		for (const [id, session] of sessions) {
+			try {
+				session.pty.kill();
+			} catch {
+				/* already dead */
+			}
+			if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
+			sessions.delete(id);
+		}
+		try {
+			wss.close();
+		} catch {
+			/* already closed */
+		}
+	};
+	process.on('exit', cleanup);
+	process.on('SIGTERM', cleanup);
+	process.on('SIGINT', cleanup);
 
 	wss.on('connection', (ws) => {
 		const defaultShell = process.env.SHELL || '/bin/bash';
@@ -188,24 +291,38 @@ async function setupTerminal() {
 		 * Spawn a new PTY process and register the session
 		 */
 		async function spawnPty(requestedShell: string, sessionId: string) {
+			// Normalize legacy paths (Docker /app/..., old script locations)
+			const normalized = normalizeShellPath(requestedShell);
+
 			// Validate and use requested shell, fallback to default
 			let shell = defaultShell;
-			if (await isValidShell(requestedShell)) {
-				shell = requestedShell;
+			if (await isValidShell(normalized)) {
+				shell = normalized;
 			} else {
 				console.warn(
 					`[argos-terminal] Invalid shell requested: ${requestedShell}, using ${defaultShell}`
 				);
 			}
 
-			const ptyProcess = ptyModule.spawn(shell, [], {
-				name: 'xterm-256color',
-				cols: 80,
-				rows: 24,
-				cwd: process.env.HOME || '/home',
-				// Safe: process.env typed as Record<string, string> for child_process spawn
-				env: process.env as Record<string, string>
-			});
+			let ptyProcess: ReturnType<typeof ptyModule.spawn>;
+			try {
+				// Unset TMUX variables to prevent nested session conflicts
+				const env = { ...process.env };
+				delete env['TMUX'];
+				delete env['TMUX_PANE'];
+
+				ptyProcess = ptyModule.spawn(shell, [], {
+					name: 'xterm-256color',
+					cols: 80,
+					rows: 24,
+					cwd: process.env.HOME || '/home',
+					env: env as Record<string, string>
+				});
+			} catch (err) {
+				console.error(`[argos-terminal] Failed to spawn PTY for ${shell}:`, err);
+				sendJson(ws, { type: 'exit' });
+				return;
+			}
 
 			const session: PtySession = {
 				pty: ptyProcess,
@@ -225,23 +342,27 @@ async function setupTerminal() {
 			// Send ready message
 			sendJson(ws, { type: 'ready', shell, sessionId });
 
-			// Forward PTY output to WebSocket or buffer
+			// Forward PTY output to WebSocket or buffer (catch to prevent crashing Vite)
 			ptyProcess.onData((data: string) => {
-				const s = sessions.get(sessionId);
-				if (!s) return;
+				try {
+					const s = sessions.get(sessionId);
+					if (!s) return;
 
-				if (s.ws && s.ws.readyState === WebSocket.OPEN) {
-					s.ws.send(data);
-				} else {
-					// Buffer output while detached
-					s.outputBuffer.push(data);
-					s.bufferSize += data.length;
+					if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+						s.ws.send(data);
+					} else {
+						// Buffer output while detached
+						s.outputBuffer.push(data);
+						s.bufferSize += data.length;
 
-					// Cap buffer size — drop oldest chunks if over limit
-					while (s.bufferSize > MAX_BUFFER_BYTES && s.outputBuffer.length > 1) {
-						const dropped = s.outputBuffer.shift();
-						if (dropped) s.bufferSize -= dropped.length;
+						// Cap buffer size — drop oldest chunks if over limit
+						while (s.bufferSize > MAX_BUFFER_BYTES && s.outputBuffer.length > 1) {
+							const dropped = s.outputBuffer.shift();
+							if (dropped) s.bufferSize -= dropped.length;
+						}
 					}
+				} catch (err) {
+					console.error(`[argos-terminal] onData error for ${sessionId}:`, err);
 				}
 			});
 

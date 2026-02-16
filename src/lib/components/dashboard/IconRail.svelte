@@ -8,6 +8,7 @@
 		togglePanel
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminal-store';
+	import { themeStore } from '$lib/stores/theme-store.svelte';
 
 	const topIcons = [
 		{
@@ -65,7 +66,7 @@
 	}
 </script>
 
-<nav class="icon-rail" aria-label="Dashboard navigation">
+<nav class="icon-rail" data-position={themeStore.railPosition} aria-label="Dashboard navigation">
 	<div class="rail-top">
 		<!-- Overview (home) -->
 		<button
@@ -160,7 +161,7 @@
 		width: var(--icon-rail-width);
 		min-width: var(--icon-rail-width);
 		flex-shrink: 0;
-		background: var(--palantir-bg-surface);
+		background: var(--palantir-bg-chrome);
 		border-right: 1px solid var(--palantir-border-subtle);
 		display: flex;
 		flex-direction: column;
@@ -218,7 +219,7 @@
 		align-items: center;
 		justify-content: center;
 		color: var(--palantir-accent);
-		background-color: rgba(74, 158, 255, 0.12);
+		background-color: color-mix(in srgb, var(--palantir-accent) 12%, transparent);
 	}
 
 	.rail-btn.active::before {
@@ -240,7 +241,91 @@
 		transform: translateY(-50%);
 		width: 1px;
 		height: 24px;
-		background: linear-gradient(to bottom, transparent, rgba(74, 158, 255, 0.5), transparent);
+		background: linear-gradient(
+			to bottom,
+			transparent,
+			color-mix(in srgb, var(--palantir-accent) 50%, transparent),
+			transparent
+		);
 		opacity: 0.6;
+	}
+
+	/* ---- Right position ---- */
+	.icon-rail[data-position='right'] {
+		border-right: none;
+		border-left: 1px solid var(--palantir-border-subtle);
+	}
+
+	.icon-rail[data-position='right'] .rail-btn.active::before {
+		left: auto;
+		right: 0;
+		border-radius: 1px 0 0 1px;
+	}
+
+	.icon-rail[data-position='right'] .rail-btn.active::after {
+		right: auto;
+		left: 0;
+	}
+
+	/* ---- Top position ---- */
+	.icon-rail[data-position='top'] {
+		flex-direction: row;
+		width: 100%;
+		min-width: unset;
+		height: var(--icon-rail-width);
+		min-height: var(--icon-rail-width);
+		border-right: none;
+		border-bottom: 1px solid var(--palantir-border-subtle);
+		padding: 0 var(--space-2);
+	}
+
+	.icon-rail[data-position='top'] .rail-top,
+	.icon-rail[data-position='top'] .rail-bottom {
+		flex-direction: row;
+	}
+
+	.icon-rail[data-position='top'] .rail-btn.active::before {
+		left: 0;
+		right: 0;
+		top: auto;
+		bottom: 0;
+		width: auto;
+		height: 3px;
+		border-radius: 1px 1px 0 0;
+	}
+
+	.icon-rail[data-position='top'] .rail-btn.active::after {
+		display: none;
+	}
+
+	/* ---- Bottom position ---- */
+	.icon-rail[data-position='bottom'] {
+		flex-direction: row;
+		width: 100%;
+		min-width: unset;
+		height: var(--icon-rail-width);
+		min-height: var(--icon-rail-width);
+		border-right: none;
+		border-top: 1px solid var(--palantir-border-subtle);
+		padding: 0 var(--space-2);
+	}
+
+	.icon-rail[data-position='bottom'] .rail-top,
+	.icon-rail[data-position='bottom'] .rail-bottom {
+		flex-direction: row;
+	}
+
+	.icon-rail[data-position='bottom'] .rail-btn.active::before {
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: auto;
+		width: auto;
+		height: 3px;
+		border-radius: 0 0 1px 1px;
+	}
+
+	.icon-rail[data-position='bottom'] .rail-btn.active::after {
+		display: none;
 	}
 </style>

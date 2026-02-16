@@ -44,7 +44,7 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
 
 		// Add priority hint if supported
 		if (options.priority && 'fetchPriority' in link) {
-		// Safe: HTMLLinkElement extended with optional fetchPriority property for resource loading priority hints
+			// Safe: HTMLLinkElement extended with optional fetchPriority property for resource loading priority hints
 			(link as HTMLLinkElement & { fetchPriority?: 'high' | 'low' }).fetchPriority =
 				options.priority;
 		}
@@ -73,10 +73,10 @@ export function isCriticalCSSLoaded(): boolean {
 	testElement.style.display = 'none';
 	document.body.appendChild(testElement);
 
-	const bgPrimary = getComputedStyle(testElement).getPropertyValue('--bg-primary');
+	const background = getComputedStyle(testElement).getPropertyValue('--background');
 	document.body.removeChild(testElement);
 
-	return bgPrimary.trim() === '#0a0a0a';
+	return background.trim().length > 0;
 }
 
 /**

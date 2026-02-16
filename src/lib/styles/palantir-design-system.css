@@ -1,55 +1,62 @@
 /* ============================================================
    PALANTIR DESIGN SYSTEM
    Enterprise-grade military dashboard aesthetic
+   
+   Colors are bridged to shadcn CSS variables so the entire
+   dashboard responds to palette/mode changes from the theme
+   store. Fallback hex values preserve appearance if shadcn
+   vars are not yet loaded.
    ============================================================ */
 
-/* ---- Color Palette ---- */
+/* ---- Color Palette (bridged to shadcn theme) ---- */
 :root {
-	/* Backgrounds - dark hierarchy */
-	--palantir-bg-app: #0e1116;
-	--palantir-bg-surface: #16181d;
-	--palantir-bg-panel: #1c1f26;
-	--palantir-bg-elevated: #25282f;
-	--palantir-bg-input: #1a1d23;
-	--palantir-bg-hover: #2a2d35;
-	--palantir-bg-button: #2a2d35;
+	/* Backgrounds — mapped to shadcn surface hierarchy
+	   3-tier depth: chrome (darkest) → surface/panel (mid) → elevated (lightest) */
+	--palantir-bg-app: var(--background, #0e1116);
+	--palantir-bg-chrome: var(--background, #0e1116);
+	--palantir-bg-surface: var(--card, #16181d);
+	--palantir-bg-panel: var(--card, #1c1f26);
+	--palantir-bg-elevated: var(--accent, #25282f);
+	--palantir-bg-input: var(--input, #1a1d23);
+	--palantir-bg-hover: var(--accent, #2a2d35);
+	--palantir-bg-button: var(--secondary, #2a2d35);
 
-	/* Borders */
-	--palantir-border-subtle: rgba(255, 255, 255, 0.06);
-	--palantir-border-default: rgba(255, 255, 255, 0.1);
-	--palantir-border-strong: rgba(255, 255, 255, 0.15);
+	/* Borders — mapped to shadcn border */
+	--palantir-border-subtle: var(--border, rgba(255, 255, 255, 0.06));
+	--palantir-border-default: var(--border, rgba(255, 255, 255, 0.1));
+	--palantir-border-strong: var(--border, rgba(255, 255, 255, 0.15));
 
-	/* Text */
-	--palantir-text-primary: #e8eaed;
-	--palantir-text-secondary: #9aa0a6;
-	--palantir-text-tertiary: #5f6368;
-	--palantir-text-on-accent: #ffffff;
+	/* Text — mapped to shadcn foreground hierarchy */
+	--palantir-text-primary: var(--foreground, #e8eaed);
+	--palantir-text-secondary: var(--muted-foreground, #9aa0a6);
+	--palantir-text-tertiary: var(--muted-foreground, #5f6368);
+	--palantir-text-on-accent: var(--primary-foreground, #ffffff);
 
-	/* Accent */
-	--palantir-accent: #4a9eff;
-	--palantir-accent-hover: #3a8eef;
-	--palantir-accent-muted: rgba(74, 158, 255, 0.15);
+	/* Accent — mapped to shadcn primary */
+	--palantir-accent: var(--primary, #4a9eff);
+	--palantir-accent-hover: var(--ring, #3a8eef);
+	--palantir-accent-muted: color-mix(in srgb, var(--primary, #4a9eff) 15%, transparent);
 
-	/* Status */
-	--palantir-success: #4ade80;
-	--palantir-warning: #fbbf24;
-	--palantir-error: #f87171;
-	--palantir-info: #60a5fa;
+	/* Status — mapped to shadcn semantic tokens */
+	--palantir-success: var(--success, #4ade80);
+	--palantir-warning: var(--warning, #fbbf24);
+	--palantir-error: var(--destructive, #f87171);
+	--palantir-info: var(--info, #60a5fa);
 
-	/* Signal strength scale */
-	--palantir-signal-critical: #dc2626;
-	--palantir-signal-strong: #f97316;
-	--palantir-signal-good: #fbbf24;
-	--palantir-signal-fair: #10b981;
-	--palantir-signal-weak: #4a90e2;
+	/* Signal strength scale — mapped to shadcn signal tokens */
+	--palantir-signal-critical: var(--signal-critical, #dc2626);
+	--palantir-signal-strong: var(--signal-strong, #f97316);
+	--palantir-signal-good: var(--signal-good, #fbbf24);
+	--palantir-signal-fair: var(--signal-fair, #10b981);
+	--palantir-signal-weak: var(--signal-weak, #4a90e2);
 
-	/* Chart / data viz */
-	--palantir-chart-1: #4a9eff;
-	--palantir-chart-2: #10b981;
-	--palantir-chart-3: #f97316;
-	--palantir-chart-4: #a78bfa;
-	--palantir-chart-5: #f87171;
-	--palantir-chart-6: #fbbf24;
+	/* Chart / data viz — mapped to shadcn chart tokens */
+	--palantir-chart-1: var(--chart-1, #4a9eff);
+	--palantir-chart-2: var(--chart-2, #10b981);
+	--palantir-chart-3: var(--chart-3, #f97316);
+	--palantir-chart-4: var(--chart-4, #a78bfa);
+	--palantir-chart-5: var(--chart-5, #f87171);
+	--palantir-chart-6: var(--chart-6, #fbbf24);
 
 	/* Spacing scale (8px grid) */
 	--space-1: 0.25rem; /* 4px */
@@ -89,205 +96,9 @@
 	--radius-xl: 12px;
 
 	/* Feature category colors (for mission cards) */
-	--feature-rf: #f97316; /* RF/Hardware features (orange) */
-	--feature-drone: #06b6d4; /* Drone/Aviation features (cyan) */
-	--feature-radio: #a855f7; /* Radio/SDR features (purple) */
-}
-
-/* ---- Section Header ---- */
-.section-header {
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-semibold);
-	letter-spacing: var(--letter-spacing-widest);
-	text-transform: uppercase;
-	color: var(--palantir-text-secondary);
-	padding-bottom: var(--space-2);
-	border-bottom: 1px solid var(--palantir-border-subtle);
-	margin-bottom: var(--space-4);
-}
-
-/* ---- Metric Display ---- */
-.metric-value {
-	font-size: var(--text-2xl);
-	font-weight: var(--font-weight-bold);
-	color: var(--palantir-text-primary);
-	letter-spacing: var(--letter-spacing-tight);
-	font-variant-numeric: tabular-nums;
-}
-
-.metric-label {
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-medium);
-	letter-spacing: var(--letter-spacing-wider);
-	text-transform: uppercase;
-	color: var(--palantir-text-tertiary);
-}
-
-/* ---- Badges ---- */
-.badge {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-1);
-	padding: 2px var(--space-2);
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-medium);
-	letter-spacing: var(--letter-spacing-wide);
-	border-radius: var(--radius-sm);
-	text-transform: uppercase;
-}
-
-.badge-success {
-	background: rgba(74, 222, 128, 0.12);
-	color: var(--palantir-success);
-	border: 1px solid rgba(74, 222, 128, 0.2);
-}
-
-.badge-warning {
-	background: rgba(251, 191, 36, 0.12);
-	color: var(--palantir-warning);
-	border: 1px solid rgba(251, 191, 36, 0.2);
-}
-
-.badge-error {
-	background: rgba(248, 113, 113, 0.12);
-	color: var(--palantir-error);
-	border: 1px solid rgba(248, 113, 113, 0.2);
-}
-
-.badge-info {
-	background: rgba(74, 158, 255, 0.12);
-	color: var(--palantir-accent);
-	border: 1px solid rgba(74, 158, 255, 0.2);
-}
-
-.badge-neutral {
-	background: rgba(255, 255, 255, 0.06);
-	color: var(--palantir-text-secondary);
-	border: 1px solid var(--palantir-border-default);
-}
-
-/* ---- Data Table ---- */
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: var(--text-sm);
-}
-
-.data-table thead th {
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-semibold);
-	letter-spacing: var(--letter-spacing-wider);
-	text-transform: uppercase;
-	color: var(--palantir-text-tertiary);
-	text-align: left;
-	padding: var(--space-2) var(--space-3);
-	border-bottom: 1px solid var(--palantir-border-default);
-	background: var(--palantir-bg-surface);
-}
-
-.data-table tbody td {
-	padding: var(--space-2) var(--space-3);
-	border-bottom: 1px solid var(--palantir-border-subtle);
-	color: var(--palantir-text-primary);
-	font-variant-numeric: tabular-nums;
-}
-
-.data-table tbody tr:hover {
-	background: var(--palantir-bg-hover);
-}
-
-/* ---- Buttons ---- */
-.btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-2);
-	padding: var(--space-2) var(--space-4);
-	font-size: var(--text-sm);
-	font-weight: var(--font-weight-medium);
-	letter-spacing: var(--letter-spacing-wide);
-	border-radius: var(--radius-md);
-	border: 1px solid transparent;
-	cursor: pointer;
-	transition: all 0.15s ease;
-	text-transform: none;
-}
-
-.btn-primary {
-	background: var(--palantir-accent);
-	color: var(--palantir-text-on-accent);
-	border-color: var(--palantir-accent);
-}
-.btn-primary:hover {
-	background: var(--palantir-accent-hover);
-	border-color: var(--palantir-accent-hover);
-}
-
-.btn-secondary {
-	background: var(--palantir-bg-elevated);
-	color: var(--palantir-text-primary);
-	border-color: var(--palantir-border-default);
-}
-.btn-secondary:hover {
-	background: var(--palantir-bg-hover);
-	border-color: var(--palantir-border-strong);
-}
-
-.btn-ghost {
-	background: transparent;
-	color: var(--palantir-text-secondary);
-	border-color: transparent;
-}
-.btn-ghost:hover {
-	background: var(--palantir-bg-hover);
-	color: var(--palantir-text-primary);
-}
-
-.btn-open {
-	background: transparent;
-	color: var(--palantir-accent);
-	border-color: transparent;
-}
-.btn-open:hover {
-	background: var(--palantir-accent-muted);
-}
-
-.btn-start {
-	background: transparent;
-	color: var(--palantir-success);
-	border-color: transparent;
-}
-.btn-start:hover {
-	background: rgba(74, 222, 128, 0.12);
-}
-.btn-start:disabled {
-	color: var(--palantir-text-tertiary);
-	background: transparent;
-}
-
-.btn-danger {
-	background: transparent;
-	color: var(--palantir-error);
-	border-color: transparent;
-}
-.btn-danger:hover {
-	background: rgba(248, 113, 113, 0.12);
-}
-
-.btn-sm {
-	padding: var(--space-1) var(--space-3);
-	font-size: var(--text-xs);
-}
-
-.btn-lg {
-	padding: var(--space-3) var(--space-6);
-	font-size: var(--text-base);
-}
-
-.btn-full {
-	width: 100%;
-	justify-content: center;
-	margin-bottom: var(--space-2);
+	--feature-rf: var(--feature-rf, #f97316);
+	--feature-drone: var(--feature-drone, #06b6d4);
+	--feature-radio: var(--feature-radio, #a855f7);
 }
 
 /* ---- Map Popup ---- */
@@ -363,21 +174,6 @@
 	box-shadow: 0 0 6px rgba(74, 144, 226, 0.4);
 }
 
-/* ---- Panel ---- */
-.palantir-panel {
-	background: var(--palantir-bg-panel);
-	border: 1px solid var(--palantir-border-default);
-	border-radius: var(--radius-lg);
-	padding: var(--space-4);
-}
-
-.palantir-panel-elevated {
-	background: var(--palantir-bg-elevated);
-	border: 1px solid var(--palantir-border-strong);
-	border-radius: var(--radius-lg);
-	padding: var(--space-4);
-}
-
 /* ---- Status dot ---- */
 .status-dot {
 	width: 8px;
@@ -409,10 +205,7 @@
 	box-shadow: 0 0 20px rgba(74, 158, 255, 0.25);
 }
 
-/* ---- Utility Classes (for Tailwind replacement) ---- */
-.bg-panel {
-	background: var(--palantir-bg-panel);
-}
+/* ---- Utility Classes ---- */
 .bg-surface {
 	background: var(--palantir-bg-surface);
 }
@@ -423,12 +216,6 @@
 	background: var(--palantir-bg-app);
 }
 
-.text-primary {
-	color: var(--palantir-text-primary);
-}
-.text-secondary {
-	color: var(--palantir-text-secondary);
-}
 .text-tertiary {
 	color: var(--palantir-text-tertiary);
 }
@@ -436,9 +223,6 @@
 	color: var(--palantir-signal-strong);
 }
 
-.border-default {
-	border-color: var(--palantir-border-default);
-}
 .border-subtle {
 	border-color: var(--palantir-border-subtle);
 }
@@ -521,65 +305,4 @@
 	flex: 1;
 	overflow-y: auto;
 	min-height: 200px;
-}
-
-/* ---- Sidebar Data Table Variant ---- */
-.data-table-compact {
-	font-size: var(--text-xs);
-	table-layout: fixed;
-	width: 100%;
-}
-
-.data-table-compact thead th {
-	padding: var(--space-1) var(--space-2);
-}
-
-.data-table-compact tbody td {
-	padding: var(--space-1) var(--space-2);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.data-table-compact tbody tr {
-	cursor: pointer;
-}
-
-.data-table-compact tbody tr:hover {
-	background: var(--palantir-bg-hover);
-	border-left: 2px solid var(--palantir-accent);
-}
-
-.data-table-compact tbody tr.selected {
-	background: rgba(74, 158, 255, 0.12);
-	border-left: 3px solid var(--palantir-accent);
-}
-
-/* ---- Form Input Controls ---- */
-.input-field {
-	width: 100%;
-	padding: var(--space-2) var(--space-3);
-	font-size: var(--text-sm);
-	font-family: monospace;
-	background: var(--palantir-bg-input);
-	color: var(--palantir-text-primary);
-	border: 1px solid var(--palantir-border-default);
-	border-radius: var(--radius-md);
-	outline: none;
-}
-
-.input-field:focus {
-	border-color: var(--palantir-accent);
-	box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
-}
-
-.input-field:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-	background: var(--palantir-bg-surface);
-}
-
-.input-field-sm {
-	padding: var(--space-1) var(--space-2);
-	font-size: var(--text-xs);
 }

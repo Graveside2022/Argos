@@ -8,6 +8,7 @@ import {
 	setUserMarker
 } from '$lib/stores/tactical-map/map-store';
 import type { LeafletCircle, LeafletMap, LeafletMarker } from '$lib/types/map';
+import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LeafletLibrary = any;
@@ -108,11 +109,11 @@ export class MapService {
 	): Promise<LeafletCircle | null> {
 		if (!this.L || accuracy <= 0) return null;
 
-		// @constitutional-exemption Article-II-2.7 issue:#999 — Leaflet map API requires hex colors, Tailwind theme not applicable
+		const circleColor = resolveThemeColor('--primary', '#3b82f6');
 		const circle = this.L.circle([position.lat, position.lon], {
 			radius: accuracy,
-			color: '#3b82f6',
-			fillColor: '#3b82f6',
+			color: circleColor,
+			fillColor: circleColor,
 			fillOpacity: 0.15,
 			weight: 1
 		});

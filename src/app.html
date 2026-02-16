@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
@@ -9,179 +9,26 @@
 		/>
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<!-- Critical CSS - Inlined to prevent FOUC -->
+		<!-- Theme FOUC prevention — runs synchronously before first paint -->
+		<script>
+			try {
+				var t = JSON.parse(localStorage.getItem('argos-theme') || '{}');
+				if (t.palette && t.palette !== 'default')
+					document.documentElement.dataset.palette = t.palette;
+			} catch (e) {
+				/* dark class already set on <html> */
+			}
+		</script>
+		<!-- Critical CSS - FOUC prevention only -->
 		<style>
-			/* CRITICAL CSS - Prevents white outlines on initial load */
-			:root {
-				--bg-primary: #0e1116;
-				--bg-secondary: #16181d;
-				--bg-card: #1c1f26;
-				--bg-input: #1a1d23;
-				--bg-hover: #2a2d35;
-				--bg-button: #2a2d35;
-				--text-primary: #e8eaed;
-				--text-secondary: #9aa0a6;
-				--text-muted: #5f6368;
-				--border-primary: 44 47 54;
-				--border-hover: 74 158 255;
-				--accent-primary: #4a9eff;
-				--neon-cyan: #4a9eff;
-				--font-heading:
-					'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-					'Helvetica Neue', Arial, sans-serif;
-				--font-body:
-					'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-					'Helvetica Neue', Arial, sans-serif;
-				--font-mono:
-					'JetBrains Mono', 'Fira Code', ui-monospace, 'SF Mono', 'Monaco',
-					'Cascadia Code', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
-			}
-
-			* {
-				margin: 0;
-				padding: 0;
-				box-sizing: border-box;
-			}
-
-			html {
-				font-family: var(--font-body);
-				-webkit-font-smoothing: antialiased;
-				-moz-osx-font-smoothing: grayscale;
-			}
-
 			body {
-				font-family: var(--font-body);
-				color: var(--text-primary);
-				background-color: var(--bg-primary);
-				line-height: 1.5;
-			}
-
-			/* Prevent white flashes on initial load - Enhanced contrast for better visibility */
-			.saasfly-feature-card,
-			.saasfly-dashboard-card {
-				background: linear-gradient(
-					to bottom right,
-					color-mix(in srgb, var(--bg-card) 95%, transparent),
-					color-mix(in srgb, var(--bg-card) 85%, transparent),
-					color-mix(in srgb, var(--bg-card) 75%, transparent)
-				);
-				border: 1px solid rgb(var(--border-primary) / 0.8);
-				border-radius: 1rem;
-				backdrop-filter: blur(24px);
-				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-			}
-
-			button {
-				font-family: var(--font-heading);
-				background: var(--bg-button);
-				color: var(--text-primary);
-				border: 1px solid rgb(var(--border-primary));
-				border-radius: 0.5rem;
-				cursor: pointer;
-				transition: all 0.2s ease;
-			}
-
-			input,
-			select,
-			textarea {
-				font-family: var(--font-mono);
-				background: var(--bg-input);
-				color: var(--text-primary);
-				border: 1px solid rgb(var(--border-primary) / 0.6);
-				border-radius: 0.5rem;
-				padding: 0.75rem 1rem;
-			}
-
-			.glass-panel {
-				background: rgba(28, 31, 38, 0.95);
-				backdrop-filter: blur(10px);
-				border: 1px solid rgb(var(--border-primary) / 0.8);
-				border-radius: 0.75rem;
-				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-			}
-
-			.glass-button {
-				background: var(--bg-button);
-				border: 1px solid rgb(var(--border-primary));
-				color: var(--text-primary);
-				border-radius: 0.5rem;
-			}
-
-			/* Status panel and card variants - Enhanced visibility */
-			.status-panel {
-				background: rgba(28, 31, 38, 0.92);
-				border: 1px solid rgb(var(--border-primary) / 0.8);
-				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-			}
-
-			.saasfly-info-card,
-			.saasfly-metric-card,
-			.saasfly-status-card,
-			.saasfly-interactive-card {
-				background: rgba(28, 31, 38, 0.85) !important;
-				border: 1px solid rgb(var(--border-primary) / 0.7) !important;
-				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
-			}
-
-			/* Header and Footer - Fix white border lines */
-			header {
-				background-color: var(--bg-primary) !important;
-				border-bottom: 1px solid rgb(var(--border-primary) / 0.8) !important;
-				backdrop-filter: blur(32px);
-			}
-
-			footer {
-				border-top: 1px solid rgb(var(--border-primary) / 0.8) !important;
-			}
-
-			/* Override Tailwind defaults immediately */
-			.text-white {
-				color: var(--text-primary) !important;
-			}
-			.text-gray-300,
-			.text-gray-400 {
-				color: var(--text-secondary) !important;
-			}
-			.text-gray-500,
-			.text-gray-600 {
-				color: var(--text-muted) !important;
-			}
-			.bg-black,
-			.bg-gray-900 {
-				background-color: var(--bg-primary) !important;
-			}
-			.bg-gray-800 {
-				background-color: var(--bg-card) !important;
-			}
-			.border-gray-300,
-			.border-gray-400,
-			.border-gray-500 {
-				border-color: rgb(var(--border-primary)) !important;
-			}
-
-			/* Font loading state classes */
-			.fonts-offline,
-			.fonts-failed {
-				/* Enhanced system fonts when external fonts unavailable */
-			}
-
-			.fonts-loaded {
-				/* External fonts loaded successfully */
-			}
-
-			/* Fallback font stack for offline mode */
-			code,
-			pre {
-				font-family: var(--font-mono);
-			}
-
-			/* Loading state to prevent flash */
-			.page-loading {
-				opacity: 0;
-				transition: opacity 0.3s ease;
-			}
-			.css-loaded .page-loading {
-				opacity: 1;
+				background-color: #0e1116;
+				color: #e8eaed;
+				font-family:
+					'Inter',
+					system-ui,
+					-apple-system,
+					sans-serif;
 			}
 		</style>
 
