@@ -44,10 +44,10 @@
 		if (!terminal) return;
 		terminal.options.theme = {
 			...terminal.options.theme,
-			background: resolveThemeColor('--background', '#0e1116'),
+			background: '#0a0a0a',
 			foreground: resolveThemeColor('--foreground', '#e8eaed'),
 			cursor: resolveThemeColor('--primary', '#4a9eff'),
-			cursorAccent: resolveThemeColor('--background', '#0e1116'),
+			cursorAccent: '#0a0a0a',
 			selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)')
 		};
 	});
@@ -75,11 +75,11 @@
 			lineHeight: 1.2,
 			scrollback: 10000,
 			theme: {
-				// UI chrome — resolved from theme CSS variables
-				background: resolveThemeColor('--background', '#0e1116'),
+				// UI chrome — near-black neutral to match dashboard aesthetic
+				background: '#0a0a0a',
 				foreground: resolveThemeColor('--foreground', '#e8eaed'),
 				cursor: resolveThemeColor('--primary', '#4a9eff'),
-				cursorAccent: resolveThemeColor('--background', '#0e1116'),
+				cursorAccent: '#0a0a0a',
 				selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
 				selectionForeground: '#ffffff',
 				// 16 ANSI standard colors — FIXED (terminal color standards for CLI output)
