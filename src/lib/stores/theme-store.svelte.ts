@@ -1,7 +1,7 @@
 /**
- * Theme Store — Manages palette, mode, and layout state
+ * Theme Store — Manages palette and layout state (dark mode only)
  * Persists to localStorage under 'argos-theme' key
- * DOM attributes managed: data-palette on <html>, dark class
+ * DOM attributes managed: data-palette on <html>, dark class (always applied)
  */
 
 import { browser } from '$app/environment';
@@ -16,13 +16,10 @@ export type ThemePalette =
 	| 'violet'
 	| 'yellow';
 
-export type ThemeMode = 'dark' | 'light';
-
 export type RailPosition = 'left' | 'right' | 'top' | 'bottom';
 
 export interface ThemeState {
 	palette: ThemePalette;
-	mode: ThemeMode;
 	railPosition: RailPosition;
 }
 
@@ -30,7 +27,6 @@ const STORAGE_KEY = 'argos-theme';
 
 const DEFAULT_STATE: ThemeState = {
 	palette: 'default',
-	mode: 'dark',
 	railPosition: 'left'
 };
 
@@ -59,7 +55,6 @@ function loadState(): ThemeState {
 			palette: VALID_PALETTES.includes(parsed.palette)
 				? parsed.palette
 				: DEFAULT_STATE.palette,
-			mode: parsed.mode === 'light' ? 'light' : 'dark',
 			railPosition: VALID_RAIL_POSITIONS.includes(parsed.railPosition)
 				? parsed.railPosition
 				: DEFAULT_STATE.railPosition
@@ -90,32 +85,23 @@ function applyPalette(palette: ThemePalette): void {
 	}
 }
 
-function applyMode(mode: ThemeMode): void {
+function applyDarkMode(): void {
 	if (!browser) return;
-	const el = document.documentElement;
-
-	if (mode === 'dark') {
-		el.classList.add('dark');
-	} else {
-		el.classList.remove('dark');
-	}
+	document.documentElement.classList.add('dark');
 }
 
 function createThemeStore() {
 	let state = $state<ThemeState>(loadState());
 
-	// Apply initial DOM state
+	// Apply initial DOM state — always dark mode
 	if (browser) {
 		applyPalette(state.palette);
-		applyMode(state.mode);
+		applyDarkMode();
 	}
 
 	return {
 		get palette() {
 			return state.palette;
-		},
-		get mode() {
-			return state.mode;
 		},
 		get railPosition() {
 			return state.railPosition;
@@ -125,13 +111,6 @@ function createThemeStore() {
 			if (!VALID_PALETTES.includes(palette)) return;
 			state.palette = palette;
 			applyPalette(palette);
-			saveState(state);
-		},
-
-		setMode(mode: ThemeMode) {
-			if (mode !== 'dark' && mode !== 'light') return;
-			state.mode = mode;
-			applyMode(mode);
 			saveState(state);
 		},
 

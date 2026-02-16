@@ -1,6 +1,6 @@
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { hostExec, isDockerContainer } from '$lib/server/host-exec';
+import { hostExec } from '$lib/server/host-exec';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { sanitizeGainForShell, validateGain } from '$lib/validators/gsm';
@@ -64,12 +64,6 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 		// PHASE 0: Prerequisite Checks
 		// ============================================
 		yield sendUpdate('[SCAN] Running prerequisite checks...');
-
-		// Detect if running in Docker — RF tools live on the host
-		const inDocker = await isDockerContainer();
-		if (inDocker) {
-			yield sendUpdate('[SCAN] Running in Docker — using nsenter to access host RF tools');
-		}
 
 		// Check grgsm_livemon_headless is installed
 		try {

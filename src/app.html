@@ -15,9 +15,8 @@
 				var t = JSON.parse(localStorage.getItem('argos-theme') || '{}');
 				if (t.palette && t.palette !== 'default')
 					document.documentElement.dataset.palette = t.palette;
-				if (t.mode !== 'light') document.documentElement.classList.add('dark');
 			} catch (e) {
-				document.documentElement.classList.add('dark');
+				/* dark class already set on <html> */
 			}
 		</script>
 		<!-- Critical CSS - FOUC prevention only -->

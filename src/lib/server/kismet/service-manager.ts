@@ -8,9 +8,10 @@ const execAsync = promisify(exec);
 
 export class KismetServiceManager {
 	private static readonly SERVICE_NAME = 'kismet';
-	private static readonly START_SCRIPT = '/home/pi/Scripts/start_kismet.sh';
-	private static readonly PID_FILE = '/home/pi/tmp/kismet.pid';
-	private static readonly LOG_FILE = '/home/pi/tmp/kismet.log';
+	private static readonly START_SCRIPT =
+		'/home/kali/Documents/Argos/Argos/scripts/start_kismet.sh';
+	private static readonly PID_FILE = '/tmp/argos-kismet.pid';
+	private static readonly LOG_FILE = '/tmp/argos-kismet.log';
 
 	/**
 	 * Get the current status of the Kismet service

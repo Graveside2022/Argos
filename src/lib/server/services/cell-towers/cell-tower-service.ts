@@ -49,7 +49,7 @@ async function queryLocalDatabase(
 ): Promise<CellTowerResult | null> {
 	const dbPaths = [
 		path.join(process.cwd(), 'data', 'celltowers', 'towers.db'),
-		'/home/ubuntu/projects/Argos/data/celltowers/towers.db',
+		'/home/kali/Documents/Argos/Argos/data/celltowers/towers.db',
 		'/home/kali/Documents/Argos/Argos/data/celltowers/towers.db'
 	];
 

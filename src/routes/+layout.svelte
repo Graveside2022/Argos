@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 
-	import { ModeWatcher } from 'mode-watcher';
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 
@@ -18,8 +17,6 @@
 		markCSSLoaded();
 	});
 </script>
-
-<ModeWatcher />
 
 <div class="page-loading">
 	{@render children()}

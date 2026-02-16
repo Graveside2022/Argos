@@ -4,7 +4,7 @@ Before=gsmevil.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/ubuntu/projects/Argos/scripts/patch-gsmevil-socketio.sh
+ExecStart=/home/kali/Documents/Argos/Argos/scripts/patch-gsmevil-socketio.sh
 RemainAfterExit=yes
 
 [Install]

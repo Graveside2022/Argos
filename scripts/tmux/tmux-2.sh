@@ -5,14 +5,8 @@
 
 TMUX_SESSION="tmux-2"
 
-# Start in appropriate directory
-if [ -d "/app" ]; then
-	# Inside Docker container
-	cd /app || exit 1
-else
-	# On host - go to project root
-	cd /home/kali/Documents/Argos/Argos || exit 1
-fi
+# Start in project directory
+cd /home/kali/Documents/Argos/Argos || exit 1
 
 # Set terminal to support 256 colors and UTF-8
 export TERM=xterm-256color
@@ -24,10 +18,8 @@ export LC_ALL=en_US.UTF-8
 # -s: Session name
 # -2: Force 256 color support
 # -u: Force UTF-8 support
-# Resolve tmux config path (works in container and host)
-if [ -f "/app/scripts/tmux/tmux.conf" ]; then
-	TMUX_CONF="/app/scripts/tmux/tmux.conf"
-elif [ -f "$(dirname "$0")/tmux.conf" ]; then
+# Resolve tmux config path
+if [ -f "$(dirname "$0")/tmux.conf" ]; then
 	TMUX_CONF="$(dirname "$0")/tmux.conf"
 fi
 

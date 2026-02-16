@@ -10,16 +10,12 @@ import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
 
 import type { RequestHandler } from './$types';
 
-// Four independent tmux profiles (container paths for Docker, host paths as fallback)
+// Four independent tmux profiles
 const SHELL_PATHS = [
-	'/app/scripts/tmux/tmux-0.sh', // Tmux 0 (default) (container path)
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh', // Tmux 0 (default) (host path)
-	'/app/scripts/tmux/tmux-1.sh', // Tmux 1 (container path)
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh', // Tmux 1 (host path)
-	'/app/scripts/tmux/tmux-2.sh', // Tmux 2 (container path)
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh', // Tmux 2 (host path)
-	'/app/scripts/tmux/tmux-3.sh', // Tmux 3 (container path)
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh' // Tmux 3 (host path)
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
+	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh'
 ];
 
 /**
