@@ -879,6 +879,7 @@ that would be affected by the migration?
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
 <final_structure>
+
 <![CDATA[
 src/
 app.css ← CSS-first Tailwind v4 config
@@ -911,6 +912,7 @@ docker/
 .nvmrc ← Updated to 20+
 .node-version ← Updated to 20+
 ]]>
+
 </final_structure>
 
 </argos_shadcn_migration>

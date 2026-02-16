@@ -2,15 +2,28 @@
 <script lang="ts">
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
-	import type { ThemePalette } from '$lib/stores/theme-store.svelte';
+	import type { RailPosition, ThemePalette } from '$lib/stores/theme-store.svelte';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { palettes } from '$lib/themes/palettes';
 
 	const paletteOptions = palettes.map((p) => ({ value: p.label, label: p.name }));
 
+	const railOptions = [
+		{ value: 'left', label: 'Left' },
+		{ value: 'right', label: 'Right' },
+		{ value: 'top', label: 'Top' },
+		{ value: 'bottom', label: 'Bottom' }
+	];
+
 	function handlePaletteChange(value: string | undefined) {
 		if (value) {
 			themeStore.setPalette(value as ThemePalette);
+		}
+	}
+
+	function handleRailChange(value: string | undefined) {
+		if (value) {
+			themeStore.setRailPosition(value as RailPosition);
 		}
 	}
 </script>
@@ -52,6 +65,25 @@
 				checked={themeStore.mode === 'dark'}
 				onCheckedChange={(checked) => themeStore.setMode(checked ? 'dark' : 'light')}
 			/>
+		</div>
+
+		<!-- Navigation Rail Position -->
+		<div class="setting-row">
+			<span class="setting-label">Navigation Rail</span>
+			<Select.Root
+				type="single"
+				value={themeStore.railPosition}
+				onValueChange={handleRailChange}
+			>
+				<Select.Trigger class="w-[140px] h-8 text-xs">
+					{railOptions.find((r) => r.value === themeStore.railPosition)?.label ?? 'Left'}
+				</Select.Trigger>
+				<Select.Content>
+					{#each railOptions as option (option.value)}
+						<Select.Item value={option.value}>{option.label}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 	</section>
 </div>

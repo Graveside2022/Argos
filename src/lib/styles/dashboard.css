@@ -32,6 +32,19 @@
 	position: relative;
 }
 
+/* Rail position variants */
+.dashboard-body.rail-right {
+	flex-direction: row-reverse;
+}
+
+.dashboard-body.rail-top {
+	flex-direction: column;
+}
+
+.dashboard-body.rail-bottom {
+	flex-direction: column-reverse;
+}
+
 /* ---- Leaflet Popup Overrides ---- */
 .dashboard-shell .leaflet-popup-content-wrapper {
 	background: var(--palantir-bg-panel);

@@ -1,5 +1,5 @@
 /**
- * Theme Store — Manages palette and mode state
+ * Theme Store — Manages palette, mode, and layout state
  * Persists to localStorage under 'argos-theme' key
  * DOM attributes managed: data-palette on <html>, dark class
  */
@@ -18,16 +18,20 @@ export type ThemePalette =
 
 export type ThemeMode = 'dark' | 'light';
 
+export type RailPosition = 'left' | 'right' | 'top' | 'bottom';
+
 export interface ThemeState {
 	palette: ThemePalette;
 	mode: ThemeMode;
+	railPosition: RailPosition;
 }
 
 const STORAGE_KEY = 'argos-theme';
 
 const DEFAULT_STATE: ThemeState = {
 	palette: 'default',
-	mode: 'dark'
+	mode: 'dark',
+	railPosition: 'left'
 };
 
 const VALID_PALETTES: ThemePalette[] = [
@@ -41,6 +45,8 @@ const VALID_PALETTES: ThemePalette[] = [
 	'yellow'
 ];
 
+const VALID_RAIL_POSITIONS: RailPosition[] = ['left', 'right', 'top', 'bottom'];
+
 function loadState(): ThemeState {
 	if (!browser) return { ...DEFAULT_STATE };
 
@@ -53,7 +59,10 @@ function loadState(): ThemeState {
 			palette: VALID_PALETTES.includes(parsed.palette)
 				? parsed.palette
 				: DEFAULT_STATE.palette,
-			mode: parsed.mode === 'light' ? 'light' : 'dark'
+			mode: parsed.mode === 'light' ? 'light' : 'dark',
+			railPosition: VALID_RAIL_POSITIONS.includes(parsed.railPosition)
+				? parsed.railPosition
+				: DEFAULT_STATE.railPosition
 		};
 	} catch {
 		return { ...DEFAULT_STATE };
@@ -108,6 +117,9 @@ function createThemeStore() {
 		get mode() {
 			return state.mode;
 		},
+		get railPosition() {
+			return state.railPosition;
+		},
 
 		setPalette(palette: ThemePalette) {
 			if (!VALID_PALETTES.includes(palette)) return;
@@ -120,6 +132,12 @@ function createThemeStore() {
 			if (mode !== 'dark' && mode !== 'light') return;
 			state.mode = mode;
 			applyMode(mode);
+			saveState(state);
+		},
+
+		setRailPosition(position: RailPosition) {
+			if (!VALID_RAIL_POSITIONS.includes(position)) return;
+			state.railPosition = position;
 			saveState(state);
 		}
 	};
