@@ -98,6 +98,12 @@
 		return [lon, lat] as LngLatLike;
 	});
 
+	// Reactive theme color for accuracy circle (blue bubble)
+	let accuracyColor = $derived.by(() => {
+		const _p = themeStore.palette; // React to palette changes
+		return resolveThemeColor('--primary', '#4a9eff');
+	});
+
 	let headingDeg: number | null = $derived.by(() => {
 		const h = $gpsStore.status.heading;
 		const spd = $gpsStore.status.speed;
@@ -848,17 +854,12 @@
 		const _p = themeStore.palette;
 		if (!map) return;
 
-		const primary = resolveThemeColor('--primary', '#4a9eff');
 		const fg = resolveThemeColor('--foreground', '#e0e0e8');
 		const mutedFg = resolveThemeColor('--muted-foreground', '#888');
 		const bg = resolveThemeColor('--background', '#111119');
 		const secondary = resolveThemeColor('--secondary', '#3a3a5c');
 		const border = resolveThemeColor('--border', '#6a6a8e');
 
-		// Accuracy circle
-		if (map.getLayer('accuracy-fill')) {
-			map.setPaintProperty('accuracy-fill', 'fill-color', primary);
-		}
 		// Cluster circles
 		if (map.getLayer('device-clusters')) {
 			map.setPaintProperty('device-clusters', 'circle-color', secondary);
@@ -955,7 +956,7 @@
 			<FillLayer
 				id="accuracy-fill"
 				paint={{
-					'fill-color': '#4a9eff',
+					'fill-color': accuracyColor,
 					'fill-opacity': 0.18
 				}}
 			/>
