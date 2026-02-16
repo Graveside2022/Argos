@@ -21,6 +21,7 @@
 	$: scanResults = $gsmEvilStore.scanResults;
 	$: capturedIMSIs = $gsmEvilStore.capturedIMSIs;
 	$: scanProgress = $gsmEvilStore.scanProgress;
+
 	$: towerLocations = $gsmEvilStore.towerLocations;
 	$: towerLookupAttempted = $gsmEvilStore.towerLookupAttempted;
 	$: scanButtonText = $gsmEvilStore.scanButtonText;
@@ -536,7 +537,7 @@
 
 <div class="flex flex-col min-h-screen bg-background text-foreground">
 	<!-- Header -->
-	<GsmHeader {isActive} {buttonText} {imsiCaptureActive} onscanbutton={handleScanButton} />
+	<GsmHeader {isActive} {buttonText} onscanbutton={handleScanButton} />
 
 	<!-- IMSI Capture Panel (shows after scan starts IMSI capture) — displayed first -->
 	{#if imsiCaptureActive}
@@ -560,7 +561,7 @@
 
 	<!-- Live GSM Frames (shows after scan starts IMSI capture) -->
 	{#if imsiCaptureActive}
-		<LiveFramesConsole {gsmFrames} {activityStatus} {capturedIMSIs} />
+		<LiveFramesConsole {gsmFrames} {activityStatus} />
 	{/if}
 </div>
 

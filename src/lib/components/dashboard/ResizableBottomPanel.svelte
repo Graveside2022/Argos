@@ -141,6 +141,10 @@
 			{@render children?.()}
 		</div>
 	</div>
+
+	{#if isDragging}
+		<div class="drag-overlay" role="presentation"></div>
+	{/if}
 {/if}
 
 <style>
@@ -199,5 +203,15 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.drag-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: 9999;
+		cursor: ns-resize;
 	}
 </style>
