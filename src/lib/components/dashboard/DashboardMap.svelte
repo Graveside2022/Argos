@@ -44,9 +44,8 @@
 	// Radii from log-distance model: d = 10^((-12 - rssiThreshold) / 33)
 	// Colors: resolved from CSS signal variables (respond to palette/semantic changes)
 	let RANGE_BANDS = $derived.by(() => {
-		// Depend on themeStore to re-resolve when palette/mode changes
+		// Depend on themeStore to re-resolve when palette changes
 		const _p = themeStore.palette;
-		const _m = themeStore.mode;
 		return [
 			{
 				outerR: 25,
@@ -847,7 +846,6 @@
 	// Re-apply MapLibre paint properties when theme changes
 	$effect(() => {
 		const _p = themeStore.palette;
-		const _m = themeStore.mode;
 		if (!map) return;
 
 		const primary = resolveThemeColor('--primary', '#4a9eff');

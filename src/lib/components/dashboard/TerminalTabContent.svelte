@@ -40,7 +40,6 @@
 	$effect(() => {
 		// Subscribe to reactive theme state to trigger re-resolution
 		const _palette = themeStore.palette;
-		const _mode = themeStore.mode;
 		if (!terminal) return;
 		terminal.options.theme = {
 			...terminal.options.theme,

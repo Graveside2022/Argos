@@ -300,6 +300,8 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 - SQLite (rf_signals.db) - no changes (001-audit-remediation)
 - TypeScript 5.8.3 (strict mode) + SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 4.1.18 (upgrading from 3.4.19), @tailwindcss/vite 4.1.18, bits-ui 2.15.5, shadcn 3.8.4 (CLI) (003-ui-modernization)
 - SQLite (rf_signals.db) — no changes (003-ui-modernization)
+- TypeScript 5.8.3 (strict mode), Svelte 5.35.5, SvelteKit 2.22.3 + shadcn-svelte (Button, Table, Badge, AlertDialog — already installed), tailwind-variants, bits-ui, lucide-svelte (006-gsm-evil-modernization)
+- N/A — no database changes; `gsmEvilStore` uses localStorage persistence (006-gsm-evil-modernization)
 
 ## Recent Changes
 - 001-constitution-audit: Added TypeScript 5.8.3 (strict mode), automated violation analysis with dependency investigation (Rulebook v2.0)
