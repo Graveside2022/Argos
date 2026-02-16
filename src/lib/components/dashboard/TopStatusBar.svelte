@@ -814,7 +814,7 @@
 	.top-status-bar {
 		height: var(--top-bar-height);
 		min-height: var(--top-bar-height);
-		background: var(--palantir-bg-surface);
+		background: var(--palantir-bg-chrome);
 		border-bottom: 1px solid var(--palantir-border-subtle);
 		display: flex;
 		align-items: center;

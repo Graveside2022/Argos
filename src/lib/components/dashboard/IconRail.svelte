@@ -160,7 +160,7 @@
 		width: var(--icon-rail-width);
 		min-width: var(--icon-rail-width);
 		flex-shrink: 0;
-		background: var(--palantir-bg-surface);
+		background: var(--palantir-bg-chrome);
 		border-right: 1px solid var(--palantir-border-subtle);
 		display: flex;
 		flex-direction: column;

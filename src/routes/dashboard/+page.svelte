@@ -285,7 +285,7 @@
 		justify-content: space-between;
 		height: 32px;
 		min-height: 32px;
-		background: var(--palantir-bg-surface, #16181d);
+		background: var(--palantir-bg-chrome, #0e1116);
 		border-bottom: 1px solid var(--palantir-border-subtle, #1e2228);
 		padding: 0 var(--space-2, 0.5rem);
 	}

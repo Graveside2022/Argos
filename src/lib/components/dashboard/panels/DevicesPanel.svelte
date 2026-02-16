@@ -643,6 +643,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		background: var(--palantir-bg-surface);
 	}
 
 	.panel-toolbar {
@@ -770,6 +771,34 @@
 	table {
 		width: max-content;
 		min-width: 100%;
+		border-collapse: collapse;
+	}
+
+	thead {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	th {
+		background: var(--palantir-bg-elevated);
+		font-size: var(--text-xs);
+		font-weight: var(--font-weight-semibold);
+		letter-spacing: var(--letter-spacing-wider);
+		color: var(--palantir-text-tertiary);
+		text-align: left;
+		padding: var(--space-2) var(--space-2);
+		border-bottom: 1px solid var(--palantir-border-default);
+		white-space: nowrap;
+	}
+
+	td {
+		padding: var(--space-1) var(--space-2);
+		border-bottom: 1px solid var(--palantir-border-subtle);
+	}
+
+	tbody tr:hover {
+		background: var(--palantir-bg-hover);
 	}
 
 	.sortable {
