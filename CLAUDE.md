@@ -18,7 +18,7 @@ pwd  # Should be: /home/kali/Documents/Argos/Argos
 [ -f .env ] && echo "✓ .env exists" || echo "✗ .env missing - copy from .env.example"
 
 # 3. Verify Node.js version
-node --version  # Must be 20.x
+node --version  # Must be 22.x
 
 # 4. Quick health check
 npm run typecheck && echo "✓ Types valid" || echo "✗ Type errors exist"
@@ -77,7 +77,7 @@ This ensures you understand the project state before making changes.
 
 TypeScript 5.8.3, SvelteKit 2.22.3, Svelte 5.35.5, Tailwind CSS 3.4.19, SQLite (better-sqlite3), Vite 7.0.3, Vitest 3.2.4, Playwright 1.53.2
 
-**Deployed on:** Raspberry Pi 5 (8GB RAM, NVMe SSD), Kali Linux 2025.4, Docker v27.5.1
+**Deployed on:** Raspberry Pi 5 (8GB RAM, NVMe SSD), Kali Linux 2025.4. Runs natively on host; Docker only for third-party tools (OpenWebRX, Bettercap).
 
 **Hardware Requirement:** USB 3.0 powered hub REQUIRED — Pi cannot power HackRF + Alfa adapter + GPS simultaneously without it.
 
@@ -125,8 +125,7 @@ npm run mcp:database         # SQLite schema & query inspection
 npm run mcp:api              # API endpoint testing & debugging
 npm run mcp:test             # Test suite execution & validation
 npm run mcp:gsm-evil         # GSM monitoring & IMSI capture
-npm run mcp:install-b        # Install all MCP servers (host)
-npm run mcp:install-c        # Install all MCP servers (container)
+npm run mcp:install-b        # Install all MCP servers
 ```
 
 **Note:** Each Claude Code instance spawns all configured MCP servers (~30 processes, ~800MB RAM). Utility servers (octocode, svelte, tailwindcss) are also configured. Avoid running multiple Claude instances simultaneously on RPi5.
@@ -184,7 +183,7 @@ config/                      # Vite, ESLint, Tailwind, terminal plugin
 **Key Patterns:**
 - **Service Layer**: Routes handle HTTP, business logic in `src/lib/services/`, DB access in `src/lib/server/db/`
 - **Hardware Abstraction**: `src/lib/server/hardware/` detects/manages RF devices
-- **Host-Container Bridge**: `src/lib/server/host-exec.ts` uses `nsenter` to run host commands from container (for gr-gsm, tcpdump, etc.)
+- **Host Execution**: `src/lib/server/host-exec.ts` runs shell commands directly (gr-gsm, tcpdump, etc.)
 
 ## Code Conventions
 
@@ -232,9 +231,7 @@ export async function POST({ request }) {
 
 **Memory Limit**: Node.js heap capped at 1024MB (`--max-old-space-size=1024`). Don't load entire database into memory — use pagination.
 
-**Docker Context**: Container uses `~/.claude/mcp.json`, NOT `~/.claude.json` (host-only). Host networking (`network_mode: host`) required for USB hardware access.
-
-**Terminal Sessions**: Dashboard terminal (port 3001, node-pty) runs inside Docker via Vite plugin. After `npm install` on host, must run `docker exec argos-dev npm rebuild node-pty` to recompile native binary for container architecture. Supports 4 independent tmux sessions (tmux-0 through tmux-3) with persistent PTY sessions that survive WebSocket reconnections.
+**Terminal Sessions**: Dashboard terminal (port 3001, node-pty) runs via Vite plugin. Supports 4 independent tmux sessions (tmux-0 through tmux-3) with persistent PTY sessions that survive WebSocket reconnections.
 
 **R-tree Spatial Indexing**: For "find signals within N meters" queries, MUST use R-tree subquery. See [src/lib/server/db/](src/lib/server/db/) for patterns. Full table scans will OOM on large datasets.
 
@@ -294,7 +291,7 @@ Detailed guides in `docs/General Documentation/`: mcp-servers.md, security-archi
 
 **Security Model**: Fail-closed, defense-in-depth, OWASP compliant
 **Memory Model**: 1GB Node.js heap, OOM protection via earlyoom + zram
-**Deployment**: Raspberry Pi 5, Kali Linux 2025.4, Docker v27.5.1
+**Deployment**: Raspberry Pi 5, Kali Linux 2025.4, native host (Docker for third-party tools only)
 
 ## Active Technologies
 - TypeScript 5.8.3 (strict mode) (001-constitution-audit)

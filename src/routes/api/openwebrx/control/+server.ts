@@ -13,8 +13,7 @@ const CONTAINER_NAME = 'openwebrx-hackrf';
  * Control OpenWebRX Docker container
  * Body: { action: 'start' | 'stop' | 'restart' | 'status' }
  *
- * Uses plain docker commands (not compose) because the dev server
- * runs inside a container that has Docker CLI but not the compose plugin.
+ * Uses plain docker commands for direct container management.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	try {

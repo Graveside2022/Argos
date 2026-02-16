@@ -1,0 +1,16 @@
+[Unit]
+Description=Kismet WiFi Scanner for Argos
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/kismet --no-ncurses --no-line-wrap --silent
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-kismet
+
+[Install]
+WantedBy=multi-user.target

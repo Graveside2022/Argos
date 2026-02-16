@@ -1,30 +1,22 @@
 [Unit]
-Description=Argos Production Server
-Documentation=https://github.com/yourusername/Argos
-After=network.target
+Description=Argos SDR & Network Analysis Console
+After=network.target gpsd.service
+Wants=gpsd.service
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/projects/Argos
-
-# Environment variables for production
+User=kali
+Group=kali
+WorkingDirectory=/home/kali/Documents/Argos/Argos
+EnvironmentFile=/home/kali/Documents/Argos/Argos/.env
 Environment="NODE_ENV=production"
-Environment="PORT=4173"
-Environment="HOST=0.0.0.0"
-
-# Run the production preview server
-ExecStart=/usr/bin/npm run preview
-
-# Restart configuration
+Environment="NODE_OPTIONS=--max-old-space-size=1024"
+ExecStart=/usr/bin/node build
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=argos-final
-
-# Security options
+SyslogIdentifier=argos
 NoNewPrivileges=true
 PrivateTmp=true
 

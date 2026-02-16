@@ -55,9 +55,7 @@
 		"mcp:api": "tsx src/lib/server/mcp/servers/api-debugger.ts",
 		"mcp:test": "tsx src/lib/server/mcp/servers/test-runner.ts",
 		"mcp:install-b": "tsx scripts/ops/mcp-install.ts b",
-		"mcp:install-c": "tsx scripts/ops/mcp-install.ts c",
-		"mcp:config-b": "tsx scripts/ops/mcp-config.ts b",
-		"mcp:config-c": "tsx scripts/ops/mcp-config.ts c"
+		"mcp:config-b": "tsx scripts/ops/mcp-config.ts b"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.11.1",

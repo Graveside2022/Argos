@@ -9,18 +9,10 @@ const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
 
 // Valid shell paths - Four independent tmux sessions (0-3)
 const VALID_SHELLS = [
-	// Tmux profiles (container paths)
-	'/app/scripts/tmux/tmux-0.sh',
-	'/app/scripts/tmux/tmux-1.sh',
-	'/app/scripts/tmux/tmux-2.sh',
-	'/app/scripts/tmux/tmux-3.sh',
-	// Tmux profiles (host paths)
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh',
-	// Keep legacy wrapper for backward compatibility
-	'/app/scripts/tmux-zsh-wrapper.sh',
 	'/home/kali/Documents/Argos/Argos/scripts/tmux-zsh-wrapper.sh'
 ];
 
@@ -50,6 +42,18 @@ export function terminalPlugin(): Plugin {
 			});
 		}
 	};
+}
+
+/**
+ * Normalize legacy Docker container paths (/app/...) to native host paths.
+ * Clients may have cached the old /app/ prefix from when Argos ran in Docker.
+ */
+function normalizeShellPath(shellPath: string): string {
+	if (shellPath.startsWith('/app/')) {
+		const nativePath = shellPath.replace(/^\/app\//, '/home/kali/Documents/Argos/Argos/');
+		return nativePath;
+	}
+	return shellPath;
 }
 
 /**
@@ -135,8 +139,14 @@ async function setupTerminal() {
 		console.warn(`[argos-terminal] Shell server listening on port ${TERMINAL_PORT}`);
 	});
 
-	wss.on('error', (err: Error) => {
-		console.error('[argos-terminal] Server error:', err.message);
+	wss.on('error', (err: Error & { code?: string }) => {
+		if (err.code === 'EADDRINUSE') {
+			console.error(
+				`[argos-terminal] FATAL: Port ${TERMINAL_PORT} already in use. Run: npm run kill-dev`
+			);
+		} else {
+			console.error('[argos-terminal] Server error:', err.message);
+		}
 	});
 
 	wss.on('connection', (ws) => {
@@ -188,10 +198,13 @@ async function setupTerminal() {
 		 * Spawn a new PTY process and register the session
 		 */
 		async function spawnPty(requestedShell: string, sessionId: string) {
+			// Normalize legacy Docker paths (/app/...) to native host paths
+			const normalized = normalizeShellPath(requestedShell);
+
 			// Validate and use requested shell, fallback to default
 			let shell = defaultShell;
-			if (await isValidShell(requestedShell)) {
-				shell = requestedShell;
+			if (await isValidShell(normalized)) {
+				shell = normalized;
 			} else {
 				console.warn(
 					`[argos-terminal] Invalid shell requested: ${requestedShell}, using ${defaultShell}`

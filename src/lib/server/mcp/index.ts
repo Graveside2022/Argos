@@ -4,11 +4,9 @@
 export {
 	generateArgosMCPServer,
 	generateContextBConfig,
-	generateContextCConfig,
 	generateMCPConfigContent,
 	getInstallationInstructions,
 	installContextBConfig,
-	installContextCConfig,
 	updateExistingConfig
 } from './config-generator';
 
