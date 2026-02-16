@@ -306,12 +306,17 @@ async function setupTerminal() {
 
 			let ptyProcess: ReturnType<typeof ptyModule.spawn>;
 			try {
+				// Unset TMUX variables to prevent nested session conflicts
+				const env = { ...process.env };
+				delete env['TMUX'];
+				delete env['TMUX_PANE'];
+
 				ptyProcess = ptyModule.spawn(shell, [], {
 					name: 'xterm-256color',
 					cols: 80,
 					rows: 24,
 					cwd: process.env.HOME || '/home',
-					env: process.env as Record<string, string>
+					env: env as Record<string, string>
 				});
 			} catch (err) {
 				console.error(`[argos-terminal] Failed to spawn PTY for ${shell}:`, err);
