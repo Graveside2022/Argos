@@ -149,7 +149,7 @@ When the user clicks the Home (Overview) icon on the icon rail, the Overview pan
 - **FR-008**: System MUST display TAK connection status in the Overview panel as a new section.
 - **FR-009**: The TAK status (connected/disconnected) MUST update reactively from the existing `takStatus` store without additional polling. When the WebSocket connection to TakService drops, indicators MUST reflect disconnected state within 5 seconds.
 - **FR-010**: The "Configure" button in both the TopStatusBar dropdown and Overview panel MUST open the TAK config view inside the dashboard.
-- **FR-011**: System MUST provide two client authentication methods when protocol is SSL: "Enroll for Certificate" and "Import Certificate", selectable via radio buttons or toggle.
+- **FR-011**: System MUST provide two client authentication methods: "Enroll for Certificate" and "Import Certificate", selectable via radio buttons or toggle. (Note: Protocol is always SSL as per `node-tak` library constraints).
 - **FR-012**: When "Enroll for Certificate" is selected, system MUST show username, password, and enrollment port (default `8446`) fields.
 - **FR-013**: System MUST call the TAK server enrollment API (`POST https://<host>:<enrollmentPort>/Marti/api/tls/signClient/v2`) with HTTP Basic Auth using the provided username/password.
 - **FR-014**: On successful enrollment, system MUST store the received client certificate `.p12` in `data/certs/` and automatically configure it in the TAK connection settings.
@@ -162,7 +162,7 @@ When the user clicks the Home (Overview) icon on the icon rail, the Overview pan
 
 ### Key Entities
 
-- **TAK Configuration**: Description (user label), hostname/IP, port (default 8089), protocol (SSL/TCP), client cert path + password (default `atakatak`), trust store path + password (default `atakatak`), connect-on-startup flag, auth method (enroll/import), enrollment credentials (username, password, enrollment port 8446) when using certificate enrollment.
+- **TAK Configuration**: Description (user label), hostname/IP, port (default 8089), protocol (SSL), client cert path + password (default `atakatak`), trust store path + password (default `atakatak`), connect-on-startup flag, auth method (enroll/import), enrollment credentials (username, password, enrollment port 8446) when using certificate enrollment.
 - **TAK Connection Status**: Connected/disconnected/error state, server name, server IP, uptime, message statistics. Sourced from existing `takStatus` store.
 - **Trust Store File**: A single PKCS#12 (.p12) file (e.g., `truststore-TAK-ID-CA-01.p12`) containing the CA certificate chain needed to verify the TAK Server's TLS certificate. TAK Server generates one trust store per CA. On import, the file is copied into `data/certs/` and the managed copy path is stored in configuration.
 
@@ -191,7 +191,7 @@ When the user clicks the Home (Overview) icon on the icon rail, the Overview pan
 
 ## Constraints
 
-- **DB Migration**: Use additive `ALTER TABLE ADD COLUMN` migration (new file e.g. `003_extend_tak_configs.sql`) to add: `truststore_path`, `truststore_password` (default 'atakatak'), `client_cert_password` (default 'atakatak'), `auth_method` (CHECK: 'enroll'/'import'), `enrollment_username`, `enrollment_password`, `enrollment_port` (default 8446). Do NOT drop/recreate the table.
+- **DB Migration**: Use additive `ALTER TABLE ADD COLUMN` migration (new TypeScript migration file e.g. `src/lib/server/db/migrations/20260218_extend_tak_configs.ts`) to add: `truststore_path`, `truststore_password` (default 'atakatak'), `client_cert_password` (default 'atakatak'), `auth_method` (CHECK: 'enroll'/'import'), `enrollment_username`, `enrollment_password`, `enrollment_port` (default 8446). Do NOT drop/recreate the table.
 - **Single Address Field**: One text input for server hostname/IP. No Tailscale vs Direct mode selector.
 
 ## Reference: ATAK Connection Form Fields (Verified)
@@ -204,7 +204,7 @@ The Argos TAK configuration form should mirror the standard ATAK/WinTAK connecti
 | Address                       | text            | —                    | IP or hostname (LAN, Tailscale, WAN)             |
 | Use Authentication            | checkbox        | unchecked            | Reveals username/password for enrollment         |
 | Enroll for Client Certificate | checkbox        | unchecked            | Triggers enrollment via port 8446                |
-| Streaming Protocol            | dropdown        | SSL                  | SSL or TCP                                       |
+| Streaming Protocol            | dropdown        | SSL                  | SSL only (TCP deprecated)                         |
 | Server Port                   | number          | 8089                 | Primary CoT streaming port                       |
 | Import Trust Store            | file + password | password: `atakatak` | Single `.p12` file for CA chain                  |
 | Import Client Certificate     | file + password | password: `atakatak` | Manual `.p12` import (alternative to enrollment) |
