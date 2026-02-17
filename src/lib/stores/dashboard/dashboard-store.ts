@@ -8,13 +8,19 @@ export const activePanel = writable<string | null>(null);
 /** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
 const ACTIVE_BOTTOM_TAB_KEY = 'activeBottomTab';
 
-type BottomTab = 'terminal' | 'chat' | 'devices' | null;
+type BottomTab = 'terminal' | 'chat' | 'devices' | 'gsm-evil' | null;
 
 function getInitialBottomTab(): BottomTab {
 	if (!browser) return null;
 	try {
 		const stored = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
-		if (stored === 'terminal' || stored === 'chat' || stored === 'devices') return stored;
+		if (
+			stored === 'terminal' ||
+			stored === 'chat' ||
+			stored === 'devices' ||
+			stored === 'gsm-evil'
+		)
+			return stored;
 	} catch {
 		/* use default */
 	}
@@ -62,7 +68,7 @@ if (browser) {
 export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
-export function toggleBottomTab(tab: 'terminal' | 'chat' | 'devices'): void {
+export function toggleBottomTab(tab: 'terminal' | 'chat' | 'devices' | 'gsm-evil'): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }
 
@@ -91,8 +97,8 @@ export function togglePanel(panel: string): void {
 
 /** Map layer visibility — shared between LayersPanel and DashboardMap */
 export const layerVisibility = writable<Record<string, boolean>>({
-	deviceDots: false, // Default to Symbols now? Requirement says "Replace dots"
-	milSyms: true,
+	deviceDots: true, // Default to Symbols now? Requirement says "Replace dots"
+	milSyms: false,
 	connectionLines: false,
 	cellTowers: false,
 	signalMarkers: false,

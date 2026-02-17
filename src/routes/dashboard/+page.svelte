@@ -11,6 +11,7 @@
 	import IconRail from '$lib/components/dashboard/IconRail.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
+	import GsmEvilPanel from '$lib/components/dashboard/panels/GsmEvilPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
 	import TopStatusBar from '$lib/components/dashboard/TopStatusBar.svelte';
@@ -157,10 +158,95 @@
 				onClose={closeBottomPanel}
 			>
 				<!-- Tab bar — shows only the active tab -->
+				<!-- Tab bar — shows all tabs -->
 				<div class="bottom-panel-tabs">
 					<div class="tab-list">
-						{#if $activeBottomTab === 'devices'}
-							<button class="panel-tab active">
+						<!-- Terminal Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'terminal'}
+							onclick={() => activeBottomTab.set('terminal')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<polyline points="4 17 10 11 4 5" /><line
+									x1="12"
+									y1="19"
+									x2="20"
+									y2="19"
+								/>
+							</svg>
+							Terminal
+						</button>
+
+						<!-- Kismet Tab (Internal: devices) -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'devices'}
+							onclick={() => activeBottomTab.set('devices')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<line x1="8" y1="6" x2="21" y2="6" /><line
+									x1="8"
+									y1="12"
+									x2="21"
+									y2="12"
+								/><line x1="8" y1="18" x2="21" y2="18" />
+								<circle cx="4" cy="6" r="1" fill="currentColor" /><circle
+									cx="4"
+									cy="12"
+									r="1"
+									fill="currentColor"
+								/><circle cx="4" cy="18" r="1" fill="currentColor" />
+							</svg>
+							Kismet
+						</button>
+
+						<!-- GSM Evil Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'gsm-evil'}
+							onclick={() => activeBottomTab.set('gsm-evil')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<rect x="2" y="7" width="20" height="15" rx="2" ry="2"
+								></rect><polyline points="17 2 12 7 7 2"></polyline>
+							</svg>
+							GSM Evil
+						</button>
+
+						<!-- Chat Tab (Hidden unless active, or kept for continuity) -->
+						{#if $activeBottomTab === 'chat'}
+							<button
+								class="panel-tab active"
+								onclick={() => activeBottomTab.set('chat')}
+							>
 								<svg
 									width="14"
 									height="14"
@@ -170,61 +256,12 @@
 									stroke-width="2"
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									><line x1="8" y1="6" x2="21" y2="6" /><line
-										x1="8"
-										y1="12"
-										x2="21"
-										y2="12"
-									/><line x1="8" y1="18" x2="21" y2="18" /><circle
-										cx="4"
-										cy="6"
-										r="1"
-										fill="currentColor"
-									/><circle cx="4" cy="12" r="1" fill="currentColor" /><circle
-										cx="4"
-										cy="18"
-										r="1"
-										fill="currentColor"
-									/></svg
 								>
-								Devices
-							</button>
-						{:else if $activeBottomTab === 'chat'}
-							<button class="panel-tab active">
-								<svg
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path
+									<path
 										d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-									/></svg
-								>
+									/>
+								</svg>
 								Agent Chat
-							</button>
-						{:else if $activeBottomTab === 'terminal'}
-							<button class="panel-tab active">
-								<svg
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><polyline points="4 17 10 11 4 5" /><line
-										x1="12"
-										y1="19"
-										x2="20"
-										y2="19"
-									/></svg
-								>
-								Terminal
 							</button>
 						{/if}
 					</div>
@@ -252,6 +289,8 @@
 						<DevicesPanel />
 					{:else if $activeBottomTab === 'terminal'}
 						<TerminalPanel />
+					{:else if $activeBottomTab === 'gsm-evil'}
+						<GsmEvilPanel />
 					{:else if $activeBottomTab === 'chat'}
 						<AgentChatPanel />
 					{/if}
@@ -338,8 +377,16 @@
 		font-size: 12px;
 		line-height: 1;
 		font-family: var(--font-sans, system-ui);
-		cursor: default;
+		cursor: pointer;
 		white-space: nowrap;
+		transition:
+			color 0.1s,
+			bg 0.1s;
+	}
+
+	.panel-tab:hover {
+		color: var(--palantir-text-secondary, #9aa0a6);
+		background: var(--palantir-bg-hover, rgba(255, 255, 255, 0.04));
 	}
 
 	.panel-tab.active {
