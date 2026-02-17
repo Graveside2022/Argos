@@ -31,6 +31,19 @@
 		</label>
 
 		<label class="toggle-row">
+			<span class="toggle-label">Military Symbols</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.milSyms}
+				onclick={() => toggleLayerVisibility('milSyms')}
+				role="switch"
+				aria-checked={$layerVisibility.milSyms}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+		<label class="toggle-row">
 			<span class="toggle-label">Connections</span>
 			<button
 				class="toggle-switch"

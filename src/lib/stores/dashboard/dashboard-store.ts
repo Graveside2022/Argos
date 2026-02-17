@@ -1,4 +1,4 @@
-import { derived,writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
 
@@ -91,7 +91,8 @@ export function togglePanel(panel: string): void {
 
 /** Map layer visibility — shared between LayersPanel and DashboardMap */
 export const layerVisibility = writable<Record<string, boolean>>({
-	deviceDots: true,
+	deviceDots: false, // Default to Symbols now? Requirement says "Replace dots"
+	milSyms: true,
 	connectionLines: false,
 	cellTowers: false,
 	signalMarkers: false,

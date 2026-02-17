@@ -83,7 +83,9 @@ export interface WebSocketMessage {
 		| 'status_update'
 		| 'device_update'
 		| 'status_change'
-		| 'error';
+		| 'error'
+		| 'tak_status'
+		| 'tak_cot';
 	data: Record<string, unknown>;
 	timestamp: string;
 }

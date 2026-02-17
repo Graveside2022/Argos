@@ -16,9 +16,12 @@
 		Marker,
 		NavigationControl,
 		Popup,
-		SymbolLayer
+		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
+	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
+	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
+	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,
@@ -26,13 +29,19 @@
 		isolateDevice,
 		layerVisibility
 	} from '$lib/stores/dashboard/dashboard-store';
+	import { mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { takCotMessages } from '$lib/stores/tak-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { parseCotToFeature } from '$lib/utils/cot-parser';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
+	import MapSettings from './MapSettings.svelte';
+
 	let map: maplibregl.Map | undefined = $state();
+	let symbolLayer: SymbolLayer | undefined = $state();
 	let initialViewSet = false;
 
 	// Alfa AWUS036AXML with basic omnidirectional antenna — signal range bands
@@ -561,6 +570,62 @@
 		if (!map) return;
 		const mapInstance = map;
 
+		// Initialize Satellite Layer
+		const satLayer = new SatelliteLayer(map);
+
+		// Initialize Symbol Layer (MIL-STD-2525)
+		symbolLayer = new SymbolLayer(map);
+
+		// Sync with settings (Satellite)
+		mapSettings.subscribe((settings) => {
+			if (settings.type === 'satellite') {
+				satLayer.add(settings.url, settings.attribution);
+				satLayer.setVisible(true);
+			} else {
+				satLayer.setVisible(false);
+			}
+		});
+
+		// Sync Symbols with Device Data and TAK CoT
+		// We use an effect to push updates to the imperative layer
+		$effect(() => {
+			// 1. Kismet Features
+			let features: Feature[] = [];
+
+			if (deviceGeoJSON) {
+				// Transform features to include SIDC
+				const deviceFeatures = deviceGeoJSON.features.map((f) => {
+					const props = f.properties || {};
+					const type = props.type || 'unknown';
+					const sidc = SymbolFactory.getSidcForDevice(type, 'unknown');
+
+					return {
+						...f,
+						properties: {
+							...props,
+							sidc,
+							label: props.ssid || props.mac || 'Unknown'
+						}
+					};
+				});
+				features = [...deviceFeatures];
+			}
+
+			// 2. TAK Features
+			const cotMsgs = $takCotMessages;
+			if (cotMsgs.length > 0) {
+				const takFeatures = cotMsgs
+					.map((xml) => parseCotToFeature(xml))
+					.filter((f) => f !== null) as Feature[];
+				features = [...features, ...takFeatures];
+			}
+
+			// 3. Update layer
+			if (symbolLayer) {
+				symbolLayer.update(features);
+			}
+		});
+
 		// Click on empty map background → dismiss overlay and clear isolation
 		mapInstance.on('click', (e) => {
 			const features = mapInstance.queryRenderedFeatures(e.point, {
@@ -802,6 +867,12 @@
 		if (!map) return;
 		const vis = $layerVisibility;
 		const isoMac = $isolatedDeviceMAC;
+
+		// Update SymbolLayer visibility
+		if (symbolLayer) {
+			symbolLayer.setVisible(vis.milSyms !== false);
+		}
+
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
 			// Connection lines: show when isolated OR when layer manually enabled
 			const visible =
@@ -930,25 +1001,32 @@
 
 		<!-- Center-on-location button — top of bottom-right stack -->
 		<CustomControl position="bottom-right">
-			<button class="locate-btn" onclick={handleLocateClick} title="Center on my location">
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
+			<div class="control-stack">
+				<MapSettings />
+				<button
+					class="locate-btn"
+					onclick={handleLocateClick}
+					title="Center on my location"
 				>
-					<circle cx="12" cy="12" r="8" />
-					<circle cx="12" cy="12" r="3" fill="currentColor" />
-					<line x1="12" y1="2" x2="12" y2="4" />
-					<line x1="12" y1="20" x2="12" y2="22" />
-					<line x1="2" y1="12" x2="4" y2="12" />
-					<line x1="20" y1="12" x2="22" y2="12" />
-				</svg>
-			</button>
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="8" />
+						<circle cx="12" cy="12" r="3" fill="currentColor" />
+						<line x1="12" y1="2" x2="12" y2="4" />
+						<line x1="12" y1="20" x2="12" y2="22" />
+						<line x1="2" y1="12" x2="4" y2="12" />
+						<line x1="20" y1="12" x2="22" y2="12" />
+					</svg>
+				</button>
+			</div>
 		</CustomControl>
 
 		<!-- GPS accuracy circle fill -->
@@ -964,8 +1042,10 @@
 
 		<!-- Cell tower markers (toggled via Layers panel) -->
 		<GeoJSONSource id="cell-towers-src" data={cellTowerGeoJSON}>
+			<!-- Cell Towers (Circles) -->
 			<CircleLayer
 				id="cell-tower-circles"
+				source="cell-towers-src"
 				paint={{
 					'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8, 18, 12],
 					'circle-color': ['get', 'color'],
@@ -976,7 +1056,7 @@
 				}}
 				onclick={handleTowerClick}
 			/>
-			<SymbolLayer
+			<MapLibreSymbolLayer
 				id="cell-tower-labels"
 				minzoom={12}
 				layout={{
@@ -1031,7 +1111,7 @@
 			/>
 
 			<!-- Cluster count labels -->
-			<SymbolLayer
+			<MapLibreSymbolLayer
 				id="device-cluster-count"
 				filter={['has', 'point_count']}
 				layout={{
@@ -1518,5 +1598,11 @@
 	.overlay-divider {
 		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
 		margin: 3px 0;
+	}
+
+	.control-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
 	}
 </style>
