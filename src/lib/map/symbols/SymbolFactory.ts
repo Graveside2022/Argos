@@ -110,8 +110,8 @@ export class SymbolFactory {
 		const parts = DEVICE_TYPE_SIDC[type] ?? DEVICE_TYPE_SIDC[normalized] ?? DEFAULT_SIDC_PARTS;
 		const [battleDim, funcId] = parts;
 
-		// S{Aff}{BattleDim}P{FuncId}-- = 15 chars
-		return `S${aff}${battleDim}P${funcId}--`;
+		// S{Aff}{BattleDim}P{FuncId}----- = 15 chars
+		return `S${aff}${battleDim}P${funcId}-----`;
 	}
 
 	/**

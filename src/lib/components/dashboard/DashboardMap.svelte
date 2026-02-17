@@ -136,6 +136,8 @@
 
 	let showCone = $derived(headingDeg !== null);
 
+
+
 	let accuracyGeoJSON: FeatureCollection = $derived.by(() => {
 		const { lat, lon } = $gpsStore.position;
 		const acc = $gpsStore.status.accuracy;
@@ -601,14 +603,33 @@
 	console.error('[DashboardMap] Script executing');
 
 	function handleMapLoad() {
+		console.log('[DashboardMap] handleMapLoad called. Map exists:', !!map, 'Loaded:', map?.loaded());
 		if (!map) return;
+
+		// Prevent double initialization
+        // Note: layersInitialized is tracked in outer scope, but if called by onload directly it might bypass the effect's guard if we don't check here?
+        // Actually, let's trust the effect and just log for now.
+        
 		const mapInstance = map;
 
+		if (!map.loaded()) {
+			console.log('[DashboardMap] Map not loaded, waiting for "load" event...');
+			map.once('load', () => {
+				console.log('[DashboardMap] "load" event fired. Setting up map.');
+				setupMap(mapInstance);
+			});
+		} else {
+			console.log('[DashboardMap] Map already loaded. Setting up map immediately.');
+			setupMap(mapInstance);
+		}
+	}
+
+	function setupMap(mapInstance: maplibregl.Map) {
 		// Initialize Satellite Layer
-		const satLayer = new SatelliteLayer(map);
+		const satLayer = new SatelliteLayer(mapInstance);
 
 		// Initialize Symbol Layer (MIL-STD-2525)
-		symbolLayer = new SymbolLayer(map);
+		symbolLayer = new SymbolLayer(mapInstance);
 
 		// Sync with settings (Satellite)
 		mapSettings.subscribe((settings) => {
@@ -617,55 +638,6 @@
 				satLayer.setVisible(true);
 			} else {
 				satLayer.setVisible(false);
-			}
-		});
-
-		// Sync Symbols with Device Data and TAK CoT
-		// We use an effect to push updates to the imperative layer
-		$effect(() => {
-			if (!symbolLayer) return;
-
-			// 1. Kismet Features
-			let features: Feature[] = [];
-
-			if (deviceGeoJSON) {
-				// Transform features to include SIDC
-				const deviceFeatures = deviceGeoJSON.features.map((f) => {
-					const props = f.properties || {};
-					const type = props.type || 'unknown';
-					const sidc = SymbolFactory.getSidcForDevice(type, 'unknown');
-
-					return {
-						...f,
-						properties: {
-							...props,
-							sidc,
-							label: props.ssid || props.mac || 'Unknown'
-						}
-					};
-				});
-				features = [...deviceFeatures];
-			}
-
-			// 2. TAK Features
-			const cotMsgs = $takCotMessages;
-			if (cotMsgs.length > 0) {
-				const takFeatures = cotMsgs
-					.map((xml) => parseCotToFeature(xml))
-					.filter((f) => f !== null) as Feature[];
-				features = [...features, ...takFeatures];
-			}
-
-			// 3. Update layer
-			if (symbolLayer) {
-				console.log(
-					'[DashboardMap] Updating SymbolLayer with',
-					features.length,
-					'features'
-				);
-				const vis = $layerVisibility;
-				console.log('[DashboardMap] milSyms visibility:', vis.milSyms);
-				symbolLayer.update(features);
 			}
 		});
 
@@ -756,11 +728,11 @@
 
 		// Pointer cursor for clickable layers
 		for (const layer of ['device-clusters', 'device-circles', 'cell-tower-circles']) {
-			map.on('mouseenter', layer, () => {
-				if (map) map.getCanvas().style.cursor = 'pointer';
+			mapInstance.on('mouseenter', layer, () => {
+				if (mapInstance) mapInstance.getCanvas().style.cursor = 'pointer';
 			});
-			map.on('mouseleave', layer, () => {
-				if (map) map.getCanvas().style.cursor = '';
+			mapInstance.on('mouseleave', layer, () => {
+				if (mapInstance) mapInstance.getCanvas().style.cursor = '';
 			});
 		}
 
@@ -1006,7 +978,8 @@
 		if (map.getLayer('building-outline-enhanced')) {
 			map.setPaintProperty('building-outline-enhanced', 'line-color', `${border}4D`);
 		}
-	});
+	}); 
+    
 </script>
 
 <div class="map-area">
