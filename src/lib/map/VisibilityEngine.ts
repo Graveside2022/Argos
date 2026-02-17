@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 
 export type VisibilityMode = 'dynamic' | 'all' | 'manual';
 
-const STORAGE_KEY = 'argos-visibility-mode';
+const STORAGE_KEY = 'argos-visibility-mode-v2';
 const PROMOTED_KEY = 'argos-promoted-devices';
 
 /** Signal strength threshold for "Dynamic Filter" mode (dBm). Devices weaker than this are hidden. */
@@ -13,10 +13,10 @@ const DYNAMIC_RSSI_THRESHOLD = -80;
 const DYNAMIC_RECENCY_SECS = 300;
 
 function loadMode(): VisibilityMode {
-	if (!browser) return 'dynamic';
+	if (!browser) return 'manual';
 	const saved = localStorage.getItem(STORAGE_KEY);
 	if (saved === 'all' || saved === 'manual' || saved === 'dynamic') return saved;
-	return 'dynamic';
+	return 'manual';
 }
 
 function loadPromoted(): Set<string> {
