@@ -27,6 +27,12 @@ Xvfb $DISPLAY_NUM -screen 0 1280x1024x24 &
 XVFB_PID=$!
 sleep 2
 
+# Verify Xvfb started
+if ! kill -0 "$XVFB_PID" 2>/dev/null; then
+    echo "Error: Xvfb failed to start. Display $DISPLAY_NUM may already be in use."
+    exit 1
+fi
+
 echo "Starting Chromium headless debug on port $DEBUG_PORT..."
 DISPLAY=$DISPLAY_NUM chromium \
     --remote-debugging-port=$DEBUG_PORT \
@@ -48,6 +54,11 @@ echo "Then open Chrome on your laptop and go to: chrome://inspect"
 echo ""
 echo "Press Ctrl+C to stop the debug session."
 
-# Wait for user interrupt
-trap "kill $XVFB_PID $CHROME_PID; exit" SIGINT SIGTERM
+# Cleanup on any exit (Ctrl+C, Chromium crash, or normal exit)
+cleanup() {
+    kill "$CHROME_PID" 2>/dev/null
+    kill "$XVFB_PID" 2>/dev/null
+    echo "Debug session ended."
+}
+trap cleanup EXIT
 wait $CHROME_PID
