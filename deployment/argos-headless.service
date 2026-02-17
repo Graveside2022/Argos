@@ -1,0 +1,14 @@
+[Unit]
+Description=Argos Headless Debug Service (Xvfb + Chromium)
+After=network.target
+
+[Service]
+Type=simple
+User=kali
+Environment=DISPLAY=:99
+ExecStart=/bin/bash /home/kali/Documents/Argos/Argos/scripts/dev/debug-headless.sh http://localhost:5173
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

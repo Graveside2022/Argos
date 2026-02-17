@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "npm run kill-dev && tmux new-session -d -s argos-dev \"CI=true NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort 2>&1 | tee /tmp/argos-dev.log\" && echo 'Argos dev server started in tmux session: argos-dev' && echo 'Use: npm run dev:logs to view output' && sleep 4 && lsof -ti:5173 >/dev/null && echo 'Server is UP on http://100.120.210.5:5173' || echo 'WARNING: Server may still be starting...'",
+		"dev": "npm run kill-dev && tmux new-session -d -s argos-dev \"CI=true NODE_OPTIONS='--max-old-space-size=2048' npx vite dev --port 5173 --host 0.0.0.0 --strictPort 2>&1 | tee /tmp/argos-dev.log\" && echo 'Argos dev server started in tmux session: argos-dev' && echo 'Use: npm run dev:logs to view output' && sleep 4 && lsof -ti:5173 >/dev/null && echo 'Server is UP on http://100.120.210.5:5173' || echo 'WARNING: Server may still be starting...'",
 		"dev:simple": "CI=true NODE_OPTIONS='--max-old-space-size=1024' npx vite dev --port 5173 --host 0.0.0.0 --strictPort",
 		"dev:logs": "tail -f /tmp/argos-dev.log",
 		"dev:status": "lsof -ti:5173 >/dev/null 2>&1 && echo 'Server is RUNNING (tmux session: argos-dev)' || echo 'Server is NOT running'",

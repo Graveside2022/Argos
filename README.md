@@ -51,6 +51,25 @@ Everything starts automatically. Just open http://\<your-pi-ip\>:5173.
 | HackRF not detected | Run `hackrf_info` on the Pi terminal             |
 | Port conflict       | Run `sudo lsof -i :5173` to find what's using it |
 
+### Headless Debugging (Parrot Core / Field Ops)
+
+When running on Parrot Core or in the field without a monitor, Argos includes tools for remote debugging:
+
+1.  **Service Status**: The debug service runs automatically on port `9222`.
+    ```bash
+    systemctl status argos-headless
+    ```
+2.  **Manual Start**:
+    ```bash
+    ./scripts/dev/debug-headless.sh
+    ```
+3.  **Connect from Laptop**:
+    Tunnel the remote debug port to your local machine:
+    ```bash
+    ssh -L 9222:localhost:9222 user@<pi-ip-address>
+    ```
+    Then open `chrome://inspect` in Chrome/Edge on your laptop to see the remote UI.
+
 ## Development
 
 See [SETUP.md](SETUP.md) for development environment, commands, and project structure.
