@@ -40,13 +40,21 @@ export class SatelliteLayer {
 			}
 		};
 
-		// Add before other layers if possible, or just add it.
-		// Raster layers generally go at the bottom.
-		// We might need to find the lowest vector layer to place this under,
-		// but for now we'll add it and let the controller handle z-index or visibility.
-		// Actually, inserting before the first symbol layer is good practice.
-		// For now, simple add.
-		this.map.addLayer(layer);
+		// Add before symbols/circles so they remain visible on top
+		const layers = this.map.getStyle()?.layers || [];
+
+		// Find the first layer that is one of our known overlays
+		// Prioritize specific layers to insert before
+		const beforeId = layers.find(
+			(l) =>
+				l.id === 'mil-sym-layer' ||
+				l.id === 'device-circles' ||
+				l.id === 'device-clusters' ||
+				l.id === 'connection-lines' ||
+				l.id.includes('label') // Try to put satellite below labels if possible
+		)?.id;
+
+		this.map.addLayer(layer, beforeId);
 	}
 
 	/**
