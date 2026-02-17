@@ -4,12 +4,18 @@
 #
 # Lock file protocol: When npm run kill-dev is running, it creates a lock file
 # so the keepalive won't race to restart Vite during a manual restart cycle.
+#
+# IMPORTANT: This script starts Vite DIRECTLY via the oom-protect wrapper,
+# NOT via "npm run dev" (which destructively kill-devs first and causes
+# a restart storm). Only the user should run "npm run dev" manually.
 
 # Monitor ports every X seconds
 CHECK_INTERVAL=10
+RESTART_COOLDOWN=30  # seconds — skip checks after a restart to let Vite boot
 LOG_DIR="logs"
 LOCKFILE="/tmp/argos-dev-restart.lock"
 LOCK_MAX_AGE=30  # seconds — stale lock protection
+LAST_RESTART=0   # epoch timestamp of last restart attempt
 
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
@@ -37,6 +43,16 @@ is_locked() {
     return 1
 }
 
+in_cooldown() {
+    local now
+    now=$(date +%s)
+    local elapsed=$(( now - LAST_RESTART ))
+    if [ "$elapsed" -lt "$RESTART_COOLDOWN" ]; then
+        return 0  # still in cooldown
+    fi
+    return 1
+}
+
 check_vite() {
     if ! lsof -ti:5173 > /dev/null; then
         # Back off if a manual restart is in progress
@@ -45,14 +61,25 @@ check_vite() {
             return
         fi
 
+        # Back off if we recently restarted (Vite needs time to boot)
+        if in_cooldown; then
+            log "Cooldown active ($(( $(date +%s) - LAST_RESTART ))s/${RESTART_COOLDOWN}s). Skipping."
+            return
+        fi
+
         warn "Vite server (port 5173) is DOWN. Attempting restart..."
-        # Kill any stale session first
+        LAST_RESTART=$(date +%s)
+
+        # Kill any stale tmux session (but NOT the Vite process — it's already dead)
         tmux kill-session -t argos-dev 2>/dev/null
 
-        # Start Vite (detached tmux session)
-        npm run dev >> "$LOG_DIR/keepalive_vite.log" 2>&1
+        # Start Vite DIRECTLY via oom-protect wrapper in a detached tmux session.
+        # Do NOT use "npm run dev" here — it runs kill-dev first which would
+        # destroy any running Vite instance and cause a restart storm.
+        tmux new-session -d -s argos-dev \
+            "./scripts/dev/vite-oom-protect.sh 2>&1 | tee /tmp/argos-dev.log"
 
-        sleep 5
+        sleep 8  # Vite takes 3-6s to bind port; wait longer to be sure
         if lsof -ti:5173 > /dev/null; then
             log "Vite server restarted successfully."
         else
