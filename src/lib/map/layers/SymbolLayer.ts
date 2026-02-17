@@ -77,22 +77,20 @@ export class SymbolLayer {
 		if (this.map.hasImage(sidc)) return;
 
 		try {
-			// Generate symbol
-			const canvas = SymbolFactory.createSymbol(sidc, {
-				size: 32,
-				uniqueDesignation: '' // Could add label logic here if needed inside the icon
-			});
-
-			// Add to map sprite
-			const ctx = canvas.getContext('2d');
-			if (!ctx) {
-				console.warn(`[SymbolLayer] Failed to get 2D context for SIDC: ${sidc}`);
+			const dataUrl = SymbolFactory.createSymbolDataUrl(sidc, { size: 32 });
+			if (!dataUrl) {
+				console.warn(`[SymbolLayer] Empty render for SIDC: ${sidc}`);
 				return;
 			}
 
-			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			this.map.addImage(sidc, imageData);
-			this.symbolCache.add(sidc);
+			const img = new Image();
+			img.onload = () => {
+				if (!this.map.hasImage(sidc)) {
+					this.map.addImage(sidc, img);
+				}
+				this.symbolCache.add(sidc);
+			};
+			img.src = dataUrl;
 		} catch (error) {
 			console.error(`[SymbolLayer] Error generating symbol for SIDC: ${sidc}`, error);
 		}
