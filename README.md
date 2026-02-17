@@ -70,7 +70,11 @@ When running on Parrot Core or in the field without a monitor, Argos includes to
     ```
     Then open `chrome://inspect` in Chrome/Edge on your laptop to see the remote UI.
 
-## Development
+### Debugging
+
+The `vite-oom-protect.sh` script now wraps the Vite process with `strace` to capture signal and exit events. Logs are saved to `/tmp/vite_strace_<timestamp>.log`. This is useful for identifying why the Vite server crashes or restarts unexpectedly.
+
+### Production Deployment
 
 See [SETUP.md](SETUP.md) for development environment, commands, and project structure.
 See [Memory & Reliability](docs/operations/memory-reliability.md) for details on the self-healing monitor and performance tuning.
