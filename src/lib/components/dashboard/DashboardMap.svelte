@@ -16,9 +16,18 @@
 		Marker,
 		NavigationControl,
 		Popup,
-		SymbolLayer
+		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
+	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
+	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
+	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
+	import {
+		type DeviceForVisibility,
+		filterByVisibility,
+		promotedDevices,
+		visibilityMode
+	} from '$lib/map/VisibilityEngine';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,
@@ -26,14 +35,83 @@
 		isolateDevice,
 		layerVisibility
 	} from '$lib/stores/dashboard/dashboard-store';
+	import { mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import {
+		type Affiliation,
+		kismetStore,
+		setDeviceAffiliation
+	} from '$lib/stores/tactical-map/kismet-store';
+	import { takCotMessages } from '$lib/stores/tak-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { parseCotToFeature } from '$lib/utils/cot-parser';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	let map: maplibregl.Map | undefined = $state();
+	let symbolLayer: SymbolLayer | undefined = $state();
 	let initialViewSet = false;
+	let layersInitialized = false;
+	let cssReady = $state(false);
+
+	// Force re-resolution of CSS-dependent derived values after DOM styles are available
+	$effect(() => {
+		queueMicrotask(() => {
+			cssReady = true;
+		});
+	});
+
+	// Robust initialization: Trigger when map is bound, not just on onload
+	$effect(() => {
+		if (map && !layersInitialized) {
+			handleMapLoad();
+			layersInitialized = true;
+		}
+	});
+
+	// Sync Symbols with Device Data and TAK CoT (top-level for Svelte 5 reactivity)
+	$effect(() => {
+		if (!symbolLayer) return;
+
+		// 1. Kismet Features
+		let features: Feature[] = [];
+
+		if (deviceGeoJSON) {
+			// Transform features to include SIDC
+			const deviceFeatures = deviceGeoJSON.features.map((f) => {
+				const props = f.properties || {};
+				const type = props.type || 'unknown';
+				const mac = (props.mac || '').toUpperCase();
+				const affiliation = $kismetStore.deviceAffiliations.get(mac) || 'unknown';
+				const sidc = SymbolFactory.getSidcForDevice(type, affiliation);
+
+				return {
+					...f,
+					properties: {
+						...props,
+						sidc,
+						label: props.ssid || props.mac || 'Unknown'
+					}
+				};
+			});
+			features = [...deviceFeatures];
+		}
+
+		// 2. TAK Features
+		const cotMsgs = $takCotMessages;
+		if (cotMsgs.length > 0) {
+			const takFeatures = cotMsgs
+				.map((xml) => parseCotToFeature(xml))
+				.filter((f) => f !== null) as Feature[];
+			features = [...features, ...takFeatures];
+		}
+
+		// 3. Update layer
+		console.log('[DashboardMap] Updating SymbolLayer with', features.length, 'features');
+		const vis = $layerVisibility;
+		console.log('[DashboardMap] milSyms visibility:', vis.milSyms);
+		symbolLayer.update(features);
+	});
 
 	// Alfa AWUS036AXML with basic omnidirectional antenna — signal range bands
 	// Log-distance path loss: PL(d) = 40 + 10·n·log₁₀(d), n=3.3 (suburban w/ buildings)
@@ -98,9 +176,10 @@
 		return [lon, lat] as LngLatLike;
 	});
 
-	// Reactive theme color for accuracy circle (blue bubble)
+	// Reactive theme color for accuracy circle (matches active palette accent)
 	let accuracyColor = $derived.by(() => {
 		const _p = themeStore.palette; // React to palette changes
+		const _r = cssReady; // Force re-resolve after CSS is applied
 		return resolveThemeColor('--primary', '#4a9eff');
 	});
 
@@ -220,6 +299,8 @@
 		const state = $kismetStore;
 		const isoMac = $isolatedDeviceMAC;
 		const bands = $activeBands;
+		const vMode = $visibilityMode;
+		const promoted = $promotedDevices;
 		const features: Feature[] = [];
 
 		// Build set of visible MACs when isolated
@@ -232,9 +313,26 @@
 			}
 		}
 
+		// Pre-filter devices by visibility mode (FR-013)
+		const devicesForVisibility: (DeviceForVisibility & { mac: string })[] = [];
 		state.devices.forEach((device, mac) => {
-			// When isolated, only include the AP and its clients
 			if (visibleMACs && !visibleMACs.has(mac)) return;
+			const lat = device.location?.lat;
+			const lon = device.location?.lon;
+			if (!lat || !lon || (lat === 0 && lon === 0)) return;
+			devicesForVisibility.push({
+				mac,
+				rssi: device.signal?.last_signal ?? 0,
+				lastSeen: device.last_seen || 0
+			});
+		});
+
+		const visibleDevices = filterByVisibility(devicesForVisibility, vMode, promoted);
+		const visibleMacSet = new Set(visibleDevices.map((d) => d.mac));
+
+		state.devices.forEach((device, mac) => {
+			// FR-013 visibility filter
+			if (!visibleMacSet.has(mac)) return;
 
 			let lat = device.location?.lat;
 			let lon = device.location?.lon;
@@ -286,6 +384,11 @@
 		return { type: 'FeatureCollection' as const, features };
 	});
 
+	// Set of MACs that have visible dots on the map (used to sync connection lines)
+	let visibleDeviceMACs: Set<string> = $derived(
+		new Set(deviceGeoJSON.features.map((f) => f.properties?.mac as string).filter(Boolean))
+	);
+
 	// AP-to-client connection arcs — curved lines for visual clarity
 	let connectionLinesGeoJSON: FeatureCollection = $derived.by(() => {
 		const state = $kismetStore;
@@ -303,6 +406,8 @@
 			if (!apLat || !apLon) return;
 			const apColor = getSignalHex(device.signal?.last_signal ?? 0);
 			for (const clientMac of device.clients) {
+				// Only draw lines to clients that have visible dots
+				if (!visibleDeviceMACs.has(clientMac)) continue;
 				const client = state.devices.get(clientMac);
 				if (!client?.location?.lat || !client?.location?.lon) continue;
 				// Use spread position for client end of the arc
@@ -354,6 +459,7 @@
 		last_seen: number;
 		clientCount: number;
 		parentAP: string;
+		affiliation: Affiliation;
 	} | null = $state(null);
 
 	// Cell tower popup state
@@ -557,14 +663,66 @@
 	// The Stadia alidade_smooth_dark style only shows parks, universities, and hospitals.
 	// We add broader POI labels, house numbers, and enhanced building outlines.
 	// NOTE: Uses pure expression syntax — do NOT mix with legacy filter syntax.
+	console.error('[DashboardMap] Script executing');
+
 	function handleMapLoad() {
+		console.log(
+			'[DashboardMap] handleMapLoad called. Map exists:',
+			!!map,
+			'Loaded:',
+			map?.loaded()
+		);
 		if (!map) return;
+
+		// Prevent double initialization
+		// Note: layersInitialized is tracked in outer scope, but if called by onload directly it might bypass the effect's guard if we don't check here?
+		// Actually, let's trust the effect and just log for now.
+
 		const mapInstance = map;
+
+		if (!map.loaded()) {
+			console.log('[DashboardMap] Map not loaded, waiting for "load" event...');
+			map.once('load', () => {
+				console.log('[DashboardMap] "load" event fired. Setting up map.');
+				setupMap(mapInstance);
+			});
+		} else {
+			console.log('[DashboardMap] Map already loaded. Setting up map immediately.');
+			setupMap(mapInstance);
+		}
+	}
+
+	function setupMap(mapInstance: maplibregl.Map) {
+		// Initialize Satellite Layer
+		const satLayer = new SatelliteLayer(mapInstance);
+
+		// Initialize Symbol Layer (MIL-STD-2525)
+		symbolLayer = new SymbolLayer(mapInstance);
+
+		// Register click handler for MIL symbol clicks (imperative layer, not template)
+		mapInstance.on('click', 'mil-sym-layer', (e) => {
+			handleDeviceClick(e as maplibregl.MapMouseEvent);
+		});
+
+		// Sync with settings (Satellite)
+		mapSettings.subscribe((settings) => {
+			if (settings.type === 'satellite') {
+				satLayer.add(settings.url, settings.attribution);
+				satLayer.setVisible(true);
+			} else {
+				satLayer.setVisible(false);
+			}
+		});
 
 		// Click on empty map background → dismiss overlay and clear isolation
 		mapInstance.on('click', (e) => {
 			const features = mapInstance.queryRenderedFeatures(e.point, {
-				layers: ['device-circles', 'device-clusters', 'cell-tower-circles']
+				layers: [
+					'device-circles',
+					'device-clusters',
+					'cell-tower-circles',
+					'mil-sym-layer'
+				].filter((l) => mapInstance.getLayer(l))
 			});
 			if (!features || features.length === 0) {
 				_popupLngLat = null;
@@ -574,79 +732,90 @@
 		});
 
 		// Enhanced building outlines (brighter than the subtle default)
-		mapInstance.addLayer(
-			{
-				id: 'building-outline-enhanced',
-				type: 'line',
-				source: 'openmaptiles',
-				'source-layer': 'building',
-				minzoom: 15,
-				paint: {
-					'line-color': 'hsla(0, 0%, 50%, 0.3)',
-					'line-width': 0.5
-				}
-			},
-			'poi_gen1'
-		);
+		if (!mapInstance.getLayer('building-outline-enhanced')) {
+			mapInstance.addLayer(
+				{
+					id: 'building-outline-enhanced',
+					type: 'line',
+					source: 'openmaptiles',
+					'source-layer': 'building',
+					minzoom: 15,
+					paint: {
+						'line-color': 'hsla(0, 0%, 50%, 0.3)',
+						'line-width': 0.5
+					}
+				},
+				'poi_gen1'
+			);
+		}
 
 		// House numbers on buildings (zoom 17+)
-		mapInstance.addLayer({
-			id: 'housenumber-labels',
-			type: 'symbol',
-			source: 'openmaptiles',
-			'source-layer': 'housenumber',
-			minzoom: 17,
-			layout: {
-				'text-field': ['get', 'housenumber'],
-				'text-font': ['Stadia Regular'],
-				'text-size': 10,
-				'text-anchor': 'center',
-				'text-optional': true,
-				'text-allow-overlap': false
-			},
-			paint: {
-				'text-color': '#7a8290',
-				'text-halo-color': '#111119',
-				'text-halo-width': 1,
-				'text-halo-blur': 0.5
-			}
-		});
+		if (!mapInstance.getLayer('housenumber-labels')) {
+			mapInstance.addLayer({
+				id: 'housenumber-labels',
+				type: 'symbol',
+				source: 'openmaptiles',
+				'source-layer': 'housenumber',
+				minzoom: 17,
+				layout: {
+					'text-field': ['get', 'housenumber'],
+					'text-font': ['Stadia Regular'],
+					'text-size': 10,
+					'text-anchor': 'center',
+					'text-optional': true,
+					'text-allow-overlap': false
+				},
+				paint: {
+					'text-color': '#7a8290',
+					'text-halo-color': '#111119',
+					'text-halo-width': 1,
+					'text-halo-blur': 0.5
+				}
+			});
+		}
 
 		// ALL named POIs — no class or rank filter (zoom 14+)
 		// Uses coalesce to try name:latin first, then name
-		mapInstance.addLayer({
-			id: 'poi-labels-all',
-			type: 'symbol',
-			source: 'openmaptiles',
-			'source-layer': 'poi',
-			minzoom: 14,
-			filter: ['any', ['has', 'name:latin'], ['has', 'name']],
-			layout: {
-				'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
-				'text-font': ['Stadia Regular'],
-				'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
-				'text-anchor': 'top',
-				'text-offset': [0, 0.6],
-				'text-max-width': 8,
-				'text-optional': true,
-				'text-allow-overlap': false,
-				'text-padding': 2
-			},
-			paint: {
-				'text-color': '#b0b8c4',
-				'text-halo-color': '#111119',
-				'text-halo-width': 1.5,
-				'text-halo-blur': 0.5
-			}
-		});
+		if (!mapInstance.getLayer('poi-labels-all')) {
+			mapInstance.addLayer({
+				id: 'poi-labels-all',
+				type: 'symbol',
+				source: 'openmaptiles',
+				'source-layer': 'poi',
+				minzoom: 14,
+				filter: ['any', ['has', 'name:latin'], ['has', 'name']],
+				layout: {
+					'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
+					'text-font': ['Stadia Regular'],
+					'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
+					'text-anchor': 'top',
+					'text-offset': [0, 0.6],
+					'text-max-width': 8,
+					'text-optional': true,
+					'text-allow-overlap': false,
+					'text-padding': 2
+				},
+				paint: {
+					'text-color': '#b0b8c4',
+					'text-halo-color': '#111119',
+					'text-halo-width': 1.5,
+					'text-halo-blur': 0.5
+				}
+			});
+		}
 
 		// Pointer cursor for clickable layers
-		for (const layer of ['device-clusters', 'device-circles', 'cell-tower-circles']) {
-			map.on('mouseenter', layer, () => {
-				if (map) map.getCanvas().style.cursor = 'pointer';
+		for (const layer of [
+			'device-clusters',
+			'device-circles',
+			'cell-tower-circles',
+			'mil-sym-layer'
+		]) {
+			mapInstance.on('mouseenter', layer, () => {
+				if (mapInstance) mapInstance.getCanvas().style.cursor = 'pointer';
 			});
-			map.on('mouseleave', layer, () => {
-				if (map) map.getCanvas().style.cursor = '';
+			mapInstance.on('mouseleave', layer, () => {
+				if (mapInstance) mapInstance.getCanvas().style.cursor = '';
 			});
 		}
 
@@ -675,7 +844,9 @@
 	}
 
 	function handleDeviceClick(ev: maplibregl.MapMouseEvent) {
-		const features = map?.queryRenderedFeatures(ev.point, { layers: ['device-circles'] });
+		const features = map?.queryRenderedFeatures(ev.point, {
+			layers: ['device-circles', 'mil-sym-layer'].filter((l) => map?.getLayer(l))
+		});
 		if (features && features.length > 0) {
 			const props = features[0].properties;
 			const geom = features[0].geometry;
@@ -693,7 +864,10 @@
 					packets: props?.packets ?? 0,
 					last_seen: props?.last_seen ?? 0,
 					clientCount: props?.clientCount ?? 0,
-					parentAP: props?.parentAP ?? ''
+					parentAP: props?.parentAP ?? '',
+					affiliation:
+						$kismetStore.deviceAffiliations.get((props?.mac ?? '').toUpperCase()) ||
+						'unknown'
 				};
 
 				// Notify agent context store (AG-UI shared state bridge)
@@ -802,6 +976,12 @@
 		if (!map) return;
 		const vis = $layerVisibility;
 		const isoMac = $isolatedDeviceMAC;
+
+		// Update SymbolLayer visibility
+		if (symbolLayer) {
+			symbolLayer.setVisible(vis.milSyms !== false);
+		}
+
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
 			// Connection lines: show when isolated OR when layer manually enabled
 			const visible =
@@ -930,25 +1110,31 @@
 
 		<!-- Center-on-location button — top of bottom-right stack -->
 		<CustomControl position="bottom-right">
-			<button class="locate-btn" onclick={handleLocateClick} title="Center on my location">
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
+			<div class="control-stack">
+				<button
+					class="locate-btn"
+					onclick={handleLocateClick}
+					title="Center on my location"
 				>
-					<circle cx="12" cy="12" r="8" />
-					<circle cx="12" cy="12" r="3" fill="currentColor" />
-					<line x1="12" y1="2" x2="12" y2="4" />
-					<line x1="12" y1="20" x2="12" y2="22" />
-					<line x1="2" y1="12" x2="4" y2="12" />
-					<line x1="20" y1="12" x2="22" y2="12" />
-				</svg>
-			</button>
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="8" />
+						<circle cx="12" cy="12" r="3" fill="currentColor" />
+						<line x1="12" y1="2" x2="12" y2="4" />
+						<line x1="12" y1="20" x2="12" y2="22" />
+						<line x1="2" y1="12" x2="4" y2="12" />
+						<line x1="20" y1="12" x2="22" y2="12" />
+					</svg>
+				</button>
+			</div>
 		</CustomControl>
 
 		<!-- GPS accuracy circle fill -->
@@ -964,8 +1150,10 @@
 
 		<!-- Cell tower markers (toggled via Layers panel) -->
 		<GeoJSONSource id="cell-towers-src" data={cellTowerGeoJSON}>
+			<!-- Cell Towers (Circles) -->
 			<CircleLayer
 				id="cell-tower-circles"
+				source="cell-towers-src"
 				paint={{
 					'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8, 18, 12],
 					'circle-color': ['get', 'color'],
@@ -976,7 +1164,7 @@
 				}}
 				onclick={handleTowerClick}
 			/>
-			<SymbolLayer
+			<MapLibreSymbolLayer
 				id="cell-tower-labels"
 				minzoom={12}
 				layout={{
@@ -1031,7 +1219,7 @@
 			/>
 
 			<!-- Cluster count labels -->
-			<SymbolLayer
+			<MapLibreSymbolLayer
 				id="device-cluster-count"
 				filter={['has', 'point_count']}
 				layout={{
@@ -1228,6 +1416,27 @@
 			<div class="overlay-row">
 				<span class="overlay-label">TYPE</span>
 				<span class="overlay-value">{popupContent.type}</span>
+			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">AFFIL</span>
+				<span class="overlay-value">
+					<span class="affil-indicator affil-{popupContent.affiliation}"></span>
+					<select
+						class="affil-select"
+						value={popupContent.affiliation}
+						onchange={(e) => {
+							const val = (e.target as HTMLSelectElement).value as Affiliation;
+							if (popupContent) {
+								setDeviceAffiliation(popupContent.mac, val);
+								popupContent = { ...popupContent, affiliation: val };
+							}
+						}}
+					>
+						<option value="unknown">Unknown</option>
+						<option value="friendly">Friendly</option>
+						<option value="hostile">Hostile</option>
+					</select>
+				</span>
 			</div>
 			<div class="overlay-divider"></div>
 			<div class="overlay-row">
@@ -1518,5 +1727,60 @@
 	.overlay-divider {
 		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
 		margin: 3px 0;
+	}
+
+	.control-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	/* Affiliation dropdown */
+	.affil-select {
+		background: var(--palantir-bg-overlay, #1a1a2e);
+		color: var(--palantir-text-secondary, #aaa);
+		border: 1px solid var(--palantir-border-default, #2a2a3e);
+		border-radius: 3px;
+		font-family: var(--font-mono, monospace);
+		font-size: 10px;
+		padding: 1px 4px;
+		cursor: pointer;
+		outline: none;
+		-webkit-appearance: none;
+		appearance: none;
+		padding-right: 14px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 3px center;
+	}
+
+	.affil-select:hover {
+		border-color: var(--palantir-accent, #4a90e2);
+	}
+
+	.affil-select:focus {
+		border-color: var(--palantir-accent, #4a90e2);
+		box-shadow: 0 0 0 1px var(--palantir-accent, #4a90e2);
+	}
+
+	.affil-indicator {
+		display: inline-block;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		margin-right: 4px;
+		vertical-align: middle;
+	}
+
+	.affil-unknown {
+		background: #c8a32e;
+	}
+
+	.affil-friendly {
+		background: #4a90e2;
+	}
+
+	.affil-hostile {
+		background: #e24a4a;
 	}
 </style>

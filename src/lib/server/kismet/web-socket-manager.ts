@@ -538,7 +538,7 @@ export class WebSocketManager extends EventEmitter {
 	/**
 	 * Broadcast message to clients with optional filter
 	 */
-	private broadcast(message: WebSocketMessage, filter?: (sub: Subscription) => boolean) {
+	public broadcast(message: WebSocketMessage, filter?: (sub: Subscription) => boolean) {
 		const data = JSON.stringify(message);
 
 		this.clients.forEach((sub, client) => {

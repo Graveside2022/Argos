@@ -1,0 +1,964 @@
+
+> argos@0.0.1 typecheck
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+The `config.kit.files.assets` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.client` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.server` option is deprecated, and will be removed in a future version
+The `config.kit.files.lib` option is deprecated, and will be removed in a future version
+The `config.kit.files.params` option is deprecated, and will be removed in a future version
+The `config.kit.files.routes` option is deprecated, and will be removed in a future version
+The `config.kit.files.serviceWorker` option is deprecated, and will be removed in a future version
+The `config.kit.files.appTemplate` option is deprecated, and will be removed in a future version
+Loading svelte-check in workspace: /home/kali/Documents/Argos/Argos
+Getting Svelte diagnostics...
+
+The `config.kit.files.assets` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.client` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.server` option is deprecated, and will be removed in a future version
+The `config.kit.files.lib` option is deprecated, and will be removed in a future version
+The `config.kit.files.params` option is deprecated, and will be removed in a future version
+The `config.kit.files.routes` option is deprecated, and will be removed in a future version
+The `config.kit.files.serviceWorker` option is deprecated, and will be removed in a future version
+The `config.kit.files.appTemplate` option is deprecated, and will be removed in a future version
+/home/kali/Documents/Argos/Argos/src/lib/server/tak/TakService.ts:113:21
+Error: Type 'string' is not assignable to type 'Record<string, unknown>'. 
+                    type: 'tak_cot',
+                    data: xml,
+                    timestamp: new Date().toISOString()
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/AgentChatPanel.svelte:256:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+		<div class="toolbar-right">
+			<button class="toolbar-btn" title="Clear chat" onclick={clearChat}>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<polyline points="3 6 5 6 21 6" />
+					<path
+						d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+					/>
+				</svg>
+			</button>
+		</div>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/MapSettings.svelte:37:2
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+<div class="map-settings-ctrl">
+	<button class="settings-btn" onclick={toggle} title="Map Layers">
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
+			<polygon points="12 2 2 7 12 12 22 7 12 2" />
+			<polyline points="2 17 12 22 22 17" />
+			<polyline points="2 12 12 17 22 12" />
+		</svg>
+	</button>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:33:11
+Error: Identifier 'getSignalBandKey' has already been declared
+https://svelte.dev/e/js_parse_error (svelte)
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { resolveThemeColor } from '$lib/utils/theme-colors';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:19:3
+Error: Duplicate identifier 'SymbolLayer'. (ts)
+		Popup,
+		SymbolLayer
+	} from 'svelte-maplibre-gl';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:32:11
+Error: Duplicate identifier 'getSignalBandKey'. (ts)
+	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:32:29
+Error: Duplicate identifier 'getSignalHex'. (ts)
+	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:33:11
+Error: Duplicate identifier 'getSignalBandKey'. (ts)
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { resolveThemeColor } from '$lib/utils/theme-colors';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:33:29
+Error: Duplicate identifier 'getSignalHex'. (ts)
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
+	import { resolveThemeColor } from '$lib/utils/theme-colors';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:37:11
+Error: Duplicate identifier 'SymbolLayer'. (ts)
+	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
+	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
+	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:577:17
+Error: Expected 2 arguments, but got 1. (ts)
+		// Initialize Symbol Layer (MIL-STD-2525)
+		symbolLayer = new SymbolLayer(map);
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:577:17
+Error: 'new' expression, whose target lacks a construct signature, implicitly has an 'any' type. (ts)
+		// Initialize Symbol Layer (MIL-STD-2525)
+		symbolLayer = new SymbolLayer(map);
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:623:23
+Error: Property 'update' does not exist on type '{ $on?(type: string, callback: (e: any) => void): () => void; $set?(props: Partial<Props>): void; }'. (ts)
+		    if (symbolLayer) {
+		        symbolLayer.update(features);
+		    }
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/DashboardMap.svelte:871:25
+Error: Property 'setVisible' does not exist on type '{ $on?(type: string, callback: (e: any) => void): () => void; $set?(props: Partial<Props>): void; }'. (ts)
+        if (symbolLayer) {
+            symbolLayer.setVisible(vis.milSyms !== false);
+        }
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:22:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			<span class="toggle-label">Device Dots</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.deviceDots}
+				onclick={() => toggleLayerVisibility('deviceDots')}
+				role="switch"
+				aria-checked={$layerVisibility.deviceDots}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:35:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			<span class="toggle-label">Military Symbols</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.milSyms}
+				onclick={() => toggleLayerVisibility('milSyms')}
+				role="switch"
+				aria-checked={$layerVisibility.milSyms}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:48:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			<span class="toggle-label">Connections</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.connectionLines}
+				onclick={() => toggleLayerVisibility('connectionLines')}
+				role="switch"
+				aria-checked={$layerVisibility.connectionLines}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:61:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			<span class="toggle-label">Cell Towers</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.cellTowers}
+				onclick={() => toggleLayerVisibility('cellTowers')}
+				role="switch"
+				aria-checked={$layerVisibility.cellTowers}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:74:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			<span class="toggle-label">Signal Markers</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.signalMarkers}
+				onclick={() => toggleLayerVisibility('signalMarkers')}
+				role="switch"
+				aria-checked={$layerVisibility.signalMarkers}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:97:5
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+				</div>
+				<button
+					class="toggle-switch"
+					class:on={$activeBands.has(band.key)}
+					onclick={() => toggleBand(band.key)}
+					role="switch"
+					aria-checked={$activeBands.has(band.key)}
+				>
+					<span class="toggle-knob"></span>
+				</button>
+			</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/LayersPanel.svelte:114:4
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			</div>
+			<button
+				class="toggle-switch"
+				class:on={$activeBands.has('none')}
+				onclick={() => toggleBand('none')}
+				role="switch"
+				aria-checked={$activeBands.has('none')}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/PanelContainer.svelte:119:4
+Warn: noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex (svelte)
+			</div>
+			<div
+				class="drag-handle"
+				role="separator"
+				aria-orientation="horizontal"
+				aria-valuenow={panelHeight}
+				aria-valuemin={MIN_HEIGHT}
+				aria-valuemax={maxHeight}
+				tabindex="0"
+				onmousedown={handleMouseDown}
+				ontouchstart={handleTouchStart}
+				ondblclick={handleDoubleClick}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						panelHeight = Math.min(maxHeight, panelHeight + 20);
+					} else if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						panelHeight = Math.max(MIN_HEIGHT, panelHeight - 20);
+					}
+				}}
+			>
+				<div class="drag-indicator"></div>
+			</div>
+		{:else if themeStore.railPosition === 'bottom'}
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/PanelContainer.svelte:119:4
+Warn: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+			</div>
+			<div
+				class="drag-handle"
+				role="separator"
+				aria-orientation="horizontal"
+				aria-valuenow={panelHeight}
+				aria-valuemin={MIN_HEIGHT}
+				aria-valuemax={maxHeight}
+				tabindex="0"
+				onmousedown={handleMouseDown}
+				ontouchstart={handleTouchStart}
+				ondblclick={handleDoubleClick}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						panelHeight = Math.min(maxHeight, panelHeight + 20);
+					} else if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						panelHeight = Math.max(MIN_HEIGHT, panelHeight - 20);
+					}
+				}}
+			>
+				<div class="drag-indicator"></div>
+			</div>
+		{:else if themeStore.railPosition === 'bottom'}
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/PanelContainer.svelte:144:4
+Warn: noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex (svelte)
+			<!-- Drag handle for bottom position (at top edge) -->
+			<div
+				class="drag-handle"
+				role="separator"
+				aria-orientation="horizontal"
+				aria-valuenow={panelHeight}
+				aria-valuemin={MIN_HEIGHT}
+				aria-valuemax={maxHeight}
+				tabindex="0"
+				onmousedown={handleMouseDown}
+				ontouchstart={handleTouchStart}
+				ondblclick={handleDoubleClick}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						panelHeight = Math.min(maxHeight, panelHeight + 20);
+					} else if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						panelHeight = Math.max(MIN_HEIGHT, panelHeight - 20);
+					}
+				}}
+			>
+				<div class="drag-indicator"></div>
+			</div>
+			<div class="panel-content">
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/PanelContainer.svelte:144:4
+Warn: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+			<!-- Drag handle for bottom position (at top edge) -->
+			<div
+				class="drag-handle"
+				role="separator"
+				aria-orientation="horizontal"
+				aria-valuenow={panelHeight}
+				aria-valuemin={MIN_HEIGHT}
+				aria-valuemax={maxHeight}
+				tabindex="0"
+				onmousedown={handleMouseDown}
+				ontouchstart={handleTouchStart}
+				ondblclick={handleDoubleClick}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						panelHeight = Math.min(maxHeight, panelHeight + 20);
+					} else if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						panelHeight = Math.max(MIN_HEIGHT, panelHeight - 20);
+					}
+				}}
+			>
+				<div class="drag-indicator"></div>
+			</div>
+			<div class="panel-content">
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/ResizableBottomPanel.svelte:115:3
+Warn: noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex (svelte)
+		<!-- Drag handle -->
+		<div
+			class="drag-handle"
+			role="separator"
+			aria-orientation="horizontal"
+			aria-valuenow={height}
+			aria-valuemin={minHeight}
+			aria-valuemax={maxHeight}
+			tabindex="0"
+			onmousedown={handleMouseDown}
+			ontouchstart={handleTouchStart}
+			ondblclick={handleDoubleClick}
+			onkeydown={(e) => {
+				if (e.key === 'ArrowUp') {
+					e.preventDefault();
+					onHeightChange?.(Math.min(maxHeight, height + 20));
+				} else if (e.key === 'ArrowDown') {
+					e.preventDefault();
+					onHeightChange?.(Math.max(minHeight, height - 20));
+				}
+			}}
+		>
+			<div class="drag-indicator"></div>
+		</div>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/ResizableBottomPanel.svelte:115:3
+Warn: Non-interactive element `<div>` should not be assigned mouse or keyboard event listeners
+https://svelte.dev/e/a11y_no_noninteractive_element_interactions (svelte)
+		<!-- Drag handle -->
+		<div
+			class="drag-handle"
+			role="separator"
+			aria-orientation="horizontal"
+			aria-valuenow={height}
+			aria-valuemin={minHeight}
+			aria-valuemax={maxHeight}
+			tabindex="0"
+			onmousedown={handleMouseDown}
+			ontouchstart={handleTouchStart}
+			ondblclick={handleDoubleClick}
+			onkeydown={(e) => {
+				if (e.key === 'ArrowUp') {
+					e.preventDefault();
+					onHeightChange?.(Math.min(maxHeight, height + 20));
+				} else if (e.key === 'ArrowDown') {
+					e.preventDefault();
+					onHeightChange?.(Math.max(minHeight, height - 20));
+				}
+			}}
+		>
+			<div class="drag-indicator"></div>
+		</div>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/TopStatusBar.svelte:396:1
+Warn: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div
+	class="top-status-bar"
+	onclick={(e) => {
+		if (e.target === e.currentTarget) closeDropdown();
+	}}
+>
+	<div class="status-group">
+		<span class="app-brand">ARGOS</span>
+		<span class="status-divider"></span>
+
+		<!-- WiFi -->
+		<div class="device-wrapper">
+			<div
+				class="status-item device-btn"
+				onclick={() => toggleDropdown('wifi')}
+				role="button"
+				tabindex="0"
+			>
+				<span
+					class="status-dot"
+					class:dot-active={wifiState === 'active'}
+					class:dot-standby={wifiState === 'standby'}
+					class:dot-offline={wifiState === 'offline'}
+				></span>
+				<span class="status-label">WiFi Adapter</span>
+			</div>
+
+			{#if openDropdown === 'wifi'}
+				<div class="device-dropdown">
+					<div class="dropdown-title">WIFI ADAPTER</div>
+					{#if wifiState === 'offline'}
+						<div class="dropdown-row">
+							<span class="dropdown-key">Status</span><span class="dropdown-val dim"
+								>Not detected</span
+							>
+						</div>
+					{:else}
+						{#if wifiInfo.chipset}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Chipset</span><span class="dropdown-val"
+									>{wifiInfo.chipset}</span
+								>
+							</div>
+						{/if}
+						{#if wifiInfo.mac}
+							<div class="dropdown-row">
+								<span class="dropdown-key">MAC</span><span class="dropdown-val"
+									>{wifiInfo.mac}</span
+								>
+							</div>
+						{/if}
+						{#if wifiInfo.driver}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Driver</span><span class="dropdown-val"
+									>{wifiInfo.driver}</span
+								>
+							</div>
+						{/if}
+						<div class="dropdown-row">
+							<span class="dropdown-key">Interface</span><span class="dropdown-val"
+								>{wifiInfo.monitorInterface || wifiInfo.interface || '—'}</span
+							>
+						</div>
+						{#if wifiInfo.mode}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Mode</span><span class="dropdown-val"
+									>{wifiInfo.mode}</span
+								>
+							</div>
+						{/if}
+						{#if wifiInfo.channel}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Channel</span><span class="dropdown-val"
+									>{wifiInfo.channel}</span
+								>
+							</div>
+						{/if}
+						{#if wifiInfo.bands && wifiInfo.bands.length > 0}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Bands</span><span class="dropdown-val"
+									>{wifiInfo.bands.join(', ')}</span
+								>
+							</div>
+						{/if}
+						{#if wifiInfo.owner}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Used by</span><span
+									class="dropdown-val accent">{wifiInfo.owner}</span
+								>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<!-- SDR -->
+		<div class="device-wrapper">
+			<div
+				class="status-item device-btn"
+				onclick={() => toggleDropdown('sdr')}
+				role="button"
+				tabindex="0"
+			>
+				<span
+					class="status-dot"
+					class:dot-active={sdrState === 'active'}
+					class:dot-standby={sdrState === 'standby'}
+					class:dot-offline={sdrState === 'offline'}
+				></span>
+				<span class="status-label">Software Defined Radio</span>
+			</div>
+
+			{#if openDropdown === 'sdr'}
+				<div class="device-dropdown">
+					<div class="dropdown-title">SOFTWARE DEFINED RADIO</div>
+					{#if sdrState === 'offline'}
+						<div class="dropdown-row">
+							<span class="dropdown-key">Status</span><span class="dropdown-val dim"
+								>Not detected</span
+							>
+						</div>
+					{:else}
+						{#if sdrInfo.manufacturer}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Make</span><span class="dropdown-val"
+									>{sdrInfo.manufacturer}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.product}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Model</span><span class="dropdown-val"
+									>{sdrInfo.product}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.serial}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Serial</span><span class="dropdown-val"
+									>{formatSerial(sdrInfo.serial)}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.firmwareApi}
+							<div class="dropdown-row">
+								<span class="dropdown-key">FW API</span><span class="dropdown-val"
+									>{sdrInfo.firmwareApi}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.usbSpeed}
+							<div class="dropdown-row">
+								<span class="dropdown-key">USB</span><span class="dropdown-val"
+									>{sdrInfo.usbSpeed}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.maxPower}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Power</span><span class="dropdown-val"
+									>{sdrInfo.maxPower}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.configuration}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Mode</span><span class="dropdown-val"
+									>{sdrInfo.configuration}</span
+								>
+							</div>
+						{/if}
+						{#if sdrInfo.owner}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Used by</span><span
+									class="dropdown-val accent">{sdrInfo.owner}</span
+								>
+							</div>
+						{:else}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Status</span><span
+									class="dropdown-val dim">Idle</span
+								>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<!-- GPS + SAT count -->
+		<div class="device-wrapper">
+			<div
+				class="status-item device-btn"
+				onclick={() => toggleDropdown('gps')}
+				role="button"
+				tabindex="0"
+			>
+				<span
+					class="status-dot"
+					class:dot-active={gpsState === 'active'}
+					class:dot-standby={gpsState === 'standby'}
+					class:dot-offline={gpsState === 'offline'}
+				></span>
+				<span class="status-label">GPS</span>
+				<span class="sat-count">{gpsSats} SAT</span>
+			</div>
+
+			{#if openDropdown === 'gps'}
+				<div class="device-dropdown">
+					<div class="dropdown-title">GPS RECEIVER</div>
+					{#if gpsState === 'offline'}
+						<div class="dropdown-row">
+							<span class="dropdown-key">Status</span><span class="dropdown-val dim"
+								>Not available</span
+							>
+						</div>
+					{:else}
+						<div class="dropdown-row">
+							<span class="dropdown-key">Fix</span><span
+								class="dropdown-val"
+								class:accent={gpsFix >= 2}
+								>{gpsFix === 3
+									? '3D Fix'
+									: gpsFix === 2
+										? '2D Fix'
+										: 'No Fix'}</span
+							>
+						</div>
+						<div
+							class="dropdown-row satellites-toggle"
+							onclick={() => (satellitesExpanded = !satellitesExpanded)}
+							role="button"
+							tabindex="0"
+						>
+							<span class="dropdown-key">Satellites</span><span class="dropdown-val">
+								{gpsSats}
+								<span class="expand-icon" class:expanded={satellitesExpanded}
+									>▼</span
+								>
+							</span>
+						</div>
+
+						{#if satellitesExpanded && satelliteData.length > 0}
+							<div class="satellites-list">
+								{#each satelliteData as sat}
+									<div class="dropdown-row satellite-item">
+										<span class="dropdown-key"
+											>PRN {sat.prn} ({sat.constellation})</span
+										>
+										<span class="dropdown-val">{sat.snr} dB</span>
+									</div>
+								{/each}
+
+								<div class="dropdown-divider"></div>
+								<div class="dropdown-row">
+									<span class="dropdown-key">Used for Fix</span>
+									<span class="dropdown-val accent">{satelliteUsedCount}</span>
+								</div>
+							</div>
+						{/if}
+
+						{#if gpsSpeed !== null}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Speed</span><span class="dropdown-val"
+									>{gpsSpeed.toFixed(1)} m/s</span
+								>
+							</div>
+						{/if}
+						{#if gpsAccuracy !== null}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Accuracy</span><span class="dropdown-val"
+									>{gpsAccuracy.toFixed(1)} m</span
+								>
+							</div>
+						{/if}
+						{#if gpsInfo.device}
+							<div class="dropdown-divider"></div>
+							<div class="dropdown-row">
+								<span class="dropdown-key">Device</span><span class="dropdown-val"
+									>{gpsInfo.device}</span
+								>
+							</div>
+						{/if}
+						{#if gpsInfo.protocol}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Protocol</span><span class="dropdown-val"
+									>{gpsInfo.protocol}</span
+								>
+							</div>
+						{/if}
+						{#if gpsInfo.baudRate}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Baud</span><span class="dropdown-val"
+									>{gpsInfo.baudRate}</span
+								>
+							</div>
+						{/if}
+						{#if gpsInfo.usbAdapter}
+							<div class="dropdown-row">
+								<span class="dropdown-key">Adapter</span><span class="dropdown-val"
+									>{gpsInfo.usbAdapter}</span
+								>
+							</div>
+						{/if}
+						{#if gpsInfo.gpsdVersion}
+							<div class="dropdown-row">
+								<span class="dropdown-key">GPSD</span><span class="dropdown-val"
+									>v{gpsInfo.gpsdVersion}</span
+								>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<!-- Right side: location, coords, time -->
+	<div class="coords-group">
+		{#if locationName}
+			<span class="coord-value location-name">{locationName}</span>
+			<span class="coord-sep">|</span>
+		{/if}
+		{#if weather}
+			<div class="device-wrapper weather-wrapper">
+				<div
+					class="weather-chip device-btn"
+					onclick={() => toggleDropdown('weather')}
+					role="button"
+					tabindex="0"
+				>
+					<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
+					<span class="weather-icon"
+						>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
+					>
+					<span class="coord-value">{Math.round(weather.temperature)}°C</span>
+				</div>
+
+				{#if openDropdown === 'weather'}
+					<div class="device-dropdown weather-dropdown">
+						<div class="dropdown-title">WEATHER CONDITIONS</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Condition</span><span class="dropdown-val"
+								>{getWeatherCondition(weather.weatherCode)}</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Temperature</span><span class="dropdown-val"
+								>{weather.temperature.toFixed(1)}°C</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Feels Like</span><span class="dropdown-val"
+								>{weather.apparentTemperature.toFixed(1)}°C</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Humidity</span><span class="dropdown-val"
+								>{weather.humidity}%</span
+							>
+						</div>
+						<div class="dropdown-divider"></div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Wind</span><span class="dropdown-val"
+								>{weather.windSpeed.toFixed(0)} km/h</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Gusts</span><span class="dropdown-val"
+								>{weather.windGusts.toFixed(0)} km/h</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Precipitation</span><span
+								class="dropdown-val">{weather.precipitation.toFixed(1)} mm</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Pressure</span><span class="dropdown-val"
+								>{weather.pressure.toFixed(0)} hPa</span
+							>
+						</div>
+						<div class="dropdown-divider"></div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">RF Conditions</span><span
+								class="dropdown-val"
+								class:accent={getRfConditions(weather).cls === 'accent'}
+								class:warn={getRfConditions(weather).cls === 'warn'}
+								>{getRfConditions(weather).label}</span
+							>
+						</div>
+						<div class="dropdown-row">
+							<span class="dropdown-key">Flight Conditions</span><span
+								class="dropdown-val"
+								class:accent={getFlightConditions(weather).cls === 'accent'}
+								class:warn={getFlightConditions(weather).cls === 'warn'}
+								>{getFlightConditions(weather).label}</span
+							>
+						</div>
+					</div>
+				{/if}
+			</div>
+			<span class="coord-sep">|</span>
+		{/if}
+		{#if gpsCoords.lat}
+			<span class="coord-value">{gpsCoords.lat}</span>
+			<span class="coord-sep">/</span>
+			<span class="coord-value">{gpsCoords.lon}</span>
+			<span class="coord-sep">|</span>
+			<span class="coord-value">{gpsCoords.mgrs}</span>
+			<span class="coord-sep">|</span>
+		{/if}
+		<span class="coord-value time-value">{zuluTime}</span>
+	</div>
+</div>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/DevicesPanel.svelte:291:5
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+			{#each signalBands as band (band.key)}
+				<button
+					class="band-chip"
+					class:hidden-band={hiddenBands.has(band.key)}
+					onclick={() => toggleBand(band.key)}
+					title={band.label}
+				>
+					<span class="band-dot" style="background: var({band.cssVar})"></span>
+				</button>
+			{/each}
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/DevicesPanel.svelte:617:7
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+						<span class="whitelist-mac">{mac}</span>
+						<button class="whitelist-remove" onclick={() => removeFromWhitelist(mac)}>
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<line x1="18" y1="6" x2="6" y2="18" /><line
+									x1="6"
+									y1="6"
+									x2="18"
+									y2="18"
+								/>
+							</svg>
+						</button>
+					</div>
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/panels/DevicesPanel.svelte:698:2
+Warn: Unused CSS selector ".toolbar-search"
+https://svelte.dev/e/css_unused_selector (svelte)
+
+	.toolbar-search {
+		flex: 1;
+
+/home/kali/Documents/Argos/Argos/src/lib/components/dashboard/views/OpenWebRXView.svelte:20:2
+Warn: Self-closing HTML tags for non-void elements are ambiguous — use `<iframe ...></iframe>` rather than `<iframe ... />`
+https://svelte.dev/e/element_invalid_self_closing_tag (svelte)
+<ToolViewWrapper title="OpenWebRX Spectrum Analyzer" onBack={goBack}>
+	<iframe src={openwebrxUrl} title="OpenWebRX Web Interface" class="openwebrx-iframe" />
+</ToolViewWrapper>
+
+/home/kali/Documents/Argos/Argos/src/routes/api/tak/config/+server.ts:9:27
+Error: Property 'getInstance' does not exist on type 'typeof RFDatabase'. 
+export const GET: RequestHandler = async () => {
+    const db = RFDatabase.getInstance(); // Use static if available or new
+    // RFDatabase.getRFDatabase is exported but class also has getInstance if I added it?
+
+/home/kali/Documents/Argos/Argos/src/routes/dashboard/+page.svelte:123:7
+Warn: Self-closing HTML tags for non-void elements are ambiguous — use `<iframe ...></iframe>` rather than `<iframe ... />`
+https://svelte.dev/e/element_invalid_self_closing_tag (svelte)
+					<ToolViewWrapper title="Bettercap" onBack={goBackToMap}>
+						<iframe src="http://localhost:80" title="Bettercap" class="tool-iframe" />
+					</ToolViewWrapper>
+
+/home/kali/Documents/Argos/Argos/src/routes/dashboard/+page.svelte:231:6
+Warn: Buttons and links should either contain text or have an `aria-label` or `aria-labelledby` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+					</div>
+					<button class="tab-close-btn" title="Close panel" onclick={closeBottomPanel}>
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							><line x1="18" y1="6" x2="6" y2="18" /><line
+								x1="6"
+								y1="6"
+								x2="18"
+								y2="18"
+							/></svg
+						>
+					</button>
+				</div>
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:129:17
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+            <div class="field-group">
+                <label>Server Name</label>
+                <input type="text" bind:value={config.name} placeholder="My TAK Server" />
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:135:21
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+                <div class="field-group">
+                    <label>Hostname / IP</label>
+                    <input type="text" bind:value={config.hostname} placeholder="192.168.1.10" />
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:139:21
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+                <div class="field-group port">
+                    <label>Port</label>
+                    <input type="number" bind:value={config.port} placeholder="8087" />
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:145:17
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+            <div class="field-group">
+                <label>Protocol</label>
+                <select bind:value={config.protocol}>
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:172:17
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+            <div class="field-group">
+                <label>P12 File</label>
+                <input type="file" accept=".p12" bind:files={p12File} />
+
+/home/kali/Documents/Argos/Argos/src/routes/settings/tak/+page.svelte:177:17
+Warn: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+            <div class="field-group">
+                <label>Password</label>
+                <input type="password" bind:value={p12Password} placeholder="P12 Password" />
+
+====================================
+svelte-check found 13 errors and 28 warnings in 13 files

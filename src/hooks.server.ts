@@ -107,6 +107,14 @@ if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
 	);
 }
 
+// Initialize TakService (Phase 5)
+import { TakService } from '$lib/server/tak/TakService';
+TakService.getInstance()
+	.initialize()
+	.catch((err) => {
+		logger.error('Failed to initialize TakService', { error: err });
+	});
+
 // Handle WebSocket connections (Phase 2.1.6: authentication enforced here
 // because noServer mode does not support the verifyClient callback).
 wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
@@ -358,8 +366,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 			"default-src 'self'",
 			"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
 			"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
-			"img-src 'self' data: blob: https://*.tile.openstreetmap.org", // Map tiles + decoded images
-			"connect-src 'self' ws: wss:", // WebSocket connections (terminal on :3001, Kismet WS)
+			"img-src 'self' data: blob: https://*.tile.openstreetmap.org https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com", // Map tiles (OSM, Google Hybrid, Esri)
+			"connect-src 'self' ws: wss: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com", // WebSocket + tile fetch
 			"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
 			"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
 			"frame-src 'self' http://*:2501 http://*:8073 http://*:80", // Kismet (:2501), OpenWebRX (:8073), Bettercap (:80)

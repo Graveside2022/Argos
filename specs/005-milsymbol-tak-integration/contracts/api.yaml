@@ -1,0 +1,64 @@
+openapi: 3.0.0
+info:
+  title: Argos TAK Integration API
+  version: 1.0.0
+paths:
+  /api/tak/config:
+    get:
+      summary: Get TAK connection configuration
+      responses:
+        '200':
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TakServerConfig'
+    put:
+      summary: Update TAK connection configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TakServerConfig'
+      responses:
+        '200':
+          description: Configuration updated
+    post:
+      summary: Test/Initiate Connection
+      responses:
+        '200':
+          description: Connection attempt started (async)
+
+  /api/tak/certs:
+    post:
+      summary: Upload .p12 Certificate
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Certificate uploaded and extracted
+
+components:
+  schemas:
+    TakServerConfig:
+      type: object
+      properties:
+        hostname:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+          enum: [tcp, tls]
+        connectOnStartup:
+          type: boolean

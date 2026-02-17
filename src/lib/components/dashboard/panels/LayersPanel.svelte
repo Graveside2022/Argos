@@ -1,17 +1,109 @@
 <script lang="ts">
+	import { type VisibilityMode, visibilityMode } from '$lib/map/VisibilityEngine';
 	import {
 		activeBands,
 		layerVisibility,
 		toggleBand,
 		toggleLayerVisibility
 	} from '$lib/stores/dashboard/dashboard-store';
+	import {
+		DEFAULT_SATELLITE_SOURCE,
+		DEFAULT_VECTOR_SOURCE,
+		mapSettings
+	} from '$lib/stores/dashboard/map-settings-store';
 	import { signalBands } from '$lib/utils/signal-utils';
+
+	let customUrl = $state('');
+
+	function selectVector() {
+		mapSettings.setProvider(DEFAULT_VECTOR_SOURCE);
+	}
+
+	function selectSatellite() {
+		mapSettings.setProvider(DEFAULT_SATELLITE_SOURCE);
+	}
+
+	function applyCustom() {
+		if (!customUrl) return;
+		mapSettings.setProvider({
+			name: 'Custom',
+			type: 'satellite',
+			url: customUrl,
+			attribution: 'Custom'
+		});
+	}
+
+	function setVisibilityMode(mode: VisibilityMode) {
+		visibilityMode.set(mode);
+	}
 </script>
 
 <div class="layers-panel">
 	<header class="panel-header">
 		<span class="panel-title">LAYERS</span>
 	</header>
+
+	<!-- Map Provider -->
+	<section class="panel-section">
+		<div class="section-label">MAP PROVIDER</div>
+		<div class="provider-grid">
+			<button
+				class="provider-btn"
+				class:active={$mapSettings.type === 'vector'}
+				onclick={selectVector}
+			>
+				<span class="provider-icon vector"></span>
+				<span class="provider-name">Tactical</span>
+			</button>
+			<button
+				class="provider-btn"
+				class:active={$mapSettings.name === 'Satellite Hybrid'}
+				onclick={selectSatellite}
+			>
+				<span class="provider-icon satellite"></span>
+				<span class="provider-name">Satellite</span>
+			</button>
+		</div>
+
+		<div class="custom-input-row">
+			<input type="text" placeholder="Custom XYZ URL..." bind:value={customUrl} />
+			<button class="apply-btn" onclick={applyCustom}>Set</button>
+		</div>
+	</section>
+
+	<!-- Visibility Filter -->
+	<section class="panel-section">
+		<div class="section-label">VISIBILITY FILTER</div>
+		<div class="vis-options">
+			<button
+				class="vis-btn"
+				class:active={$visibilityMode === 'dynamic'}
+				onclick={() => setVisibilityMode('dynamic')}
+				title="Auto-squelch noise"
+			>
+				<span class="vis-icon">D</span>
+				<span class="vis-name">Dynamic</span>
+			</button>
+			<button
+				class="vis-btn"
+				class:active={$visibilityMode === 'all'}
+				onclick={() => setVisibilityMode('all')}
+				title="Show all detections"
+			>
+				<span class="vis-icon">A</span>
+				<span class="vis-name">All</span>
+			</button>
+			<button
+				class="vis-btn"
+				class:active={$visibilityMode === 'manual'}
+				onclick={() => setVisibilityMode('manual')}
+				title="Manually promoted only"
+			>
+				<span class="vis-icon">M</span>
+				<span class="vis-name">Manual</span>
+			</button>
+		</div>
+	</section>
 
 	<!-- Map Layers -->
 	<section class="panel-section">
@@ -25,6 +117,19 @@
 				onclick={() => toggleLayerVisibility('deviceDots')}
 				role="switch"
 				aria-checked={$layerVisibility.deviceDots}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
+
+		<label class="toggle-row">
+			<span class="toggle-label">Military Symbols</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.milSyms}
+				onclick={() => toggleLayerVisibility('milSyms')}
+				role="switch"
+				aria-checked={$layerVisibility.milSyms}
 			>
 				<span class="toggle-knob"></span>
 			</button>
@@ -211,5 +316,137 @@
 	.toggle-switch.on .toggle-knob {
 		transform: translateX(14px);
 		background: var(--palantir-text-on-accent);
+	}
+
+	/* Map Provider Styles */
+	.provider-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--space-2);
+	}
+
+	.provider-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 8px;
+		background: var(--palantir-bg-subtle);
+		border: 1px solid var(--palantir-border-default);
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.provider-btn:hover {
+		background: var(--palantir-bg-hover);
+	}
+
+	.provider-btn.active {
+		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
+		border-color: var(--palantir-accent);
+	}
+
+	.provider-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 4px;
+		background-size: cover;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.provider-icon.vector {
+		background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+	}
+
+	.provider-icon.satellite {
+		background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+	}
+
+	.provider-name {
+		font-size: 10px;
+		color: var(--palantir-text-primary);
+	}
+
+	.custom-input-row {
+		display: flex;
+		gap: 4px;
+		margin-top: 4px;
+	}
+
+	.custom-input-row input {
+		flex: 1;
+		background: var(--palantir-bg-default);
+		border: 1px solid var(--palantir-border-default);
+		border-radius: 4px;
+		padding: 4px 8px;
+		font-size: 11px;
+		color: var(--palantir-text-primary);
+	}
+
+	.apply-btn {
+		background: var(--palantir-bg-elevated);
+		border: 1px solid var(--palantir-border-default);
+		color: var(--palantir-text-primary);
+		font-size: 10px;
+		padding: 0 8px;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	/* Visibility Filter Styles */
+	.vis-options {
+		display: flex;
+		gap: 4px;
+	}
+
+	.vis-btn {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		padding: 6px;
+		background: transparent;
+		border: 1px solid var(--palantir-border-default);
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.vis-btn:hover {
+		background: var(--palantir-bg-hover);
+	}
+
+	.vis-btn.active {
+		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
+		border-color: var(--palantir-accent);
+	}
+
+	.vis-icon {
+		width: 20px;
+		height: 20px;
+		border-radius: 4px;
+		background: var(--palantir-bg-elevated);
+		color: var(--palantir-text-secondary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		font-weight: 700;
+	}
+
+	.vis-btn.active .vis-icon {
+		background: var(--palantir-accent);
+		color: var(--palantir-text-on-accent);
+	}
+
+	.vis-name {
+		font-size: 9px;
+		color: var(--palantir-text-secondary);
+	}
+
+	.vis-btn.active .vis-name {
+		color: var(--palantir-text-primary);
 	}
 </style>
