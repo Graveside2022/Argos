@@ -73,6 +73,17 @@
 			</Select.Root>
 		</div>
 	</section>
+
+	<section class="panel-section">
+		<span class="section-title">CONNECTIVITY</span>
+
+		<div class="setting-row">
+			<span class="setting-label">TAK Server</span>
+			<a href="/settings/tak" class="text-xs text-blue-400 hover:text-blue-300"
+				>Configure &rarr;</a
+			>
+		</div>
+	</section>
 </div>
 
 <style>

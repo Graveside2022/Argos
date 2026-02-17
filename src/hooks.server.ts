@@ -107,6 +107,14 @@ if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
 	);
 }
 
+// Initialize TakService (Phase 5)
+import { TakService } from '$lib/server/tak/TakService';
+TakService.getInstance()
+	.initialize()
+	.catch((err) => {
+		logger.error('Failed to initialize TakService', { error: err });
+	});
+
 // Handle WebSocket connections (Phase 2.1.6: authentication enforced here
 // because noServer mode does not support the verifyClient callback).
 wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
