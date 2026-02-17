@@ -160,6 +160,32 @@ else
   echo "  IMPORTANT: Edit .env to set Kismet, Bettercap, and OpenWebRX passwords"
 fi
 
+# --- 10. Development Monitor Service ---
+echo "[10/10] Development Monitor Service..."
+if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
+  echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
+  
+  # Create user systemd directory
+  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd/user"
+  
+  # Copy service file
+  sudo -u "$SETUP_USER" cp "$PROJECT_DIR/deployment/argos-dev-monitor.service" "$SETUP_HOME/.config/systemd/user/"
+  
+  # Enable and start service
+  # We use sudo -u to run systemctl as the target user
+  # XDG_RUNTIME_DIR is needed for user systemd interaction
+  USER_ID=$(id -u "$SETUP_USER")
+  export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+  
+  sudo -u "$SETUP_USER" systemctl --user daemon-reload
+  sudo -u "$SETUP_USER" systemctl --user enable argos-dev-monitor
+  sudo -u "$SETUP_USER" systemctl --user restart argos-dev-monitor
+  
+  echo "  Dev monitor service installed and started."
+else
+  echo "  Warning: deployment/argos-dev-monitor.service not found. Skipping."
+fi
+
 echo ""
 echo "=== Provisioning Complete ==="
 echo ""
