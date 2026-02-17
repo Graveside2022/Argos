@@ -47,6 +47,15 @@
 	let map: maplibregl.Map | undefined = $state();
 	let symbolLayer: SymbolLayer | undefined = $state();
 	let initialViewSet = false;
+	let layersInitialized = false;
+
+	// Robust initialization: Trigger when map is bound, not just on onload
+	$effect(() => {
+		if (map && !layersInitialized) {
+			handleMapLoad();
+			layersInitialized = true;
+		}
+	});
 
 	// Alfa AWUS036AXML with basic omnidirectional antenna — signal range bands
 	// Log-distance path loss: PL(d) = 40 + 10·n·log₁₀(d), n=3.3 (suburban w/ buildings)
@@ -589,6 +598,8 @@
 	// The Stadia alidade_smooth_dark style only shows parks, universities, and hospitals.
 	// We add broader POI labels, house numbers, and enhanced building outlines.
 	// NOTE: Uses pure expression syntax — do NOT mix with legacy filter syntax.
+	console.error('[DashboardMap] Script executing');
+
 	function handleMapLoad() {
 		if (!map) return;
 		const mapInstance = map;
@@ -612,6 +623,8 @@
 		// Sync Symbols with Device Data and TAK CoT
 		// We use an effect to push updates to the imperative layer
 		$effect(() => {
+			if (!symbolLayer) return;
+
 			// 1. Kismet Features
 			let features: Feature[] = [];
 
@@ -645,6 +658,13 @@
 
 			// 3. Update layer
 			if (symbolLayer) {
+				console.log(
+					'[DashboardMap] Updating SymbolLayer with',
+					features.length,
+					'features'
+				);
+				const vis = $layerVisibility;
+				console.log('[DashboardMap] milSyms visibility:', vis.milSyms);
 				symbolLayer.update(features);
 			}
 		});
@@ -662,71 +682,77 @@
 		});
 
 		// Enhanced building outlines (brighter than the subtle default)
-		mapInstance.addLayer(
-			{
-				id: 'building-outline-enhanced',
-				type: 'line',
-				source: 'openmaptiles',
-				'source-layer': 'building',
-				minzoom: 15,
-				paint: {
-					'line-color': 'hsla(0, 0%, 50%, 0.3)',
-					'line-width': 0.5
-				}
-			},
-			'poi_gen1'
-		);
+		if (!mapInstance.getLayer('building-outline-enhanced')) {
+			mapInstance.addLayer(
+				{
+					id: 'building-outline-enhanced',
+					type: 'line',
+					source: 'openmaptiles',
+					'source-layer': 'building',
+					minzoom: 15,
+					paint: {
+						'line-color': 'hsla(0, 0%, 50%, 0.3)',
+						'line-width': 0.5
+					}
+				},
+				'poi_gen1'
+			);
+		}
 
 		// House numbers on buildings (zoom 17+)
-		mapInstance.addLayer({
-			id: 'housenumber-labels',
-			type: 'symbol',
-			source: 'openmaptiles',
-			'source-layer': 'housenumber',
-			minzoom: 17,
-			layout: {
-				'text-field': ['get', 'housenumber'],
-				'text-font': ['Stadia Regular'],
-				'text-size': 10,
-				'text-anchor': 'center',
-				'text-optional': true,
-				'text-allow-overlap': false
-			},
-			paint: {
-				'text-color': '#7a8290',
-				'text-halo-color': '#111119',
-				'text-halo-width': 1,
-				'text-halo-blur': 0.5
-			}
-		});
+		if (!mapInstance.getLayer('housenumber-labels')) {
+			mapInstance.addLayer({
+				id: 'housenumber-labels',
+				type: 'symbol',
+				source: 'openmaptiles',
+				'source-layer': 'housenumber',
+				minzoom: 17,
+				layout: {
+					'text-field': ['get', 'housenumber'],
+					'text-font': ['Stadia Regular'],
+					'text-size': 10,
+					'text-anchor': 'center',
+					'text-optional': true,
+					'text-allow-overlap': false
+				},
+				paint: {
+					'text-color': '#7a8290',
+					'text-halo-color': '#111119',
+					'text-halo-width': 1,
+					'text-halo-blur': 0.5
+				}
+			});
+		}
 
 		// ALL named POIs — no class or rank filter (zoom 14+)
 		// Uses coalesce to try name:latin first, then name
-		mapInstance.addLayer({
-			id: 'poi-labels-all',
-			type: 'symbol',
-			source: 'openmaptiles',
-			'source-layer': 'poi',
-			minzoom: 14,
-			filter: ['any', ['has', 'name:latin'], ['has', 'name']],
-			layout: {
-				'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
-				'text-font': ['Stadia Regular'],
-				'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
-				'text-anchor': 'top',
-				'text-offset': [0, 0.6],
-				'text-max-width': 8,
-				'text-optional': true,
-				'text-allow-overlap': false,
-				'text-padding': 2
-			},
-			paint: {
-				'text-color': '#b0b8c4',
-				'text-halo-color': '#111119',
-				'text-halo-width': 1.5,
-				'text-halo-blur': 0.5
-			}
-		});
+		if (!mapInstance.getLayer('poi-labels-all')) {
+			mapInstance.addLayer({
+				id: 'poi-labels-all',
+				type: 'symbol',
+				source: 'openmaptiles',
+				'source-layer': 'poi',
+				minzoom: 14,
+				filter: ['any', ['has', 'name:latin'], ['has', 'name']],
+				layout: {
+					'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
+					'text-font': ['Stadia Regular'],
+					'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
+					'text-anchor': 'top',
+					'text-offset': [0, 0.6],
+					'text-max-width': 8,
+					'text-optional': true,
+					'text-allow-overlap': false,
+					'text-padding': 2
+				},
+				paint: {
+					'text-color': '#b0b8c4',
+					'text-halo-color': '#111119',
+					'text-halo-width': 1.5,
+					'text-halo-blur': 0.5
+				}
+			});
+		}
 
 		// Pointer cursor for clickable layers
 		for (const layer of ['device-clusters', 'device-circles', 'cell-tower-circles']) {
