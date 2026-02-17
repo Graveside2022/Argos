@@ -1,9 +1,9 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class CertManager {
 	private static readonly BASE_DIR = 'data/certs';
@@ -19,6 +19,7 @@ export class CertManager {
 
 	/**
 	 * Saves a P12 file and extracts the certificate and private key.
+	 * Uses execFile() with argument arrays to prevent shell injection.
 	 * @param configId The unique ID of the TAK server config.
 	 * @param p12Buffer The P12 file content.
 	 * @param password The password for the P12 file.
@@ -45,25 +46,49 @@ export class CertManager {
 		fs.writeFileSync(p12Path, p12Buffer, { mode: 0o600 });
 
 		try {
-			// Extract Certificate
-			await execAsync(
-				`openssl pkcs12 -in "${p12Path}" -clcerts -nokeys -out "${certPath}" -passin pass:"${password}"`
-			);
+			// Extract Certificate — execFile prevents shell injection via password
+			await execFileAsync('openssl', [
+				'pkcs12',
+				'-in',
+				p12Path,
+				'-clcerts',
+				'-nokeys',
+				'-out',
+				certPath,
+				'-passin',
+				`pass:${password}`
+			]);
 
 			// Extract Private Key
-			await execAsync(
-				`openssl pkcs12 -in "${p12Path}" -nocerts -out "${keyPath}" -passin pass:"${password}" -nodes`
-			);
+			await execFileAsync('openssl', [
+				'pkcs12',
+				'-in',
+				p12Path,
+				'-nocerts',
+				'-out',
+				keyPath,
+				'-passin',
+				`pass:${password}`,
+				'-nodes'
+			]);
 
 			// Extract CA Certificate (if present)
 			const caPath = path.join(configDir, 'ca.crt');
 			try {
-				await execAsync(
-					`openssl pkcs12 -in "${p12Path}" -cacerts -nokeys -out "${caPath}" -passin pass:"${password}"`
-				);
+				await execFileAsync('openssl', [
+					'pkcs12',
+					'-in',
+					p12Path,
+					'-cacerts',
+					'-nokeys',
+					'-out',
+					caPath,
+					'-passin',
+					`pass:${password}`
+				]);
 				fs.chmodSync(caPath, 0o600);
 			} catch (_e) {
-				// CA might not be present, ignore or log
+				// CA might not be present in the p12 bundle
 			}
 
 			// Set strict permissions on extracted files

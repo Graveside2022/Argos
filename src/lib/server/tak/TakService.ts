@@ -5,12 +5,21 @@ import type { CotMessage, TakServerConfig } from '../../types/tak';
 import { RFDatabase } from '../db/database';
 import { TakClient } from './TakClient';
 
+const COT_THROTTLE_MS = 1000; // Max 1 update/sec per entity
+
+interface ThrottleEntry {
+	lastSent: number;
+	pendingTimeout: NodeJS.Timeout | null;
+	pendingCot: CotMessage | string | null;
+}
+
 export class TakService extends EventEmitter {
 	private static instance: TakService;
 	private client: TakClient | null = null;
 	private config: TakServerConfig | null = null;
 	private db: RFDatabase;
 	private shouldConnect = false;
+	private throttleMap = new Map<string, ThrottleEntry>();
 
 	private constructor() {
 		super();
@@ -130,13 +139,58 @@ export class TakService extends EventEmitter {
 		if (this.client) {
 			this.client.disconnect();
 		}
+		// Clear all pending throttle timers
+		for (const entry of this.throttleMap.values()) {
+			if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
+		}
+		this.throttleMap.clear();
 		this.emit('status', 'disconnected');
 	}
 
+	/**
+	 * Sends a CoT message, throttled to max 1 update/sec per entity UID.
+	 * If multiple updates arrive within the window, only the latest is sent.
+	 */
 	public sendCot(cot: CotMessage | string) {
-		if (this.client) {
+		if (!this.client) return;
+
+		const uid = this.extractUid(cot);
+		if (!uid) {
+			// No UID to throttle on — send immediately
 			this.client.send(cot);
+			return;
 		}
+
+		const now = Date.now();
+		const entry = this.throttleMap.get(uid);
+
+		if (!entry || now - entry.lastSent >= COT_THROTTLE_MS) {
+			// Enough time has passed — send immediately
+			if (entry?.pendingTimeout) clearTimeout(entry.pendingTimeout);
+			this.throttleMap.set(uid, { lastSent: now, pendingTimeout: null, pendingCot: null });
+			this.client.send(cot);
+		} else {
+			// Within throttle window — schedule latest for when window expires
+			if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
+			const delay = COT_THROTTLE_MS - (now - entry.lastSent);
+			entry.pendingCot = cot;
+			entry.pendingTimeout = setTimeout(() => {
+				if (this.client && entry.pendingCot) {
+					this.client.send(entry.pendingCot);
+					entry.lastSent = Date.now();
+					entry.pendingCot = null;
+					entry.pendingTimeout = null;
+				}
+			}, delay);
+		}
+	}
+
+	private extractUid(cot: CotMessage | string): string | null {
+		if (typeof cot === 'string') {
+			const match = cot.match(/uid="([^"]+)"/);
+			return match ? match[1] : null;
+		}
+		return cot.event?.uid ?? null;
 	}
 
 	public async saveConfig(config: TakServerConfig) {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 
+	import { type VisibilityMode, visibilityMode } from '$lib/map/VisibilityEngine';
 	import {
 		DEFAULT_SATELLITE_SOURCE,
 		DEFAULT_VECTOR_SOURCE,
@@ -26,10 +27,14 @@
 		if (!customUrl) return;
 		mapSettings.setProvider({
 			name: 'Custom',
-			type: 'satellite', // Treat as raster/satellite
+			type: 'satellite',
 			url: customUrl,
 			attribution: 'Custom'
 		});
+	}
+
+	function setVisibilityMode(mode: VisibilityMode) {
+		visibilityMode.set(mode);
 	}
 </script>
 
@@ -84,6 +89,45 @@
 				<input type="text" placeholder="Custom XYZ URL..." bind:value={customUrl} />
 				<button class="apply-btn" onclick={applyCustom}>Set</button>
 			</div>
+
+			<div class="settings-divider"></div>
+			<div class="settings-title">Visibility</div>
+
+			<button
+				class="layer-option"
+				class:active={$visibilityMode === 'dynamic'}
+				onclick={() => setVisibilityMode('dynamic')}
+			>
+				<span class="vis-icon">D</span>
+				<div class="layer-info">
+					<span class="layer-name">Dynamic Filter</span>
+					<span class="layer-sub">Auto-squelch noise</span>
+				</div>
+			</button>
+
+			<button
+				class="layer-option"
+				class:active={$visibilityMode === 'all'}
+				onclick={() => setVisibilityMode('all')}
+			>
+				<span class="vis-icon">A</span>
+				<div class="layer-info">
+					<span class="layer-name">Show All</span>
+					<span class="layer-sub">Every detection</span>
+				</div>
+			</button>
+
+			<button
+				class="layer-option"
+				class:active={$visibilityMode === 'manual'}
+				onclick={() => setVisibilityMode('manual')}
+			>
+				<span class="vis-icon">M</span>
+				<div class="layer-info">
+					<span class="layer-name">Manual Only</span>
+					<span class="layer-sub">Promoted devices</span>
+				</div>
+			</button>
 		</div>
 	{/if}
 </div>
@@ -222,5 +266,19 @@
 		font-size: 10px;
 		padding: 0 8px;
 		cursor: pointer;
+	}
+
+	.vis-icon {
+		width: 24px;
+		height: 24px;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		font-weight: 700;
+		background: var(--accent);
+		color: var(--primary);
+		border: 1px solid var(--border);
 	}
 </style>
