@@ -5,7 +5,12 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import type { KismetDevice } from '$lib/kismet/types';
-	import { isolatedDeviceMAC, isolateDevice } from '$lib/stores/dashboard/dashboard-store';
+	import {
+		activeBands,
+		isolatedDeviceMAC,
+		isolateDevice,
+		toggleBand as toggleGlobalBand
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
 	import { getSignalBandKey, getSignalHex, signalBands } from '$lib/utils/signal-utils';
 
@@ -20,19 +25,10 @@
 	let sortDirection: 'asc' | 'desc' = $state('desc');
 	let selectedMAC: string | null = $state(null);
 	let expandedMAC: string | null = $state(null);
-	let hiddenBands = $state(new Set<string>());
+
 	let hideNoSignal = $state(true);
 	/** Filter to show only APs with connected clients */
 	let showOnlyWithClients = $state(false);
-
-	function toggleBand(key: string) {
-		if (hiddenBands.has(key)) {
-			hiddenBands.delete(key);
-		} else {
-			hiddenBands.add(key);
-		}
-		hiddenBands = new Set(hiddenBands);
-	}
 
 	function handleSort(col: typeof sortColumn) {
 		if (sortColumn === col) {
@@ -192,7 +188,7 @@
 				const rssi = getRSSI(d);
 				if (hideNoSignal && rssi === 0) return false;
 				const band = getSignalBandKey(rssi);
-				if (hiddenBands.has(band)) return false;
+				if (!$activeBands.has(band)) return false;
 				if (showOnlyWithClients && !(d.clients && d.clients.length > 0)) return false;
 				if (!q) return true;
 				const mac = (d.mac || '').toLowerCase();
@@ -290,8 +286,8 @@
 			{#each signalBands as band (band.key)}
 				<button
 					class="band-chip"
-					class:hidden-band={hiddenBands.has(band.key)}
-					onclick={() => toggleBand(band.key)}
+					class:hidden-band={!$activeBands.has(band.key)}
+					onclick={() => toggleGlobalBand(band.key)}
 					title={band.label}
 				>
 					<span class="band-dot" style="background: var({band.cssVar})"></span>
