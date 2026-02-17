@@ -40,7 +40,7 @@ PACKAGES=(
   python3 python3-venv python3-pip
   libsqlite3-dev pkg-config
   curl wget git
-  xvfb chromium chromium-driver earlyoom
+  xvfb chromium earlyoom
 )
 apt-get update -qq
 for pkg in "${PACKAGES[@]}"; do
@@ -206,11 +206,13 @@ fi
 echo "[12/12] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
-    sudo cp "$PROJECT_DIR/deployment/argos-headless.service" "/etc/systemd/system/"
-    sudo systemctl daemon-reload
-    sudo systemctl enable argos-headless.service
-    sudo systemctl start argos-headless.service
+    cp "$PROJECT_DIR/deployment/argos-headless.service" "/etc/systemd/system/"
+    systemctl daemon-reload
+    systemctl enable argos-headless.service
+    systemctl start argos-headless.service
     echo "  Headless debug service installed and started on port 9222."
+else
+    echo "  Warning: deployment/argos-headless.service not found. Skipping."
 fi
 
 echo ""

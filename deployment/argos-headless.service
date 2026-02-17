@@ -1,6 +1,7 @@
 [Unit]
 Description=Argos Headless Debug Service (Xvfb + Chromium)
 After=network.target
+Documentation=https://github.com/Graveside2022/Argos
 
 [Service]
 Type=simple
@@ -9,6 +10,8 @@ Environment=DISPLAY=:99
 ExecStart=/bin/bash /home/kali/Documents/Argos/Argos/scripts/dev/debug-headless.sh http://localhost:5173
 Restart=always
 RestartSec=10
+# Chromium may need time to shut down gracefully
+TimeoutStopSec=15
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
