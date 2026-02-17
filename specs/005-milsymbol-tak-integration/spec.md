@@ -1,233 +1,175 @@
-# Feature Specification: MIL-STD-2525 Military Symbology & TAK Integration
+# Feature Specification: MIL-STD-2525 Military Symbology & Native TAK Integration
 
 **Feature Branch**: `005-milsymbol-tak-integration`
-**Created**: 2026-02-15
+**Created**: 2026-02-17
 **Status**: Draft
-**Input**: User description: "Replace colored dots on tactical map with proper MIL-STD-2525 military symbols and add bidirectional TAK server integration"
-**Depends on**: `004-ui-implementation` (NATO-standard semantic colors, Settings panel infrastructure)
+**Input**: "Replace colored dots with military symbols, integrate native Google Hybrid maps for visual parity with TAK, and implement full bidirectional TAK server connectivity using .p12 certificates."
+**Depends on**: `004-ui-implementation` (Settings panel infrastructure)
 
 ## Overview
 
-Argos currently shows detected devices and signals on the tactical map as colored dots. Every soldier is trained to read MIL-STD-2525 military map symbols — the same ones used in ATAK, WinTAK, CPCE, and JBC-P. This spec replaces the colored dots with those real military symbols so any trained operator can read the Argos map instantly without learning Argos-specific iconography.
+Argos currently uses a tactical dark vector map with colored dots for devices. To function as a true **Common Operating Picture (COP)** node in a TAK network, it must match both the **data** and the **visual language** of other TAK clients (ATAK, WebTAK).
 
-It also connects Argos to TAK servers so that Argos detections appear on other TAK clients (ATAK on phones, WinTAK on laptops) and external TAK markers appear on the Argos map. This makes Argos a full participant in the unit's Common Operating Picture (COP).
+This feature upgrades Argos to:
 
-**What changes**: Map markers become proper military symbols with affiliation shapes (hostile diamond, friendly rectangle, unknown quatrefoil). Operators can classify any device's affiliation. A new TAK section in Settings lets operators connect to a TAK server. Detections flow out; TAK markers flow in.
+1.  **Visual Parity**: Replace dots with **MIL-STD-2525 military symbols** and allow operators to switch the map background to **Google Hybrid Satellite** imagery, matching the standard TAK view.
+2.  **Data Parity**: Connect natively to TAK servers using **Certificate Authentication (.p12)** to send WiFi/RF detections and receive team positions.
 
-**What stays the same**: Every panel, spectrum display, terminal, and feature works exactly as before. The map layout doesn't change. Scanning, monitoring, and data capture are unaffected.
+The goal is to make Argos look and behave like a specialized TAK client—without running a separate heavy application like WebTAK. It remains one lightweight, integrated tool.
+
+## Clarifications
+
+### Session 2026-02-17
+
+- Q: How should the extracted TAK client certificate and key (PEM files) be stored on the host system? → A: Filesystem (Protected) - Save to a restricted directory (e.g., `data/certs`) with strict OS permissions (0600).
+- Q: How should the system handle self-signed TAK server certificates? → A: Strict Mode Only - Require a valid CA-signed certificate or an explicitly uploaded CA. No "Insecure" toggle.
+- Q: How should the system access satellite imagery (Google Maps)? → A: Custom Source Support (TAK Style) - Default to compliant provider (Esri World Imagery); allow users to enter any Custom XYZ URL (including Google, at their own risk).
+- Q: How should the MIL-STD-2525 symbols be generated? → A: Client-Side (mil-sym-ts) - Use the `missioncommand/mil-sym-ts` library for strict 2525D compliance and performance.
+- Q: How should we handle map clutter from thousands of Kismet detections? → A: Tri-Mode Visibility - Support "Dynamic Filter" (Auto-Squelch), "Show All" (Raw), and "Manual Only". Allow individual device promotion in all modes.
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Military Symbols on the Tactical Map (Priority: P1)
+### User Story 1 - Google Hybrid Map Integration (Priority: P1)
 
-As an operator viewing the Argos tactical map, I want detected devices and signals to appear as proper MIL-STD-2525 military symbols instead of colored dots, so I can read the electromagnetic battlespace using the same symbology I already know from ATAK, CPCE, and operations orders.
+As an operator, I want to switch the tactical map background to "Satellite Hybrid" (Google Maps) so I can recognize terrain features and see the exact same visual map that my team sees on their ATAK devices.
 
-**Why this priority**: This is the core visual upgrade. Without proper symbols, the map looks like a civilian tool. With them, it looks and reads like a real Common Operating Picture. Every other feature in this spec builds on these symbols being present.
+**Why this priority**: Visual parity is critical for coordination. "The target is near the white building" means nothing on a dark vector map. It requires satellite imagery. This also makes Argos feel like a professional TAK tool.
 
-**Independent Test**: Start a Kismet scan with devices in range. Open the tactical map. Devices appear as MIL-STD-2525 symbols — WiFi access points show as ground equipment icons, cell towers as infrastructure icons, the Argos node itself as a blue friendly sensor rectangle. Zoom in and out — symbols scale appropriately. Hover over a symbol — the detail popup still shows all device information.
+**Independent Test**: Click the Gear Icon (Settings) > "Map Layers".
 
-**Acceptance Scenarios**:
-
-1. **Given** a WiFi access point detected by Kismet with GPS coordinates, **When** it appears on the tactical map, **Then** it renders as a MIL-STD-2525 ground equipment symbol instead of a colored dot.
-2. **Given** the Argos node's own GPS position, **When** displayed on the map, **Then** it renders as a blue friendly rectangle (affiliation: Friendly) with a sensor icon.
-3. **Given** a detected cell tower, **When** displayed on the map, **Then** it renders as a ground infrastructure symbol.
-4. **Given** any device type not recognized by the symbol mapping, **When** displayed on the map, **Then** it renders as a generic ground unknown symbol (yellow quatrefoil with "?" indicator).
-5. **Given** the map zoomed to different levels, **When** symbols are visible, **Then** they remain legible and properly sized at every zoom level.
-6. **Given** the "Military Symbols" toggle in the Layers panel, **When** turned off, **Then** the map reverts to the legacy colored-dot display. When turned back on, symbols return.
-
----
-
-### User Story 2 - Device Affiliation Classification (Priority: P1)
-
-As an operator, I want to classify any detected device as Hostile, Friendly, Unknown, or Neutral so that its map symbol changes shape and color to match standard NATO affiliation conventions, and my classifications persist between sessions.
-
-**Why this priority**: Affiliation is fundamental to military symbology. A symbol without affiliation is meaningless — operators need to know at a glance whether a signal is friendly or hostile. This transforms the map from "here are some devices" to "here is the threat picture."
-
-**Independent Test**: Click on a detected device's symbol on the map. The detail popup shows the current affiliation (defaults to "Unknown"). Change it to "Hostile." The symbol instantly changes to a red diamond shape. Close and reopen the browser — the device is still marked Hostile.
+- **Standard**: Select "Satellite Hybrid" from the dropdown.
+- **Custom**: Click "Import Source". Upload a TAK-compatible XML file (e.g., `Google_Maps.xml`) or paste a standard XYZ URL. The map updates immediately.
 
 **Acceptance Scenarios**:
 
-1. **Given** a newly detected device, **When** it first appears on the map, **Then** it defaults to "Unknown" affiliation (yellow quatrefoil frame).
-2. **Given** a device detail popup, **When** the operator selects "Hostile" from the affiliation dropdown, **Then** the symbol instantly changes to a red diamond frame.
-3. **Given** a device detail popup, **When** the operator selects "Friendly," **Then** the symbol changes to a blue rectangle frame.
-4. **Given** a device detail popup, **When** the operator selects "Neutral," **Then** the symbol changes to a green square frame.
-5. **Given** a device classified as "Hostile," **When** the operator refreshes the page or reopens the browser, **Then** the device retains its "Hostile" classification and red diamond symbol.
-6. **Given** the Argos node itself, **When** displayed on the map, **Then** it is always "Friendly" and cannot be reclassified.
+1.  **Given** the Map Settings panel, **When** the operator selects "Satellite Hybrid," **Then** the map background instantly changes to Google Hybrid raster tiles.
+2.  **Given** a custom map requirement, **When** the user uploads a TAK Map Source XML or pastes an XYZ URL, **Then** the system parses the template and applies it as the base layer.
+3.  **Given** the "Satellite Hybrid" view, **When** the operator zooms in, **Then** high-resolution satellite imagery is displayed with street names and labels overlaying it.
+4.  **Given** the map view, **When** the operator selects "Tactical Dark," **Then** the map reverts to the standard Stadia/MapLibre vector style.
+5.  **Given** a selected map source, **When** the page is refreshed, **Then** the map remembers the user's selection (persisted state).
+6.  **Given** an offline environment (no internet), **When** "Satellite Hybrid" is selected, **Then** the map handles the failure gracefully (e.g., shows cached tiles or a specific "Offline" placeholder if tiles fail to load).
 
 ---
 
-### User Story 3 - TAK Server Connection (Priority: P2)
+### User Story 2 - Military Symbols on the Tactical Map (Priority: P1)
 
-As an operator, I want to configure a TAK server connection in the Settings panel by entering a server address, port, and optional credentials, so that Argos can send and receive tactical data.
+As an operator, I want detected devices to appear as proper MIL-STD-2525 military symbols instead of colored dots, so I can instantly distinguish between "Friendly," "Hostile," and "Unknown" entities using standard NATO symbology.
 
-**Why this priority**: TAK connectivity is the gateway to all bidirectional data exchange. Without a connection, Argos can't share detections or receive external markers. This must work before outbound or inbound CoT features (US4, US5) can function.
+**Why this priority**: This is the "language" of tactical operations. Dots are ambiguous; symbols are precise.
 
-**Independent Test**: Open Settings. Navigate to the "TAK Integration" section. Enter a TAK server address and port. Click "Connect." The status indicator shows "Connected" (green) or an error message if the server is unreachable. Click "Disconnect." The status returns to "Disconnected."
+**Independent Test**: Start a Kismet scan. Devices appear on the map. Verify they are icons (Ground Equipment for WiFi, Infrastructure for Towers), not dots. Click a device, change affiliation to "Hostile." It becomes a Red Diamond.
 
 **Acceptance Scenarios**:
 
-1. **Given** the Settings panel, **When** the operator opens the TAK Integration section, **Then** it shows fields for server address, port, protocol (TCP/TLS), and an optional callsign.
-2. **Given** valid TAK server credentials, **When** the operator clicks "Connect," **Then** the system establishes a connection and shows "Connected" status.
-3. **Given** an unreachable TAK server, **When** the operator clicks "Connect," **Then** the system shows a clear error message (e.g., "Connection refused" or "Timeout") within 10 seconds.
-4. **Given** an active TAK connection, **When** the operator clicks "Disconnect," **Then** the connection closes cleanly and the status returns to "Disconnected."
-5. **Given** a TAK connection drops unexpectedly, **When** the connection is lost, **Then** the system attempts automatic reconnection up to 3 times before showing "Disconnected" with an error message.
-6. **Given** the TAK server configuration, **When** the operator refreshes the page, **Then** the saved server address, port, and protocol persist. The connection does not auto-reconnect — the operator must click "Connect" again.
+1.  **Given** a detected WiFi AP, **When** displayed, **Then** it renders as a MIL-STD-2525 "Ground Equipment" symbol (Icon: Sensor/Antenna).
+2.  **Given** the Argos node itself, **When** displayed, **Then** it renders as a Blue "Friendly" Rectangle (Unit: Cyber/EW Team).
+3.  **Given** a Cell Tower, **When** displayed, **Then** it renders as "Ground Infrastructure" (Icon: Communications Tower).
+4.  **Given** a device with unknown type, **When** displayed, **Then** it renders as "Ground Unknown" (Yellow Quatrefoil).
+5.  **Given** the "Military Symbols" toggle, **When** disabled, **Then** the map reverts to simple dots (for clutter reduction).
 
 ---
 
-### User Story 4 - Outbound CoT: Argos Detections to TAK (Priority: P2)
+### User Story 3 - Secure TAK Server Connection (Priority: P2)
 
-As an operator with a TAK server connected, I want Argos detections (WiFi devices, cell towers, RF signals) to automatically appear on other TAK clients (ATAK, WinTAK, iTAK), so that my team sees the electromagnetic picture I'm collecting.
+As an operator, I want to connect to a TAK Server using my **.p12 client certificate**, so I can securely authenticate and participate in the encrypted mission network.
 
-**Why this priority**: This is the primary tactical value of TAK integration — sharing Argos intelligence with the rest of the unit. Detection data flows from Argos to the TAK server, which distributes it to every connected TAK client.
+**Why this priority**: Real-world TAK networks use TLS/SSL with mutual authentication. Without `.p12` support, Argos cannot connect to production servers.
 
-**Independent Test**: Connect to a TAK server. Start a Kismet scan. On a separate ATAK/WinTAK client connected to the same TAK server, verify that Argos-detected devices appear as CoT markers on the TAK client's map within 5 seconds of detection.
+**Independent Test**: Click the Gear Icon (Settings) > "TAK Integration".
+
+- **Identity**: Upload `user.p12`. Enter password. System validates.
+- **Trust**: Upload `root-ca.pem` or `truststore.p12` (for private CAs).
+- **Connect**: Enter `tls://tak-server:8089`. Click "Connect". Status: "Connected".
 
 **Acceptance Scenarios**:
 
-1. **Given** an active TAK connection and a WiFi device detected by Kismet, **When** the detection occurs, **Then** a Cursor on Target (CoT) XML message is sent to the TAK server within 5 seconds.
-2. **Given** an Argos node with GPS fix, **When** connected to TAK, **Then** the node's own position is broadcast as a friendly sensor CoT marker.
-3. **Given** a device whose affiliation the operator has changed to "Hostile," **When** the CoT message is sent, **Then** the affiliation in the CoT type field reflects "Hostile" so TAK clients display a red diamond.
-4. **Given** multiple detected devices, **When** sending CoT messages, **Then** total outbound bandwidth stays below 50 KB/s to work over limited tactical backhaul (4G LTE, Starlink).
-5. **Given** a CoT marker sent for a device, **When** no updates occur within 5 minutes (GPS) or 10 minutes (device detection), **Then** the CoT stale time expires and the marker fades or removes itself from TAK clients.
+1.  **Given** the Settings > TAK panel, **When** the user uploads a `.p12`, **Then** the system extracts the Client Cert and Private Key.
+2.  **Given** a private TAK server, **When** the user uploads a CA/Trust Store file, **Then** the system adds it to the trusted root for the connection (allowing self-signed verification).
+3.  **Given** a valid certificate and server URL, **When** "Connect" is clicked, **Then** the backend establishes a mutual TLS connection and updates the status to "Connected."
+4.  **Given** an invalid certificate or password, **When** connecting, **Then** a clear error message ("Authentication Failed") is displayed.
+5.  **Given** a connection drop, **When** it happens, **Then** the system attempts to reconnect automatically with exponential backoff.
+6.  **Given** a successful connection, **When** the page is refreshed, **Then** the connection remains active (managed server-side).
 
 ---
 
-### User Story 5 - Inbound CoT: TAK Markers on Argos Map (Priority: P2)
+### User Story 4 - Bi-Directional CoT Sync (Priority: P2)
 
-As an operator with a TAK server connected, I want to see markers from other TAK users (friendly positions, reported threats, points of interest) on my Argos tactical map, so I have a complete tactical picture without switching between apps.
+As an operator, I want Argos to send its WiFi/RF detections to the TAK server and receive team positions from the server, so I have a complete picture of the battlespace.
 
-**Why this priority**: Bidirectional flow completes the COP. If Argos can only send but not receive, operators still need a separate TAK client open. Receiving TAK markers makes Argos a single-pane-of-glass for both electromagnetic and conventional tactical data.
+**Why this priority**: This is the functional "integration." It turns Argos into a sensor node for the team and a display for the operator.
 
-**Independent Test**: Connect to a TAK server where other users are broadcasting positions. Their markers appear on the Argos tactical map as MIL-STD-2525 symbols. Moving a marker in ATAK causes it to move on the Argos map within a few seconds.
+**Independent Test**:
+
+- **Outbound**: Detect a WiFi network in Argos. Check ATAK/WebTAK. See the WiFi network appear as a "Hostile" or "Suspect" marker.
+- **Inbound**: Create a marker in ATAK. Check Argos map. See the marker appear as a MIL-STD-2525 symbol.
 
 **Acceptance Scenarios**:
 
-1. **Given** an active TAK connection, **When** a CoT event is received from the TAK server, **Then** the corresponding marker appears on the Argos tactical map within 2 seconds.
-2. **Given** a received CoT event with a valid MIL-STD-2525 type code, **When** rendered on the map, **Then** it displays the correct military symbol with proper affiliation shape and color.
-3. **Given** a received CoT event with an updated position, **When** the update arrives, **Then** the existing marker moves to the new position rather than creating a duplicate.
-4. **Given** a received CoT event whose stale time has expired, **When** the stale time passes, **Then** the marker is removed from the map within 30 seconds.
-5. **Given** more than 500 TAK markers received, **When** the cap is reached, **Then** the oldest markers are removed to keep memory usage bounded. A subtle indicator shows the cap has been reached.
-6. **Given** the "TAK Markers" toggle in the Layers panel, **When** turned off, **Then** all external TAK markers are hidden from the map. When turned back on, they reappear.
+1.  **Given** a newly detected WiFi device, **When** it is classified (e.g., "Hostile"), **Then** Argos sends a CoT event to the TAK server with the correct UID, location, and Type (Affiliation).
+2.  **Given** the Argos node moves, **When** GPS updates, **Then** Argos sends a "Self Position" (SA) CoT update to the server.
+3.  **Given** a generic CoT event received from the server (e.g., a "Friendly Ground Unit"), **When** received, **Then** it appears on the Argos map with the correct Blue Rectangle symbol.
+4.  **Given** a "Stale" marker, **When** the timeout expires, **Then** it is removed from the Argos map.
+5.  **Given** high network traffic, **When** sending CoT, **Then** Argos throttles updates to avoid flooding the low-bandwidth tactical link (max 1 update/sec per entity).
 
 ---
-
-### User Story 6 - Symbol Legend and Preferences (Priority: P3)
-
-As an operator, I want a legend overlay on the tactical map that explains what each symbol shape and color means, and I want to adjust symbol size to my preference, so I can quickly reference the symbology and optimize readability for my display.
-
-**Why this priority**: Not everyone has MIL-STD-2525 symbology memorized. A legend removes the learning curve. Symbol size preferences help operators on different screen sizes (RPi touchscreen vs. external monitor). These are quality-of-life improvements that aren't required for core functionality.
-
-**Independent Test**: Click a "Legend" button on the map toolbar. An overlay appears showing the four affiliation shapes (diamond/rectangle/quatrefoil/square) with their colors and meanings, plus the device type icons used in Argos. Close the legend. Open Settings and adjust symbol size — symbols on the map grow or shrink accordingly.
-
-**Acceptance Scenarios**:
-
-1. **Given** the map toolbar, **When** the operator clicks the "Legend" button, **Then** a translucent overlay appears showing affiliation shapes (Hostile=red diamond, Friendly=blue rectangle, Unknown=yellow quatrefoil, Neutral=green square) and device type icons.
-2. **Given** the legend overlay is open, **When** the operator clicks outside it or presses Escape, **Then** the overlay closes.
-3. **Given** the Settings panel, **When** the operator adjusts the "Symbol Size" slider (Small / Medium / Large), **Then** all map symbols resize accordingly without affecting map zoom or layout.
-4. **Given** a symbol size preference, **When** the page is refreshed, **Then** the selected size persists.
-
----
-
-### Edge Cases
-
-- What happens if the symbol library cannot generate a symbol for an unrecognized device type? The system falls back to a generic "unknown ground" symbol (yellow quatrefoil). No blank or missing markers.
-- What happens if a malformed CoT XML message is received from the TAK server? The message is silently discarded and logged. No crash, no corrupted map state.
-- What happens if the TAK server connection drops during a scan? Outbound CoT messages are dropped (not queued) to avoid unbounded memory growth. The operator sees a "Disconnected" status. Reconnection is attempted automatically up to 3 times.
-- What happens if two Argos nodes detect the same device and both send CoT to the same TAK server? The TAK server handles deconfliction by UID — each Argos node uses its own node ID prefix in the CoT UID, so they appear as separate detections. Deduplication is a TAK server responsibility.
-- What happens if memory pressure rises above 900MB with TAK active? The inbound TAK marker cap (500) is reduced to 200. If pressure continues, inbound markers are paused entirely until memory drops. Outbound CoT continues unaffected.
-- What happens if the operator switches themes (spec 004) while military symbols are active? The affiliation colors (red/blue/yellow/green) are NATO standard and do not change with theme. Other map elements follow the theme.
-- What happens if GPS is unavailable? Devices without GPS coordinates are not sent to TAK (CoT requires lat/lon). They still appear in the Argos device list but not on the map or in TAK.
-- What happens if local storage is cleared? Affiliation classifications are lost and all devices revert to "Unknown." TAK server configuration is also lost. The operator must reconfigure.
-- What happens if the operator tries to connect to two TAK servers simultaneously? Only one TAK connection is supported at a time. The operator must disconnect from the current server before connecting to another.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-**Symbol Rendering**
+**Map Visualization**
 
-- **FR-001**: System MUST render detected devices on the tactical map as MIL-STD-2525 military symbols instead of colored dots when the "Military Symbols" toggle is enabled.
-- **FR-002**: System MUST map each device type to an appropriate MIL-STD-2525 symbol category (WiFi AP → ground equipment, cell tower → ground infrastructure, Argos node → friendly sensor, unknown → ground unknown).
-- **FR-003**: System MUST generate symbols with the correct affiliation frame shape: Hostile = red diamond, Friendly = blue rectangle, Unknown = yellow quatrefoil, Neutral = green square.
-- **FR-004**: System MUST scale symbols appropriately across all map zoom levels so they remain legible without obscuring the map.
+- **FR-001**: System MUST support switching the map tile provider between "Stadia (Vector)", "Esri Satellite (Raster)", and "Custom XYZ Source".
+- **FR-002**: System MUST render MIL-STD-2525 symbols for all entities (local detections + remote TAK markers) on top of either map background.
+- **FR-003**: System MUST persist the user's map provider selection and custom URL configuration.
+- **FR-014**: System MUST support importing TAK-compatible Map Source XML files (containing XYZ templates) to configure custom map layers.
 
-**Affiliation System**
+**Authentication & Security**
 
-- **FR-005**: System MUST default all newly detected devices to "Unknown" affiliation.
-- **FR-006**: System MUST always classify the Argos node itself as "Friendly" and prevent reclassification.
-- **FR-007**: System MUST allow operators to change a device's affiliation (Hostile, Friendly, Unknown, Neutral) from the device detail popup on the map.
-- **FR-008**: System MUST persist affiliation classifications in local storage, keyed by device MAC address, so they survive page refreshes.
+- **FR-004**: System MUST allow uploading of PKCS#12 (`.p12`) files for TAK authentication.
+- **FR-005**: System MUST extract client certificates/keys from the .p12 file (converting to PEM) and store them securely on the host filesystem with restricted permissions (0600/root only).
+- **FR-006**: System MUST support TLS (Secure TCP) connections to TAK servers on standard ports (e.g., 8089).
+- **FR-012**: System MUST allow uploading a custom CA certificate (PEM/CRT) to trust private TAK servers. Insecure TLS connections (skipping verification) MUST NOT be supported.
 
-**Display Toggles**
+**TAK Protocol (CoT)**
 
-- **FR-009**: System MUST provide a "Military Symbols" toggle in the Layers panel that switches between MIL-STD-2525 symbols and legacy colored-dot display.
-- **FR-010**: System MUST provide a "TAK Markers" toggle in the Layers panel to show or hide external TAK markers independently.
+- **FR-007**: System MUST use a native server-side client (e.g., `@tak-ps/node-tak`) to maintain the connection, ensuring it persists even if the browser is closed.
+- **FR-008**: System MUST translate internal Kismet/RF entities into standard CoT XML schema (UID, Type, Point, Detail).
+- **FR-009**: System MUST process incoming CoT messages and convert them to GeoJSON for the frontend map.
 
-**TAK Connection**
+**Symbology**
 
-- **FR-011**: System MUST display a "TAK Integration" section in the Settings panel with fields for server address, port, protocol (TCP/TLS), and callsign.
-- **FR-012**: System MUST establish TAK connections server-side (not from the browser) to support TCP/TLS sockets.
-- **FR-013**: System MUST display connection status (Disconnected, Connecting, Connected, Error) with clear feedback.
-- **FR-014**: System MUST attempt automatic reconnection up to 3 times when a connection drops, then show "Disconnected" with an error.
-- **FR-015**: System MUST persist TAK server configuration in local storage so it survives page refreshes. Connections do not auto-reconnect on page load.
-
-**Outbound CoT (Argos → TAK)**
-
-- **FR-016**: System MUST convert Argos detections to Cursor on Target (CoT) XML messages and send them to the connected TAK server.
-- **FR-017**: System MUST include the operator's affiliation classification in outbound CoT type codes so TAK clients display the correct symbol.
-- **FR-018**: System MUST cap outbound CoT bandwidth at 50 KB/s to work over limited tactical backhaul.
-- **FR-019**: System MUST set CoT stale times (5 minutes for GPS positions, 10 minutes for device detections) so expired markers auto-remove on TAK clients.
-
-**Inbound CoT (TAK → Argos)**
-
-- **FR-020**: System MUST receive CoT events from the TAK server and display them as MIL-STD-2525 symbols on the Argos tactical map.
-- **FR-021**: System MUST cap inbound TAK markers at 500 to prevent unbounded memory growth. When the cap is reached, the oldest markers are removed first.
-- **FR-022**: System MUST remove inbound TAK markers within 30 seconds after their CoT stale time expires.
+- **FR-010**: System MUST use the `@missioncommand/mil-sym-ts` library to render client-side SVG symbols for all map entities.
+- **FR-011**: System MUST support standard affiliations: Friendly (Blue), Hostile (Red), Neutral (Green), Unknown (Yellow).
+- **FR-013**: System MUST implement three visibility modes for Kismet detections: (1) "Dynamic Filter" (Default: hide noise), (2) "Show All" (show every device), and (3) "Manual Only" (show only promoted devices). Operators MUST be able to manually toggle visibility for individual devices in any mode.
 
 ### Key Entities
 
-- **Military Symbol**: A MIL-STD-2525 icon rendered on the tactical map. Composed of a frame shape (determined by affiliation), an icon (determined by device type), and optional modifiers. Generated as SVG by the rendering library.
-- **Affiliation**: The tactical classification of a detected device — Hostile, Friendly, Unknown, or Neutral. Determines the symbol's frame shape and color. Persisted per device (keyed by MAC address).
-- **CoT Event**: A Cursor on Target XML message conforming to the CoT protocol. Contains a UID, type code (maps to MIL-STD-2525 SIDC), geographic point, timestamp, stale time, and detail element with device metadata.
-- **TAK Connection**: A persistent TCP or TLS socket connection from the Argos server to a TAK server. Carries bidirectional CoT messages. Managed server-side with status exposed to the browser via internal API.
-- **TAK Marker**: An inbound CoT event rendered on the Argos map. Has a capped lifetime (stale time) and contributes to the 500-marker memory cap.
+- **Map Provider**: Configuration object defining the tile URL template (e.g., `mt1.google.com/...`) and attribution.
+- **TAK Certificate**: The user's `.p12` file, parsed into Key and Cert for TLS.
+- **CoT Message**: The XML payload exchanged with the server.
+- **TAK Contact**: A remote entity (User, Vehicle, Marker) tracked by the TAK server.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: All detected devices on the tactical map render as recognizable MIL-STD-2525 symbols (not colored dots) when the "Military Symbols" toggle is on.
-- **SC-002**: Affiliation changes (Hostile/Friendly/Unknown/Neutral) are reflected instantly on the map — frame shape and color update within one render cycle.
-- **SC-003**: Affiliation classifications persist across page refreshes with zero data loss.
-- **SC-004**: A TAK server connection can be established, monitored, and disconnected entirely from the Settings panel — no command-line configuration required.
-- **SC-005**: Argos detections appear on a connected TAK client (ATAK/WinTAK) within 5 seconds of detection.
-- **SC-006**: TAK markers from external users appear on the Argos map within 2 seconds of receipt.
-- **SC-007**: Symbol generation completes in under 50 milliseconds per symbol, verified by performance test.
-- **SC-008**: Outbound CoT bandwidth stays below 50 KB/s during active scanning with 50+ detected devices.
-- **SC-009**: Memory usage stays below 900MB with TAK active and 500 inbound markers.
-- **SC-010**: The "Military Symbols" toggle switches between MIL-STD-2525 and legacy colored dots with no data loss or scan interruption.
-- **SC-011**: The "TAK Markers" toggle hides and shows external markers independently of Argos-detected symbols.
-- **SC-012**: Stale TAK markers are cleaned up within 30 seconds of expiry — no phantom markers persist.
-- **SC-013**: All quality checks pass (type safety, code quality, unit tests, build) after all changes.
+- **SC-001**: Operator can switch to "Satellite Hybrid" view and see Google Maps imagery with < 2s tile load time on standard broadband.
+- **SC-002**: User can successfully connect to a TLS-secured TAK server using a `.p12` file.
+- **SC-003**: WiFi detections from Argos appear on a connected ATAK device within 5 seconds.
+- **SC-004**: Markers created on ATAK appear on the Argos map within 2 seconds.
+- **SC-005**: Argos maintains the TAK connection for > 1 hour without dropping, or auto-reconnects within 30s if dropped.
+- **SC-006**: System handles 100+ incoming TAK markers without UI lag (maintains > 30 FPS map panning).
 
 ## Assumptions
 
-- Spec 004 is complete: semantic color system operational (NATO affiliation colors available as design tokens), Settings panel infrastructure in place.
-- Operators are familiar with basic MIL-STD-2525 symbology from their military training. The legend (US6) helps those who need a refresher, but symbols are already standard knowledge.
-- TAK server is accessible over the network (TCP port 8087 or TLS port 8089). Firewall/VPN configuration is the operator's responsibility.
-- GPS is available for most detected devices (Kismet associates GPS with WiFi detections). Devices without GPS coordinates appear in the device list but not on the map or in TAK.
-- The TAK server handles deconfliction when multiple Argos nodes report the same device. Each node prefixes CoT UIDs with its own node ID.
-- Local storage is available for persistence. In private browsing mode, affiliations and TAK config are lost on page close.
+- The operator has a valid `.p12` certificate and password for the target TAK server.
+- The Raspberry Pi has internet access (for Google Maps tiles) and network access to the TAK server (via VPN/Tailscale or direct).
+- Google Maps tile usage complies with standard "Direct Tile Access" patterns used by other OSINT/TAK tools (or user accepts the ToS implications).
+- The existing MapLibre engine can handle the raster tile overlay without performance regression.
 
 ## Constraints
 
-- **Memory**: Node.js heap capped at 1024MB. Inbound TAK markers capped at 500. Symbol SVGs are cached after first generation to avoid redundant computation.
-- **Hardware**: Target is Raspberry Pi 5 (8GB RAM, ARM64). All dependencies must work on ARM with zero native compilation.
-- **Bandwidth**: Outbound CoT capped at 50 KB/s. Device update rate ~0.1 Hz per device. Designed for tactical backhaul (4G LTE at minimum).
-- **Single TAK Connection**: Only one TAK server connection at a time. Multi-server federation is a future enhancement.
-- **NATO Colors Are Fixed**: Affiliation colors (red, blue, yellow, green) follow NATO standard and do not change with operator-selected theme palettes from spec 004.
-- **No Layout Changes**: All panels, map controls, spectrum displays, and terminals remain in their current positions.
-- **No Functionality Changes**: Scanning, monitoring, data capture, and all existing features remain untouched.
-- **Incremental Delivery**: P1 (symbols + affiliation) ships independently of P2 (TAK connection). P3 (legend + preferences) ships last. Each priority tier is independently deployable.
-- **Step-by-step Implementation**: Each change is implemented, verified, and committed individually before moving to the next.
+- **Hardware**: Raspberry Pi 5. Map rendering must remain efficient (Raster tiles are generally lighter than Vector, but bandwidth is higher).
+- **Network**: Tactical networks may be slow. CoT updates should be optimized (only send changes).
+- **Storage**: Certificates must be stored securely (restricted file permissions).
