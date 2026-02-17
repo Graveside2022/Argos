@@ -21,6 +21,7 @@
 
 	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
 	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
+	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
 	import {
 		type DeviceForVisibility,
 		filterByVisibility,
@@ -36,8 +37,14 @@
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import {
+		type Affiliation,
+		kismetStore,
+		setDeviceAffiliation
+	} from '$lib/stores/tactical-map/kismet-store';
+	import { takCotMessages } from '$lib/stores/tak-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { parseCotToFeature } from '$lib/utils/cot-parser';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
@@ -45,6 +52,14 @@
 	let symbolLayer: SymbolLayer | undefined = $state();
 	let initialViewSet = false;
 	let layersInitialized = false;
+	let cssReady = $state(false);
+
+	// Force re-resolution of CSS-dependent derived values after DOM styles are available
+	$effect(() => {
+		queueMicrotask(() => {
+			cssReady = true;
+		});
+	});
 
 	// Robust initialization: Trigger when map is bound, not just on onload
 	$effect(() => {
@@ -52,6 +67,50 @@
 			handleMapLoad();
 			layersInitialized = true;
 		}
+	});
+
+	// Sync Symbols with Device Data and TAK CoT (top-level for Svelte 5 reactivity)
+	$effect(() => {
+		if (!symbolLayer) return;
+
+		// 1. Kismet Features
+		let features: Feature[] = [];
+
+		if (deviceGeoJSON) {
+			// Transform features to include SIDC
+			const deviceFeatures = deviceGeoJSON.features.map((f) => {
+				const props = f.properties || {};
+				const type = props.type || 'unknown';
+				const mac = (props.mac || '').toUpperCase();
+				const affiliation = $kismetStore.deviceAffiliations.get(mac) || 'unknown';
+				const sidc = SymbolFactory.getSidcForDevice(type, affiliation);
+
+				return {
+					...f,
+					properties: {
+						...props,
+						sidc,
+						label: props.ssid || props.mac || 'Unknown'
+					}
+				};
+			});
+			features = [...deviceFeatures];
+		}
+
+		// 2. TAK Features
+		const cotMsgs = $takCotMessages;
+		if (cotMsgs.length > 0) {
+			const takFeatures = cotMsgs
+				.map((xml) => parseCotToFeature(xml))
+				.filter((f) => f !== null) as Feature[];
+			features = [...features, ...takFeatures];
+		}
+
+		// 3. Update layer
+		console.log('[DashboardMap] Updating SymbolLayer with', features.length, 'features');
+		const vis = $layerVisibility;
+		console.log('[DashboardMap] milSyms visibility:', vis.milSyms);
+		symbolLayer.update(features);
 	});
 
 	// Alfa AWUS036AXML with basic omnidirectional antenna — signal range bands
@@ -117,9 +176,10 @@
 		return [lon, lat] as LngLatLike;
 	});
 
-	// Reactive theme color for accuracy circle (blue bubble)
+	// Reactive theme color for accuracy circle (matches active palette accent)
 	let accuracyColor = $derived.by(() => {
 		const _p = themeStore.palette; // React to palette changes
+		const _r = cssReady; // Force re-resolve after CSS is applied
 		return resolveThemeColor('--primary', '#4a9eff');
 	});
 
@@ -324,6 +384,11 @@
 		return { type: 'FeatureCollection' as const, features };
 	});
 
+	// Set of MACs that have visible dots on the map (used to sync connection lines)
+	let visibleDeviceMACs: Set<string> = $derived(
+		new Set(deviceGeoJSON.features.map((f) => f.properties?.mac as string).filter(Boolean))
+	);
+
 	// AP-to-client connection arcs — curved lines for visual clarity
 	let connectionLinesGeoJSON: FeatureCollection = $derived.by(() => {
 		const state = $kismetStore;
@@ -341,6 +406,8 @@
 			if (!apLat || !apLon) return;
 			const apColor = getSignalHex(device.signal?.last_signal ?? 0);
 			for (const clientMac of device.clients) {
+				// Only draw lines to clients that have visible dots
+				if (!visibleDeviceMACs.has(clientMac)) continue;
 				const client = state.devices.get(clientMac);
 				if (!client?.location?.lat || !client?.location?.lon) continue;
 				// Use spread position for client end of the arc
@@ -392,6 +459,7 @@
 		last_seen: number;
 		clientCount: number;
 		parentAP: string;
+		affiliation: Affiliation;
 	} | null = $state(null);
 
 	// Cell tower popup state
@@ -631,6 +699,11 @@
 		// Initialize Symbol Layer (MIL-STD-2525)
 		symbolLayer = new SymbolLayer(mapInstance);
 
+		// Register click handler for MIL symbol clicks (imperative layer, not template)
+		mapInstance.on('click', 'mil-sym-layer', (e) => {
+			handleDeviceClick(e as maplibregl.MapMouseEvent);
+		});
+
 		// Sync with settings (Satellite)
 		mapSettings.subscribe((settings) => {
 			if (settings.type === 'satellite') {
@@ -644,7 +717,12 @@
 		// Click on empty map background → dismiss overlay and clear isolation
 		mapInstance.on('click', (e) => {
 			const features = mapInstance.queryRenderedFeatures(e.point, {
-				layers: ['device-circles', 'device-clusters', 'cell-tower-circles']
+				layers: [
+					'device-circles',
+					'device-clusters',
+					'cell-tower-circles',
+					'mil-sym-layer'
+				].filter((l) => mapInstance.getLayer(l))
 			});
 			if (!features || features.length === 0) {
 				_popupLngLat = null;
@@ -727,7 +805,12 @@
 		}
 
 		// Pointer cursor for clickable layers
-		for (const layer of ['device-clusters', 'device-circles', 'cell-tower-circles']) {
+		for (const layer of [
+			'device-clusters',
+			'device-circles',
+			'cell-tower-circles',
+			'mil-sym-layer'
+		]) {
 			mapInstance.on('mouseenter', layer, () => {
 				if (mapInstance) mapInstance.getCanvas().style.cursor = 'pointer';
 			});
@@ -761,7 +844,9 @@
 	}
 
 	function handleDeviceClick(ev: maplibregl.MapMouseEvent) {
-		const features = map?.queryRenderedFeatures(ev.point, { layers: ['device-circles'] });
+		const features = map?.queryRenderedFeatures(ev.point, {
+			layers: ['device-circles', 'mil-sym-layer'].filter((l) => map?.getLayer(l))
+		});
 		if (features && features.length > 0) {
 			const props = features[0].properties;
 			const geom = features[0].geometry;
@@ -779,7 +864,10 @@
 					packets: props?.packets ?? 0,
 					last_seen: props?.last_seen ?? 0,
 					clientCount: props?.clientCount ?? 0,
-					parentAP: props?.parentAP ?? ''
+					parentAP: props?.parentAP ?? '',
+					affiliation:
+						$kismetStore.deviceAffiliations.get((props?.mac ?? '').toUpperCase()) ||
+						'unknown'
 				};
 
 				// Notify agent context store (AG-UI shared state bridge)
@@ -1329,6 +1417,27 @@
 				<span class="overlay-label">TYPE</span>
 				<span class="overlay-value">{popupContent.type}</span>
 			</div>
+			<div class="overlay-row">
+				<span class="overlay-label">AFFIL</span>
+				<span class="overlay-value">
+					<span class="affil-indicator affil-{popupContent.affiliation}"></span>
+					<select
+						class="affil-select"
+						value={popupContent.affiliation}
+						onchange={(e) => {
+							const val = (e.target as HTMLSelectElement).value as Affiliation;
+							if (popupContent) {
+								setDeviceAffiliation(popupContent.mac, val);
+								popupContent = { ...popupContent, affiliation: val };
+							}
+						}}
+					>
+						<option value="unknown">Unknown</option>
+						<option value="friendly">Friendly</option>
+						<option value="hostile">Hostile</option>
+					</select>
+				</span>
+			</div>
 			<div class="overlay-divider"></div>
 			<div class="overlay-row">
 				<span class="overlay-label">RSSI</span>
@@ -1624,5 +1733,54 @@
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+	}
+
+	/* Affiliation dropdown */
+	.affil-select {
+		background: var(--palantir-bg-overlay, #1a1a2e);
+		color: var(--palantir-text-secondary, #aaa);
+		border: 1px solid var(--palantir-border-default, #2a2a3e);
+		border-radius: 3px;
+		font-family: var(--font-mono, monospace);
+		font-size: 10px;
+		padding: 1px 4px;
+		cursor: pointer;
+		outline: none;
+		-webkit-appearance: none;
+		appearance: none;
+		padding-right: 14px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 3px center;
+	}
+
+	.affil-select:hover {
+		border-color: var(--palantir-accent, #4a90e2);
+	}
+
+	.affil-select:focus {
+		border-color: var(--palantir-accent, #4a90e2);
+		box-shadow: 0 0 0 1px var(--palantir-accent, #4a90e2);
+	}
+
+	.affil-indicator {
+		display: inline-block;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		margin-right: 4px;
+		vertical-align: middle;
+	}
+
+	.affil-unknown {
+		background: #c8a32e;
+	}
+
+	.affil-friendly {
+		background: #4a90e2;
+	}
+
+	.affil-hostile {
+		background: #e24a4a;
 	}
 </style>

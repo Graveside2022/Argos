@@ -3,12 +3,15 @@ import { type Writable, writable } from 'svelte/store';
 import type { KismetDevice } from '$lib/kismet/types';
 import type { LeafletMarker } from '$lib/types/map';
 
+export type Affiliation = 'friendly' | 'hostile' | 'unknown';
+
 export interface KismetState {
 	status: 'stopped' | 'starting' | 'running' | 'stopping';
 	devices: Map<string, KismetDevice>;
 	deviceMarkers: Map<string, LeafletMarker>;
 	deviceCount: number;
 	whitelistMAC: string;
+	deviceAffiliations: Map<string, Affiliation>;
 	message?: string; // Status message for agent context
 	distributions: {
 		byType: Map<string, number>;
@@ -23,6 +26,7 @@ const initialKismetState: KismetState = {
 	deviceMarkers: new Map(),
 	deviceCount: 0,
 	whitelistMAC: '',
+	deviceAffiliations: new Map(),
 	distributions: {
 		byType: new Map(),
 		byManufacturer: new Map(),
@@ -39,6 +43,18 @@ export const setKismetStatus = (status: 'stopped' | 'starting' | 'running' | 'st
 
 export const setWhitelistMAC = (mac: string) => {
 	kismetStore.update((state) => ({ ...state, whitelistMAC: mac }));
+};
+
+export const setDeviceAffiliation = (mac: string, affiliation: Affiliation) => {
+	kismetStore.update((state) => {
+		const newAffiliations = new Map(state.deviceAffiliations);
+		if (affiliation === 'unknown') {
+			newAffiliations.delete(mac.toUpperCase());
+		} else {
+			newAffiliations.set(mac.toUpperCase(), affiliation);
+		}
+		return { ...state, deviceAffiliations: newAffiliations };
+	});
 };
 
 export const addKismetDevice = (device: KismetDevice) => {
