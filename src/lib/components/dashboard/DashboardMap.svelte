@@ -21,7 +21,6 @@
 
 	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
 	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
-	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
 	import {
 		type DeviceForVisibility,
 		filterByVisibility,
@@ -38,9 +37,7 @@
 	import { mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import { takCotMessages } from '$lib/stores/tak-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
-	import { parseCotToFeature } from '$lib/utils/cot-parser';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
@@ -135,8 +132,6 @@
 	});
 
 	let showCone = $derived(headingDeg !== null);
-
-
 
 	let accuracyGeoJSON: FeatureCollection = $derived.by(() => {
 		const { lat, lon } = $gpsStore.position;
@@ -603,13 +598,18 @@
 	console.error('[DashboardMap] Script executing');
 
 	function handleMapLoad() {
-		console.log('[DashboardMap] handleMapLoad called. Map exists:', !!map, 'Loaded:', map?.loaded());
+		console.log(
+			'[DashboardMap] handleMapLoad called. Map exists:',
+			!!map,
+			'Loaded:',
+			map?.loaded()
+		);
 		if (!map) return;
 
 		// Prevent double initialization
-        // Note: layersInitialized is tracked in outer scope, but if called by onload directly it might bypass the effect's guard if we don't check here?
-        // Actually, let's trust the effect and just log for now.
-        
+		// Note: layersInitialized is tracked in outer scope, but if called by onload directly it might bypass the effect's guard if we don't check here?
+		// Actually, let's trust the effect and just log for now.
+
 		const mapInstance = map;
 
 		if (!map.loaded()) {
@@ -978,8 +978,7 @@
 		if (map.getLayer('building-outline-enhanced')) {
 			map.setPaintProperty('building-outline-enhanced', 'line-color', `${border}4D`);
 		}
-	}); 
-    
+	});
 </script>
 
 <div class="map-area">
