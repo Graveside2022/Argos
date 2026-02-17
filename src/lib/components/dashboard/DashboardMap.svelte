@@ -22,6 +22,12 @@
 	import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
 	import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
 	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
+	import {
+		type DeviceForVisibility,
+		filterByVisibility,
+		promotedDevices,
+		visibilityMode
+	} from '$lib/map/VisibilityEngine';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,
@@ -229,6 +235,8 @@
 		const state = $kismetStore;
 		const isoMac = $isolatedDeviceMAC;
 		const bands = $activeBands;
+		const vMode = $visibilityMode;
+		const promoted = $promotedDevices;
 		const features: Feature[] = [];
 
 		// Build set of visible MACs when isolated
@@ -241,9 +249,26 @@
 			}
 		}
 
+		// Pre-filter devices by visibility mode (FR-013)
+		const devicesForVisibility: (DeviceForVisibility & { mac: string })[] = [];
 		state.devices.forEach((device, mac) => {
-			// When isolated, only include the AP and its clients
 			if (visibleMACs && !visibleMACs.has(mac)) return;
+			const lat = device.location?.lat;
+			const lon = device.location?.lon;
+			if (!lat || !lon || (lat === 0 && lon === 0)) return;
+			devicesForVisibility.push({
+				mac,
+				rssi: device.signal?.last_signal ?? 0,
+				lastSeen: device.last_seen || 0
+			});
+		});
+
+		const visibleDevices = filterByVisibility(devicesForVisibility, vMode, promoted);
+		const visibleMacSet = new Set(visibleDevices.map((d) => d.mac));
+
+		state.devices.forEach((device, mac) => {
+			// FR-013 visibility filter
+			if (!visibleMacSet.has(mac)) return;
 
 			let lat = device.location?.lat;
 			let lon = device.location?.lon;
