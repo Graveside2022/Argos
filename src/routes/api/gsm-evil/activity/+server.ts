@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { hostExec } from '$lib/server/host-exec';
+import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 
 import type { RequestHandler } from './$types';
 
@@ -61,21 +62,12 @@ export const GET: RequestHandler = async () => {
 			currentFreq = freqMatch[1];
 		}
 
-		// Get channel type distribution
+		// Get channel type distribution from monitor service
 		let channelInfo = '';
 		try {
-			const { stdout: channelTypes } = await hostExec(
-				'sudo timeout 1 tshark -i lo -f "port 4729" -T fields -e gsmtap.chan_type 2>/dev/null | sort | uniq -c | head -3'
-			).catch((error: unknown) => {
-				console.warn('[gsm-evil-activity] Channel type check failed', {
-					error: String(error)
-				});
-				return { stdout: '' };
-			});
-
-			if (channelTypes) {
-				channelInfo = channelTypes.trim().replace(/\n/g, ', ');
-			}
+			// This call uses the in-memory counter of the persistent service
+			// instead of spawning a new tshark process every second
+			channelInfo = gsmMonitor.getActivityStats();
 		} catch (_error: unknown) {
 			/* channel type check failed - non-critical */
 		}
