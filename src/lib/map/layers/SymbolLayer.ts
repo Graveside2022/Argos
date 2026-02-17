@@ -51,10 +51,12 @@ export class SymbolLayer {
 	 * @param features GeoJSON features containing 'sidc' and 'label' properties
 	 */
 	public update(features: Feature[]) {
+		console.log(`[SymbolLayer] Updating with ${features.length} features.`);
 		// 1. Identify new SIDC codes
 		features.forEach((f) => {
 			const sidc = f.properties?.sidc;
 			if (sidc && !this.symbolCache.has(sidc)) {
+				console.log(`[SymbolLayer] Found new SIDC: ${sidc}, generating symbol...`);
 				this.addSymbolImage(sidc);
 			}
 		});
@@ -66,29 +68,34 @@ export class SymbolLayer {
 				type: 'FeatureCollection',
 				features: features
 			});
+		} else {
+			console.warn('[SymbolLayer] Source not found during update!');
 		}
 	}
 
 	private addSymbolImage(sidc: string) {
 		if (this.map.hasImage(sidc)) return;
 
-		// Generate symbol
-		const canvas = SymbolFactory.createSymbol(sidc, {
-			size: 32,
-			uniqueDesignation: '' // Could add label logic here if needed inside the icon
-		});
+		try {
+			// Generate symbol
+			const canvas = SymbolFactory.createSymbol(sidc, {
+				size: 32,
+				uniqueDesignation: '' // Could add label logic here if needed inside the icon
+			});
 
-		// Add to map sprite
-		// Context needs to be extracted from canvas or pass canvas directly
-		// MapLibre addImage accepts HTMLImageElement | ImageBitmap | ImageData | { width, height, data }
-		// Canvas is acceptable if context 2d.
+			// Add to map sprite
+			const ctx = canvas.getContext('2d');
+			if (!ctx) {
+				console.warn(`[SymbolLayer] Failed to get 2D context for SIDC: ${sidc}`);
+				return;
+			}
 
-		const ctx = canvas.getContext('2d');
-		if (!ctx) return;
-
-		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-		this.map.addImage(sidc, imageData);
-		this.symbolCache.add(sidc);
+			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			this.map.addImage(sidc, imageData);
+			this.symbolCache.add(sidc);
+		} catch (error) {
+			console.error(`[SymbolLayer] Error generating symbol for SIDC: ${sidc}`, error);
+		}
 	}
 
 	public setVisible(visible: boolean) {
