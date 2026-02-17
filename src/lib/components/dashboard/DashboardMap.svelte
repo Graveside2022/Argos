@@ -1011,7 +1011,7 @@
 		<GeoJSONSource
 			id="devices-src"
 			data={deviceGeoJSON}
-			cluster={true}
+			cluster={!$isolatedDeviceMAC}
 			clusterRadius={50}
 			clusterMaxZoom={16}
 			clusterMinPoints={3}
