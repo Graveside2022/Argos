@@ -44,8 +44,6 @@
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
-	import MapSettings from './MapSettings.svelte';
-
 	let map: maplibregl.Map | undefined = $state();
 	let symbolLayer: SymbolLayer | undefined = $state();
 	let initialViewSet = false;
@@ -1027,7 +1025,6 @@
 		<!-- Center-on-location button — top of bottom-right stack -->
 		<CustomControl position="bottom-right">
 			<div class="control-stack">
-				<MapSettings />
 				<button
 					class="locate-btn"
 					onclick={handleLocateClick}
