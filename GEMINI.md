@@ -130,6 +130,8 @@ The project utilizes Husky for Git pre-commit hooks, likely enforcing code quali
 - **Reset Database:** `rm rf_signals.db && npm run db:migrate`
 
 ## Active Technologies
+- SQLite (`rf_signals.db`) - `tak_configs` table. (007-tak-server-p2)
+- TypeScript 5.x (Strict Mode) + SvelteKit, Tailwind CSS, SQLite (better-sqlite3), `@tak-ps/node-tak` (via GitHub), `@xmldom/xmldom`, `openssl` (system) (007-tak-server-p2)
 
 - TypeScript 5.x (Strict Mode) (005-milsymbol-tak-integration)
 

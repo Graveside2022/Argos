@@ -1,60 +1,70 @@
-# Tasks: MIL-STD-2525 & TAK Integration
+# Tasks: MIL-STD-2525 Military Symbology & Native TAK Integration
 
-**Feature**: `005-milsymbol-tak-integration`
-**Status**: Complete (100% — 21/21 tasks done, 3 security fixes applied)
-**Based on**: Plan, Spec, Data Model
-**Last Audit**: 2026-02-17
+This document outlines the implementation tasks for the 005-milsymbol-tak-integration feature, organized by priority and user story.
 
-## Dependencies & Resources
+## Dependencies
 
-- **MIL-STD-2525 Library**: [missioncommand/mil-sym-ts](https://github.com/missioncommand/mil-sym-ts) (installed as `@armyc2.c5isr.renderer/mil-sym-ts-web`, brings `milsymbol` transitive dep)
-- **TAK Library**: [dfpc-coe/node-tak](https://github.com/dfpc-coe/node-tak) (as `@tak-ps/node-tak`, installed but TakClient hand-rolled)
+- Phase 2 depends on Phase 1.
+- Phase 3 (US1) and Phase 4 (US2) are largely independent.
+- Phase 5 (US3) is required for Phase 6 (US4).
 
-## Phase 1: Setup
-- [x] T001 Install dependencies: `@armyc2.c5isr.renderer/mil-sym-ts-web`, `@xmldom/xmldom` (note: used milsymbol instead of @missioncommand/mil-sym-ts)
-- [x] T002 Create directory structure: `src/lib/server/tak`, `src/lib/map/layers`, `src/lib/map/symbols`, `src/lib/types`, `data/certs`
+## Phase 1: Setup & Foundations
 
-## Phase 2: Foundational
-- [x] T003 Create TakServerConfig migration in `src/lib/server/db/migrations/20260217_create_tak_configs.ts`
-- [x] T004 Implement CertManager for secure file handling in `src/lib/server/tak/CertManager.ts` (SECURITY FIX: switched exec→execFile)
-- [x] T005 [P] Define TakServerConfig, TakContact, CotMessage interfaces in `src/lib/types/tak.ts`
+- [ ] T001 [P] Fix `src/lib/map/symbols/SymbolFactory.ts` to use `@armyc2.c5isr.renderer/mil-sym-ts-web` instead of missing `milsymbol`
+- [ ] T002 [P] Implement/Verify `src/lib/map/MapSourceParser.ts` for TAK Map Source XML compatibility
+- [ ] T003 [P] Ensure `src/lib/server/tak/CertManager.ts` enforces 0600 permissions on all extracted files
 
-## Phase 3: Google Hybrid Map (US1)
-- [x] T006 [P] [US1] Create SatelliteLayer class for raster tiles in `src/lib/map/layers/SatelliteLayer.ts`
-- [x] T007 [P] [US1] Update MapSettings component to include layer switching in `src/lib/components/dashboard/MapSettings.svelte`
-- [x] T007b [US1] Implement Map Source XML parser (TAK format) in `src/lib/map/MapSourceParser.ts`
-- [x] T008 [US1] Integrate SatelliteLayer into `DashboardMap.svelte` and sync with map-settings-store
+## Phase 2: Foundational Map Infrastructure
 
-## Phase 4: MIL-STD-2525 Symbols (US2)
-- [x] T009 [P] [US2] Create SymbolFactory wrapper using milsymbol in `src/lib/map/symbols/SymbolFactory.ts`
-- [x] T010 [US2] Create SymbolLayer to render symbols on map in `src/lib/map/layers/SymbolLayer.ts`
-- [x] T010b [US2] LeafletSymbolProvider — SKIPPED (project is MapLibre-only)
-- [x] T011 [US2] Proper SIDC mapping per device type in SymbolFactory.getSidcForDevice()
-  - WiFi/AP → Ground SIGINT Sensor (EVSR), Client → SIGINT Intercept (EVSC)
-  - Bluetooth/BLE → Direction Finding (EVSDF), Cell Tower → Infrastructure Comms (IPC)
-  - Drone/UAV → Air Track (MFQ), Self/Argos → Cyber/EW Team (UCFEW)
-  - Also added cotTypeToSidc() for proper CoT atom→SIDC conversion in cot-parser.ts
-- [x] T011b [US2] Implement Tri-Mode Visibility (Dynamic Filter/Auto-Squelch) in `src/lib/map/VisibilityEngine.ts`
-  - Three modes: Dynamic (auto-squelch noise), Show All, Manual Only
-  - Promoted devices visible in all modes, persisted to localStorage
-  - Integrated into DashboardMap.svelte and MapSettings.svelte UI
+- [ ] T004 [P] Verify `src/lib/map/layers/SatelliteLayer.ts` supports dynamic URL updates from `mapSettings` store
+- [ ] T005 [P] Verify `src/lib/map/layers/SymbolLayer.ts` correctly manages MapLibre image sprite for 2525 symbols
+- [ ] T006 [P] Ensure `src/lib/server/tak/TakService.ts` is properly initialized in `src/hooks.server.ts`
 
-## Phase 5: TAK Server Connectivity (US3 & US4)
-- [x] T012 [P] [US3] Implement TakClient in `src/lib/server/tak/TakClient.ts` (SECURITY FIX: rejectUnauthorized=true)
-- [x] T013 [US3] Implement TakService in `src/lib/server/tak/TakService.ts` with WebSocket broadcast
-- [x] T013b [US4] Implement outbound CoT throttling (max 1 update/sec per entity)
-  - Per-UID throttle map in TakService.sendCot(), latest-wins for queued updates
-  - Throttle entries cleaned on disconnect to prevent memory leaks
-- [x] T014 [P] [US3] Create API endpoint for TAK config in `src/routes/api/tak/config/+server.ts`
-- [x] T015 [P] [US3] Create API endpoint for Cert upload in `src/routes/api/tak/certs/+server.ts`
-- [x] T016 [US3] Create UI for TAK Server settings in `src/routes/settings/tak/+page.svelte`
+## Phase 3: User Story 1 - Google Hybrid Map & Custom Sources (P1)
 
-## Phase 6: Polish & Verification
-- [x] T017 Exponential backoff + custom error classes (TakAuthError, TakConnectionError)
-  - Backoff: 1s→2s→4s→8s→16s→30s max, with jitter. Credentials cached for auto-reconnect.
-  - TakAuthError (cert/handshake failures), TakConnectionError (network issues)
-  - Intentional disconnect suppresses reconnect; attempt counter resets on success
-- [x] T018 Verify CSP headers for external tile sources in `src/hooks.server.ts` (FIXED: added Google/Esri domains)
-- [x] T019 [SC-006] Performance stress test: 150 CoT markers processed in <1ms (tests/performance/tak-markers.test.ts)
-  - 8 tests: SIDC resolution (0.35ms/150), CoT→SIDC mapping (0.49ms/150), VisibilityEngine (0.34ms/150)
-  - Validates distinct SIDCs per device type and correct visibility filtering behavior
+- [ ] T007 [US1] Add "Import Source" file upload input to `src/lib/components/dashboard/panels/LayersPanel.svelte`
+- [ ] T008 [US1] Implement Map Source XML parsing logic in `src/lib/components/dashboard/panels/LayersPanel.svelte` using `MapSourceParser.ts`
+- [ ] T009 [US1] Persist custom map source configurations in the database via new API or `mapSettings` store
+- [ ] T010 [US1] Add integration test for switching between Tactical, Satellite, and Custom map layers in `tests/integration/map-layers.test.ts`
+
+## Phase 4: User Story 2 - Military Symbols (Visuals) (P1)
+
+- [ ] T011 [US2] Map all Argos device types (WiFi AP, Client, Cell Tower, Drone) to specific MIL-STD-2525 SIDC codes in `src/lib/map/symbols/SymbolFactory.ts`
+- [ ] T012 [US2] Ensure `src/lib/components/dashboard/DashboardMap.svelte` correctly reactive-updates symbol layers when device affiliations change
+- [ ] T013 [US2] Implement "Military Symbols" toggle logic in `src/lib/components/dashboard/DashboardMap.svelte` to switch between dots and icons
+- [ ] T014 [US2] Add visual regression test for symbol rendering in `tests/visual/symbology.test.ts`
+
+## Phase 5: User Story 3 - Secure TAK Connection (P2)
+
+- [ ] T015 [US3] Add standalone CA Certificate upload support to `src/routes/api/tak/certs/+server.ts` and `src/lib/server/tak/CertManager.ts`
+- [ ] T016 [US3] Update `src/routes/settings/tak/+page.svelte` to support separate CA file upload and password-protected .p12
+- [ ] T017 [US3] Implement comprehensive error reporting for TAK connection states (Auth Failure vs. Timeout) in `src/lib/server/tak/TakClient.ts`
+- [ ] T018 [US3] Add unit tests for certificate extraction and secure storage in `tests/unit/server/tak/CertManager.test.ts`
+
+## Phase 6: User Story 4 - Bi-Directional CoT Sync (P2)
+
+- [ ] T019 [US4] Implement Kismet-to-CoT translation bridge in `src/lib/server/tak/TakService.ts` to send detections to TAK server
+- [ ] T020 [US4] Implement GPS-to-CoT (Self-Position/SA) update logic in `src/lib/server/tak/TakService.ts`
+- [ ] T021 [US4] Verify Inbound CoT to GeoJSON conversion in `src/lib/utils/cot-parser.ts` handles remote team members and markers
+- [ ] T022 [US4] Implement stale marker cleanup logic for incoming TAK contacts to prevent map clutter
+- [ ] T023 [US4] Add E2E test for bi-directional CoT sync between Argos and a mock TAK server in `tests/e2e/tak-sync.test.ts`
+
+## Phase 7: Polish & Cross-Cutting
+
+- [ ] T024 Optimize map rendering performance for 100+ concurrent symbols to ensure SC-006 (30+ FPS)
+- [ ] T025 Implement graceful failure and "Offline" placeholder for raster map tiles in `src/lib/map/layers/SatelliteLayer.ts`
+- [ ] T026 Final security audit of certificate storage and connection handling per Article VIII of the plan
+- [ ] T027 Verify all Acceptance Scenarios from `spec.md` pass in the final prototype
+
+## Implementation Strategy
+
+1.  **MVP (Phase 1-2)**: Get symbols rendering correctly and raster tiles working with hardcoded URLs.
+2.  **Visual Completion (Phase 3-4)**: Enable full operator control over maps and symbology.
+3.  **Connectivity (Phase 5)**: Establish secure connection to TAK servers.
+4.  **Functional Parity (Phase 6)**: Enable bidirectional data flow (The "Real" Integration).
+
+## Parallel Execution
+
+- T001, T002, T003 can be done in parallel.
+- US1 (T007-T009) and US2 (T011-T013) can be developed in parallel once foundational map work is done.
+- Backend TAK logic (T015, T017, T019) can be developed in parallel with Frontend TAK UI (T016).

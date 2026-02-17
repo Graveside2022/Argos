@@ -34,12 +34,13 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # --- 1. System packages ---
-echo "[1/9] System packages..."
+echo "[1/12] System packages..."
 PACKAGES=(
   wireless-tools iw usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
   libsqlite3-dev pkg-config
   curl wget git
+  xvfb chromium chromium-driver earlyoom
 )
 apt-get update -qq
 for pkg in "${PACKAGES[@]}"; do
@@ -52,7 +53,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 2. Node.js ---
-echo "[2/9] Node.js..."
+echo "[2/12] Node.js..."
 if command -v node &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed"
@@ -64,7 +65,7 @@ else
 fi
 
 # --- 3. Kismet ---
-echo "[3/9] Kismet..."
+echo "[3/12] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -82,7 +83,7 @@ else
 fi
 
 # --- 4. gpsd ---
-echo "[4/9] gpsd..."
+echo "[4/12] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -91,7 +92,7 @@ else
 fi
 
 # --- 5. Docker (for third-party tools only) ---
-echo "[5/9] Docker..."
+echo "[5/12] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -102,7 +103,7 @@ else
 fi
 
 # --- 6. udev rules for SDR devices ---
-echo "[6/9] udev rules..."
+echo "[6/12] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -121,7 +122,7 @@ UDEV
 fi
 
 # --- 7. Kismet GPS config ---
-echo "[7/9] Kismet GPS config..."
+echo "[7/12] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -135,7 +136,7 @@ else
 fi
 
 # --- 8. npm dependencies ---
-echo "[8/9] npm dependencies..."
+echo "[8/12] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -145,7 +146,7 @@ fi
 sudo -u "$SETUP_USER" npm ci
 
 # --- 9. .env from template ---
-echo "[9/9] Environment file..."
+echo "[9/12] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -161,7 +162,7 @@ else
 fi
 
 # --- 10. Development Monitor Service ---
-echo "[10/10] Development Monitor Service..."
+echo "[10/12] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -184,6 +185,32 @@ if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Dev monitor service installed and started."
 else
   echo "  Warning: deployment/argos-dev-monitor.service not found. Skipping."
+fi
+
+# --- 11. EarlyOOM Configuration ---
+echo "[11/12] Configure EarlyOOM..."
+if [[ -f /etc/default/earlyoom ]]; then
+  # Memory threshold: 10% RAM, 50% swap, check every 60s
+  # Avoid list: system-critical + development tools + headless browser
+  # Prefer list: only ollama (large model, recoverable)
+  cat > /etc/default/earlyoom << 'EARLYOOM'
+EARLYOOM_ARGS="-m 10 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|claude|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama)$'"
+EARLYOOM
+  systemctl restart earlyoom
+  echo "  EarlyOOM configured (protect: system + dev tools + headless browser, prefer kill: ollama)."
+else
+  echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
+fi
+
+# --- 12. Headless Debug Service ---
+echo "[12/12] Headless Debug Service..."
+if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
+    echo "  Installing argos-headless.service..."
+    sudo cp "$PROJECT_DIR/deployment/argos-headless.service" "/etc/systemd/system/"
+    sudo systemctl daemon-reload
+    sudo systemctl enable argos-headless.service
+    sudo systemctl start argos-headless.service
+    echo "  Headless debug service installed and started on port 9222."
 fi
 
 echo ""
