@@ -77,6 +77,12 @@ class GsmMonitorService extends EventEmitter {
 			}
 		});
 
+		this.tsharkProcess.on('error', (err) => {
+			console.error('[GsmMonitorService] Failed to start tshark process:', err);
+			this.isRunning = false;
+			this.tsharkProcess = null;
+		});
+
 		this.tsharkProcess.on('close', (code) => {
 			console.info(`[GsmMonitorService] tshark exited with code ${code}`);
 			this.isRunning = false;
