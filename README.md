@@ -54,6 +54,7 @@ Everything starts automatically. Just open http://\<your-pi-ip\>:5173.
 ## Development
 
 See [SETUP.md](SETUP.md) for development environment, commands, and project structure.
+See [Memory & Reliability](docs/operations/memory-reliability.md) for details on the self-healing monitor and performance tuning.
 
 ## License
 
