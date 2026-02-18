@@ -1,15 +1,14 @@
-import { execFileSync } from 'child_process';
 import { access, constants } from 'fs/promises';
+import type { IncomingMessage } from 'http';
 import path from 'path';
+import type { Duplex } from 'stream';
 import type { Plugin, ViteDevServer } from 'vite';
 import { WebSocket, WebSocketServer } from 'ws';
 
-const TERMINAL_PORT = 3001;
+const TERMINAL_WS_PATH = '/terminal-ws';
 const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message
 const CLEANUP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes before killing orphaned PTY
 const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
-const PORT_RETRY_DELAY_MS = 1000; // Wait after killing stale port holder
-const MAX_PORT_RETRIES = 2;
 
 // Valid shell paths — resolved relative to project root
 const PROJECT_ROOT = process.cwd();
@@ -39,10 +38,10 @@ const sessions = new Map<string, PtySession>();
 export function terminalPlugin(): Plugin {
 	return {
 		name: 'argos-terminal',
-		configureServer(_server: ViteDevServer) {
+		configureServer(server: ViteDevServer) {
 			console.warn('[argos-terminal] Plugin hook called');
 			// Don't return the promise — fire-and-forget so we don't block Vite
-			setupTerminal().catch((err) => {
+			setupTerminal(server).catch((err) => {
 				console.error('[argos-terminal] Setup failed:', err);
 			});
 		}
@@ -141,71 +140,6 @@ function detachSession(sessionId: string): void {
 }
 
 /**
- * Kill whatever is holding a port. Returns true if something was killed.
- */
-function killPortHolder(port: number): boolean {
-	try {
-		const output = execFileSync('lsof', ['-ti', `:${port}`], {
-			encoding: 'utf8',
-			timeout: 3000
-		}).trim();
-		if (!output) return false;
-
-		const pids = output
-			.split('\n')
-			.map((p) => parseInt(p, 10))
-			.filter((p) => p > 0 && p !== process.pid);
-		for (const pid of pids) {
-			try {
-				process.kill(pid, 'SIGKILL');
-				console.warn(`[argos-terminal] Killed stale process ${pid} on port ${port}`);
-			} catch {
-				// Already dead
-			}
-		}
-		return pids.length > 0;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Create WebSocket server with retry on EADDRINUSE.
- * Kills stale port holders and retries.
- */
-function createWssWithRetry(port: number, retries = MAX_PORT_RETRIES): Promise<WebSocketServer> {
-	return new Promise((resolve, reject) => {
-		const wss = new WebSocketServer({ port, host: '0.0.0.0' });
-
-		wss.on('listening', () => {
-			console.warn(`[argos-terminal] Shell server listening on port ${port}`);
-			resolve(wss);
-		});
-
-		wss.on('error', (err: Error & { code?: string }) => {
-			if (err.code === 'EADDRINUSE' && retries > 0) {
-				console.warn(
-					`[argos-terminal] Port ${port} in use, killing stale holder and retrying...`
-				);
-				wss.close();
-				killPortHolder(port);
-				setTimeout(() => {
-					createWssWithRetry(port, retries - 1).then(resolve, reject);
-				}, PORT_RETRY_DELAY_MS);
-			} else if (err.code === 'EADDRINUSE') {
-				console.error(
-					`[argos-terminal] Port ${port} still in use after retries — terminal disabled`
-				);
-				wss.close();
-				reject(err);
-			} else {
-				console.error('[argos-terminal] Server error:', err.message);
-			}
-		});
-	});
-}
-
-/**
  * Pre-spawn the default tmux-0 session so it's ready before any browser connects.
  * Runs headless (no WebSocket attached) — the client reattaches when Terminal is opened.
  * Delays 2s to let tmux-continuum restore any saved state.
@@ -293,7 +227,7 @@ function preSpawnDefaultSession(ptyModule: typeof import('node-pty')): void {
 	}, PRE_SPAWN_DELAY_MS);
 }
 
-async function setupTerminal() {
+async function setupTerminal(server: ViteDevServer) {
 	let ptyModule: typeof import('node-pty');
 	try {
 		ptyModule = await import('node-pty');
@@ -303,13 +237,26 @@ async function setupTerminal() {
 		return;
 	}
 
-	let wss: WebSocketServer;
-	try {
-		wss = await createWssWithRetry(TERMINAL_PORT);
-	} catch {
-		// Terminal disabled but Vite continues running
+	// Use noServer mode — we handle upgrades on Vite's HTTP server
+	const wss = new WebSocketServer({ noServer: true });
+
+	// Hook into Vite's HTTP server for WebSocket upgrades at /terminal-ws
+	const httpServer = server.httpServer;
+	if (!httpServer) {
+		console.warn('[argos-terminal] No HTTP server available — terminal disabled');
 		return;
 	}
+
+	httpServer.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+		const url = new URL(req.url || '/', `http://${req.headers.host}`);
+		if (url.pathname !== TERMINAL_WS_PATH) return; // Let other upgrade handlers (HMR, etc.) proceed
+
+		wss.handleUpgrade(req, socket, head, (ws) => {
+			wss.emit('connection', ws, req);
+		});
+	});
+
+	console.warn(`[argos-terminal] Terminal WebSocket attached at ${TERMINAL_WS_PATH}`);
 
 	// Graceful shutdown: clean up all PTY sessions when Vite exits
 	const cleanup = () => {
