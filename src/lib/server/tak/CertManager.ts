@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import { validatePathWithinDir } from '../security/input-sanitizer';
+
 const execFileAsync = promisify(execFile);
 
 export class CertManager {
@@ -161,7 +163,13 @@ export class CertManager {
 		key: string,
 		ca: string[]
 	): { certPath: string; keyPath: string; caPath?: string } {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = validatePathWithinDir(
+			path.join(this.BASE_DIR, configId),
+			path.resolve(this.BASE_DIR)
+		);
+		if (fs.existsSync(configDir)) {
+			fs.rmSync(configDir, { recursive: true, force: true });
+		}
 		fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
 
 		const certPath = path.join(configDir, 'client.crt');
