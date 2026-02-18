@@ -1,3 +1,4 @@
+import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { hostExec } from '$lib/server/host-exec';
@@ -78,7 +79,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		const validatedFreq = validateNumericParam(frequency || '947.2', 'frequency', 800, 1000);
 		const freq = String(validatedFreq);
 		const gain = '40';
-		const gsmDir = '/home/kali/gsmevil-user';
+		const gsmDir = getGsmEvilDir();
 		console.warn(`[gsm-evil] Starting on ${freq} MHz...`);
 
 		// 1. Kill existing processes (ignore errors - may not be running)

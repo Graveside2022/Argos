@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { hostExec } from '$lib/server/host-exec';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 
@@ -36,8 +37,9 @@ export const GET: RequestHandler = async () => {
 		// Check for recent IMSI database activity on the host
 		let recentIMSI = false;
 		try {
+			const imsiDbPath = `${getGsmEvilDir()}/database/imsi.db`;
 			const { stdout: dbAge } = await hostExec(
-				'find /usr/src/gsmevil2/database/imsi.db -mmin -5 2>/dev/null | head -1'
+				`find ${imsiDbPath} -mmin -5 2>/dev/null | head -1`
 			).catch((error: unknown) => {
 				console.warn('[gsm-evil-activity] IMSI database age check failed', {
 					error: String(error)

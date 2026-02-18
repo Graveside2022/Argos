@@ -54,7 +54,7 @@ fi
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/13] Network configuration..."
+echo "[1/20] Network configuration..."
 
 configure_networking() {
   local changed=false
@@ -136,7 +136,7 @@ EOF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/13] System packages..."
+echo "[2/20] System packages..."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -155,7 +155,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 2. Node.js ---
-echo "[3/13] Node.js..."
+echo "[3/20] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -171,7 +171,7 @@ else
 fi
 
 # --- 3. Kismet ---
-echo "[4/13] Kismet..."
+echo "[4/20] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -191,7 +191,7 @@ else
 fi
 
 # --- 4. gpsd ---
-echo "[5/13] gpsd..."
+echo "[5/20] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -200,7 +200,7 @@ else
 fi
 
 # --- 5. Docker (for third-party tools only) ---
-echo "[6/13] Docker..."
+echo "[6/20] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -229,8 +229,27 @@ else
   echo "  Docker installed. User $SETUP_USER added to docker group."
 fi
 
-# --- 6. udev rules for SDR devices ---
-echo "[7/13] udev rules..."
+# --- 6. OpenSSH Server ---
+echo "[7/20] OpenSSH server..."
+if dpkg -s openssh-server &>/dev/null; then
+  echo "  OpenSSH server already installed"
+else
+  echo "  Installing OpenSSH server..."
+  apt-get install -y -qq openssh-server
+fi
+# Ensure sshd is enabled and running
+if ! systemctl is-enabled --quiet ssh 2>/dev/null; then
+  systemctl enable ssh
+fi
+if ! systemctl is-active --quiet ssh 2>/dev/null; then
+  systemctl start ssh
+  echo "  SSH server started"
+else
+  echo "  SSH server running"
+fi
+
+# --- 7. udev rules for SDR devices ---
+echo "[8/20] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -248,8 +267,52 @@ UDEV
   usermod -aG plugdev "$SETUP_USER" 2>/dev/null || true
 fi
 
-# --- 7. Kismet GPS config ---
-echo "[8/13] Kismet GPS config..."
+# --- 8. GSM Evil (gr-gsm + GsmEvil2) ---
+echo "[9/20] GSM Evil..."
+GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
+
+# Install gr-gsm and hackrf packages
+for pkg in gr-gsm hackrf libhackrf-dev; do
+  if dpkg -s "$pkg" &>/dev/null; then
+    echo "  $pkg — already installed"
+  else
+    echo "  $pkg — installing..."
+    apt-get install -y -qq "$pkg" 2>/dev/null || echo "  $pkg — not available in repos, skipping"
+  fi
+done
+
+# Clone or update GsmEvil2
+if [[ -d "$GSMEVIL_DIR/.git" ]]; then
+  echo "  GsmEvil2 already cloned — pulling latest..."
+  sudo -u "$SETUP_USER" git -C "$GSMEVIL_DIR" pull --ff-only 2>/dev/null || true
+else
+  echo "  Cloning GsmEvil2..."
+  sudo -u "$SETUP_USER" git clone https://github.com/ninjhacks/gsmevil2.git "$GSMEVIL_DIR"
+fi
+
+# Python virtual environment + dependencies
+GSMEVIL_VENV="$GSMEVIL_DIR/venv"
+if [[ -d "$GSMEVIL_VENV" ]]; then
+  echo "  GsmEvil2 venv already exists"
+else
+  echo "  Creating Python venv and installing dependencies..."
+  sudo -u "$SETUP_USER" python3 -m venv "$GSMEVIL_VENV"
+  sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet pyshark flask flask-socketio 2>/dev/null || true
+  echo "  GsmEvil2 Python dependencies installed"
+fi
+
+# Set GSMEVIL_DIR in .env if not already present
+if [[ -f "$PROJECT_DIR/.env" ]]; then
+  if grep -q "^GSMEVIL_DIR=" "$PROJECT_DIR/.env"; then
+    echo "  GSMEVIL_DIR already set in .env"
+  else
+    echo "GSMEVIL_DIR=$GSMEVIL_DIR" >> "$PROJECT_DIR/.env"
+    echo "  GSMEVIL_DIR=$GSMEVIL_DIR added to .env"
+  fi
+fi
+
+# --- 9. Kismet GPS config ---
+echo "[10/20] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -263,7 +326,7 @@ else
 fi
 
 # --- 8. npm dependencies ---
-echo "[9/13] npm dependencies..."
+echo "[11/20] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -273,7 +336,7 @@ fi
 sudo -u "$SETUP_USER" npm ci
 
 # --- 9. .env from template ---
-echo "[10/13] Environment file..."
+echo "[12/20] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -326,15 +389,18 @@ else
 fi
 
 # --- 10. Development Monitor Service ---
-echo "[11/13] Development Monitor Service..."
+echo "[13/20] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
   # Create user systemd directory
   sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd/user"
   
-  # Copy service file
-  sudo -u "$SETUP_USER" cp "$PROJECT_DIR/deployment/argos-dev-monitor.service" "$SETUP_HOME/.config/systemd/user/"
+  # Template service file with actual project path
+  sed "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
+    "$PROJECT_DIR/deployment/argos-dev-monitor.service" \
+    > "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service"
+  chown "$SETUP_USER":"$SETUP_USER" "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service"
   
   # Enable and start service
   # We use sudo -u to run systemctl as the target user
@@ -352,7 +418,7 @@ else
 fi
 
 # --- 11. EarlyOOM Configuration ---
-echo "[12/13] Configure EarlyOOM..."
+echo "[14/20] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
   # Avoid list: system-critical + development tools + headless browser
@@ -366,11 +432,137 @@ else
   echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
 fi
 
-# --- 12. Headless Debug Service ---
-echo "[13/13] Headless Debug Service..."
+# --- 12. Tailscale ---
+echo "[15/20] Tailscale..."
+if command -v tailscale &>/dev/null; then
+  echo "  Tailscale already installed: $(tailscale version | head -1)"
+else
+  echo "  Installing Tailscale..."
+  curl -fsSL https://tailscale.com/install.sh | bash
+  echo "  Tailscale installed. Run 'sudo tailscale up' to authenticate."
+fi
+
+# --- 13. Claude Code ---
+echo "[16/20] Claude Code..."
+if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
+  echo "  Claude Code already installed"
+else
+  echo "  Installing Claude Code (native installer, no sudo)..."
+  sudo -u "$SETUP_USER" bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+  echo "  Claude Code installed. Run 'claude' to authenticate."
+fi
+
+# --- 14. Gemini CLI ---
+echo "[17/20] Gemini CLI..."
+if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
+  echo "  Gemini CLI already installed"
+else
+  echo "  Installing Gemini CLI..."
+  sudo -u "$SETUP_USER" npm install -g @google/gemini-cli
+  echo "  Gemini CLI installed. Run 'gemini' to authenticate."
+fi
+
+# --- 15. Zsh + Dotfiles ---
+echo "[18/20] Zsh + Dotfiles..."
+DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
+DOTFILES_DIR="$SETUP_HOME/.dotfiles"
+
+# Clone or update the dotfiles repo
+if [[ -d "$DOTFILES_DIR/.git" ]]; then
+  echo "  Dotfiles repo already cloned — pulling latest..."
+  sudo -u "$SETUP_USER" git -C "$DOTFILES_DIR" pull --ff-only 2>/dev/null || true
+else
+  echo "  Cloning dotfiles from $DOTFILES_REPO..."
+  sudo -u "$SETUP_USER" git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
+fi
+
+# Oh My Zsh
+if [[ -d "$SETUP_HOME/.oh-my-zsh" ]]; then
+  echo "  Oh My Zsh already installed"
+else
+  echo "  Installing Oh My Zsh..."
+  sudo -u "$SETUP_USER" sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+ZSH_CUSTOM="$SETUP_HOME/.oh-my-zsh/custom"
+
+# Powerlevel10k theme
+if [[ -d "$ZSH_CUSTOM/themes/powerlevel10k" ]]; then
+  echo "  Powerlevel10k already installed"
+else
+  echo "  Installing Powerlevel10k theme..."
+  sudo -u "$SETUP_USER" git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k"
+fi
+
+# Zsh plugins
+for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-completions; do
+  if [[ -d "$ZSH_CUSTOM/plugins/$plugin" ]]; then
+    echo "  $plugin already installed"
+  else
+    echo "  Installing $plugin..."
+    case "$plugin" in
+      zsh-autosuggestions)
+        sudo -u "$SETUP_USER" git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/$plugin" ;;
+      zsh-syntax-highlighting)
+        sudo -u "$SETUP_USER" git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/$plugin" ;;
+      zsh-completions)
+        sudo -u "$SETUP_USER" git clone https://github.com/zsh-users/zsh-completions "$ZSH_CUSTOM/plugins/$plugin" ;;
+    esac
+  fi
+done
+
+# FiraCode Nerd Font
+FONT_DIR="$SETUP_HOME/.local/share/fonts/FiraCode"
+if [[ -d "$FONT_DIR" ]] && sudo -u "$SETUP_USER" fc-list 2>/dev/null | grep -qi "FiraCode Nerd Font"; then
+  echo "  FiraCode Nerd Font already installed"
+else
+  echo "  Installing FiraCode Nerd Font..."
+  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.local/share/fonts"
+  FIRA_ZIP="$(mktemp /tmp/FiraCode.XXXXXX.zip)"
+  curl -fsSL -o "$FIRA_ZIP" https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip
+  sudo -u "$SETUP_USER" unzip -o "$FIRA_ZIP" -d "$FONT_DIR"
+  rm -f "$FIRA_ZIP"
+  sudo -u "$SETUP_USER" fc-cache -f "$SETUP_HOME/.local/share/fonts"
+  echo "  FiraCode Nerd Font installed"
+fi
+
+# Atuin (shell history)
+if sudo -u "$SETUP_USER" bash -c 'command -v atuin' &>/dev/null; then
+  echo "  Atuin already installed"
+else
+  echo "  Installing Atuin..."
+  sudo -u "$SETUP_USER" bash -c 'curl --proto "=https" --tlsv1.2 -LsSf https://setup.atuin.sh | sh'
+  echo "  Atuin installed"
+fi
+
+# Copy dotfiles config
+if [[ -f "$DOTFILES_DIR/zshrc" ]]; then
+  echo "  Installing .zshrc and .p10k.zsh..."
+  sudo -u "$SETUP_USER" cp "$DOTFILES_DIR/zshrc" "$SETUP_HOME/.zshrc"
+  [[ -f "$DOTFILES_DIR/p10k.zsh" ]] && sudo -u "$SETUP_USER" cp "$DOTFILES_DIR/p10k.zsh" "$SETUP_HOME/.p10k.zsh"
+else
+  echo "  Warning: dotfiles repo missing zshrc. Skipping config copy."
+fi
+
+# --- 14. Set Zsh as default shell ---
+echo "[19/20] Default shell..."
+CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
+if [[ "$CURRENT_SHELL" == */zsh ]]; then
+  echo "  $SETUP_USER already using zsh"
+else
+  echo "  Changing default shell for $SETUP_USER to zsh..."
+  chsh -s "$(command -v zsh)" "$SETUP_USER"
+  echo "  Default shell set to zsh (takes effect on next login)"
+fi
+
+# --- 15. Headless Debug Service ---
+echo "[20/20] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
-    cp "$PROJECT_DIR/deployment/argos-headless.service" "/etc/systemd/system/"
+    sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
+        -e "s|__SETUP_USER__|$SETUP_USER|g" \
+        "$PROJECT_DIR/deployment/argos-headless.service" \
+        > "/etc/systemd/system/argos-headless.service"
     systemctl daemon-reload
     systemctl enable argos-headless.service
     systemctl start argos-headless.service

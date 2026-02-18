@@ -1,5 +1,6 @@
 import { execFileSync } from 'child_process';
 import { access, constants } from 'fs/promises';
+import path from 'path';
 import type { Plugin, ViteDevServer } from 'vite';
 import { WebSocket, WebSocketServer } from 'ws';
 
@@ -10,13 +11,14 @@ const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
 const PORT_RETRY_DELAY_MS = 1000; // Wait after killing stale port holder
 const MAX_PORT_RETRIES = 2;
 
-// Valid shell paths - Four independent tmux sessions (0-3)
+// Valid shell paths — resolved relative to project root
+const PROJECT_ROOT = process.cwd();
 const VALID_SHELLS = [
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-zsh-wrapper.sh'
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-0.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-1.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-2.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-3.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-zsh-wrapper.sh')
 ];
 
 /** Persistent PTY session that survives WebSocket disconnections */
@@ -57,7 +59,7 @@ function normalizeShellPath(shellPath: string): string {
 
 	// Docker → native
 	if (normalized.startsWith('/app/')) {
-		normalized = normalized.replace(/^\/app\//, '/home/kali/Documents/Argos/Argos/');
+		normalized = normalized.replace(/^\/app\//, PROJECT_ROOT + '/');
 	}
 
 	// Old tmux-zsh-wrapper.sh location (moved during Phase 3 reorg)

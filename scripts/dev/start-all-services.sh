@@ -13,8 +13,9 @@ BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Project directories
-ARGOS_DIR="/home/kali/Documents/Argos/Argos"
+# Project directories — resolved from script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARGOS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HACKRF_BACKEND_DIR="$ARGOS_DIR/hackrf_emitter/backend"
 HACKRF_FRONTEND_DIR="$ARGOS_DIR/hackrf_emitter/frontend"
 
