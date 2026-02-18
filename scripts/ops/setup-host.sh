@@ -267,19 +267,120 @@ UDEV
   usermod -aG plugdev "$SETUP_USER" 2>/dev/null || true
 fi
 
-# --- 8. GSM Evil (gr-gsm + GsmEvil2) ---
+# --- 8. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
 echo "[9/20] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
+ARCH="$(dpkg --print-architecture)"
 
-# Install gr-gsm and hackrf packages
-for pkg in gr-gsm hackrf libhackrf-dev; do
-  if dpkg -s "$pkg" &>/dev/null; then
-    echo "  $pkg — already installed"
-  else
-    echo "  $pkg — installing..."
-    apt-get install -y -qq "$pkg" 2>/dev/null || echo "  $pkg — not available in repos, skipping"
+# Detect platform for gr-gsm install strategy
+# - Ubuntu/Debian x86_64: gr-gsm available via PPA
+# - Kali/Parrot (any arch): must build gr-gsm from source
+# - Already installed: skip (detect grgsm_livemon_headless binary)
+install_grgsm() {
+  if command -v grgsm_livemon_headless &>/dev/null; then
+    echo "  gr-gsm already installed ($(which grgsm_livemon_headless))"
+    return 0
   fi
-done
+
+  # Install SDR hardware packages (available on all distros)
+  for pkg in hackrf libhackrf-dev; do
+    if dpkg -s "$pkg" &>/dev/null; then
+      echo "  $pkg — already installed"
+    else
+      echo "  $pkg — installing..."
+      apt-get install -y -qq "$pkg"
+    fi
+  done
+
+  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "debian" ]] && [[ "$ARCH" == "amd64" ]]; then
+    # Ubuntu/Debian x86_64: try the PPA first
+    echo "  Trying gr-gsm via PPA (Ubuntu/Debian x86_64)..."
+    if ! dpkg -s gr-gsm &>/dev/null; then
+      add-apt-repository -y ppa:ptrkrysik/gr-gsm 2>/dev/null || true
+      apt-get update -qq
+      if apt-get install -y -qq gr-gsm 2>/dev/null; then
+        echo "  gr-gsm installed via PPA"
+        return 0
+      else
+        echo "  PPA install failed — falling back to source build..."
+      fi
+    fi
+  fi
+
+  # Kali, Parrot, or PPA failed: build gr-gsm from source
+  echo "  Building gr-gsm from source ($OS_ID, $ARCH)..."
+
+  # Build dependencies
+  local BUILD_DEPS=(
+    gnuradio gnuradio-dev gr-osmosdr
+    libosmocore-dev
+    cmake build-essential pkg-config
+    libboost-all-dev libcppunit-dev
+    swig doxygen
+    python3-docutils
+  )
+  for pkg in "${BUILD_DEPS[@]}"; do
+    if dpkg -s "$pkg" &>/dev/null; then
+      echo "  $pkg — already installed"
+    else
+      echo "  $pkg — installing..."
+      apt-get install -y -qq "$pkg" || echo "  WARNING: $pkg not available, build may fail"
+    fi
+  done
+
+  # Clone and build
+  local GRGSM_BUILD_DIR="/tmp/gr-gsm-build"
+  rm -rf "$GRGSM_BUILD_DIR"
+  git clone https://github.com/ptrkrysik/gr-gsm.git "$GRGSM_BUILD_DIR"
+  cd "$GRGSM_BUILD_DIR"
+  mkdir -p build && cd build
+  cmake .. 2>&1 | tail -5
+  echo "  Compiling gr-gsm (this takes a few minutes on ARM)..."
+  make -j "$(nproc)" 2>&1 | tail -3
+  make install
+  ldconfig
+  cd "$PROJECT_DIR"
+
+  # Verify
+  if command -v grgsm_livemon_headless &>/dev/null; then
+    echo "  gr-gsm built and installed successfully"
+    rm -rf "$GRGSM_BUILD_DIR"
+    return 0
+  else
+    echo "  WARNING: gr-gsm build completed but grgsm_livemon_headless not found"
+    echo "  GSM Evil will not work without gr-gsm. Check build output above."
+    rm -rf "$GRGSM_BUILD_DIR"
+    return 1
+  fi
+}
+
+install_grgsm || true
+
+# kalibrate-rtl — frequency scanner for finding nearby GSM base stations
+echo "  Installing kalibrate-rtl..."
+if command -v kal &>/dev/null; then
+  echo "  kalibrate-rtl already installed ($(which kal))"
+elif apt-cache show kalibrate-rtl &>/dev/null 2>&1; then
+  # Available via apt (Kali has it in repos)
+  apt-get install -y -qq kalibrate-rtl
+  echo "  kalibrate-rtl installed via apt"
+else
+  # Build from source (Ubuntu/Debian/Parrot without the package)
+  echo "  kalibrate-rtl not in repos — building from source..."
+  apt-get install -y -qq librtlsdr-dev libfftw3-dev libtool automake autoconf 2>/dev/null || true
+  KAL_BUILD_DIR="/tmp/kalibrate-rtl-build"
+  rm -rf "$KAL_BUILD_DIR"
+  git clone https://github.com/steve-m/kalibrate-rtl.git "$KAL_BUILD_DIR"
+  cd "$KAL_BUILD_DIR"
+  ./bootstrap && CXXFLAGS='-W -Wall -O3' ./configure && make -j "$(nproc)" && make install
+  cd "$PROJECT_DIR"
+  rm -rf "$KAL_BUILD_DIR"
+  if command -v kal &>/dev/null; then
+    echo "  kalibrate-rtl built and installed"
+  else
+    echo "  WARNING: kalibrate-rtl build failed — manual frequency entry will still work"
+  fi
+fi
 
 # Clone or update GsmEvil2
 if [[ -d "$GSMEVIL_DIR/.git" ]]; then
@@ -290,14 +391,19 @@ else
   sudo -u "$SETUP_USER" git clone https://github.com/ninjhacks/gsmevil2.git "$GSMEVIL_DIR"
 fi
 
-# Python virtual environment + dependencies
+# Python virtual environment + dependencies (use upstream requirements.txt)
 GSMEVIL_VENV="$GSMEVIL_DIR/venv"
-if [[ -d "$GSMEVIL_VENV" ]]; then
-  echo "  GsmEvil2 venv already exists"
+if [[ -d "$GSMEVIL_VENV" ]] && "$GSMEVIL_VENV/bin/python" -c "import flask, pyshark" 2>/dev/null; then
+  echo "  GsmEvil2 venv already exists with dependencies"
 else
   echo "  Creating Python venv and installing dependencies..."
   sudo -u "$SETUP_USER" python3 -m venv "$GSMEVIL_VENV"
-  sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet pyshark flask flask-socketio 2>/dev/null || true
+  if [[ -f "$GSMEVIL_DIR/requirements.txt" ]]; then
+    sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet -r "$GSMEVIL_DIR/requirements.txt"
+  else
+    # Fallback if requirements.txt is missing from the clone
+    sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet "flask==2.2.2" "flask_socketio==5.3.2" "pyshark==0.5.3"
+  fi
   echo "  GsmEvil2 Python dependencies installed"
 fi
 
@@ -442,10 +548,10 @@ if [[ -f /etc/default/earlyoom ]]; then
   # Avoid list: system-critical + development tools + headless browser
   # Prefer list: only ollama (large model, recoverable)
   cat > /etc/default/earlyoom << 'EARLYOOM'
-EARLYOOM_ARGS="-m 10 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|claude|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama)$'"
+EARLYOOM_ARGS="-m 10 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
 EARLYOOM
   systemctl restart earlyoom
-  echo "  EarlyOOM configured (protect: system + dev tools + headless browser, prefer kill: ollama)."
+  echo "  EarlyOOM configured (protect: system + dev tools, prefer kill: ollama + bun daemons)."
 else
   echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
 fi
