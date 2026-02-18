@@ -511,6 +511,23 @@ for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-completions; do
   fi
 done
 
+# TPM (Tmux Plugin Manager)
+TPM_DIR="$SETUP_HOME/.tmux/plugins/tpm"
+if [[ -d "$TPM_DIR/.git" ]]; then
+  echo "  TPM already installed"
+else
+  echo "  Installing TPM (Tmux Plugin Manager)..."
+  sudo -u "$SETUP_USER" git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+fi
+
+# Copy project tmux.conf as user default (contains plugin declarations)
+echo "  Installing tmux.conf..."
+sudo -u "$SETUP_USER" cp "$PROJECT_DIR/scripts/tmux/tmux.conf" "$SETUP_HOME/.tmux.conf"
+
+# Install tmux plugins non-interactively (resurrect + continuum)
+echo "  Installing tmux plugins (resurrect, continuum)..."
+sudo -u "$SETUP_USER" "$TPM_DIR/bin/install_plugins" || true
+
 # FiraCode Nerd Font
 FONT_DIR="$SETUP_HOME/.local/share/fonts/FiraCode"
 if [[ -d "$FONT_DIR" ]] && sudo -u "$SETUP_USER" fc-list 2>/dev/null | grep -qi "FiraCode Nerd Font"; then

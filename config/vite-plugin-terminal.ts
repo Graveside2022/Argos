@@ -205,6 +205,94 @@ function createWssWithRetry(port: number, retries = MAX_PORT_RETRIES): Promise<W
 	});
 }
 
+/**
+ * Pre-spawn the default tmux-0 session so it's ready before any browser connects.
+ * Runs headless (no WebSocket attached) — the client reattaches when Terminal is opened.
+ * Delays 2s to let tmux-continuum restore any saved state.
+ */
+function preSpawnDefaultSession(ptyModule: typeof import('node-pty')): void {
+	const PRE_SPAWN_SESSION_ID = 'tmux-0-default';
+	const PRE_SPAWN_SHELL = path.join(PROJECT_ROOT, 'scripts/tmux/tmux-0.sh');
+	const PRE_SPAWN_DELAY_MS = 2000;
+
+	// Don't double-spawn
+	if (sessions.has(PRE_SPAWN_SESSION_ID)) {
+		console.warn('[argos-terminal] tmux-0 session already exists, skipping pre-spawn');
+		return;
+	}
+
+	setTimeout(async () => {
+		// Verify shell is executable
+		try {
+			await access(PRE_SPAWN_SHELL, constants.X_OK);
+		} catch {
+			console.warn(`[argos-terminal] Pre-spawn skipped: ${PRE_SPAWN_SHELL} not executable`);
+			return;
+		}
+
+		// Unset TMUX variables to prevent nested session conflicts
+		const env = { ...process.env };
+		delete env['TMUX'];
+		delete env['TMUX_PANE'];
+
+		let ptyProcess: ReturnType<typeof ptyModule.spawn>;
+		try {
+			ptyProcess = ptyModule.spawn(PRE_SPAWN_SHELL, [], {
+				name: 'xterm-256color',
+				cols: 80,
+				rows: 24,
+				cwd: process.env.HOME || '/home',
+				env: env as Record<string, string>
+			});
+		} catch (err) {
+			console.error('[argos-terminal] Pre-spawn failed:', err);
+			return;
+		}
+
+		const session: PtySession = {
+			pty: ptyProcess,
+			shell: PRE_SPAWN_SHELL,
+			ws: null, // headless — no WebSocket yet
+			outputBuffer: [],
+			bufferSize: 0,
+			cleanupTimer: null, // no cleanup timer — persistent default session
+			cols: 80,
+			rows: 24
+		};
+
+		sessions.set(PRE_SPAWN_SESSION_ID, session);
+
+		// Buffer output while headless; client reattaches and sees history
+		ptyProcess.onData((data: string) => {
+			try {
+				const s = sessions.get(PRE_SPAWN_SESSION_ID);
+				if (!s) return;
+
+				if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+					s.ws.send(data);
+				} else {
+					s.outputBuffer.push(data);
+					s.bufferSize += data.length;
+
+					while (s.bufferSize > MAX_BUFFER_BYTES && s.outputBuffer.length > 1) {
+						const dropped = s.outputBuffer.shift();
+						if (dropped) s.bufferSize -= dropped.length;
+					}
+				}
+			} catch (err) {
+				console.error(`[argos-terminal] Pre-spawn onData error:`, err);
+			}
+		});
+
+		ptyProcess.onExit(() => {
+			sessions.delete(PRE_SPAWN_SESSION_ID);
+			console.warn('[argos-terminal] Pre-spawned tmux-0 session exited');
+		});
+
+		console.warn('[argos-terminal] Pre-spawned tmux-0 session (ready for reattach)');
+	}, PRE_SPAWN_DELAY_MS);
+}
+
 async function setupTerminal() {
 	let ptyModule: typeof import('node-pty');
 	try {
@@ -243,6 +331,9 @@ async function setupTerminal() {
 	process.on('exit', cleanup);
 	process.on('SIGTERM', cleanup);
 	process.on('SIGINT', cleanup);
+
+	// Pre-spawn tmux-0 so it's ready before any browser connects
+	preSpawnDefaultSession(ptyModule);
 
 	wss.on('connection', (ws) => {
 		const defaultShell = process.env.SHELL || '/bin/bash';
