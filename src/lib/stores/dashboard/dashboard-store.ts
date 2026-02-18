@@ -88,7 +88,23 @@ export function setBottomPanelHeight(height: number): void {
  * 'map' = default map view (State 1 or 2)
  * 'kismet' | 'gsm-evil' | 'hackrf' | etc. = full-screen tool view (State 3)
  */
-export const activeView = writable<string>('map');
+export type ActiveView =
+	| 'map'
+	| 'kismet'
+	| 'openwebrx'
+	| 'bettercap'
+	| 'hackrf'
+	| 'gsm-evil'
+	| 'rtl-433'
+	| 'btle'
+	| 'droneid'
+	| 'pagermon'
+	| 'rf-emitter'
+	| 'wifite'
+	| 'wigletotak'
+	| 'tak-config';
+
+export const activeView = writable<ActiveView>('map');
 
 /** Toggle a panel: if already active, close it; otherwise open it */
 export function togglePanel(panel: string): void {

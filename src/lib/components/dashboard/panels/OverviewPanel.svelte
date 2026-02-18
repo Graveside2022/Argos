@@ -2,7 +2,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { activePanel, activeView } from '$lib/stores/dashboard/dashboard-store';
+	import {
+		activePanel,
+		type ActiveView,
+		activeView
+	} from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 	import type { SystemInfo } from '$lib/types/system';
@@ -59,7 +63,7 @@
 		expandedRow = expandedRow === id ? null : id;
 	}
 
-	function openTool(view: string) {
+	function openTool(view: ActiveView) {
 		activeView.set(view);
 		activePanel.set(null);
 	}

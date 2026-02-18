@@ -43,9 +43,9 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Install dependencies: `npm install @tak-ps/node-tak @tak-ps/node-cot @xmldom/xmldom`. **Note**: `@tak-ps/node-cot` is a required peer dependency of node-tak (CoT parsing/serialization). `@xmldom/xmldom` is needed for TakPackageParser (preference.pref XML). Verify `node --version` >= 22 (node-tak requirement). → See **Integration Notes § 1, 4**
-- [ ] T002 Create directory `src/lib/components/dashboard/tak/` for inline TAK components
-- [ ] T003 [P] Add `'tak-config'` to `activeView` union type in `src/lib/stores/dashboard/dashboard-store.ts`. **Current state**: untyped `writable<string>`. Existing view values: `'map'`, `'kismet'`, `'openwebrx'`, `'bettercap'`, `'gsm-evil'`. Create a union type and add `'tak-config'`. → See **research.md § Task 3**
+- [x] T001 Install dependencies: `npm install @tak-ps/node-tak @tak-ps/node-cot @xmldom/xmldom`. **Note**: `@tak-ps/node-cot` is a required peer dependency of node-tak (CoT parsing/serialization). `@xmldom/xmldom` is needed for TakPackageParser (preference.pref XML). Verify `node --version` >= 22 (node-tak requirement). → See **Integration Notes § 1, 4**
+- [x] T002 Create directory `src/lib/components/dashboard/tak/` for inline TAK components
+- [x] T003 [P] Add `'tak-config'` to `activeView` union type in `src/lib/stores/dashboard/dashboard-store.ts`. **Current state**: untyped `writable<string>`. Existing view values: `'map'`, `'kismet'`, `'openwebrx'`, `'bettercap'`, `'gsm-evil'`. Create a union type and add `'tak-config'`. → See **research.md § Task 3**
 
 ---
 
