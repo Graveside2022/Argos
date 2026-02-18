@@ -60,7 +60,7 @@
 		if (destroyed) return;
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const sock = new WebSocket(`${protocol}//${window.location.hostname}:3001`);
+		const sock = new WebSocket(`${protocol}//${window.location.host}/terminal-ws`);
 		ws = sock;
 
 		sock.onopen = () => {
@@ -279,7 +279,7 @@
 				</svg>
 				<span class="error-title">Terminal Unavailable</span>
 				<span class="error-detail"
-					>Could not connect to terminal server on port 3001 after {WS_MAX_RETRIES} attempts.</span
+					>Could not connect to terminal server after {WS_MAX_RETRIES} attempts.</span
 				>
 				<code class="error-cmd">Check that the dev server is running (npm run dev)</code>
 			</div>
