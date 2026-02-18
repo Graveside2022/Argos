@@ -1,5 +1,5 @@
 // Dashboard stores — panel layout, terminal sessions, tool navigation, and agent context
-export type { InteractionEvent, WorkflowType } from "./agent-context-store";
+export type { InteractionEvent, WorkflowType } from './agent-context-store';
 export {
 	agentContext,
 	clearSelection,
@@ -12,8 +12,8 @@ export {
 	selectedDeviceMAC,
 	setWorkflow,
 	workflowGoal,
-	workflowStep,
-} from "./agent-context-store";
+	workflowStep
+} from './agent-context-store';
 export {
 	activeBands,
 	activeBottomTab,
@@ -27,8 +27,8 @@ export {
 	toggleBand,
 	toggleBottomTab,
 	toggleLayerVisibility,
-	togglePanel,
-} from "./dashboard-store";
+	togglePanel
+} from './dashboard-store';
 export {
 	activeSession,
 	closeSession,
@@ -51,8 +51,8 @@ export {
 	toggleTerminalPanel,
 	unsplit,
 	updateSessionConnection,
-	updateSplitWidths,
-} from "./terminal-store";
+	updateSplitWidths
+} from './terminal-store';
 export {
 	breadcrumbs,
 	currentCategory,
@@ -64,5 +64,5 @@ export {
 	setToolStatus,
 	toggleCategory,
 	toolNavigationPath,
-	toolStates,
-} from "./tools-store";
+	toolStates
+} from './tools-store';
