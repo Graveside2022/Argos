@@ -27,6 +27,27 @@ export interface GsmEvilStopResult {
  */
 export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResult> {
 	try {
+		// Pre-flight: check that required binaries and directories exist
+		const gsmDir = getGsmEvilDir();
+		const { stdout: hasGrgsm } = await hostExec(
+			'command -v grgsm_livemon_headless >/dev/null 2>&1 && echo ok || echo missing'
+		);
+		if (hasGrgsm.trim() !== 'ok') {
+			return {
+				success: false,
+				message: 'grgsm_livemon_headless is not installed. Run: sudo apt install gr-gsm'
+			};
+		}
+		const { stdout: hasPython } = await hostExec(
+			`test -f ${gsmDir}/GsmEvil.py && echo ok || echo missing`
+		);
+		if (hasPython.trim() !== 'ok') {
+			return {
+				success: false,
+				message: `GsmEvil2 not found at ${gsmDir}. Run: git clone https://github.com/ninjhacks/gsmevil2.git ${gsmDir}`
+			};
+		}
+
 		// Acquire HackRF via Resource Manager
 		let acquireResult = await resourceManager.acquire('gsm-evil', HardwareDevice.HACKRF);
 		if (!acquireResult.success) {
@@ -79,7 +100,6 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		const validatedFreq = validateNumericParam(frequency || '947.2', 'frequency', 800, 1000);
 		const freq = String(validatedFreq);
 		const gain = '40';
-		const gsmDir = getGsmEvilDir();
 		console.warn(`[gsm-evil] Starting on ${freq} MHz...`);
 
 		// 1. Kill existing processes (ignore errors - may not be running)
