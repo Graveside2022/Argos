@@ -54,7 +54,7 @@ fi
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/20] Network configuration..."
+echo "[1/21] Network configuration..."
 
 configure_networking() {
   local changed=false
@@ -136,7 +136,7 @@ EOF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/20] System packages..."
+echo "[2/21] System packages..."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -155,7 +155,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 2. Node.js ---
-echo "[3/20] Node.js..."
+echo "[3/21] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -171,7 +171,7 @@ else
 fi
 
 # --- 3. Kismet ---
-echo "[4/20] Kismet..."
+echo "[4/21] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -191,7 +191,7 @@ else
 fi
 
 # --- 4. gpsd ---
-echo "[5/20] gpsd..."
+echo "[5/21] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -200,7 +200,7 @@ else
 fi
 
 # --- 5. Docker (for third-party tools only) ---
-echo "[6/20] Docker..."
+echo "[6/21] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -230,7 +230,7 @@ else
 fi
 
 # --- 6. OpenSSH Server ---
-echo "[7/20] OpenSSH server..."
+echo "[7/21] OpenSSH server..."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
 else
@@ -249,7 +249,7 @@ else
 fi
 
 # --- 7. udev rules for SDR devices ---
-echo "[8/20] udev rules..."
+echo "[8/21] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -268,7 +268,7 @@ UDEV
 fi
 
 # --- 8. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
-echo "[9/20] GSM Evil..."
+echo "[9/21] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
 
@@ -418,7 +418,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
 fi
 
 # --- 9. Kismet GPS config ---
-echo "[10/20] Kismet GPS config..."
+echo "[10/21] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -432,7 +432,7 @@ else
 fi
 
 # --- 8. npm dependencies ---
-echo "[11/20] npm dependencies..."
+echo "[11/21] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -456,7 +456,7 @@ else
 fi
 
 # --- 9. .env from template ---
-echo "[12/20] Environment file..."
+echo "[12/21] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -513,7 +513,7 @@ echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 10. Development Monitor Service ---
-echo "[13/20] Development Monitor Service..."
+echo "[13/21] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -542,7 +542,7 @@ else
 fi
 
 # --- 11. EarlyOOM Configuration ---
-echo "[14/20] Configure EarlyOOM..."
+echo "[14/21] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
   # Avoid list: system-critical + development tools + headless browser
@@ -556,8 +556,58 @@ else
   echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
 fi
 
-# --- 12. Tailscale ---
-echo "[15/20] Tailscale..."
+# --- 12. cgroup Memory Limit (defense against runaway processes) ---
+echo "[15/21] cgroup memory limit..."
+
+# Detect the primary UID (the user who will run Argos)
+SETUP_UID=$(id -u "$SETUP_USER")
+SLICE_DIR="/etc/systemd/system/user-${SETUP_UID}.slice.d"
+SLICE_CONF="$SLICE_DIR/memory-limit.conf"
+
+# Calculate limits dynamically based on total RAM.
+# Hybrid formula: reserve max(512 MiB, 5% of RAM) for kernel+system.
+# - Small machines (4-8 GB RPi): reserves 512 MiB (tight but safe)
+# - Large machines (32-128 GB x86): reserves 1.6-6.4 GiB (proportional headroom)
+#   MemoryHigh (soft) = MemoryMax - 512 MiB → triggers aggressive reclaim before hard limit
+#   MemoryMax  (hard) = total - reserve      → OOM-kills the process
+TOTAL_MEM_BYTES=$(free -b | awk '/Mem:/ {print $2}')
+TOTAL_MEM_MIB=$(( TOTAL_MEM_BYTES / 1048576 ))
+RESERVE_PERCENT=$(( TOTAL_MEM_MIB * 5 / 100 ))
+RESERVE_MIN=512
+RESERVE_MIB=$(( RESERVE_PERCENT > RESERVE_MIN ? RESERVE_PERCENT : RESERVE_MIN ))
+MEM_MAX_MIB=$(( TOTAL_MEM_MIB - RESERVE_MIB ))
+MEM_HIGH_MIB=$(( MEM_MAX_MIB - 512 ))      # soft limit 512 MiB below hard limit
+
+# Sanity check: don't set limits on machines with < 2 GiB
+if [[ "$TOTAL_MEM_MIB" -lt 2048 ]]; then
+  echo "  Skipping cgroup limits — only ${TOTAL_MEM_MIB} MiB RAM detected (need ≥ 2 GiB)"
+else
+  if [[ -f "$SLICE_CONF" ]]; then
+    echo "  cgroup memory limit already configured at $SLICE_CONF"
+    echo "  Current: $(grep 'MemoryHigh\|MemoryMax' "$SLICE_CONF" | tr '\n' ' ')"
+  else
+    echo "  Total RAM: ${TOTAL_MEM_MIB} MiB"
+    echo "  Setting MemoryHigh=${MEM_HIGH_MIB}M (soft), MemoryMax=${MEM_MAX_MIB}M (hard)"
+    echo "  Reserving ${RESERVE_MIB} MiB for kernel/system (max of 512M or 5%)"
+    mkdir -p "$SLICE_DIR"
+    cat > "$SLICE_CONF" << EOF
+# Argos: Prevent user processes from consuming all system memory.
+# Applies to ALL processes under user ${SETUP_UID} (${SETUP_USER}).
+# Total RAM: ${TOTAL_MEM_MIB} MiB — reserves ${RESERVE_MIB} MiB for kernel/system.
+#
+# MemoryHigh = soft limit (kernel reclaims aggressively above this)
+# MemoryMax  = hard limit (OOM-kills the process)
+[Slice]
+MemoryHigh=${MEM_HIGH_MIB}M
+MemoryMax=${MEM_MAX_MIB}M
+EOF
+    systemctl daemon-reload
+    echo "  cgroup memory limit installed. Active for new user sessions."
+  fi
+fi
+
+# --- 13. Tailscale ---
+echo "[16/21] Tailscale..."
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
 else
@@ -566,8 +616,8 @@ else
   echo "  Tailscale installed. Run 'sudo tailscale up' to authenticate."
 fi
 
-# --- 13. Claude Code ---
-echo "[16/20] Claude Code..."
+# --- 14. Claude Code ---
+echo "[17/21] Claude Code..."
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
 else
@@ -576,8 +626,8 @@ else
   echo "  Claude Code installed. Run 'claude' to authenticate."
 fi
 
-# --- 14. Gemini CLI ---
-echo "[17/20] Gemini CLI..."
+# --- 15. Gemini CLI ---
+echo "[18/21] Gemini CLI..."
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
 else
@@ -586,8 +636,8 @@ else
   echo "  Gemini CLI installed. Run 'gemini' to authenticate."
 fi
 
-# --- 15. Zsh + Dotfiles ---
-echo "[18/20] Zsh + Dotfiles..."
+# --- 16. Zsh + Dotfiles ---
+echo "[19/21] Zsh + Dotfiles..."
 DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
 DOTFILES_DIR="$SETUP_HOME/.dotfiles"
 
@@ -685,8 +735,8 @@ else
   echo "  Warning: dotfiles repo missing zshrc. Skipping config copy."
 fi
 
-# --- 14. Set Zsh as default shell ---
-echo "[19/20] Default shell..."
+# --- 17. Set Zsh as default shell ---
+echo "[20/21] Default shell..."
 CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
 if [[ "$CURRENT_SHELL" == */zsh ]]; then
   echo "  $SETUP_USER already using zsh"
@@ -696,8 +746,8 @@ else
   echo "  Default shell set to zsh (takes effect on next login)"
 fi
 
-# --- 15. Headless Debug Service ---
-echo "[20/20] Headless Debug Service..."
+# --- 18. Headless Debug Service ---
+echo "[21/21] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
     sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
