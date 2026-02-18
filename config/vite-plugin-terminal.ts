@@ -1,22 +1,23 @@
-import { execFileSync } from 'child_process';
 import { access, constants } from 'fs/promises';
+import type { IncomingMessage } from 'http';
+import path from 'path';
+import type { Duplex } from 'stream';
 import type { Plugin, ViteDevServer } from 'vite';
 import { WebSocket, WebSocketServer } from 'ws';
 
-const TERMINAL_PORT = 3001;
+const TERMINAL_WS_PATH = '/terminal-ws';
 const INIT_TIMEOUT_MS = 5000; // Wait max 5s for init message
 const CLEANUP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes before killing orphaned PTY
 const MAX_BUFFER_BYTES = 100 * 1024; // 100KB output buffer while detached
-const PORT_RETRY_DELAY_MS = 1000; // Wait after killing stale port holder
-const MAX_PORT_RETRIES = 2;
 
-// Valid shell paths - Four independent tmux sessions (0-3)
+// Valid shell paths — resolved relative to project root
+const PROJECT_ROOT = process.cwd();
 const VALID_SHELLS = [
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-zsh-wrapper.sh'
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-0.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-1.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-2.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-3.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-zsh-wrapper.sh')
 ];
 
 /** Persistent PTY session that survives WebSocket disconnections */
@@ -37,10 +38,10 @@ const sessions = new Map<string, PtySession>();
 export function terminalPlugin(): Plugin {
 	return {
 		name: 'argos-terminal',
-		configureServer(_server: ViteDevServer) {
+		configureServer(server: ViteDevServer) {
 			console.warn('[argos-terminal] Plugin hook called');
 			// Don't return the promise — fire-and-forget so we don't block Vite
-			setupTerminal().catch((err) => {
+			setupTerminal(server).catch((err) => {
 				console.error('[argos-terminal] Setup failed:', err);
 			});
 		}
@@ -57,7 +58,7 @@ function normalizeShellPath(shellPath: string): string {
 
 	// Docker → native
 	if (normalized.startsWith('/app/')) {
-		normalized = normalized.replace(/^\/app\//, '/home/kali/Documents/Argos/Argos/');
+		normalized = normalized.replace(/^\/app\//, PROJECT_ROOT + '/');
 	}
 
 	// Old tmux-zsh-wrapper.sh location (moved during Phase 3 reorg)
@@ -139,71 +140,94 @@ function detachSession(sessionId: string): void {
 }
 
 /**
- * Kill whatever is holding a port. Returns true if something was killed.
+ * Pre-spawn the default tmux-0 session so it's ready before any browser connects.
+ * Runs headless (no WebSocket attached) — the client reattaches when Terminal is opened.
+ * Delays 2s to let tmux-continuum restore any saved state.
  */
-function killPortHolder(port: number): boolean {
-	try {
-		const output = execFileSync('lsof', ['-ti', `:${port}`], {
-			encoding: 'utf8',
-			timeout: 3000
-		}).trim();
-		if (!output) return false;
+function preSpawnDefaultSession(ptyModule: typeof import('node-pty')): void {
+	const PRE_SPAWN_SESSION_ID = 'tmux-0-default';
+	const PRE_SPAWN_SHELL = path.join(PROJECT_ROOT, 'scripts/tmux/tmux-0.sh');
+	const PRE_SPAWN_DELAY_MS = 2000;
 
-		const pids = output
-			.split('\n')
-			.map((p) => parseInt(p, 10))
-			.filter((p) => p > 0 && p !== process.pid);
-		for (const pid of pids) {
-			try {
-				process.kill(pid, 'SIGKILL');
-				console.warn(`[argos-terminal] Killed stale process ${pid} on port ${port}`);
-			} catch {
-				// Already dead
-			}
-		}
-		return pids.length > 0;
-	} catch {
-		return false;
+	// Don't double-spawn
+	if (sessions.has(PRE_SPAWN_SESSION_ID)) {
+		console.warn('[argos-terminal] tmux-0 session already exists, skipping pre-spawn');
+		return;
 	}
-}
 
-/**
- * Create WebSocket server with retry on EADDRINUSE.
- * Kills stale port holders and retries.
- */
-function createWssWithRetry(port: number, retries = MAX_PORT_RETRIES): Promise<WebSocketServer> {
-	return new Promise((resolve, reject) => {
-		const wss = new WebSocketServer({ port, host: '0.0.0.0' });
+	setTimeout(async () => {
+		// Verify shell is executable
+		try {
+			await access(PRE_SPAWN_SHELL, constants.X_OK);
+		} catch {
+			console.warn(`[argos-terminal] Pre-spawn skipped: ${PRE_SPAWN_SHELL} not executable`);
+			return;
+		}
 
-		wss.on('listening', () => {
-			console.warn(`[argos-terminal] Shell server listening on port ${port}`);
-			resolve(wss);
-		});
+		// Unset TMUX variables to prevent nested session conflicts
+		const env = { ...process.env };
+		delete env['TMUX'];
+		delete env['TMUX_PANE'];
 
-		wss.on('error', (err: Error & { code?: string }) => {
-			if (err.code === 'EADDRINUSE' && retries > 0) {
-				console.warn(
-					`[argos-terminal] Port ${port} in use, killing stale holder and retrying...`
-				);
-				wss.close();
-				killPortHolder(port);
-				setTimeout(() => {
-					createWssWithRetry(port, retries - 1).then(resolve, reject);
-				}, PORT_RETRY_DELAY_MS);
-			} else if (err.code === 'EADDRINUSE') {
-				console.error(
-					`[argos-terminal] Port ${port} still in use after retries — terminal disabled`
-				);
-				wss.close();
-				reject(err);
-			} else {
-				console.error('[argos-terminal] Server error:', err.message);
+		let ptyProcess: ReturnType<typeof ptyModule.spawn>;
+		try {
+			ptyProcess = ptyModule.spawn(PRE_SPAWN_SHELL, [], {
+				name: 'xterm-256color',
+				cols: 80,
+				rows: 24,
+				cwd: process.env.HOME || '/home',
+				env: env as Record<string, string>
+			});
+		} catch (err) {
+			console.error('[argos-terminal] Pre-spawn failed:', err);
+			return;
+		}
+
+		const session: PtySession = {
+			pty: ptyProcess,
+			shell: PRE_SPAWN_SHELL,
+			ws: null, // headless — no WebSocket yet
+			outputBuffer: [],
+			bufferSize: 0,
+			cleanupTimer: null, // no cleanup timer — persistent default session
+			cols: 80,
+			rows: 24
+		};
+
+		sessions.set(PRE_SPAWN_SESSION_ID, session);
+
+		// Buffer output while headless; client reattaches and sees history
+		ptyProcess.onData((data: string) => {
+			try {
+				const s = sessions.get(PRE_SPAWN_SESSION_ID);
+				if (!s) return;
+
+				if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+					s.ws.send(data);
+				} else {
+					s.outputBuffer.push(data);
+					s.bufferSize += data.length;
+
+					while (s.bufferSize > MAX_BUFFER_BYTES && s.outputBuffer.length > 1) {
+						const dropped = s.outputBuffer.shift();
+						if (dropped) s.bufferSize -= dropped.length;
+					}
+				}
+			} catch (err) {
+				console.error(`[argos-terminal] Pre-spawn onData error:`, err);
 			}
 		});
-	});
+
+		ptyProcess.onExit(() => {
+			sessions.delete(PRE_SPAWN_SESSION_ID);
+			console.warn('[argos-terminal] Pre-spawned tmux-0 session exited');
+		});
+
+		console.warn('[argos-terminal] Pre-spawned tmux-0 session (ready for reattach)');
+	}, PRE_SPAWN_DELAY_MS);
 }
 
-async function setupTerminal() {
+async function setupTerminal(server: ViteDevServer) {
 	let ptyModule: typeof import('node-pty');
 	try {
 		ptyModule = await import('node-pty');
@@ -213,13 +237,26 @@ async function setupTerminal() {
 		return;
 	}
 
-	let wss: WebSocketServer;
-	try {
-		wss = await createWssWithRetry(TERMINAL_PORT);
-	} catch {
-		// Terminal disabled but Vite continues running
+	// Use noServer mode — we handle upgrades on Vite's HTTP server
+	const wss = new WebSocketServer({ noServer: true });
+
+	// Hook into Vite's HTTP server for WebSocket upgrades at /terminal-ws
+	const httpServer = server.httpServer;
+	if (!httpServer) {
+		console.warn('[argos-terminal] No HTTP server available — terminal disabled');
 		return;
 	}
+
+	httpServer.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+		const url = new URL(req.url || '/', `http://${req.headers.host}`);
+		if (url.pathname !== TERMINAL_WS_PATH) return; // Let other upgrade handlers (HMR, etc.) proceed
+
+		wss.handleUpgrade(req, socket, head, (ws) => {
+			wss.emit('connection', ws, req);
+		});
+	});
+
+	console.warn(`[argos-terminal] Terminal WebSocket attached at ${TERMINAL_WS_PATH}`);
 
 	// Graceful shutdown: clean up all PTY sessions when Vite exits
 	const cleanup = () => {
@@ -241,6 +278,9 @@ async function setupTerminal() {
 	process.on('exit', cleanup);
 	process.on('SIGTERM', cleanup);
 	process.on('SIGINT', cleanup);
+
+	// Pre-spawn tmux-0 so it's ready before any browser connects
+	preSpawnDefaultSession(ptyModule);
 
 	wss.on('connection', (ws) => {
 		const defaultShell = process.env.SHELL || '/bin/bash';

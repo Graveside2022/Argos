@@ -47,11 +47,7 @@ async function queryLocalDatabase(
 	latDelta: number,
 	lonDelta: number
 ): Promise<CellTowerResult | null> {
-	const dbPaths = [
-		path.join(process.cwd(), 'data', 'celltowers', 'towers.db'),
-		'/home/kali/Documents/Argos/Argos/data/celltowers/towers.db',
-		'/home/kali/Documents/Argos/Argos/data/celltowers/towers.db'
-	];
+	const dbPaths = [path.join(process.cwd(), 'data', 'celltowers', 'towers.db')];
 
 	for (const dbPath of dbPaths) {
 		if (!fs.existsSync(dbPath)) continue;

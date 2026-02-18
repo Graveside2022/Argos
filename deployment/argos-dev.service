@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=kali
-Group=kali
-WorkingDirectory=/home/kali/Documents/Argos/Argos
-EnvironmentFile=/home/kali/Documents/Argos/Argos/.env
+User=__SETUP_USER__
+Group=__SETUP_USER__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=__PROJECT_DIR__/.env
 Environment="NODE_ENV=development"
 Environment="NODE_OPTIONS=--max-old-space-size=1024"
 Environment="CI=true"

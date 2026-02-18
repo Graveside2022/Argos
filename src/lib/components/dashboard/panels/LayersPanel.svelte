@@ -14,6 +14,8 @@
 	import { signalBands } from '$lib/utils/signal-utils';
 
 	let customUrl = $state('');
+	let stadiaAvailable = $state(false);
+	mapSettings.stadiaAvailable.subscribe((v) => (stadiaAvailable = v));
 
 	function selectVector() {
 		mapSettings.setProvider(DEFAULT_VECTOR_SOURCE);
@@ -51,6 +53,8 @@
 				class="provider-btn"
 				class:active={$mapSettings.type === 'vector'}
 				onclick={selectVector}
+				disabled={!stadiaAvailable}
+				title={!stadiaAvailable ? 'Requires Stadia Maps API key' : ''}
 			>
 				<span class="provider-icon vector"></span>
 				<span class="provider-name">Tactical</span>
@@ -338,8 +342,13 @@
 		transition: all 0.2s;
 	}
 
-	.provider-btn:hover {
+	.provider-btn:hover:not(:disabled) {
 		background: var(--palantir-bg-hover);
+	}
+
+	.provider-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
 	.provider-btn.active {

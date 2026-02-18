@@ -1,5 +1,6 @@
 // Kismet service management
 import { exec } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
 
 import type { KismetServiceStatus } from './types';
@@ -8,8 +9,7 @@ const execAsync = promisify(exec);
 
 export class KismetServiceManager {
 	private static readonly SERVICE_NAME = 'kismet';
-	private static readonly START_SCRIPT =
-		'/home/kali/Documents/Argos/Argos/scripts/start_kismet.sh';
+	private static readonly START_SCRIPT = path.join(process.cwd(), 'scripts/start_kismet.sh');
 	private static readonly PID_FILE = '/tmp/argos-kismet.pid';
 	private static readonly LOG_FILE = '/tmp/argos-kismet.log';
 

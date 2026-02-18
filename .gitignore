@@ -328,6 +328,7 @@ bmad-method/
 
 # Credential-bearing config files
 config/opencellid.json
+.mcp.json
 
 # Enhanced Environment Security
 .envrc
@@ -364,7 +365,7 @@ SECURITY.md
 # Large data files
 map-data/*.csv
 map-data/cell_towers_*.csv
-data/celltowers/towers.db
+data/celltowers/
 docker-images/openwebrx-hackrf-only-v2.tar
 
 # Signal caches and backups

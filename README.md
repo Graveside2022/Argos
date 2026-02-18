@@ -1,6 +1,6 @@
 # Argos -- SDR & Network Analysis Console
 
-Real-time spectrum analysis, WiFi intelligence, GPS tracking, and tactical mapping on a Raspberry Pi.
+Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, and tactical mapping on a Raspberry Pi.
 
 ## Hardware
 
@@ -16,44 +16,114 @@ Real-time spectrum analysis, WiFi intelligence, GPS tracking, and tactical mappi
 ```bash
 git clone https://github.com/Graveside2022/Argos.git
 cd Argos
-sudo bash scripts/setup-host.sh
+sudo bash scripts/ops/setup-host.sh
 ```
 
-This installs Docker, Portainer, builds container images, configures GPS, and sets up auto-start on boot. Run it once.
+The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
-## Deploy
+## API Keys
 
-1. Open **https://\<your-pi-ip\>:9443** in a browser (Portainer)
-2. Create an admin account on first login
-3. Go to **Stacks** > **Add Stack**, name it `argos`
-4. Paste the contents of `docker/docker-compose.portainer-dev.yml`
-5. Click **Deploy the stack**
+The setup script prompts for these during first run. All are stored in `.env`.
+
+| Key                   | Required | Source                                           | Purpose                                                     |
+| --------------------- | -------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| `ARGOS_API_KEY`       | Yes      | Auto-generated                                   | API authentication (fail-closed)                            |
+| `STADIA_MAPS_API_KEY` | No       | [stadiamaps.com](https://stadiamaps.com/) (free) | Vector map tiles. Falls back to Google satellite without it |
+| `OPENCELLID_API_KEY`  | No       | [opencellid.org](https://opencellid.org/) (free) | Cell tower database download for map overlay                |
+
+To update keys after setup:
+
+```bash
+# Edit .env and set/change the key values
+nano .env
+
+# Restart to pick up changes
+npm run dev
+```
+
+## Cell Tower Database
+
+With an OpenCellID key, you can download the global cell tower database (~500MB) for offline tower lookups on the map:
+
+```bash
+bash scripts/ops/import-celltowers.sh
+```
+
+The setup script offers to do this during first install. To refresh the data later:
+
+```bash
+rm data/celltowers/cell_towers.csv.gz
+bash scripts/ops/import-celltowers.sh
+```
+
+## Map Tiles
+
+Argos supports two map tile sources:
+
+- **Vector tiles (Stadia Maps)** -- detailed tactical view with building outlines, street names, and POI labels. Requires `STADIA_MAPS_API_KEY`.
+- **Satellite tiles (Google)** -- aerial imagery fallback when no Stadia key is set.
+
+The map automatically detects which source is available and switches accordingly.
 
 ## Open Argos
 
-Go to **http://\<your-pi-ip\>:5173**
+```bash
+npm run dev
+```
+
+Then open **http://\<your-pi-ip\>:5173** in a browser.
+
+## After Reboot
+
+If systemd services are installed, Argos starts automatically:
+
+```bash
+sudo systemctl status argos-final
+```
+
+Otherwise, start manually with `npm run dev`.
 
 ## Hardware Setup
 
 Plug the Alfa adapter, HackRF, and GPS dongle into the powered USB hub, then connect the hub to the Pi. Argos detects hardware automatically. GPS needs 1--2 minutes for a first fix outdoors.
-
-## After Reboot
-
-Everything starts automatically. Just open http://\<your-pi-ip\>:5173.
 
 ## Troubleshooting
 
 | Problem             | Fix                                              |
 | ------------------- | ------------------------------------------------ |
 | No GPS fix          | Go outside, wait 2 minutes                       |
-| Page is blank       | Check Portainer -- are containers running?       |
+| Page is blank       | Check `npm run dev` output for errors            |
 | Alfa not detected   | Unplug and replug the USB hub                    |
 | HackRF not detected | Run `hackrf_info` on the Pi terminal             |
 | Port conflict       | Run `sudo lsof -i :5173` to find what's using it |
 
-## Development
+### Headless Debugging (Parrot Core / Field Ops)
 
-See [SETUP.md](SETUP.md) for development environment, commands, and project structure.
+When running on Parrot Core or in the field without a monitor, Argos includes tools for remote debugging:
+
+1.  **Service Status**: The debug service runs automatically on port `9222`.
+    ```bash
+    systemctl status argos-headless
+    ```
+2.  **Manual Start**:
+    ```bash
+    ./scripts/dev/debug-headless.sh
+    ```
+3.  **Connect from Laptop**:
+    Tunnel the remote debug port to your local machine:
+    ```bash
+    ssh -L 9222:localhost:9222 user@<pi-ip-address>
+    ```
+    Then open `chrome://inspect` in Chrome/Edge on your laptop to see the remote UI.
+
+### Debugging
+
+The `vite-oom-protect.sh` script wraps the Vite process with `strace` to capture signal and exit events. Logs are saved to `/tmp/vite_strace_<timestamp>.log`. Useful for identifying why the Vite server crashes or restarts unexpectedly.
+
+## More Info
+
+See [SETUP.md](SETUP.md) for development commands, architecture, and project structure.
+See [Memory & Reliability](docs/operations/memory-reliability.md) for the self-healing monitor and performance tuning.
 
 ## License
 

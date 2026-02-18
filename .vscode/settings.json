@@ -8,38 +8,23 @@
 		},
 		"Dev (tmux)": {
 			"path": "bash",
-			"args": [
-				"-c",
-				"cd /home/kali/Documents/Argos/Argos && exec tmux -2 -u new-session -A -s dev zsh"
-			]
+			"args": ["-c", "cd ${workspaceFolder} && exec tmux -2 -u new-session -A -s dev zsh"]
 		},
 		"Tmux 0": {
 			"path": "bash",
-			"args": [
-				"-c",
-				"cd /home/kali/Documents/Argos/Argos && exec tmux -2 -u new-session -A -s tmux-0 zsh"
-			]
+			"args": ["-c", "cd ${workspaceFolder} && exec tmux -2 -u new-session -A -s tmux-0 zsh"]
 		},
 		"Tmux 1": {
 			"path": "bash",
-			"args": [
-				"-c",
-				"cd /home/kali/Documents/Argos/Argos && exec tmux -2 -u new-session -A -s tmux-1 zsh"
-			]
+			"args": ["-c", "cd ${workspaceFolder} && exec tmux -2 -u new-session -A -s tmux-1 zsh"]
 		},
 		"Tmux 2": {
 			"path": "bash",
-			"args": [
-				"-c",
-				"cd /home/kali/Documents/Argos/Argos && exec tmux -2 -u new-session -A -s tmux-2 zsh"
-			]
+			"args": ["-c", "cd ${workspaceFolder} && exec tmux -2 -u new-session -A -s tmux-2 zsh"]
 		},
 		"Tmux 3": {
 			"path": "bash",
-			"args": [
-				"-c",
-				"cd /home/kali/Documents/Argos/Argos && exec tmux -2 -u new-session -A -s tmux-3 zsh"
-			]
+			"args": ["-c", "cd ${workspaceFolder} && exec tmux -2 -u new-session -A -s tmux-3 zsh"]
 		}
 	},
 	"terminal.integrated.defaultProfile.linux": "zsh",

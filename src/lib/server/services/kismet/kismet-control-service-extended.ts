@@ -1,3 +1,5 @@
+import { homedir } from 'os';
+
 import { hostExec } from '$lib/server/host-exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 
@@ -17,7 +19,7 @@ export interface KismetStatusResult {
 
 /**
  * Start Kismet WiFi discovery service
- * Detects ALFA adapter, starts Kismet as kali user, sets up auth credentials
+ * Detects ALFA adapter, starts Kismet as current user, sets up auth credentials
  *
  * @returns Result with success status, process details, and any errors
  */
@@ -74,14 +76,14 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			}
 		);
 
-		// Start Kismet as kali user (NOT root) — capture helpers are suid
+		// Start Kismet as current user (NOT root) — capture helpers are suid
 		// Uses --daemonize so Kismet forks into background properly via nsenter
-		// cd to /home/kali so Kismet can write its log database
+		// cd to home dir so Kismet can write its log database
 		await hostExec(
-			`sudo -u kali bash -c 'cd /home/kali && kismet -c ${alfaInterface}:type=linuxwifi --no-ncurses --no-line-wrap --daemonize --silent'`,
+			`sudo -u ${process.env.USER || 'kali'} bash -c 'cd ${homedir()} && kismet -c ${alfaInterface}:type=linuxwifi --no-ncurses --no-line-wrap --daemonize --silent'`,
 			{ timeout: 15000 }
 		);
-		console.warn('[kismet] Start command issued as kali user');
+		console.warn(`[kismet] Start command issued as ${process.env.USER || 'unknown'} user`);
 
 		// Wait for Kismet to initialize (needs time to bind port and set up capture)
 		await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -143,8 +145,8 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		return {
 			success: false,
 			message: 'Failed to start Kismet',
-		// Safe: Error handling
-				// Safe: Catch block error cast to Error for message extraction
+			// Safe: Error handling
+			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		};
 	}

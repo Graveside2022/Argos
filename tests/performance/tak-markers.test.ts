@@ -76,7 +76,7 @@ describe('TAK Marker Performance (SC-006)', () => {
 		for (const type of types) {
 			for (const aff of affiliations) {
 				const sidc = SymbolFactory.getSidcForDevice(type, aff);
-				// milsymbol expects 15-char SIDCs or at least 10 significant chars
+				// mil-sym-ts expects 15-char SIDCs or at least 10 significant chars
 				expect(sidc.length).toBeGreaterThanOrEqual(10);
 				// First char must be S (warfighting)
 				expect(sidc[0]).toBe('S');

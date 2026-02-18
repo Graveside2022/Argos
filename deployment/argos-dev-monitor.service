@@ -1,0 +1,15 @@
+[Unit]
+Description=Argos Development Monitor (Vite/Chromium Keepalive)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash __PROJECT_DIR__/scripts/ops/keepalive-dev.sh
+WorkingDirectory=__PROJECT_DIR__
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

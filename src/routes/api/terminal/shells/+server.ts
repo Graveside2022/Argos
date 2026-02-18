@@ -5,17 +5,19 @@
 
 import { json } from '@sveltejs/kit';
 import { access, constants } from 'fs/promises';
+import path from 'path';
 
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
 
 import type { RequestHandler } from './$types';
 
-// Four independent tmux profiles
+// Four independent tmux profiles — resolved relative to project root
+const PROJECT_ROOT = process.cwd();
 const SHELL_PATHS = [
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-1.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-2.sh',
-	'/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-3.sh'
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-0.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-1.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-2.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-3.sh')
 ];
 
 /**

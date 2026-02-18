@@ -5,9 +5,9 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=kali
-Group=kali
-WorkingDirectory=/home/kali/Documents/Argos/Argos
+User=__SETUP_USER__
+Group=__SETUP_USER__
+WorkingDirectory=__PROJECT_DIR__
 ExecStart=/usr/local/bin/argos-wifi-resilience.sh monitor
 Restart=on-failure
 RestartSec=30

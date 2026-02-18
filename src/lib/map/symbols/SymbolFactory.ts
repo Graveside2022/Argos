@@ -1,12 +1,13 @@
-import ms from 'milsymbol';
+import {
+	MilStdAttributes,
+	MilStdIconRenderer,
+	Modifiers
+} from '@armyc2.c5isr.renderer/mil-sym-ts-web';
 
 export interface SymbolOptions {
 	size?: number;
 	uniqueDesignation?: string; // T (Text modifier)
 	additionalInformation?: string; // H (Text modifier)
-	fill?: boolean;
-	frame?: boolean;
-	icon?: boolean;
 }
 
 export type Affiliation = 'friendly' | 'hostile' | 'neutral' | 'unknown';
@@ -71,31 +72,55 @@ const DEFAULT_SIDC_PARTS: [string, string] = ['G', 'U-----'];
 
 export class SymbolFactory {
 	private static readonly DEFAULT_SIZE = 24;
+	private static renderer: MilStdIconRenderer | null = null;
 
-	/**
-	 * Generates a MIL-STD-2525 symbol as an HTMLCanvasElement
-	 * @param sidc The 15-character Symbol ID Code
-	 * @param options Customization options
-	 */
-	static createSymbol(sidc: string, options: SymbolOptions = {}): HTMLCanvasElement {
-		const symbol = new ms.Symbol(sidc, {
-			size: options.size || this.DEFAULT_SIZE,
-			uniqueDesignation: options.uniqueDesignation,
-			additionalInformation: options.additionalInformation,
-			fill: options.fill ?? true,
-			frame: options.frame ?? true,
-			icon: options.icon ?? true
-		});
-
-		return symbol.asCanvas();
+	private static getRenderer(): MilStdIconRenderer {
+		if (!this.renderer) {
+			this.renderer = MilStdIconRenderer.getInstance();
+		}
+		return this.renderer;
 	}
 
 	/**
-	 * Generates a Data URL for the symbol (useful for MapLibre icon-image)
+	 * Renders a MIL-STD-2525D/E symbol as an SVG string.
+	 * @param sidc The Symbol ID Code
+	 * @param options Customization options
+	 */
+	static createSymbolSVG(sidc: string, options: SymbolOptions = {}): string {
+		const modifiers = new Map<string, string>();
+		const attributes = new Map<string, string>();
+
+		attributes.set(MilStdAttributes.PixelSize, String(options.size || this.DEFAULT_SIZE));
+
+		if (options.uniqueDesignation) {
+			modifiers.set(Modifiers.T_UNIQUE_DESIGNATION_1, options.uniqueDesignation);
+		}
+		if (options.additionalInformation) {
+			modifiers.set(Modifiers.H_ADDITIONAL_INFO_1, options.additionalInformation);
+		}
+
+		const result = this.getRenderer().RenderSVG(sidc, modifiers, attributes);
+		return result?.getSVG() ?? '';
+	}
+
+	/**
+	 * Generates a base64 data URI for the symbol (useful for MapLibre icon-image).
 	 */
 	static createSymbolDataUrl(sidc: string, options: SymbolOptions = {}): string {
-		const canvas = this.createSymbol(sidc, options);
-		return canvas.toDataURL('image/png');
+		const modifiers = new Map<string, string>();
+		const attributes = new Map<string, string>();
+
+		attributes.set(MilStdAttributes.PixelSize, String(options.size || this.DEFAULT_SIZE));
+
+		if (options.uniqueDesignation) {
+			modifiers.set(Modifiers.T_UNIQUE_DESIGNATION_1, options.uniqueDesignation);
+		}
+		if (options.additionalInformation) {
+			modifiers.set(Modifiers.H_ADDITIONAL_INFO_1, options.additionalInformation);
+		}
+
+		const result = this.getRenderer().RenderSVG(sidc, modifiers, attributes);
+		return result?.getSVGDataURI() ?? '';
 	}
 
 	/**

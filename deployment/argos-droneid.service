@@ -6,9 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/kali/Documents/Argos/RemoteIDReceiver/Receiver
+WorkingDirectory=__DRONEID_DIR__/Receiver
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/kali/Documents/Argos/RemoteIDReceiver/Receiver/venv/bin/python3 /home/kali/Documents/Argos/RemoteIDReceiver/Receiver/backend/dronesniffer/main.py -p 80
+ExecStart=__DRONEID_DIR__/Receiver/venv/bin/python3 __DRONEID_DIR__/Receiver/backend/dronesniffer/main.py -p 80
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
