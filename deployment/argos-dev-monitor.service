@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/bash %h/Documents/Argos/Argos/scripts/ops/keepalive-dev.sh
-WorkingDirectory=%h/Documents/Argos/Argos
+ExecStart=/bin/bash __PROJECT_DIR__/scripts/ops/keepalive-dev.sh
+WorkingDirectory=__PROJECT_DIR__
 Restart=always
 RestartSec=5
 StandardOutput=journal

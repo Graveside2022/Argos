@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { exec } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
@@ -28,8 +29,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	}
 
 	try {
-		const composeFile =
-			'/home/kali/Documents/Argos/Argos/docker/docker-compose.portainer-dev.yml';
+		const composeFile = path.join(process.cwd(), 'docker/docker-compose.portainer-dev.yml');
 		const service = container.replace('-hackrf', ''); // openwebrx-hackrf → openwebrx
 
 		if (action === 'start') {
