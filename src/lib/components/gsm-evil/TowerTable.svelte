@@ -1,9 +1,22 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import * as Table from '$lib/components/ui/table';
+	import Badge from '$lib/components/ui/badge/badge.svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import TableRoot from '$lib/components/ui/table/table.svelte';
+	import TableBody from '$lib/components/ui/table/table-body.svelte';
+	import TableCell from '$lib/components/ui/table/table-cell.svelte';
+	import TableHead from '$lib/components/ui/table/table-head.svelte';
+	import TableHeader from '$lib/components/ui/table/table-header.svelte';
+	import TableRow from '$lib/components/ui/table/table-row.svelte';
+	const Table = {
+		Root: TableRoot,
+		Body: TableBody,
+		Cell: TableCell,
+		Head: TableHead,
+		Header: TableHeader,
+		Row: TableRow
+	};
 	import type { TowerGroup } from '$lib/utils/gsm-tower-utils';
 	import { sortTowers } from '$lib/utils/gsm-tower-utils';
 

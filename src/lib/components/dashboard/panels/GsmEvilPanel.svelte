@@ -3,7 +3,7 @@
 
 	import ScanResultsTable from '$lib/components/gsm-evil/ScanResultsTable.svelte';
 	import TowerTable from '$lib/components/gsm-evil/TowerTable.svelte';
-	import { Button } from '$lib/components/ui/button';
+	import Button from '$lib/components/ui/button/button.svelte';
 	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
