@@ -77,7 +77,7 @@ export const GET: RequestHandler = async () => {
 					// Check if web interface is accessible
 					try {
 						const { stdout: curlCheck } = await hostExec(
-							'timeout 1 curl -s -o /dev/null -w "%{http_code}" http://localhost:80 2>/dev/null || echo "000"'
+							'timeout 1 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
 						);
 						status.gsmevil.webInterface = curlCheck.trim() === '200';
 					} catch (_error: unknown) {
@@ -114,7 +114,7 @@ export const GET: RequestHandler = async () => {
 				status: 'error',
 				message: 'Failed to check GSM Evil status',
 				// Safe: Catch block error cast to Error for message extraction in error response
-			// Safe: Catch block error cast to Error for message extraction
+				// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},
 			{ status: 500 }
