@@ -3,8 +3,6 @@ import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { TakStatus } from '$lib/types/tak';
 
-export { type TakStatus };
-
 const DEFAULT_STATUS: TakStatus = { status: 'disconnected' };
 
 export const takStatus = writable<TakStatus>(DEFAULT_STATUS);
