@@ -3,10 +3,10 @@
  * Handles session state, panel visibility, and persistence
  */
 
-import { derived, get,writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
-import type { TerminalPanelState,TerminalSession } from '$lib/types/terminal';
+import type { TerminalPanelState, TerminalSession } from '$lib/types/terminal';
 
 import { activeBottomTab, closeBottomPanel, setBottomPanelHeight } from './dashboard-store';
 
@@ -71,7 +71,7 @@ function getDefaultState(): TerminalPanelState {
 		activeTabId: null,
 		sessions: [],
 		splits: null,
-		preferredShell: '/home/kali/Documents/Argos/Argos/scripts/tmux/tmux-0.sh',
+		preferredShell: 'scripts/tmux/tmux-0.sh',
 		isMaximized: false
 	};
 }
@@ -162,9 +162,27 @@ function createNewSession(shell: string): TerminalSession {
 	};
 }
 
+const TMUX_SHELLS = [
+	'scripts/tmux/tmux-0.sh',
+	'scripts/tmux/tmux-1.sh',
+	'scripts/tmux/tmux-2.sh',
+	'scripts/tmux/tmux-3.sh'
+];
+
 export function createSession(shell?: string): string {
 	const state = get(terminalPanelState);
-	const shellToUse = shell || state.preferredShell || '/bin/zsh';
+
+	let shellToUse: string;
+	if (shell) {
+		// Explicit shell requested (from dropdown)
+		shellToUse = shell;
+	} else {
+		// Auto-pick next available tmux session
+		const openShells = new Set(state.sessions.map((s) => s.shell));
+		const nextShell = TMUX_SHELLS.find((s) => !openShells.has(s));
+		shellToUse = nextShell || state.preferredShell || '/bin/zsh';
+	}
+
 	const newSession = createNewSession(shellToUse);
 
 	terminalPanelState.update((s) => ({

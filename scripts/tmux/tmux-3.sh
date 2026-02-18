@@ -6,7 +6,8 @@
 TMUX_SESSION="tmux-3"
 
 # Start in project directory
-cd /home/kali/Documents/Argos/Argos || exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/../.." || exit 1
 
 # Set terminal to support 256 colors and UTF-8
 export TERM=xterm-256color

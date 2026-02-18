@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { hostExec } from '$lib/server/host-exec';
 import { safeJsonParse } from '$lib/server/security/safe-json';
 
@@ -32,8 +33,10 @@ const GsmEvilImsiDataSchema = z.union([
 export const GET: RequestHandler = async () => {
 	try {
 		// Find the IMSI database on the host
+		const gsmDir = getGsmEvilDir();
+		const searchPaths = `${gsmDir}/database/imsi.db /tmp/gsm_db.sqlite`;
 		const { stdout: dbFound } = await hostExec(
-			'for p in /usr/src/gsmevil2/database/imsi.db /home/kali/gsmevil-user/database/imsi.db; do [ -f "$p" ] && echo "$p" && break; done'
+			`for p in ${searchPaths}; do [ -f "$p" ] && echo "$p" && break; done`
 		).catch((error: unknown) => {
 			console.error('[gsm-evil-imsi-data] Database path search failed', {
 				error: String(error)
@@ -51,14 +54,8 @@ export const GET: RequestHandler = async () => {
 		}
 
 		// Validate dbPath against known allowlist to prevent shell injection
-		const ALLOWED_IMSI_DB_PATHS = [
-			'/usr/src/gsmevil2/database/imsi.db',
-			'/home/kali/gsmevil-user/database/imsi.db'
-			// Safe: Array literal narrowed to const readonly tuple for strict allowlist matching
-		] as const;
-
-		// Safe: dbPath cast to any for includes() check against readonly const array (TypeScript limitation)
-		if (!ALLOWED_IMSI_DB_PATHS.includes(dbPath as any)) {
+		const allowedPaths = getAllowedImsiDbPaths();
+		if (!allowedPaths.includes(dbPath)) {
 			return json({ success: false, message: 'Invalid database path', data: [] });
 		}
 

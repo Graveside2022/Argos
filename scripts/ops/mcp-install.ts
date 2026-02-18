@@ -4,12 +4,18 @@
  * Installs MCP configuration for the host Claude CLI
  */
 
-import { getInstallationInstructions, installContextBConfig } from '../src/lib/server/mcp';
+import { config } from 'dotenv';
+config();
+
+import { getInstallationInstructions, installContextBConfig } from '../../src/lib/server/mcp';
 
 const args = process.argv.slice(2);
 const command = args[0];
 
 async function main() {
+	if (!process.env.ARGOS_API_KEY) {
+		process.stderr.write('[WARN] ARGOS_API_KEY is empty — .env may be missing or incomplete\n');
+	}
 	process.stdout.write('[MCP Install] Starting installation...\n\n');
 
 	try {

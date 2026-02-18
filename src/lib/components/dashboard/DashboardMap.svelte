@@ -35,7 +35,7 @@
 		isolateDevice,
 		layerVisibility
 	} from '$lib/stores/dashboard/dashboard-store';
-	import { mapSettings } from '$lib/stores/dashboard/map-settings-store';
+	import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import {
 		type Affiliation,
@@ -53,6 +53,25 @@
 	let initialViewSet = false;
 	let layersInitialized = false;
 	let cssReady = $state(false);
+
+	// Dynamic map style: start with Google satellite (always works), upgrade to Stadia if available
+	let mapStyle: maplibregl.StyleSpecification | string = $state(GOOGLE_SATELLITE_STYLE);
+
+	// Probe Stadia style URL — if 200, upgrade to vector tiles; if 503/error, stay on Google satellite
+	$effect(() => {
+		fetch('/api/map-tiles/styles/alidade_smooth_dark.json', { method: 'HEAD' })
+			.then((res) => {
+				if (res.ok) {
+					mapStyle = '/api/map-tiles/styles/alidade_smooth_dark.json';
+					mapSettings.stadiaAvailable.set(true);
+				} else {
+					mapSettings.stadiaAvailable.set(false);
+				}
+			})
+			.catch(() => {
+				mapSettings.stadiaAvailable.set(false);
+			});
+	});
 
 	// Force re-resolution of CSS-dependent derived values after DOM styles are available
 	$effect(() => {
@@ -731,77 +750,81 @@
 			}
 		});
 
-		// Enhanced building outlines (brighter than the subtle default)
-		if (!mapInstance.getLayer('building-outline-enhanced')) {
-			mapInstance.addLayer(
-				{
-					id: 'building-outline-enhanced',
-					type: 'line',
+		// Stadia-dependent layers — only add when openmaptiles vector source is available
+		// (Google satellite fallback does not have these vector sources)
+		if (mapInstance.getSource('openmaptiles')) {
+			// Enhanced building outlines (brighter than the subtle default)
+			if (!mapInstance.getLayer('building-outline-enhanced')) {
+				mapInstance.addLayer(
+					{
+						id: 'building-outline-enhanced',
+						type: 'line',
+						source: 'openmaptiles',
+						'source-layer': 'building',
+						minzoom: 15,
+						paint: {
+							'line-color': 'hsla(0, 0%, 50%, 0.3)',
+							'line-width': 0.5
+						}
+					},
+					'poi_gen1'
+				);
+			}
+
+			// House numbers on buildings (zoom 17+)
+			if (!mapInstance.getLayer('housenumber-labels')) {
+				mapInstance.addLayer({
+					id: 'housenumber-labels',
+					type: 'symbol',
 					source: 'openmaptiles',
-					'source-layer': 'building',
-					minzoom: 15,
+					'source-layer': 'housenumber',
+					minzoom: 17,
+					layout: {
+						'text-field': ['get', 'housenumber'],
+						'text-font': ['Stadia Regular'],
+						'text-size': 10,
+						'text-anchor': 'center',
+						'text-optional': true,
+						'text-allow-overlap': false
+					},
 					paint: {
-						'line-color': 'hsla(0, 0%, 50%, 0.3)',
-						'line-width': 0.5
+						'text-color': '#7a8290',
+						'text-halo-color': '#111119',
+						'text-halo-width': 1,
+						'text-halo-blur': 0.5
 					}
-				},
-				'poi_gen1'
-			);
-		}
+				});
+			}
 
-		// House numbers on buildings (zoom 17+)
-		if (!mapInstance.getLayer('housenumber-labels')) {
-			mapInstance.addLayer({
-				id: 'housenumber-labels',
-				type: 'symbol',
-				source: 'openmaptiles',
-				'source-layer': 'housenumber',
-				minzoom: 17,
-				layout: {
-					'text-field': ['get', 'housenumber'],
-					'text-font': ['Stadia Regular'],
-					'text-size': 10,
-					'text-anchor': 'center',
-					'text-optional': true,
-					'text-allow-overlap': false
-				},
-				paint: {
-					'text-color': '#7a8290',
-					'text-halo-color': '#111119',
-					'text-halo-width': 1,
-					'text-halo-blur': 0.5
-				}
-			});
-		}
-
-		// ALL named POIs — no class or rank filter (zoom 14+)
-		// Uses coalesce to try name:latin first, then name
-		if (!mapInstance.getLayer('poi-labels-all')) {
-			mapInstance.addLayer({
-				id: 'poi-labels-all',
-				type: 'symbol',
-				source: 'openmaptiles',
-				'source-layer': 'poi',
-				minzoom: 14,
-				filter: ['any', ['has', 'name:latin'], ['has', 'name']],
-				layout: {
-					'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
-					'text-font': ['Stadia Regular'],
-					'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
-					'text-anchor': 'top',
-					'text-offset': [0, 0.6],
-					'text-max-width': 8,
-					'text-optional': true,
-					'text-allow-overlap': false,
-					'text-padding': 2
-				},
-				paint: {
-					'text-color': '#b0b8c4',
-					'text-halo-color': '#111119',
-					'text-halo-width': 1.5,
-					'text-halo-blur': 0.5
-				}
-			});
+			// ALL named POIs — no class or rank filter (zoom 14+)
+			// Uses coalesce to try name:latin first, then name
+			if (!mapInstance.getLayer('poi-labels-all')) {
+				mapInstance.addLayer({
+					id: 'poi-labels-all',
+					type: 'symbol',
+					source: 'openmaptiles',
+					'source-layer': 'poi',
+					minzoom: 14,
+					filter: ['any', ['has', 'name:latin'], ['has', 'name']],
+					layout: {
+						'text-field': ['coalesce', ['get', 'name:latin'], ['get', 'name']],
+						'text-font': ['Stadia Regular'],
+						'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 13],
+						'text-anchor': 'top',
+						'text-offset': [0, 0.6],
+						'text-max-width': 8,
+						'text-optional': true,
+						'text-allow-overlap': false,
+						'text-padding': 2
+					},
+					paint: {
+						'text-color': '#b0b8c4',
+						'text-halo-color': '#111119',
+						'text-halo-width': 1.5,
+						'text-halo-blur': 0.5
+					}
+				});
+			}
 		}
 
 		// Pointer cursor for clickable layers
@@ -1072,7 +1095,7 @@
 <div class="map-area">
 	<MapLibre
 		bind:map
-		style="/api/map-tiles/styles/alidade_smooth_dark.json"
+		style={mapStyle}
 		center={[0, 0]}
 		zoom={3}
 		attributionControl={false}

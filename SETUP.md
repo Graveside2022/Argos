@@ -61,6 +61,12 @@ DATABASE_PATH=./rf_signals.db
 # Kismet WiFi Scanner
 KISMET_API_URL=http://localhost:2501
 KISMET_PASSWORD=<set a strong password>
+
+# Map Tiles (optional — falls back to Google satellite)
+STADIA_MAPS_API_KEY=<get from https://stadiamaps.com/>
+
+# Cell Tower Database (optional — enables cell tower overlay)
+OPENCELLID_API_KEY=<get from https://opencellid.org/>
 ```
 
 ### Database Setup
@@ -68,6 +74,19 @@ KISMET_PASSWORD=<set a strong password>
 ```bash
 npm run db:migrate
 ```
+
+### Cell Tower Database
+
+```bash
+# Download global cell tower database (~500MB, offline lookups)
+bash scripts/ops/import-celltowers.sh
+
+# To refresh the data later:
+rm data/celltowers/cell_towers.csv.gz
+bash scripts/ops/import-celltowers.sh
+```
+
+Requires `OPENCELLID_API_KEY` in `.env`. The setup script offers to download during first install.
 
 ### Access the Application
 

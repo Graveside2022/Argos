@@ -57,7 +57,7 @@ class TestRunner extends BaseMCPServer {
 					const startTime = Date.now();
 					const { stdout } = await execAsync(command, {
 						timeout: timeout * 1000,
-						cwd: '/home/kali/Documents/Argos/Argos'
+						cwd: process.cwd()
 					});
 
 					const duration = Date.now() - startTime;
@@ -122,7 +122,7 @@ class TestRunner extends BaseMCPServer {
 			execute: async () => {
 				try {
 					const { stdout } = await execAsync('npm run typecheck', {
-						cwd: '/home/kali/Documents/Argos/Argos',
+						cwd: process.cwd(),
 						timeout: 120000
 					});
 
@@ -172,7 +172,7 @@ class TestRunner extends BaseMCPServer {
 
 				try {
 					const { stdout, stderr } = await execAsync(command, {
-						cwd: '/home/kali/Documents/Argos/Argos',
+						cwd: process.cwd(),
 						timeout: 60000
 					});
 
