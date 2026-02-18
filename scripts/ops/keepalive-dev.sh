@@ -17,6 +17,13 @@ LOCKFILE="/tmp/argos-dev-restart.lock"
 LOCK_MAX_AGE=30  # seconds — stale lock protection
 LAST_RESTART=0   # epoch timestamp of last restart attempt
 
+# Circuit breaker: stop retrying after consecutive failures
+MAX_CONSECUTIVE_FAILURES=10
+CONSECUTIVE_FAILURES=0
+CIRCUIT_OPEN=false
+CIRCUIT_OPEN_SINCE=0
+CIRCUIT_RESET_INTERVAL=300  # 5 minutes — try again after this long
+
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
@@ -54,36 +61,74 @@ in_cooldown() {
 }
 
 check_vite() {
-    if ! lsof -ti:5173 > /dev/null; then
-        # Back off if a manual restart is in progress
-        if is_locked; then
-            log "Lock file present — manual restart in progress. Skipping."
+    if lsof -ti:5173 > /dev/null; then
+        # Vite is up — reset circuit breaker if it was tripped
+        if [ "$CONSECUTIVE_FAILURES" -gt 0 ] || [ "$CIRCUIT_OPEN" = true ]; then
+            log "Vite is back. Resetting circuit breaker (was ${CONSECUTIVE_FAILURES} failures)."
+            CONSECUTIVE_FAILURES=0
+            CIRCUIT_OPEN=false
+        fi
+        return
+    fi
+
+    # --- Vite is DOWN ---
+
+    # Circuit breaker: stop hammering if we've failed too many times
+    if [ "$CIRCUIT_OPEN" = true ]; then
+        local now elapsed
+        now=$(date +%s)
+        elapsed=$(( now - CIRCUIT_OPEN_SINCE ))
+        if [ "$elapsed" -lt "$CIRCUIT_RESET_INTERVAL" ]; then
+            # Still in cooldown — stay quiet (log once per minute max)
+            if [ $(( elapsed % 60 )) -lt "$CHECK_INTERVAL" ]; then
+                log "Circuit breaker OPEN (${elapsed}s/${CIRCUIT_RESET_INTERVAL}s). Waiting before retry."
+            fi
             return
         fi
+        # Enough time passed — allow one probe attempt
+        warn "Circuit breaker reset after ${CIRCUIT_RESET_INTERVAL}s. Probing..."
+        CIRCUIT_OPEN=false
+        CONSECUTIVE_FAILURES=0
+    fi
 
-        # Back off if we recently restarted (Vite needs time to boot)
-        if in_cooldown; then
-            log "Cooldown active ($(( $(date +%s) - LAST_RESTART ))s/${RESTART_COOLDOWN}s). Skipping."
-            return
-        fi
+    # Back off if a manual restart is in progress
+    if is_locked; then
+        log "Lock file present — manual restart in progress. Skipping."
+        return
+    fi
 
-        warn "Vite server (port 5173) is DOWN. Attempting restart..."
-        LAST_RESTART=$(date +%s)
+    # Back off if we recently restarted (Vite needs time to boot)
+    if in_cooldown; then
+        log "Cooldown active ($(( $(date +%s) - LAST_RESTART ))s/${RESTART_COOLDOWN}s). Skipping."
+        return
+    fi
 
-        # Kill any stale tmux session (but NOT the Vite process — it's already dead)
-        tmux kill-session -t argos-dev 2>/dev/null
+    warn "Vite server (port 5173) is DOWN. Attempting restart (try $((CONSECUTIVE_FAILURES + 1))/${MAX_CONSECUTIVE_FAILURES})..."
+    LAST_RESTART=$(date +%s)
 
-        # Start Vite DIRECTLY via oom-protect wrapper in a detached tmux session.
-        # Do NOT use "npm run dev" here — it runs kill-dev first which would
-        # destroy any running Vite instance and cause a restart storm.
-        tmux new-session -d -s argos-dev \
-            "./scripts/dev/vite-oom-protect.sh 2>&1 | tee /tmp/argos-dev.log"
+    # Kill any stale tmux session (but NOT the Vite process — it's already dead)
+    tmux kill-session -t argos-dev 2>/dev/null
 
-        sleep 8  # Vite takes 3-6s to bind port; wait longer to be sure
-        if lsof -ti:5173 > /dev/null; then
-            log "Vite server restarted successfully."
-        else
-            warn "Failed to restart Vite. Check /tmp/argos-dev.log for details."
+    # Start Vite DIRECTLY via oom-protect wrapper in a detached tmux session.
+    # Do NOT use "npm run dev" here — it runs kill-dev first which would
+    # destroy any running Vite instance and cause a restart storm.
+    tmux new-session -d -s argos-dev \
+        "./scripts/dev/vite-oom-protect.sh 2>&1 | tee /tmp/argos-dev.log"
+
+    sleep 8  # Vite takes 3-6s to bind port; wait longer to be sure
+    if lsof -ti:5173 > /dev/null; then
+        log "Vite server restarted successfully."
+        CONSECUTIVE_FAILURES=0
+        CIRCUIT_OPEN=false
+    else
+        CONSECUTIVE_FAILURES=$(( CONSECUTIVE_FAILURES + 1 ))
+        warn "Failed to restart Vite (${CONSECUTIVE_FAILURES}/${MAX_CONSECUTIVE_FAILURES}). Check /tmp/argos-dev.log."
+
+        if [ "$CONSECUTIVE_FAILURES" -ge "$MAX_CONSECUTIVE_FAILURES" ]; then
+            warn "CIRCUIT BREAKER OPEN: ${MAX_CONSECUTIVE_FAILURES} consecutive failures. Pausing Vite restarts for ${CIRCUIT_RESET_INTERVAL}s."
+            warn "Run 'npm run dev' manually to restart, or wait for auto-retry."
+            CIRCUIT_OPEN=true
+            CIRCUIT_OPEN_SINCE=$(date +%s)
         fi
     fi
 }
