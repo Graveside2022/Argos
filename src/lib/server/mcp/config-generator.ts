@@ -3,8 +3,10 @@
  * Auto-generates MCP configs for the host Claude CLI
  */
 
-import { mkdir, writeFile } from 'fs/promises';
-import { homedir } from 'os';
+import { config } from 'dotenv';
+config();
+
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import type { MCPConfiguration, MCPServerDefinition } from './types';
@@ -14,29 +16,39 @@ import type { MCPConfiguration, MCPServerDefinition } from './types';
  */
 const MCP_SERVERS = [
 	{
-		id: 'argos-hackrf',
-		name: 'HackRF SDR Control',
-		serverFile: 'hackrf-server.ts'
+		id: 'argos-hardware-debugger',
+		name: 'Hardware Diagnostics & Recovery',
+		serverFile: 'hardware-debugger.ts'
 	},
 	{
-		id: 'argos-kismet',
-		name: 'WiFi Scanning & Device Tracking',
-		serverFile: 'kismet-server.ts'
+		id: 'argos-system-inspector',
+		name: 'System Health & Docker Status',
+		serverFile: 'system-inspector.ts'
 	},
 	{
-		id: 'argos-gps',
-		name: 'GPS Positioning & Location',
-		serverFile: 'gps-server.ts'
+		id: 'argos-streaming-inspector',
+		name: 'SSE Stream Monitoring',
+		serverFile: 'streaming-inspector.ts'
+	},
+	{
+		id: 'argos-database-inspector',
+		name: 'Database Schema & Queries',
+		serverFile: 'database-inspector.ts'
+	},
+	{
+		id: 'argos-api-debugger',
+		name: 'API Endpoint Testing',
+		serverFile: 'api-debugger.ts'
+	},
+	{
+		id: 'argos-test-runner',
+		name: 'Test Suite Runner',
+		serverFile: 'test-runner.ts'
 	},
 	{
 		id: 'argos-gsm-evil',
 		name: 'GSM Monitoring & IMSI Detection',
 		serverFile: 'gsm-evil-server.ts'
-	},
-	{
-		id: 'argos-system',
-		name: 'System Stats & Hardware Scanning',
-		serverFile: 'system-server.ts'
 	}
 ] as const;
 
@@ -113,25 +125,27 @@ export async function generateContextBConfig(): Promise<MCPConfiguration> {
 /**
  * Write MCP configuration to file
  */
-async function writeMCPConfig(config: MCPConfiguration, path: string): Promise<void> {
-	// Ensure directory exists
-	const dir = join(path, '..');
-	await mkdir(dir, { recursive: true });
-
-	// Write config file
-	await writeFile(path, JSON.stringify(config, null, 2), 'utf-8');
-
+async function writeMCPConfig(mcpConfig: MCPConfiguration, path: string): Promise<void> {
+	await writeFile(path, JSON.stringify(mcpConfig, null, '\t') + '\n', 'utf-8');
 	console.warn(`[MCP Config] Written to: ${path}`);
 }
 
 /**
  * Install MCP configuration for Context B (Host)
+ * Writes to .mcp.json in the project root (where Claude Code reads it)
  */
 export async function installContextBConfig(): Promise<string> {
-	const config = await generateContextBConfig();
-	const configPath = join(homedir(), '.claude', 'mcp.json');
+	const mcpConfig = await generateContextBConfig();
 
-	await writeMCPConfig(config, configPath);
+	// Add shadcn (no env needed)
+	mcpConfig.mcpServers['shadcn'] = {
+		id: 'shadcn',
+		command: 'npx',
+		args: ['shadcn@latest', 'mcp']
+	};
+
+	const configPath = join(process.cwd(), '.mcp.json');
+	await writeMCPConfig(mcpConfig, configPath);
 
 	return configPath;
 }
@@ -182,13 +196,15 @@ export function getInstallationInstructions(): string {
 
 ## Available Servers
 
-The Argos platform provides 5 specialized MCP servers:
+The Argos platform provides 7 specialized MCP servers:
 
-1. **argos-hackrf** - HackRF SDR control and spectrum analysis
-2. **argos-kismet** - WiFi scanning and device tracking
-3. **argos-gps** - GPS positioning and location services
-4. **argos-gsm-evil** - GSM monitoring and IMSI detection
-5. **argos-system** - System stats, hardware scanning, diagnostics
+1. **argos-hardware-debugger** - Hardware diagnostics and recovery
+2. **argos-system-inspector** - System health and Docker status
+3. **argos-streaming-inspector** - SSE stream monitoring
+4. **argos-database-inspector** - Database schema and queries
+5. **argos-api-debugger** - API endpoint testing
+6. **argos-test-runner** - Test suite runner
+7. **argos-gsm-evil** - GSM monitoring and IMSI detection
 
 ## Installation (Host Claude CLI)
 
@@ -196,29 +212,11 @@ The Argos platform provides 5 specialized MCP servers:
    npm run mcp:install-b
 
 2. Configuration will be written to:
-   ~/.claude/mcp.json
+   .mcp.json (project root)
 
-3. Restart Claude CLI to load all 5 servers
+3. Restart Claude CLI to load all servers
 
 4. Test with:
    claude "List available Argos tools"
-
-## Running Individual Servers (Development)
-
-You can also run servers individually for testing:
-
-npm run mcp:hackrf    # HackRF server only
-npm run mcp:kismet    # Kismet server only
-npm run mcp:gps       # GPS server only
-npm run mcp:gsm-evil  # GSM Evil server only
-npm run mcp:system    # System server only
-
-## Manual Installation
-
-Generate the config and copy it manually:
-
-npm run mcp:config-b
-
-Then copy the output to ~/.claude/mcp.json
 `;
 }

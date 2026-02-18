@@ -328,6 +328,7 @@ bmad-method/
 
 # Credential-bearing config files
 config/opencellid.json
+.mcp.json
 
 # Enhanced Environment Security
 .envrc

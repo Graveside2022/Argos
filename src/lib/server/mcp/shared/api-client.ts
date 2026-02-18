@@ -4,7 +4,6 @@
  */
 
 const ARGOS_API = process.env.ARGOS_API_URL || 'http://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
 
 export interface ApiFetchOptions extends globalThis.RequestInit {
 	timeout?: number;
@@ -16,13 +15,14 @@ export interface ApiFetchOptions extends globalThis.RequestInit {
 export async function apiFetch(path: string, options: ApiFetchOptions = {}): Promise<Response> {
 	const { timeout = 15000, ...fetchOptions } = options;
 	const url = `${ARGOS_API}${path}`;
+	const apiKey = process.env.ARGOS_API_KEY || '';
 
 	const resp = await fetch(url, {
 		...fetchOptions,
 		signal: AbortSignal.timeout(timeout),
 		headers: {
 			'Content-Type': 'application/json',
-			...(API_KEY ? { 'X-API-Key': API_KEY } : {}),
+			...(apiKey ? { 'X-API-Key': apiKey } : {}),
 			...fetchOptions.headers
 		}
 	});

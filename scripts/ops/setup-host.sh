@@ -335,6 +335,20 @@ else
 fi
 sudo -u "$SETUP_USER" npm ci
 
+# Verify node-pty native addon compiled successfully (required for terminal)
+if sudo -u "$SETUP_USER" node -e "require('node-pty')" 2>/dev/null; then
+  echo "  node-pty native addon OK"
+else
+  echo "  node-pty failed to load — rebuilding native addon..."
+  sudo -u "$SETUP_USER" npm rebuild node-pty
+  if sudo -u "$SETUP_USER" node -e "require('node-pty')" 2>/dev/null; then
+    echo "  node-pty rebuilt successfully"
+  else
+    echo "  WARNING: node-pty still broken — terminal will be unavailable"
+    echo "  Try: npm install node-pty --build-from-source"
+  fi
+fi
+
 # --- 9. .env from template ---
 echo "[12/20] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
@@ -387,6 +401,10 @@ else
   echo ""
   echo "  IMPORTANT: Edit .env to set Kismet, Bettercap, and OpenWebRX passwords"
 fi
+
+# Generate MCP config (.mcp.json) with API key from .env
+echo "  Generating MCP server configuration..."
+sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 10. Development Monitor Service ---
 echo "[13/20] Development Monitor Service..."

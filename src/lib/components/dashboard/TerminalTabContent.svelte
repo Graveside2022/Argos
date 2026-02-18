@@ -20,11 +20,16 @@
 	let connectionError = $state(false);
 	let _actualShell = $state(shell);
 
+	const WS_MAX_RETRIES = 5;
+	const WS_BASE_DELAY_MS = 500; // 500ms, 1s, 2s, 4s, 8s
+
 	// References for cleanup
 	let terminal: import('@xterm/xterm').Terminal | null = null;
 	let fitAddon: import('@xterm/addon-fit').FitAddon | null = null;
 	let ws: WebSocket | null = null;
 	let resizeObserver: ResizeObserver | null = null;
+	let wsRetryTimer: ReturnType<typeof setTimeout> | null = null;
+	let destroyed = false;
 
 	// Focus terminal when becoming active
 	$effect(() => {
@@ -50,6 +55,100 @@
 			selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)')
 		};
 	});
+
+	function connectWebSocket(attempt: number) {
+		if (destroyed) return;
+
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const sock = new WebSocket(`${protocol}//${window.location.hostname}:3001`);
+		ws = sock;
+
+		sock.onopen = () => {
+			connectionError = false;
+			console.warn(`[Terminal ${sessionId}] WebSocket connected, sending init`);
+			sock.send(JSON.stringify({ type: 'init', shell, sessionId }));
+		};
+
+		sock.onmessage = (e) => {
+			if (typeof e.data === 'string') {
+				try {
+					const msg = JSON.parse(e.data);
+					if (msg.type === 'ready') {
+						console.warn(`[Terminal ${sessionId}] New PTY session spawned`);
+						_actualShell = msg.shell;
+						updateSessionConnection(sessionId, true);
+						let shellName = msg.shell.split('/').pop() || 'terminal';
+						if (msg.shell.includes('docker-claude-terminal.sh')) {
+							shellName = '🐋 Claude';
+						}
+						onTitleChange?.(shellName);
+						if (terminal) {
+							sock.send(
+								JSON.stringify({
+									type: 'resize',
+									cols: terminal.cols,
+									rows: terminal.rows
+								})
+							);
+						}
+						return;
+					}
+					if (msg.type === 'reattached') {
+						console.warn(`[Terminal ${sessionId}] PTY session reattached successfully`);
+						_actualShell = msg.shell;
+						updateSessionConnection(sessionId, true);
+						let shellName = msg.shell.split('/').pop() || 'terminal';
+						if (msg.shell.includes('docker-claude-terminal.sh')) {
+							shellName = '🐋 Claude';
+						}
+						onTitleChange?.(shellName);
+						terminal?.write(
+							'\r\n\x1b[90m[terminal reconnected - session restored]\x1b[0m\r\n'
+						);
+						if (terminal) {
+							sock.send(
+								JSON.stringify({
+									type: 'resize',
+									cols: terminal.cols,
+									rows: terminal.rows
+								})
+							);
+						}
+						return;
+					}
+					if (msg.type === 'exit') {
+						terminal?.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n');
+						updateSessionConnection(sessionId, false);
+						return;
+					}
+				} catch {
+					// Not JSON, treat as terminal output
+				}
+				terminal?.write(e.data);
+			}
+		};
+
+		sock.onerror = () => {
+			updateSessionConnection(sessionId, false);
+		};
+
+		sock.onclose = () => {
+			updateSessionConnection(sessionId, false);
+			// Retry with exponential backoff if we never connected successfully
+			if (!destroyed && attempt < WS_MAX_RETRIES && !connectionError) {
+				const delay = WS_BASE_DELAY_MS * Math.pow(2, attempt);
+				console.warn(
+					`[Terminal ${sessionId}] Connection failed, retry ${attempt + 1}/${WS_MAX_RETRIES} in ${delay}ms`
+				);
+				wsRetryTimer = setTimeout(() => connectWebSocket(attempt + 1), delay);
+			} else if (!destroyed && attempt >= WS_MAX_RETRIES) {
+				console.warn(
+					`[Terminal ${sessionId}] All ${WS_MAX_RETRIES} retries exhausted, showing error`
+				);
+				connectionError = true;
+			}
+		};
+	}
 
 	onMount(async () => {
 		if (!browser || !terminalEl) return;
@@ -123,96 +222,6 @@
 		});
 		resizeObserver.observe(terminalEl);
 
-		// WebSocket connection to PTY backend
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		ws = new WebSocket(`${protocol}//${window.location.hostname}:3001`);
-
-		ws.onopen = () => {
-			connectionError = false;
-			console.warn(`[Terminal ${sessionId}] WebSocket connected, sending init`);
-			// Send init message with shell selection
-			ws?.send(JSON.stringify({ type: 'init', shell, sessionId }));
-		};
-
-		ws.onmessage = (e) => {
-			if (typeof e.data === 'string') {
-				// Check for JSON messages from server
-				try {
-					const msg = JSON.parse(e.data);
-					if (msg.type === 'ready') {
-						console.warn(`[Terminal ${sessionId}] New PTY session spawned`);
-						_actualShell = msg.shell;
-						updateSessionConnection(sessionId, true);
-						let shellName = msg.shell.split('/').pop() || 'terminal';
-						// Friendly name for Docker + tmux terminal
-						if (msg.shell.includes('docker-claude-terminal.sh')) {
-							shellName = '🐋 Claude';
-						}
-						onTitleChange?.(shellName);
-						// Send initial resize
-						if (terminal) {
-							ws?.send(
-								JSON.stringify({
-									type: 'resize',
-									cols: terminal.cols,
-									rows: terminal.rows
-								})
-							);
-						}
-						return;
-					}
-					if (msg.type === 'reattached') {
-						console.warn(`[Terminal ${sessionId}] PTY session reattached successfully`);
-						_actualShell = msg.shell;
-						updateSessionConnection(sessionId, true);
-						let shellName = msg.shell.split('/').pop() || 'terminal';
-						// Friendly name for Docker + tmux terminal
-						if (msg.shell.includes('docker-claude-terminal.sh')) {
-							shellName = '🐋 Claude';
-						}
-						onTitleChange?.(shellName);
-
-						// Notify user of reconnection
-						terminal?.write(
-							'\r\n\x1b[90m[terminal reconnected - session restored]\x1b[0m\r\n'
-						);
-
-						// Send resize so PTY matches current terminal dimensions
-						if (terminal) {
-							ws?.send(
-								JSON.stringify({
-									type: 'resize',
-									cols: terminal.cols,
-									rows: terminal.rows
-								})
-							);
-						}
-						// Buffered output will arrive as regular data after this message
-						return;
-					}
-					if (msg.type === 'exit') {
-						terminal?.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n');
-						updateSessionConnection(sessionId, false);
-						return;
-					}
-				} catch {
-					// Not JSON, treat as terminal output
-				}
-				terminal?.write(e.data);
-			}
-		};
-
-		ws.onerror = () => {
-			connectionError = true;
-			updateSessionConnection(sessionId, false);
-		};
-
-		ws.onclose = () => {
-			// Don't print "[connection closed]" — the PTY persists server-side
-			// and will be reattached on next page load
-			updateSessionConnection(sessionId, false);
-		};
-
 		// Forward terminal input to backend
 		terminal.onData((data) => {
 			if (ws?.readyState === WebSocket.OPEN) {
@@ -234,12 +243,17 @@
 			}
 		});
 
+		// Connect WebSocket with auto-retry
+		connectWebSocket(0);
+
 		if (isActive) {
 			terminal.focus();
 		}
 	});
 
 	onDestroy(() => {
+		destroyed = true;
+		if (wsRetryTimer) clearTimeout(wsRetryTimer);
 		resizeObserver?.disconnect();
 		ws?.close();
 		terminal?.dispose();
@@ -265,9 +279,9 @@
 				</svg>
 				<span class="error-title">Terminal Unavailable</span>
 				<span class="error-detail"
-					>Ensure <code>node-pty</code> is installed and the dev server is running.</span
+					>Could not connect to terminal server on port 3001 after {WS_MAX_RETRIES} attempts.</span
 				>
-				<code class="error-cmd">npm install node-pty</code>
+				<code class="error-cmd">Check that the dev server is running (npm run dev)</code>
 			</div>
 		</div>
 	{/if}
