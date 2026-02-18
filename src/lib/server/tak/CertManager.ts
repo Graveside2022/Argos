@@ -123,6 +123,63 @@ export class CertManager {
 	}
 
 	/**
+	 * Validates a PKCS#12 truststore by attempting to read it with openssl.
+	 * Returns true if the file is valid and the password is correct.
+	 */
+	static async validateTruststore(
+		truststorePath: string,
+		password: string
+	): Promise<{ valid: boolean; error?: string }> {
+		try {
+			await execFileAsync('openssl', [
+				'pkcs12',
+				'-in',
+				truststorePath,
+				'-info',
+				'-passin',
+				`pass:${password}`,
+				'-noout'
+			]);
+			return { valid: true };
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			if (msg.includes('mac verify failure') || msg.includes('invalid password')) {
+				return { valid: false, error: 'Invalid truststore or password' };
+			}
+			return { valid: false, error: `Invalid truststore file: ${msg}` };
+		}
+	}
+
+	/**
+	 * Saves PEM certificate strings directly to disk.
+	 * Used after enrollment when the TAK Server API returns PEM strings
+	 * rather than a P12 bundle.
+	 */
+	static savePemCerts(
+		configId: string,
+		cert: string,
+		key: string,
+		ca: string[]
+	): { certPath: string; keyPath: string; caPath?: string } {
+		const configDir = path.join(this.BASE_DIR, configId);
+		fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+
+		const certPath = path.join(configDir, 'client.crt');
+		const keyPath = path.join(configDir, 'client.key');
+
+		fs.writeFileSync(certPath, cert, { mode: 0o600 });
+		fs.writeFileSync(keyPath, key, { mode: 0o600 });
+
+		let caPath: string | undefined;
+		if (ca.length > 0) {
+			caPath = path.join(configDir, 'ca.crt');
+			fs.writeFileSync(caPath, ca.join('\n'), { mode: 0o600 });
+		}
+
+		return { certPath, keyPath, caPath };
+	}
+
+	/**
 	 * Deletes certificates for a configuration.
 	 */
 	static deleteCerts(configId: string) {

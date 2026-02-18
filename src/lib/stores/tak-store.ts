@@ -1,38 +1,28 @@
 import { writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
+import type { TakStatus } from '$lib/types/tak';
 
-export interface TakStatus {
-	status: 'connected' | 'disconnected' | 'error';
-	lastMessage?: string;
-}
+export { type TakStatus };
 
-// Stores
-export const takStatus = writable<TakStatus>({ status: 'disconnected' });
-export const takCotMessages = writable<string[]>([]); // Keep last N messages?
+const DEFAULT_STATUS: TakStatus = { status: 'disconnected' };
 
-// Logic to hook into WebSocket
-// We need to access the WebSocket connection.
-// Ideally, we reuse the connection from MapController or a central WS service.
-// For now, we can listen if we assume a global WS or if we are initialized by the layout.
+export const takStatus = writable<TakStatus>(DEFAULT_STATUS);
+export const takCotMessages = writable<string[]>([]);
 
-// Let's create a helper to handle TAK messages
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function handleTakMessage(message: any) {
+/** Handles incoming WebSocket messages for TAK status and CoT data. */
+export function handleTakMessage(message: { type: string; data: Record<string, unknown> }) {
 	if (message.type === 'tak_status') {
-		takStatus.set(message.data);
+		takStatus.set(message.data as unknown as TakStatus);
 	} else if (message.type === 'tak_cot') {
-		// data is { xml: string }
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const xml = (message.data as any).xml;
+		const xml = (message.data as { xml?: string }).xml;
 		if (typeof xml === 'string') {
 			takCotMessages.update((msgs) => {
 				const newMsgs = [...msgs, xml];
-				if (newMsgs.length > 50) newMsgs.shift(); // Keep last 50
+				if (newMsgs.length > 50) newMsgs.shift();
 				return newMsgs;
 			});
 		}
-		// Dispatch event for Map?
 		if (browser) {
 			window.dispatchEvent(new CustomEvent('tak-cot', { detail: message.data }));
 		}
