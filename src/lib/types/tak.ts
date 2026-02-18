@@ -3,11 +3,27 @@ export interface TakServerConfig {
 	name: string;
 	hostname: string;
 	port: number;
-	protocol: 'tcp' | 'tls';
+	protocol: 'tls';
 	certPath?: string;
 	keyPath?: string;
 	caPath?: string;
 	connectOnStartup: boolean;
+	authMethod?: 'enroll' | 'import';
+	truststorePath?: string;
+	truststorePass: string;
+	certPass: string;
+	enrollmentUser?: string;
+	enrollmentPass?: string;
+	enrollmentPort: number;
+}
+
+export interface TakStatus {
+	status: 'connected' | 'disconnected' | 'error';
+	serverName?: string;
+	serverHost?: string;
+	uptime?: number;
+	messageCount?: number;
+	lastError?: string;
 }
 
 export interface TakContact {

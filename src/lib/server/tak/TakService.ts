@@ -1,25 +1,35 @@
 /* eslint-disable no-console */
+import type CoT from '@tak-ps/node-cot';
+import { CoTParser } from '@tak-ps/node-cot';
+import TAK from '@tak-ps/node-tak';
 import { EventEmitter } from 'events';
+import { readFile } from 'fs/promises';
 
-import type { CotMessage, TakServerConfig } from '../../types/tak';
+import type { TakServerConfig, TakStatus } from '../../types/tak';
 import { RFDatabase } from '../db/database';
-import { TakClient } from './TakClient';
+import { loadTakConfig, saveTakConfig } from './tak-db';
 
-const COT_THROTTLE_MS = 1000; // Max 1 update/sec per entity
+const COT_THROTTLE_MS = 1000;
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
 
 interface ThrottleEntry {
 	lastSent: number;
 	pendingTimeout: NodeJS.Timeout | null;
-	pendingCot: CotMessage | string | null;
+	pendingCot: CoT | null;
 }
 
 export class TakService extends EventEmitter {
 	private static instance: TakService;
-	private client: TakClient | null = null;
+	private tak: TAK | null = null;
 	private config: TakServerConfig | null = null;
 	private db: RFDatabase;
 	private shouldConnect = false;
 	private throttleMap = new Map<string, ThrottleEntry>();
+	private messageCount = 0;
+	private connectedAt: number | null = null;
+	private reconnectAttempt = 0;
+	private reconnectTimeout: NodeJS.Timeout | null = null;
 
 	private constructor() {
 		super();
@@ -33,25 +43,25 @@ export class TakService extends EventEmitter {
 		return TakService.instance;
 	}
 
-	/**
-	 * Initializes the service by loading config from DB and connecting if enabled.
-	 */
 	public async initialize() {
 		console.log('[TakService] Initializing...');
-		await this.loadConfig();
-		if (this.config && this.config.connectOnStartup) {
+		this.config = loadTakConfig(this.db.rawDb);
+		if (this.config?.connectOnStartup) {
 			this.shouldConnect = true;
 			await this.connect();
 		}
 	}
 
-	private async loadConfig() {
-		// Load from DB
-		const stmt = this.db.rawDb.prepare('SELECT * FROM tak_configs LIMIT 1');
-		const row = stmt.get() as TakServerConfig;
-		if (row) {
-			this.config = row;
-		}
+	public getStatus(): TakStatus {
+		return {
+			status: this.tak?.open ? 'connected' : 'disconnected',
+			serverName: this.config?.name,
+			serverHost: this.config?.hostname,
+			uptime: this.connectedAt
+				? Math.floor((Date.now() - this.connectedAt) / 1000)
+				: undefined,
+			messageCount: this.messageCount
+		};
 	}
 
 	public async connect() {
@@ -59,124 +69,139 @@ export class TakService extends EventEmitter {
 			console.warn('[TakService] No configuration found.');
 			return;
 		}
-
-		if (this.client) {
-			this.client.disconnect();
+		if (this.tak) {
+			this.tak.destroy();
+			this.tak = null;
+		}
+		if (!this.config.certPath || !this.config.keyPath) {
+			console.warn('[TakService] TLS certificates not configured.');
+			return;
 		}
 
-		this.client = new TakClient(this.config);
-
-		// Load certs if needed
-		let key: Buffer | undefined;
-		let cert: Buffer | undefined;
-		let ca: Buffer | undefined;
-
-		if (this.config.protocol === 'tls' && this.config.keyPath && this.config.certPath) {
-			try {
-				// We need to read the extracted key/cert files.
-				// CertManager saves them. Use fs to read?
-				// CertManager deals with paths.
-				// Let's assume absolute paths or relative to cwd.
-				const fs = await import('fs/promises');
-				key = await fs.readFile(this.config.keyPath);
-				cert = await fs.readFile(this.config.certPath);
-				if (this.config.caPath) {
-					ca = await fs.readFile(this.config.caPath);
-				}
-			} catch (err) {
-				console.error('[TakService] Failed to load certificates:', err);
-				return;
-			}
+		let cert: string, key: string, ca: string | undefined;
+		try {
+			cert = await readFile(this.config.certPath, 'utf-8');
+			key = await readFile(this.config.keyPath, 'utf-8');
+			if (this.config.caPath) ca = await readFile(this.config.caPath, 'utf-8');
+		} catch (err) {
+			console.error('[TakService] Failed to load certificates:', err);
+			this.broadcastStatus(
+				'error',
+				err instanceof Error ? err.message : 'Certificate load failed'
+			);
+			return;
 		}
 
-		this.client.on('connect', () => {
+		const url = new URL(`ssl://${this.config.hostname}:${this.config.port}`);
+		try {
+			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: true });
+			this.setupEventHandlers();
+			this.reconnectAttempt = 0;
+			console.log('[TakService] Connection initiated');
+		} catch (err) {
+			console.error('[TakService] Connection failed:', err);
+			this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
+			if (this.shouldConnect) this.scheduleReconnect();
+		}
+	}
+
+	private setupEventHandlers() {
+		if (!this.tak) return;
+
+		this.tak.on('secureConnect', () => {
+			console.log('[TakService] Securely connected');
+			this.connectedAt = Date.now();
 			this.emit('status', 'connected');
-			import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
-				WebSocketManager.getInstance().broadcast({
-					type: 'tak_status',
-					data: { status: 'connected' },
-					timestamp: new Date().toISOString()
-				});
-			});
+			this.broadcastStatus('connected');
 		});
 
-		this.client.on('disconnect', () => {
+		this.tak.on('cot', (cot: CoT) => {
+			this.messageCount++;
+			this.emit('cot', cot);
+			this.broadcastCot(CoTParser.to_xml(cot));
+		});
+
+		this.tak.on('end', () => {
+			console.log('[TakService] Connection ended');
+			this.connectedAt = null;
 			this.emit('status', 'disconnected');
-			import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
-				WebSocketManager.getInstance().broadcast({
-					type: 'tak_status',
-					data: { status: 'disconnected' },
-					timestamp: new Date().toISOString()
-				});
-			});
-			if (this.shouldConnect) {
-				// Client handles reconnect schedule usually, or we do it here
-			}
+			this.broadcastStatus('disconnected');
+			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
-		this.client.on('cot', (xml: string) => {
-			this.emit('cot', xml);
-			// Broadcast to frontend
-			import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
-				// Broadcast CoT message to WebSocket clients
-				WebSocketManager.getInstance().broadcast({
-					type: 'tak_cot',
-					data: { xml }, // Wrap string in object to match Record<string, unknown>
-					timestamp: new Date().toISOString()
-				});
-			});
-		});
+		this.tak.on('timeout', () => console.warn('[TakService] Connection timeout'));
 
-		this.client.on('error', (err) => {
+		this.tak.on('error', (err: Error) => {
+			console.error('[TakService] Error:', err.message);
 			this.emit('error', err);
+			this.broadcastStatus('error', err.message);
 		});
 
-		await this.client.connect(key, cert, ca);
+		this.tak.on('ping', () => {
+			if (!this.connectedAt) this.connectedAt = Date.now();
+		});
+	}
+
+	private scheduleReconnect() {
+		if (this.reconnectTimeout) return;
+		const expDelay = RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt);
+		const jitter = Math.random() * RECONNECT_BASE_MS;
+		const delay = Math.min(expDelay + jitter, RECONNECT_MAX_MS);
+		this.reconnectAttempt++;
+		console.log(
+			`[TakService] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempt})`
+		);
+		this.reconnectTimeout = setTimeout(async () => {
+			this.reconnectTimeout = null;
+			try {
+				await this.connect();
+			} catch (err) {
+				console.error('[TakService] Reconnect failed:', err);
+			}
+		}, delay);
 	}
 
 	public disconnect() {
 		this.shouldConnect = false;
-		if (this.client) {
-			this.client.disconnect();
+		if (this.tak) {
+			this.tak.destroy();
+			this.tak = null;
 		}
-		// Clear all pending throttle timers
+		if (this.reconnectTimeout) {
+			clearTimeout(this.reconnectTimeout);
+			this.reconnectTimeout = null;
+		}
 		for (const entry of this.throttleMap.values()) {
 			if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
 		}
 		this.throttleMap.clear();
+		this.connectedAt = null;
 		this.emit('status', 'disconnected');
+		this.broadcastStatus('disconnected');
 	}
 
-	/**
-	 * Sends a CoT message, throttled to max 1 update/sec per entity UID.
-	 * If multiple updates arrive within the window, only the latest is sent.
-	 */
-	public sendCot(cot: CotMessage | string) {
-		if (!this.client) return;
-
-		const uid = this.extractUid(cot);
+	/** Sends a CoT message, throttled to max 1 update/sec per entity UID. */
+	public sendCot(cot: CoT) {
+		if (!this.tak || !this.tak.open) return;
+		const uid = cot.uid();
 		if (!uid) {
-			// No UID to throttle on — send immediately
-			this.client.send(cot);
+			this.tak.write([cot]);
 			return;
 		}
 
 		const now = Date.now();
 		const entry = this.throttleMap.get(uid);
-
 		if (!entry || now - entry.lastSent >= COT_THROTTLE_MS) {
-			// Enough time has passed — send immediately
 			if (entry?.pendingTimeout) clearTimeout(entry.pendingTimeout);
 			this.throttleMap.set(uid, { lastSent: now, pendingTimeout: null, pendingCot: null });
-			this.client.send(cot);
+			this.tak.write([cot]);
 		} else {
-			// Within throttle window — schedule latest for when window expires
 			if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
 			const delay = COT_THROTTLE_MS - (now - entry.lastSent);
 			entry.pendingCot = cot;
 			entry.pendingTimeout = setTimeout(() => {
-				if (this.client && entry.pendingCot) {
-					this.client.send(entry.pendingCot);
+				if (this.tak?.open && entry.pendingCot) {
+					this.tak.write([entry.pendingCot]);
 					entry.lastSent = Date.now();
 					entry.pendingCot = null;
 					entry.pendingTimeout = null;
@@ -185,46 +210,38 @@ export class TakService extends EventEmitter {
 		}
 	}
 
-	private extractUid(cot: CotMessage | string): string | null {
-		if (typeof cot === 'string') {
-			const match = cot.match(/uid="([^"]+)"/);
-			return match ? match[1] : null;
-		}
-		return cot.event?.uid ?? null;
+	public async saveConfig(config: TakServerConfig) {
+		saveTakConfig(this.db.rawDb, config);
+		this.config = config;
+		if (this.shouldConnect) await this.connect();
 	}
 
-	public async saveConfig(config: TakServerConfig) {
-		// Update DB
-		// Check if exists
-		const existing = this.db.rawDb
-			.prepare('SELECT id FROM tak_configs WHERE id = ?')
-			.get(config.id);
+	private broadcastStatus(status: TakStatus['status'], lastError?: string) {
+		import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
+			WebSocketManager.getInstance().broadcast({
+				type: 'tak_status',
+				data: {
+					status,
+					serverName: this.config?.name,
+					serverHost: this.config?.hostname,
+					uptime: this.connectedAt
+						? Math.floor((Date.now() - this.connectedAt) / 1000)
+						: undefined,
+					messageCount: this.messageCount,
+					lastError
+				},
+				timestamp: new Date().toISOString()
+			});
+		});
+	}
 
-		if (existing) {
-			const stmt = this.db.rawDb.prepare(`
-                UPDATE tak_configs SET 
-                    name = @name, hostname = @hostname, port = @port, protocol = @protocol,
-                    certPath = @certPath, keyPath = @keyPath, caPath = @caPath,
-                    connectOnStartup = @connectOnStartup
-                WHERE id = @id
-             `);
-			stmt.run(config);
-		} else {
-			const stmt = this.db.rawDb.prepare(`
-                INSERT INTO tak_configs (
-                    id, name, hostname, port, protocol, certPath, keyPath, caPath, connectOnStartup
-                ) VALUES (
-                    @id, @name, @hostname, @port, @protocol, @certPath, @keyPath, @caPath, @connectOnStartup
-                )
-             `);
-			stmt.run(config);
-		}
-
-		this.config = config;
-
-		// Reconnect if active
-		if (this.shouldConnect) {
-			await this.connect();
-		}
+	private broadcastCot(xml: string) {
+		import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
+			WebSocketManager.getInstance().broadcast({
+				type: 'tak_cot',
+				data: { xml },
+				timestamp: new Date().toISOString()
+			});
+		});
 	}
 }
