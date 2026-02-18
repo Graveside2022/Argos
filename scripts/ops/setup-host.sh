@@ -307,8 +307,17 @@ else
     sed -i "s/^OPENCELLID_API_KEY=.*/OPENCELLID_API_KEY=$OCID_KEY/" "$PROJECT_DIR/.env"
     echo "  OPENCELLID_API_KEY configured."
     echo ""
-    echo "  To download the full cell tower database (~500MB), run:"
-    echo "    bash scripts/ops/import-celltowers.sh"
+    echo "  Download the global cell tower database now? (~500MB download, takes a few minutes)"
+    read -rp "  [Y/n]: " DL_TOWERS
+    DL_TOWERS="${DL_TOWERS:-Y}"
+    if [[ "$DL_TOWERS" =~ ^[Yy]$ ]]; then
+      echo ""
+      sudo -u "$SETUP_USER" bash "$PROJECT_DIR/scripts/ops/import-celltowers.sh"
+    else
+      echo ""
+      echo "  To download later, run:"
+      echo "    bash scripts/ops/import-celltowers.sh"
+    fi
   else
     echo "  Skipped — cell tower overlay disabled."
   fi
@@ -378,3 +387,10 @@ echo "  1. Edit .env to set service passwords"
 echo "  2. npm run dev          — start development server"
 echo "  3. sudo bash scripts/ops/install-services.sh  — install systemd services"
 echo "  4. sudo systemctl start argos-final           — start production server"
+echo ""
+echo "To update API keys later:"
+echo "  Edit .env and set STADIA_MAPS_API_KEY and/or OPENCELLID_API_KEY"
+echo "  Then restart: npm run dev"
+echo ""
+echo "To import/refresh cell tower database:"
+echo "  bash scripts/ops/import-celltowers.sh"
