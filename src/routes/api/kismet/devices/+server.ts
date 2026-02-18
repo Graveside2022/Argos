@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
-import { KismetService } from '$lib/server/services';
+import { KismetService } from '$lib/server/services/kismet.service';
 
 import type { RequestHandler } from './$types';
 

@@ -3,7 +3,7 @@ import {
 	RawKismetDeviceSchema,
 	SimplifiedKismetDeviceSchema
 } from '$lib/schemas/kismet';
-import { KismetProxy } from '$lib/server/kismet';
+import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 

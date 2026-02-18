@@ -186,9 +186,7 @@ tool.hardwareRequirements = [
 ### Event System
 
 ```typescript
-import { registryEvents } from '$lib/server/mcp';
-
-// Listen for tool changes
+// Conceptual — registry events are handled internally by the dynamic MCP server
 registryEvents.on('tool_added', (event, toolId) => {
 	console.log(`New tool available: ${toolId}`);
 });
@@ -292,21 +290,14 @@ Returns available resources (hardware status, logs, etc.).
 ### Start MCP Server
 
 ```typescript
-import { startArgosMCPServer, initializeMCPIntegration } from '$lib/server/mcp';
-
-// Start server
-const mcpServer = await startArgosMCPServer();
-
-// Enable registry integration
-initializeMCPIntegration(mcpServer);
-
-// Server now auto-updates when tools/hardware change
+// Conceptual — the MCP server is started via `npx tsx src/lib/server/mcp/dynamic-server.ts`
+// See dynamic-server.ts for the actual entry point
 ```
 
 ### Generate Config
 
 ```typescript
-import { generateContextBConfig, installContextBConfig } from '$lib/server/mcp';
+import { generateContextBConfig, installContextBConfig } from '$lib/server/mcp/config-generator';
 
 // Generate config
 const config = await generateContextBConfig();

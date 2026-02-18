@@ -1,6 +1,15 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
-	import * as Select from '$lib/components/ui/select';
+	import SelectRoot from '$lib/components/ui/select/select.svelte';
+	import SelectContent from '$lib/components/ui/select/select-content.svelte';
+	import SelectItem from '$lib/components/ui/select/select-item.svelte';
+	import SelectTrigger from '$lib/components/ui/select/select-trigger.svelte';
+	const Select = {
+		Root: SelectRoot,
+		Trigger: SelectTrigger,
+		Content: SelectContent,
+		Item: SelectItem
+	};
 	import type { RailPosition, ThemePalette } from '$lib/stores/theme-store.svelte';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { palettes } from '$lib/themes/palettes';

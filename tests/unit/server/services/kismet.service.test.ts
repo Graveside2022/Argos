@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import { KismetProxy } from '$lib/server/kismet';
+import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import type { GPSPosition } from '$lib/server/services/kismet.service';
 import { KismetService } from '$lib/server/services/kismet.service';
 
 // Mock the KismetProxy module
-vi.mock('$lib/server/kismet', () => ({
+vi.mock('$lib/server/kismet/kismet-proxy', () => ({
 	KismetProxy: {
 		getDevices: vi.fn(),
 		proxyGet: vi.fn()
