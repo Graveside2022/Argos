@@ -3,7 +3,7 @@
  * Detects GPS modules, cellular modems, and other serial devices
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { readdir, readFile } from 'fs/promises';
 import { promisify } from 'util';
 
@@ -13,7 +13,7 @@ import type {
 	GPSCapabilities
 } from '$lib/server/hardware/detection-types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Detect GPS modules
@@ -37,10 +37,10 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 
 			try {
 				// Try to read NMEA data to confirm it's a GPS
-				const { stdout } = await execAsync(
-					`timeout 2 cat ${devicePath} 2>/dev/null | head -5`,
-					{ timeout: 3000 }
-				);
+				const { stdout: rawOutput } = await execFileAsync('/usr/bin/cat', [devicePath], {
+					timeout: 3000
+				});
+				const stdout = rawOutput.split('\n').slice(0, 5).join('\n');
 
 				// Check for NMEA sentences
 				const isNMEA =
@@ -79,7 +79,7 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 
 		// Also check if gpsd is running
 		try {
-			const { stdout } = await execAsync('systemctl is-active gpsd 2>&1');
+			const { stdout } = await execFileAsync('/usr/bin/systemctl', ['is-active', 'gpsd']);
 			if (stdout.trim() === 'active') {
 				// GPSD is running, add virtual GPS device
 				hardware.push({
@@ -91,7 +91,7 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 					capabilities: {
 						device: '/var/run/gpsd.sock',
 						protocol: 'GPSD'
-// @constitutional-exemption Article-II-2.1 issue:#999 — GPS capabilities type narrowing
+						// @constitutional-exemption Article-II-2.1 issue:#999 — GPS capabilities type narrowing
 						// Safe: Object literal satisfies GPSCapabilities — all required fields provided
 					} as GPSCapabilities,
 					lastSeen: Date.now(),
@@ -117,7 +117,7 @@ async function detectCellularModems(): Promise<DetectedHardware[]> {
 
 	try {
 		// Check for modem manager
-		const { stdout } = await execAsync('mmcli -L 2>&1');
+		const { stdout } = await execFileAsync('/usr/bin/mmcli', ['-L']);
 
 		if (stdout.includes('/Modem/')) {
 			// Parse modem manager output
@@ -128,7 +128,10 @@ async function detectCellularModems(): Promise<DetectedHardware[]> {
 
 				try {
 					// Get modem details
-					const { stdout: detailsOut } = await execAsync(`mmcli -m ${modemId} 2>&1`);
+					const { stdout: detailsOut } = await execFileAsync('/usr/bin/mmcli', [
+						'-m',
+						modemId
+					]);
 
 					const modelMatch = detailsOut.match(/model:\s*([^\n]+)/i);
 					const imeiMatch = detailsOut.match(/imei:\s*([^\n]+)/i);

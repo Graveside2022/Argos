@@ -162,6 +162,7 @@
 			>
 				<!-- Tab bar — shows only the active tab -->
 				<!-- Tab bar — shows all tabs -->
+				<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
 				<div class="bottom-panel-tabs">
 					<div class="tab-list">
 						<!-- Terminal Tab -->

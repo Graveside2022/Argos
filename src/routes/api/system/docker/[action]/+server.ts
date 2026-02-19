@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * POST /api/system/docker/[action]
@@ -34,7 +34,16 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 		if (action === 'start') {
 			// Start container with tools profile
-			await execAsync(`docker compose -f ${composeFile} --profile tools up -d ${service}`);
+			await execFileAsync('/usr/bin/docker', [
+				'compose',
+				'-f',
+				composeFile,
+				'--profile',
+				'tools',
+				'up',
+				'-d',
+				service
+			]);
 
 			// Wait for container to be ready
 			await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -47,7 +56,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			});
 		} else if (action === 'stop') {
 			// Stop container
-			await execAsync(`docker compose -f ${composeFile} stop ${service}`);
+			await execFileAsync('/usr/bin/docker', ['compose', '-f', composeFile, 'stop', service]);
 
 			return json({
 				success: true,
@@ -57,7 +66,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			});
 		} else if (action === 'restart') {
 			// Restart container
-			await execAsync(`docker compose -f ${composeFile} restart ${service}`);
+			await execFileAsync('/usr/bin/docker', [
+				'compose',
+				'-f',
+				composeFile,
+				'restart',
+				service
+			]);
 
 			return json({
 				success: true,
