@@ -1,11 +1,11 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { promisify } from 'util';
 
-import { logError,logInfo, logWarn } from '$lib/utils/logger';
+import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Alfa adapter detection utilities
@@ -39,7 +39,7 @@ export class AlfaDetector {
 		try {
 			// Try using lsusb first
 			try {
-				const { stdout } = await execAsync('lsusb');
+				const { stdout } = await execFileAsync('/usr/bin/lsusb', []);
 				for (const [usbId, description] of Object.entries(this.ALFA_USB_IDS)) {
 					if (stdout.includes(usbId)) {
 						logInfo(`Detected Alfa adapter: ${description} (${usbId})`);
@@ -60,7 +60,7 @@ export class AlfaDetector {
 						const product = (await readFile(productPath, 'utf-8')).trim();
 						const usbId = `${vendor}:${product}`;
 
-// @constitutional-exemption Article-II-2.1 issue:#999 — USB ID dictionary lookup type narrowing
+						// @constitutional-exemption Article-II-2.1 issue:#999 — USB ID dictionary lookup type narrowing
 						const alfaDevice =
 							this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
 						if (alfaDevice) {
@@ -84,7 +84,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
 			logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
 		}
 
@@ -123,7 +123,7 @@ export class AlfaDetector {
 				}
 			}
 		} catch (error) {
-		// Safe: Type cast for dynamic data access
+			// Safe: Type cast for dynamic data access
 			logError('Error finding network interfaces:', error as Record<string, unknown>);
 		}
 

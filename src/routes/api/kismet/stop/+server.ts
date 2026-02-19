@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const POST: RequestHandler = async () => {
 	try {
@@ -13,7 +13,7 @@ export const POST: RequestHandler = async () => {
 		// First try to get Kismet PIDs
 		let pids: string[] = [];
 		try {
-			const { stdout } = await execAsync('pgrep -x kismet');
+			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 			pids = stdout
 				.trim()
 				.split('\n')
@@ -35,7 +35,7 @@ export const POST: RequestHandler = async () => {
 		// Send SIGTERM to all Kismet processes (graceful shutdown)
 		if (pids.length > 0) {
 			try {
-				await execAsync('pkill -TERM kismet');
+				await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
 				console.warn('Sent SIGTERM to Kismet processes');
 
 				// Give Kismet time to cleanup gracefully
@@ -43,10 +43,10 @@ export const POST: RequestHandler = async () => {
 
 				// Check if any processes are still running
 				try {
-					await execAsync('pgrep -x kismet');
+					await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 					// If we get here, some processes are still running, force kill them
 					console.warn('Some Kismet processes still running, sending SIGKILL...');
-					await execAsync('pkill -KILL kismet');
+					await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']);
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				} catch (_error: unknown) {
 					// Good - no processes remaining
@@ -58,14 +58,14 @@ export const POST: RequestHandler = async () => {
 
 		// Also kill any kismon interfaces that might be lingering
 		try {
-			await execAsync('sudo ip link delete kismon0 2>/dev/null || true');
+			await execFileAsync('/usr/bin/sudo', ['ip', 'link', 'delete', 'kismon0']);
 		} catch (_error: unknown) {
 			// Ignore errors - interface might not exist
 		}
 
 		// Final verification
 		try {
-			await execAsync('pgrep -x kismet');
+			await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 			// If we get here, Kismet is still running somehow
 			console.error('Warning: Kismet processes may still be running');
 			return json(
@@ -94,7 +94,7 @@ export const POST: RequestHandler = async () => {
 		return json(
 			{
 				success: false,
-			// Safe: Catch block error cast to Error for message extraction
+				// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message,
 				message: 'Failed to stop Kismet'
 			},
