@@ -4,6 +4,8 @@ import { writeFileSync } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 
+import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
+
 import type { KismetServiceStatus } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -50,8 +52,7 @@ export class KismetServiceManager {
 			return {
 				running: false,
 				// Safe: Error handling
-				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
-				error: error instanceof Error ? (error as Error).message : 'Unknown error'
+				error: error instanceof Error ? error.message : 'Unknown error'
 			};
 		}
 	}
@@ -83,8 +84,7 @@ export class KismetServiceManager {
 			return {
 				success: false,
 				// Safe: Error handling
-				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
-				message: `Failed to start Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
+				message: `Failed to start Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
 			};
 		}
 	}
@@ -133,8 +133,9 @@ export class KismetServiceManager {
 					})
 					.filter(Boolean);
 
-				for (const interfaceName of wifiInterfaces) {
+				for (const rawName of wifiInterfaces) {
 					try {
+						const interfaceName = validateInterfaceName(rawName);
 						console.warn(`Resetting USB WiFi interface: ${interfaceName}`);
 
 						// Bring interface down
@@ -162,7 +163,13 @@ export class KismetServiceManager {
 								for (const usbLine of usbLines) {
 									const busMatch = usbLine.match(/Bus (\d+) Device (\d+)/);
 									if (busMatch) {
-										const [, bus, device] = busMatch;
+										const [, rawBus, rawDevice] = busMatch;
+										const bus = String(
+											validateNumericParam(rawBus, 'USB bus', 1, 999)
+										);
+										const device = String(
+											validateNumericParam(rawDevice, 'USB device', 1, 999)
+										);
 										try {
 											// Unbind and rebind USB device to reset its state
 											writeFileSync(
@@ -197,7 +204,7 @@ export class KismetServiceManager {
 						await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'up']);
 						console.warn(`Interface ${interfaceName} reset complete`);
 					} catch (interfaceError) {
-						console.warn(`Failed to reset interface ${interfaceName}:`, interfaceError);
+						console.warn(`Failed to reset interface ${rawName}:`, interfaceError);
 					}
 				}
 			} catch (resetError) {
@@ -216,8 +223,7 @@ export class KismetServiceManager {
 			return {
 				success: false,
 				// Safe: Error handling
-				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
-				message: `Failed to stop Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
+				message: `Failed to stop Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
 			};
 		}
 	}
@@ -238,8 +244,7 @@ export class KismetServiceManager {
 			return {
 				success: false,
 				// Safe: Error handling
-				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
-				message: `Failed to restart Kismet: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
+				message: `Failed to restart Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
 			};
 		}
 	}
@@ -255,8 +260,7 @@ export class KismetServiceManager {
 		} catch (error) {
 			return [
 				// Safe: Error handling
-				// Safe: error already narrowed by instanceof check; cast is redundant but explicit
-				`Error reading logs: ${error instanceof Error ? (error as Error).message : 'Unknown error'}`
+				`Error reading logs: ${error instanceof Error ? error.message : 'Unknown error'}`
 			];
 		}
 	}

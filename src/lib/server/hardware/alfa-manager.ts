@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { AlfaDetector } from '$lib/server/kismet/alfa-detector';
+import { validateInterfaceName } from '$lib/server/security/input-sanitizer';
 
 const execFileAsync = promisify(execFile);
 
@@ -12,8 +13,9 @@ export async function detectAdapter(): Promise<string | null> {
 }
 
 export async function getMode(iface: string): Promise<'monitor' | 'managed' | 'unknown'> {
+	const validIface = validateInterfaceName(iface);
 	try {
-		const { stdout } = await execFileAsync('/usr/sbin/iwconfig', [iface]);
+		const { stdout } = await execFileAsync('/usr/sbin/iwconfig', [validIface]);
 		if (stdout.includes('Mode:Monitor')) return 'monitor';
 		if (stdout.includes('Mode:Managed')) return 'managed';
 		return 'unknown';
