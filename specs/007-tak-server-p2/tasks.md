@@ -72,12 +72,12 @@
 
 **Independent Test**: Clicking Settings > TAK Server opens the config form inside the dashboard with a working back button, no page navigation.
 
-- [ ] T011 [P] [US1] Create `TakConfigView.svelte` using `ToolViewWrapper` in `src/lib/components/dashboard/tak/`. **ToolViewWrapper** (78 lines at `src/lib/components/dashboard/views/ToolViewWrapper.svelte`) accepts: `title` prop, `children` snippet, optional status badge. **Migrate from**: `src/lib/components/dashboard/settings/TakSettingsForm.svelte` (308 lines) — convert Svelte 4 `onMount` to Svelte 5 `$effect`, use `$state()` for form fields. **Include the Description field (FR-015) for server labeling**. → See **research.md § Task 3** for pattern, **spec.md § Reference: ATAK Connection Form Fields** for full field list
-- [ ] T012 [US1] Update `src/routes/dashboard/+page.svelte` (430 lines) to add `{:else if $activeView === 'tak-config'}` branch rendering `TakConfigView`. **Pattern to follow**: existing `'gsm-evil'` and `'bettercap'` branches that use `ToolViewWrapper`. → See **research.md § Task 3**
-- [ ] T013 [US1] Update `src/lib/components/dashboard/panels/SettingsPanel.svelte` (135 lines) to trigger `activeView = 'tak-config'` instead of the current broken `href="/settings/tak"` link (no route exists for that path). Import `activeView` from dashboard store.
-- [ ] T014 [US1] Update existing `GET/POST /api/tak/config` in `src/routes/api/tak/config/+server.ts` (45 lines) to support new fields: `authMethod`, `truststorePath`, `truststorePass`, `certPass`, `enrollmentUser`, `enrollmentPass`, `enrollmentPort`. **Must add DB↔TS mapping**: GET should convert `snake_case` DB rows to `camelCase` TS objects (e.g., `cert_path` → `certPath`). POST should convert incoming `camelCase` JSON to `snake_case` for SQL. Also update `TakService.saveConfig()` SQL statements to include the new columns. → See **contracts/api.md § Configuration API**, **Integration Notes § 5**
+- [x] T011 [P] [US1] Create `TakConfigView.svelte` using `ToolViewWrapper` in `src/lib/components/dashboard/tak/`. **ToolViewWrapper** (78 lines at `src/lib/components/dashboard/views/ToolViewWrapper.svelte`) accepts: `title` prop, `children` snippet, optional status badge. **Migrate from**: `src/lib/components/dashboard/settings/TakSettingsForm.svelte` (308 lines) — convert Svelte 4 `onMount` to Svelte 5 `$effect`, use `$state()` for form fields. **Include the Description field (FR-015) for server labeling**. → See **research.md § Task 3** for pattern, **spec.md § Reference: ATAK Connection Form Fields** for full field list
+- [x] T012 [US1] Update `src/routes/dashboard/+page.svelte` (430 lines) to add `{:else if $activeView === 'tak-config'}` branch rendering `TakConfigView`. **Pattern to follow**: existing `'gsm-evil'` and `'bettercap'` branches that use `ToolViewWrapper`. → See **research.md § Task 3**
+- [x] T013 [US1] Update `src/lib/components/dashboard/panels/SettingsPanel.svelte` (135 lines) to trigger `activeView = 'tak-config'` instead of the current broken `href="/settings/tak"` link (no route exists for that path). Import `activeView` from dashboard store.
+- [x] T014 [US1] Update existing `GET/POST /api/tak/config` in `src/routes/api/tak/config/+server.ts` (45 lines) to support new fields: `authMethod`, `truststorePath`, `truststorePass`, `certPass`, `enrollmentUser`, `enrollmentPass`, `enrollmentPort`. **Must add DB↔TS mapping**: GET should convert `snake_case` DB rows to `camelCase` TS objects (e.g., `cert_path` → `certPath`). POST should convert incoming `camelCase` JSON to `snake_case` for SQL. Also update `TakService.saveConfig()` SQL statements to include the new columns. → See **contracts/api.md § Configuration API**, **Integration Notes § 5**
 - [ ] T015 [US1] Write unit tests for config API endpoint in `src/routes/api/tak/config/+server.test.ts`
-- [ ] T011B [US1] DELETE `src/lib/components/dashboard/settings/TakSettingsForm.svelte` (308 lines) and remove all imports referencing it. **Depends on**: T011 (replacement) + T012 (routing) + T013 (settings link) all complete
+- [x] T011B [US1] DELETE `src/lib/components/dashboard/settings/TakSettingsForm.svelte` (308 lines) and remove all imports referencing it. **Depends on**: T011 (replacement) + T012 (routing) + T013 (settings link) all complete
 
 ---
 
@@ -87,9 +87,9 @@
 
 **Independent Test**: Upload a .p12 truststore via the config form and verify it is copied to `data/certs/` and validated.
 
-- [ ] T016 [US2] Implement `POST /api/tak/truststore` in `src/routes/api/tak/truststore/+server.ts`. → See **contracts/api.md § Certificate & Truststore API** for request/response shape
-- [ ] T017 [US2] Add Trust Store import UI (file picker, path field, password defaulting to `atakatak`) to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields** (Import Trust Store row)
-- [ ] T018 [US2] Implement truststore validation (PKCS#12 unlock + extract) in `src/lib/server/tak/CertManager.ts`. **Method**: `validateTruststore(path, password)` using `openssl pkcs12 -info`. → See **research.md § Task 2** for the exact openssl command
+- [x] T016 [US2] Implement `POST /api/tak/truststore` in `src/routes/api/tak/truststore/+server.ts`. → See **contracts/api.md § Certificate & Truststore API** for request/response shape
+- [x] T017 [US2] Add Trust Store import UI (file picker, path field, password defaulting to `atakatak`) to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields** (Import Trust Store row)
+- [x] T018 [US2] Implement truststore validation (PKCS#12 unlock + extract) in `src/lib/server/tak/CertManager.ts`. **Method**: `validateTruststore(path, password)` using `openssl pkcs12 -info`. → See **research.md § Task 2** for the exact openssl command
 - [ ] T019 [US2] Write unit tests for CertManager truststore validation in `src/lib/server/tak/CertManager.test.ts`
 
 ---
@@ -102,9 +102,9 @@
 
 **Note**: T018 (truststore validation) should be complete before T022 — the enrollment TLS connection to `https://<host>:8446/Marti/api/tls/signClient/v2` requires the truststore to verify the server's certificate.
 
-- [ ] T020 [US2B] Implement `POST /api/tak/enroll` in `src/routes/api/tak/enroll/+server.ts`. → See **contracts/api.md § Enrollment API** for request/response shape
-- [ ] T021 [US2B] Add Enrollment UI fields (username, password, port defaulting to `8446`) and auth method toggle (radio: "Enroll for Certificate" / "Import Certificate") to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
-- [ ] T022 [US2B] Implement enrollment logic in `src/lib/server/tak/CertManager.ts`. **Strategy**: Use node-tak's `TAKAPI` + `APIAuthPassword` + `Credentials.generate()` which handles CSR creation, POST to `/Marti/api/tls/signClient/v2`, and returns `{ ca: string[], cert: string, key: string }` as PEM strings. Store PEM files via `savePemCerts()` (from T008). **Fallback**: If node-tak's Credentials class doesn't work for our flow (it requires `APIAuthPassword` init which calls OAuth), implement manually: `pem.createCSR()` → POST CSR with HTTP Basic Auth → parse response `signedCert` + `ca0`/`ca1`. **Requires**: truststore loaded (T018) for TLS verification of the enrollment endpoint. → See **Integration Notes § 3**, **contracts/api.md § Enrollment API**
+- [x] T020 [US2B] Implement `POST /api/tak/enroll` in `src/routes/api/tak/enroll/+server.ts`. → See **contracts/api.md § Enrollment API** for request/response shape
+- [x] T021 [US2B] Add Enrollment UI fields (username, password, port defaulting to `8446`) and auth method toggle (radio: "Enroll for Certificate" / "Import Certificate") to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
+- [x] T022 [US2B] Implement enrollment logic in `src/lib/server/tak/CertManager.ts`. **Strategy**: Use node-tak's `TAKAPI` + `APIAuthPassword` + `Credentials.generate()` which handles CSR creation, POST to `/Marti/api/tls/signClient/v2`, and returns `{ ca: string[], cert: string, key: string }` as PEM strings. Store PEM files via `savePemCerts()` (from T008). **Fallback**: If node-tak's Credentials class doesn't work for our flow (it requires `APIAuthPassword` init which calls OAuth), implement manually: `pem.createCSR()` → POST CSR with HTTP Basic Auth → parse response `signedCert` + `ca0`/`ca1`. **Requires**: truststore loaded (T018) for TLS verification of the enrollment endpoint. → See **Integration Notes § 3**, **contracts/api.md § Enrollment API**
 - [ ] T023 [US2B] Write unit tests for enrollment logic in `src/lib/server/tak/CertManager.test.ts`
 
 ---
@@ -115,9 +115,9 @@
 
 **Independent Test**: Import a sample .zip package and verify hostname, port, and certs are auto-filled.
 
-- [ ] T024 [US2C] Implement `POST /api/tak/import-package` in `src/routes/api/tak/import-package/+server.ts`. → See **contracts/api.md § Data Package API** for request/response shape
-- [ ] T025 [US2C] Add "Import Data Package" button and handler to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
-- [ ] T026 [US2C] Integrate `TakPackageParser.ts` (from T009) into the import-package API endpoint. Wire: upload → parse → extract certs to `data/certs/` → return auto-filled config. → See **research.md § Task 1**
+- [x] T024 [US2C] Implement `POST /api/tak/import-package` in `src/routes/api/tak/import-package/+server.ts`. → See **contracts/api.md § Data Package API** for request/response shape
+- [x] T025 [US2C] Add "Import Data Package" button and handler to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
+- [x] T026 [US2C] Integrate `TakPackageParser.ts` (from T009) into the import-package API endpoint. Wire: upload → parse → extract certs to `data/certs/` → return auto-filled config. → See **research.md § Task 1**
 - [ ] T027 [US2C] Write unit tests for TakPackageParser (ZIP extraction, manifest validation, pref parsing) in `src/lib/server/tak/TakPackageParser.test.ts`
 
 ---
@@ -128,9 +128,9 @@
 
 **Independent Test**: Verify the TAK indicator dot changes color based on connection and shows a dropdown on click.
 
-- [ ] T028 [P] [US3] Create `TAKIndicator.svelte` component in `src/lib/components/status/`. **Placement**: After GPS indicator in TopStatusBar. **Pattern**: Green dot (connected) / grey dot (disconnected) + server name label. Dropdown on click. → See **research.md § Task 4** for layout spec
-- [ ] T029 [US3] Integrate `TAKIndicator.svelte` into `src/lib/components/dashboard/TopStatusBar.svelte` (1200 lines). **Insert after**: GPS indicator section. **Reactive source**: `takStatus` store from `$lib/stores/tak-store.ts`. → See **research.md § Task 4**
-- [ ] T030 [US3] Implement dropdown in `TAKIndicator.svelte` with: server name, IP address, connection uptime, message count (when connected) OR "Not connected" + "Configure" button (when disconnected). "Configure" button sets `activeView = 'tak-config'`.
+- [x] T028 [P] [US3] Create `TAKIndicator.svelte` component in `src/lib/components/status/`. **Placement**: After GPS indicator in TopStatusBar. **Pattern**: Green dot (connected) / grey dot (disconnected) + server name label. Dropdown on click. → See **research.md § Task 4** for layout spec
+- [x] T029 [US3] Integrate `TAKIndicator.svelte` into `src/lib/components/dashboard/TopStatusBar.svelte` (1200 lines). **Insert after**: GPS indicator section. **Reactive source**: `takStatus` store from `$lib/stores/tak-store.ts`. → See **research.md § Task 4**
+- [x] T030 [US3] Implement dropdown in `TAKIndicator.svelte` with: server name, IP address, connection uptime, message count (when connected) OR "Not connected" + "Configure" button (when disconnected). "Configure" button sets `activeView = 'tak-config'`.
 
 ---
 
@@ -140,8 +140,8 @@
 
 **Independent Test**: Open Overview panel and verify the TAK SERVER section reflects current state.
 
-- [ ] T031 [US4] Add TAK SERVER section to `src/lib/components/dashboard/panels/OverviewPanel.svelte` (755 lines). **Position**: After the existing services section (Kismet WiFi, GPS). **Display**: Server name, IP, status indicator (green/grey), message count. → See **research.md § Task 4** for section layout
-- [ ] T032 [US4] Ensure the "Configure" link in Overview sets `activeView = 'tak-config'` (import from dashboard store, same pattern as T013)
+- [x] T031 [US4] Add TAK SERVER section to `src/lib/components/dashboard/panels/OverviewPanel.svelte` (755 lines). **Position**: After the existing services section (Kismet WiFi, GPS). **Display**: Server name, IP, status indicator (green/grey), message count. → See **research.md § Task 4** for section layout
+- [x] T032 [US4] Ensure the "Configure" link in Overview sets `activeView = 'tak-config'` (import from dashboard store, same pattern as T013)
 
 ---
 

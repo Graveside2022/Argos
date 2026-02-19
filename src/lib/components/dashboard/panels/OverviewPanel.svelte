@@ -9,6 +9,7 @@
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { takStatus } from '$lib/stores/tak-store';
 	import type { SystemInfo } from '$lib/types/system';
 
 	interface DeviceState {
@@ -311,6 +312,16 @@
 				{/if}
 			</div>
 		{/if}
+		<button class="scan-row clickable" onclick={() => activeView.set('tak-config')}>
+			<span class="scan-dot" class:active={$takStatus.status === 'connected'}></span>
+			<span class="scan-name">TAK Server</span>
+			{#if $takStatus.status === 'connected'}
+				<span class="scan-count">{$takStatus.messageCount ?? 0} msg</span>
+			{:else}
+				<span class="scan-status-text">{$takStatus.status}</span>
+			{/if}
+			<span class="row-chevron">&#8250;</span>
+		</button>
 	</section>
 
 	<!-- Hardware -->
