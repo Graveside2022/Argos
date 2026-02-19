@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -40,31 +40,22 @@ async function getSystemMetrics() {
 }
 
 async function getCPUUsage(): Promise<number> {
-	try {
-		// Get CPU usage percentage
-		const { stdout } = await execAsync(
-			"top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1"
-		);
-		return parseFloat(stdout.trim()) || 0;
-	} catch (_error: unknown) {
-		// Fallback to Node.js os module
-		const cpus = os.cpus();
-		let totalIdle = 0;
-		let totalTick = 0;
+	const cpus = os.cpus();
+	let totalIdle = 0;
+	let totalTick = 0;
 
-		cpus.forEach((cpu) => {
-			for (const type in cpu.times) {
-				totalTick += cpu.times[type as keyof typeof cpu.times];
-			}
-			totalIdle += cpu.times.idle;
-		});
+	cpus.forEach((cpu) => {
+		for (const type in cpu.times) {
+			totalTick += cpu.times[type as keyof typeof cpu.times];
+		}
+		totalIdle += cpu.times.idle;
+	});
 
-		const idle = totalIdle / cpus.length;
-		const total = totalTick / cpus.length;
-		const usage = 100 - ~~((100 * idle) / total);
+	const idle = totalIdle / cpus.length;
+	const total = totalTick / cpus.length;
+	const usage = 100 - ~~((100 * idle) / total);
 
-		return usage;
-	}
+	return usage;
 }
 
 function getMemoryUsage() {
@@ -82,8 +73,10 @@ function getMemoryUsage() {
 
 async function getDiskUsage() {
 	try {
-		const { stdout } = await execAsync("df -B1 / | tail -1 | awk '{print $2,$3,$4}'");
-		const [total, used, available] = stdout.trim().split(' ').map(Number);
+		const { stdout } = await execFileAsync('/usr/bin/df', ['-B1', '/']);
+		const lines = stdout.trim().split('\n');
+		if (lines.length < 2) return { total: 0, used: 0, available: 0, percentage: 0 };
+		const [total, used, available] = lines[1].split(/\s+/).slice(1, 4).map(Number);
 
 		return {
 			total,
@@ -104,7 +97,7 @@ async function getDiskUsage() {
 async function getCPUTemperature(): Promise<number | undefined> {
 	try {
 		// Try Raspberry Pi temperature
-		const { stdout } = await execAsync('vcgencmd measure_temp');
+		const { stdout } = await execFileAsync('/usr/bin/vcgencmd', ['measure_temp']);
 		const match = stdout.match(/temp=(\d+\.?\d*)/);
 		if (match) {
 			return parseFloat(match[1]);
@@ -123,7 +116,8 @@ async function getCPUTemperature(): Promise<number | undefined> {
 async function getNetworkStats() {
 	try {
 		// Get network interface stats
-		const { stdout } = await execAsync("cat /proc/net/dev | grep -E 'wlan|eth' | head -1");
+		const content = await fs.readFile('/proc/net/dev', 'utf-8');
+		const stdout = content.split('\n').find((line) => /wlan|eth/.test(line)) || '';
 		const parts = stdout.trim().split(/\s+/);
 
 		if (parts.length >= 10) {
