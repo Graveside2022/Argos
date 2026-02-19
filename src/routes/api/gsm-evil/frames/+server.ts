@@ -1,13 +1,16 @@
 import { json } from '@sveltejs/kit';
-
-import { legacyShellExec } from '$lib/server/legacy-shell-exec';
+import { execFile } from 'child_process';
+import { readFile } from 'fs/promises';
+import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
+
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
-		const grgsm = await legacyShellExec('pgrep -f grgsm_livemon_headless').catch(
+		const grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']).catch(
 			(error: unknown) => {
 				console.warn('[gsm-evil-frames] GRGSM process check failed', {
 					error: String(error)
@@ -25,13 +28,17 @@ export const GET: RequestHandler = async () => {
 
 		// Read GSM frames from the log file where grgsm_livemon outputs them
 		const logPath = '/tmp/grgsm_scan.log';
-		const { stdout: recentFrames } = await legacyShellExec(
-			`tail -10 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s"`,
-			{ timeout: 2000 }
-		).catch((error: unknown) => {
+		const frameRegex = /^\s*[0-9a-f]{2}\s/;
+		let recentFrames = '';
+		try {
+			const fileContent = await readFile(logPath, 'utf-8');
+			const allLines = fileContent.split('\n');
+			const lastLines = allLines.slice(-10);
+			recentFrames = lastLines.filter((line) => frameRegex.test(line)).join('\n');
+		} catch (error: unknown) {
 			console.warn('[gsm-evil-frames] Frame log read failed', { error: String(error) });
-			return { stdout: '' };
-		});
+			recentFrames = '';
+		}
 
 		let frames: string[] = [];
 

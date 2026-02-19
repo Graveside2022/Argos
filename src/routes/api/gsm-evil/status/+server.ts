@@ -1,9 +1,13 @@
 import { json } from '@sveltejs/kit';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
-import { legacyShellExec } from '$lib/server/legacy-shell-exec';
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logWarn } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
+
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -30,23 +34,34 @@ export const GET: RequestHandler = async () => {
 		try {
 			// Look for grgsm_livemon_headless but exclude ones that are part of scanning (they run briefly)
 			// GSM Evil proper runs with specific long-running parameters
-			const { stdout: grgsmCheck } = await legacyShellExec(
-				'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
-			);
-			if (grgsmCheck.trim()) {
-				const parts = grgsmCheck.trim().split(/\s+/);
-				const pid = parseInt(parts[1]);
+			const { stdout: grgsmCheck } = await execFileAsync('/usr/bin/pgrep', [
+				'-af',
+				'grgsm_livemon_headless'
+			]);
+			// Filter out "timeout" matches and take first line (equivalent to grep -v "timeout" | head -1)
+			const grgsmLine = grgsmCheck
+				.split('\n')
+				.filter((line) => line.trim() && !line.includes('timeout'))
+				.at(0);
+			if (grgsmLine) {
+				// pgrep -af output format: "PID command..."
+				const parts = grgsmLine.trim().split(/\s+/);
+				const pid = parseInt(parts[0]);
 				if (!isNaN(pid)) {
 					// Check if this is a long-running process (not a scan)
 					try {
-						const { stdout: pidTime } = await legacyShellExec(
-							`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
-						);
+						const validPid = validateNumericParam(pid, 'pid', 1, 4194304);
+						const { stdout: pidTime } = await execFileAsync('/usr/bin/ps', [
+							'-o',
+							'etimes=',
+							'-p',
+							String(validPid)
+						]);
 						const runtime = parseInt(pidTime.trim()) || 0;
 						// Only consider it "running" if it's been up for more than 10 seconds
 						if (runtime > 10) {
 							status.grgsm.running = true;
-							status.grgsm.pid = pid;
+							status.grgsm.pid = validPid;
 						}
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
@@ -64,22 +79,29 @@ export const GET: RequestHandler = async () => {
 
 		// Check GSMEvil2 with exact match (including auto version)
 		try {
-			const { stdout: gsmevilCheck } = await legacyShellExec(
-				'ps aux | grep -E "python3? GsmEvil(_auto)?\\.py" | grep -v grep | head -1'
-			);
-			if (gsmevilCheck.trim()) {
-				const parts = gsmevilCheck.trim().split(/\s+/);
-				const pid = parseInt(parts[1]);
+			const { stdout: gsmevilCheck } = await execFileAsync('/usr/bin/pgrep', [
+				'-af',
+				'GsmEvil.*\\.py'
+			]);
+			// Take first matching line (equivalent to head -1)
+			const gsmevilLine = gsmevilCheck
+				.split('\n')
+				.filter((line) => line.trim())
+				.at(0);
+			if (gsmevilLine) {
+				// pgrep -af output format: "PID command..."
+				const parts = gsmevilLine.trim().split(/\s+/);
+				const pid = parseInt(parts[0]);
 				if (!isNaN(pid)) {
 					status.gsmevil.running = true;
 					status.gsmevil.pid = pid;
 
 					// Check if web interface is accessible
 					try {
-						const { stdout: curlCheck } = await legacyShellExec(
-							'timeout 1 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
-						);
-						status.gsmevil.webInterface = curlCheck.trim() === '200';
+						const response = await fetch('http://localhost:8080', {
+							signal: AbortSignal.timeout(1000)
+						});
+						status.gsmevil.webInterface = response.status === 200;
 					} catch (_error: unknown) {
 						status.gsmevil.webInterface = false;
 					}
