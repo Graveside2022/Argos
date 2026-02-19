@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import os from 'os';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async () => {
 		// Check earlyoom status
 		let earlyoomRunning = false;
 		try {
-			await execAsync('pgrep earlyoom');
+			await execFileAsync('/usr/bin/pgrep', ['earlyoom']);
 			earlyoomRunning = true;
 		} catch {
 			earlyoomRunning = false;
@@ -33,7 +33,10 @@ export const GET: RequestHandler = async () => {
 		let zramEnabled = false;
 		let zramSize = '0MB';
 		try {
-			const { stdout } = await execAsync('zramctl --output NAME,DISKSIZE,DATA,COMPR 2>&1');
+			const { stdout } = await execFileAsync('/usr/sbin/zramctl', [
+				'--output',
+				'NAME,DISKSIZE,DATA,COMPR'
+			]);
 			if (stdout.includes('/dev/zram')) {
 				zramEnabled = true;
 				// Extract size from first zram device

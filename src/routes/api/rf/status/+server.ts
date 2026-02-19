@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
@@ -7,7 +7,7 @@ import { getCorsHeaders } from '$lib/server/security/cors';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 interface DeviceInfo {
 	connected: boolean;
@@ -26,7 +26,7 @@ async function detectConnectedDevices(): Promise<{
 
 	// Check for HackRF
 	try {
-		const { stdout } = await execAsync('timeout 2 hackrf_info');
+		const { stdout } = await execFileAsync('/usr/bin/hackrf_info', [], { timeout: 2000 });
 		if (stdout.includes('Serial number')) {
 			hackrfConnected = true;
 			const serialMatch = stdout.match(/Serial number:\s*(\S+)/);

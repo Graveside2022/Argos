@@ -1,13 +1,13 @@
 import { json } from '@sveltejs/kit';
+import Database from 'better-sqlite3';
+import { existsSync } from 'fs';
 import { z } from 'zod';
 
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
-import { hostExec } from '$lib/server/host-exec';
-import { safeJsonParse } from '$lib/server/security/safe-json';
 
 import type { RequestHandler } from './$types';
 
-// Zod schema for GSM Evil IMSI query result from Python subprocess
+// Zod schema for GSM Evil IMSI query result
 const GsmEvilImsiResultSchema = z
 	.object({
 		success: z.boolean(),
@@ -50,19 +50,24 @@ const GsmEvilImsiResultSchema = z
 	})
 	.passthrough();
 
+interface ImsiRow {
+	id: number;
+	imsi: string;
+	tmsi: string | null;
+	mcc: number | string;
+	mnc: number | string;
+	lac: number | string;
+	ci: number | string;
+	date_time: string;
+}
+
 export const GET: RequestHandler = async () => {
 	try {
 		// Find the IMSI database on the host filesystem
 		const gsmDir = getGsmEvilDir();
-		const searchPaths = `${gsmDir}/database/imsi.db /tmp/gsm_db.sqlite`;
-		const { stdout: dbFound } = await hostExec(
-			`for p in ${searchPaths}; do [ -f "$p" ] && echo "$p" && break; done`
-		).catch((error: unknown) => {
-			console.error('[gsm-evil-imsi] Database path search failed', { error: String(error) });
-			return { stdout: '' };
-		});
+		const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
+		const dbPath = searchPaths.find((p) => existsSync(p)) || '';
 
-		const dbPath = dbFound.trim();
 		if (!dbPath) {
 			return json({
 				success: false,
@@ -72,55 +77,63 @@ export const GET: RequestHandler = async () => {
 			});
 		}
 
-		// Validate dbPath against known allowlist to prevent shell injection
+		// Validate dbPath against known allowlist to prevent path traversal
 		const allowedPaths = getAllowedImsiDbPaths();
 		if (!allowedPaths.includes(dbPath)) {
 			return json({ success: false, message: 'Invalid database path', imsis: [], total: 0 });
 		}
 
-		// Run the python query on the host where the DB lives
-		const pythonScript = `
-import sqlite3, json
-try:
-    conn = sqlite3.connect('${dbPath}')
-    c = conn.cursor()
-    c.execute('SELECT COUNT(*) FROM imsi_data')
-    total = c.fetchone()[0]
-    c.execute('SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC')
-    rows = c.fetchall()
-    imsis = [{"id":r[0],"imsi":r[1],"tmsi":r[2] or "N/A","mcc":r[3],"mnc":r[4],"lac":r[5],"ci":r[6],"timestamp":r[7],"lat":None,"lon":None} for r in rows]
-    conn.close()
-    print(json.dumps({"success":True,"total":total,"imsis":imsis,"message":f"Found {total} IMSIs"}))
-except Exception as e:
-    print(json.dumps({"success":False,"message":str(e),"imsis":[],"total":0}))
-`;
+		// Query the IMSI database directly with better-sqlite3
+		const db = new Database(dbPath, { readonly: true });
+		try {
+			const total = (
+				db.prepare('SELECT COUNT(*) as count FROM imsi_data').get() as { count: number }
+			).count;
+			const rows = db
+				.prepare(
+					'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC'
+				)
+				.all() as ImsiRow[];
 
-		const { stdout, stderr } = await hostExec(
-			`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`
-		);
+			const imsis = rows.map((row) => ({
+				id: row.id,
+				imsi: row.imsi,
+				tmsi: row.tmsi || 'N/A',
+				mcc: row.mcc,
+				mnc: row.mnc,
+				lac: row.lac,
+				ci: row.ci,
+				timestamp: row.date_time,
+				lat: null,
+				lon: null
+			}));
 
-		console.warn('[gsm-evil-imsi] Python stdout length:', stdout.length);
-		console.warn('[gsm-evil-imsi] Python stderr:', stderr);
-		if (stdout.length < 100) {
-			console.warn('[gsm-evil-imsi] Full stdout:', stdout);
+			const rawResult = {
+				success: true,
+				total,
+				imsis,
+				message: `Found ${total} IMSIs`
+			};
+
+			// Validate with Zod schema
+			const parsed = GsmEvilImsiResultSchema.safeParse(rawResult);
+			if (!parsed.success) {
+				console.error('[gsm-evil-imsi] Schema validation failed:', parsed.error.message);
+				return json(
+					{
+						success: false,
+						imsis: [],
+						total: 0,
+						message: 'IMSI data failed schema validation'
+					},
+					{ status: 500 }
+				);
+			}
+
+			return json(parsed.data);
+		} finally {
+			db.close();
 		}
-
-		// Parse and return the result
-		const result = safeJsonParse(stdout, GsmEvilImsiResultSchema, 'gsm-evil-imsi');
-		if (!result.success) {
-			console.error('[gsm-evil-imsi] Parse failed. Raw stdout:', stdout.substring(0, 500));
-			return json(
-				{
-					success: false,
-					imsis: [],
-					total: 0,
-					message: 'Failed to parse IMSI data from subprocess',
-					debug: { stdout: stdout.substring(0, 200), stderr }
-				},
-				{ status: 500 }
-			);
-		}
-		return json(result.data);
 	} catch (error: unknown) {
 		console.error('IMSI fetch error:', error);
 		return json({

@@ -1,19 +1,26 @@
 import { json } from '@sveltejs/kit';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
-import { hostExec } from '$lib/server/host-exec';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 
 import type { RequestHandler } from './$types';
 
+const execFileAsync = promisify(execFile);
+
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running (still needed to know if radio is active)
-		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
+		let grgsm: { stdout: string };
+		try {
+			grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']);
+		} catch (error: unknown) {
+			// pgrep exits 1 when no processes match — not a real error
 			console.warn('[gsm-evil-live-frames] GRGSM process check failed', {
 				error: String(error)
 			});
-			return { stdout: '' };
-		});
+			grgsm = { stdout: '' };
+		}
 
 		if (!grgsm.stdout.trim()) {
 			return json({

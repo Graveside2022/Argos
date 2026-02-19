@@ -1,10 +1,10 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { stat } from 'fs/promises';
 import { promisify } from 'util';
 
 import { FileNotFoundError, GitNotAvailableError, type ViolationCategory } from './types.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Constitution ratification Unix timestamp (2026-02-13T02:53:01+01:00)
@@ -35,7 +35,7 @@ export async function categorizeViolationByTimestamp(
 
 	// Check if git is available
 	try {
-		await execAsync('git rev-parse --git-dir');
+		await execFileAsync('/usr/bin/git', ['rev-parse', '--git-dir']);
 	} catch {
 		// Fallback to file mtime with WARNING
 		return await fallbackToMtime(file);
@@ -43,7 +43,12 @@ export async function categorizeViolationByTimestamp(
 
 	try {
 		// Use git blame --porcelain for reliable parsing
-		const { stdout } = await execAsync(`git blame --porcelain -L${line},${line} "${file}"`);
+		const { stdout } = await execFileAsync('/usr/bin/git', [
+			'blame',
+			'--porcelain',
+			`-L${line},${line}`,
+			file
+		]);
 
 		// Parse porcelain format
 		const commitHash = stdout.match(/^([0-9a-f]{40})/)?.[1];
@@ -100,7 +105,7 @@ export async function batchCategorizeViolations(
 
 	// Check if git is available
 	try {
-		await execAsync('git rev-parse --git-dir');
+		await execFileAsync('/usr/bin/git', ['rev-parse', '--git-dir']);
 	} catch {
 		throw new GitNotAvailableError();
 	}

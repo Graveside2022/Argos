@@ -1,12 +1,13 @@
-import { exec } from 'child_process';
-import { readdir,readFile, readlink } from 'fs/promises';
+import { execFile } from 'child_process';
+import { readdir, readFile, readlink } from 'fs/promises';
 import { createConnection } from 'net';
 import { promisify } from 'util';
 import { z } from 'zod';
 
+import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { safeJsonParse } from '$lib/server/security/safe-json';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Zod schema for gpsd JSON messages (VERSION, DEVICES, etc.)
 const GpsdDeviceMessageSchema = z
@@ -27,10 +28,10 @@ const GpsdDeviceMessageSchema = z
 	})
 	.passthrough();
 
-/** Run a shell command — uses iw which is available in the container */
-async function run(cmd: string): Promise<string> {
+/** Run a command safely via execFile — no shell interpretation */
+async function run(binary: string, args: string[]): Promise<string> {
 	try {
-		const { stdout } = await execAsync(cmd, { timeout: 5000 });
+		const { stdout } = await execFileAsync(binary, args, { timeout: 5000 });
 		return stdout.trim();
 	} catch (_error: unknown) {
 		return '';
@@ -108,7 +109,7 @@ export interface HardwareDetails {
 }
 
 async function getWifiDetails(): Promise<WifiDetails | null> {
-	const iwDev = await run('iw dev');
+	const iwDev = await run('/usr/sbin/iw', ['dev']);
 	if (!iwDev) return null;
 
 	let iface = '';
@@ -126,13 +127,13 @@ async function getWifiDetails(): Promise<WifiDetails | null> {
 		// Check if this phy is the USB WiFi adapter via sysfs driver symlink
 		const driver = await sysLink(`/sys/class/ieee80211/phy${phyNum}/device/driver`);
 		if (!/mt79|mt76|rtl8|ath9k/i.test(driver)) continue;
-		phyIdx = phyNum;
+		phyIdx = String(validateNumericParam(phyNum, 'phyIdx', 0, 255));
 
 		const ifaceBlocks = section.split(/(?=\tInterface )/);
 		for (const block of ifaceBlocks) {
 			const ifMatch = block.match(/Interface\s+(\S+)/);
 			if (!ifMatch) continue;
-			const name = ifMatch[1];
+			const name = validateInterfaceName(ifMatch[1]);
 			const typeMatch = block.match(/type\s+(\S+)/);
 			const addrMatch = block.match(/addr\s+([0-9a-f:]+)/i);
 			const chanMatch = block.match(
@@ -160,7 +161,7 @@ async function getWifiDetails(): Promise<WifiDetails | null> {
 
 	// Get channel from iw dev info if not captured
 	if (!channel) {
-		const devInfo = await run(`iw dev ${monIface || iface} info`);
+		const devInfo = await run('/usr/sbin/iw', ['dev', monIface || iface, 'info']);
 		const chanMatch = devInfo.match(
 			/channel\s+(\d+)\s+\((\d+)\s+MHz\),\s+width:\s+(\d+)\s+MHz/
 		);
@@ -199,7 +200,7 @@ async function getWifiDetails(): Promise<WifiDetails | null> {
 	}
 
 	// Determine bands from phy info
-	const phyInfo = await run(`iw phy phy${phyIdx} info`);
+	const phyInfo = await run('/usr/sbin/iw', ['phy', `phy${phyIdx}`, 'info']);
 	const bands: string[] = [];
 	if (phyInfo.includes('Band 1:')) bands.push('2.4 GHz');
 	if (phyInfo.includes('Band 2:')) bands.push('5 GHz');
@@ -304,7 +305,7 @@ async function getGpsDetails(): Promise<GpsDetails | null> {
 				gpsdVersion = (parsed.release as string) || '';
 			}
 			if (parsed.class === 'DEVICES' && Array.isArray(parsed.devices)) {
-		// Safe: Type cast for dynamic data access
+				// Safe: Type cast for dynamic data access
 				const dev = parsed.devices[0] as Record<string, unknown> | undefined;
 				if (dev) {
 					device = (dev.path as string) || '';

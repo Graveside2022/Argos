@@ -9,6 +9,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Separator from '$lib/components/ui/separator/separator.svelte';
+	import Switch from '$lib/components/ui/switch/switch.svelte';
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { takStatus } from '$lib/stores/tak-store';
 	import type { TakServerConfig } from '$lib/types/tak';
@@ -190,11 +191,7 @@
 				<label
 					class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
 				>
-					<input
-						type="checkbox"
-						bind:checked={config.connectOnStartup}
-						class="accent-primary"
-					/>
+					<Switch bind:checked={config.connectOnStartup} />
 					Connect on startup
 				</label>
 			</div>
@@ -204,6 +201,7 @@
 				<span class="text-[10px] font-semibold tracking-widest text-muted-foreground"
 					>AUTHENTICATION</span
 				>
+				<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — No RadioGroup component installed; native radio with bind:group is idiomatic Svelte -->
 				<div class="flex flex-col gap-1.5">
 					<label
 						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"

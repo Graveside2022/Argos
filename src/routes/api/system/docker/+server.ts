@@ -1,17 +1,20 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if Docker is running
-		const { stdout: psOutput } = await execAsync(
-			'docker ps -a --format "{{.Names}}|{{.State}}|{{.Status}}|{{.Image}}" 2>&1'
-		);
+		const { stdout: psOutput } = await execFileAsync('/usr/bin/docker', [
+			'ps',
+			'-a',
+			'--format',
+			'{{.Names}}|{{.State}}|{{.Status}}|{{.Image}}'
+		]);
 
 		const containers = psOutput
 			.trim()
@@ -32,7 +35,11 @@ export const GET: RequestHandler = async () => {
 		);
 
 		// Get Docker system info
-		const { stdout: infoOutput } = await execAsync('docker info --format "{{json .}}" 2>&1');
+		const { stdout: infoOutput } = await execFileAsync('/usr/bin/docker', [
+			'info',
+			'--format',
+			'{{json .}}'
+		]);
 		const dockerInfo = JSON.parse(infoOutput);
 
 		return json({

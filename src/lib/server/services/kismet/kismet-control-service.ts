@@ -1,11 +1,11 @@
-import { exec } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 
 import { logWarn } from '$lib/utils/logger';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface KismetStartResult {
 	success: boolean;
@@ -26,7 +26,7 @@ export interface KismetStartResult {
  */
 export async function isKismetRunning(): Promise<boolean> {
 	try {
-		const { stdout } = await execAsync('pgrep -x kismet');
+		const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 		return stdout.trim().length > 0;
 	} catch (error: unknown) {
 		const msg = error instanceof Error ? error.message : String(error);
@@ -73,17 +73,17 @@ async function startWithScript(): Promise<{ success: boolean; stderr?: string }>
 	console.warn('Executing Kismet startup script...');
 
 	try {
-		// Use nohup to ensure the process continues after this request completes
-		const { stderr } = await execAsync(`nohup ${scriptPath} > /tmp/kismet-start.log 2>&1 &`, {
+		// Spawn detached process — replaces nohup/shell backgrounding
+		const logFd = fs.openSync('/tmp/kismet-start.log', 'w');
+		const child = spawn(scriptPath, [], {
 			cwd: process.cwd(),
-			shell: '/bin/bash'
+			detached: true,
+			stdio: ['ignore', logFd, logFd]
 		});
+		child.unref();
+		fs.closeSync(logFd);
 
-		if (stderr) {
-			console.warn('Startup script stderr:', stderr);
-		}
-
-		return { success: true, stderr };
+		return { success: true };
 	} catch (error) {
 		console.error('Script execution failed:', error);
 		return { success: false };
@@ -97,9 +97,14 @@ async function startDirect(): Promise<boolean> {
 	console.warn('Attempting direct Kismet startup...');
 
 	try {
-		// Start Kismet with basic configuration
-		// Using nohup to prevent it from being killed when the request completes
-		await execAsync('nohup kismet --no-ncurses --no-line-wrap > /tmp/kismet.log 2>&1 &');
+		// Spawn detached Kismet process — replaces nohup/shell backgrounding
+		const logFd = fs.openSync('/tmp/kismet.log', 'w');
+		const child = spawn('/usr/bin/kismet', ['--no-ncurses', '--no-line-wrap'], {
+			detached: true,
+			stdio: ['ignore', logFd, logFd]
+		});
+		child.unref();
+		fs.closeSync(logFd);
 
 		// Give Kismet a moment to start
 		await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -119,12 +124,15 @@ async function detectInterface(): Promise<string> {
 	const defaultInterface = 'wlxbee1d69fa811'; // Known Alfa interface
 
 	try {
-		const { stdout } = await execAsync(
-			'tail -20 /tmp/kismet-start.log | grep "Primary interface selected:" | tail -1'
-		);
-		const match = stdout.match(/Primary interface selected:\s+(\S+)/);
-		if (match) {
-			return match[1];
+		const content = fs.readFileSync('/tmp/kismet-start.log', 'utf-8');
+		const lines = content.trim().split('\n').slice(-20);
+		const interfaceLines = lines.filter((l) => l.includes('Primary interface selected:'));
+		const lastLine = interfaceLines[interfaceLines.length - 1];
+		if (lastLine) {
+			const match = lastLine.match(/Primary interface selected:\s+(\S+)/);
+			if (match) {
+				return match[1];
+			}
 		}
 	} catch (_error: unknown) {
 		// Ignore errors, use default
