@@ -1,6 +1,16 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
-	import * as Select from '$lib/components/ui/select';
+	import SelectRoot from '$lib/components/ui/select/select.svelte';
+	import SelectContent from '$lib/components/ui/select/select-content.svelte';
+	import SelectItem from '$lib/components/ui/select/select-item.svelte';
+	import SelectTrigger from '$lib/components/ui/select/select-trigger.svelte';
+	const Select = {
+		Root: SelectRoot,
+		Trigger: SelectTrigger,
+		Content: SelectContent,
+		Item: SelectItem
+	};
+	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import type { RailPosition, ThemePalette } from '$lib/stores/theme-store.svelte';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { palettes } from '$lib/themes/palettes';
@@ -79,9 +89,12 @@
 
 		<div class="setting-row">
 			<span class="setting-label">TAK Server</span>
-			<a href="/settings/tak" class="text-xs text-blue-400 hover:text-blue-300"
-				>Configure &rarr;</a
+			<button
+				class="text-xs text-blue-400 hover:text-blue-300 bg-transparent border-none cursor-pointer"
+				onclick={() => activeView.set('tak-config')}
 			>
+				Configure &rarr;
+			</button>
 		</div>
 	</section>
 </div>

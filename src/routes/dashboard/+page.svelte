@@ -13,6 +13,7 @@
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import GsmEvilPanel from '$lib/components/dashboard/panels/GsmEvilPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
+	import TakConfigView from '$lib/components/dashboard/tak/TakConfigView.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
 	import TopStatusBar from '$lib/components/dashboard/TopStatusBar.svelte';
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
@@ -143,6 +144,8 @@
 					<ToolUnavailableView title="Wifite2" />
 				{:else if $activeView === 'wigletotak'}
 					<ToolUnavailableView title="WigleToTAK" />
+				{:else if $activeView === 'tak-config'}
+					<TakConfigView />
 				{:else}
 					<ToolUnavailableView title={$activeView} />
 				{/if}

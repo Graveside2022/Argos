@@ -5,7 +5,7 @@
 
 import { json } from '@sveltejs/kit';
 
-import { scanAllHardware } from '$lib/server/hardware';
+import { scanAllHardware } from '$lib/server/hardware/detection/hardware-detector';
 
 import type { RequestHandler } from './$types';
 

@@ -3,10 +3,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+import { InputValidationError, validatePathWithinDir } from '../security/input-sanitizer';
+
 const execFileAsync = promisify(execFile);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class CertManager {
 	private static readonly BASE_DIR = 'data/certs';
+
+	/**
+	 * Validates a configId is a proper UUID and returns the resolved config directory.
+	 * Prevents path traversal and empty-string edge cases.
+	 */
+	static validateConfigId(configId: string): string {
+		if (!UUID_RE.test(configId)) {
+			throw new InputValidationError(`Invalid config ID — must be a UUID, got: ${configId}`);
+		}
+		return validatePathWithinDir(
+			path.join(this.BASE_DIR, configId),
+			path.resolve(this.BASE_DIR)
+		);
+	}
 
 	/**
 	 * Initializes the secure storage directory.
@@ -30,7 +48,7 @@ export class CertManager {
 		p12Buffer: Buffer,
 		password: string
 	): Promise<{ certPath: string; keyPath: string; caPath?: string }> {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 
 		// Ensure config directory exists with strict permissions
 		if (fs.existsSync(configDir)) {
@@ -112,7 +130,7 @@ export class CertManager {
 	 * @returns Path to the saved CA certificate.
 	 */
 	static saveCA(configId: string, caBuffer: Buffer): string {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 		if (!fs.existsSync(configDir)) {
 			fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
 		}
@@ -123,10 +141,70 @@ export class CertManager {
 	}
 
 	/**
+	 * Validates a PKCS#12 truststore by attempting to read it with openssl.
+	 * Returns true if the file is valid and the password is correct.
+	 */
+	static async validateTruststore(
+		truststorePath: string,
+		password: string
+	): Promise<{ valid: boolean; error?: string }> {
+		try {
+			await execFileAsync('openssl', [
+				'pkcs12',
+				'-in',
+				truststorePath,
+				'-info',
+				'-passin',
+				`pass:${password}`,
+				'-noout'
+			]);
+			return { valid: true };
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			if (msg.includes('mac verify failure') || msg.includes('invalid password')) {
+				return { valid: false, error: 'Invalid truststore or password' };
+			}
+			return { valid: false, error: `Invalid truststore file: ${msg}` };
+		}
+	}
+
+	/**
+	 * Saves PEM certificate strings directly to disk.
+	 * Used after enrollment when the TAK Server API returns PEM strings
+	 * rather than a P12 bundle.
+	 */
+	static savePemCerts(
+		configId: string,
+		cert: string,
+		key: string,
+		ca: string[]
+	): { certPath: string; keyPath: string; caPath?: string } {
+		const configDir = this.validateConfigId(configId);
+		if (fs.existsSync(configDir)) {
+			fs.rmSync(configDir, { recursive: true, force: true });
+		}
+		fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+
+		const certPath = path.join(configDir, 'client.crt');
+		const keyPath = path.join(configDir, 'client.key');
+
+		fs.writeFileSync(certPath, cert, { mode: 0o600 });
+		fs.writeFileSync(keyPath, key, { mode: 0o600 });
+
+		let caPath: string | undefined;
+		if (ca.length > 0) {
+			caPath = path.join(configDir, 'ca.crt');
+			fs.writeFileSync(caPath, ca.join('\n'), { mode: 0o600 });
+		}
+
+		return { certPath, keyPath, caPath };
+	}
+
+	/**
 	 * Deletes certificates for a configuration.
 	 */
 	static deleteCerts(configId: string) {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 		if (fs.existsSync(configDir)) {
 			fs.rmSync(configDir, { recursive: true, force: true });
 		}

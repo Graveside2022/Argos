@@ -2,6 +2,8 @@
  * Type definitions for hierarchical tool navigation system
  */
 
+import type { ActiveView } from '$lib/stores/dashboard/dashboard-store';
+
 export type ToolStatus = 'stopped' | 'starting' | 'running' | 'stopping';
 
 export type DeploymentType = 'docker' | 'native' | 'external' | 'incompatible';
@@ -20,7 +22,7 @@ export interface ToolDefinition {
 	deployment: DeploymentType; // How it deploys
 
 	// Integration
-	viewName?: string; // For activeView routing (e.g., 'kismet')
+	viewName?: ActiveView; // For activeView routing (e.g., 'kismet')
 	externalUrl?: string; // For external tools
 
 	// Capabilities

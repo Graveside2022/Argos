@@ -2,8 +2,8 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import Input from '$lib/components/ui/input/input.svelte';
 	import type { KismetDevice } from '$lib/kismet/types';
 	import {
 		activeBands,
