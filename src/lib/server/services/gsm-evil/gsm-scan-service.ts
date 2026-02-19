@@ -158,23 +158,16 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					// Wait for data collection period
 					await new Promise((resolve) => setTimeout(resolve, captureTime * 1000));
 
-					// Get final log line count
-					let endLines = 0;
+					// Read final log and count new GSM frames
 					try {
 						const content = await readFile(logPath, 'utf-8');
-						endLines = content.split('\n').length;
-					} catch {
-						endLines = 0;
-					}
-
-					// Count actual GSM data frames (hex patterns) added during collection
-					if (endLines > startLines) {
-						const content = await readFile(logPath, 'utf-8');
 						const allLines = content.split('\n');
-						const newLines = allLines.slice(
-							Math.max(0, allLines.length - (endLines - startLines))
-						);
-						frameCount = newLines.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l)).length;
+						if (allLines.length > startLines) {
+							const newLines = allLines.slice(startLines);
+							frameCount = newLines.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l)).length;
+						}
+					} catch {
+						// File may have been removed — frameCount stays 0
 					}
 
 					console.warn(

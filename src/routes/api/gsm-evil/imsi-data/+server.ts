@@ -57,23 +57,22 @@ export const GET: RequestHandler = async () => {
 
 		// Query IMSI data directly with better-sqlite3 instead of Python subprocess
 		let data;
+		const db = new Database(dbPath, { readonly: true });
 		try {
-			const db = new Database(dbPath, { readonly: true });
 			const rows = db
 				.prepare(
 					'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000'
 				)
 				.all() as ImsiRow[];
-			db.close();
 
 			data = rows.map((row) => ({
 				id: row.id,
 				imsi: row.imsi || '',
 				tmsi: row.tmsi || '',
-				mcc: String(row.mcc) || '',
-				mnc: String(row.mnc) || '',
-				lac: String(row.lac) || '',
-				ci: String(row.ci) || '',
+				mcc: row.mcc != null ? String(row.mcc) : '',
+				mnc: row.mnc != null ? String(row.mnc) : '',
+				lac: row.lac != null ? String(row.lac) : '',
+				ci: row.ci != null ? String(row.ci) : '',
 				datetime: row.date_time || ''
 			}));
 		} catch (dbError) {
@@ -83,6 +82,8 @@ export const GET: RequestHandler = async () => {
 				error: dbError instanceof Error ? dbError.message : String(dbError),
 				data: []
 			});
+		} finally {
+			db.close();
 		}
 
 		const parseResult = GsmEvilImsiDataSchema.safeParse(data);
