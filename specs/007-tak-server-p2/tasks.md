@@ -76,7 +76,7 @@
 - [x] T012 [US1] Update `src/routes/dashboard/+page.svelte` (430 lines) to add `{:else if $activeView === 'tak-config'}` branch rendering `TakConfigView`. **Pattern to follow**: existing `'gsm-evil'` and `'bettercap'` branches that use `ToolViewWrapper`. → See **research.md § Task 3**
 - [x] T013 [US1] Update `src/lib/components/dashboard/panels/SettingsPanel.svelte` (135 lines) to trigger `activeView = 'tak-config'` instead of the current broken `href="/settings/tak"` link (no route exists for that path). Import `activeView` from dashboard store.
 - [x] T014 [US1] Update existing `GET/POST /api/tak/config` in `src/routes/api/tak/config/+server.ts` (45 lines) to support new fields: `authMethod`, `truststorePath`, `truststorePass`, `certPass`, `enrollmentUser`, `enrollmentPass`, `enrollmentPort`. **Must add DB↔TS mapping**: GET should convert `snake_case` DB rows to `camelCase` TS objects (e.g., `cert_path` → `certPath`). POST should convert incoming `camelCase` JSON to `snake_case` for SQL. Also update `TakService.saveConfig()` SQL statements to include the new columns. → See **contracts/api.md § Configuration API**, **Integration Notes § 5**
-- [ ] T015 [US1] Write unit tests for config API endpoint in `src/routes/api/tak/config/+server.test.ts`
+- [x] T015 [US1] Write unit tests for config API endpoint in `tests/unit/server/tak/config-api.test.ts`
 - [x] T011B [US1] DELETE `src/lib/components/dashboard/settings/TakSettingsForm.svelte` (308 lines) and remove all imports referencing it. **Depends on**: T011 (replacement) + T012 (routing) + T013 (settings link) all complete
 
 ---
@@ -90,7 +90,7 @@
 - [x] T016 [US2] Implement `POST /api/tak/truststore` in `src/routes/api/tak/truststore/+server.ts`. → See **contracts/api.md § Certificate & Truststore API** for request/response shape
 - [x] T017 [US2] Add Trust Store import UI (file picker, path field, password defaulting to `atakatak`) to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields** (Import Trust Store row)
 - [x] T018 [US2] Implement truststore validation (PKCS#12 unlock + extract) in `src/lib/server/tak/CertManager.ts`. **Method**: `validateTruststore(path, password)` using `openssl pkcs12 -info`. → See **research.md § Task 2** for the exact openssl command
-- [ ] T019 [US2] Write unit tests for CertManager truststore validation in `src/lib/server/tak/CertManager.test.ts`
+- [x] T019 [US2] Write unit tests for CertManager truststore validation in `tests/unit/server/tak/cert-manager.test.ts`
 
 ---
 
@@ -105,7 +105,7 @@
 - [x] T020 [US2B] Implement `POST /api/tak/enroll` in `src/routes/api/tak/enroll/+server.ts`. → See **contracts/api.md § Enrollment API** for request/response shape
 - [x] T021 [US2B] Add Enrollment UI fields (username, password, port defaulting to `8446`) and auth method toggle (radio: "Enroll for Certificate" / "Import Certificate") to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
 - [x] T022 [US2B] Implement enrollment logic in `src/lib/server/tak/CertManager.ts`. **Strategy**: Use node-tak's `TAKAPI` + `APIAuthPassword` + `Credentials.generate()` which handles CSR creation, POST to `/Marti/api/tls/signClient/v2`, and returns `{ ca: string[], cert: string, key: string }` as PEM strings. Store PEM files via `savePemCerts()` (from T008). **Fallback**: If node-tak's Credentials class doesn't work for our flow (it requires `APIAuthPassword` init which calls OAuth), implement manually: `pem.createCSR()` → POST CSR with HTTP Basic Auth → parse response `signedCert` + `ca0`/`ca1`. **Requires**: truststore loaded (T018) for TLS verification of the enrollment endpoint. → See **Integration Notes § 3**, **contracts/api.md § Enrollment API**
-- [ ] T023 [US2B] Write unit tests for enrollment logic in `src/lib/server/tak/CertManager.test.ts`
+- [x] T023 [US2B] Write unit tests for enrollment API in `tests/unit/server/tak/enroll-api.test.ts`
 
 ---
 
@@ -118,7 +118,7 @@
 - [x] T024 [US2C] Implement `POST /api/tak/import-package` in `src/routes/api/tak/import-package/+server.ts`. → See **contracts/api.md § Data Package API** for request/response shape
 - [x] T025 [US2C] Add "Import Data Package" button and handler to `TakConfigView.svelte`. → See **spec.md § Reference: ATAK Connection Form Fields**
 - [x] T026 [US2C] Integrate `TakPackageParser.ts` (from T009) into the import-package API endpoint. Wire: upload → parse → extract certs to `data/certs/` → return auto-filled config. → See **research.md § Task 1**
-- [ ] T027 [US2C] Write unit tests for TakPackageParser (ZIP extraction, manifest validation, pref parsing) in `src/lib/server/tak/TakPackageParser.test.ts`
+- [x] T027 [US2C] Write unit tests for TakPackageParser (ZIP extraction, manifest validation, pref parsing) in `tests/unit/server/tak/tak-package-parser.test.ts`
 
 ---
 
@@ -147,11 +147,17 @@
 
 ## Final Phase: Polish & Cross-Cutting Concerns
 
-- [ ] T033 Audit all new files for "Max 300 lines" constraint from plan.md
-- [ ] T034 Verify dark mode styling across all new TAK components (project is dark mode only)
-- [ ] T035 Ensure no barrel files (index.ts) were introduced
-- [ ] T036 Final check of error messages for all 10 edge cases. → See **spec.md § Edge Cases** for exact error message strings: "File not found at [path]", "Invalid truststore file", "Trust store required...", "Authentication failed...", "Enrollment server unreachable at...", "No certificates found in data package...", "Invalid data package — no manifest.xml found"
-- [ ] T037 Remove broken `/settings/tak` href from SettingsPanel (already fixed by T013) and delete any orphaned `/settings/tak` route files if they exist. Add a code comment noting the TAK config is now accessed via `activeView = 'tak-config'`.
+### Audit Results (from prior pass)
+- **T035**: PASS — no barrel files found
+- **T036**: PASS — all 7 spec error messages confirmed in source
+
+### Remaining Tasks
+
+- [ ] T033 **Refactor `TakConfigView.svelte` (565 lines) to comply with project conventions**. Three violations found: (1) 565 lines exceeds 300-line max from plan.md, (2) 152 lines of scoped `<style>` CSS violates `src/CLAUDE.md` rule "Tailwind CSS 4.x — use utility classes, avoid custom CSS unless absolutely necessary", (3) hand-rolled `<input>` and `<button>` HTML violates `src/CLAUDE.md` rule "Shadcn UI — use `src/lib/components/ui` for base primitives". **Fix (Option D)**: Replace custom HTML with shadcn `<Button>`, `<Input>` primitives + Tailwind utility classes. Extract two child components: `TakAuthImport.svelte` (cert + truststore upload) and `TakAuthEnroll.svelte` (enrollment fields). Delete entire `<style>` block. Target: parent ~185 lines, children ~65-80 lines each.
+- [ ] T034 **Dark mode verification** — after T033 refactor, verify all TAK components render correctly in dark mode. The shadcn primitives use standard theme tokens (`bg-background`, `text-foreground`, etc.) which are mapped via `palantir-design-system.css`, so dark mode should work automatically. Visual spot-check required.
+- [x] T035 Ensure no barrel files (index.ts) were introduced — **PASS, no barrel files found**
+- [x] T036 Final check of error messages — **PASS, all 7 spec edge case messages confirmed in source**
+- [ ] T037 **Delete orphaned route** `src/routes/settings/tak/+page.svelte` (7.8KB). This file was orphaned when T013 switched SettingsPanel to use `activeView = 'tak-config'` instead of navigating to `/settings/tak`. The href was already fixed by T013. Delete the entire `src/routes/settings/tak/` directory.
 
 ## Dependencies
 
