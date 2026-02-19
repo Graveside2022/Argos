@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import { getRFDatabase } from '$lib/server/db/database';
 import { loadTakConfig } from '$lib/server/tak/tak-db';
@@ -6,6 +7,25 @@ import { TakService } from '$lib/server/tak/TakService';
 import type { TakServerConfig } from '$lib/types/tak';
 
 import type { RequestHandler } from './$types';
+
+const TakConfigSchema = z.object({
+	id: z.string().uuid().optional(),
+	name: z.string().min(1).max(256),
+	hostname: z.string().min(1).max(253),
+	port: z.number().int().min(1).max(65535),
+	protocol: z.literal('tls'),
+	certPath: z.string().optional(),
+	keyPath: z.string().optional(),
+	caPath: z.string().optional(),
+	connectOnStartup: z.boolean(),
+	authMethod: z.enum(['enroll', 'import']).optional(),
+	truststorePath: z.string().optional(),
+	truststorePass: z.string().max(256),
+	certPass: z.string().max(256),
+	enrollmentUser: z.string().max(256).optional(),
+	enrollmentPass: z.string().max(256).optional(),
+	enrollmentPort: z.number().int().min(1).max(65535)
+});
 
 export const GET: RequestHandler = async () => {
 	const db = getRFDatabase();
@@ -15,8 +35,15 @@ export const GET: RequestHandler = async () => {
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const config = (await request.json()) as TakServerConfig;
+		const parsed = TakConfigSchema.safeParse(await request.json());
+		if (!parsed.success) {
+			return json(
+				{ success: false, error: parsed.error.issues.map((i) => i.message).join('; ') },
+				{ status: 400 }
+			);
+		}
 
+		const config = parsed.data as TakServerConfig;
 		if (!config.id) {
 			config.id = crypto.randomUUID();
 		}

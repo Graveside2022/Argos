@@ -1,5 +1,7 @@
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { json } from '@sveltejs/kit';
 
@@ -7,19 +9,26 @@ import { CertManager } from '$lib/server/tak/CertManager';
 
 import type { RequestHandler } from './$types';
 
+const execFileAsync = promisify(execFile);
+const MAX_TRUSTSTORE_SIZE = 1024 * 1024; // 1 MB
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const formData = await request.formData();
 		const file = formData.get('p12File') as File | null;
-		const password = (formData.get('password') as string) ?? 'atakatak';
-		const configId = (formData.get('id') as string) ?? crypto.randomUUID();
+		const password = (formData.get('password') as string) || 'atakatak';
+		const configId = (formData.get('id') as string) || crypto.randomUUID();
 
 		if (!file) {
 			return json({ success: false, error: 'No file provided' }, { status: 400 });
 		}
 
+		if (file.size > MAX_TRUSTSTORE_SIZE) {
+			return json({ success: false, error: 'File too large (max 1 MB)' }, { status: 413 });
+		}
+
 		CertManager.init();
-		const configDir = path.join('data/certs', configId);
+		const configDir = CertManager.validateConfigId(configId);
 		if (!fs.existsSync(configDir)) {
 			fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
 		}
@@ -40,10 +49,6 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Extract CA certificate from truststore
 		const caPath = path.join(configDir, 'ca.crt');
-		const { execFile } = await import('node:child_process');
-		const { promisify } = await import('node:util');
-		const execFileAsync = promisify(execFile);
-
 		await execFileAsync('openssl', [
 			'pkcs12',
 			'-in',
@@ -66,6 +71,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		});
 	} catch (err) {
+		if (err instanceof Error && err.name === 'InputValidationError') {
+			return json({ success: false, error: err.message }, { status: 400 });
+		}
 		console.error('Failed to process truststore:', err);
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}

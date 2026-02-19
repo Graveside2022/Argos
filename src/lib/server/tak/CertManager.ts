@@ -3,12 +3,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { validatePathWithinDir } from '../security/input-sanitizer';
+import { InputValidationError, validatePathWithinDir } from '../security/input-sanitizer';
 
 const execFileAsync = promisify(execFile);
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class CertManager {
 	private static readonly BASE_DIR = 'data/certs';
+
+	/**
+	 * Validates a configId is a proper UUID and returns the resolved config directory.
+	 * Prevents path traversal and empty-string edge cases.
+	 */
+	static validateConfigId(configId: string): string {
+		if (!UUID_RE.test(configId)) {
+			throw new InputValidationError(`Invalid config ID — must be a UUID, got: ${configId}`);
+		}
+		return validatePathWithinDir(
+			path.join(this.BASE_DIR, configId),
+			path.resolve(this.BASE_DIR)
+		);
+	}
 
 	/**
 	 * Initializes the secure storage directory.
@@ -32,7 +48,7 @@ export class CertManager {
 		p12Buffer: Buffer,
 		password: string
 	): Promise<{ certPath: string; keyPath: string; caPath?: string }> {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 
 		// Ensure config directory exists with strict permissions
 		if (fs.existsSync(configDir)) {
@@ -114,7 +130,7 @@ export class CertManager {
 	 * @returns Path to the saved CA certificate.
 	 */
 	static saveCA(configId: string, caBuffer: Buffer): string {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 		if (!fs.existsSync(configDir)) {
 			fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
 		}
@@ -163,10 +179,7 @@ export class CertManager {
 		key: string,
 		ca: string[]
 	): { certPath: string; keyPath: string; caPath?: string } {
-		const configDir = validatePathWithinDir(
-			path.join(this.BASE_DIR, configId),
-			path.resolve(this.BASE_DIR)
-		);
+		const configDir = this.validateConfigId(configId);
 		if (fs.existsSync(configDir)) {
 			fs.rmSync(configDir, { recursive: true, force: true });
 		}
@@ -191,7 +204,7 @@ export class CertManager {
 	 * Deletes certificates for a configuration.
 	 */
 	static deleteCerts(configId: string) {
-		const configDir = path.join(this.BASE_DIR, configId);
+		const configDir = this.validateConfigId(configId);
 		if (fs.existsSync(configDir)) {
 			fs.rmSync(configDir, { recursive: true, force: true });
 		}
