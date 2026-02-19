@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 
 import type { RequestHandler } from './$types';
@@ -9,12 +9,14 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
-		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
-			console.warn('[gsm-evil-activity] GRGSM process check failed', {
-				error: String(error)
-			});
-			return { stdout: '' };
-		});
+		const grgsm = await legacyShellExec('pgrep -f grgsm_livemon_headless').catch(
+			(error: unknown) => {
+				console.warn('[gsm-evil-activity] GRGSM process check failed', {
+					error: String(error)
+				});
+				return { stdout: '' };
+			}
+		);
 		if (!grgsm.stdout.trim()) {
 			return json({
 				success: false,
@@ -24,7 +26,7 @@ export const GET: RequestHandler = async () => {
 		}
 
 		// Check for recent GSMTAP activity on port 4729
-		const { stdout: tcpdumpOutput } = await hostExec(
+		const { stdout: tcpdumpOutput } = await legacyShellExec(
 			'sudo timeout 1 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l',
 			{ timeout: 3000 }
 		).catch((error: unknown) => {
@@ -38,7 +40,7 @@ export const GET: RequestHandler = async () => {
 		let recentIMSI = false;
 		try {
 			const imsiDbPath = `${getGsmEvilDir()}/database/imsi.db`;
-			const { stdout: dbAge } = await hostExec(
+			const { stdout: dbAge } = await legacyShellExec(
 				`find ${imsiDbPath} -mmin -5 2>/dev/null | head -1`
 			).catch((error: unknown) => {
 				console.warn('[gsm-evil-activity] IMSI database age check failed', {
@@ -52,7 +54,7 @@ export const GET: RequestHandler = async () => {
 		}
 
 		// Get current frequency from process
-		const { stdout: psOutput } = await hostExec(
+		const { stdout: psOutput } = await legacyShellExec(
 			'ps aux | grep grgsm_livemon_headless | grep -v grep'
 		).catch((error: unknown) => {
 			console.warn('[gsm-evil-activity] Frequency check failed', { error: String(error) });

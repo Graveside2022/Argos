@@ -1,4 +1,4 @@
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export interface GsmScanResult {
@@ -58,7 +58,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				// Test if GRGSM can start at all
 				let gsmTestOutput = '';
 				try {
-					const testResult = await hostExec(`timeout 4 ${baseCommand}`);
+					const testResult = await legacyShellExec(`timeout 4 ${baseCommand}`);
 					gsmTestOutput = testResult.stdout + testResult.stderr;
 					console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 300)}`);
 				} catch (testError: unknown) {
@@ -88,7 +88,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					);
 				}
 
-				const { stdout: gsmPid } = await hostExec(
+				const { stdout: gsmPid } = await legacyShellExec(
 					`${baseCommand} >>/tmp/grgsm_scan.log 2>&1 & echo $!`
 				);
 
@@ -119,7 +119,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					// DIRECT LOG ANALYSIS: Check grgsm.log for actual GSM frames instead of unreliable tcpdump
 
 					// Get initial log size
-					const { stdout: initialSize } = await hostExec(
+					const { stdout: initialSize } = await legacyShellExec(
 						`wc -l < ${logPath} 2>/dev/null || echo 0`
 					);
 					const startLines = parseInt(initialSize.trim()) || 0;
@@ -128,14 +128,14 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					await new Promise((resolve) => setTimeout(resolve, captureTime * 1000));
 
 					// Get final log size and count new GSM frame lines
-					const { stdout: finalSize } = await hostExec(
+					const { stdout: finalSize } = await legacyShellExec(
 						`wc -l < ${logPath} 2>/dev/null || echo 0`
 					);
 					const endLines = parseInt(finalSize.trim()) || 0;
 
 					// Count actual GSM data frames (hex patterns) added during collection
 					if (endLines > startLines) {
-						const { stdout: frameLines } = await hostExec(
+						const { stdout: frameLines } = await legacyShellExec(
 							`tail -n ${endLines - startLines} ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s" | wc -l`
 						);
 						frameCount = parseInt(frameLines.trim()) || 0;
@@ -149,7 +149,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					if (frameCount === 0) {
 						console.warn('Log analysis found no frames, trying tcpdump fallback...');
 						const tcpdumpCommand = `sudo timeout 2 tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || echo 0`;
-						const { stdout: packetCount } = await hostExec(tcpdumpCommand).catch(
+						const { stdout: packetCount } = await legacyShellExec(tcpdumpCommand).catch(
 							(error: unknown) => {
 								console.warn('[gsm-evil-scan] tcpdump fallback failed', {
 									error: String(error)
@@ -169,7 +169,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					);
 					try {
 						const tcpdumpCommand = `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729"`;
-						const { stdout: packetCount } = await hostExec(tcpdumpCommand);
+						const { stdout: packetCount } = await legacyShellExec(tcpdumpCommand);
 						frameCount = parseInt(packetCount.trim()) || 0;
 					} catch (_error: unknown) {
 						frameCount = 0;
@@ -184,7 +184,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				if (frameCount > 0) {
 					// Read recent frame lines and classify by GSM L3 message type (byte[2] with byte[1]=0x06)
 					try {
-						const { stdout: recentLines } = await hostExec(
+						const { stdout: recentLines } = await legacyShellExec(
 							`tail -50 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s" | head -30`
 						);
 						const lines = recentLines.split('\n').filter((l: string) => l.trim());
@@ -276,10 +276,10 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 			} finally {
 				if (pid && pid !== '0') {
 					try {
-						await hostExec(`sudo kill ${pid} 2>/dev/null`);
+						await legacyShellExec(`sudo kill ${pid} 2>/dev/null`);
 					} catch (_error: unknown) {
 						console.warn(`Warning: Failed to clean up process ${pid}`);
-						await hostExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(
+						await legacyShellExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(
 							(error: unknown) => {
 								console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
 									error: String(error)

@@ -1,16 +1,20 @@
 import { json } from '@sveltejs/kit';
 
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
 		// Check if grgsm_livemon is running
-		const grgsm = await hostExec('pgrep -f grgsm_livemon_headless').catch((error: unknown) => {
-			console.warn('[gsm-evil-frames] GRGSM process check failed', { error: String(error) });
-			return { stdout: '' };
-		});
+		const grgsm = await legacyShellExec('pgrep -f grgsm_livemon_headless').catch(
+			(error: unknown) => {
+				console.warn('[gsm-evil-frames] GRGSM process check failed', {
+					error: String(error)
+				});
+				return { stdout: '' };
+			}
+		);
 		if (!grgsm.stdout.trim()) {
 			return json({
 				success: false,
@@ -21,7 +25,7 @@ export const GET: RequestHandler = async () => {
 
 		// Read GSM frames from the log file where grgsm_livemon outputs them
 		const logPath = '/tmp/grgsm_scan.log';
-		const { stdout: recentFrames } = await hostExec(
+		const { stdout: recentFrames } = await legacyShellExec(
 			`tail -10 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s"`,
 			{ timeout: 2000 }
 		).catch((error: unknown) => {

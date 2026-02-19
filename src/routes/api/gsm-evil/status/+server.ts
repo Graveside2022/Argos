@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { logWarn } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async () => {
 		try {
 			// Look for grgsm_livemon_headless but exclude ones that are part of scanning (they run briefly)
 			// GSM Evil proper runs with specific long-running parameters
-			const { stdout: grgsmCheck } = await hostExec(
+			const { stdout: grgsmCheck } = await legacyShellExec(
 				'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
 			);
 			if (grgsmCheck.trim()) {
@@ -39,7 +39,7 @@ export const GET: RequestHandler = async () => {
 				if (!isNaN(pid)) {
 					// Check if this is a long-running process (not a scan)
 					try {
-						const { stdout: pidTime } = await hostExec(
+						const { stdout: pidTime } = await legacyShellExec(
 							`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
 						);
 						const runtime = parseInt(pidTime.trim()) || 0;
@@ -64,7 +64,7 @@ export const GET: RequestHandler = async () => {
 
 		// Check GSMEvil2 with exact match (including auto version)
 		try {
-			const { stdout: gsmevilCheck } = await hostExec(
+			const { stdout: gsmevilCheck } = await legacyShellExec(
 				'ps aux | grep -E "python3? GsmEvil(_auto)?\\.py" | grep -v grep | head -1'
 			);
 			if (gsmevilCheck.trim()) {
@@ -76,7 +76,7 @@ export const GET: RequestHandler = async () => {
 
 					// Check if web interface is accessible
 					try {
-						const { stdout: curlCheck } = await hostExec(
+						const { stdout: curlCheck } = await legacyShellExec(
 							'timeout 1 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
 						);
 						status.gsmevil.webInterface = curlCheck.trim() === '200';

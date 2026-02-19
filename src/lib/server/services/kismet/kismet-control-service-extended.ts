@@ -1,6 +1,6 @@
 import { homedir } from 'os';
 
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 
 export interface KismetControlResult {
@@ -28,7 +28,9 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		console.warn('[kismet] Starting Kismet...');
 
 		// Check if Kismet is already running
-		const { stdout: existingPids } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+		const { stdout: existingPids } = await legacyShellExec(
+			'pgrep -x kismet 2>/dev/null || true'
+		);
 		if (existingPids.trim()) {
 			console.warn('[kismet] Already running, PID:', existingPids.trim());
 			return {
@@ -39,14 +41,16 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		}
 
 		// Detect ALFA WiFi adapter interface (skip wlan0 = built-in Pi WiFi)
-		const { stdout: ifaceList } = await hostExec('ls /sys/class/net/ 2>/dev/null || true');
+		const { stdout: ifaceList } = await legacyShellExec(
+			'ls /sys/class/net/ 2>/dev/null || true'
+		);
 		let alfaInterface = '';
 		for (const iface of ifaceList.trim().split(/\s+/)) {
 			if (iface === 'lo' || iface === 'eth0' || iface === 'wlan0' || !iface) continue;
 			// Validate interface name before using in shell command
 			const validIface = validateInterfaceName(iface);
 			// Check if it's a wireless interface
-			const { stdout: isWireless } = await hostExec(
+			const { stdout: isWireless } = await legacyShellExec(
 				`test -d /sys/class/net/${validIface}/wireless && echo yes || true`
 			);
 			if (isWireless.trim() === 'yes') {
@@ -68,7 +72,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		console.warn(`[kismet] Using interface: ${alfaInterface}`);
 
 		// Clean up stale monitor interfaces
-		await hostExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
+		await legacyShellExec(`iw dev ${alfaInterface}mon del 2>/dev/null || true`).catch(
 			(error: unknown) => {
 				console.warn('[kismet] Cleanup: iw dev mon del failed (non-critical)', {
 					error: String(error)
@@ -79,7 +83,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		// Start Kismet as current user (NOT root) — capture helpers are suid
 		// Uses --daemonize so Kismet forks into background properly via nsenter
 		// cd to home dir so Kismet can write its log database
-		await hostExec(
+		await legacyShellExec(
 			`sudo -u ${process.env.USER || 'kali'} bash -c 'cd ${homedir()} && kismet -c ${alfaInterface}:type=linuxwifi --no-ncurses --no-line-wrap --daemonize --silent'`,
 			{ timeout: 15000 }
 		);
@@ -91,7 +95,9 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		// Verify running — retry a few times
 		let verifyPid = '';
 		for (let attempt = 0; attempt < 3; attempt++) {
-			const { stdout: pidCheck } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+			const { stdout: pidCheck } = await legacyShellExec(
+				'pgrep -x kismet 2>/dev/null || true'
+			);
 			if (pidCheck.trim()) {
 				verifyPid = pidCheck.trim();
 				break;
@@ -111,7 +117,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		const validPid = validateNumericParam(parseInt(verifyPid, 10), 'pid', 1, 4194304);
 
 		// Verify running as non-root
-		const { stdout: userCheck } = await hostExec(
+		const { stdout: userCheck } = await legacyShellExec(
 			`ps -p ${validPid} -o user= 2>/dev/null || true`
 		);
 		console.warn(`[kismet] Running as user: ${userCheck.trim()}, PID: ${validPid}`);
@@ -123,7 +129,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			if (!kismetPass) {
 				console.warn('[kismet] KISMET_PASSWORD not set, skipping initial credential setup');
 			} else {
-				const { stdout: authCheck } = await hostExec(
+				const { stdout: authCheck } = await legacyShellExec(
 					`curl -s -m 3 -X POST -d "username=${kismetUser}&password=${kismetPass}" http://localhost:2501/session/set_password 2>/dev/null || true`
 				);
 				if (authCheck.includes('Login configured')) {
@@ -163,10 +169,10 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 		console.warn('[kismet] Stopping Kismet...');
 
 		// Check if Kismet is running at all
-		const { stdout: pids } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+		const { stdout: pids } = await legacyShellExec('pgrep -x kismet 2>/dev/null || true');
 		if (!pids.trim()) {
 			// Also ensure systemd service is stopped
-			await hostExec('sudo systemctl stop kismet 2>/dev/null || true');
+			await legacyShellExec('sudo systemctl stop kismet 2>/dev/null || true');
 			return {
 				success: true,
 				message: 'Kismet stopped successfully',
@@ -175,19 +181,19 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 		}
 
 		// Stop via systemctl first (prevents Restart=always from respawning)
-		await hostExec('sudo systemctl stop kismet 2>/dev/null || true');
+		await legacyShellExec('sudo systemctl stop kismet 2>/dev/null || true');
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
 		// Force kill any remaining processes not managed by systemd
-		const { stdout: remaining } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+		const { stdout: remaining } = await legacyShellExec('pgrep -x kismet 2>/dev/null || true');
 		if (remaining.trim()) {
 			console.warn('[kismet] Processes remain after systemctl stop, force killing...');
-			await hostExec('sudo pkill -x -9 kismet 2>/dev/null || true');
+			await legacyShellExec('sudo pkill -x -9 kismet 2>/dev/null || true');
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 		}
 
 		// Verify stopped
-		const { stdout: finalCheck } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+		const { stdout: finalCheck } = await legacyShellExec('pgrep -x kismet 2>/dev/null || true');
 		if (finalCheck.trim()) {
 			return {
 				success: false,
@@ -219,13 +225,13 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
  */
 export async function getKismetStatus(): Promise<KismetStatusResult> {
 	try {
-		const { stdout: processOut } = await hostExec('pgrep -x kismet 2>/dev/null || true');
+		const { stdout: processOut } = await legacyShellExec('pgrep -x kismet 2>/dev/null || true');
 		const hasProcess = !!processOut.trim();
 
 		// Double-check via API
 		let apiResponding = false;
 		try {
-			const { stdout: apiOut } = await hostExec(
+			const { stdout: apiOut } = await legacyShellExec(
 				'curl -s -m 2 http://localhost:2501/system/timestamp.json 2>/dev/null || true'
 			);
 			apiResponding = apiOut.includes('timestamp') || apiOut.includes('{');
