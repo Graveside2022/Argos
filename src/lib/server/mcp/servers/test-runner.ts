@@ -4,13 +4,13 @@
  * Tools for running tests, checking coverage, and build validation
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { config } from 'dotenv';
 import { promisify } from 'util';
 
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 config();
 
 class TestRunner extends BaseMCPServer {
@@ -38,15 +38,15 @@ class TestRunner extends BaseMCPServer {
 				const suite = args.suite as string;
 				const timeout = Math.min((args.timeout_seconds as number) || 300, 600);
 
-				const commands: Record<string, string> = {
-					unit: 'npm run test:unit',
-					integration: 'npm run test:integration',
-					e2e: 'npm run test:e2e',
-					all: 'npm run test:all'
+				const scripts: Record<string, string> = {
+					unit: 'test:unit',
+					integration: 'test:integration',
+					e2e: 'test:e2e',
+					all: 'test:all'
 				};
 
-				const command = commands[suite];
-				if (!command) {
+				const script = scripts[suite];
+				if (!script) {
 					return {
 						status: 'ERROR',
 						error: `Unknown test suite: ${suite}`
@@ -55,7 +55,7 @@ class TestRunner extends BaseMCPServer {
 
 				try {
 					const startTime = Date.now();
-					const { stdout } = await execAsync(command, {
+					const { stdout } = await execFileAsync('/usr/bin/npm', ['run', script], {
 						timeout: timeout * 1000,
 						cwd: process.cwd()
 					});
@@ -121,7 +121,7 @@ class TestRunner extends BaseMCPServer {
 			},
 			execute: async () => {
 				try {
-					const { stdout } = await execAsync('npm run typecheck', {
+					const { stdout } = await execFileAsync('/usr/bin/npm', ['run', 'typecheck'], {
 						cwd: process.cwd(),
 						timeout: 120000
 					});
@@ -168,13 +168,17 @@ class TestRunner extends BaseMCPServer {
 			},
 			execute: async (args: Record<string, unknown>) => {
 				const fix = args.fix === true;
-				const command = fix ? 'npm run lint:fix' : 'npm run lint';
+				const script = fix ? 'lint:fix' : 'lint';
 
 				try {
-					const { stdout, stderr } = await execAsync(command, {
-						cwd: process.cwd(),
-						timeout: 60000
-					});
+					const { stdout, stderr } = await execFileAsync(
+						'/usr/bin/npm',
+						['run', script],
+						{
+							cwd: process.cwd(),
+							timeout: 60000
+						}
+					);
 
 					const output = stdout || stderr;
 					const errorMatch = output.match(/(\d+) errors?/);
