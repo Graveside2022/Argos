@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { EventEmitter } from 'events';
 
 import { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
@@ -920,7 +920,7 @@ export class SweepManager extends EventEmitter {
 		deviceInfo?: string;
 	}> {
 		return new Promise((resolve) => {
-			exec('timeout 3 hackrf_info', (error, stdout, stderr) => {
+			execFile('/usr/bin/timeout', ['3', 'hackrf_info'], (error, stdout, stderr) => {
 				if (error) {
 					if (error.code === 124) {
 						resolve({
@@ -930,8 +930,7 @@ export class SweepManager extends EventEmitter {
 					} else {
 						resolve({
 							available: false,
-							// Safe: Error type assertion for error handling
-							reason: `Device check failed: ${(error as Error).message}`
+							reason: `Device check failed: ${error.message}`
 						});
 					}
 				} else if (stderr.includes('Resource busy')) {
@@ -939,7 +938,6 @@ export class SweepManager extends EventEmitter {
 				} else if (stderr.includes('No HackRF boards found')) {
 					resolve({ available: false, reason: 'No HackRF found' });
 				} else if (stdout.includes('Serial number')) {
-					// Extract device info
 					const deviceInfo = stdout
 						.split('\n')
 						.filter((line) => line.trim())
@@ -965,30 +963,39 @@ export class SweepManager extends EventEmitter {
 		try {
 			const processState = this.processManager.getProcessState();
 
-			// Only kill hackrf_sweep processes that aren't ours
 			if (processState.isRunning && processState.sweepProcessPgid) {
 				// Kill all hackrf_sweep processes except our current process group
 				await new Promise<void>((resolve) => {
-					exec(
-						`pgrep -x hackrf_sweep | grep -v "^${processState.sweepProcessPgid}$" | xargs -r kill -9`,
-						() => resolve()
-					);
+					execFile('/usr/bin/pgrep', ['-x', 'hackrf_sweep'], (err, stdout) => {
+						if (err || !stdout.trim()) return resolve();
+						const pids = stdout.trim().split('\n');
+						for (const pid of pids) {
+							const pidNum = parseInt(pid, 10);
+							if (pidNum !== processState.sweepProcessPgid) {
+								try {
+									process.kill(pidNum, 'SIGKILL');
+								} catch {
+									/* already dead */
+								}
+							}
+						}
+						resolve();
+					});
 				});
 			} else {
-				// No current process, safe to kill all
 				await new Promise<void>((resolve) => {
-					exec('pkill -9 -x hackrf_sweep', () => resolve());
+					execFile('/usr/bin/pkill', ['-9', '-x', 'hackrf_sweep'], () => resolve());
 				});
 			}
 
 			// Kill any hackrf_info processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f hackrf_info', () => resolve());
+				execFile('/usr/bin/pkill', ['-9', '-f', 'hackrf_info'], () => resolve());
 			});
 
-			// Kill any sweep_bridge.py processes (python_hackrf sweep bridge)
+			// Kill any sweep_bridge.py processes
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f sweep_bridge.py', () => resolve());
+				execFile('/usr/bin/pkill', ['-9', '-f', 'sweep_bridge.py'], () => resolve());
 			});
 
 			// Wait for cleanup
@@ -1328,7 +1335,7 @@ export class SweepManager extends EventEmitter {
 		availableMB: number;
 	}> {
 		return new Promise((resolve, reject) => {
-			exec('free -m', (error, stdout) => {
+			execFile('/usr/bin/free', ['-m'], (error, stdout) => {
 				if (error) {
 					reject(error);
 					return;

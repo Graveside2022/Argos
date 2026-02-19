@@ -50,6 +50,7 @@
 
 	let map: maplibregl.Map | undefined = $state();
 	let symbolLayer: SymbolLayer | undefined = $state();
+	let satLayer: SatelliteLayer | undefined = $state();
 	let initialViewSet = false;
 	let layersInitialized = false;
 	let cssReady = $state(false);
@@ -85,6 +86,18 @@
 		if (map && !layersInitialized) {
 			handleMapLoad();
 			layersInitialized = true;
+		}
+	});
+
+	// Sync satellite layer with map settings (replaces .subscribe())
+	$effect(() => {
+		if (!satLayer) return;
+		const settings = $mapSettings;
+		if (settings.type === 'satellite') {
+			satLayer.add(settings.url, settings.attribution);
+			satLayer.setVisible(true);
+		} else {
+			satLayer.setVisible(false);
 		}
 	});
 
@@ -126,9 +139,6 @@
 		}
 
 		// 3. Update layer
-		console.log('[DashboardMap] Updating SymbolLayer with', features.length, 'features');
-		const vis = $layerVisibility;
-		console.log('[DashboardMap] milSyms visibility:', vis.milSyms);
 		symbolLayer.update(features);
 	});
 
@@ -682,38 +692,23 @@
 	// The Stadia alidade_smooth_dark style only shows parks, universities, and hospitals.
 	// We add broader POI labels, house numbers, and enhanced building outlines.
 	// NOTE: Uses pure expression syntax — do NOT mix with legacy filter syntax.
-	console.error('[DashboardMap] Script executing');
-
 	function handleMapLoad() {
-		console.log(
-			'[DashboardMap] handleMapLoad called. Map exists:',
-			!!map,
-			'Loaded:',
-			map?.loaded()
-		);
 		if (!map) return;
-
-		// Prevent double initialization
-		// Note: layersInitialized is tracked in outer scope, but if called by onload directly it might bypass the effect's guard if we don't check here?
-		// Actually, let's trust the effect and just log for now.
 
 		const mapInstance = map;
 
 		if (!map.loaded()) {
-			console.log('[DashboardMap] Map not loaded, waiting for "load" event...');
 			map.once('load', () => {
-				console.log('[DashboardMap] "load" event fired. Setting up map.');
 				setupMap(mapInstance);
 			});
 		} else {
-			console.log('[DashboardMap] Map already loaded. Setting up map immediately.');
 			setupMap(mapInstance);
 		}
 	}
 
 	function setupMap(mapInstance: maplibregl.Map) {
-		// Initialize Satellite Layer
-		const satLayer = new SatelliteLayer(mapInstance);
+		// Initialize Satellite Layer (synced via $effect at component scope)
+		satLayer = new SatelliteLayer(mapInstance);
 
 		// Initialize Symbol Layer (MIL-STD-2525)
 		symbolLayer = new SymbolLayer(mapInstance);
@@ -721,16 +716,6 @@
 		// Register click handler for MIL symbol clicks (imperative layer, not template)
 		mapInstance.on('click', 'mil-sym-layer', (e) => {
 			handleDeviceClick(e as maplibregl.MapMouseEvent);
-		});
-
-		// Sync with settings (Satellite)
-		mapSettings.subscribe((settings) => {
-			if (settings.type === 'satellite') {
-				satLayer.add(settings.url, settings.attribution);
-				satLayer.setVisible(true);
-			} else {
-				satLayer.setVisible(false);
-			}
 		});
 
 		// Click on empty map background → dismiss overlay and clear isolation
