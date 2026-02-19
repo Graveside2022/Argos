@@ -14,11 +14,12 @@ We use a custom systemd service to ensure critical development tools stay online
 
 The monitor checks the following ports every 10 seconds:
 
-| Service               | Port   | Action on Failure                                  |
-| --------------------- | ------ | -------------------------------------------------- |
-| **Vite Dev Server**   | `5173` | Restarts the `npm run dev` tmux session.           |
-| **Chromium Debugger** | `9222` | Restarts headless Chromium (and Xvfb/Display :99). |
-| **Debug Proxy**       | `99`   | Restarts `socat` to expose debugger on port 99.    |
+| Service               | Port   | Action on Failure                                        |
+| --------------------- | ------ | -------------------------------------------------------- |
+| **Vite Dev Server**   | `5173` | Restarts the `npm run dev` tmux session.                 |
+| **Chromium Debugger** | `9222` | Restarts headless Chromium (and Xvfb/Display :99).       |
+| **Debug Proxy**       | `99`   | Restarts `socat` to expose debugger on port 99.          |
+| **Claude Mem Plugin** | N/A    | Checks every 60s for plugin updates and applies patches. |
 
 ### Managing the Service
 

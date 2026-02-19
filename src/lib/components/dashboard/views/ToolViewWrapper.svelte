@@ -2,8 +2,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
+	import Badge from '$lib/components/ui/badge/badge.svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
 
 	interface Props {
 		title: string;

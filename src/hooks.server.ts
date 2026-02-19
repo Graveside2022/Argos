@@ -11,8 +11,11 @@ import {
 	validateApiKey,
 	validateSecurityConfig
 } from '$lib/server/auth/auth-middleware';
-import { globalHardwareMonitor, scanAllHardware } from '$lib/server/hardware';
-import { WebSocketManager } from '$lib/server/kismet';
+import {
+	globalHardwareMonitor,
+	scanAllHardware
+} from '$lib/server/hardware/detection/hardware-detector';
+import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
 import { RateLimiter } from '$lib/server/security/rate-limiter';
 import { logger } from '$lib/utils/logger';
