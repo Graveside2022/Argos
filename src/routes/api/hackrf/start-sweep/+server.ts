@@ -76,8 +76,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				const centerFreq = (range.start + range.end) / 2;
 				return { value: centerFreq, unit: 'MHz' };
 			} else {
-				// Fallback (should never reach here due to Zod validation)
-				throw new Error('Invalid frequency range format');
+				// Unreachable after Zod validation, but satisfies exhaustive check
+				return { value: 0, unit: 'MHz' };
 			}
 		});
 

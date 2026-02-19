@@ -155,8 +155,6 @@
 					// Show error but still clear UI state
 					errorDialogMessage = `Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`;
 					errorDialogOpen = true;
-				} else {
-					console.log('[GSM] Stop successful:', data.message);
 				}
 			} catch (error: unknown) {
 				console.error('[GSM] Stop request failed:', error);
@@ -175,8 +173,6 @@
 	}
 
 	onMount(async () => {
-		console.log('[GSM] Component mounted');
-
 		// Check if GSM Evil is already running (e.g. user navigated away and back)
 		try {
 			const res = await fetch('/api/gsm-evil/status');
@@ -187,13 +183,6 @@
 			const bothRunning = data.status === 'running';
 
 			if (grgsmRunning || bothRunning) {
-				console.log('[GSM] Detected running grgsm process — starting polling');
-				console.log('[GSM] Status details:', {
-					grgsm: data.details?.grgsm,
-					gsmevil: data.details?.gsmevil,
-					overallStatus: data.status
-				});
-
 				// Set active state if ANY GSM process is running (so stop button works)
 				if (grgsmRunning || bothRunning) {
 					imsiCaptureActive = true;
@@ -212,7 +201,6 @@
 				checkActivity();
 				fetchRealFrames();
 			} else {
-				console.log('[GSM] No GSM processes detected - page in stopped state');
 				// Clear any stale scanning state from localStorage
 				gsmEvilStore.completeScan();
 			}
@@ -232,7 +220,6 @@
 		if (imsiCaptureActive) return;
 
 		try {
-			console.log('[GSM] Starting IMSI capture on', frequency, 'MHz');
 			const response = await fetch('/api/gsm-evil/control', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -254,7 +241,6 @@
 				fetchIMSIs();
 				checkActivity();
 				fetchRealFrames();
-				console.log('[GSM] IMSI capture started successfully');
 			} else {
 				console.error('[GSM] Failed to start IMSI capture:', data.message);
 			}
@@ -329,11 +315,9 @@
 							}
 							if (json.result) {
 								const data = json.result;
-								console.log('Scan response:', data);
 
 								if (data.type === 'frequency_result') {
 									// REAL-TIME RESULTS - Add individual frequency results as they complete
-									console.log('Adding frequency result:', data.result);
 									gsmEvilStore.addScanResult(data.result);
 
 									// Update progress status
@@ -362,16 +346,6 @@
 								} else if (data.type === 'scan_complete' || data.bestFrequency) {
 									// SCAN COMPLETE - Final results processing
 									if (data.bestFrequency) {
-										console.log(
-											'Scan complete! Setting results:',
-											data.scanResults
-										);
-										console.log(
-											'Results with cell data:',
-											data.scanResults?.filter(
-												(r: FrequencyTestResult) => r.mcc
-											)
-										);
 										gsmEvilStore.setSelectedFrequency(data.bestFrequency);
 										gsmEvilStore.setScanResults(data.scanResults || []);
 										gsmEvilStore.setScanStatus(
@@ -387,9 +361,6 @@
 											data.scanResults?.filter(
 												(r: FrequencyTestResult) => r.mcc && r.lac && r.ci
 											).length || 0;
-										console.log(
-											`Cell identity captured for ${withCellData}/${data.scanResults?.length || 0} frequencies`
-										);
 										if (withCellData > 0) {
 											gsmEvilStore.addScanProgress(
 												`[SCAN] ✓ Cell identity captured for ${withCellData} frequency(ies) - tower data will display below`
@@ -464,14 +435,6 @@
 			if (response.ok) {
 				const data = await response.json();
 
-				// Debug logging
-				console.log('[GSM Frames] API response:', {
-					success: data.success,
-					frameCount: data.frames?.length || 0,
-					message: data.message,
-					currentTotal: gsmFrames.length
-				});
-
 				if (data.success && data.frames && data.frames.length > 0) {
 					// Append new frames to existing ones (console-like behavior)
 					gsmFrames = [...gsmFrames, ...data.frames];
@@ -487,10 +450,8 @@
 					if (frameDisplay) {
 						frameDisplay.scrollTop = frameDisplay.scrollHeight;
 					}
-
-					console.log('[GSM Frames] Updated, new total:', gsmFrames.length);
 				} else {
-					console.log('[GSM Frames] No frames in this batch:', data.message);
+					// No frames in this polling batch
 				}
 			} else if (response.status === 401) {
 				console.error('[GSM Frames] Authentication failed - session may have expired');

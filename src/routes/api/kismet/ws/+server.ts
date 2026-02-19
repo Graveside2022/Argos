@@ -1,23 +1,23 @@
 // WebSocket endpoint for Kismet real-time data
+import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ request }) => {
-	// Check if this is a WebSocket upgrade request
 	const upgradeHeader = request.headers.get('upgrade');
 	if (upgradeHeader !== 'websocket') {
-		throw new Error('Expected WebSocket upgrade request');
+		return json(
+			{ error: 'Expected WebSocket upgrade request' },
+			{ status: 426, headers: { Upgrade: 'websocket' } }
+		);
 	}
 
-	// Note: SvelteKit doesn't directly support WebSocket upgrades
-	// This would typically be handled by a separate WebSocket server
-	// or through a platform-specific adapter
-
-	return new Response('WebSocket endpoint - requires platform-specific implementation', {
-		status: 501,
-		headers: {
-			'Content-Type': 'text/plain'
-		}
-	});
+	// SvelteKit doesn't directly support WebSocket upgrades.
+	// Handled by the separate WebSocket server (port 3001).
+	return json(
+		{ error: 'WebSocket endpoint — requires platform-specific adapter' },
+		{ status: 501 }
+	);
 };
 
 // Alternative: Document how to set up WebSocket server separately

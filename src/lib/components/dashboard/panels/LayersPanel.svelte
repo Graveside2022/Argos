@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Input from '$lib/components/ui/input/input.svelte';
 	import { type VisibilityMode, visibilityMode } from '$lib/map/VisibilityEngine';
 	import {
 		activeBands,
@@ -14,8 +15,8 @@
 	import { signalBands } from '$lib/utils/signal-utils';
 
 	let customUrl = $state('');
-	let stadiaAvailable = $state(false);
-	mapSettings.stadiaAvailable.subscribe((v) => (stadiaAvailable = v));
+	const stadiaStore = mapSettings.stadiaAvailable;
+	let stadiaAvailable = $derived($stadiaStore);
 
 	function selectVector() {
 		mapSettings.setProvider(DEFAULT_VECTOR_SOURCE);
@@ -70,7 +71,12 @@
 		</div>
 
 		<div class="custom-input-row">
-			<input type="text" placeholder="Custom XYZ URL..." bind:value={customUrl} />
+			<Input
+				type="text"
+				placeholder="Custom XYZ URL..."
+				bind:value={customUrl}
+				class="flex-1 h-7 text-xs"
+			/>
 			<button class="apply-btn" onclick={applyCustom}>Set</button>
 		</div>
 	</section>

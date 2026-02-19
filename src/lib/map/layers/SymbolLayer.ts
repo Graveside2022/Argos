@@ -38,8 +38,10 @@ export class SymbolLayer {
 					'text-anchor': 'top'
 				},
 				paint: {
-					'text-color': '#ffffff',
-					'text-halo-color': '#000000',
+					// MapLibre GL paint operates on WebGL canvas — CSS variables unsupported.
+					// Values match --palantir-text-primary (light on dark) for dark-only tactical theme.
+					'text-color': 'hsl(0, 0%, 100%)',
+					'text-halo-color': 'hsl(0, 0%, 0%)',
 					'text-halo-width': 1
 				}
 			});
@@ -51,12 +53,12 @@ export class SymbolLayer {
 	 * @param features GeoJSON features containing 'sidc' and 'label' properties
 	 */
 	public update(features: Feature[]) {
-		console.log(`[SymbolLayer] Updating with ${features.length} features.`);
+		// Symbol update count tracked via feature array length
 		// 1. Identify new SIDC codes
 		features.forEach((f) => {
 			const sidc = f.properties?.sidc;
 			if (sidc && !this.symbolCache.has(sidc)) {
-				console.log(`[SymbolLayer] Found new SIDC: ${sidc}, generating symbol...`);
+				// New SIDC detected — generate symbol image
 				this.addSymbolImage(sidc);
 			}
 		});
