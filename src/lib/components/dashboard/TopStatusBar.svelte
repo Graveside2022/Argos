@@ -3,6 +3,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	import TAKIndicator from '$lib/components/status/TAKIndicator.svelte';
 	import type { Satellite } from '$lib/gps/types';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 
@@ -709,6 +710,9 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- TAK Server connection indicator -->
+		<TAKIndicator />
 	</div>
 
 	<!-- Right side: location, coords, time -->
