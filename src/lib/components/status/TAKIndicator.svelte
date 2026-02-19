@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/ui/button/button.svelte';
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { takStatus } from '$lib/stores/tak-store';
 
@@ -30,6 +31,7 @@
 	}}
 />
 
+<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Status indicator toggle uses custom dot+label layout incompatible with shadcn Button -->
 <div class="tak-indicator-wrapper">
 	<button class="tak-indicator" onclick={toggle}>
 		<span
@@ -64,7 +66,9 @@
 				<div class="dropdown-row">
 					<span class="dropdown-val dim">Not connected</span>
 				</div>
-				<button class="configure-btn" onclick={configure}>Configure</button>
+				<Button variant="outline" size="sm" class="configure-btn" onclick={configure}
+					>Configure</Button
+				>
 			{/if}
 		</div>
 	{/if}
@@ -143,20 +147,9 @@
 		color: var(--palantir-text-tertiary);
 		font-style: italic;
 	}
-	.configure-btn {
+	:global(.configure-btn) {
 		display: block;
 		width: calc(100% - 24px);
 		margin: 8px 12px 4px;
-		padding: 4px 0;
-		font-size: 11px;
-		font-weight: 500;
-		color: var(--palantir-accent, #4a9eff);
-		background: transparent;
-		border: 1px solid var(--palantir-accent, #4a9eff);
-		border-radius: 4px;
-		cursor: pointer;
-	}
-	.configure-btn:hover {
-		background: rgba(74, 158, 255, 0.1);
 	}
 </style>
