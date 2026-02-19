@@ -178,12 +178,26 @@ check_chromium() {
     fi
 }
 
-log "Starting Argos Dev Keepalive Monitor..."
-log "Monitoring Vite (5173), Chromium (9222), and Proxy (99)."
+check_claude_mem() {
+    # Run the fix script which checks for updates/patches and applies them if needed.
+    # It only restarts processes if a patch was applied.
+    bash "./scripts/ops/fix-claude-mem.sh" > /dev/null 2>&1
+}
 
+log "Starting Argos Dev Keepalive Monitor..."
+log "Monitoring Vite (5173), Chromium (9222), Proxy (99), and Claude Mem."
+
+LOOP_COUNT=0
 while true; do
     check_vite
     check_chromium
     check_socat
+
+    # Check claude-mem every 6 iterations (approx 60 seconds)
+    if [ $((LOOP_COUNT % 6)) -eq 0 ]; then
+        check_claude_mem
+    fi
+
     sleep "$CHECK_INTERVAL"
+    LOOP_COUNT=$((LOOP_COUNT + 1))
 done
