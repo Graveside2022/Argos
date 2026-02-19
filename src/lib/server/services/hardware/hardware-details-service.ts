@@ -4,6 +4,7 @@ import { createConnection } from 'net';
 import { promisify } from 'util';
 import { z } from 'zod';
 
+import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { safeJsonParse } from '$lib/server/security/safe-json';
 
 const execFileAsync = promisify(execFile);
@@ -126,13 +127,13 @@ async function getWifiDetails(): Promise<WifiDetails | null> {
 		// Check if this phy is the USB WiFi adapter via sysfs driver symlink
 		const driver = await sysLink(`/sys/class/ieee80211/phy${phyNum}/device/driver`);
 		if (!/mt79|mt76|rtl8|ath9k/i.test(driver)) continue;
-		phyIdx = phyNum;
+		phyIdx = String(validateNumericParam(phyNum, 'phyIdx', 0, 255));
 
 		const ifaceBlocks = section.split(/(?=\tInterface )/);
 		for (const block of ifaceBlocks) {
 			const ifMatch = block.match(/Interface\s+(\S+)/);
 			if (!ifMatch) continue;
-			const name = ifMatch[1];
+			const name = validateInterfaceName(ifMatch[1]);
 			const typeMatch = block.match(/type\s+(\S+)/);
 			const addrMatch = block.match(/addr\s+([0-9a-f:]+)/i);
 			const chanMatch = block.match(
