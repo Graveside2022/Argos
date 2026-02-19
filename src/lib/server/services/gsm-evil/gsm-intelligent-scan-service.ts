@@ -1,9 +1,13 @@
+import { execFile, spawn } from 'child_process';
+import { closeSync, openSync } from 'fs';
+import { readFile, unlink } from 'fs/promises';
+import { promisify } from 'util';
+
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
-import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
-import { sanitizeGainForShell, validateGain } from '$lib/validators/gsm';
+import { validateGain } from '$lib/validators/gsm';
 
 import {
 	analyzeGsmFrames,
@@ -11,6 +15,8 @@ import {
 	determineChannelType,
 	parseCellIdentity
 } from './protocol-parser';
+
+const execFileAsync = promisify(execFile);
 
 export type ScanEventType = 'update' | 'result' | 'error';
 
@@ -67,7 +73,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 		// Check grgsm_livemon_headless is installed
 		try {
-			await legacyShellExec('which grgsm_livemon_headless');
+			await execFileAsync('/usr/bin/which', ['grgsm_livemon_headless']);
 			yield sendUpdate('[SCAN] grgsm_livemon_headless found');
 		} catch (_error: unknown) {
 			yield sendError(
@@ -78,7 +84,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 		// Check tcpdump is available
 		try {
-			await legacyShellExec('which tcpdump');
+			await execFileAsync('/usr/bin/which', ['tcpdump']);
 			yield sendUpdate('[SCAN] tcpdump found');
 		} catch (_error: unknown) {
 			yield sendUpdate('[SCAN] WARNING: tcpdump not found — packet counting may fail');
@@ -86,8 +92,9 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 		// Check HackRF is accessible
 		try {
-			const { stdout } = await legacyShellExec('hackrf_info 2>&1');
-			if (stdout.includes('No HackRF boards found') || stdout.includes('hackrf_open')) {
+			const result = await execFileAsync('/usr/bin/hackrf_info');
+			const output = result.stdout + result.stderr;
+			if (output.includes('No HackRF boards found') || output.includes('hackrf_open')) {
 				yield sendUpdate(
 					'[SCAN] WARNING: hackrf_info reports no HackRF device — scan may fail'
 				);
@@ -109,9 +116,17 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 			yield sendUpdate(`[SCAN] HackRF held by "${owner}" — checking if still active...`);
 			try {
 				// Check for both grgsm_livemon_headless AND GsmEvil.py processes
-				const { stdout: gsmProc } = await legacyShellExec(
-					'pgrep -f "grgsm_livemon_headless|GsmEvil" 2>/dev/null || true'
-				);
+				let gsmProc = '';
+				try {
+					const { stdout } = await execFileAsync('/usr/bin/pgrep', [
+						'-f',
+						'grgsm_livemon_headless|GsmEvil'
+					]);
+					gsmProc = stdout;
+				} catch {
+					// pgrep returns non-zero when no match — treat as empty
+				}
+
 				if (!gsmProc.trim()) {
 					yield sendUpdate(
 						`[SCAN] No active GSM/GsmEvil process found — releasing stale "${owner}" lock`
@@ -126,10 +141,20 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 					yield sendUpdate(
 						`[SCAN] Found running GSM processes — killing them to free HackRF...`
 					);
-					await legacyShellExec(
-						'sudo pkill -f grgsm_livemon_headless 2>/dev/null || true'
-					);
-					await legacyShellExec('sudo pkill -f "GsmEvil" 2>/dev/null || true');
+					try {
+						await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/pkill',
+							'-f',
+							'grgsm_livemon_headless'
+						]);
+					} catch {
+						/* no match is fine */
+					}
+					try {
+						await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'GsmEvil']);
+					} catch {
+						/* no match is fine */
+					}
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 					await resourceManager.forceRelease(HardwareDevice.HACKRF);
 					acquireResult = await resourceManager.acquire(
@@ -198,26 +223,34 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 					continue;
 				}
 
-				const safeGain = sanitizeGainForShell(validatedGain);
-
 				yield sendUpdate(`[FREQ ${i + 1}/${checkFreqs.length}] Testing ${freq} MHz...`);
 				yield sendUpdate(`[DEVICE] Using HackRF`);
 
 				let strength = 'No Signal';
 				let power = -100;
 
-				// Build grgsm command for HackRF with sanitized parameters
-				const grgsm_base = `sudo grgsm_livemon_headless -f ${freq}M -g ${safeGain}`;
+				// Build grgsm command args for HackRF with validated parameters
+				const gsmArgs = [
+					'grgsm_livemon_headless',
+					'-f',
+					`${freq}M`,
+					'-g',
+					String(validatedGain)
+				];
 
-				yield sendUpdate(`[CMD] $ ${grgsm_base}`);
+				yield sendUpdate(`[CMD] $ sudo ${gsmArgs.join(' ')}`);
 
-				// Start grgsm — capture stdout (hex frames) and stderr to temp file for diagnostics
-				// Background the process and echo its PID
-				const { stdout: gsmPid } = await legacyShellExec(
-					`${grgsm_base} >${stderrLog} 2>&1 & echo $!`
-				);
-
-				pid = String(gsmPid).trim();
+				// Start grgsm — redirect stdout and stderr to temp file for diagnostics
+				const logFd = openSync(stderrLog, 'a');
+				const child = spawn('/usr/bin/sudo', gsmArgs, {
+					detached: true,
+					stdio: ['ignore', logFd, logFd]
+				});
+				child.unref();
+				closeSync(logFd);
+				const spawnedPid = child.pid;
+				if (!spawnedPid) throw new Error('Failed to start grgsm_livemon_headless');
+				pid = String(spawnedPid);
 				validateNumericParam(pid, 'pid', 1, 4194304);
 
 				// Validate process started
@@ -235,16 +268,15 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 				// Verify process is still running after init delay
 				try {
-					await legacyShellExec(`sudo kill -0 ${pid} 2>/dev/null`);
+					const validPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
+					process.kill(validPid, 0);
 				} catch (_error: unknown) {
 					// Process died during init — read stderr for diagnostics
 					let stderrContent = '';
 					try {
-						const { stdout: errLog } = await legacyShellExec(
-							`cat ${stderrLog} 2>/dev/null | tail -10`
-						);
-						stderrContent = String(errLog).trim();
-					} catch (_error: unknown) {
+						const logContent = await readFile(stderrLog, 'utf-8');
+						stderrContent = logContent.split('\n').slice(-10).join('\n').trim();
+					} catch {
 						/* ignore */
 					}
 
@@ -262,26 +294,92 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 				// Run tcpdump (frame count) and tshark (cell identity) IN PARALLEL
 				// tshark must run concurrently to capture SI3 messages as they arrive.
-				const tcpdumpPromise = legacyShellExec(
-					`sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || true`
-				).catch((error: unknown) => {
-					console.warn('[gsm-evil-scan-stream] tcpdump failed', {
-						error: String(error)
-					});
-					return { stdout: '0', stderr: '' };
-				});
+				const tcpdumpPromise = (async () => {
+					try {
+						const { stdout } = await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/timeout',
+							String(captureTime),
+							'/usr/sbin/tcpdump',
+							'-i',
+							'lo',
+							'-nn',
+							'port',
+							'4729'
+						]);
+						return {
+							stdout: String(
+								stdout.split('\n').filter((l) => l.includes('127.0.0.1.4729'))
+									.length
+							),
+							stderr: ''
+						};
+					} catch (error: unknown) {
+						// timeout kills tcpdump with non-zero exit, but stdout has captured data
+						const err = error as { stdout?: string };
+						if (err.stdout) {
+							return {
+								stdout: String(
+									err.stdout
+										.split('\n')
+										.filter((l) => l.includes('127.0.0.1.4729')).length
+								),
+								stderr: ''
+							};
+						}
+						return { stdout: '0', stderr: '' };
+					}
+				})();
 
 				// Capture cell identity from SI3/SI4 messages via tshark
 				// Fields: e212.lai.mcc/mnc (from LAI in SI3/SI4), gsm_a.lac, gsm_a.bssmap.cell_ci (from SI3)
-				const tsharkPromise = legacyShellExec(
-					`sudo timeout ${captureTime} tshark -i lo -f 'udp port 4729' -T fields -e e212.lai.mcc -e e212.lai.mnc -e gsm_a.lac -e gsm_a.bssmap.cell_ci -E separator=, -c 300 2>/dev/null | grep -v '^,*$' | grep -E '[0-9]' | head -30`,
-					{ timeout: captureTime * 1000 + 3000 }
-				).catch((error: unknown) => {
-					console.warn('[gsm-evil-scan-stream] tshark failed', {
-						error: String(error)
-					});
-					return { stdout: '', stderr: '' };
-				});
+				const tsharkPromise = (async () => {
+					try {
+						const { stdout } = await execFileAsync(
+							'/usr/bin/sudo',
+							[
+								'/usr/bin/timeout',
+								String(captureTime),
+								'/usr/bin/tshark',
+								'-i',
+								'lo',
+								'-f',
+								'udp port 4729',
+								'-T',
+								'fields',
+								'-e',
+								'e212.lai.mcc',
+								'-e',
+								'e212.lai.mnc',
+								'-e',
+								'gsm_a.lac',
+								'-e',
+								'gsm_a.bssmap.cell_ci',
+								'-E',
+								'separator=,',
+								'-c',
+								'300'
+							],
+							{ timeout: captureTime * 1000 + 3000 }
+						);
+						const filteredLines = stdout
+							.split('\n')
+							.filter((l) => l.trim() && !/^,*$/.test(l) && /[0-9]/.test(l))
+							.slice(0, 30)
+							.join('\n');
+						return { stdout: filteredLines, stderr: '' };
+					} catch (error: unknown) {
+						const err = error as { stdout?: string };
+						if (err.stdout) {
+							const filteredLines = err.stdout
+								.split('\n')
+								.filter((l) => l.trim() && !/^,*$/.test(l) && /[0-9]/.test(l))
+								.slice(0, 30)
+								.join('\n');
+							return { stdout: filteredLines, stderr: '' };
+						}
+						return { stdout: '', stderr: '' };
+					}
+				})();
 
 				const [tcpdumpResult, tsharkResult] = await Promise.all([
 					tcpdumpPromise,
@@ -332,12 +430,11 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 				if (frameCount > 0 && !(cellMcc && cellLac && cellCi)) {
 					// Only read hex log when cell identity is incomplete
 					try {
-						const { stdout: recentLines } = await legacyShellExec(
-							`grep -E "^\\s*[0-9a-f]{2}\\s" ${stderrLog} 2>/dev/null | tail -30`
-						);
-						const hexLines = String(recentLines)
+						const logContent = await readFile(stderrLog, 'utf-8');
+						const hexLines = logContent
 							.split('\n')
-							.filter((l: string) => l.trim());
+							.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l))
+							.slice(-30);
 						frameAnalysis = analyzeGsmFrames(hexLines, frameCount);
 					} catch (_error: unknown) {
 						// Hex log unreadable — determineChannelType handles null
@@ -443,34 +540,48 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 			} finally {
 				// CRITICAL: Always kill grgsm_livemon process regardless of success/failure
 				if (pid && pid !== '0') {
+					const validKillPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
 					try {
-						await legacyShellExec(`sudo kill ${pid} 2>/dev/null`);
+						await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/kill',
+							String(validKillPid)
+						]);
 						yield sendUpdate(
 							`[FREQ ${i + 1}/${checkFreqs.length}] Cleaned up process ${pid}`
 						);
 					} catch (_error: unknown) {
 						try {
-							await legacyShellExec(`sudo kill -9 ${pid} 2>/dev/null`);
+							await execFileAsync('/usr/bin/sudo', [
+								'/usr/bin/kill',
+								'-9',
+								String(validKillPid)
+							]);
 						} catch (_error: unknown) {
 							// Process already exited — that's fine
 						}
 					}
 					// Also clean up any orphaned grgsm processes matching this frequency
-					await legacyShellExec(
-						`sudo pkill -f "grgsm_livemon_headless.*-f ${freq}M" 2>/dev/null`
-					).catch((error: unknown) => {
+					try {
+						await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/pkill',
+							'-f',
+							`grgsm_livemon_headless.*-f ${freq}M`
+						]);
+					} catch (error: unknown) {
 						console.warn(
 							`[gsm-evil] Cleanup: pkill orphaned grgsm process for ${freq}M failed`,
 							{ error: String(error) }
 						);
-					});
+					}
 				}
 				// Clean up temp stderr log
-				await legacyShellExec(`rm -f ${stderrLog} 2>/dev/null`).catch((error: unknown) => {
+				try {
+					await unlink(stderrLog);
+				} catch (error: unknown) {
 					console.warn('[gsm-evil] Cleanup: rm stderr log failed (non-critical)', {
 						error: String(error)
 					});
-				});
+				}
 			}
 
 			// Brief pause between frequencies
