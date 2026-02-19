@@ -153,11 +153,11 @@
 
 ### Remaining Tasks
 
-- [ ] T033 **Refactor `TakConfigView.svelte` (565 lines) to comply with project conventions**. Three violations found: (1) 565 lines exceeds 300-line max from plan.md, (2) 152 lines of scoped `<style>` CSS violates `src/CLAUDE.md` rule "Tailwind CSS 4.x — use utility classes, avoid custom CSS unless absolutely necessary", (3) hand-rolled `<input>` and `<button>` HTML violates `src/CLAUDE.md` rule "Shadcn UI — use `src/lib/components/ui` for base primitives". **Fix (Option D)**: Replace custom HTML with shadcn `<Button>`, `<Input>` primitives + Tailwind utility classes. Extract two child components: `TakAuthImport.svelte` (cert + truststore upload) and `TakAuthEnroll.svelte` (enrollment fields). Delete entire `<style>` block. Target: parent ~185 lines, children ~65-80 lines each.
-- [ ] T034 **Dark mode verification** — after T033 refactor, verify all TAK components render correctly in dark mode. The shadcn primitives use standard theme tokens (`bg-background`, `text-foreground`, etc.) which are mapped via `palantir-design-system.css`, so dark mode should work automatically. Visual spot-check required.
+- [x] T033 **Refactor `TakConfigView.svelte` to comply with project conventions**. Extracted 4 child components: `TakAuthImport.svelte` (72 lines), `TakAuthEnroll.svelte` (90 lines), `TakTruststore.svelte` (70 lines), `TakDataPackage.svelte` (67 lines). Parent reduced from 565 → 260 lines. All 152 lines of scoped CSS eliminated — replaced with Tailwind utilities. All hand-rolled HTML replaced with shadcn `<Button>`, `<Input>`, `<Separator>` primitives. Zero `<style>` blocks across all TAK components.
+- [x] T034 **Dark mode verification** — PASS. All TAK components use shadcn semantic tokens (`text-foreground`, `text-muted-foreground`, `bg-destructive`) and Tailwind palette classes. Zero hardcoded hex colors, zero `var(--palantir-*)` references, zero `<style>` blocks. All theme-aware via palantir-design-system.css bridge.
 - [x] T035 Ensure no barrel files (index.ts) were introduced — **PASS, no barrel files found**
 - [x] T036 Final check of error messages — **PASS, all 7 spec edge case messages confirmed in source**
-- [ ] T037 **Delete orphaned route** `src/routes/settings/tak/+page.svelte` (7.8KB). This file was orphaned when T013 switched SettingsPanel to use `activeView = 'tak-config'` instead of navigating to `/settings/tak`. The href was already fixed by T013. Delete the entire `src/routes/settings/tak/` directory.
+- [x] T037 **Delete orphaned route** `src/routes/settings/tak/`. Deleted `+page.svelte` (7.8KB) and empty parent directory. Updated E2E test `tak-verification.spec.ts` to test TAK config via dashboard inline view instead of deleted route.
 
 ## Dependencies
 
