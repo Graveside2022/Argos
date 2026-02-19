@@ -17,10 +17,7 @@ PATCH_APPLIED=false
 
 echo "Found claude-mem plugin directory."
 
-# Find all version directories
-VERSIONS=$(ls -d "$PLUGIN_DIR"/*/)
-
-for VERSION_DIR in $VERSIONS; do
+for VERSION_DIR in "$PLUGIN_DIR"/*/; do
     echo "Processing version: $(basename "$VERSION_DIR")"
     
     # 1. Fix Orphaned Processes (bun-runner.js)
@@ -68,8 +65,12 @@ signals.forEach((signal) => {\\
              # 2d. Increment in AJ waiter
              sed -i 's/a=()=>{clearTimeout(s),Iu.size<t?r():Sg.push(a)};Sg.push(a)/a=()=>{clearTimeout(s),(Iu.size+pendingSpawns)<t?(pendingSpawns++,r()):Sg.push(a)};Sg.push(a)});pendingSpawns++/g' "$WORKER_SERVICE"
 
-             echo "  - worker-service.cjs patched."
-             PATCH_APPLIED=true
+             if grep -q "pendingSpawns=0" "$WORKER_SERVICE"; then
+                 echo "  - worker-service.cjs patched."
+                 PATCH_APPLIED=true
+             else
+                 echo "  - WARNING: worker-service.cjs sed patterns did not match. Plugin version may have changed."
+             fi
         fi
     else
         echo "  - Warning: worker-service.cjs not found in $(basename "$VERSION_DIR")"
@@ -79,9 +80,10 @@ done
 
 if [ "$PATCH_APPLIED" = true ]; then
     echo "Patches were applied. Restarting claude-mem processes..."
-    if pgrep -f claude-mem > /dev/null; then
-        pkill -f claude-mem
-        echo "Killed existing processes. They should restart automatically by Claude Desktop/MCP."
+    if pgrep -f "worker-service.cjs.*--daemon" > /dev/null; then
+        pkill -f "worker-service.cjs.*--daemon" 2>/dev/null
+        pkill -f "bun-runner.js" 2>/dev/null
+        echo "Killed existing daemon processes. They should restart automatically by Claude Desktop/MCP."
     else
         echo "No running claude-mem processes found to restart."
     fi
@@ -89,4 +91,4 @@ else
     echo "All versions already patched. No restart needed."
 fi
 
-echo "Done. Patches applied."
+echo "Done."

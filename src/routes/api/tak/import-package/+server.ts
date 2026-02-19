@@ -8,6 +8,8 @@ import { TakPackageParser } from '$lib/server/tak/TakPackageParser';
 
 import type { RequestHandler } from './$types';
 
+const MAX_PACKAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const formData = await request.formData();
@@ -17,7 +19,11 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ success: false, error: 'No file provided' }, { status: 400 });
 		}
 
-		const configId = (formData.get('id') as string) ?? crypto.randomUUID();
+		if (file.size > MAX_PACKAGE_SIZE) {
+			return json({ success: false, error: 'File too large (max 10 MB)' }, { status: 413 });
+		}
+
+		const configId = (formData.get('id') as string) || crypto.randomUUID();
 
 		// Write uploaded zip to a temp file for TakPackageParser
 		const tmpDir = path.join('data', 'tmp');
@@ -31,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const parsed = await TakPackageParser.parse(zipPath);
 
 			// Save extracted cert files to the config's cert directory
-			const certDir = path.join('data/certs', configId);
+			const certDir = CertManager.validateConfigId(configId);
 			fs.mkdirSync(certDir, { recursive: true, mode: 0o700 });
 
 			let clientCertPath: string | undefined;
@@ -51,21 +57,11 @@ export const POST: RequestHandler = async ({ request }) => {
 			const config = {
 				hostname: parsed.hostname,
 				port: parsed.port,
-				protocol: 'ssl' as const,
+				protocol: 'tls' as const,
 				description: parsed.description,
 				truststorePath,
 				clientCertPath
 			};
-
-			if (parsed.certFiles.length === 0) {
-				return json({
-					success: true,
-					id: configId,
-					config,
-					warning:
-						'No certificates found in data package — import trust store and client certificate manually'
-				});
-			}
 
 			return json({ success: true, id: configId, config });
 		} finally {
@@ -73,10 +69,22 @@ export const POST: RequestHandler = async ({ request }) => {
 			if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 		}
 	} catch (err) {
+		if (err instanceof Error && err.name === 'InputValidationError') {
+			return json({ success: false, error: err.message }, { status: 400 });
+		}
 		const msg = err instanceof Error ? err.message : String(err);
 		if (msg.includes('no manifest.xml')) {
 			return json(
 				{ success: false, error: 'Invalid data package — no manifest.xml found' },
+				{ status: 400 }
+			);
+		}
+		if (msg.includes('No certificates found')) {
+			return json(
+				{
+					success: false,
+					error: 'No certificates found in data package — import trust store and client certificate manually'
+				},
 				{ status: 400 }
 			);
 		}

@@ -49,5 +49,5 @@ This file documents key insights and context for AI agents working in the `/src`
 
 ## ⚠️ Common Pitfalls to Avoid
 - **DO NOT** use `document` or `window` in `load` functions (they run on server). Check `$app/environment` `browser` first.
-- **DO NOT** import server-only modules (like `fs`, `child_process`, `better-sqlite3`) into client-side components (`.svelte` or `+page.ts`). wrapper them in `+page.server.ts` or API routes.
+- **DO NOT** import server-only modules (like `fs`, `child_process`, `better-sqlite3`) into client-side components (`.svelte` or `+page.ts`). Wrap them in `+page.server.ts` or API routes.
 - **DO NOT** use `any` type aggressively. Fix the type definition.
