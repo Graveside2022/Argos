@@ -3,13 +3,13 @@
  * Detects networked SDRs and other network-connected hardware
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Detect networked USRP devices
@@ -18,7 +18,7 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 	const hardware: DetectedHardware[] = [];
 
 	try {
-		const { stdout } = await execAsync('uhd_find_devices --args="type=usrp" 2>&1', {
+		const { stdout } = await execFileAsync('/usr/bin/uhd_find_devices', ['--args=type=usrp'], {
 			timeout: 5000
 		});
 
