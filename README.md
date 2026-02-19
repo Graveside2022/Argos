@@ -11,6 +11,26 @@ Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, an
 - USB GPS dongle (BU-353S4 or similar)
 - Kali Linux installed on the Pi
 
+## Additional Tools
+
+### Claude Desktop / Claude Mem
+
+If using `claude-mem`, you may encounter issue with orphaned processes or excessive spawning. These issues are caused by bugs in the plugin's `bun-runner.js` and `worker-service.cjs` scripts.
+
+To fix both issues (including after a plugin update), run the provided patch script:
+
+```bash
+bash scripts/ops/fix-claude-mem.sh
+```
+
+**Automated Healing**: If you are running `argos-dev-monitor` (see `docs/operations/memory-reliability.md`), this script is automatically run every 60 seconds to detect and patch updates.
+
+This script will:
+
+1.  Patch `bun-runner.js` to forward termination signals (fixing orphaned processes).
+2.  Patch `worker-service.cjs` to fix a race condition in concurrency limiting (fixing process explosion).
+3.  Restart `claude-mem` processes to apply changes.
+
 ## Install
 
 ```bash
