@@ -31,3 +31,12 @@ Run BEFORE commit:
 1. `npm run typecheck`
 2. `npm run test:unit`
 3. `npm run test:security`
+
+## Active Technologies
+
+- TypeScript 5.8 (strict mode) + SvelteKit 2.22, child_process (execFile, spawn), better-sqlite3, fs/promises (009-gsm-evil-exec-migration)
+- SQLite via better-sqlite3 (replaces inline Python sqlite3 calls) (009-gsm-evil-exec-migration)
+
+## Recent Changes
+
+- 009-gsm-evil-exec-migration: Added TypeScript 5.8 (strict mode) + SvelteKit 2.22, child_process (execFile, spawn), better-sqlite3, fs/promises
