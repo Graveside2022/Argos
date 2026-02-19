@@ -1,5 +1,11 @@
-import { legacyShellExec } from '$lib/server/legacy-shell-exec';
+import { execFile, spawn } from 'child_process';
+import { closeSync, openSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { promisify } from 'util';
+
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+
+const execFileAsync = promisify(execFile);
 
 export interface GsmScanResult {
 	frequency: string;
@@ -51,18 +57,30 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 			try {
 				const gain = 40;
 
-				// HackRF via grgsm_livemon_headless — no device args needed
-				const baseCommand = `sudo grgsm_livemon_headless -f ${freq}M -g ${gain} --collector localhost --collectorport 4729`;
-				console.warn(`Running command: ${baseCommand}`);
+				const gsmArgs = [
+					'grgsm_livemon_headless',
+					'-f',
+					`${freq}M`,
+					'-g',
+					String(gain),
+					'--collector',
+					'localhost',
+					'--collectorport',
+					'4729'
+				];
+				console.warn(`Running command: sudo ${gsmArgs.join(' ')}`);
 
 				// Test if GRGSM can start at all
 				let gsmTestOutput = '';
 				try {
-					const testResult = await legacyShellExec(`timeout 4 ${baseCommand}`);
+					const testResult = await execFileAsync('/usr/bin/timeout', [
+						'4',
+						'/usr/bin/sudo',
+						...gsmArgs
+					]);
 					gsmTestOutput = testResult.stdout + testResult.stderr;
 					console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 300)}`);
 				} catch (testError: unknown) {
-					// Safe: execFile error contains stdout/stderr properties for diagnostic output capture
 					const error = testError as { stdout?: string; stderr?: string };
 					gsmTestOutput = (error.stdout || '') + (error.stderr || '');
 				}
@@ -88,11 +106,21 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					);
 				}
 
-				const { stdout: gsmPid } = await legacyShellExec(
-					`${baseCommand} >>/tmp/grgsm_scan.log 2>&1 & echo $!`
-				);
-
-				pid = gsmPid.trim();
+				// Background spawn with PID capture
+				const logFd = openSync('/tmp/grgsm_scan.log', 'a');
+				const child = spawn('/usr/bin/sudo', gsmArgs, {
+					detached: true,
+					stdio: ['ignore', logFd, logFd]
+				});
+				child.unref();
+				closeSync(logFd);
+				const spawnedPid = child.pid;
+				if (!spawnedPid) {
+					throw new Error(
+						'Failed to start grgsm_livemon_headless - check hardware connection'
+					);
+				}
+				pid = String(spawnedPid);
 				validateNumericParam(pid, 'pid', 1, 4194304);
 
 				// Validate process started
@@ -118,27 +146,35 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				try {
 					// DIRECT LOG ANALYSIS: Check grgsm.log for actual GSM frames instead of unreliable tcpdump
 
-					// Get initial log size
-					const { stdout: initialSize } = await legacyShellExec(
-						`wc -l < ${logPath} 2>/dev/null || echo 0`
-					);
-					const startLines = parseInt(initialSize.trim()) || 0;
+					// Get initial log line count
+					let startLines = 0;
+					try {
+						const content = await readFile(logPath, 'utf-8');
+						startLines = content.split('\n').length;
+					} catch {
+						startLines = 0;
+					}
 
 					// Wait for data collection period
 					await new Promise((resolve) => setTimeout(resolve, captureTime * 1000));
 
-					// Get final log size and count new GSM frame lines
-					const { stdout: finalSize } = await legacyShellExec(
-						`wc -l < ${logPath} 2>/dev/null || echo 0`
-					);
-					const endLines = parseInt(finalSize.trim()) || 0;
+					// Get final log line count
+					let endLines = 0;
+					try {
+						const content = await readFile(logPath, 'utf-8');
+						endLines = content.split('\n').length;
+					} catch {
+						endLines = 0;
+					}
 
 					// Count actual GSM data frames (hex patterns) added during collection
 					if (endLines > startLines) {
-						const { stdout: frameLines } = await legacyShellExec(
-							`tail -n ${endLines - startLines} ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s" | wc -l`
+						const content = await readFile(logPath, 'utf-8');
+						const allLines = content.split('\n');
+						const newLines = allLines.slice(
+							Math.max(0, allLines.length - (endLines - startLines))
 						);
-						frameCount = parseInt(frameLines.trim()) || 0;
+						frameCount = newLines.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l)).length;
 					}
 
 					console.warn(
@@ -148,32 +184,61 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					// Fallback to tcpdump only if log analysis fails
 					if (frameCount === 0) {
 						console.warn('Log analysis found no frames, trying tcpdump fallback...');
-						const tcpdumpCommand = `sudo timeout 2 tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729" || echo 0`;
-						const { stdout: packetCount } = await legacyShellExec(tcpdumpCommand).catch(
-							(error: unknown) => {
-								console.warn('[gsm-evil-scan] tcpdump fallback failed', {
-									error: String(error)
-								});
-								return { stdout: '0' };
+						try {
+							const { stdout: tcpOut } = await execFileAsync('/usr/bin/sudo', [
+								'/usr/bin/timeout',
+								'2',
+								'/usr/sbin/tcpdump',
+								'-i',
+								'lo',
+								'-nn',
+								'port',
+								'4729'
+							]);
+							const tcpdumpFrames = tcpOut
+								.split('\n')
+								.filter((l) => l.includes('127.0.0.1.4729')).length;
+							frameCount = tcpdumpFrames;
+						} catch (tcpError: unknown) {
+							const error = tcpError as { stdout?: string };
+							if (error.stdout) {
+								const tcpdumpFrames = error.stdout
+									.split('\n')
+									.filter((l) => l.includes('127.0.0.1.4729')).length;
+								frameCount = tcpdumpFrames;
 							}
-						);
-						const tcpdumpFrames = parseInt(packetCount.trim()) || 0;
-						console.warn(`Tcpdump fallback: ${tcpdumpFrames} packets`);
-						frameCount = tcpdumpFrames;
+						}
+						console.warn(`Tcpdump fallback: ${frameCount} packets`);
 					}
 				} catch (logError: unknown) {
-					// Safe: Log analysis error cast to Error for diagnostic message
 					console.warn(
-						// Safe: Catch block error from file operations is Error instance
 						`Direct log analysis failed: ${(logError as Error).message}, using tcpdump fallback`
 					);
+					// tcpdump fallback in catch block
 					try {
-						const tcpdumpCommand = `sudo timeout ${captureTime} tcpdump -i lo -nn port 4729 2>/dev/null | grep -c "127.0.0.1.4729"`;
-						const { stdout: packetCount } = await legacyShellExec(tcpdumpCommand);
-						frameCount = parseInt(packetCount.trim()) || 0;
-					} catch (_error: unknown) {
-						frameCount = 0;
-						console.warn(`Both log analysis and tcpdump failed for ${freq} MHz`);
+						const { stdout: tcpOut } = await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/timeout',
+							String(captureTime),
+							'/usr/sbin/tcpdump',
+							'-i',
+							'lo',
+							'-nn',
+							'port',
+							'4729'
+						]);
+						frameCount = tcpOut
+							.split('\n')
+							.filter((l) => l.includes('127.0.0.1.4729')).length;
+					} catch (tcpError: unknown) {
+						const error = tcpError as { stdout?: string };
+						if (error.stdout) {
+							frameCount = error.stdout
+								.split('\n')
+								.filter((l) => l.includes('127.0.0.1.4729')).length;
+						} else {
+							frameCount = 0;
+							console.warn(`Both log analysis and tcpdump failed for ${freq} MHz`);
+						}
 					}
 				}
 
@@ -182,12 +247,15 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				let controlChannel = false;
 
 				if (frameCount > 0) {
-					// Read recent frame lines and classify by GSM L3 message type (byte[2] with byte[1]=0x06)
+					// Read recent frame lines and classify by GSM L3 message type
 					try {
-						const { stdout: recentLines } = await legacyShellExec(
-							`tail -50 ${logPath} | grep -E "^\\s*[0-9a-f]{2}\\s" | head -30`
-						);
-						const lines = recentLines.split('\n').filter((l: string) => l.trim());
+						const logContent = await readFile(logPath, 'utf-8');
+						const logLines = logContent.split('\n');
+						const lines = logLines
+							.slice(-50)
+							.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l))
+							.slice(0, 30);
+
 						let hasSI = false;
 						let hasPaging = false;
 
@@ -266,26 +334,40 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					});
 				}
 			} catch (freqError) {
-				// Safe: Frequency test error cast to Error for warning message
 				console.warn(`Error testing ${freq} MHz: ${(freqError as Error).message}`);
 
-				// Safe: Error message check for hardware unavailability detection
 				if ((freqError as Error).message.includes('Hardware not available')) {
 					throw freqError;
 				}
 			} finally {
 				if (pid && pid !== '0') {
 					try {
-						await legacyShellExec(`sudo kill ${pid} 2>/dev/null`);
+						// Kill background process
+						const validKillPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
+						await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/kill',
+							String(validKillPid)
+						]);
 					} catch (_error: unknown) {
 						console.warn(`Warning: Failed to clean up process ${pid}`);
-						await legacyShellExec(`sudo kill -9 ${pid} 2>/dev/null`).catch(
-							(error: unknown) => {
-								console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
-									error: String(error)
-								});
-							}
-						);
+						// Force kill fallback
+						try {
+							const validKillPid = validateNumericParam(
+								parseInt(pid),
+								'pid',
+								1,
+								4194304
+							);
+							await execFileAsync('/usr/bin/sudo', [
+								'/usr/bin/kill',
+								'-9',
+								String(validKillPid)
+							]);
+						} catch (killError: unknown) {
+							console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
+								error: String(killError)
+							});
+						}
 					}
 				}
 			}
@@ -317,7 +399,6 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 		return {
 			success: false,
 			message: 'Scan failed. Make sure GSM Evil is stopped first.',
-			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message
 		};
 	}
