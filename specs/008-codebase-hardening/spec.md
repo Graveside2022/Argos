@@ -1,180 +1,120 @@
-# 008 — Codebase Hardening
+# Feature Specification: Codebase Hardening
 
-## Goal
+**Feature Branch**: `008-codebase-hardening`
+**Created**: 2026-02-19
+**Status**: Draft
+**Input**: User description: "Eliminate all remaining CLAUDE.md and Constitution violations discovered in the 2026-02-19 codebase convention audit. Covers shell call migration to safe execution, file decomposition for maintainability, and convention compliance fixes."
 
-Eliminate all remaining CLAUDE.md and Constitution violations discovered in the
-2026-02-19 codebase convention audit. This branch covers Phase 4 (file
-decomposition) and the remaining unsafe shell call migration that was
-outside Phase 1 scope.
+## User Scenarios & Testing _(mandatory)_
 
-## Non-Goals
+### User Story 1 - Safe Command Execution (Priority: P1)
 
-- No new features.
-- No UI redesign — only component extraction to reduce file size.
-- No changes to pure data files (tool-hierarchy.ts, carrier-mappings.ts, types.ts).
+As a security-conscious operator deploying Argos in a field environment, I need all system commands to execute through safe, injection-resistant methods so that no external input can compromise the host system.
 
-## Success Criteria
+**Why this priority**: Shell injection is the highest-severity vulnerability class in a network analysis tool. Argos runs with hardware access on tactical systems — a command injection could compromise the entire device. This must be resolved before any other code quality work.
 
-1. Zero files importing the unsafe shell function from child_process (all converted to execFile/spawn).
-2. All component/logic files under 300 lines (data files exempt).
-3. All existing tests continue to pass.
-4. No new console.log, .subscribe(), barrel files, or `as any` introduced.
+**Independent Test**: Can be fully tested by running the security test suite (`npm run test:security`) and verifying zero unsafe shell execution patterns remain. Delivers immediate security hardening value.
 
----
+**Acceptance Scenarios**:
 
-## Workstream A: Unsafe Shell Call Migration (18 files, ~66 call sites)
-
-**Pattern to eliminate:** `promisify(unsafeShellFn)` replaced with `execFile` + explicit arg arrays.
-
-### Priority 1 — API Routes (user-facing, highest injection risk)
-
-| #   | File                                           | Calls | Notes                                             |
-| --- | ---------------------------------------------- | ----: | ------------------------------------------------- |
-| A1  | `routes/api/system/metrics/+server.ts`         |     4 | CPU/disk/network stats — use os module + execFile |
-| A2  | `routes/api/system/docker/[action]/+server.ts` |     3 | Docker control — execFile with explicit args      |
-| A3  | `routes/api/system/docker/+server.ts`          |     2 | Docker status — execFile                          |
-| A4  | `routes/api/system/services/+server.ts`        |     2 | systemctl queries — execFile                      |
-| A5  | `routes/api/system/memory-pressure/+server.ts` |     3 | Memory stats — use os module + execFile           |
-| A6  | `routes/api/kismet/stop/+server.ts`            |     7 | Process kill chain — execFile pkill/kill          |
-| A7  | `routes/api/rf/status/+server.ts`              |     1 | RF device query — execFile                        |
-
-### Priority 2 — Server Libraries (internal, lower risk but pattern must go)
-
-| #   | File                                                       | Calls | Notes                                   |
-| --- | ---------------------------------------------------------- | ----: | --------------------------------------- |
-| A8  | `lib/server/kismet/service-manager.ts`                     |    19 | Heaviest user — USB reset, process mgmt |
-| A9  | `lib/server/services/kismet/kismet-control-service.ts`     |     8 | Kismet start/stop/restart               |
-| A10 | `lib/server/hardware/hackrf-manager.ts`                    |     8 | HackRF device control                   |
-| A11 | `lib/server/hardware/alfa-manager.ts`                      |     3 | Alfa adapter monitor mode               |
-| A12 | `lib/server/hardware/detection/network-detector.ts`        |     1 | Network interface scan                  |
-| A13 | `lib/server/services/hardware/hardware-details-service.ts` |     1 | lsusb/lspci queries                     |
-| A14 | `lib/server/mcp/servers/test-runner.ts`                    |     3 | MCP test execution                      |
-| A15 | `lib/constitution/git-categorizer.ts`                      |     3 | git log/diff queries                    |
-
-### Priority 3 — Dead Imports (import but never call)
-
-| #   | File                                               | Notes                |
-| --- | -------------------------------------------------- | -------------------- |
-| A16 | `lib/server/hardware/detection/serial-detector.ts` | Remove unused import |
-| A17 | `lib/server/hardware/detection/usb-detector.ts`    | Remove unused import |
-| A18 | `lib/server/kismet/alfa-detector.ts`               | Remove unused import |
+1. **Given** the codebase contains files that execute system commands, **When** a developer audits all command execution calls, **Then** every call uses argument-array-based execution (not string interpolation into a shell)
+2. **Given** a file imports the unsafe shell function, **When** it never actually calls that function, **Then** the unused import is removed entirely
+3. **Given** any system command requires dynamic arguments (device names, process IDs, file paths), **When** those arguments are passed to execution, **Then** they are provided as separate array elements, never concatenated into a command string
 
 ---
 
-## Workstream B: File Decomposition (54 actionable files > 300 lines)
+### User Story 2 - Maintainable File Sizes (Priority: P2)
 
-### Tier 1 — Critical (>1000 lines, highest ROI)
+As a developer maintaining Argos, I need all component and logic files to be under 300 lines so that I can understand, review, and modify any single file without excessive cognitive load.
 
-| #   | File                                              | Lines | Target | Strategy                                                            |
-| --- | ------------------------------------------------- | ----: | ------ | ------------------------------------------------------------------- |
-| B1  | `components/dashboard/DashboardMap.svelte`        |  1794 | <300   | Extract: MapCore, MapLayers, MapControls, MapOverlays, MapPopups    |
-| B2  | `server/hackrf/sweep-manager.ts`                  |  1417 | <300   | Extract: health-checker, cleanup-manager, memory-monitor            |
-| B3  | `components/dashboard/TopStatusBar.svelte`        |  1203 | <300   | Extract: StatusIndicators, NetworkInfo, SystemMonitor, ModalDialogs |
-| B4  | `components/dashboard/panels/DevicesPanel.svelte` |  1047 | <300   | Extract: DeviceList, DeviceControls, DeviceFilters, DeviceDetails   |
+**Why this priority**: Large files (some exceeding 1000 lines) slow down code review, increase merge conflict likelihood, and make it harder for new contributors to onboard. Decomposition enables parallel development and targeted testing.
 
-### Tier 2 — High (500-999 lines)
+**Independent Test**: Can be tested by running a line-count audit across all source files and confirming no component or logic file exceeds 300 lines (pure data files are exempt). Delivers maintainability value immediately.
 
-| #   | File                                                       | Lines | Strategy                                                    |
-| --- | ---------------------------------------------------------- | ----: | ----------------------------------------------------------- |
-| B5  | `components/dashboard/panels/OverviewPanel.svelte`         |   769 | Extract chart/stats widgets                                 |
-| B6  | `components/dashboard/TerminalPanel.svelte`                |   742 | Extract TerminalOutput, TerminalInput, SessionManager       |
-| B7  | `server/mcp/dynamic-server.ts`                             |   716 | Extract tool factories                                      |
-| B8  | `components/dashboard/AgentChatPanel.svelte`               |   619 | Extract MessageList, InputBar, ToolResults                  |
-| B9  | `server/kismet/web-socket-manager.ts`                      |   611 | Extract message handlers                                    |
-| B10 | `server/services/gsm-evil/gsm-intelligent-scan-service.ts` |   558 | Extract state machine                                       |
-| B11 | `server/mcp/servers/hardware-debugger.ts`                  |   554 | Extract tool definitions                                    |
-| B12 | `server/kismet/kismet-proxy.ts`                            |   543 | Extract request handlers                                    |
-| B13 | `routes/gsm-evil/+page.svelte`                             |   537 | Extract ScanPanel, CapturePanel, FrameViewer                |
-| B14 | `server/db/db-optimizer.ts`                                |   520 | Extract analysis functions                                  |
-| B15 | `server/db/cleanup-service.ts`                             |   509 | Extract retention policies                                  |
-| B16 | `hackrf/api-legacy.ts`                                     |   509 | Extract or deprecate                                        |
-| B17 | `hackrf/sweep-manager/buffer-manager.ts`                   |   505 | Extract ring buffer logic                                   |
-| B18 | `hooks.server.ts`                                          |   501 | Extract auth, rate-limit, CORS into middleware modules      |
-| B19 | `server/mcp/servers/streaming-inspector.ts`                |   498 | Extract tool definitions                                    |
-| B20 | `hackrf/spectrum.ts`                                       |   492 | Extract FFT, waterfall, power modules                       |
-| B21 | `hackrf/sweep-manager/error-tracker.ts`                    |   485 | Extract recovery strategies                                 |
-| B22 | `constitution/validators/article-ii-code-quality.ts`       |   483 | Extract rule validators                                     |
-| B23 | `server/websocket-server.ts`                               |   469 | Extract session management                                  |
-| B24 | `components/dashboard/panels/LayersPanel.svelte`           |   467 | Extract MapProviderSelector, VisibilityFilter, LayerToggles |
+**Acceptance Scenarios**:
 
-### Tier 3 — Moderate (300-500 lines, tackle after Tier 1-2)
-
-| #   | File                                                   | Lines |
-| --- | ------------------------------------------------------ | ----: |
-| B25 | `server/mcp/servers/system-inspector.ts`               |   445 |
-| B26 | `kismet/websocket.ts`                                  |   434 |
-| B27 | `hackrf/sweep-manager/frequency-cycler.ts`             |   434 |
-| B28 | `constitution/master-report-generator.ts`              |   433 |
-| B29 | `routes/dashboard/+page.svelte`                        |   432 |
-| B30 | `kismet/api.ts`                                        |   429 |
-| B31 | `constitution/analysis-generator.ts`                   |   422 |
-| B32 | `server/mcp/servers/database-inspector.ts`             |   420 |
-| B33 | `server/services/gps/gps-position-service.ts`          |   419 |
-| B34 | `stores/gsm-evil-store.ts`                             |   415 |
-| B35 | `hackrf/sweep-manager/process-manager.ts`              |   405 |
-| B36 | `server/hardware/detection/usb-detector.ts`            |   401 |
-| B37 | `server/gsm/l3-decoder.ts`                             |   392 |
-| B38 | `components/dashboard/TerminalTabContent.svelte`       |   382 |
-| B39 | `websocket/base.ts`                                    |   380 |
-| B40 | `server/services/kismet.service.ts`                    |   380 |
-| B41 | `constitution/constitution-parser.ts`                  |   380 |
-| B42 | `server/agent/frontend-tools.ts`                       |   369 |
-| B43 | `server/services/hardware/hardware-details-service.ts` |   363 |
-| B44 | `stores/dashboard/terminal-store.ts`                   |   362 |
-| B45 | `server/db/database.ts`                                |   359 |
-| B46 | `constitution/validators/article-iii-testing.ts`       |   341 |
-| B47 | `constitution/auditor.ts`                              |   341 |
-| B48 | `server/mcp/servers/api-debugger.ts`                   |   332 |
-| B49 | `components/dashboard/IconRail.svelte`                 |   331 |
-| B50 | `server/services/gsm-evil/gsm-scan-service.ts`         |   324 |
-| B51 | `components/dashboard/PanelContainer.svelte`           |   317 |
-| B52 | `server/hardware/resource-manager.ts`                  |   315 |
-| B53 | `hackrf/stores.ts`                                     |   310 |
-| B54 | `server/services/gps/gps-satellite-service.ts`         |   307 |
+1. **Given** a component or logic file exceeds 300 lines, **When** a developer decomposes it, **Then** the resulting files are each under 300 lines and the original functionality is preserved
+2. **Given** a file is a pure data definition (static lookup tables, type definitions), **When** the line-count audit runs, **Then** that file is excluded from the 300-line threshold
+3. **Given** a large file is decomposed into smaller modules, **When** the full test suite runs, **Then** all existing tests continue to pass without modification
 
 ---
 
-## Workstream C: Remaining Convention Fixes
+### User Story 3 - Convention Compliance (Priority: P3)
 
-### C1. Raw button elements to shadcn Button (~15 instances, 10 files)
+As a developer working on the Argos UI, I need all interactive elements to use the project's design system components (not raw HTML) so that the interface remains visually consistent and accessible across all panels.
 
-| File                             | Instances | Notes                        |
-| -------------------------------- | --------: | ---------------------------- |
-| `panels/LayersPanel.svelte`      |         1 | apply-btn                    |
-| `dashboard/+page.svelte`         |         1 | tab-close-btn                |
-| `panels/DevicesPanel.svelte`     |         1 | whitelist-remove             |
-| `panels/OverviewPanel.svelte`    |         6 | scan-row buttons             |
-| `status/TAKIndicator.svelte`     |         2 | tak-indicator, configure-btn |
-| `TerminalPanel.svelte`           |         2 | dropdown-item, create-btn    |
-| `AgentChatPanel.svelte`          |         1 | toolbar-btn                  |
-| `panels/ToolsPanelHeader.svelte` |         1 | back-btn                     |
-| `shared/ToolCategoryCard.svelte` |         1 | category-card                |
+**Why this priority**: Raw HTML buttons and inputs bypass the design system's built-in accessibility attributes, consistent styling, and theming support. Fixing these ensures a uniform operator experience and reduces future UI maintenance burden.
 
-**Note:** Some may be intentionally raw (MapLibre overlays, terminal UI). Evaluate case-by-case.
+**Independent Test**: Can be tested by searching the codebase for raw `<button>` and `<input>` elements in Svelte components and verifying they have been replaced with design system equivalents (where appropriate). Delivers UI consistency value.
 
-### C2. Type assertion cleanup
+**Acceptance Scenarios**:
 
-| File                | Line | Notes                                                      |
-| ------------------- | ---- | ---------------------------------------------------------- |
-| `websocket/base.ts` | 72   | WebSocket constructor compat — use `as unknown as` pattern |
+1. **Given** a Svelte component contains a raw HTML button element, **When** a developer evaluates it, **Then** it is replaced with the project's Button component unless it is intentionally raw (e.g., map overlay controls)
+2. **Given** a TypeScript file uses an unsafe type assertion (`as any`), **When** it is reviewed, **Then** the assertion is replaced with a properly typed pattern
+3. **Given** all convention fixes are applied, **When** the type checker and linter run, **Then** no new errors or warnings are introduced
 
 ---
 
-## Exempt Files (no action needed)
+### Edge Cases
 
-| File                       | Lines | Reason                     |
-| -------------------------- | ----: | -------------------------- |
-| `data/tool-hierarchy.ts`   |  1491 | Pure static data tree      |
-| `data/carrier-mappings.ts` |   809 | Pure MCC-MNC lookup tables |
-| `constitution/types.ts`    |   315 | Type definitions only      |
+- What happens when a system command requires shell operators (pipes, redirects, background execution)?
+    - These must be restructured to use programmatic alternatives (e.g., Node.js `spawn` with `detached: true` and file descriptor options instead of `nohup &`)
+- What happens when a file decomposition changes an import path that other files depend on?
+    - All consumers must be updated in the same commit to maintain a working state at every commit
+- What happens when a raw button is intentionally used for a non-standard UI context (e.g., map overlays)?
+    - These cases are evaluated individually and documented as exempt if the design system component is not appropriate
 
----
+## Requirements _(mandatory)_
 
-## Execution Strategy
+### Functional Requirements
 
-1. **Workstream A first** (shell call migration) — mechanical, low risk, high security value.
-2. **Workstream B Tier 1** next — the 4 largest files yield the biggest improvement.
-3. **Workstream C** alongside B — small fixes bundled with decomposition commits.
-4. **Workstream B Tiers 2-3** — batch by subsystem (hackrf, kismet, mcp, dashboard).
+- **FR-001**: System MUST execute all external commands using argument-array-based methods, never shell string interpolation
+- **FR-002**: System MUST remove all unused imports of unsafe shell execution functions
+- **FR-003**: System MUST validate all dynamic command arguments (device names, process IDs, file paths) before passing them to execution
+- **FR-004**: All Tier 1 files (>1000 lines) MUST be decomposed to under 300 lines each (pure data files exempt). Tier 2/3 deferred to follow-up branch
+- **FR-005**: All interactive UI elements MUST use the project's design system components unless explicitly documented as exempt
+- **FR-006**: System MUST NOT introduce any new violations of project conventions (no `console.log`, no `.subscribe()`, no barrel files, no `as any`)
+- **FR-007**: All existing tests MUST continue to pass after every change
+- **FR-008**: Each file decomposition MUST preserve the original module's public API or update all consumers in the same commit
 
-Each decomposition should be a separate commit for easy review and revert.
+### Key Entities
+
+- **Command Execution Call**: A site in the codebase where an external system binary is invoked (19 files including host-exec.ts wrapper, ~66 call sites identified)
+- **Oversized File**: A component or logic file exceeding 300 lines (51 actionable files identified after excluding 3 exempt data files; 4 exceeding 1000 lines)
+- **Convention Violation**: A usage of raw HTML elements, unsafe type assertions, or other patterns prohibited by project conventions (9 raw buttons + 3 raw inputs = 12 total; 4 `as any` assertions, all documented library limitations)
+
+## Success Criteria _(mandatory)_
+
+### Measurable Outcomes
+
+- **SC-001**: Zero files in the codebase import or use shell-string-based command execution — verified by automated grep
+- **SC-002**: Zero Tier 1 files (>1000 lines) remain after decomposition — verified by line-count audit. Tier 2/3 compliance deferred to follow-up branch
+- **SC-003**: All existing tests pass after all changes are complete (163+ unit, 151 security, 25+ integration)
+- **SC-004**: Type checking completes with zero errors (no new warnings introduced beyond pre-implementation baseline)
+- **SC-005**: Security test suite passes with zero regressions
+- **SC-006**: No new convention violations introduced (verified by constitutional audit tool)
+
+## Assumptions
+
+- Pure data files (static lookup tables, type-only files) are exempt from the 300-line file size threshold
+- Shell commands that require shell operators (pipes, redirects, background execution) will be restructured using Node.js process management APIs rather than simply being wrapped in a shell string
+- The 4 files exceeding 1000 lines will be decomposed first due to highest maintainability ROI. Tier 2/3 decomposition (47 files, 300-999 lines) deferred to follow-up branch per IX-9.2 task granularity — each decomposition takes 1-2 hours and this branch establishes the pattern
+- Each decomposition commit will be atomic — all import path updates included in the same commit
+- Map overlay buttons and other context-specific raw HTML elements may be exempted from design system migration after case-by-case evaluation
+- III-3.1 Test-First adapted for mechanical refactoring — existing 250+ tests (151 security, 80+ unit, 25+ integration) serve as regression net. No new behavior introduced = no new test-first requirement. New tests added only for genuinely new patterns.
+
+## Scope Boundaries
+
+### In Scope
+
+- Migration of all ~66 unsafe shell execution call sites across 19 files (including deletion of host-exec.ts wrapper)
+- Decomposition of Tier 1 oversized files (4 files >1000 lines). Tier 2 (500-999) and Tier 3 (300-500) deferred to follow-up branch per IX-9.2 task granularity
+- Replacement of 4 raw HTML elements (1 button + 3 inputs) with design system components; 8 intentional raw buttons documented as exempt
+- 4 `as any` type assertions verified as documented library limitations — no action needed
+
+### Out of Scope
+
+- No new features or functionality
+- No UI redesign beyond component swap-ins
+- No changes to pure data files (tool-hierarchy.ts at 1491 lines, carrier-mappings.ts at 810 lines, types.ts at 315 lines)
+- No changes to the database schema or API contracts
