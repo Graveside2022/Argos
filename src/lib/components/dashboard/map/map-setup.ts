@@ -127,8 +127,8 @@ export function setupMap(
 		});
 	}
 
-	// Apply initial layer visibility
-	setTimeout(() => {
+	// Apply initial layer visibility once the map finishes rendering added layers
+	mapInstance.once('idle', () => {
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
 			const visible = layerVisibility[key] !== false;
 			for (const id of layerIds) {
@@ -137,7 +137,7 @@ export function setupMap(
 				}
 			}
 		}
-	}, 200);
+	});
 
 	return { satLayer, symbolLayer };
 }

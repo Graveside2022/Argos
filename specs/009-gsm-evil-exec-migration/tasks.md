@@ -20,11 +20,11 @@
 
 **Purpose**: Add missing input validation to 5 identified security gaps. This ensures all dynamic values are validated regardless of migration.
 
-- [ ] T001 [US1] Add `validateNumericParam()` for PID parsed from ps output in `src/routes/api/gsm-evil/status/+server.ts`
-- [ ] T002 [US1] Add `validateNumericParam()` for frequency from hackrf_sweep output in `src/routes/api/gsm-evil/intelligent-scan/+server.ts`
-- [ ] T003 [US1] Add path validation (allowlist) for `imsiDbPath` in `src/routes/api/gsm-evil/activity/+server.ts`
-- [ ] T004 [US1] Add `validateInterfaceName()` for `alfaInterface` from sysfs in `src/lib/server/services/kismet/kismet-control-service-extended.ts`
-- [ ] T005 [US1] Add port validation with `validateNumericParam()` for lsof port in `src/lib/server/services/kismet/kismet-control-service-extended.ts` (carryover I3)
+- [x] T001 [US1] Add `validateNumericParam()` for PID parsed from ps output in `src/routes/api/gsm-evil/status/+server.ts`
+- [x] T002 [US1] Add `validateNumericParam()` for frequency from hackrf_sweep output in `src/routes/api/gsm-evil/intelligent-scan/+server.ts`
+- [x] T003 [US1] Add path validation (allowlist) for `imsiDbPath` in `src/routes/api/gsm-evil/activity/+server.ts`
+- [x] T004 [US1] Add `validateInterfaceName()` for `alfaInterface` from sysfs in `src/lib/server/services/kismet/kismet-control-service-extended.ts`
+- [x] T005 [US1] Add port validation with `validateNumericParam()` for lsof port in `src/lib/server/services/kismet/kismet-control-service-extended.ts` (carryover I3)
 
 **Checkpoint**: All dynamic values validated. Run `npm run typecheck` — 0 errors.
 
@@ -34,14 +34,14 @@
 
 **Purpose**: Migrate the 7 GSM Evil API routes. Most use static commands or already-validated parameters. Low risk, 26 call sites.
 
-- [ ] T006 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/routes/api/gsm-evil/live-frames/+server.ts` (2 calls — simplest file, 1 actual exec)
-- [ ] T007 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/routes/api/gsm-evil/frames/+server.ts` (3 calls — pipe chain + fs)
-- [ ] T008 [P] [US1] Migrate `legacyShellExec` → `execFileAsync` in `src/routes/api/gsm-evil/status/+server.ts` (5 calls — multi-pipe chains → pgrep/ps)
-- [ ] T009 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs`/`better-sqlite3` in `src/routes/api/gsm-evil/activity/+server.ts` (5 calls — pipes, redirects, inline Python)
-- [ ] T010 [P] [US1] Migrate `legacyShellExec` → `fs`/`better-sqlite3` in `src/routes/api/gsm-evil/imsi-data/+server.ts` (3 calls — inline Python → better-sqlite3)
-- [ ] T011 [P] [US1] Migrate `legacyShellExec` → `fs`/`better-sqlite3` in `src/routes/api/gsm-evil/imsi/+server.ts` (3 calls — inline Python → better-sqlite3)
-- [ ] T012 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn` in `src/routes/api/gsm-evil/intelligent-scan/+server.ts` (5 calls — pipes, background, redirects)
-- [ ] T013 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after all route migrations
+- [x] T006 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/routes/api/gsm-evil/live-frames/+server.ts` (2 calls — simplest file, 1 actual exec)
+- [x] T007 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/routes/api/gsm-evil/frames/+server.ts` (3 calls — pipe chain + fs)
+- [x] T008 [P] [US1] Migrate `legacyShellExec` → `execFileAsync` in `src/routes/api/gsm-evil/status/+server.ts` (5 calls — multi-pipe chains → pgrep/ps)
+- [x] T009 [P] [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs`/`better-sqlite3` in `src/routes/api/gsm-evil/activity/+server.ts` (5 calls — pipes, redirects, inline Python)
+- [x] T010 [P] [US1] Migrate `legacyShellExec` → `fs`/`better-sqlite3` in `src/routes/api/gsm-evil/imsi-data/+server.ts` (3 calls — inline Python → better-sqlite3)
+- [x] T011 [P] [US1] Migrate `legacyShellExec` → `fs`/`better-sqlite3` in `src/routes/api/gsm-evil/imsi/+server.ts` (3 calls — inline Python → better-sqlite3)
+- [x] T012 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn` in `src/routes/api/gsm-evil/intelligent-scan/+server.ts` (5 calls — pipes, background, redirects)
+- [x] T013 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after all route migrations
 
 **Checkpoint**: All 7 route files migrated. `grep -rn "legacyShellExec" src/routes/` returns 0 matches.
 
@@ -51,11 +51,11 @@
 
 **Purpose**: Migrate the 4 GSM Evil service files. Contains the hardest patterns: background processes, inline Python, pipe chains, sed scripting. 57 call sites.
 
-- [ ] T014 [US1] Migrate `legacyShellExec` → `execFileAsync`/`better-sqlite3`/`fetch` in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` (9 calls — multi-pipe chains, inline Python SQL → better-sqlite3)
-- [ ] T015 [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/lib/server/services/gsm-evil/gsm-scan-service.ts` (11 calls — pipes, redirects, process discovery)
-- [ ] T016 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fs` in `src/lib/server/services/gsm-evil/gsm-intelligent-scan-service.ts` (17 calls — background processes, pipes, redirects, PID capture)
-- [ ] T017 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fs` in `src/lib/server/services/gsm-evil/gsm-evil-control-service.ts` (20 calls — background/nohup, nested shell, redirects, sed → fs operations)
-- [ ] T018 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after all service migrations
+- [x] T014 [US1] Migrate `legacyShellExec` → `execFileAsync`/`better-sqlite3`/`fetch` in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` (9 calls — multi-pipe chains, inline Python SQL → better-sqlite3)
+- [x] T015 [US1] Migrate `legacyShellExec` → `execFileAsync`/`fs` in `src/lib/server/services/gsm-evil/gsm-scan-service.ts` (11 calls — pipes, redirects, process discovery)
+- [x] T016 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fs` in `src/lib/server/services/gsm-evil/gsm-intelligent-scan-service.ts` (17 calls — background processes, pipes, redirects, PID capture)
+- [x] T017 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fs` in `src/lib/server/services/gsm-evil/gsm-evil-control-service.ts` (20 calls — background/nohup, nested shell, redirects, sed → fs operations)
+- [x] T018 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after all service migrations
 
 **Checkpoint**: All 4 service files migrated. `grep -rn "legacyShellExec" src/lib/server/services/gsm-evil/` returns 0 matches.
 
@@ -65,8 +65,8 @@
 
 **Purpose**: Migrate kismet-control-service-extended.ts. Contains credential-via-curl (→ fetch), kismet daemonization via bash -c (→ spawn), and repetitive pgrep patterns. 17 call sites.
 
-- [ ] T019 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fetch`/`fs` in `src/lib/server/services/kismet/kismet-control-service-extended.ts` (17 calls — bash -c → spawn, curl → fetch, pgrep patterns)
-- [ ] T020 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after Kismet migration
+- [x] T019 [US1] Migrate `legacyShellExec` → `execFileAsync`/`spawn`/`fetch`/`fs` in `src/lib/server/services/kismet/kismet-control-service-extended.ts` (17 calls — bash -c → spawn, curl → fetch, pgrep patterns)
+- [x] T020 [US1] Run `npm run typecheck && npm run build` — verify 0 errors after Kismet migration
 
 **Checkpoint**: Kismet file migrated. `grep -rn "legacyShellExec" src/lib/server/services/kismet/` returns 0 matches.
 
@@ -76,10 +76,10 @@
 
 **Purpose**: Delete the legacy shim, verify zero shell execution remains, run full test suite.
 
-- [ ] T021 [US1] Delete `src/lib/server/legacy-shell-exec.ts` — remove the legacyShellExec shim entirely
-- [ ] T022 [US1] Verify zero `legacyShellExec` or `promisify(exec)` imports remain: `grep -r "legacyShellExec\|promisify(exec)" src/ --include="*.ts"` returns 0 matches
-- [ ] T023 [US1] Verify only `execFile` and `spawn` imports from `child_process`: `grep -r "from 'child_process'" src/ --include="*.ts" | grep -v "execFile\|spawn"` returns 0 matches
-- [ ] T024 [US1] Run full verification suite: `npm run typecheck && npm run build && npm run test:unit && npm run test:security` — all pass
+- [x] T021 [US1] Delete `src/lib/server/legacy-shell-exec.ts` — remove the legacyShellExec shim entirely
+- [x] T022 [US1] Verify zero `legacyShellExec` or `promisify(exec)` imports remain: `grep -r "legacyShellExec\|promisify(exec)" src/ --include="*.ts"` returns 0 matches
+- [x] T023 [US1] Verify only `execFile` and `spawn` imports from `child_process`: `grep -r "from 'child_process'" src/ --include="*.ts" | grep -v "execFile\|spawn"` returns 0 matches
+- [x] T024 [US1] Run full verification suite: `npm run typecheck && npm run build && npm run test:unit && npm run test:security` — all pass
 
 **Checkpoint**: SC-001 through SC-005 met. Zero shell injection vectors remain.
 
@@ -89,9 +89,9 @@
 
 **Purpose**: Address actionable carryover items from the 008 code review.
 
-- [ ] T025 [P] Replace `setTimeout` hack with MapLibre load event in `src/lib/components/dashboard/map/map-setup.ts` (carryover S4)
-- [ ] T026 [P] Add sudoers configuration documentation to `deployment/` for all `sudo` usage in service files (carryover S5)
-- [ ] T027 Run final verification: `npm run typecheck && npm run build && npm run test:unit && npm run test:security` — all pass
+- [x] T025 [P] Replace `setTimeout` hack with MapLibre load event in `src/lib/components/dashboard/map/map-setup.ts` (carryover S4)
+- [x] T026 [P] Add sudoers configuration documentation to `deployment/` for all `sudo` usage in service files (carryover S5)
+- [x] T027 Run final verification: `npm run typecheck && npm run build && npm run test:unit && npm run test:security` — all pass
 
 **Checkpoint**: All carryover items complete. Branch ready for review.
 
