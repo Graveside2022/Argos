@@ -175,8 +175,8 @@ config/opencellid.json
 *.kismet-journal
 *.kismetdb
 
-# ── Core Dumps ───────────────────────────────────────────────
-core.*
+# ── Core Dumps (numeric PID suffix only) ────────────────────
+core.[0-9]*
 
 # ── Docker ───────────────────────────────────────────────────
 docker-images/
@@ -208,12 +208,12 @@ CLAUDE.local.md
 .husky/_/
 
 # ── Project-Specific: Ephemeral Dev Artifacts ───────────────
-# One-off scripts generated during dev sessions
-claude-*.sh
-test-*.sh
-test-*.js
-test-*.cjs
-test-*.html
+# One-off scripts generated during dev sessions (root-only)
+/claude-*.sh
+/test-*.sh
+/test-*.js
+/test-*.cjs
+/test-*.html
 
 # Generated reports
 audit-report.json
@@ -223,17 +223,17 @@ eslint_*.json
 page_eslint_results.json
 hooks.json
 
-# Legacy one-off CJS scripts
-check_eslint.cjs
-quick_eslint_count.cjs
-simple_validate.cjs
-validate_mission_control.cjs
+# Legacy one-off CJS scripts (root-only)
+/check_eslint.cjs
+/quick_eslint_count.cjs
+/simple_validate.cjs
+/validate_mission_control.cjs
 
 # Build framework generated reports
 tests/visual/pi-baseline-report.json
 
-# Autotools artifacts
-ltmain.sh
+# Autotools artifacts (root-only)
+/ltmain.sh
 
 # Debug/test utilities (not part of main app)
 utils/debug/
