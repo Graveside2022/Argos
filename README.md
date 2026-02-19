@@ -13,23 +13,23 @@ Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, an
 
 ## Additional Tools
 
-### Claude Desktop / Claude Mem
+### Claude Code / claude-mem
 
-If using `claude-mem`, you may encounter issue with orphaned processes or excessive spawning. These issues are caused by bugs in the plugin's `bun-runner.js` and `worker-service.cjs` scripts.
+`claude-mem` uses ChromaDB for vector search (semantic memory retrieval). The setup script automatically:
 
-To fix both issues (including after a plugin update), run the provided patch script:
+1. Installs ChromaDB via `pipx` and creates a systemd user service on port 8000
+2. Enables `loginctl linger` so the service survives headless reboots
+3. Sets `CHROMA_SSL=false` in `~/.zshenv` (required for local connections)
+4. Switches claude-mem to `remote` mode (connects to the pre-running server instead of spawning ephemeral environments)
+
+If you encounter orphaned `bun worker-service.cjs --daemon` processes, they are cleaned up automatically by the SessionStart hook in `.claude/hooks/cleanup-stale-daemons.sh`.
+
+To verify ChromaDB is running:
 
 ```bash
-bash scripts/ops/fix-claude-mem.sh
+systemctl --user status chroma-server
+curl -s http://127.0.0.1:8000/api/v2/heartbeat
 ```
-
-**Automated Healing**: If you are running `argos-dev-monitor` (see `docs/operations/memory-reliability.md`), this script is automatically run every 60 seconds to detect and patch updates.
-
-This script will:
-
-1.  Patch `bun-runner.js` to forward termination signals (fixing orphaned processes).
-2.  Patch `worker-service.cjs` to fix a race condition in concurrency limiting (fixing process explosion).
-3.  Restart `claude-mem` processes to apply changes.
 
 ## Install
 
@@ -39,7 +39,7 @@ cd Argos
 sudo bash scripts/ops/setup-host.sh
 ```
 
-The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
+The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), ChromaDB, configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
 ## API Keys
 
