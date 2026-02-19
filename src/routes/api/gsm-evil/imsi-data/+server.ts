@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { safeJsonParse } from '$lib/server/security/safe-json';
 
 import type { RequestHandler } from './$types';
@@ -35,7 +35,7 @@ export const GET: RequestHandler = async () => {
 		// Find the IMSI database on the host
 		const gsmDir = getGsmEvilDir();
 		const searchPaths = `${gsmDir}/database/imsi.db /tmp/gsm_db.sqlite`;
-		const { stdout: dbFound } = await hostExec(
+		const { stdout: dbFound } = await legacyShellExec(
 			`for p in ${searchPaths}; do [ -f "$p" ] && echo "$p" && break; done`
 		).catch((error: unknown) => {
 			console.error('[gsm-evil-imsi-data] Database path search failed', {
@@ -74,7 +74,9 @@ except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
 
-		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
+		const { stdout } = await legacyShellExec(
+			`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`
+		);
 
 		const parseResult = safeJsonParse(stdout, GsmEvilImsiDataSchema, 'gsm-evil-imsi-data');
 		if (!parseResult.success) {

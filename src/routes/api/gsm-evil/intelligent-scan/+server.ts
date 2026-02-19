@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 
@@ -11,7 +11,7 @@ export const POST: RequestHandler = async () => {
 		console.warn('Starting intelligent GSM frequency scan...');
 
 		// Phase 1: Quick RF power scan
-		const { stdout: sweepData } = await hostExec(
+		const { stdout: sweepData } = await legacyShellExec(
 			'timeout 10 hackrf_sweep -f 935:960 -l 32 -g 20 | grep -E "^[0-9]" | sort -k6 -n | head -20',
 			{ timeout: 15000 }
 		).catch((error: unknown) => {
@@ -70,7 +70,7 @@ export const POST: RequestHandler = async () => {
 			console.warn(`Testing ${freq} MHz...`);
 
 			// Start grgsm_livemon briefly
-			const { stdout: gsmPid } = await hostExec(
+			const { stdout: gsmPid } = await legacyShellExec(
 				`sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
 			);
 
@@ -81,7 +81,7 @@ export const POST: RequestHandler = async () => {
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Count GSMTAP packets for 3 seconds
-			const { stdout: packetCount } = await hostExec(
+			const { stdout: packetCount } = await legacyShellExec(
 				'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
 			).catch((error: unknown) => {
 				console.warn('[gsm-evil-scan] tcpdump check failed', { error: String(error) });
@@ -102,7 +102,7 @@ export const POST: RequestHandler = async () => {
 			}
 
 			// Kill grgsm_livemon
-			await hostExec(`sudo kill ${pid} 2>/dev/null`).catch((error: unknown) => {
+			await legacyShellExec(`sudo kill ${pid} 2>/dev/null`).catch((error: unknown) => {
 				console.warn('[gsm-evil] Cleanup: kill grgsm_livemon process failed', {
 					error: String(error)
 				});

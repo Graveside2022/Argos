@@ -1,4 +1,4 @@
-import { hostExec } from '$lib/server/host-exec';
+import { legacyShellExec } from '$lib/server/legacy-shell-exec';
 
 export interface GsmEvilHealth {
 	grgsm: {
@@ -67,7 +67,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 	try {
 		// Check GRGSM process
-		const { stdout: grgsmCheck } = await hostExec(
+		const { stdout: grgsmCheck } = await legacyShellExec(
 			'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
 		).catch((error: unknown) => {
 			console.warn('[gsm-evil-health] GRGSM process check failed', { error: String(error) });
@@ -79,7 +79,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			const pid = parseInt(parts[1]);
 			if (!isNaN(pid)) {
 				// Check runtime to distinguish from scans
-				const { stdout: pidTime } = await hostExec(
+				const { stdout: pidTime } = await legacyShellExec(
 					`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
 				).catch((error: unknown) => {
 					console.warn('[gsm-evil-health] PID runtime check failed', {
@@ -103,7 +103,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		}
 
 		// Check GSM Evil process and web interface
-		const { stdout: gsmevilCheck } = await hostExec(
+		const { stdout: gsmevilCheck } = await legacyShellExec(
 			'ps aux | grep -E "python3? GsmEvil[_a-zA-Z0-9]*\\.py" | grep -v grep | head -1'
 		).catch((error: unknown) => {
 			console.warn('[gsm-evil-health] GSM Evil process check failed', {
@@ -121,7 +121,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 				health.gsmevil.status = 'running';
 
 				// Check port 8080 listener
-				const { stdout: portCheck } = await hostExec(
+				const { stdout: portCheck } = await legacyShellExec(
 					'sudo lsof -i :8080 | grep LISTEN'
 				).catch((error: unknown) => {
 					console.warn('[gsm-evil-health] Port 8080 check failed', {
@@ -133,7 +133,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 				// Check HTTP response
 				if (health.gsmevil.port8080) {
-					const { stdout: httpCheck } = await hostExec(
+					const { stdout: httpCheck } = await legacyShellExec(
 						'timeout 3 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
 					).catch((error: unknown) => {
 						console.warn('[gsm-evil-health] HTTP check failed', {
@@ -150,7 +150,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 		// Check data flow components
 		// GSMTAP port 4729
-		const { stdout: gsmtapPort } = await hostExec(
+		const { stdout: gsmtapPort } = await legacyShellExec(
 			'ss -u -n | grep -c ":4729" || echo "0"'
 		).catch((error: unknown) => {
 			console.warn('[gsm-evil-health] GSMTAP port check failed', { error: String(error) });
@@ -166,7 +166,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 			if (dbPath) {
 				// Quick database connectivity test
-				const { stdout: dbCheck } = await hostExec(
+				const { stdout: dbCheck } = await legacyShellExec(
 					`python3 -c "import sqlite3; conn = sqlite3.connect('${dbPath}'); conn.close(); print('ok')" 2>/dev/null || echo "error"`
 				).catch((error: unknown) => {
 					console.error('[gsm-evil-health] Database connectivity test failed', {
@@ -178,7 +178,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 				// Check for recent data (last 10 minutes)
 				if (health.dataFlow.databaseAccessible) {
-					const { stdout: recentData } = await hostExec(
+					const { stdout: recentData } = await legacyShellExec(
 						`python3 -c "import sqlite3; from datetime import datetime, timedelta; conn = sqlite3.connect('${dbPath}'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM imsi_data WHERE datetime(date_time) > datetime(\\'now\\', \\'-10 minutes\\')'); print(cursor.fetchone()[0]); conn.close()" 2>/dev/null || echo "0"`
 					).catch((error: unknown) => {
 						console.warn('[gsm-evil-health] Recent data check failed', {
