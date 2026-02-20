@@ -1,7 +1,6 @@
 <script lang="ts">
-	import type { Satellite } from '$lib/gps/types';
-
-	import { type DeviceState, fetchSatelliteData, type GpsInfo } from './status-bar-data';
+	import SatelliteTable from './SatelliteTable.svelte';
+	import { type DeviceState, type GpsInfo } from './status-bar-data';
 
 	interface Props {
 		deviceState: DeviceState;
@@ -15,36 +14,21 @@
 	}
 
 	let { deviceState, info, sats, fix, speed, accuracy, open, onToggle }: Props = $props();
-
-	let satellitesExpanded = $state(false);
-	let satelliteData = $state<Satellite[]>([]);
-	let satelliteUsedCount = $state(0);
-
-	$effect(() => {
-		if (open && satellitesExpanded) {
-			void fetchSatelliteData().then((r) => {
-				if (r) {
-					satelliteData = r.satellites;
-					satelliteUsedCount = r.usedCount;
-				}
-			});
-			const interval = setInterval(
-				() =>
-					void fetchSatelliteData().then((r) => {
-						if (r) {
-							satelliteData = r.satellites;
-							satelliteUsedCount = r.usedCount;
-						}
-					}),
-				5000
-			);
-			return () => clearInterval(interval);
-		}
-	});
 </script>
 
 <div class="device-wrapper">
-	<div class="status-item device-btn" onclick={onToggle} role="button" tabindex="0">
+	<div
+		class="status-item device-btn"
+		onclick={onToggle}
+		onkeydown={(e: KeyboardEvent) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				onToggle();
+			}
+		}}
+		role="button"
+		tabindex="0"
+	>
 		<span
 			class="status-dot"
 			class:dot-active={deviceState === 'active'}
@@ -71,34 +55,7 @@
 						>{fix === 3 ? '3D Fix' : fix === 2 ? '2D Fix' : 'No Fix'}</span
 					>
 				</div>
-				<div
-					class="dropdown-row satellites-toggle"
-					onclick={() => (satellitesExpanded = !satellitesExpanded)}
-					role="button"
-					tabindex="0"
-				>
-					<span class="dropdown-key">Satellites</span><span class="dropdown-val"
-						>{sats}
-						<span class="expand-icon" class:expanded={satellitesExpanded}>&#9660;</span
-						></span
-					>
-				</div>
-				{#if satellitesExpanded && satelliteData.length > 0}
-					<div class="satellites-list">
-						{#each satelliteData as sat}
-							<div class="dropdown-row satellite-item">
-								<span class="dropdown-key">PRN {sat.prn} ({sat.constellation})</span
-								><span class="dropdown-val">{sat.snr} dB</span>
-							</div>
-						{/each}
-						<div class="dropdown-divider"></div>
-						<div class="dropdown-row">
-							<span class="dropdown-key">Used for Fix</span><span
-								class="dropdown-val accent">{satelliteUsedCount}</span
-							>
-						</div>
-					</div>
-				{/if}
+				<SatelliteTable {open} {sats} />
 				{#if speed !== null}<div class="dropdown-row">
 						<span class="dropdown-key">Speed</span><span class="dropdown-val"
 							>{speed.toFixed(1)} m/s</span
@@ -242,42 +199,6 @@
 		height: 1px;
 		background: var(--palantir-border-subtle);
 		margin: var(--space-1) 0;
-	}
-	.satellites-toggle {
-		cursor: pointer;
-		transition: background 0.15s ease;
-	}
-	.satellites-toggle:hover {
-		background: var(--palantir-bg-hover);
-	}
-	.expand-icon {
-		display: inline-block;
-		font-size: 10px;
-		margin-left: var(--space-1);
-		transition: transform 0.2s ease;
-		color: var(--palantir-text-tertiary);
-	}
-	.expand-icon.expanded {
-		transform: rotate(180deg);
-	}
-	.satellites-list {
-		padding-left: var(--space-2);
-		margin-top: var(--space-1);
-		animation: slideDown 0.2s ease;
-	}
-	@keyframes slideDown {
-		from {
-			opacity: 0;
-			max-height: 0;
-		}
-		to {
-			opacity: 1;
-			max-height: 500px;
-		}
-	}
-	.satellite-item .dropdown-key,
-	.satellite-item .dropdown-val {
-		font-size: 10px;
 	}
 
 	@media (max-width: 900px) {
