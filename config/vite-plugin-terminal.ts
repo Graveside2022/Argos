@@ -17,6 +17,7 @@ const VALID_SHELLS = [
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-1.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-2.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-3.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-logs.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-zsh-wrapper.sh')
 ];
 

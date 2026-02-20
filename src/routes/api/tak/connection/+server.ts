@@ -10,7 +10,7 @@ export const GET: RequestHandler = async () => {
 	try {
 		const service = TakService.getInstance();
 		const status = service.getStatus();
-		return json({ success: true, status: status.status });
+		return json({ success: true, ...status });
 	} catch (err) {
 		logger.error('[TAK API] Status check failed', {
 			error: err instanceof Error ? err.message : String(err)

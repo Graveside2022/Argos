@@ -195,6 +195,28 @@
 							Terminal
 						</button>
 
+						<!-- GSM Evil Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'gsm-evil'}
+							onclick={() => activeBottomTab.set('gsm-evil')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<rect x="2" y="7" width="20" height="15" rx="2" ry="2"
+								></rect><polyline points="17 2 12 7 7 2"></polyline>
+							</svg>
+							GSM Evil
+						</button>
+
 						<!-- Kismet Tab (Internal: devices) -->
 						<button
 							class="panel-tab"
@@ -225,28 +247,6 @@
 								/><circle cx="4" cy="18" r="1" fill="currentColor" />
 							</svg>
 							Kismet
-						</button>
-
-						<!-- GSM Evil Tab -->
-						<button
-							class="panel-tab"
-							class:active={$activeBottomTab === 'gsm-evil'}
-							onclick={() => activeBottomTab.set('gsm-evil')}
-						>
-							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							>
-								<rect x="2" y="7" width="20" height="15" rx="2" ry="2"
-								></rect><polyline points="17 2 12 7 7 2"></polyline>
-							</svg>
-							GSM Evil
 						</button>
 
 						<!-- Chat Tab (Hidden unless active, or kept for continuity) -->

@@ -133,6 +133,8 @@ function createNewSession(shell: string): TerminalSession {
 		shellName = 'Tmux 2';
 	} else if (shell.includes('tmux-3.sh')) {
 		shellName = 'Tmux 3';
+	} else if (shell.includes('tmux-logs.sh')) {
+		shellName = 'System Logs';
 	}
 
 	return {
