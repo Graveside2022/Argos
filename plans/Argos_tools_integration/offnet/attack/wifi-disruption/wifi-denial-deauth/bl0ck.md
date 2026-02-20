@@ -1,0 +1,137 @@
+# Bl0ck
+
+> **RISK CLASSIFICATION**: HIGH RISK - SENSITIVE SOFTWARE
+> WiFi 5/6 QoS Data frame interruption tool exploiting Block Ack frame vulnerabilities (802.11ac/ax). Military education/training toolkit - Not for public release.
+
+---
+
+## Deployment Classification
+
+> **RUNS ON ARGOS RPi 5: YES** — Pure Python script with Scapy; fully architecture-independent
+
+| Method               | Supported | Notes                                                                                    |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| **Docker Container** | YES       | Requires `--privileged`, `--net=host`, USB passthrough; lightweight Python + Scapy image |
+| **Native Install**   | YES       | Clone from GitHub + `pip install scapy`; recommended for minimal overhead                |
+
+---
+
+## Tool Description
+
+Bl0ck is a tool that interrupts the transmission of QoS Data frames in WiFi 5 (802.11ac) and WiFi 6 (802.11ax) networks by exploiting Block Ack frame vulnerabilities. Based on the research paper "Bl0ck: Paralyzing 802.11 connections through Block Ack frames." It provides three different attack modes targeting QoS Data traffic from an AP to specific clients. Pure Python with Scapy.
+
+## Category
+
+WiFi 5/6 QoS Exploitation / Block Ack Frame Attack
+
+## Repository
+
+https://github.com/efchatz/Bl0ck
+
+---
+
+## Docker Compatibility Analysis
+
+### Can it run in Docker?
+
+**YES** - Bl0ck runs cleanly in Docker with privileged access and host networking. It is a Python script with minimal dependencies beyond Scapy and standard wireless tools.
+
+### Host OS-Level Requirements
+
+- `--privileged` - Required for raw 802.11 frame injection and monitor mode interface control
+- `--net=host` - Required for direct access to wireless interfaces in monitor mode
+- `--device=/dev/bus/usb` - USB passthrough for external WiFi adapter
+- Host kernel modules: `cfg80211`, `mac80211`, `mt76x2u` (Alfa adapter driver)
+- WiFi adapter must be in monitor mode (configured on host or within privileged container)
+
+### Docker-to-Host Communication
+
+- Direct wireless interface access via `--net=host` and `--privileged`
+- No IP-layer network ports required (operates at raw 802.11 layer)
+- Target lists and MAC filters can be mounted from host: `-v /host/config:/config`
+- Logs and results via volume mount: `-v /host/output:/output`
+
+---
+
+## Install Instructions (Docker on Kali RPi 5)
+
+### Option A: Native Install
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-pip python3-scapy aircrack-ng wireless-tools iw
+
+git clone https://github.com/efchatz/Bl0ck.git /opt/bl0ck
+cd /opt/bl0ck
+pip3 install -r requirements.txt 2>/dev/null; true
+```
+
+### Option B: Docker
+
+```dockerfile
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y \
+    git \
+    aircrack-ng \
+    wireless-tools \
+    iw \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir scapy
+
+RUN git clone https://github.com/efchatz/Bl0ck.git /opt/bl0ck
+
+WORKDIR /opt/bl0ck
+ENTRYPOINT ["python3", "bl0ck.py"]
+```
+
+```bash
+# Build
+docker build -t argos/bl0ck .
+
+# Prepare monitor mode on host
+sudo airmon-ng start wlan1
+
+# Run - deauth all clients on target AP
+docker run --rm -it \
+  --privileged \
+  --net=host \
+  -v /dev/bus/usb:/dev/bus/usb \
+  argos/bl0ck -i wlan1mon -b AA:BB:CC:DD:EE:FF
+
+# Run - deauth specific client only
+docker run --rm -it \
+  --privileged \
+  --net=host \
+  -v /dev/bus/usb:/dev/bus/usb \
+  argos/bl0ck -i wlan1mon -b AA:BB:CC:DD:EE:FF -c 11:22:33:44:55:66
+
+# Run - with MAC blacklist (deauth only listed clients)
+docker run --rm -it \
+  --privileged \
+  --net=host \
+  -v /dev/bus/usb:/dev/bus/usb \
+  -v $(pwd)/blacklist.txt:/config/blacklist.txt \
+  argos/bl0ck -i wlan1mon --blacklist /config/blacklist.txt
+```
+
+---
+
+## Kali Linux Raspberry Pi 5 Compatibility
+
+### Architecture Support
+
+**ARM64 NATIVE** - Bl0ck is a pure Python script using Scapy for packet crafting. Python 3 and Scapy are fully supported on ARM64. No compiled components.
+
+### Hardware Constraints
+
+- CPU: Extremely lightweight. Deauthentication frame crafting and injection is trivial for Cortex-A76 cores
+- RAM: Minimal memory usage (~30-50MB with Scapy loaded). Negligible impact on 8GB
+- WiFi: Requires adapter with monitor mode and packet injection support. Alfa AWUS036AXML (mt76x2u) fully compatible
+- No GPU or additional hardware required
+
+### Verdict
+
+**COMPATIBLE** - Bl0ck runs without issues on RPi5. Pure Python codebase with Scapy eliminates any architecture concerns. The tool provides more granular control over deauthentication targeting compared to aireplay-ng or mdk4. Lightweight enough for continuous operation on RPi5. Native install from GitHub recommended.

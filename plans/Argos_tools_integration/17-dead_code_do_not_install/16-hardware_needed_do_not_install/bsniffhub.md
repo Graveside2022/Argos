@@ -1,0 +1,149 @@
+# Bsniffhub
+
+## DO NOT INSTALL -- Required hardware not available
+
+> **RISK CLASSIFICATION**: LOW RISK
+> Passive BLE sniffing aggregation hub that combines data from multiple BLE sniffers for comprehensive channel coverage; receive-only with no transmission capability. Military education/training toolkit - Not for public release.
+
+---
+
+## Deployment Classification
+
+> **RUNS ON ARGOS RPi 5: YES** — C/C++ binary with ARM64 support; compiles natively on aarch64
+
+| Method               | Supported | Notes                                                                  |
+| -------------------- | --------- | ---------------------------------------------------------------------- |
+| **Docker Container** | YES       | Multi-stage build; USB serial passthrough for multiple sniffer devices |
+| **Native Install**   | YES       | `make` on Kali ARM64; lightweight runtime binary                       |
+
+---
+
+## Tool Description
+
+Bsniffhub is a BLE sniffing hub written in C/C++ that aggregates packet captures from multiple BLE sniffer devices into a unified data stream. It solves the coverage problem inherent in single-sniffer setups by combining feeds from multiple nRF Sniffer dongles, Sniffle boards, or other BLE capture devices to achieve simultaneous coverage across all BLE channels. Output is provided as a merged PCAP stream that can be piped to Wireshark or saved to file. The tool handles clock synchronization, duplicate packet filtering, and channel correlation across sniffer sources.
+
+## Category
+
+BLE Passive Sniffing Aggregation
+
+## Repository
+
+https://github.com/homewsn/bsniffhub
+
+---
+
+## Docker Compatibility Analysis
+
+### Can it run in Docker?
+
+**YES** - Bsniffhub is a standalone C/C++ binary that compiles and runs in Docker. It communicates with sniffer hardware via USB serial passthrough and outputs PCAP data.
+
+### Host OS-Level Requirements
+
+- `--device=/dev/ttyACM0` through `--device=/dev/ttyACMN` - USB serial passthrough for each sniffer device
+- `--privileged` - Required for multi-device USB serial access
+- Host kernel modules: `cdc_acm` for USB serial sniffer devices
+- No `--net=host` required (communication is via USB serial and file I/O)
+- No Bluetooth stack required on host (communicates with sniffer devices directly)
+
+### Docker-to-Host Communication
+
+- Multiple sniffer devices must be connected to host USB ports
+- Each device appears as a separate `/dev/ttyACM*` serial port
+- Merged PCAP output via volume mount: `-v /host/captures:/captures`
+- Can pipe output to host Wireshark via named pipe in shared volume
+
+---
+
+## Install Instructions (Docker on Kali RPi 5)
+
+### Dockerfile
+
+```dockerfile
+FROM kalilinux/kali-rolling:latest AS builder
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libudev-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 \
+    https://github.com/homewsn/bsniffhub.git /opt/bsniffhub
+
+WORKDIR /opt/bsniffhub
+
+RUN make
+
+# Runtime stage
+FROM kalilinux/kali-rolling:latest
+
+RUN apt-get update && apt-get install -y \
+    libudev1 \
+    usbutils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/bsniffhub/bsniffhub /usr/local/bin/bsniffhub
+
+WORKDIR /captures
+
+ENTRYPOINT ["bsniffhub"]
+CMD ["--help"]
+```
+
+### Build and Run
+
+```bash
+# Build the image (C/C++ compilation takes 2-5 minutes on RPi 5)
+docker build -t argos/bsniffhub .
+
+# Run - aggregate 2 nRF Sniffer dongles
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  --device=/dev/ttyACM1 \
+  -v $(pwd)/captures:/captures \
+  argos/bsniffhub \
+    -s /dev/ttyACM0 \
+    -s /dev/ttyACM1 \
+    -o /captures/merged.pcap
+
+# Run - aggregate 3 sniffers and pipe to Wireshark on host
+docker run --rm -it \
+  --privileged \
+  --device=/dev/ttyACM0 \
+  --device=/dev/ttyACM1 \
+  --device=/dev/ttyACM2 \
+  -v $(pwd)/captures:/captures \
+  argos/bsniffhub \
+    -s /dev/ttyACM0 \
+    -s /dev/ttyACM1 \
+    -s /dev/ttyACM2 \
+    -o /captures/live.pcap
+
+# On host: open live capture in Wireshark
+# wireshark -k -i <(tail -f captures/live.pcap)
+```
+
+---
+
+## Kali Linux Raspberry Pi 5 Compatibility
+
+### Architecture Support
+
+**ARM64 COMPILES** - C/C++ compiles natively on ARM64 (aarch64) with GCC. Bsniffhub uses standard libraries with no architecture-specific dependencies. Compilation on RPi 5 via `make` works natively. Cross-compilation from x86 is also possible but not necessary.
+
+### Hardware Constraints
+
+- CPU: C/C++ binary is efficient; packet merging and deduplication have minimal CPU overhead on Cortex-A76
+- RAM: Very lightweight runtime (~30-50MB); compilation requires minimal resources (build only, not runtime)
+- Hardware: Requires 2 or more BLE sniffer devices to aggregate. Supported sniffers include:
+    - nRF52840 dongles with nRF Sniffer firmware
+    - Sniffle-compatible TI LaunchPad boards
+    - Any sniffer that outputs PCAP-compatible serial data
+- USB: RPi 5 has 2 USB 3.0 and 2 USB 2.0 ports; a USB hub may be needed for 3+ sniffers
+
+### Verdict
+
+**COMPATIBLE** - Bsniffhub compiles and runs natively on RPi 5 Kali ARM64. C/C++ ARM64 support via GCC is mature. Docker multi-stage build produces a small runtime image. The primary value is in multi-sniffer aggregation for comprehensive BLE channel coverage, which is well-suited to the RPi 5 as a centralized capture platform.

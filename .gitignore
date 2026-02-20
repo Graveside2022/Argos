@@ -207,13 +207,12 @@ CLAUDE.md
 # Dev specs/plans generated locally, not shipped with product.
 .specify/
 
-# ── Internal Dev Artifacts (not shipped) ─────────────────────
-# These folders contain development research, specs, and prompts
-# used during product development. Not part of the product.
-plans/
-specs/
-docs/prompts/
-docs/plans/
+# ── Internal Dev Artifacts ───────────────────────────────────
+# Development research, specs, and prompts — tracked for backup.
+# plans/
+# specs/
+# docs/prompts/
+# docs/plans/
 
 # ── Husky Internals (only .husky/pre-commit is tracked) ────
 .husky/_/
