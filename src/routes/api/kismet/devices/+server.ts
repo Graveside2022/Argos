@@ -118,7 +118,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 				),
 				source: 'kismet' as const,
 				status: {
-					running: status.running,
+					running: status.isRunning,
 					deviceCount: status.deviceCount,
 					interface: status.interface,
 					uptime: status.uptime

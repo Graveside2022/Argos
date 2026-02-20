@@ -12,13 +12,13 @@ interface OptimizationConfig {
 	cacheSize: number; // Pages in cache (-2000 = 2MB)
 	pageSize: number; // Database page size
 	mmapSize: number; // Memory-mapped I/O size
-	walMode: boolean; // Use Write-Ahead Logging
+	isWalMode: boolean; // Use Write-Ahead Logging
 	synchronous: 'OFF' | 'NORMAL' | 'FULL';
 
 	// Query optimization
-	analyzeOnStart: boolean; // Run ANALYZE on startup
-	autoIndex: boolean; // Allow automatic indexes
-	queryPlanner: boolean; // Enable query planner stats
+	shouldAnalyzeOnStart: boolean; // Run ANALYZE on startup
+	shouldAutoIndex: boolean; // Allow automatic indexes
+	shouldUseQueryPlanner: boolean; // Enable query planner stats
 
 	// Memory limits
 	tempStore: 'DEFAULT' | 'FILE' | 'MEMORY';
@@ -47,11 +47,11 @@ export class DatabaseOptimizer {
 			cacheSize: -2000, // 2MB cache
 			pageSize: 4096, // 4KB pages
 			mmapSize: 30000000, // 30MB mmap
-			walMode: true,
+			isWalMode: true,
 			synchronous: 'NORMAL',
-			analyzeOnStart: true,
-			autoIndex: true,
-			queryPlanner: false,
+			shouldAnalyzeOnStart: true,
+			shouldAutoIndex: true,
+			shouldUseQueryPlanner: false,
 			tempStore: 'MEMORY',
 			memoryLimit: 50 * 1024 * 1024, // 50MB soft limit
 			...config
@@ -68,7 +68,7 @@ export class DatabaseOptimizer {
 		this.db.pragma(`cache_size = ${this.config.cacheSize}`);
 
 		// WAL mode for better concurrency
-		if (this.config.walMode) {
+		if (this.config.isWalMode) {
 			this.db.pragma('journal_mode = WAL');
 			this.db.pragma('wal_autocheckpoint = 1000'); // Checkpoint every 1000 pages
 		}
@@ -96,15 +96,15 @@ export class DatabaseOptimizer {
 		}
 
 		// Query planner
-		if (this.config.queryPlanner) {
+		if (this.config.shouldUseQueryPlanner) {
 			this.db.pragma('query_only = 0');
 		}
 
 		// Auto-index
-		this.db.pragma(`automatic_index = ${this.config.autoIndex ? 'ON' : 'OFF'}`);
+		this.db.pragma(`automatic_index = ${this.config.shouldAutoIndex ? 'ON' : 'OFF'}`);
 
 		// Initial analysis
-		if (this.config.analyzeOnStart) {
+		if (this.config.shouldAnalyzeOnStart) {
 			this.analyze();
 		}
 

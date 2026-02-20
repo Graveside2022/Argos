@@ -1,10 +1,10 @@
-import type { Readable,Writable } from 'svelte/store';
-import { derived,writable } from 'svelte/store';
+import type { Readable, Writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 // Types
 export interface ServiceConnectionStatus {
-	connected: boolean;
-	connecting: boolean;
+	isConnected: boolean;
+	isConnecting: boolean;
 	error: string | null;
 	lastConnected?: number;
 	lastError?: string;
@@ -21,7 +21,7 @@ export interface SystemHealth {
 
 export interface ServiceStatus {
 	name: string;
-	running: boolean;
+	isRunning: boolean;
 	pid?: number;
 	uptime?: number;
 	memory?: number;
@@ -30,22 +30,22 @@ export interface ServiceStatus {
 
 // Individual service connection stores
 export const hackrfConnection: Writable<ServiceConnectionStatus> = writable({
-	connected: false,
-	connecting: false,
+	isConnected: false,
+	isConnecting: false,
 	error: null,
 	reconnectAttempts: 0
 });
 
 export const kismetConnection: Writable<ServiceConnectionStatus> = writable({
-	connected: false,
-	connecting: false,
+	isConnected: false,
+	isConnecting: false,
 	error: null,
 	reconnectAttempts: 0
 });
 
 export const expressConnection: Writable<ServiceConnectionStatus> = writable({
-	connected: false,
-	connecting: false,
+	isConnected: false,
+	isConnecting: false,
 	error: null,
 	reconnectAttempts: 0
 });
@@ -64,13 +64,14 @@ export const webSocketStates: Writable<Map<string, number>> = writable(new Map<s
 // Derived stores
 export const allConnected: Readable<boolean> = derived(
 	[hackrfConnection, kismetConnection, expressConnection],
-	([$hackrf, $kismet, $express]) => $hackrf.connected && $kismet.connected && $express.connected
+	([$hackrf, $kismet, $express]) =>
+		$hackrf.isConnected && $kismet.isConnected && $express.isConnected
 );
 
 export const anyConnecting: Readable<boolean> = derived(
 	[hackrfConnection, kismetConnection, expressConnection],
 	([$hackrf, $kismet, $express]) =>
-		$hackrf.connecting || $kismet.connecting || $express.connecting
+		$hackrf.isConnecting || $kismet.isConnecting || $express.isConnecting
 );
 
 export const connectionErrors: Readable<string[]> = derived(
@@ -101,11 +102,11 @@ export const systemHealthy: Readable<boolean> = derived(systemHealth, ($health) 
 });
 
 export const runningServices: Readable<ServiceStatus[]> = derived(serviceStatuses, ($statuses) =>
-	Array.from($statuses.values()).filter((s) => s.running)
+	Array.from($statuses.values()).filter((s) => s.isRunning)
 );
 
 export const stoppedServices: Readable<ServiceStatus[]> = derived(serviceStatuses, ($statuses) =>
-	Array.from($statuses.values()).filter((s) => !s.running)
+	Array.from($statuses.values()).filter((s) => !s.isRunning)
 );
 
 // Helper functions
@@ -139,20 +140,20 @@ export function updateWebSocketState(name: string, state: number) {
 
 export function resetConnectionStores() {
 	hackrfConnection.set({
-		connected: false,
-		connecting: false,
+		isConnected: false,
+		isConnecting: false,
 		error: null,
 		reconnectAttempts: 0
 	});
 	kismetConnection.set({
-		connected: false,
-		connecting: false,
+		isConnected: false,
+		isConnecting: false,
 		error: null,
 		reconnectAttempts: 0
 	});
 	expressConnection.set({
-		connected: false,
-		connecting: false,
+		isConnected: false,
+		isConnecting: false,
 		error: null,
 		reconnectAttempts: 0
 	});

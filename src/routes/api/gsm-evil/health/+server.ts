@@ -18,11 +18,11 @@ export const GET: RequestHandler = async () => {
 			health,
 			summary: {
 				status: health.overall.status,
-				pipelineHealthy: health.overall.pipelineHealthy,
+				isPipelineHealthy: health.overall.isPipelineHealthy,
 				componentsRunning: {
 					grgsm: health.grgsm.running,
 					gsmevil: health.gsmevil.running,
-					webInterface: health.gsmevil.webInterface,
+					hasWebInterface: health.gsmevil.hasWebInterface,
 					dataFlow:
 						health.dataFlow.status === 'active' || health.dataFlow.status === 'idle'
 				},

@@ -36,7 +36,7 @@ class FusionKismetController {
 			return result.data;
 		} catch {
 			return {
-				running: false,
+				isRunning: false,
 				uptime: 0,
 				interface: '',
 				deviceCount: 0,

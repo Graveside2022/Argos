@@ -79,7 +79,7 @@ export class HackRFAPI {
 
 		if (!response.ok) throw new Error('Failed to emergency stop');
 
-		updateEmergencyStopStatus({ active: true, timestamp: Date.now() });
+		updateEmergencyStopStatus({ isActive: true, timestamp: Date.now() });
 
 		// Safe: /api/hackrf/emergency-stop returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
@@ -109,7 +109,7 @@ export class HackRFAPI {
 		// Connected event
 		this.addTrackedListener('connected', (_event) => {
 			logInfo('[HackRFAPI] Connected to data stream');
-			updateConnectionStatus({ connected: true, connecting: false, error: null });
+			updateConnectionStatus({ isConnected: true, isConnecting: false, error: null });
 			this.lastDataTimestamp = Date.now();
 
 			// Reset reconnection state
@@ -201,7 +201,7 @@ export class HackRFAPI {
 
 			// Update sweep status
 			const newStatus = {
-				active:
+				isActive:
 					status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
 				startFreq: status.startFrequency || 0,
 				endFreq: status.endFrequency || 0,
@@ -218,7 +218,7 @@ export class HackRFAPI {
 				const timeRemaining = Math.max(0, cycleTime - (elapsed % cycleTime));
 
 				updateCycleStatus({
-					active: true,
+					isActive: true,
 					currentCycle: status.completedSweeps + 1,
 					totalCycles: status.totalSweeps,
 					cycleTime: cycleTime,
@@ -239,7 +239,7 @@ export class HackRFAPI {
 			}
 			updateCycleStatus({
 				...config,
-				active: true
+				isActive: true
 			});
 		});
 
@@ -257,11 +257,11 @@ export class HackRFAPI {
 			}
 			logDebug('[EventSource] Status change event:', { change });
 			if (change.isSweping !== undefined) {
-				updateSweepStatus({ active: change.isSweping });
+				updateSweepStatus({ isActive: change.isSweping });
 			}
 			if (change.status === 'stopped') {
-				logDebug('[EventSource] Received stopped status, setting active to false');
-				updateSweepStatus({ active: false });
+				logDebug('[EventSource] Received stopped status, setting isActive to false');
+				updateSweepStatus({ isActive: false });
 			}
 		});
 
@@ -300,16 +300,16 @@ export class HackRFAPI {
 				return;
 			}
 			updateConnectionStatus({
-				connected: true,
-				connecting: false,
+				isConnected: true,
+				isConnecting: false,
 				error: `Recovering: ${recoveryData.reason} (attempt ${recoveryData.attempt}/${recoveryData.maxAttempts})`
 			});
 		});
 
 		this.addTrackedListener('recovery_complete', (_event) => {
 			updateConnectionStatus({
-				connected: true,
-				connecting: false,
+				isConnected: true,
+				isConnecting: false,
 				error: null
 			});
 		});
@@ -319,8 +319,8 @@ export class HackRFAPI {
 			// Don't disconnect on recovery errors
 			if (this.eventSource?.readyState === EventSource.CLOSED) {
 				updateConnectionStatus({
-					connected: false,
-					connecting: false,
+					isConnected: false,
+					isConnecting: false,
 					error: errorData.message
 				});
 			}
@@ -335,8 +335,8 @@ export class HackRFAPI {
 			if (this.reconnectAttempts >= this.maxReconnectAttempts) {
 				logError('[HackRFAPI] Max reconnection attempts reached');
 				updateConnectionStatus({
-					connected: false,
-					connecting: false,
+					isConnected: false,
+					isConnecting: false,
 					error: 'Connection lost - please refresh page'
 				});
 				this.disconnectDataStream();
@@ -345,8 +345,8 @@ export class HackRFAPI {
 
 			// Show reconnecting status
 			updateConnectionStatus({
-				connected: false,
-				connecting: true,
+				isConnected: false,
+				isConnecting: true,
 				error: `Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
 			});
 
@@ -419,8 +419,8 @@ export class HackRFAPI {
 				// Only show stale message if not already reconnecting
 				if (!this.isReconnecting) {
 					updateConnectionStatus({
-						connected: true,
-						connecting: false,
+						isConnected: true,
+						isConnecting: false,
 						error: 'Connection stale - attempting to reconnect...'
 					});
 
@@ -488,7 +488,7 @@ export class HackRFAPI {
 	disconnect() {
 		this.disconnectDataStream();
 		this.cleanupVisibilityHandler();
-		updateConnectionStatus({ connected: false, connecting: false, error: null });
+		updateConnectionStatus({ isConnected: false, isConnecting: false, error: null });
 	}
 
 	// Manual reconnect method that resets attempts

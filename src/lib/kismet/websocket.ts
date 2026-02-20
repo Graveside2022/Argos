@@ -95,8 +95,8 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		// console.info('[Kismet] WebSocket connected');
 
 		updateKismetConnection({
-			connected: true,
-			connecting: false,
+			isConnected: true,
+			isConnecting: false,
 			error: null,
 			reconnectAttempts: 0,
 			lastConnected: Date.now()
@@ -112,8 +112,8 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		// console.info('[Kismet] WebSocket disconnected');
 
 		updateKismetConnection({
-			connected: false,
-			connecting: false
+			isConnected: false,
+			isConnecting: false
 		});
 
 		kismetStore.updateStatus({ kismet_running: false });

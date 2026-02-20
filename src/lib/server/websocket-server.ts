@@ -282,7 +282,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 				JSON.stringify({
 					type: 'sweep_status',
 					data: {
-						active: false,
+						isActive: false,
 						startFreq: 88000000,
 						endFreq: 108000000,
 						currentFreq: 0,
@@ -297,7 +297,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 				JSON.stringify({
 					type: 'sweep_status',
 					data: {
-						active: true,
+						isActive: true,
 						startFreq: message.config?.startFreq || 88000000,
 						endFreq: message.config?.endFreq || 108000000,
 						currentFreq: message.config?.startFreq || 88000000,
@@ -316,7 +316,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 					ws.send(
 						JSON.stringify({
 							type: 'sweep_status',
-							data: { active: false, progress: 100 }
+							data: { isActive: false, progress: 100 }
 						})
 					);
 				} else {
@@ -345,7 +345,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 			ws.send(
 				JSON.stringify({
 					type: 'sweep_status',
-					data: { active: false }
+					data: { isActive: false }
 				})
 			);
 			break;

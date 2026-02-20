@@ -21,7 +21,7 @@
 		hostname: '',
 		port: 8089,
 		protocol: 'tls',
-		connectOnStartup: false,
+		shouldConnectOnStartup: false,
 		authMethod: 'import',
 		truststorePass: 'atakatak',
 		certPass: 'atakatak',
@@ -192,7 +192,7 @@
 				<label
 					class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
 				>
-					<Switch bind:checked={config.connectOnStartup} />
+					<Switch bind:checked={config.shouldConnectOnStartup} />
 					Connect on startup
 				</label>
 			</div>

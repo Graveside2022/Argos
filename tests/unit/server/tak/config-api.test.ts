@@ -41,7 +41,7 @@ const VALID_CONFIG = {
 	hostname: '192.168.1.100',
 	port: 8089,
 	protocol: 'tls' as const,
-	connectOnStartup: false,
+	shouldConnectOnStartup: false,
 	truststorePass: 'atakatak',
 	certPass: 'atakatak',
 	enrollmentPort: 8446

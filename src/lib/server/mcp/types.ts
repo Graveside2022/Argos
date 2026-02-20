@@ -35,9 +35,9 @@ export interface MCPServerConfig {
 	version: string;
 	description: string;
 	capabilities: {
-		tools: boolean;
-		resources: boolean;
-		prompts: boolean;
+		hasTools: boolean;
+		hasResources: boolean;
+		hasPrompts: boolean;
 	};
 }
 

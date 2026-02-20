@@ -73,10 +73,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			return json({
 				success: true,
-				running: status.running,
-				status: status.running ? 'running' : 'stopped',
+				running: status.isRunning,
+				status: status.isRunning ? 'running' : 'stopped',
 				data: {
-					running: status.running,
+					running: status.isRunning,
 					interface: status.interface,
 					channels: status.channels,
 					deviceCount: status.deviceCount,

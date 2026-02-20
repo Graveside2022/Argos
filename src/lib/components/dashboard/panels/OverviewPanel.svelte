@@ -14,10 +14,10 @@
 
 	interface DeviceState {
 		device: string;
-		available: boolean;
+		isAvailable: boolean;
 		owner: string | null;
 		connectedSince: number | null;
-		detected: boolean;
+		isDetected: boolean;
 	}
 
 	interface HardwareStatus {
@@ -332,11 +332,11 @@
 			<button class="scan-row clickable" onclick={() => toggleExpand('hackrf')}>
 				<span
 					class="scan-dot"
-					class:active={hardwareStatus.hackrf.detected && hardwareStatus.hackrf.owner}
-					class:standby={hardwareStatus.hackrf.detected && !hardwareStatus.hackrf.owner}
+					class:active={hardwareStatus.hackrf.isDetected && hardwareStatus.hackrf.owner}
+					class:standby={hardwareStatus.hackrf.isDetected && !hardwareStatus.hackrf.owner}
 				></span>
 				<span class="scan-name">HackRF</span>
-				{#if !hardwareStatus.hackrf.detected}
+				{#if !hardwareStatus.hackrf.isDetected}
 					<span class="scan-status-text">not found</span>
 				{:else if hardwareStatus.hackrf.owner}
 					<span class="scan-owner">{hardwareStatus.hackrf.owner}</span>
@@ -383,7 +383,7 @@
 							<span class="detail-val accent">{hardwareStatus.hackrf.owner}</span>
 						</div>
 					{/if}
-					{#if !hardwareDetails?.sdr?.manufacturer && !hardwareStatus.hackrf.detected}
+					{#if !hardwareDetails?.sdr?.manufacturer && !hardwareStatus.hackrf.isDetected}
 						<div class="detail-row">
 							<span class="detail-key">Status</span>
 							<span class="detail-val dim">Not detected</span>
@@ -396,11 +396,11 @@
 			<button class="scan-row clickable" onclick={() => toggleExpand('alfa')}>
 				<span
 					class="scan-dot"
-					class:active={hardwareStatus.alfa.detected && hardwareStatus.alfa.owner}
-					class:standby={hardwareStatus.alfa.detected && !hardwareStatus.alfa.owner}
+					class:active={hardwareStatus.alfa.isDetected && hardwareStatus.alfa.owner}
+					class:standby={hardwareStatus.alfa.isDetected && !hardwareStatus.alfa.owner}
 				></span>
 				<span class="scan-name">ALFA WiFi</span>
-				{#if !hardwareStatus.alfa.detected}
+				{#if !hardwareStatus.alfa.isDetected}
 					<span class="scan-status-text">not found</span>
 				{:else if hardwareStatus.alfa.owner}
 					<span class="scan-owner">{hardwareStatus.alfa.owner}</span>
@@ -456,7 +456,7 @@
 							<span class="detail-val accent">{hardwareStatus.alfa.owner}</span>
 						</div>
 					{/if}
-					{#if !hardwareDetails?.wifi?.chipset && !hardwareStatus.alfa.detected}
+					{#if !hardwareDetails?.wifi?.chipset && !hardwareStatus.alfa.isDetected}
 						<div class="detail-row">
 							<span class="detail-key">Status</span>
 							<span class="detail-val dim">Not detected</span>
@@ -469,13 +469,13 @@
 			<button class="scan-row clickable" onclick={() => toggleExpand('bluetooth')}>
 				<span
 					class="scan-dot"
-					class:active={hardwareStatus.bluetooth.detected &&
+					class:active={hardwareStatus.bluetooth.isDetected &&
 						hardwareStatus.bluetooth.owner}
-					class:standby={hardwareStatus.bluetooth.detected &&
+					class:standby={hardwareStatus.bluetooth.isDetected &&
 						!hardwareStatus.bluetooth.owner}
 				></span>
 				<span class="scan-name">Bluetooth</span>
-				{#if !hardwareStatus.bluetooth.detected}
+				{#if !hardwareStatus.bluetooth.isDetected}
 					<span class="scan-status-text">not found</span>
 				{:else if hardwareStatus.bluetooth.owner}
 					<span class="scan-owner">{hardwareStatus.bluetooth.owner}</span>
@@ -490,7 +490,9 @@
 					<div class="detail-row">
 						<span class="detail-key">Status</span>
 						<span class="detail-val"
-							>{hardwareStatus.bluetooth.detected ? 'Detected' : 'Not detected'}</span
+							>{hardwareStatus.bluetooth.isDetected
+								? 'Detected'
+								: 'Not detected'}</span
 						>
 					</div>
 					{#if hardwareStatus.bluetooth.owner}

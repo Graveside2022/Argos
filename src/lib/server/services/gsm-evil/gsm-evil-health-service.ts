@@ -17,20 +17,20 @@ export interface GsmEvilHealth {
 	gsmevil: {
 		running: boolean;
 		pid: number | null;
-		webInterface: boolean;
-		port8080: boolean;
+		hasWebInterface: boolean;
+		hasPort8080: boolean;
 		status: string;
 	};
 	dataFlow: {
-		gsmtapActive: boolean;
-		port4729Active: boolean;
-		databaseAccessible: boolean;
-		recentData: boolean;
+		isGsmtapActive: boolean;
+		isPort4729Active: boolean;
+		isDatabaseAccessible: boolean;
+		hasRecentData: boolean;
 		status: string;
 	};
 	overall: {
 		status: string;
-		pipelineHealthy: boolean;
+		isPipelineHealthy: boolean;
 		issues: string[];
 		recommendations: string[];
 	};
@@ -47,20 +47,20 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		gsmevil: {
 			running: false,
 			pid: null,
-			webInterface: false,
-			port8080: false,
+			hasWebInterface: false,
+			hasPort8080: false,
 			status: 'unknown'
 		},
 		dataFlow: {
-			gsmtapActive: false,
-			port4729Active: false,
-			databaseAccessible: false,
-			recentData: false,
+			isGsmtapActive: false,
+			isPort4729Active: false,
+			isDatabaseAccessible: false,
+			hasRecentData: false,
 			status: 'unknown'
 		},
 		overall: {
 			status: 'unknown',
-			pipelineHealthy: false,
+			isPipelineHealthy: false,
 			issues: [],
 			recommendations: []
 		}
@@ -138,7 +138,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 							'-i',
 							':8080'
 						]);
-						health.gsmevil.port8080 = portCheck
+						health.gsmevil.hasPort8080 = portCheck
 							.split('\n')
 							.some((line) => line.includes('LISTEN'));
 					} catch (error: unknown) {
@@ -147,12 +147,12 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 					}
 
 					// Check HTTP response
-					if (health.gsmevil.port8080) {
+					if (health.gsmevil.hasPort8080) {
 						try {
 							const response = await fetch('http://localhost:8080', {
 								signal: AbortSignal.timeout(3000)
 							});
-							health.gsmevil.webInterface = response.status === 200;
+							health.gsmevil.hasWebInterface = response.status === 200;
 						} catch (error: unknown) {
 							const msg = error instanceof Error ? error.message : String(error);
 							logger.warn('[gsm-evil-health] HTTP check failed', { error: msg });
@@ -170,8 +170,8 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		try {
 			const { stdout: ssOut } = await execFileAsync('/usr/bin/ss', ['-u', '-n']);
 			const portCount = ssOut.split('\n').filter((line) => line.includes(':4729')).length;
-			health.dataFlow.port4729Active = portCount > 0;
-			health.dataFlow.gsmtapActive = portCount > 0;
+			health.dataFlow.isPort4729Active = portCount > 0;
+			health.dataFlow.isGsmtapActive = portCount > 0;
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
 			logger.warn('[gsm-evil-health] GSMTAP port check failed', { error: msg });
@@ -186,7 +186,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 				try {
 					const db = new Database(dbPath, { readonly: true });
 					db.close();
-					health.dataFlow.databaseAccessible = true;
+					health.dataFlow.isDatabaseAccessible = true;
 				} catch (error: unknown) {
 					const msg = error instanceof Error ? error.message : String(error);
 					logger.warn('[gsm-evil-health] Database connectivity test failed', {
@@ -194,7 +194,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 					});
 				}
 
-				if (health.dataFlow.databaseAccessible) {
+				if (health.dataFlow.isDatabaseAccessible) {
 					const db = new Database(dbPath, { readonly: true });
 					try {
 						const row = db
@@ -202,7 +202,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 								"SELECT COUNT(*) as count FROM imsi_data WHERE datetime(date_time) > datetime('now', '-10 minutes')"
 							)
 							.get() as { count: number } | undefined;
-						health.dataFlow.recentData = (row?.count ?? 0) > 0;
+						health.dataFlow.hasRecentData = (row?.count ?? 0) > 0;
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
 						logger.warn('[gsm-evil-health] Recent data check failed', { error: msg });
@@ -214,12 +214,12 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		} catch (dbError: unknown) {
 			const msg = dbError instanceof Error ? dbError.message : String(dbError);
 			logger.warn('[gsm-evil-health] Database health check failed', { error: msg });
-			health.dataFlow.databaseAccessible = false;
+			health.dataFlow.isDatabaseAccessible = false;
 		}
 
 		// Determine data flow status
-		if (health.dataFlow.gsmtapActive && health.dataFlow.databaseAccessible) {
-			health.dataFlow.status = health.dataFlow.recentData ? 'active' : 'idle';
+		if (health.dataFlow.isGsmtapActive && health.dataFlow.isDatabaseAccessible) {
+			health.dataFlow.status = health.dataFlow.hasRecentData ? 'active' : 'idle';
 		} else {
 			health.dataFlow.status = 'broken';
 		}
@@ -236,33 +236,33 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		if (!health.gsmevil.running) {
 			issues.push('GSM Evil service not running');
 			recommendations.push('Start GSM Evil web service');
-		} else if (!health.gsmevil.webInterface) {
+		} else if (!health.gsmevil.hasWebInterface) {
 			issues.push('GSM Evil web interface not responding');
 			recommendations.push('Check GSM Evil service configuration');
 		}
 
-		if (!health.dataFlow.gsmtapActive) {
+		if (!health.dataFlow.isGsmtapActive) {
 			issues.push('GSMTAP data flow inactive');
 			recommendations.push('Verify GRGSM is sending data to port 4729');
 		}
 
-		if (!health.dataFlow.databaseAccessible) {
+		if (!health.dataFlow.isDatabaseAccessible) {
 			issues.push('Database not accessible');
 			recommendations.push('Check database path and permissions');
 		}
 
-		health.overall.pipelineHealthy =
+		health.overall.isPipelineHealthy =
 			health.grgsm.running &&
 			health.gsmevil.running &&
-			health.gsmevil.webInterface &&
-			health.dataFlow.gsmtapActive &&
-			health.dataFlow.databaseAccessible;
+			health.gsmevil.hasWebInterface &&
+			health.dataFlow.isGsmtapActive &&
+			health.dataFlow.isDatabaseAccessible;
 
 		health.overall.issues = issues;
 		health.overall.recommendations = recommendations;
 
-		if (health.overall.pipelineHealthy) {
-			health.overall.status = health.dataFlow.recentData ? 'healthy' : 'healthy-idle';
+		if (health.overall.isPipelineHealthy) {
+			health.overall.status = health.dataFlow.hasRecentData ? 'healthy' : 'healthy-idle';
 		} else if (health.grgsm.running || health.gsmevil.running) {
 			health.overall.status = 'partial';
 		} else {

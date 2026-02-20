@@ -10,7 +10,7 @@
 		status?: 'stopped' | 'starting' | 'running' | 'stopping';
 		count?: number | null;
 		canOpen?: boolean;
-		showControls?: boolean;
+		shouldShowControls?: boolean;
 		externalUrl?: string | null;
 		isInstalled?: boolean;
 		onStart?: () => void;
@@ -25,7 +25,7 @@
 		status = 'stopped',
 		count = null,
 		canOpen = true,
-		showControls = true,
+		shouldShowControls = true,
 		externalUrl = null,
 		isInstalled = true,
 		onStart,
@@ -92,7 +92,7 @@
 					<Button variant="outline" size="sm" onclick={() => onOpen?.()}>Open</Button>
 				{/if}
 			{/if}
-			{#if showControls}
+			{#if shouldShowControls}
 				{#if isRunning}
 					<Button
 						variant="destructive"

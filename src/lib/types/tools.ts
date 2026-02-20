@@ -18,7 +18,7 @@ export interface ToolDefinition {
 	icon: string; // SVG string
 
 	// Installation metadata
-	installed: boolean; // Is tool installed?
+	isInstalled: boolean;
 	deployment: DeploymentType; // How it deploys
 
 	// Integration
@@ -27,7 +27,7 @@ export interface ToolDefinition {
 
 	// Capabilities
 	canOpen: boolean;
-	showControls: boolean; // Show Start/Stop buttons
+	shouldShowControls: boolean;
 	requiresHardware?: string[]; // e.g., ['hackrf', 'gps']
 
 	// Runtime state (managed separately in store)

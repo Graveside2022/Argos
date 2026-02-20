@@ -43,7 +43,7 @@ function initializeOptimizer() {
 		const db = getRFDatabase();
 		optimizer = new DatabaseOptimizer(db['db'], {
 			cacheSize: -2000, // 2MB cache for Pi
-			walMode: true,
+			isWalMode: true,
 			synchronous: 'NORMAL',
 			mmapSize: 30000000, // 30MB memory map
 			memoryLimit: 50 * 1024 * 1024 // 50MB memory limit

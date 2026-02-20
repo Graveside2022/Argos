@@ -54,9 +54,9 @@ export async function fetchHardwareStatus(): Promise<HardwareStatusResult | null
 		const alfa = status.alfa;
 		const hackrf = status.hackrf;
 		return {
-			wifiState: alfa?.detected ? (alfa.owner ? 'active' : 'standby') : 'offline',
+			wifiState: alfa?.isDetected ? (alfa.owner ? 'active' : 'standby') : 'offline',
 			wifiOwner: alfa?.owner || undefined,
-			sdrState: hackrf?.detected ? (hackrf.owner ? 'active' : 'standby') : 'offline',
+			sdrState: hackrf?.isDetected ? (hackrf.owner ? 'active' : 'standby') : 'offline',
 			sdrOwner: hackrf?.owner || undefined
 		};
 	} catch {
