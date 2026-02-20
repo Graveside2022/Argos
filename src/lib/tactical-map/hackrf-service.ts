@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+
 import { hackrfAPI } from '$lib/hackrf/api-legacy';
 import { spectrumData } from '$lib/hackrf/stores';
 import {
@@ -24,11 +26,7 @@ export class HackRFService {
 
 		// Subscribe to spectrum data
 		this.spectrumUnsubscribe = spectrumData.subscribe((data) => {
-			const _state = hackrfStore;
-			// Access current state synchronously
-			let currentState: { isSearching: boolean } | undefined;
-			const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
-			unsubscribe();
+			const currentState = get(hackrfStore);
 
 			if (data && currentState?.isSearching) {
 				this.aggregator.addSpectrumData(data);
@@ -62,9 +60,7 @@ export class HackRFService {
 	}
 
 	toggleSearch(frequency: number): void {
-		let currentState: { isSearching: boolean } | undefined;
-		const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
-		unsubscribe();
+		const currentState = get(hackrfStore);
 
 		if (currentState?.isSearching) {
 			this.stopSearch();
