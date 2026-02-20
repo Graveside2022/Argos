@@ -3,10 +3,10 @@
 	import { onDestroy, onMount } from 'svelte';
 
 	import { browser } from '$app/environment';
+	import { buildTerminalTheme } from '$lib/components/dashboard/terminal/terminal-theme';
 	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { logger } from '$lib/utils/logger';
-	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	interface Props {
 		sessionId: string;
@@ -47,14 +47,7 @@
 		// Subscribe to reactive theme state to trigger re-resolution
 		const _palette = themeStore.palette;
 		if (!terminal) return;
-		terminal.options.theme = {
-			...terminal.options.theme,
-			background: '#0a0a0a',
-			foreground: resolveThemeColor('--foreground', '#e8eaed'),
-			cursor: resolveThemeColor('--primary', '#4a9eff'),
-			cursorAccent: '#0a0a0a',
-			selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)')
-		};
+		terminal.options.theme = buildTerminalTheme();
 	});
 
 	function connectWebSocket(attempt: number) {
@@ -177,32 +170,7 @@
 				"'FiraCode Nerd Font', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
 			lineHeight: 1.2,
 			scrollback: 10000,
-			theme: {
-				// UI chrome — near-black neutral to match dashboard aesthetic
-				background: '#0a0a0a',
-				foreground: resolveThemeColor('--foreground', '#e8eaed'),
-				cursor: resolveThemeColor('--primary', '#4a9eff'),
-				cursorAccent: '#0a0a0a',
-				selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
-				selectionForeground: '#ffffff',
-				// @constitutional-exemption Article-IV — 16 ANSI standard colors are protocol constants, not theme colors
-				black: '#16181d',
-				red: '#f87171',
-				green: '#4ade80',
-				yellow: '#fbbf24',
-				blue: '#4a9eff',
-				magenta: '#a78bfa',
-				cyan: '#22d3ee',
-				white: '#e8eaed',
-				brightBlack: '#5f6368',
-				brightRed: '#fca5a5',
-				brightGreen: '#86efac',
-				brightYellow: '#fde047',
-				brightBlue: '#60a5fa',
-				brightMagenta: '#c4b5fd',
-				brightCyan: '#67e8f9',
-				brightWhite: '#ffffff'
-			}
+			theme: buildTerminalTheme()
 		});
 
 		fitAddon = new FitAddon();
