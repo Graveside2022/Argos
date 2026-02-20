@@ -6,7 +6,6 @@
 	import TakDataPackage from '$lib/components/dashboard/tak/TakDataPackage.svelte';
 	import TakTruststore from '$lib/components/dashboard/tak/TakTruststore.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
-	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Separator from '$lib/components/ui/separator/separator.svelte';
 	import Switch from '$lib/components/ui/switch/switch.svelte';
@@ -187,23 +186,55 @@
 					</div>
 					<div>
 						{#if $takStatus.status === 'connected'}
-							<Button
-								variant="destructive"
-								size="sm"
+							<button
 								onclick={handleDisconnect}
 								disabled={isConnecting}
+								class="inline-flex items-center gap-1.5 rounded-md border border-red-500/50 bg-red-600/20 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-600/40 disabled:opacity-50"
 							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line
+										x1="12"
+										y1="2"
+										x2="12"
+										y2="12"
+									/></svg
+								>
 								{isConnecting ? 'Disconnecting...' : 'Disconnect'}
-							</Button>
+							</button>
 						{:else}
-							<Button
-								size="sm"
+							<button
 								onclick={handleConnect}
 								disabled={isConnecting || !config.hostname}
-								class="bg-green-600 text-white hover:bg-green-700"
+								class="inline-flex items-center gap-1.5 rounded-md border border-green-500/50 bg-green-600/20 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-600/40 disabled:opacity-50"
 							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line
+										x1="12"
+										y1="2"
+										x2="12"
+										y2="12"
+									/></svg
+								>
 								{isConnecting ? 'Connecting...' : 'Connect'}
-							</Button>
+							</button>
 						{/if}
 					</div>
 				</div>
@@ -253,7 +284,7 @@
 						</label>
 					</div>
 					<label
-						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
+						class="flex cursor-pointer flex-row items-center gap-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
 					>
 						<Switch bind:checked={config.shouldConnectOnStartup} />
 						Connect on startup
@@ -269,26 +300,52 @@
 					>AUTHENTICATION</span
 				>
 				<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — No RadioGroup component installed; native radio with bind:group is idiomatic Svelte -->
-				<div class="flex flex-col gap-1.5">
+				<div class="flex flex-col gap-2">
 					<label
-						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
+						class="flex cursor-pointer flex-row items-center gap-2.5 rounded-md border px-3 py-2 text-xs font-medium transition-colors {config.authMethod ===
+						'import'
+							? 'border-primary/60 bg-primary/10 text-foreground'
+							: 'border-border/40 bg-muted/10 text-muted-foreground hover:bg-muted/30'}"
 					>
+						<span
+							class="flex size-4 shrink-0 items-center justify-center rounded-full border-2 {config.authMethod ===
+							'import'
+								? 'border-primary'
+								: 'border-muted-foreground/50'}"
+						>
+							{#if config.authMethod === 'import'}
+								<span class="size-2 rounded-full bg-primary"></span>
+							{/if}
+						</span>
 						<input
 							type="radio"
 							bind:group={config.authMethod}
 							value="import"
-							class="accent-primary"
+							class="sr-only"
 						/>
 						Import Certificate (.p12)
 					</label>
 					<label
-						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
+						class="flex cursor-pointer flex-row items-center gap-2.5 rounded-md border px-3 py-2 text-xs font-medium transition-colors {config.authMethod ===
+						'enroll'
+							? 'border-primary/60 bg-primary/10 text-foreground'
+							: 'border-border/40 bg-muted/10 text-muted-foreground hover:bg-muted/30'}"
 					>
+						<span
+							class="flex size-4 shrink-0 items-center justify-center rounded-full border-2 {config.authMethod ===
+							'enroll'
+								? 'border-primary'
+								: 'border-muted-foreground/50'}"
+						>
+							{#if config.authMethod === 'enroll'}
+								<span class="size-2 rounded-full bg-primary"></span>
+							{/if}
+						</span>
 						<input
 							type="radio"
 							bind:group={config.authMethod}
 							value="enroll"
-							class="accent-primary"
+							class="sr-only"
 						/>
 						Enroll for Certificate
 					</label>
@@ -324,9 +381,29 @@
 
 			<!-- ═══ SAVE ═══ -->
 			<div class="flex items-center gap-2">
-				<Button onclick={saveConfig} disabled={isSaving} size="sm">
+				<button
+					onclick={saveConfig}
+					disabled={isSaving}
+					class="inline-flex items-center gap-1.5 rounded-md border border-primary/50 bg-primary/20 px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/40 disabled:opacity-50"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><path
+							d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+						/><polyline points="17 21 17 13 7 13 7 21" /><polyline
+							points="7 3 7 8 15 8"
+						/></svg
+					>
 					{isSaving ? 'Saving...' : 'Save Configuration'}
-				</Button>
+				</button>
 				{#if message}
 					<span
 						class="text-[10px] {messageType === 'success'
