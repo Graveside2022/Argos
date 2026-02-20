@@ -18,7 +18,7 @@ const TakConfigSchema = z.object({
 	certPath: z.string().optional(),
 	keyPath: z.string().optional(),
 	caPath: z.string().optional(),
-	connectOnStartup: z.boolean(),
+	shouldConnectOnStartup: z.boolean(),
 	authMethod: z.enum(['enroll', 'import']).optional(),
 	truststorePath: z.string().optional(),
 	truststorePass: z.string().max(256),

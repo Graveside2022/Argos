@@ -193,9 +193,9 @@
 					name={item.name}
 					description={item.description}
 					icon={item.icon}
-					isInstalled={item.installed}
+					isInstalled={item.isInstalled}
 					canOpen={item.canOpen}
-					showControls={item.showControls}
+					shouldShowControls={item.shouldShowControls}
 					externalUrl={item.externalUrl}
 					status={getLiveStatus(item)}
 					count={getLiveCount(item)}

@@ -444,7 +444,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 				const channelResult = determineChannelType(cellId, frameAnalysis, frameCount);
 				const channelType = channelResult.channelType;
-				const controlChannel = channelResult.controlChannel;
+				const controlChannel = channelResult.isControlChannel;
 
 				if (cellMcc && cellLac && cellCi) {
 					yield sendUpdate(

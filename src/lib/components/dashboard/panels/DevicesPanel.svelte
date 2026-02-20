@@ -39,8 +39,8 @@
 	let sortDirection: 'asc' | 'desc' = $state('desc');
 	let selectedMAC: string | null = $state(null);
 	let expandedMAC: string | null = $state(null);
-	let hideNoSignal = $state(true);
-	let showOnlyWithClients = $state(false);
+	let shouldHideNoSignal = $state(true);
+	let shouldShowOnlyWithClients = $state(false);
 
 	function handleSort(col: SortColumn) {
 		if (sortColumn === col) {
@@ -109,8 +109,8 @@
 	let devices = $derived(
 		filterAndSortDevices($kismetStore.devices, $isolatedDeviceMAC, {
 			searchQuery,
-			hideNoSignal,
-			showOnlyWithClients,
+			shouldHideNoSignal,
+			shouldShowOnlyWithClients,
 			activeBands: $activeBands,
 			sortColumn,
 			sortDirection
@@ -186,17 +186,19 @@
 			{/each}
 			<button
 				class="band-chip no-signal-chip"
-				class:hidden-band={hideNoSignal}
-				onclick={() => (hideNoSignal = !hideNoSignal)}
-				title={hideNoSignal ? 'Show devices without signal' : 'Hide devices without signal'}
+				class:hidden-band={shouldHideNoSignal}
+				onclick={() => (shouldHideNoSignal = !shouldHideNoSignal)}
+				title={shouldHideNoSignal
+					? 'Show devices without signal'
+					: 'Hide devices without signal'}
 			>
 				<span class="no-signal-label">--</span>
 			</button>
 			<button
 				class="band-chip multi-client-chip"
-				class:active-filter={showOnlyWithClients}
-				onclick={() => (showOnlyWithClients = !showOnlyWithClients)}
-				title={showOnlyWithClients
+				class:active-filter={shouldShowOnlyWithClients}
+				onclick={() => (shouldShowOnlyWithClients = !shouldShowOnlyWithClients)}
+				title={shouldShowOnlyWithClients
 					? 'Show all devices'
 					: 'Show only APs with connected clients'}
 			>

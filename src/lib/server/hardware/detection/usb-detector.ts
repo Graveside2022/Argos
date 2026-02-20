@@ -95,8 +95,8 @@ async function detectHackRF(): Promise<DetectedHardware[]> {
 				maxFrequency: 6_000_000_000, // 6 GHz
 				sampleRate: 20_000_000, // 20 Msps
 				bandwidth: 20_000_000,
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: false
 			};
 
@@ -183,8 +183,8 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 				minFrequency: 70_000_000, // Varies by model
 				maxFrequency: 6_000_000_000,
 				sampleRate: 61_440_000, // Varies by model
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: true
 			};
 			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
@@ -226,8 +226,8 @@ async function detectRTLSDR(): Promise<DetectedHardware[]> {
 				minFrequency: 24_000_000, // 24 MHz
 				maxFrequency: 1_766_000_000, // 1.766 GHz
 				sampleRate: 2_400_000, // 2.4 Msps
-				txCapable: false,
-				rxCapable: true
+				canTransmit: false,
+				canReceive: true
 			};
 
 			hardware.push({
@@ -286,8 +286,8 @@ async function detectWiFiAdapters(): Promise<DetectedHardware[]> {
 
 				const capabilities: WiFiCapabilities = {
 					interface: iface,
-					monitorMode,
-					injectionCapable: injection,
+					hasMonitorMode: monitorMode,
+					canInject: injection,
 					frequencyBands: bands,
 					channels: [] // Would need to parse channels from phy info
 				};
@@ -339,8 +339,8 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 
 				const capabilities: BluetoothCapabilities = {
 					interface: iface,
-					bleSupport,
-					classicSupport
+					hasBleSupport: bleSupport,
+					hasClassicSupport: classicSupport
 				};
 
 				hardware.push({
@@ -365,8 +365,8 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 					// Safe: Object literal satisfies BluetoothCapabilities — all required fields provided
 					capabilities: {
 						interface: iface,
-						bleSupport: true,
-						classicSupport: true
+						hasBleSupport: true,
+						hasClassicSupport: true
 						// Safe: Object literal satisfies BluetoothCapabilities — all required fields provided
 					} as BluetoothCapabilities,
 					lastSeen: Date.now(),

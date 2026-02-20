@@ -35,8 +35,8 @@ export interface SDRCapabilities {
 	maxFrequency: number; // Hz
 	sampleRate: number; // Samples per second
 	bandwidth?: number; // Hz
-	txCapable: boolean; // Can transmit
-	rxCapable: boolean; // Can receive
+	canTransmit: boolean;
+	canReceive: boolean;
 	fullDuplex?: boolean; // Simultaneous TX/RX
 }
 
@@ -45,8 +45,8 @@ export interface SDRCapabilities {
  */
 export interface WiFiCapabilities {
 	interface: string; // e.g., wlan0
-	monitorMode: boolean;
-	injectionCapable: boolean;
+	hasMonitorMode: boolean;
+	canInject: boolean;
 	frequencyBands: string[]; // ['2.4GHz', '5GHz']
 	channels: number[];
 	maxTxPower?: number; // dBm
@@ -57,8 +57,8 @@ export interface WiFiCapabilities {
  */
 export interface BluetoothCapabilities {
 	interface: string; // e.g., hci0
-	bleSupport: boolean;
-	classicSupport: boolean;
+	hasBleSupport: boolean;
+	hasClassicSupport: boolean;
 	version?: string; // Bluetooth version
 	manufacturer?: string;
 }
@@ -163,7 +163,7 @@ export interface HardwareQueryOptions {
  */
 export interface HardwareRequirement {
 	category: HardwareCategory;
-	required: boolean; // true = must have, false = optional
+	isRequired: boolean;
 	capabilities?: Partial<HardwareCapabilities>;
 	message?: string; // Error message if not available
 }

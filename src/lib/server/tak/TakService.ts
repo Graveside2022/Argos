@@ -47,7 +47,7 @@ export class TakService extends EventEmitter {
 	public async initialize() {
 		logger.info('[TakService] Initializing...');
 		this.config = loadTakConfig(this.db.rawDb);
-		if (this.config?.connectOnStartup) {
+		if (this.config?.shouldConnectOnStartup) {
 			this.shouldConnect = true;
 			await this.connect();
 		}

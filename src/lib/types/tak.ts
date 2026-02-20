@@ -7,7 +7,7 @@ export interface TakServerConfig {
 	certPath?: string;
 	keyPath?: string;
 	caPath?: string;
-	connectOnStartup: boolean;
+	shouldConnectOnStartup: boolean;
 	authMethod?: 'enroll' | 'import';
 	truststorePath?: string;
 	truststorePass: string;

@@ -5,16 +5,16 @@
  */
 export interface KismetConfig {
 	interface: string;
-	monitorMode: boolean;
+	hasMonitorMode: boolean;
 	channels: number[];
 	hopRate: number;
 	restPort: number;
 	restUser: string;
 	restPassword: string;
 	logLevel: string;
-	enableGPS: boolean;
-	enableLogging: boolean;
-	enableAlerts: boolean;
+	shouldEnableGPS: boolean;
+	shouldEnableLogging: boolean;
+	shouldEnableAlerts: boolean;
 	deviceTimeout: number;
 }
 
@@ -22,7 +22,7 @@ export interface KismetConfig {
  * Kismet status
  */
 export interface KismetStatus {
-	running: boolean;
+	isRunning: boolean;
 	interface: string | null;
 	channels: number[];
 	startTime: Date | null;
@@ -40,7 +40,7 @@ export interface MonitorInterface {
 	name: string;
 	type: string;
 	channels: number[];
-	enabled: boolean;
+	isEnabled: boolean;
 }
 
 /**

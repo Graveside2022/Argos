@@ -70,8 +70,8 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 				minFrequency: 70_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 61_440_000,
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: true
 				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
 			} as SDRCapabilities;

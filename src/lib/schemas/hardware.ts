@@ -45,8 +45,8 @@ export const SDRCapabilitiesSchema = z.object({
 	maxFrequency: z.number().positive('Max frequency must be positive'),
 	sampleRate: z.number().positive('Sample rate must be positive'),
 	bandwidth: z.number().positive('Bandwidth must be positive').optional(),
-	txCapable: z.boolean(),
-	rxCapable: z.boolean(),
+	canTransmit: z.boolean(),
+	canReceive: z.boolean(),
 	fullDuplex: z.boolean().optional()
 });
 
@@ -55,8 +55,8 @@ export const SDRCapabilitiesSchema = z.object({
  */
 export const WiFiCapabilitiesSchema = z.object({
 	interface: z.string().min(1, 'Interface name required'),
-	monitorMode: z.boolean(),
-	injectionCapable: z.boolean(),
+	hasMonitorMode: z.boolean(),
+	canInject: z.boolean(),
 	frequencyBands: z.array(z.string()),
 	channels: z.array(z.number()),
 	maxTxPower: z.number().optional()
@@ -67,8 +67,8 @@ export const WiFiCapabilitiesSchema = z.object({
  */
 export const BluetoothCapabilitiesSchema = z.object({
 	interface: z.string().min(1, 'Interface name required'),
-	bleSupport: z.boolean(),
-	classicSupport: z.boolean(),
+	hasBleSupport: z.boolean(),
+	hasClassicSupport: z.boolean(),
 	version: z.string().optional(),
 	manufacturer: z.string().optional()
 });
