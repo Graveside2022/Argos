@@ -46,6 +46,17 @@
 	const kismetService = new KismetService();
 	const takService = new TakService();
 
+	// Track which bottom-panel tabs have been visited at least once.
+	// Visited tabs stay mounted (hidden via CSS) so terminals/logs keep their scrollback.
+	let mountedTabs = $state(new Set<string>());
+
+	$effect(() => {
+		const tab = $activeBottomTab;
+		if (tab && !mountedTabs.has(tab)) {
+			mountedTabs = new Set([...mountedTabs, tab]);
+		}
+	});
+
 	function goBackToMap() {
 		activeView.set('map');
 	}
@@ -318,18 +329,32 @@
 					</button>
 				</div>
 
-				<!-- Panel content -->
+				<!-- Panel content — tabs stay mounted after first visit so terminals/logs keep scrollback -->
 				<div class="bottom-panel-content">
-					{#if $activeBottomTab === 'devices'}
-						<DevicesPanel />
-					{:else if $activeBottomTab === 'terminal'}
-						<TerminalPanel />
-					{:else if $activeBottomTab === 'gsm-evil'}
-						<GsmEvilPanel />
-					{:else if $activeBottomTab === 'logs'}
-						<LogsPanel />
-					{:else if $activeBottomTab === 'chat'}
-						<AgentChatPanel />
+					{#if mountedTabs.has('devices')}
+						<div class="tab-pane" class:tab-active={$activeBottomTab === 'devices'}>
+							<DevicesPanel />
+						</div>
+					{/if}
+					{#if mountedTabs.has('terminal')}
+						<div class="tab-pane" class:tab-active={$activeBottomTab === 'terminal'}>
+							<TerminalPanel />
+						</div>
+					{/if}
+					{#if mountedTabs.has('gsm-evil')}
+						<div class="tab-pane" class:tab-active={$activeBottomTab === 'gsm-evil'}>
+							<GsmEvilPanel />
+						</div>
+					{/if}
+					{#if mountedTabs.has('logs')}
+						<div class="tab-pane" class:tab-active={$activeBottomTab === 'logs'}>
+							<LogsPanel />
+						</div>
+					{/if}
+					{#if mountedTabs.has('chat')}
+						<div class="tab-pane" class:tab-active={$activeBottomTab === 'chat'}>
+							<AgentChatPanel />
+						</div>
 					{/if}
 				</div>
 			</ResizableBottomPanel>
@@ -462,5 +487,17 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.tab-pane {
+		display: none;
+		flex: 1;
+		flex-direction: column;
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.tab-pane.tab-active {
+		display: flex;
 	}
 </style>
