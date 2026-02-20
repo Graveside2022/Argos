@@ -35,7 +35,7 @@ export function storeNetworkGraph(
 			const relationshipData = {
 				source_device_id: edge.source,
 				target_device_id: edge.target,
-				network_id: null, // TODO: Implement network detection
+				network_id: null, // TODO(#9): Implement network detection
 				relationship_type: edge.type,
 				strength: edge.strength,
 				first_seen: edge.metadata.lastSeen,

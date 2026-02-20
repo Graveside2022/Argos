@@ -2,7 +2,7 @@ import { type Violation } from '../types.js';
 
 /**
  * Validate Article VII — Debugging Practices
- * TODO: Implement debugging practice checks (future version)
+ * TODO(#8): Implement debugging practice checks (future version)
  *
  * Placeholder for v1 — requires manual code review
  */
