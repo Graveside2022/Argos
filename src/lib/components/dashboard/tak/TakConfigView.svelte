@@ -31,6 +31,7 @@
 	let config: TakServerConfig = $state({ ...DEFAULT_CONFIG });
 	let isLoading = $state(false);
 	let isSaving = $state(false);
+	let isConnecting = $state(false);
 	let message = $state('');
 	let messageType: 'success' | 'error' = $state('success');
 
@@ -71,6 +72,40 @@
 			showMessage('Failed to save configuration', 'error');
 		} finally {
 			isSaving = false;
+		}
+	}
+
+	async function handleConnect() {
+		isConnecting = true;
+		try {
+			const res = await fetch('/api/tak/connection', { method: 'POST' });
+			const data = await res.json();
+			if (data.success) {
+				showMessage('Connecting...', 'success');
+			} else {
+				showMessage(data.error ?? 'Connection failed', 'error');
+			}
+		} catch {
+			showMessage('Connection request failed', 'error');
+		} finally {
+			isConnecting = false;
+		}
+	}
+
+	async function handleDisconnect() {
+		isConnecting = true;
+		try {
+			const res = await fetch('/api/tak/connection', { method: 'DELETE' });
+			const data = await res.json();
+			if (data.success) {
+				showMessage('Disconnected', 'success');
+			} else {
+				showMessage(data.error ?? 'Disconnect failed', 'error');
+			}
+		} catch {
+			showMessage('Disconnect request failed', 'error');
+		} finally {
+			isConnecting = false;
 		}
 	}
 
@@ -123,83 +158,114 @@
 	status={$takStatus.status === 'connected' ? 'Connected' : ''}
 	onBack={() => activeView.set('map')}
 >
-	<div class="flex h-full flex-col gap-4 overflow-y-auto p-4">
+	<div class="flex h-full flex-col gap-3 overflow-y-auto p-4">
 		{#if isLoading}
 			<p class="py-5 text-xs text-muted-foreground">Loading configuration...</p>
 		{:else}
-			<!-- Status -->
-			<div class="flex flex-col gap-2">
-				<span class="text-[10px] font-semibold tracking-widest text-muted-foreground"
+			<!-- ═══ STATUS ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
 					>STATUS</span
 				>
-				<div class="flex items-center gap-2 text-xs">
-					<span
-						class="size-2 shrink-0 rounded-full {$takStatus.status === 'connected'
-							? 'bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]'
-							: $takStatus.status === 'error'
-								? 'bg-destructive'
-								: 'bg-muted-foreground'}"
-					></span>
-					<span class="font-semibold text-foreground"
-						>{$takStatus.status.toUpperCase()}</span
-					>
-					{#if $takStatus.serverHost}
-						<span class="text-muted-foreground"
-							>{$takStatus.serverHost}:{config.port}</span
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2 text-xs">
+						<span
+							class="size-2.5 shrink-0 rounded-full {$takStatus.status === 'connected'
+								? 'bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]'
+								: $takStatus.status === 'error'
+									? 'bg-destructive'
+									: 'bg-muted-foreground'}"
+						></span>
+						<span class="font-semibold text-foreground"
+							>{$takStatus.status.toUpperCase()}</span
 						>
-					{/if}
+						{#if $takStatus.serverHost}
+							<span class="text-muted-foreground"
+								>{$takStatus.serverHost}:{config.port}</span
+							>
+						{/if}
+					</div>
+					<div>
+						{#if $takStatus.status === 'connected'}
+							<Button
+								variant="destructive"
+								size="sm"
+								onclick={handleDisconnect}
+								disabled={isConnecting}
+							>
+								{isConnecting ? 'Disconnecting...' : 'Disconnect'}
+							</Button>
+						{:else}
+							<Button
+								size="sm"
+								onclick={handleConnect}
+								disabled={isConnecting || !config.hostname}
+								class="bg-green-600 text-white hover:bg-green-700"
+							>
+								{isConnecting ? 'Connecting...' : 'Connect'}
+							</Button>
+						{/if}
+					</div>
 				</div>
 			</div>
 
-			<!-- Server Info -->
-			<div class="flex flex-col gap-2">
-				<span class="text-[10px] font-semibold tracking-widest text-muted-foreground"
+			<Separator />
+
+			<!-- ═══ SERVER ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
 					>SERVER</span
 				>
-				<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-					Description
-					<Input
-						type="text"
-						bind:value={config.name}
-						placeholder="Unit TAK Server"
-						class="h-8 text-xs"
-					/>
-				</label>
-				<div class="flex gap-2">
+				<div class="flex flex-col gap-2">
 					<label
-						class="flex flex-[2] flex-col gap-1 text-[11px] font-medium text-muted-foreground"
+						class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground"
 					>
-						Hostname / IP
+						Description
 						<Input
 							type="text"
-							bind:value={config.hostname}
-							placeholder="192.168.1.100"
+							bind:value={config.name}
+							placeholder="Unit TAK Server"
 							class="h-8 text-xs"
 						/>
 					</label>
+					<div class="flex gap-2">
+						<label
+							class="flex flex-[2] flex-col gap-1 text-[11px] font-medium text-muted-foreground"
+						>
+							Hostname / IP
+							<Input
+								type="text"
+								bind:value={config.hostname}
+								placeholder="192.168.1.100"
+								class="h-8 text-xs"
+							/>
+						</label>
+						<label
+							class="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground"
+						>
+							Port
+							<Input
+								type="number"
+								bind:value={config.port}
+								placeholder="8089"
+								class="h-8 text-xs"
+							/>
+						</label>
+					</div>
 					<label
-						class="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground"
+						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
 					>
-						Port
-						<Input
-							type="number"
-							bind:value={config.port}
-							placeholder="8089"
-							class="h-8 text-xs"
-						/>
+						<Switch bind:checked={config.shouldConnectOnStartup} />
+						Connect on startup
 					</label>
 				</div>
-				<label
-					class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"
-				>
-					<Switch bind:checked={config.shouldConnectOnStartup} />
-					Connect on startup
-				</label>
 			</div>
 
-			<!-- Authentication Method -->
-			<div class="flex flex-col gap-2">
-				<span class="text-[10px] font-semibold tracking-widest text-muted-foreground"
+			<Separator />
+
+			<!-- ═══ AUTHENTICATION ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
 					>AUTHENTICATION</span
 				>
 				<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — No RadioGroup component installed; native radio with bind:group is idiomatic Svelte -->
@@ -229,17 +295,34 @@
 				</div>
 			</div>
 
-			{#if config.authMethod === 'import'}
-				<TakAuthImport {config} onCertUploaded={applyPaths} />
-			{:else}
-				<TakAuthEnroll {config} onEnrolled={applyPaths} />
-			{/if}
-
-			<TakTruststore {config} onUploaded={handleTruststoreUploaded} />
-			<TakDataPackage configId={config.id} onImported={handlePackageImported} />
-
-			<!-- Save -->
 			<Separator />
+
+			<!-- ═══ CLIENT CERTIFICATE / ENROLLMENT ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				{#if config.authMethod === 'import'}
+					<TakAuthImport {config} onCertUploaded={applyPaths} />
+				{:else}
+					<TakAuthEnroll {config} onEnrolled={applyPaths} />
+				{/if}
+			</div>
+
+			<Separator />
+
+			<!-- ═══ TRUST STORE ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				<TakTruststore {config} onUploaded={handleTruststoreUploaded} />
+			</div>
+
+			<Separator />
+
+			<!-- ═══ DATA PACKAGE ═══ -->
+			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+				<TakDataPackage configId={config.id} onImported={handlePackageImported} />
+			</div>
+
+			<Separator />
+
+			<!-- ═══ SAVE ═══ -->
 			<div class="flex items-center gap-2">
 				<Button onclick={saveConfig} disabled={isSaving} size="sm">
 					{isSaving ? 'Saving...' : 'Save Configuration'}

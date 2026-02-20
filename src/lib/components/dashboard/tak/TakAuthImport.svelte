@@ -44,9 +44,14 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	<span class="text-[10px] font-semibold tracking-widest text-muted-foreground">
+	<span class="text-xs font-semibold tracking-widest text-muted-foreground">
 		CLIENT CERTIFICATE
 	</span>
+	<p class="text-[10px] leading-relaxed text-muted-foreground/70">
+		Upload your <strong class="text-muted-foreground">client identity certificate</strong>
+		(.p12) — e.g.
+		<code class="rounded bg-muted/50 px-1 text-foreground/80">truststore-intermediate.p12</code>
+	</p>
 	<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
 		Certificate File (.p12)
 		<Input type="file" accept=".p12" bind:files={p12File} class="h-8 text-[10px]" />
@@ -61,12 +66,12 @@
 		/>
 	</label>
 	<div class="flex items-center gap-2">
-		<Button variant="secondary" size="sm" onclick={uploadCert}>Upload Certificate</Button>
+		<Button size="sm" onclick={uploadCert}>Upload Certificate</Button>
 		{#if uploadStatus}
 			<span class="text-[10px] text-muted-foreground">{uploadStatus}</span>
 		{/if}
 	</div>
 	{#if config.certPath}
-		<span class="text-[10px] text-green-400">Certificates loaded</span>
+		<span class="text-[10px] text-green-400">✓ Certificates loaded</span>
 	{/if}
 </div>

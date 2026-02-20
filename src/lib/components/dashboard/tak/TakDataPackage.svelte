@@ -52,14 +52,13 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	<span class="text-[10px] font-semibold tracking-widest text-muted-foreground">DATA PACKAGE</span
-	>
+	<span class="text-xs font-semibold tracking-widest text-muted-foreground">DATA PACKAGE</span>
 	<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
 		TAK Data Package (.zip)
 		<Input type="file" accept=".zip" bind:files={packageFile} class="h-8 text-[10px]" />
 	</label>
 	<div class="flex items-center gap-2">
-		<Button variant="secondary" size="sm" onclick={importDataPackage}>Import Package</Button>
+		<Button size="sm" onclick={importDataPackage}>Import Package</Button>
 		{#if packageStatus}
 			<span class="text-[10px] text-muted-foreground">{packageStatus}</span>
 		{/if}
