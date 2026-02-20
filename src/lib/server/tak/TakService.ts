@@ -138,9 +138,13 @@ export class TakService extends EventEmitter {
 		this.tak.on('timeout', () => logger.warn('[TakService] Connection timeout'));
 
 		this.tak.on('error', (err: Error) => {
-			logger.error('[TakService] Error', { error: err.message });
-			this.emit('error', err);
+			logger.error('[TakService] TAK socket error', { error: err.message });
+			// We don't use this.emit('error', err) because Node.js crashes on unhandled 'error' events
+			this.emit('tak-socket-error', err);
 			this.broadcastStatus('error', err.message);
+
+			this.connectedAt = null;
+			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
 		this.tak.on('ping', () => {
