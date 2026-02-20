@@ -371,11 +371,11 @@
 	}
 
 	.provider-icon.vector {
-		background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+		background: linear-gradient(135deg, var(--color-card) 0%, var(--color-muted) 100%);
 	}
 
 	.provider-icon.satellite {
-		background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+		background: linear-gradient(135deg, var(--color-muted) 0%, var(--color-primary) 100%);
 	}
 
 	.provider-name {

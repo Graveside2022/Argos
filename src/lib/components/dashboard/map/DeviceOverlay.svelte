@@ -227,14 +227,14 @@
 	}
 
 	.affil-unknown {
-		background: #c8a32e;
+		background: var(--color-warning);
 	}
 
 	.affil-friendly {
-		background: #4a90e2;
+		background: var(--color-info);
 	}
 
 	.affil-hostile {
-		background: #e24a4a;
+		background: var(--color-destructive);
 	}
 </style>
