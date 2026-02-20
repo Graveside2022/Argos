@@ -14,98 +14,123 @@
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
 	import { logger } from '$lib/utils/logger';
 
-	let imsiCaptureActive = false;
+	let imsiCaptureActive = $state(false);
 	let imsiPollInterval: ReturnType<typeof setInterval>;
-	// Store-managed state via reactive statements
-	$: selectedFrequency = $gsmEvilStore.selectedFrequency;
-	$: isScanning = $gsmEvilStore.isScanning;
-	$: scanResults = $gsmEvilStore.scanResults;
-	$: capturedIMSIs = $gsmEvilStore.capturedIMSIs;
-	$: scanProgress = $gsmEvilStore.scanProgress;
 
-	$: towerLocations = $gsmEvilStore.towerLocations;
-	$: towerLookupAttempted = $gsmEvilStore.towerLookupAttempted;
-	$: scanButtonText = $gsmEvilStore.scanButtonText;
+	// Store-managed state via $derived runes
+	let selectedFrequency = $derived($gsmEvilStore.selectedFrequency);
+	let isScanning = $derived($gsmEvilStore.isScanning);
+	let scanResults = $derived($gsmEvilStore.scanResults);
+	let capturedIMSIs = $derived($gsmEvilStore.capturedIMSIs);
+	let scanProgress = $derived($gsmEvilStore.scanProgress);
+	let towerLocations = $derived($gsmEvilStore.towerLocations);
+	let towerLookupAttempted = $derived($gsmEvilStore.towerLookupAttempted);
+	let scanButtonText = $derived($gsmEvilStore.scanButtonText);
 
 	// Button shows "Stop Scan" (red) when scanning OR when IMSI capture is running
-	$: isActive = isScanning || imsiCaptureActive;
-	$: buttonText = isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan';
+	let isActive = $derived(isScanning || imsiCaptureActive);
+	let buttonText = $derived(
+		isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan'
+	);
 
 	// Error dialog state
-	let errorDialogOpen = false;
-	let errorDialogMessage = '';
+	let errorDialogOpen = $state(false);
+	let errorDialogMessage = $state('');
 
 	// Non-store managed state
-	let gsmFrames: string[] = [];
-	let activityStatus = {
+	let gsmFrames = $state<string[]>([]);
+	let activityStatus = $state({
 		hasActivity: false,
 		packetCount: 0,
 		recentIMSI: false,
 		currentFrequency: '947.2',
 		message: 'Checking...'
-	};
+	});
 
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
-	$: groupedTowers = capturedIMSIs
-		? groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations)
-		: [];
+	let groupedTowers = $derived(
+		capturedIMSIs
+			? groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations)
+			: []
+	);
 
 	// Derive detected towers from scan results that have cell info (MCC/MNC/LAC/CI)
-	$: scanDetectedTowers = scanResults
-		.filter((r) => r.mcc && r.lac && r.ci)
-		.map((r) => {
-			const mcc = r.mcc || '';
-			const mnc = r.mnc || '';
-			const lac = r.lac || '';
-			const ci = r.ci || '';
-			const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
-			const towerId = `${mccMnc}-${lac}-${ci}`;
-			const country = mccToCountry[mcc] || { name: 'Unknown', flag: '', code: '??' };
-			const carrier = mncToCarrier[mccMnc] || 'Unknown';
-			return {
-				frequency: r.frequency,
-				mcc,
-				mnc,
-				mccMnc,
-				lac,
-				ci,
-				towerId,
-				country,
-				carrier,
-				frameCount: r.frameCount || 0,
-				strength: r.strength,
-				location: towerLocations[towerId] || null
-			};
-		});
+	let scanDetectedTowers = $derived(
+		scanResults
+			.filter((r) => r.mcc && r.lac && r.ci)
+			.map((r) => {
+				const mcc = r.mcc || '';
+				const mnc = r.mnc || '';
+				const lac = r.lac || '';
+				const ci = r.ci || '';
+				const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
+				const towerId = `${mccMnc}-${lac}-${ci}`;
+				const country = mccToCountry[mcc] || { name: 'Unknown', flag: '', code: '??' };
+				const carrier = mncToCarrier[mccMnc] || 'Unknown';
+				return {
+					frequency: r.frequency,
+					mcc,
+					mnc,
+					mccMnc,
+					lac,
+					ci,
+					towerId,
+					country,
+					carrier,
+					frameCount: r.frameCount || 0,
+					strength: r.strength,
+					location: towerLocations[towerId] || null
+				};
+			})
+	);
 
 	// Fetch tower locations when new IMSIs are captured
-	$: if (capturedIMSIs.length > 0) {
-		const towers = groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations);
-		towers.forEach(async (tower) => {
-			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
-				gsmEvilStore.markTowerLookupAttempted(towerId);
+	$effect(() => {
+		if (capturedIMSIs.length > 0) {
+			const towers = groupIMSIsByTower(
+				capturedIMSIs,
+				mncToCarrier,
+				mccToCountry,
+				towerLocations
+			);
+			towers.forEach(async (tower) => {
+				const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
+				if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
+					gsmEvilStore.markTowerLookupAttempted(towerId);
 
-				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-				if (result && result.found) {
-					gsmEvilStore.updateTowerLocation(towerId, result.location);
+					const result = await fetchTowerLocation(
+						tower.mcc,
+						tower.mnc,
+						tower.lac,
+						tower.ci
+					);
+					if (result && result.found) {
+						gsmEvilStore.updateTowerLocation(towerId, result.location);
+					}
 				}
-			}
-		});
-	}
+			});
+		}
+	});
 
 	// Auto-fetch tower locations for scan-detected towers (post-scan cell identity)
-	$: if (scanDetectedTowers.length > 0) {
-		scanDetectedTowers.forEach(async (tower) => {
-			if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
-				gsmEvilStore.markTowerLookupAttempted(tower.towerId);
-				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-				if (result && result.found) {
-					gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
+	$effect(() => {
+		if (scanDetectedTowers.length > 0) {
+			scanDetectedTowers.forEach(async (tower) => {
+				if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
+					gsmEvilStore.markTowerLookupAttempted(tower.towerId);
+					const result = await fetchTowerLocation(
+						tower.mcc,
+						tower.mnc,
+						tower.lac,
+						tower.ci
+					);
+					if (result && result.found) {
+						gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
+					}
 				}
-			}
-		});
-	}
+			});
+		}
+	});
 
 	// Fetch tower location
 	async function fetchTowerLocation(mcc: string, mnc: string, lac: string, ci: string) {

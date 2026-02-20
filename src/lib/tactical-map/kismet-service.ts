@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+
 import type { KismetDevice } from '$lib/kismet/types';
 import { KismetControlResponseSchema, KismetDevicesResponseSchema } from '$lib/schemas/rf';
 import {
@@ -47,12 +49,7 @@ export class KismetService {
 					return;
 				}
 
-				// Get current status
-				let currentStatus: string = 'stopped';
-				const unsubscribe = kismetStore.subscribe(
-					(state) => (currentStatus = state.status)
-				);
-				unsubscribe();
+				const currentStatus = get(kismetStore).status;
 
 				if (data.running && currentStatus === 'stopped') {
 					setKismetStatus('running');
@@ -66,9 +63,7 @@ export class KismetService {
 	}
 
 	async startKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
 
@@ -102,9 +97,7 @@ export class KismetService {
 	}
 
 	async stopKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
 
@@ -140,9 +133,7 @@ export class KismetService {
 	}
 
 	async toggleKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'running') {
 			await this.stopKismet();
@@ -152,9 +143,7 @@ export class KismetService {
 	}
 
 	async fetchKismetDevices(): Promise<KismetDevice[]> {
-		let currentState: { status: string; devices: Map<string, KismetDevice> } | undefined;
-		const unsubscribe = kismetStore.subscribe((state) => (currentState = state));
-		unsubscribe();
+		const currentState = get(kismetStore);
 
 		if (currentState?.status !== 'running') return [];
 

@@ -3,7 +3,7 @@
  * Manages navigation state, expanded categories, and tool runtime status
  */
 
-import { derived, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
 import { findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
@@ -140,11 +140,7 @@ export function setToolStatus(toolId: string, status: ToolStatus) {
  * Get a tool's current status (from runtime state or static definition)
  */
 export function getToolStatus(toolId: string): ToolStatus {
-	let status: ToolStatus = 'stopped';
-	toolStates.subscribe((map) => {
-		status = map.get(toolId) || 'stopped';
-	})();
-	return status;
+	return get(toolStates).get(toolId) || 'stopped';
 }
 
 // Persistence to localStorage
