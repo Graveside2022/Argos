@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { stat } from 'fs/promises';
 import { promisify } from 'util';
 
+import { logger } from '../utils/logger.js';
 import { FileNotFoundError, GitNotAvailableError, type ViolationCategory } from './types.js';
 
 const execFileAsync = promisify(execFile);
@@ -120,7 +121,7 @@ export async function batchCategorizeViolations(
 				results.set(`${file}:${line}`, category);
 			} catch (error) {
 				// Skip violations that can't be categorized
-				console.warn(`Failed to categorize ${file}:${line}:`, error);
+				logger.warn('Failed to categorize violation', { file, line, error: error instanceof Error ? error.message : String(error) });
 			}
 		});
 		await Promise.all(promises);
