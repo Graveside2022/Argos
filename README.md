@@ -138,7 +138,7 @@ When running on Parrot Core or in the field without a monitor, Argos includes to
 
 ### Debugging
 
-The `vite-oom-protect.sh` script wraps the Vite process with `strace` to capture signal and exit events. Logs are saved to `/tmp/vite_strace_<timestamp>.log`. Useful for identifying why the Vite server crashes or restarts unexpectedly.
+The `vite-oom-protect.sh` script launches Vite with OOM protection (`oom_score_adj=-500`) on the entire process tree. Do **not** wrap Vite with `strace -f` — it ptrace-attaches to child processes, which strips SUID bits from `sudo` and capture helpers (breaking Kismet, GSM Evil, and any service requiring privilege escalation).
 
 ## More Info
 
