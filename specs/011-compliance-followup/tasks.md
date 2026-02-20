@@ -160,9 +160,9 @@
 
 **Purpose**: Final verification and commit hygiene
 
-- [ ] T051 Run full verification suite: `npm run typecheck` (0 errors), `npm run test:unit` (190+ pass), `npm run test:security`, `npm run build` (success)
-- [ ] T052 Verify SC-001 through SC-008 from spec.md — document pass/fail for each success criterion
-- [ ] T053 Create GitHub issue to track remaining 6 oversized dashboard components (TerminalPanel 742, AgentChatPanel 619, LayersPanel 467, TerminalTabContent 387, IconRail 331, PanelContainer 317) for future work
+- [x] T051 Run full verification suite: `npm run typecheck` (0 errors), `npm run test:unit` (190+ pass), `npm run test:security`, `npm run build` (success)
+- [x] T052 Verify SC-001 through SC-008 from spec.md — document pass/fail for each success criterion
+- [x] T053 Create GitHub issue to track remaining 6 oversized dashboard components (TerminalPanel 742, AgentChatPanel 619, LayersPanel 467, TerminalTabContent 387, IconRail 331, PanelContainer 317) for future work — GitHub issue #17
 
 ---
 
