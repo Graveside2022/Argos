@@ -2,7 +2,7 @@
 <script lang="ts">
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
-	import type { Feature, FeatureCollection } from 'geojson';
+	import type { FeatureCollection } from 'geojson';
 	import type { LngLatLike } from 'maplibre-gl';
 	import maplibregl from 'maplibre-gl';
 	import { setContext } from 'svelte';
@@ -19,20 +19,9 @@
 		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
-	import {
-		MAP_UI_COLORS,
-		resolveMapColor,
-		SIGNAL_COLORS
-	} from '$lib/components/dashboard/map/map-colors';
 	import type { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
 	import type { SymbolLayer } from '$lib/map/layers/SymbolLayer';
-	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
-	import {
-		type DeviceForVisibility,
-		filterByVisibility,
-		promotedDevices,
-		visibilityMode
-	} from '$lib/map/VisibilityEngine';
+	import { promotedDevices, visibilityMode } from '$lib/map/VisibilityEngine';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,
@@ -42,23 +31,33 @@
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { type Affiliation, kismetStore } from '$lib/stores/tactical-map/kismet-store';
+	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 	import { takCotMessages } from '$lib/stores/tak-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
-	import { parseCotToFeature } from '$lib/utils/cot-parser';
-	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 
 	import DeviceOverlay from './map/DeviceOverlay.svelte';
+	import { MAP_UI_COLORS, resolveMapColor } from './map/map-colors';
 	import {
-		bezierArc,
-		buildConeSVG,
-		createCirclePolygon,
-		createRingPolygon,
-		fetchCellTowers,
-		haversineKm,
-		LAYER_MAP,
-		spreadClientPosition
-	} from './map/map-helpers';
+		buildAccuracyGeoJSON,
+		buildConnectionLinesGeoJSON,
+		buildDetectionRangeGeoJSON,
+		buildDeviceGeoJSON
+	} from './map/map-geojson';
+	import {
+		buildRangeBands,
+		type CellTowerFetchState,
+		handleClusterClick as onClusterClick,
+		handleDeviceClick as deviceClickHandler,
+		handleTowerClick as towerClickHandler,
+		maybeFetchCellTowers,
+		type PopupState,
+		syncClusterVisibility,
+		syncLayerVisibility,
+		syncThemePaint,
+		type TowerPopupState,
+		updateSymbolLayer
+	} from './map/map-handlers';
+	import { buildConeSVG } from './map/map-helpers';
 	import { setupMap } from './map/map-setup';
 	import TowerPopup from './map/TowerPopup.svelte';
 
@@ -71,35 +70,12 @@
 	let mapStyle: maplibregl.StyleSpecification | string = $state(GOOGLE_SATELLITE_STYLE);
 
 	let cellTowerGeoJSON: FeatureCollection = $state({ type: 'FeatureCollection', features: [] });
-	let lastTowerFetchLat = 0;
-	let lastTowerFetchLon = 0;
+	const towerFetchState: CellTowerFetchState = { lastLat: 0, lastLon: 0 };
 
 	let _popupLngLat: LngLatLike | null = $state(null);
-	let popupContent: {
-		ssid: string;
-		mac: string;
-		rssi: number;
-		type: string;
-		manufacturer: string;
-		channel: number;
-		frequency: number;
-		packets: number;
-		last_seen: number;
-		clientCount: number;
-		parentAP: string;
-		affiliation: Affiliation;
-	} | null = $state(null);
+	let popupContent: PopupState | null = $state(null);
 	let towerPopupLngLat: LngLatLike | null = $state(null);
-	let towerPopupContent: {
-		radio: string;
-		mcc: number;
-		mnc: number;
-		lac: number;
-		ci: number;
-		range: number;
-		samples: number;
-		avgSignal: number;
-	} | null = $state(null);
+	let towerPopupContent: TowerPopupState | null = $state(null);
 
 	let accuracyColor = $derived.by(() => {
 		const _p = themeStore.palette;
@@ -109,48 +85,7 @@
 
 	let RANGE_BANDS = $derived.by(() => {
 		const _p = themeStore.palette;
-		return [
-			{
-				outerR: 25,
-				innerR: 0,
-				band: 'vstrong',
-				color: resolveMapColor(SIGNAL_COLORS.critical),
-				rssi: '> -50',
-				label: '25m'
-			},
-			{
-				outerR: 60,
-				innerR: 25,
-				band: 'strong',
-				color: resolveMapColor(SIGNAL_COLORS.strong),
-				rssi: '-50 to -60',
-				label: '60m'
-			},
-			{
-				outerR: 100,
-				innerR: 60,
-				band: 'good',
-				color: resolveMapColor(SIGNAL_COLORS.good),
-				rssi: '-60 to -70',
-				label: '100m'
-			},
-			{
-				outerR: 175,
-				innerR: 100,
-				band: 'fair',
-				color: resolveMapColor(SIGNAL_COLORS.fair),
-				rssi: '-70 to -80',
-				label: '175m'
-			},
-			{
-				outerR: 300,
-				innerR: 175,
-				band: 'weak',
-				color: resolveMapColor(SIGNAL_COLORS.weak),
-				rssi: '< -80',
-				label: '300m'
-			}
-		];
+		return buildRangeBands();
 	});
 
 	let gpsLngLat: LngLatLike | null = $derived.by(() => {
@@ -169,152 +104,40 @@
 
 	let showCone = $derived(headingDeg !== null);
 
-	let accuracyGeoJSON: FeatureCollection = $derived.by(() => {
-		const { lat, lon } = $gpsStore.position;
-		const acc = $gpsStore.status.accuracy;
-		if ((lat === 0 && lon === 0) || acc <= 0) {
-			return { type: 'FeatureCollection' as const, features: [] };
-		}
-		return {
-			type: 'FeatureCollection' as const,
-			features: [createCirclePolygon(lon, lat, acc)]
-		};
-	});
+	let accuracyGeoJSON: FeatureCollection = $derived(
+		buildAccuracyGeoJSON(
+			$gpsStore.position.lat,
+			$gpsStore.position.lon,
+			$gpsStore.status.accuracy
+		)
+	);
 
-	let detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
-		const { lat, lon } = $gpsStore.position;
-		if (lat === 0 && lon === 0) return { type: 'FeatureCollection' as const, features: [] };
-		const rangeFeatures: Feature[] = [];
-		for (const b of RANGE_BANDS) {
-			rangeFeatures.push({
-				...createRingPolygon(lon, lat, b.outerR, b.innerR),
-				properties: { band: b.band, color: b.color }
-			});
-		}
-		return { type: 'FeatureCollection' as const, features: rangeFeatures };
-	});
+	let detectionRangeGeoJSON: FeatureCollection = $derived(
+		buildDetectionRangeGeoJSON($gpsStore.position.lat, $gpsStore.position.lon, RANGE_BANDS)
+	);
 
-	let deviceGeoJSON: FeatureCollection = $derived.by(() => {
-		const state = $kismetStore;
-		const isoMac = $isolatedDeviceMAC;
-		const bands = $activeBands;
-		const vMode = $visibilityMode;
-		const promoted = $promotedDevices;
-		const features: Feature[] = [];
-
-		let visibleMACs: Set<string> | null = null;
-		if (isoMac) {
-			const ap = state.devices.get(isoMac);
-			visibleMACs = new Set([isoMac]);
-			if (ap?.clients?.length) for (const c of ap.clients) visibleMACs.add(c);
-		}
-
-		const devicesForVisibility: (DeviceForVisibility & { mac: string })[] = [];
-		state.devices.forEach((device, mac) => {
-			if (visibleMACs && !visibleMACs.has(mac)) return;
-			const lat = device.location?.lat;
-			const lon = device.location?.lon;
-			if (!lat || !lon || (lat === 0 && lon === 0)) return;
-			devicesForVisibility.push({
-				mac,
-				rssi: device.signal?.last_signal ?? 0,
-				lastSeen: device.last_seen || 0
-			});
-		});
-
-		const visibleDevices = filterByVisibility(devicesForVisibility, vMode, promoted);
-		const visibleMacSet = new Set(visibleDevices.map((d) => d.mac));
-
-		state.devices.forEach((device, mac) => {
-			if (!visibleMacSet.has(mac)) return;
-			let lat = device.location?.lat;
-			let lon = device.location?.lon;
-			if (!lat || !lon || (lat === 0 && lon === 0)) return;
-			const rssi = device.signal?.last_signal ?? 0;
-			const band = getSignalBandKey(rssi);
-			if (!bands.has(band)) return;
-
-			if (device.parentAP) {
-				const ap = state.devices.get(device.parentAP);
-				if (ap?.location?.lat && ap?.location?.lon) {
-					const [sLon, sLat] = spreadClientPosition(
-						lon,
-						lat,
-						ap.location.lon,
-						ap.location.lat,
-						mac,
-						rssi
-					);
-					lon = sLon;
-					lat = sLat;
-				}
-			}
-
-			features.push({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [lon, lat] },
-				properties: {
-					mac,
-					ssid: device.ssid || 'Unknown',
-					rssi,
-					band,
-					type: device.type || 'unknown',
-					color: getSignalHex(rssi),
-					manufacturer: device.manufacturer || device.manuf || 'Unknown',
-					channel: device.channel || 0,
-					frequency: device.frequency || 0,
-					packets: device.packets || 0,
-					last_seen: device.last_seen || 0,
-					clientCount: device.clients?.length ?? 0,
-					parentAP: device.parentAP ?? ''
-				}
-			});
-		});
-		return { type: 'FeatureCollection' as const, features };
-	});
+	let deviceGeoJSON: FeatureCollection = $derived(
+		buildDeviceGeoJSON(
+			$kismetStore,
+			$isolatedDeviceMAC,
+			$activeBands,
+			$visibilityMode,
+			$promotedDevices
+		)
+	);
 
 	let visibleDeviceMACs: Set<string> = $derived(
 		new Set(deviceGeoJSON.features.map((f) => f.properties?.mac as string).filter(Boolean))
 	);
 
-	let connectionLinesGeoJSON: FeatureCollection = $derived.by(() => {
-		const state = $kismetStore;
-		const isoMac = $isolatedDeviceMAC;
-		const layerOn = $layerVisibility.connectionLines;
-		if (!isoMac && !layerOn) return { type: 'FeatureCollection' as const, features: [] };
-
-		const features: Feature[] = [];
-		state.devices.forEach((device) => {
-			if (!device.clients?.length) return;
-			if (isoMac && device.mac !== isoMac) return;
-			const apLat = device.location?.lat;
-			const apLon = device.location?.lon;
-			if (!apLat || !apLon) return;
-			const apColor = getSignalHex(device.signal?.last_signal ?? 0);
-			for (const clientMac of device.clients) {
-				if (!visibleDeviceMACs.has(clientMac)) continue;
-				const client = state.devices.get(clientMac);
-				if (!client?.location?.lat || !client?.location?.lon) continue;
-				const [cLon, cLat] = spreadClientPosition(
-					client.location.lon,
-					client.location.lat,
-					apLon,
-					apLat,
-					clientMac,
-					client.signal?.last_signal ?? -70
-				);
-				features.push({
-					type: 'Feature',
-					geometry: {
-						type: 'LineString',
-						coordinates: bezierArc([apLon, apLat], [cLon, cLat])
-					},
-					properties: { apMac: device.mac, clientMac, color: apColor }
-				});
-			}
-		});
-		return { type: 'FeatureCollection' as const, features };
-	});
+	let connectionLinesGeoJSON: FeatureCollection = $derived(
+		buildConnectionLinesGeoJSON(
+			$kismetStore,
+			$isolatedDeviceMAC,
+			$layerVisibility.connectionLines,
+			visibleDeviceMACs
+		)
+	);
 
 	setContext('dashboardMap', {
 		getMap: () => map,
@@ -323,7 +146,8 @@
 		}
 	});
 
-	// Probe Stadia style availability
+	// ── Effects ──
+
 	$effect(() => {
 		fetch('/api/map-tiles/styles/alidade_smooth_dark.json', { method: 'HEAD' })
 			.then((res) => {
@@ -340,6 +164,7 @@
 			cssReady = true;
 		});
 	});
+
 	$effect(() => {
 		if (map && !layersInitialized) {
 			handleMapLoad();
@@ -357,32 +182,13 @@
 	});
 
 	$effect(() => {
-		if (!symbolLayer) return;
-		let features: Feature[] = [];
-		if (deviceGeoJSON) {
-			features = deviceGeoJSON.features.map((f) => {
-				const props = f.properties || {};
-				const mac = (props.mac || '').toUpperCase();
-				const affiliation = $kismetStore.deviceAffiliations.get(mac) || 'unknown';
-				return {
-					...f,
-					properties: {
-						...props,
-						sidc: SymbolFactory.getSidcForDevice(props.type || 'unknown', affiliation),
-						label: props.ssid || props.mac || 'Unknown'
-					}
-				};
-			});
-		}
-		const cotMsgs = $takCotMessages;
-		if (cotMsgs.length > 0)
-			features = [
-				...features,
-				...(cotMsgs
-					.map((xml) => parseCotToFeature(xml))
-					.filter((f) => f !== null) as Feature[])
-			];
-		symbolLayer.update(features);
+		if (symbolLayer)
+			updateSymbolLayer(
+				symbolLayer,
+				deviceGeoJSON,
+				$kismetStore.deviceAffiliations,
+				$takCotMessages
+			);
 	});
 
 	$effect(() => {
@@ -395,77 +201,26 @@
 
 	$effect(() => {
 		const { lat, lon } = $gpsStore.position;
-		if (lat === 0 && lon === 0) return;
-		const shouldFetch =
-			(lastTowerFetchLat === 0 && lastTowerFetchLon === 0) ||
-			haversineKm(lat, lon, lastTowerFetchLat, lastTowerFetchLon) > 1;
-		if (shouldFetch)
-			fetchCellTowers(lat, lon).then((r) => {
-				if (r) {
-					cellTowerGeoJSON = r;
-					lastTowerFetchLat = lat;
-					lastTowerFetchLon = lon;
-				}
-			});
+		maybeFetchCellTowers(lat, lon, towerFetchState).then((r) => {
+			if (r) cellTowerGeoJSON = r;
+		});
 	});
 
 	$effect(() => {
-		if (!map) return;
-		const vis = $layerVisibility;
-		const isoMac = $isolatedDeviceMAC;
-		if (symbolLayer) symbolLayer.setVisible(vis.milSyms !== false);
-		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
-			const visible =
-				key === 'connectionLines'
-					? vis[key] !== false || isoMac !== null
-					: vis[key] !== false;
-			for (const id of layerIds) {
-				if (map.getLayer(id))
-					map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
-			}
-		}
+		if (map) syncLayerVisibility(map, $layerVisibility, $isolatedDeviceMAC, symbolLayer);
 	});
 
 	$effect(() => {
-		if (!map) return;
-		const isoMac = $isolatedDeviceMAC;
-		const dotsVisible = $layerVisibility.deviceDots !== false;
-		const clusterVis = isoMac ? 'none' : dotsVisible ? 'visible' : 'none';
-		if (map.getLayer('device-clusters'))
-			map.setLayoutProperty('device-clusters', 'visibility', clusterVis);
-		if (map.getLayer('device-cluster-count'))
-			map.setLayoutProperty('device-cluster-count', 'visibility', clusterVis);
+		if (map)
+			syncClusterVisibility(map, $isolatedDeviceMAC, $layerVisibility.deviceDots !== false);
 	});
 
 	$effect(() => {
 		const _p = themeStore.palette;
-		if (!map) return;
-		const fg = resolveMapColor(MAP_UI_COLORS.foreground),
-			mutedFg = resolveMapColor(MAP_UI_COLORS.mutedForeground),
-			bg = resolveMapColor(MAP_UI_COLORS.background),
-			secondary = resolveMapColor(MAP_UI_COLORS.secondary),
-			border = resolveMapColor(MAP_UI_COLORS.border);
-		if (map.getLayer('device-clusters')) {
-			map.setPaintProperty('device-clusters', 'circle-color', secondary);
-			map.setPaintProperty('device-clusters', 'circle-stroke-color', border);
-		}
-		if (map.getLayer('device-cluster-count'))
-			map.setPaintProperty('device-cluster-count', 'text-color', fg);
-		if (map.getLayer('cell-tower-labels')) {
-			map.setPaintProperty('cell-tower-labels', 'text-color', mutedFg);
-			map.setPaintProperty('cell-tower-labels', 'text-halo-color', bg);
-		}
-		if (map.getLayer('housenumber-labels')) {
-			map.setPaintProperty('housenumber-labels', 'text-color', mutedFg);
-			map.setPaintProperty('housenumber-labels', 'text-halo-color', bg);
-		}
-		if (map.getLayer('poi-labels-all')) {
-			map.setPaintProperty('poi-labels-all', 'text-color', fg);
-			map.setPaintProperty('poi-labels-all', 'text-halo-color', bg);
-		}
-		if (map.getLayer('building-outline-enhanced'))
-			map.setPaintProperty('building-outline-enhanced', 'line-color', `${border}4D`);
+		if (map) syncThemePaint(map);
 	});
+
+	// ── Handlers ──
 
 	function handleMapLoad() {
 		if (!map) return;
@@ -473,7 +228,16 @@
 		const init = () => {
 			const r = setupMap(
 				m,
-				handleDeviceClick,
+				(ev: maplibregl.MapMouseEvent) => {
+					const result = deviceClickHandler(m, ev, $kismetStore.deviceAffiliations);
+					if (!result) return;
+					_popupLngLat = result.lngLat;
+					popupContent = result.content;
+					selectDevice(result.content.mac, { ...result.content });
+					if (result.content.clientCount > 0) isolateDevice(result.content.mac);
+					else if (result.content.parentAP) isolateDevice(result.content.parentAP);
+					else isolateDevice(null);
+				},
 				() => {
 					_popupLngLat = null;
 					popupContent = null;
@@ -490,75 +254,6 @@
 
 	function handleLocateClick() {
 		if (map && gpsLngLat) map.flyTo({ center: gpsLngLat as [number, number], zoom: 18 });
-	}
-
-	function handleDeviceClick(ev: maplibregl.MapMouseEvent) {
-		const features = map?.queryRenderedFeatures(ev.point, {
-			layers: ['device-circles', 'mil-sym-layer'].filter((l) => map?.getLayer(l))
-		});
-		if (!features?.length) return;
-		const props = features[0].properties,
-			geom = features[0].geometry;
-		if (geom.type !== 'Point') return;
-		_popupLngLat = geom.coordinates as [number, number];
-		popupContent = {
-			ssid: props?.ssid ?? 'Unknown',
-			mac: props?.mac ?? '',
-			rssi: props?.rssi ?? -80,
-			type: props?.type ?? 'unknown',
-			manufacturer: props?.manufacturer ?? 'Unknown',
-			channel: props?.channel ?? 0,
-			frequency: props?.frequency ?? 0,
-			packets: props?.packets ?? 0,
-			last_seen: props?.last_seen ?? 0,
-			clientCount: props?.clientCount ?? 0,
-			parentAP: props?.parentAP ?? '',
-			affiliation:
-				$kismetStore.deviceAffiliations.get((props?.mac ?? '').toUpperCase()) || 'unknown'
-		};
-		selectDevice(props?.mac ?? '', popupContent);
-		if ((props?.clientCount ?? 0) > 0) isolateDevice(props?.mac ?? '');
-		else if (props?.parentAP) isolateDevice(props.parentAP);
-		else isolateDevice(null);
-	}
-
-	async function handleClusterClick(ev: maplibregl.MapMouseEvent) {
-		const features = map?.queryRenderedFeatures(ev.point, { layers: ['device-clusters'] });
-		if (!features?.length || !map) return;
-		const clusterId = features[0].properties?.cluster_id;
-		if (clusterId === undefined) return;
-		const source = map.getSource('devices-src') as maplibregl.GeoJSONSource;
-		if (!source) return;
-		try {
-			const zoom = await source.getClusterExpansionZoom(clusterId);
-			const geom = features[0].geometry;
-			if (geom.type === 'Point')
-				map.easeTo({
-					center: geom.coordinates as [number, number],
-					zoom: Math.min(zoom, 18)
-				});
-		} catch {
-			/* cluster removed */
-		}
-	}
-
-	function handleTowerClick(ev: maplibregl.MapMouseEvent) {
-		const features = map?.queryRenderedFeatures(ev.point, { layers: ['cell-tower-circles'] });
-		if (!features?.length) return;
-		const props = features[0].properties,
-			geom = features[0].geometry;
-		if (geom.type !== 'Point') return;
-		towerPopupLngLat = geom.coordinates as [number, number];
-		towerPopupContent = {
-			radio: props?.radio ?? 'Unknown',
-			mcc: props?.mcc ?? 0,
-			mnc: props?.mnc ?? 0,
-			lac: props?.lac ?? 0,
-			ci: props?.ci ?? 0,
-			range: props?.range ?? 0,
-			samples: props?.samples ?? 0,
-			avgSignal: props?.avgSignal ?? 0
-		};
 	}
 </script>
 
@@ -658,7 +353,14 @@
 					'circle-stroke-color': ['get', 'color'],
 					'circle-stroke-opacity': 0.9
 				}}
-				onclick={handleTowerClick}
+				onclick={(ev) => {
+					if (!map) return;
+					const result = towerClickHandler(map, ev);
+					if (result) {
+						towerPopupLngLat = result.lngLat;
+						towerPopupContent = result.content;
+					}
+				}}
 			/>
 			<MapLibreSymbolLayer
 				id="cell-tower-labels"
@@ -704,7 +406,9 @@
 					'circle-stroke-width': 2,
 					'circle-stroke-color': MAP_UI_COLORS.border.fallback
 				}}
-				onclick={handleClusterClick}
+				onclick={(ev) => {
+					if (map) onClusterClick(map, ev);
+				}}
 			/>
 			<MapLibreSymbolLayer
 				id="device-cluster-count"
@@ -774,7 +478,17 @@
 					'circle-stroke-color': ['get', 'color'],
 					'circle-stroke-opacity': ['case', ['>', ['get', 'clientCount'], 0], 0.7, 0.5]
 				}}
-				onclick={handleDeviceClick}
+				onclick={(ev) => {
+					if (!map) return;
+					const result = deviceClickHandler(map, ev, $kismetStore.deviceAffiliations);
+					if (!result) return;
+					_popupLngLat = result.lngLat;
+					popupContent = result.content;
+					selectDevice(result.content.mac, { ...result.content });
+					if (result.content.clientCount > 0) isolateDevice(result.content.mac);
+					else if (result.content.parentAP) isolateDevice(result.content.parentAP);
+					else isolateDevice(null);
+				}}
 			/>
 		</GeoJSONSource>
 
@@ -822,6 +536,8 @@
 </div>
 
 <style>
+	@import './map/map-overrides.css';
+
 	.map-area {
 		flex: 1;
 		position: relative;
@@ -864,60 +580,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
-	}
-	.map-area :global(.maplibregl-ctrl-group) {
-		background: color-mix(in srgb, var(--card) 97%, transparent) !important;
-		border: 1px solid var(--border) !important;
-		border-radius: 6px !important;
-		box-shadow: none !important;
-	}
-	.map-area :global(.maplibregl-ctrl-group button) {
-		width: 34px !important;
-		height: 34px !important;
-		background: transparent !important;
-		border: none !important;
-		border-bottom: 1px solid var(--border) !important;
-		color: var(--muted-foreground) !important;
-	}
-	.map-area :global(.maplibregl-ctrl-group button:last-child) {
-		border-bottom: none !important;
-	}
-	.map-area :global(.maplibregl-ctrl-group button:hover) {
-		background: var(--accent) !important;
-		color: var(--primary) !important;
-	}
-	.map-area :global(.maplibregl-ctrl-group button .maplibregl-ctrl-icon) {
-		filter: invert(0.85);
-	}
-	.map-area :global(.maplibregl-ctrl-group button:hover .maplibregl-ctrl-icon) {
-		filter: invert(0.8) sepia(1) saturate(3) hue-rotate(190deg);
-	}
-	.map-area :global(.maplibregl-ctrl) {
-		background: transparent !important;
-		box-shadow: none !important;
-		border: none !important;
-	}
-	.map-area :global(.maplibregl-ctrl-bottom-right > .maplibregl-ctrl) {
-		margin-bottom: 4px !important;
-	}
-	.map-area :global(.maplibregl-popup-content) {
-		background: var(--palantir-bg-panel, #141420);
-		color: var(--palantir-text-primary, #e0e0e8);
-		border: 1px solid var(--palantir-border-default, #2a2a3e);
-		border-radius: 8px;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-		padding: 12px;
-	}
-	.map-area :global(.maplibregl-popup-tip) {
-		border-top-color: var(--palantir-bg-panel, #141420);
-	}
-	.map-area :global(.maplibregl-popup-close-button) {
-		color: var(--palantir-text-tertiary, #666);
-		font-size: 18px;
-		padding: 2px 6px;
-	}
-	.map-area :global(.maplibregl-popup-close-button:hover) {
-		color: var(--palantir-text-primary, #e0e0e8);
-		background: transparent;
 	}
 </style>

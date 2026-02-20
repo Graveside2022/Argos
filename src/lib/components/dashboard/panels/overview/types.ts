@@ -41,6 +41,12 @@ export interface HardwareDetails {
 	};
 }
 
+export interface HardwareDetailRow {
+	key: string;
+	value: string;
+	className?: 'accent' | 'dim';
+}
+
 export function formatBytes(bytes: number): string {
 	if (bytes === 0) return '0 B';
 	const k = 1024;
