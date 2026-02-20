@@ -31,18 +31,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Usage: api.Credentials.generate() handles CSR + POST + PEM response
 		const { TAKAPI, APIAuthPassword } = await import('@tak-ps/node-tak');
 
-		const api = new TAKAPI(
-			new URL(`https://${hostname}:${port}`),
-			new APIAuthPassword(username, password)
-		);
-
 		let result: { ca: string[]; cert: string; key: string };
 		try {
 			// TAK servers use self-signed certs — temporarily disable TLS verification
-			// for the enrollment HTTPS calls (config + signClient)
+			// for the enrollment HTTPS calls (OAuth login + config + signClient)
 			const prevTLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
 			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 			try {
+				// Use TAKAPI.init() to perform OAuth login first — gets JWT for all API calls
+				const api = await TAKAPI.init(
+					new URL(`https://${hostname}:${port}`),
+					new APIAuthPassword(username, password)
+				);
 				result = await api.Credentials.generate();
 			} finally {
 				// Restore previous setting
