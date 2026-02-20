@@ -9,6 +9,7 @@ import type {
 	KismetStatus
 } from '$lib/kismet/types';
 import { updateKismetConnection } from '$lib/stores/connection';
+import { handleTakMessage } from '$lib/stores/tak-store';
 import { KismetEvent } from '$lib/types/enums';
 import { logger } from '$lib/utils/logger';
 import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/websocket/base';
@@ -39,6 +40,14 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	private setupMessageHandlers(): void {
+		// TAK updates
+		this.onMessage('tak_status', (data) => {
+			handleTakMessage({ type: 'tak_status', data: data as Record<string, unknown> });
+		});
+		this.onMessage('tak_cot', (data) => {
+			handleTakMessage({ type: 'tak_cot', data: data as Record<string, unknown> });
+		});
+
 		// Status updates
 		this.onMessage('status', (data) => {
 			this.handleStatusUpdate(data);
