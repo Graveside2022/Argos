@@ -201,8 +201,16 @@ export class CertManager {
 
 		let caPath: string | undefined;
 		if (ca.length > 0) {
+			const formattedCas = ca.map((certString) => {
+				let formatted = certString.trim();
+				if (!formatted.includes('-----BEGIN CERTIFICATE-----')) {
+					formatted = `-----BEGIN CERTIFICATE-----\n${formatted}\n-----END CERTIFICATE-----`;
+				}
+				return formatted;
+			});
+
 			caPath = path.join(configDir, 'ca.crt');
-			fs.writeFileSync(caPath, ca.join('\n'), { mode: 0o600 });
+			fs.writeFileSync(caPath, formattedCas.join('\n'), { mode: 0o600 });
 		}
 
 		return { certPath, keyPath, caPath };
