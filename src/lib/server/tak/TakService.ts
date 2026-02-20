@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import type CoT from '@tak-ps/node-cot';
 import { CoTParser } from '@tak-ps/node-cot';
 import TAK from '@tak-ps/node-tak';
@@ -44,7 +43,7 @@ export class TakService extends EventEmitter {
 	}
 
 	public async initialize() {
-		console.log('[TakService] Initializing...');
+		console.warn('[TakService] Initializing...');
 		this.config = loadTakConfig(this.db.rawDb);
 		if (this.config?.connectOnStartup) {
 			this.shouldConnect = true;
@@ -97,7 +96,7 @@ export class TakService extends EventEmitter {
 			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: true });
 			this.setupEventHandlers();
 			this.reconnectAttempt = 0;
-			console.log('[TakService] Connection initiated');
+			console.warn('[TakService] Connection initiated');
 		} catch (err) {
 			console.error('[TakService] Connection failed:', err);
 			this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
@@ -109,7 +108,7 @@ export class TakService extends EventEmitter {
 		if (!this.tak) return;
 
 		this.tak.on('secureConnect', () => {
-			console.log('[TakService] Securely connected');
+			console.warn('[TakService] Securely connected');
 			this.connectedAt = Date.now();
 			this.emit('status', 'connected');
 			this.broadcastStatus('connected');
@@ -122,7 +121,7 @@ export class TakService extends EventEmitter {
 		});
 
 		this.tak.on('end', () => {
-			console.log('[TakService] Connection ended');
+			console.warn('[TakService] Connection ended');
 			this.connectedAt = null;
 			this.emit('status', 'disconnected');
 			this.broadcastStatus('disconnected');
@@ -148,7 +147,7 @@ export class TakService extends EventEmitter {
 		const jitter = Math.random() * RECONNECT_BASE_MS;
 		const delay = Math.min(expDelay + jitter, RECONNECT_MAX_MS);
 		this.reconnectAttempt++;
-		console.log(
+		console.warn(
 			`[TakService] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempt})`
 		);
 		this.reconnectTimeout = setTimeout(async () => {

@@ -3,7 +3,7 @@
  * Detects SDRs, WiFi adapters, Bluetooth adapters, and other USB devices
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
@@ -15,7 +15,7 @@ import type {
 	WiFiCapabilities
 } from '$lib/server/hardware/detection-types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Known USB device signatures
@@ -80,7 +80,7 @@ function _parseLsusb(output: string): USBDevice[] {
  */
 async function detectHackRF(): Promise<DetectedHardware[]> {
 	try {
-		const { stdout } = await execAsync('hackrf_info 2>&1');
+		const { stdout } = await execFileAsync('/usr/bin/hackrf_info', []);
 		const hardware: DetectedHardware[] = [];
 
 		// Parse hackrf_info output
@@ -134,7 +134,7 @@ async function detectHackRF(): Promise<DetectedHardware[]> {
  */
 async function detectUSRP(): Promise<DetectedHardware[]> {
 	try {
-		const { stdout } = await execAsync('uhd_find_devices 2>&1');
+		const { stdout } = await execFileAsync('/usr/bin/uhd_find_devices', []);
 		const hardware: DetectedHardware[] = [];
 
 		// Parse uhd_find_devices output
@@ -211,7 +211,10 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
  */
 async function detectRTLSDR(): Promise<DetectedHardware[]> {
 	try {
-		const { stdout } = await execAsync('rtl_test -t 2>&1 | head -20');
+		const { stdout: rawOutput } = await execFileAsync('/usr/bin/rtl_test', ['-t'], {
+			timeout: 5000
+		});
+		const stdout = rawOutput.split('\n').slice(0, 20).join('\n');
 		const hardware: DetectedHardware[] = [];
 
 		const _indexMatch = stdout.matchAll(/Found \d+ device\(s\):/g);
@@ -253,7 +256,7 @@ async function detectRTLSDR(): Promise<DetectedHardware[]> {
  */
 async function detectWiFiAdapters(): Promise<DetectedHardware[]> {
 	try {
-		const { stdout } = await execAsync('iw dev 2>&1');
+		const { stdout } = await execFileAsync('/usr/sbin/iw', ['dev']);
 		const hardware: DetectedHardware[] = [];
 
 		// Parse iw dev output
@@ -264,8 +267,12 @@ async function detectWiFiAdapters(): Promise<DetectedHardware[]> {
 
 			try {
 				// Check if interface supports monitor mode
-				const { stdout: _infoOut } = await execAsync(`iw ${iface} info 2>&1`);
-				const { stdout: phyOut } = await execAsync(`iw phy${iface} info 2>&1 | head -50`);
+				const { stdout: _infoOut } = await execFileAsync('/usr/sbin/iw', [iface, 'info']);
+				const { stdout: rawPhyOut } = await execFileAsync('/usr/sbin/iw', [
+					`phy${iface}`,
+					'info'
+				]);
+				const phyOut = rawPhyOut.split('\n').slice(0, 50).join('\n');
 
 				// Check for monitor mode support
 				const monitorMode = phyOut.includes('monitor');
@@ -313,7 +320,7 @@ async function detectWiFiAdapters(): Promise<DetectedHardware[]> {
  */
 async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 	try {
-		const { stdout } = await execAsync('hciconfig 2>&1');
+		const { stdout } = await execFileAsync('/usr/bin/hciconfig', []);
 		const hardware: DetectedHardware[] = [];
 
 		// Parse hciconfig output
@@ -324,7 +331,7 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 
 			try {
 				// Get more details with bluetoothctl
-				const { stdout: btOut } = await execAsync(`bluetoothctl show 2>&1`);
+				const { stdout: btOut } = await execFileAsync('/usr/bin/bluetoothctl', ['show']);
 
 				const bleSupport = btOut.includes('LE') || btOut.includes('Low Energy');
 				const classicSupport = btOut.includes('BR/EDR');

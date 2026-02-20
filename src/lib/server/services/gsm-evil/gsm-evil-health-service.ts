@@ -1,4 +1,10 @@
-import { hostExec } from '$lib/server/host-exec';
+import Database from 'better-sqlite3';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+
+const execFileAsync = promisify(execFile);
 
 export interface GsmEvilHealth {
 	grgsm: {
@@ -29,12 +35,6 @@ export interface GsmEvilHealth {
 	};
 }
 
-/**
- * Comprehensive health check for GSM Evil pipeline
- * Checks GRGSM, GSM Evil service, data flow, and database connectivity
- *
- * @returns Health status object with component details, issues, and recommendations
- */
 export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 	const health: GsmEvilHealth = {
 		grgsm: {
@@ -67,97 +67,114 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 	try {
 		// Check GRGSM process
-		const { stdout: grgsmCheck } = await hostExec(
-			'ps aux | grep -E "grgsm_livemon_headless" | grep -v grep | grep -v "timeout" | head -1'
-		).catch((error: unknown) => {
-			console.warn('[gsm-evil-health] GRGSM process check failed', { error: String(error) });
-			return { stdout: '' };
-		});
+		try {
+			const { stdout: grgsmCheck } = await execFileAsync('/usr/bin/pgrep', [
+				'-af',
+				'grgsm_livemon_headless'
+			]);
+			const grgsmLine = grgsmCheck
+				.split('\n')
+				.filter((line) => line.trim() && !line.includes('timeout'))
+				.at(0);
 
-		if (grgsmCheck.trim()) {
-			const parts = grgsmCheck.trim().split(/\s+/);
-			const pid = parseInt(parts[1]);
-			if (!isNaN(pid)) {
-				// Check runtime to distinguish from scans
-				const { stdout: pidTime } = await hostExec(
-					`ps -o etimes= -p ${pid} 2>/dev/null || echo 0`
-				).catch((error: unknown) => {
-					console.warn('[gsm-evil-health] PID runtime check failed', {
-						error: String(error)
-					});
-					return { stdout: '0' };
-				});
-				const runtime = parseInt(pidTime.trim()) || 0;
+			if (grgsmLine) {
+				const parts = grgsmLine.trim().split(/\s+/);
+				const pid = parseInt(parts[0]);
+				if (!isNaN(pid)) {
+					try {
+						const validPid = validateNumericParam(pid, 'pid', 1, 4194304);
+						const { stdout: pidTime } = await execFileAsync('/usr/bin/ps', [
+							'-o',
+							'etimes=',
+							'-p',
+							String(validPid)
+						]);
+						const runtime = parseInt(pidTime.trim()) || 0;
 
-				if (runtime > 10) {
-					health.grgsm.running = true;
-					health.grgsm.pid = pid;
-					health.grgsm.runtime = runtime;
-					health.grgsm.status = 'running';
-				} else {
-					health.grgsm.status = 'scan-process';
+						if (runtime > 10) {
+							health.grgsm.running = true;
+							health.grgsm.pid = validPid;
+							health.grgsm.runtime = runtime;
+							health.grgsm.status = 'running';
+						} else {
+							health.grgsm.status = 'scan-process';
+						}
+					} catch (error: unknown) {
+						const msg = error instanceof Error ? error.message : String(error);
+						console.warn('[gsm-evil-health] PID runtime check failed', { error: msg });
+					}
 				}
+			} else {
+				health.grgsm.status = 'stopped';
 			}
-		} else {
+		} catch {
 			health.grgsm.status = 'stopped';
 		}
 
 		// Check GSM Evil process and web interface
-		const { stdout: gsmevilCheck } = await hostExec(
-			'ps aux | grep -E "python3? GsmEvil[_a-zA-Z0-9]*\\.py" | grep -v grep | head -1'
-		).catch((error: unknown) => {
-			console.warn('[gsm-evil-health] GSM Evil process check failed', {
-				error: String(error)
-			});
-			return { stdout: '' };
-		});
+		try {
+			const { stdout: gsmevilCheck } = await execFileAsync('/usr/bin/pgrep', [
+				'-af',
+				'GsmEvil.*\\.py'
+			]);
+			const gsmevilLine = gsmevilCheck
+				.split('\n')
+				.filter((line) => line.trim())
+				.at(0);
 
-		if (gsmevilCheck.trim()) {
-			const parts = gsmevilCheck.trim().split(/\s+/);
-			const pid = parseInt(parts[1]);
-			if (!isNaN(pid)) {
-				health.gsmevil.running = true;
-				health.gsmevil.pid = pid;
-				health.gsmevil.status = 'running';
+			if (gsmevilLine) {
+				const parts = gsmevilLine.trim().split(/\s+/);
+				const pid = parseInt(parts[0]);
+				if (!isNaN(pid)) {
+					health.gsmevil.running = true;
+					health.gsmevil.pid = pid;
+					health.gsmevil.status = 'running';
 
-				// Check port 8080 listener
-				const { stdout: portCheck } = await hostExec(
-					'sudo lsof -i :8080 | grep LISTEN'
-				).catch((error: unknown) => {
-					console.warn('[gsm-evil-health] Port 8080 check failed', {
-						error: String(error)
-					});
-					return { stdout: '' };
-				});
-				health.gsmevil.port8080 = portCheck.trim().length > 0;
+					// Check port 8080 listener
+					try {
+						const { stdout: portCheck } = await execFileAsync('/usr/bin/sudo', [
+							'/usr/bin/lsof',
+							'-i',
+							':8080'
+						]);
+						health.gsmevil.port8080 = portCheck
+							.split('\n')
+							.some((line) => line.includes('LISTEN'));
+					} catch (error: unknown) {
+						const msg = error instanceof Error ? error.message : String(error);
+						console.warn('[gsm-evil-health] Port 8080 check failed', { error: msg });
+					}
 
-				// Check HTTP response
-				if (health.gsmevil.port8080) {
-					const { stdout: httpCheck } = await hostExec(
-						'timeout 3 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null || echo "000"'
-					).catch((error: unknown) => {
-						console.warn('[gsm-evil-health] HTTP check failed', {
-							error: String(error)
-						});
-						return { stdout: '000' };
-					});
-					health.gsmevil.webInterface = httpCheck.trim() === '200';
+					// Check HTTP response
+					if (health.gsmevil.port8080) {
+						try {
+							const response = await fetch('http://localhost:8080', {
+								signal: AbortSignal.timeout(3000)
+							});
+							health.gsmevil.webInterface = response.status === 200;
+						} catch (error: unknown) {
+							const msg = error instanceof Error ? error.message : String(error);
+							console.warn('[gsm-evil-health] HTTP check failed', { error: msg });
+						}
+					}
 				}
+			} else {
+				health.gsmevil.status = 'stopped';
 			}
-		} else {
+		} catch {
 			health.gsmevil.status = 'stopped';
 		}
 
-		// Check data flow components
-		// GSMTAP port 4729
-		const { stdout: gsmtapPort } = await hostExec(
-			'ss -u -n | grep -c ":4729" || echo "0"'
-		).catch((error: unknown) => {
-			console.warn('[gsm-evil-health] GSMTAP port check failed', { error: String(error) });
-			return { stdout: '0' };
-		});
-		health.dataFlow.port4729Active = parseInt(gsmtapPort.trim()) > 0;
-		health.dataFlow.gsmtapActive = health.dataFlow.port4729Active;
+		// Check data flow components - GSMTAP port 4729
+		try {
+			const { stdout: ssOut } = await execFileAsync('/usr/bin/ss', ['-u', '-n']);
+			const portCount = ssOut.split('\n').filter((line) => line.includes(':4729')).length;
+			health.dataFlow.port4729Active = portCount > 0;
+			health.dataFlow.gsmtapActive = portCount > 0;
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			console.warn('[gsm-evil-health] GSMTAP port check failed', { error: msg });
+		}
 
 		// Database accessibility check
 		try {
@@ -165,32 +182,37 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			const dbPath = await resolveGsmDatabasePath();
 
 			if (dbPath) {
-				// Quick database connectivity test
-				const { stdout: dbCheck } = await hostExec(
-					`python3 -c "import sqlite3; conn = sqlite3.connect('${dbPath}'); conn.close(); print('ok')" 2>/dev/null || echo "error"`
-				).catch((error: unknown) => {
-					console.error('[gsm-evil-health] Database connectivity test failed', {
-						error: String(error)
+				try {
+					const db = new Database(dbPath, { readonly: true });
+					db.close();
+					health.dataFlow.databaseAccessible = true;
+				} catch (error: unknown) {
+					const msg = error instanceof Error ? error.message : String(error);
+					console.warn('[gsm-evil-health] Database connectivity test failed', {
+						error: msg
 					});
-					return { stdout: 'error' };
-				});
-				health.dataFlow.databaseAccessible = dbCheck.trim() === 'ok';
+				}
 
-				// Check for recent data (last 10 minutes)
 				if (health.dataFlow.databaseAccessible) {
-					const { stdout: recentData } = await hostExec(
-						`python3 -c "import sqlite3; from datetime import datetime, timedelta; conn = sqlite3.connect('${dbPath}'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM imsi_data WHERE datetime(date_time) > datetime(\\'now\\', \\'-10 minutes\\')'); print(cursor.fetchone()[0]); conn.close()" 2>/dev/null || echo "0"`
-					).catch((error: unknown) => {
-						console.warn('[gsm-evil-health] Recent data check failed', {
-							error: String(error)
-						});
-						return { stdout: '0' };
-					});
-					health.dataFlow.recentData = parseInt(recentData.trim()) > 0;
+					const db = new Database(dbPath, { readonly: true });
+					try {
+						const row = db
+							.prepare(
+								"SELECT COUNT(*) as count FROM imsi_data WHERE datetime(date_time) > datetime('now', '-10 minutes')"
+							)
+							.get() as { count: number } | undefined;
+						health.dataFlow.recentData = (row?.count ?? 0) > 0;
+					} catch (error: unknown) {
+						const msg = error instanceof Error ? error.message : String(error);
+						console.warn('[gsm-evil-health] Recent data check failed', { error: msg });
+					} finally {
+						db.close();
+					}
 				}
 			}
-		} catch (dbError) {
-			console.warn('Database health check failed:', dbError);
+		} catch (dbError: unknown) {
+			const msg = dbError instanceof Error ? dbError.message : String(dbError);
+			console.warn('[gsm-evil-health] Database health check failed', { error: msg });
 			health.dataFlow.databaseAccessible = false;
 		}
 
@@ -202,8 +224,8 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		}
 
 		// Determine overall health and issues
-		const issues = [];
-		const recommendations = [];
+		const issues: string[] = [];
+		const recommendations: string[] = [];
 
 		if (!health.grgsm.running) {
 			issues.push('GRGSM monitor not running');
@@ -228,7 +250,6 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			recommendations.push('Check database path and permissions');
 		}
 
-		// Overall pipeline health
 		health.overall.pipelineHealthy =
 			health.grgsm.running &&
 			health.gsmevil.running &&
@@ -239,7 +260,6 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		health.overall.issues = issues;
 		health.overall.recommendations = recommendations;
 
-		// Overall status determination
 		if (health.overall.pipelineHealthy) {
 			health.overall.status = health.dataFlow.recentData ? 'healthy' : 'healthy-idle';
 		} else if (health.grgsm.running || health.gsmevil.running) {

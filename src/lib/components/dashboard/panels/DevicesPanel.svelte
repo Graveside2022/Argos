@@ -1,4 +1,5 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Band filter chips, back button, and whitelist remove use custom 24x20px sizing incompatible with shadcn Button -->
 <script lang="ts">
 	import { getContext } from 'svelte';
 
@@ -12,7 +13,20 @@
 		toggleBand as toggleGlobalBand
 	} from '$lib/stores/dashboard/dashboard-store';
 	import { kismetStore, setWhitelistMAC } from '$lib/stores/tactical-map/kismet-store';
-	import { getSignalBandKey, getSignalHex, signalBands } from '$lib/utils/signal-utils';
+	import { getSignalHex, signalBands } from '$lib/utils/signal-utils';
+
+	import { filterAndSortDevices, type SortColumn } from './devices/device-filters';
+	import {
+		formatDataSize,
+		formatEncryption,
+		formatFirstSeen,
+		formatFreq,
+		formatLastSeen,
+		formatPackets,
+		getRSSI,
+		hasConnections,
+		sortIndicator as getSortIndicator
+	} from './devices/device-formatters';
 
 	const dashboardMap = getContext<
 		{ flyTo: (lat: number, lon: number, zoom?: number) => void } | undefined
@@ -21,16 +35,14 @@
 	let searchQuery = $state('');
 	let whitelistInput = $state('');
 	let whitelistedMACs: string[] = $state([]);
-	let sortColumn: 'mac' | 'rssi' | 'type' | 'channel' | 'packets' | 'data' = $state('rssi');
+	let sortColumn: SortColumn = $state('rssi');
 	let sortDirection: 'asc' | 'desc' = $state('desc');
 	let selectedMAC: string | null = $state(null);
 	let expandedMAC: string | null = $state(null);
-
 	let hideNoSignal = $state(true);
-	/** Filter to show only APs with connected clients */
 	let showOnlyWithClients = $state(false);
 
-	function handleSort(col: typeof sortColumn) {
+	function handleSort(col: SortColumn) {
 		if (sortColumn === col) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -53,10 +65,8 @@
 	}
 
 	function handleRowClick(device: KismetDevice) {
-		// If clicking an AP that has clients, toggle isolation mode
 		if (device.clients?.length) {
 			if ($isolatedDeviceMAC === device.mac) {
-				// Deselect — show all devices again
 				isolateDevice(null);
 				selectedMAC = null;
 				expandedMAC = null;
@@ -66,7 +76,6 @@
 				expandedMAC = device.mac;
 			}
 		} else if (device.parentAP) {
-			// Client device — isolate to its parent AP
 			if ($isolatedDeviceMAC === device.parentAP) {
 				isolateDevice(null);
 				selectedMAC = null;
@@ -76,7 +85,6 @@
 				selectedMAC = device.mac;
 			}
 		} else {
-			// Regular device click
 			if (selectedMAC === device.mac) {
 				selectedMAC = null;
 				expandedMAC = null;
@@ -85,153 +93,36 @@
 				expandedMAC = expandedMAC === device.mac ? null : device.mac;
 			}
 		}
-
 		const lat = device.location?.lat;
 		const lon = device.location?.lon;
-		if (lat && lon && dashboardMap) {
-			dashboardMap.flyTo(lat, lon, 17);
-		}
-	}
-
-	function hasConnections(device: KismetDevice): boolean {
-		return !!(device.clients?.length || device.parentAP);
+		if (lat && lon && dashboardMap) dashboardMap.flyTo(lat, lon, 17);
 	}
 
 	function lookupDevice(mac: string): KismetDevice | undefined {
 		return $kismetStore.devices.get(mac);
 	}
 
-	/** Get RSSI value, treating 0 as no-signal */
-	function getRSSI(device: KismetDevice): number {
-		return device.signal?.last_signal ?? 0;
+	function si(col: string): string {
+		return getSortIndicator(sortColumn, sortDirection, col);
 	}
 
-	function formatFreq(freq: number): string {
-		if (!freq) return '-';
-		if (freq >= 1000000) return `${(freq / 1000000).toFixed(1)}G`;
-		if (freq >= 1000) return `${(freq / 1000).toFixed(0)}M`;
-		return `${freq}`;
-	}
+	let devices = $derived(
+		filterAndSortDevices($kismetStore.devices, $isolatedDeviceMAC, {
+			searchQuery,
+			hideNoSignal,
+			showOnlyWithClients,
+			activeBands: $activeBands,
+			sortColumn,
+			sortDirection
+		})
+	);
 
-	function formatEncryption(device: KismetDevice): string {
-		const enc = device.encryption || device.encryptionType;
-		if (!enc || enc.length === 0) return '-';
-		if (enc.length === 1 && enc[0] === 'Open') return 'Open';
-		return enc.join('/');
-	}
-
-	function formatLastSeen(device: KismetDevice): string {
-		const ts = device.lastSeen || device.last_seen || device.last_time || 0;
-		if (!ts) return '-';
-		const msTs = ts < 1e12 ? ts * 1000 : ts;
-		const secs = Math.floor((Date.now() - msTs) / 1000);
-		if (secs < 0 || isNaN(secs)) return '-';
-		if (secs < 5) return 'now';
-		if (secs < 60) return `${secs}s`;
-		if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-		if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-		return `${Math.floor(secs / 86400)}d`;
-	}
-
-	function formatPackets(n: number): string {
-		if (!n) return '-';
-		if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-		if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-		return String(n);
-	}
-
-	function formatDataSize(bytes: number): string {
-		if (!bytes) return '-';
-		if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)}G`;
-		if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)}M`;
-		if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)}K`;
-		return `${bytes}B`;
-	}
-
-	function formatFirstSeen(device: KismetDevice): string {
-		const ts = device.firstSeen || 0;
-		if (!ts) return '-';
-		const msTs = ts < 1e12 ? ts * 1000 : ts;
-		const secs = Math.floor((Date.now() - msTs) / 1000);
-		if (secs < 0 || isNaN(secs)) return '-';
-		if (secs < 60) return `${secs}s`;
-		if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-		if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-		return `${Math.floor(secs / 86400)}d`;
-	}
-
-	// Filtered and sorted devices
-	let devices = $derived.by(() => {
-		const all = Array.from($kismetStore.devices.values());
-		const q = searchQuery.toLowerCase().trim();
-		const isoMac = $isolatedDeviceMAC;
-
-		// If isolated to an AP, only show that AP and its clients
-		if (isoMac) {
-			const ap = $kismetStore.devices.get(isoMac);
-			if (!ap) {
-				isolateDevice(null);
-				return [];
-			}
-			const result: KismetDevice[] = [ap];
-			if (ap.clients?.length) {
-				for (const clientMac of ap.clients) {
-					const client = $kismetStore.devices.get(clientMac);
-					if (client) result.push(client);
-				}
-			}
-			return result;
-		}
-
-		return all
-			.filter((d) => {
-				const rssi = getRSSI(d);
-				if (hideNoSignal && rssi === 0) return false;
-				const band = getSignalBandKey(rssi);
-				if (!$activeBands.has(band)) return false;
-				if (showOnlyWithClients && !(d.clients && d.clients.length > 0)) return false;
-				if (!q) return true;
-				const mac = (d.mac || '').toLowerCase();
-				const ssid = (d.ssid || '').toLowerCase();
-				const mfr = (d.manufacturer || d.manuf || '').toLowerCase();
-				return mac.includes(q) || ssid.includes(q) || mfr.includes(q);
-			})
-			.sort((a, b) => {
-				let cmp = 0;
-				if (sortColumn === 'mac') {
-					cmp = (a.mac || '').localeCompare(b.mac || '');
-				} else if (sortColumn === 'rssi') {
-					const aRssi = getRSSI(a);
-					const bRssi = getRSSI(b);
-					// 0 = no data, sort below real signals
-					const aVal = aRssi === 0 ? -999 : aRssi;
-					const bVal = bRssi === 0 ? -999 : bRssi;
-					cmp = aVal - bVal;
-				} else if (sortColumn === 'type') {
-					const order: Record<string, number> = {
-						AP: 0,
-						Client: 1,
-						Bridged: 2,
-						'Ad-Hoc': 3
-					};
-					cmp = (order[a.type] ?? 4) - (order[b.type] ?? 4);
-				} else if (sortColumn === 'channel') {
-					cmp = (a.channel || 0) - (b.channel || 0);
-				} else if (sortColumn === 'packets') {
-					cmp = (a.packets || 0) - (b.packets || 0);
-				} else if (sortColumn === 'data') {
-					cmp = (a.datasize || a.dataSize || 0) - (b.datasize || b.dataSize || 0);
-				}
-				return sortDirection === 'asc' ? cmp : -cmp;
-			});
+	// Clear isolation if the isolated AP no longer exists
+	$effect(() => {
+		const iso = $isolatedDeviceMAC;
+		if (iso && !$kismetStore.devices.has(iso)) isolateDevice(null);
 	});
 
-	function sortIndicator(col: string): string {
-		if (sortColumn !== col) return '';
-		return sortDirection === 'asc' ? ' ^' : ' v';
-	}
-
-	/** Count of APs with clients for the filter badge */
 	let apsWithClientsCount = $derived.by(() => {
 		let count = 0;
 		$kismetStore.devices.forEach((d) => {
@@ -338,25 +229,25 @@
 			<thead>
 				<tr>
 					<th onclick={() => handleSort('mac')} class="sortable col-mac"
-						>MAC / SSID{sortIndicator('mac')}</th
+						>MAC / SSID{si('mac')}</th
 					>
 					<th onclick={() => handleSort('rssi')} class="sortable col-rssi"
-						>RSSI{sortIndicator('rssi')}</th
+						>RSSI{si('rssi')}</th
 					>
 					<th onclick={() => handleSort('type')} class="sortable col-type"
-						>TYPE{sortIndicator('type')}</th
+						>TYPE{si('type')}</th
 					>
 					<th class="col-vendor">VENDOR</th>
 					<th onclick={() => handleSort('channel')} class="sortable col-ch"
-						>CH{sortIndicator('channel')}</th
+						>CH{si('channel')}</th
 					>
 					<th class="col-freq">FREQ</th>
 					<th class="col-enc">ENC</th>
 					<th onclick={() => handleSort('packets')} class="sortable col-pkts"
-						>PKTS{sortIndicator('packets')}</th
+						>PKTS{si('packets')}</th
 					>
 					<th onclick={() => handleSort('data')} class="sortable col-data"
-						>DATA{sortIndicator('data')}</th
+						>DATA{si('data')}</th
 					>
 					<th class="col-first">AGE</th>
 					<th class="col-seen">LAST</th>
