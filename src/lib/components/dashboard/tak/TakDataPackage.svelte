@@ -102,7 +102,17 @@
 			Import Package
 		</button>
 		{#if packageStatus}
-			<span class="text-[10px] text-muted-foreground">{packageStatus}</span>
+			<span
+				class="text-[10px] {packageStatus.includes('error') ||
+				packageStatus.includes('failed') ||
+				packageStatus.includes('Failed')
+					? 'text-red-400'
+					: packageStatus.includes('enroll') || packageStatus.includes('certificate')
+						? 'text-amber-400'
+						: 'text-muted-foreground'}"
+			>
+				{packageStatus}
+			</span>
 		{/if}
 	</div>
 </div>
