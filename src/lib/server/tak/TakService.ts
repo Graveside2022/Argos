@@ -100,7 +100,20 @@ export class TakService extends EventEmitter {
 
 		const url = new URL(`ssl://${this.config.hostname}:${this.config.port}`);
 		try {
-			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: true });
+			// TAK servers use self-signed certs which Node.js rejects natively
+			// Need to temporarily disable TLS verification for the connect call
+			const prevTLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+			try {
+				this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: false });
+			} finally {
+				if (prevTLS === undefined) {
+					delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+				} else {
+					process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevTLS;
+				}
+			}
+
 			this.setupEventHandlers();
 			this.reconnectAttempt = 0;
 			logger.info('[TakService] Connection initiated');
