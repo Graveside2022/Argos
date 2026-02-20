@@ -61,7 +61,7 @@ class ResourceManager extends EventEmitter {
 			// Check HackRF tool containers (not the default backend)
 			const containers = await hackrfMgr.getContainerStatus(true);
 			for (const c of containers) {
-				if (c.running) {
+				if (c.isRunning) {
 					logger.info('[ResourceManager] Orphan scan: HackRF tool container running', {
 						container: c.name
 					});
@@ -118,7 +118,7 @@ class ResourceManager extends EventEmitter {
 
 			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
 			const hackrfContainers = await hackrfMgr.getContainerStatus(true);
-			const runningContainer = hackrfContainers.find((c) => c.running);
+			const runningContainer = hackrfContainers.find((c) => c.isRunning);
 
 			if (hackrfProcesses.length > 0) {
 				hackrfCurrent.owner = hackrfProcesses[0].name;

@@ -94,7 +94,7 @@ export interface WebSocketMessage {
  * Kismet service status
  */
 export interface KismetServiceStatus {
-	running: boolean;
+	isRunning: boolean;
 	pid?: number;
 	cpu?: number;
 	memory?: number;

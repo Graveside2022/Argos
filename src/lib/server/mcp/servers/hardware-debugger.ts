@@ -85,7 +85,7 @@ class HardwareDebugger extends BaseMCPServer {
 				if (kismet.status === 'unreachable') {
 					kismetHealth = 'ERROR';
 					issues.push('Kismet API unreachable');
-				} else if (kismet.running === false || kismet.status === 'stopped') {
+				} else if (kismet.isRunning === false || kismet.status === 'stopped') {
 					kismetHealth = 'STOPPED';
 					issues.push('Kismet service not running');
 					recommendations.push('💡 Start with: /api/kismet/control (action: start)');
@@ -104,7 +104,7 @@ class HardwareDebugger extends BaseMCPServer {
 					status: kismet.status || 'unknown',
 					details: detailed
 						? {
-								running: kismet.running,
+								isRunning: kismet.isRunning,
 								device_count: kismet.device_count,
 								interface: kismet.interface,
 								uptime: kismet.uptime
@@ -457,13 +457,13 @@ class HardwareDebugger extends BaseMCPServer {
 						const resp = await apiFetch('/api/kismet/status');
 						const status = await resp.json();
 
-						if (status.running && status.device_count > 0) {
+						if (status.isRunning && status.device_count > 0) {
 							result.can_perform = true;
 							result.reasons = [
 								'✅ Kismet running',
 								`✅ ${status.device_count} device(s) active`
 							];
-						} else if (!status.running) {
+						} else if (!status.isRunning) {
 							result.reasons = [
 								'❌ Kismet not running',
 								'💡 Start service: /api/kismet/control (action: start)'
@@ -535,7 +535,7 @@ class HardwareDebugger extends BaseMCPServer {
 
 				const status = {
 					hackrf: hackrf?.connected ? '🟢 Connected' : '🔴 Disconnected',
-					kismet: kismet?.running
+					kismet: kismet?.isRunning
 						? `🟢 Running (${kismet.device_count || 0} devices)`
 						: '🔴 Stopped',
 					gps: gps?.fix >= 2 ? `🟢 ${gps.fix === 3 ? '3D' : '2D'} Fix` : '🔴 No Fix',

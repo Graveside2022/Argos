@@ -46,7 +46,7 @@
 	);
 </script>
 
-<div class="tool-card" class:running={isRunning} class:not-installed={!isInstalled}>
+<div class="tool-card" class:isRunning class:not-installed={!isInstalled}>
 	<div class="tool-header">
 		<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="tool-icon">
@@ -126,7 +126,7 @@
 		transition: border-color 0.15s ease;
 	}
 
-	.tool-card.running {
+	.tool-card.isRunning {
 		border-color: var(--palantir-border-default);
 	}
 
@@ -151,7 +151,7 @@
 		color: var(--palantir-text-secondary);
 	}
 
-	.tool-card.running .tool-icon {
+	.tool-card.isRunning .tool-icon {
 		color: var(--palantir-accent);
 	}
 

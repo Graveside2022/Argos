@@ -87,7 +87,7 @@
 		try {
 			const res = await fetch('/api/gsm-evil/status');
 			const data = await res.json();
-			const grgsmRunning = data.details?.grgsm?.running;
+			const grgsmRunning = data.details?.grgsm?.isRunning;
 			const bothRunning = data.status === 'running';
 
 			if (grgsmRunning || bothRunning) {

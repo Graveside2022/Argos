@@ -18,7 +18,7 @@ export interface KismetControlResult {
 
 export interface KismetStatusResult {
 	success: boolean;
-	running: boolean;
+	isRunning: boolean;
 	status: 'active' | 'inactive';
 }
 
@@ -288,13 +288,13 @@ export async function getKismetStatus(): Promise<KismetStatusResult> {
 		const isRunning = hasProcess || apiResponding;
 		return {
 			success: true,
-			running: isRunning,
+			isRunning: isRunning,
 			status: isRunning ? 'active' : 'inactive'
 		};
 	} catch {
 		return {
 			success: true,
-			running: false,
+			isRunning: false,
 			status: 'inactive'
 		};
 	}

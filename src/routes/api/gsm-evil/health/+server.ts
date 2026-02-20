@@ -20,8 +20,8 @@ export const GET: RequestHandler = async () => {
 				status: health.overall.status,
 				isPipelineHealthy: health.overall.isPipelineHealthy,
 				componentsRunning: {
-					grgsm: health.grgsm.running,
-					gsmevil: health.gsmevil.running,
+					grgsm: health.grgsm.isRunning,
+					gsmevil: health.gsmevil.isRunning,
 					hasWebInterface: health.gsmevil.hasWebInterface,
 					dataFlow:
 						health.dataFlow.status === 'active' || health.dataFlow.status === 'idle'

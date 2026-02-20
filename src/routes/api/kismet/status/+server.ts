@@ -13,10 +13,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		if (useMock) {
 			return json({
 				success: true,
-				running: false,
+				isRunning: false,
 				status: 'inactive',
 				data: {
-					running: false,
+					isRunning: false,
 					interface: 'wlan0',
 					channels: [1, 6, 11],
 					deviceCount: 0,
@@ -45,10 +45,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			return json({
 				success: true,
-				running: true,
+				isRunning: true,
 				status: 'running',
 				data: {
-					running: true,
+					isRunning: true,
 					host: config.host,
 					port: config.port,
 					version,
@@ -73,10 +73,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			return json({
 				success: true,
-				running: status.isRunning,
+				isRunning: status.isRunning,
 				status: status.isRunning ? 'running' : 'stopped',
 				data: {
-					running: status.isRunning,
+					isRunning: status.isRunning,
 					interface: status.interface,
 					channels: status.channels,
 					deviceCount: status.deviceCount,
@@ -91,10 +91,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Neither source available
 		return json({
 			success: true,
-			running: false,
+			isRunning: false,
 			status: 'inactive',
 			data: {
-				running: false,
+				isRunning: false,
 				interface: null,
 				channels: [],
 				deviceCount: 0,
@@ -114,7 +114,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message,
 			data: {
-				running: false,
+				isRunning: false,
 				interface: null,
 				channels: [],
 				deviceCount: 0,

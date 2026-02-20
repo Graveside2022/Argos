@@ -27,7 +27,7 @@ export class KismetServiceManager {
 			const pids = pgrepOutput.trim().split('\n').filter(Boolean);
 
 			if (pids.length === 0) {
-				return { running: false };
+				return { isRunning: false };
 			}
 
 			const pid = parseInt(pids[0]);
@@ -43,7 +43,7 @@ export class KismetServiceManager {
 			const [cpu, memory, uptime] = psOutput.trim().split(/\s+/).map(parseFloat);
 
 			return {
-				running: true,
+				isRunning: true,
 				pid,
 				cpu,
 				memory,
@@ -51,7 +51,7 @@ export class KismetServiceManager {
 			};
 		} catch (error) {
 			return {
-				running: false,
+				isRunning: false,
 				// Safe: Error handling
 				error: error instanceof Error ? error.message : 'Unknown error'
 			};
@@ -64,7 +64,7 @@ export class KismetServiceManager {
 	static async start(): Promise<{ success: boolean; message: string }> {
 		try {
 			const status = await this.getStatus();
-			if (status.running) {
+			if (status.isRunning) {
 				return { success: false, message: 'Kismet is already running' };
 			}
 
@@ -76,7 +76,7 @@ export class KismetServiceManager {
 
 			// Verify it started
 			const newStatus = await this.getStatus();
-			if (newStatus.running) {
+			if (newStatus.isRunning) {
 				return { success: true, message: 'Kismet started successfully' };
 			} else {
 				return { success: false, message: 'Failed to start Kismet' };
@@ -96,7 +96,7 @@ export class KismetServiceManager {
 	static async stop(): Promise<{ success: boolean; message: string }> {
 		try {
 			const status = await this.getStatus();
-			if (!status.running) {
+			if (!status.isRunning) {
 				return { success: false, message: 'Kismet is not running' };
 			}
 
@@ -220,7 +220,7 @@ export class KismetServiceManager {
 
 			// Verify it stopped
 			const newStatus = await this.getStatus();
-			if (!newStatus.running) {
+			if (!newStatus.isRunning) {
 				return { success: true, message: 'Kismet stopped successfully with adapter reset' };
 			} else {
 				return { success: false, message: 'Failed to stop Kismet' };
