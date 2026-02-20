@@ -29,7 +29,7 @@ vi.mock('@tak-ps/node-tak', () => ({
 	APIAuthPassword: vi.fn()
 }));
 
-import { POST } from '$lib/../routes/api/tak/enroll/+server';
+import { POST } from './+server';
 
 // --- Helpers ---
 

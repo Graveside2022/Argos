@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 
+import { logger } from '../utils/logger.js';
 import { parseConstitution } from './constitution-parser.js';
 import { applyExemptions, filterExemptedViolations, parseExemptions } from './exemption-parser.js';
 import { categorizeViolationByTimestamp } from './git-categorizer.js';
@@ -123,12 +124,12 @@ async function runAuditInternal(
 	for (const format of options.outputFormats) {
 		if (format === 'terminal') {
 			// Display terminal output immediately
-			console.log(generateReport(report, 'terminal'));
+			logger.info(generateReport(report, 'terminal'));
 		} else {
 			// Save JSON and markdown reports to file
 			const filepath = await saveReport(report, format, reportOutputDir);
 			if (options.verbose) {
-				console.log(`Report saved: ${filepath}`);
+				logger.info('Report saved', { filepath });
 			}
 		}
 	}
@@ -192,7 +193,7 @@ async function runValidators(options: AuditOptions, projectRoot: string): Promis
 		case 'incremental':
 		case 'directory':
 			// For MVP, run all validators and filter violations by scope
-			// TODO: Optimize by only scanning relevant files
+			// TODO(#10): Optimize by only scanning relevant files
 			validatorsToRun = Object.values(allValidators).map(
 				(validator) => () => validator(projectRoot)
 			);

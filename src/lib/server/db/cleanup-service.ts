@@ -176,7 +176,7 @@ export class DatabaseCleanupService {
         COUNT(DISTINCT CAST(timestamp / 3600000 AS INTEGER)) as active_hours,
         AVG(latitude) as avg_lat,
         AVG(longitude) as avg_lon,
-        0 as movement_distance -- TODO: Calculate actual movement
+        0 as movement_distance -- TODO(#9): Calculate actual movement
       FROM signals
       WHERE timestamp >= ? AND timestamp < ?
       GROUP BY CAST(timestamp / 86400000 AS INTEGER) * 86400000, device_id

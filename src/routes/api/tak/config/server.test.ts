@@ -24,7 +24,7 @@ vi.mock('$lib/server/tak/TakService', () => ({
 }));
 
 // Import handlers after mocks are registered
-import { GET, POST } from '$lib/../routes/api/tak/config/+server';
+import { GET, POST } from './+server';
 
 // --- Helpers ---
 
