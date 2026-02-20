@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import type { TakServerConfig } from '$lib/types/tak';
 
@@ -50,7 +49,7 @@
 	}
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2.5">
 	<span class="text-xs font-semibold tracking-widest text-muted-foreground">ENROLLMENT</span>
 	<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
 		Username
@@ -80,9 +79,27 @@
 		/>
 	</label>
 	<div class="flex items-center gap-2">
-		<Button size="sm" onclick={enrollCertificate} disabled={isEnrolling}>
+		<button
+			onclick={enrollCertificate}
+			disabled={isEnrolling}
+			class="inline-flex items-center gap-1.5 rounded-md border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/30 disabled:opacity-50"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline
+					points="22 4 12 14.01 9 11.01"
+				/></svg
+			>
 			{isEnrolling ? 'Enrolling...' : 'Enroll Now'}
-		</Button>
+		</button>
 		{#if enrollStatus}
 			<span class="text-[10px] text-muted-foreground">{enrollStatus}</span>
 		{/if}
