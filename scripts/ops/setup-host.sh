@@ -54,7 +54,7 @@ fi
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/21] Network configuration..."
+echo "[1/22] Network configuration..."
 
 configure_networking() {
   local changed=false
@@ -136,7 +136,7 @@ EOF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/21] System packages..."
+echo "[2/22] System packages..."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -155,7 +155,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 2. Node.js ---
-echo "[3/21] Node.js..."
+echo "[3/22] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -171,7 +171,7 @@ else
 fi
 
 # --- 3. Kismet ---
-echo "[4/21] Kismet..."
+echo "[4/22] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -191,7 +191,7 @@ else
 fi
 
 # --- 4. gpsd ---
-echo "[5/21] gpsd..."
+echo "[5/22] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -200,7 +200,7 @@ else
 fi
 
 # --- 5. Docker (for third-party tools only) ---
-echo "[6/21] Docker..."
+echo "[6/22] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -230,7 +230,7 @@ else
 fi
 
 # --- 6. OpenSSH Server ---
-echo "[7/21] OpenSSH server..."
+echo "[7/22] OpenSSH server..."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
 else
@@ -249,7 +249,7 @@ else
 fi
 
 # --- 7. udev rules for SDR devices ---
-echo "[8/21] udev rules..."
+echo "[8/22] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -268,7 +268,7 @@ UDEV
 fi
 
 # --- 8. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
-echo "[9/21] GSM Evil..."
+echo "[9/22] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
 
@@ -418,7 +418,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
 fi
 
 # --- 9. Kismet GPS config ---
-echo "[10/21] Kismet GPS config..."
+echo "[10/22] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -432,7 +432,7 @@ else
 fi
 
 # --- 8. npm dependencies ---
-echo "[11/21] npm dependencies..."
+echo "[11/22] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -456,7 +456,7 @@ else
 fi
 
 # --- 9. .env from template ---
-echo "[12/21] Environment file..."
+echo "[12/22] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -513,7 +513,7 @@ echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 10. Development Monitor Service ---
-echo "[13/21] Development Monitor Service..."
+echo "[13/22] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -542,7 +542,7 @@ else
 fi
 
 # --- 11. EarlyOOM Configuration ---
-echo "[14/21] Configure EarlyOOM..."
+echo "[14/22] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
   # Avoid list: system-critical + development tools + headless browser
@@ -557,7 +557,7 @@ else
 fi
 
 # --- 12. cgroup Memory Limit (defense against runaway processes) ---
-echo "[15/21] cgroup memory limit..."
+echo "[15/22] cgroup memory limit..."
 
 # Detect the primary UID (the user who will run Argos)
 SETUP_UID=$(id -u "$SETUP_USER")
@@ -607,7 +607,7 @@ EOF
 fi
 
 # --- 13. Tailscale ---
-echo "[16/21] Tailscale..."
+echo "[16/22] Tailscale..."
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
 else
@@ -617,7 +617,7 @@ else
 fi
 
 # --- 14. Claude Code ---
-echo "[17/21] Claude Code..."
+echo "[17/22] Claude Code..."
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
 else
@@ -627,7 +627,7 @@ else
 fi
 
 # --- 15. Gemini CLI ---
-echo "[18/21] Gemini CLI..."
+echo "[18/22] Gemini CLI..."
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
 else
@@ -636,8 +636,98 @@ else
   echo "  Gemini CLI installed. Run 'gemini' to authenticate."
 fi
 
-# --- 16. Zsh + Dotfiles ---
-echo "[19/21] Zsh + Dotfiles..."
+# --- 16. ChromaDB (claude-mem vector search backend) ---
+echo "[19/22] ChromaDB for claude-mem..."
+
+# pipx is needed to install chromadb in an isolated venv
+if ! sudo -u "$SETUP_USER" bash -c 'command -v pipx' &>/dev/null; then
+  echo "  Installing pipx..."
+  apt-get install -y -qq pipx
+fi
+
+# Install chromadb via pipx (provides the `chroma` CLI)
+if sudo -u "$SETUP_USER" bash -c 'command -v chroma' &>/dev/null; then
+  echo "  ChromaDB already installed: $(sudo -u "$SETUP_USER" bash -c 'chroma --version' 2>/dev/null)"
+else
+  echo "  Installing ChromaDB via pipx..."
+  sudo -u "$SETUP_USER" pipx install chromadb
+  echo "  ChromaDB installed: $(sudo -u "$SETUP_USER" bash -c 'chroma --version' 2>/dev/null)"
+fi
+
+# Create data directory
+CHROMA_DATA_DIR="$SETUP_HOME/.claude-mem/chroma"
+sudo -u "$SETUP_USER" mkdir -p "$CHROMA_DATA_DIR"
+
+# Install systemd user service for ChromaDB
+CHROMA_SERVICE="$SETUP_HOME/.config/systemd/user/chroma-server.service"
+sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd/user"
+cat > "$CHROMA_SERVICE" << EOF
+[Unit]
+Description=ChromaDB Vector Database Server (claude-mem)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$SETUP_HOME/.local/bin/chroma run --path $CHROMA_DATA_DIR --host 127.0.0.1 --port 8000
+ExecStartPost=/bin/sh -c 'for i in 1 2 3 4 5 6 7 8 9 10; do curl -sf http://127.0.0.1:8000/api/v2/heartbeat && exit 0; sleep 2; done; exit 1'
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+StandardOutput=journal
+StandardError=journal
+
+# OOM protection: earlyoom --avoid matches comm=chroma, so earlyoom won't kill this.
+# OOMScoreAdjust=-200 requires CAP_SYS_NICE (unavailable in user services),
+# so the actual oom_score_adj remains at the inherited value.
+# The earlyoom avoid list is the real protection mechanism.
+OOMScoreAdjust=-200
+
+[Install]
+WantedBy=default.target
+EOF
+chown "$SETUP_USER":"$SETUP_USER" "$CHROMA_SERVICE"
+
+# Enable linger so user services survive logout (required for headless reboots)
+loginctl enable-linger "$SETUP_USER"
+
+# Enable and start
+sudo -u "$SETUP_USER" systemctl --user daemon-reload
+sudo -u "$SETUP_USER" systemctl --user enable chroma-server
+sudo -u "$SETUP_USER" systemctl --user restart chroma-server
+
+# Set CHROMA_SSL=false for chroma-mcp client (defaults to SSL=true in 0.2.6+)
+ZSHENV="$SETUP_HOME/.zshenv"
+if [[ -f "$ZSHENV" ]] && grep -q "CHROMA_SSL" "$ZSHENV"; then
+  echo "  CHROMA_SSL already set in .zshenv"
+else
+  echo "  Setting CHROMA_SSL=false in .zshenv..."
+  cat >> "$ZSHENV" << 'ZSHENV_CONTENT'
+
+# ChromaDB MCP client: disable SSL for local server connections
+# Required because chroma-mcp 0.2.6+ defaults to SSL=true
+export CHROMA_SSL=false
+ZSHENV_CONTENT
+  chown "$SETUP_USER":"$SETUP_USER" "$ZSHENV"
+fi
+
+# Update claude-mem settings if they exist
+CLAUDE_MEM_SETTINGS="$SETUP_HOME/.claude-mem/settings.json"
+if [[ -f "$CLAUDE_MEM_SETTINGS" ]]; then
+  if grep -q '"CLAUDE_MEM_CHROMA_MODE": "local"' "$CLAUDE_MEM_SETTINGS"; then
+    echo "  Switching claude-mem chroma mode to remote..."
+    sed -i 's/"CLAUDE_MEM_CHROMA_MODE": "local"/"CLAUDE_MEM_CHROMA_MODE": "remote"/' "$CLAUDE_MEM_SETTINGS"
+  else
+    echo "  claude-mem chroma mode already set"
+  fi
+else
+  echo "  claude-mem settings not found (will be created on first run)"
+fi
+
+echo "  ChromaDB service installed and running on port 8000."
+
+# --- 17. Zsh + Dotfiles ---
+echo "[20/22] Zsh + Dotfiles..."
 DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
 DOTFILES_DIR="$SETUP_HOME/.dotfiles"
 
@@ -736,7 +826,7 @@ else
 fi
 
 # --- 17. Set Zsh as default shell ---
-echo "[20/21] Default shell..."
+echo "[21/22] Default shell..."
 CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
 if [[ "$CURRENT_SHELL" == */zsh ]]; then
   echo "  $SETUP_USER already using zsh"
@@ -747,7 +837,7 @@ else
 fi
 
 # --- 18. Headless Debug Service ---
-echo "[21/21] Headless Debug Service..."
+echo "[22/22] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
     sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \

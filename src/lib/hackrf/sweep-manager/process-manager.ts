@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { type ChildProcess, exec, spawn } from 'child_process';
+import { type ChildProcess, execFile, spawn } from 'child_process';
 
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
@@ -224,9 +224,8 @@ export class ProcessManager {
 		// Ensure hackrf_sweep is not running using system command as backup
 		try {
 			await new Promise<void>((resolve) => {
-				exec('pkill -9 -x hackrf_sweep', (error) => {
+				execFile('/usr/bin/pkill', ['-9', '-x', 'hackrf_sweep'], (error) => {
 					if (error && error.code !== 1) {
-						// Exit code 1 means no processes found
 						logError('pkill error', { error }, 'pkill-error');
 					}
 					resolve();
@@ -246,41 +245,20 @@ export class ProcessManager {
 	async forceCleanupAll(): Promise<void> {
 		logInfo('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
 
+		const pkill = (args: string[]) =>
+			new Promise<void>((resolve) => {
+				execFile('/usr/bin/pkill', args, () => resolve());
+			});
+
 		try {
-			// Kill all hackrf_sweep processes
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -x hackrf_sweep', () => resolve());
-			});
+			await pkill(['-9', '-x', 'hackrf_sweep']);
+			await pkill(['-9', '-f', 'hackrf_info']);
+			await pkill(['-9', '-f', 'usrp_spectrum_scan.py']);
+			await pkill(['-9', '-f', 'python.*usrp']);
+			await pkill(['-9', '-f', 'mock_sweep.sh']);
+			await pkill(['-9', '-f', 'auto_sweep.sh']);
 
-			// Kill any hackrf_info processes
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f hackrf_info', () => resolve());
-			});
-
-			// Kill any USRP spectrum scan processes
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f usrp_spectrum_scan.py', () => resolve());
-			});
-
-			// Kill any Python processes using UHD/USRP
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f "python.*usrp"', () => resolve());
-			});
-
-			// Kill any mock sweep processes
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f mock_sweep.sh', () => resolve());
-			});
-
-			// Kill any auto_sweep processes
-			await new Promise<void>((resolve) => {
-				exec('pkill -9 -f auto_sweep.sh', () => resolve());
-			});
-
-			// Clear registry
 			this.processRegistry.clear();
-
-			// Wait for cleanup
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
@@ -351,7 +329,7 @@ export class ProcessManager {
 		deviceInfo?: string;
 	}> {
 		return new Promise((resolve) => {
-			exec('timeout 3 hackrf_info', (error, stdout, stderr) => {
+			execFile('/usr/bin/timeout', ['3', 'hackrf_info'], (error, stdout, stderr) => {
 				if (error) {
 					if (error.code === 124) {
 						resolve({
@@ -369,7 +347,6 @@ export class ProcessManager {
 				} else if (stderr.includes('No HackRF boards found')) {
 					resolve({ available: false, reason: 'No HackRF found' });
 				} else if (stdout.includes('Serial number')) {
-					// Extract device info
 					const deviceInfo = stdout
 						.split('\n')
 						.filter((line) => line.trim())

@@ -55,25 +55,3 @@ export function validateGain(gain: string | number): number {
 
 	return gainNum;
 }
-
-/**
- * Sanitize frequency for shell command (prevents injection)
- * Only allows validated numeric frequency
- * @param freq - Validated frequency number
- * @returns Safe string for shell command
- */
-export function sanitizeFrequencyForShell(freq: number): string {
-	// Frequency already validated, format as fixed-precision string
-	return freq.toFixed(1);
-}
-
-/**
- * Sanitize gain for shell command (prevents injection)
- * Only allows validated numeric gain
- * @param gain - Validated gain number
- * @returns Safe string for shell command
- */
-export function sanitizeGainForShell(gain: number): string {
-	// Gain already validated, format as integer string
-	return Math.round(gain).toString();
-}

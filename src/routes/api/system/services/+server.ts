@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -21,7 +21,10 @@ export const GET: RequestHandler = async () => {
 
 				// Check if process is running
 				try {
-					const { stdout } = await execAsync(`pgrep -f "${service.process}"`);
+					const { stdout } = await execFileAsync('/usr/bin/pgrep', [
+						'-f',
+						service.process
+					]);
 					if (stdout.trim()) {
 						processRunning = true;
 						pid = parseInt(stdout.trim().split('\n')[0]);
@@ -32,7 +35,7 @@ export const GET: RequestHandler = async () => {
 
 				// Check if port is listening
 				try {
-					await execAsync(`lsof -i:${service.port} -sTCP:LISTEN`);
+					await execFileAsync('/usr/bin/lsof', [`-i:${service.port}`, '-sTCP:LISTEN']);
 					portListening = true;
 				} catch {
 					portListening = false;

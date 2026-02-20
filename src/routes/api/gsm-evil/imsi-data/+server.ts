@@ -1,50 +1,46 @@
 import { json } from '@sveltejs/kit';
+import Database from 'better-sqlite3';
+import { existsSync } from 'fs';
 import { z } from 'zod';
 
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
-import { hostExec } from '$lib/server/host-exec';
-import { safeJsonParse } from '$lib/server/security/safe-json';
 
 import type { RequestHandler } from './$types';
 
-// Zod schema for GSM Evil IMSI detailed data from Python subprocess
-const GsmEvilImsiDataSchema = z.union([
-	z.array(
-		z
-			.object({
-				id: z.number(),
-				imsi: z.string(),
-				tmsi: z.string(),
-				mcc: z.string(),
-				mnc: z.string(),
-				lac: z.string(),
-				ci: z.string(),
-				datetime: z.string()
-			})
-			.passthrough()
-	),
+// Zod schema for GSM Evil IMSI detailed data from better-sqlite3
+const GsmEvilImsiDataSchema = z.array(
 	z
 		.object({
-			error: z.string()
+			id: z.number(),
+			imsi: z.string(),
+			tmsi: z.string(),
+			mcc: z.string(),
+			mnc: z.string(),
+			lac: z.string(),
+			ci: z.string(),
+			datetime: z.string()
 		})
 		.passthrough()
-]);
+);
+
+interface ImsiRow {
+	id: number;
+	imsi: string | null;
+	tmsi: string | null;
+	mcc: string | number | null;
+	mnc: string | number | null;
+	lac: string | number | null;
+	ci: string | number | null;
+	date_time: string | null;
+}
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Find the IMSI database on the host
+		// Find the IMSI database using fs.existsSync instead of shell
 		const gsmDir = getGsmEvilDir();
-		const searchPaths = `${gsmDir}/database/imsi.db /tmp/gsm_db.sqlite`;
-		const { stdout: dbFound } = await hostExec(
-			`for p in ${searchPaths}; do [ -f "$p" ] && echo "$p" && break; done`
-		).catch((error: unknown) => {
-			console.error('[gsm-evil-imsi-data] Database path search failed', {
-				error: String(error)
-			});
-			return { stdout: '' };
-		});
+		const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
+		const dbPath = searchPaths.find((p) => existsSync(p)) || '';
 
-		const dbPath = dbFound.trim();
 		if (!dbPath) {
 			return json({
 				success: false,
@@ -53,55 +49,59 @@ export const GET: RequestHandler = async () => {
 			});
 		}
 
-		// Validate dbPath against known allowlist to prevent shell injection
+		// Validate dbPath against known allowlist to prevent path traversal
 		const allowedPaths = getAllowedImsiDbPaths();
 		if (!allowedPaths.includes(dbPath)) {
 			return json({ success: false, message: 'Invalid database path', data: [] });
 		}
 
-		// Run python on the host where the DB lives
-		const pythonScript = `
-import sqlite3, json
-try:
-    conn = sqlite3.connect('${dbPath}')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000')
-    rows = cursor.fetchall()
-    conn.close()
-    data = [{'id':r[0],'imsi':r[1] or '','tmsi':r[2] or '','mcc':str(r[3]) if r[3] else '','mnc':str(r[4]) if r[4] else '','lac':str(r[5]) if r[5] else '','ci':str(r[6]) if r[6] else '','datetime':r[7] or ''} for r in rows]
-    print(json.dumps(data))
-except Exception as e:
-    print(json.dumps({'error': str(e)}))
-`;
+		// Query IMSI data directly with better-sqlite3 instead of Python subprocess
+		let data;
+		const db = new Database(dbPath, { readonly: true });
+		try {
+			const rows = db
+				.prepare(
+					'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000'
+				)
+				.all() as ImsiRow[];
 
-		const { stdout } = await hostExec(`python3 -c '${pythonScript.replace(/'/g, "'\\''")}'`);
+			data = rows.map((row) => ({
+				id: row.id,
+				imsi: row.imsi || '',
+				tmsi: row.tmsi || '',
+				mcc: row.mcc != null ? String(row.mcc) : '',
+				mnc: row.mnc != null ? String(row.mnc) : '',
+				lac: row.lac != null ? String(row.lac) : '',
+				ci: row.ci != null ? String(row.ci) : '',
+				datetime: row.date_time || ''
+			}));
+		} catch (dbError) {
+			return json({
+				success: false,
+				message: 'Failed to read database',
+				error: dbError instanceof Error ? dbError.message : String(dbError),
+				data: []
+			});
+		} finally {
+			db.close();
+		}
 
-		const parseResult = safeJsonParse(stdout, GsmEvilImsiDataSchema, 'gsm-evil-imsi-data');
+		const parseResult = GsmEvilImsiDataSchema.safeParse(data);
 		if (!parseResult.success) {
 			return json(
 				{
 					success: false,
-					message: 'Failed to parse IMSI data from subprocess',
+					message: 'Failed to parse IMSI data from database',
 					data: []
 				},
 				{ status: 500 }
 			);
 		}
 
-		const result = parseResult.data;
-		if (typeof result === 'object' && 'error' in result && result.error) {
-			return json({
-				success: false,
-				message: 'Failed to read database',
-				error: result.error,
-				data: []
-			});
-		}
-
 		return json({
 			success: true,
-			count: result.length,
-			data: result // Changed from 'imsis' to 'data' to match what IMSIDisplay expects
+			count: parseResult.data.length,
+			data: parseResult.data
 		});
 	} catch (error) {
 		console.error('Failed to fetch IMSI data:', error);

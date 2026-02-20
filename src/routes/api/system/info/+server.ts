@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { exec } from 'child_process';
-	// Safe: System info data type assertion
+import { execFile } from 'child_process';
+import * as fs from 'fs';
 import * as os from 'os';
 import { promisify } from 'util';
 
@@ -8,44 +8,58 @@ import type { SystemInfo } from '$lib/types/system';
 
 import type { RequestHandler } from './$types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 async function getSystemInfo(): Promise<SystemInfo> {
 	try {
-		// Get hostname
 		const hostname = os.hostname();
 
-		// Get all IPs and extract primary + Tailscale
-		const { stdout: allIps } = await execAsync('hostname -I');
+		// Get all IPs via hostname -I (no shell pipe needed)
+		const { stdout: allIps } = await execFileAsync('/usr/bin/hostname', ['-I']);
 		const ips = allIps.trim().split(' ').filter(Boolean);
 		const primaryIp = ips[0] || '';
 		const tailscaleIp = ips.find((ip) => ip.startsWith('100.')) || null;
 
-		// Get WiFi interfaces
+		// Get WiFi interfaces via ip command + JS parsing (replaces grep|awk|sed pipe)
 		const wifiInterfaces = [];
 		try {
-			const { stdout: ifaceOutput } = await execAsync(
-				"ip -o link show | grep -E 'wlan|wlp' | awk '{print $2}' | sed 's/://'"
-			);
-			const ifaces = ifaceOutput.trim().split('\n').filter(Boolean);
+			const { stdout: ifaceOutput } = await execFileAsync('/usr/sbin/ip', [
+				'-o',
+				'link',
+				'show'
+			]);
+			const ifaces = ifaceOutput
+				.split('\n')
+				.filter((line) => /wlan|wlp/.test(line))
+				.map((line) => {
+					const match = line.match(/^\d+:\s+(\S+?):/);
+					return match ? match[1] : '';
+				})
+				.filter(Boolean);
 
 			for (const iface of ifaces) {
 				try {
-					const { stdout: ipAddr } = await execAsync(
-						`ip addr show ${iface} | grep 'inet ' | awk '{print $2}' | cut -d/ -f1`
-					);
-					const { stdout: macAddr } = await execAsync(
-						`ip link show ${iface} | grep 'link/ether' | awk '{print $2}'`
-					);
+					const { stdout: addrOutput } = await execFileAsync('/usr/sbin/ip', [
+						'addr',
+						'show',
+						iface
+					]);
+					const ipMatch = addrOutput.match(/inet\s+(\d+\.\d+\.\d+\.\d+)/);
+					const { stdout: linkOutput } = await execFileAsync('/usr/sbin/ip', [
+						'link',
+						'show',
+						iface
+					]);
+					const macMatch = linkOutput.match(/link\/ether\s+([\da-f:]+)/);
 
-					if (ipAddr.trim()) {
+					if (ipMatch) {
 						wifiInterfaces.push({
 							name: iface,
-							ip: ipAddr.trim(),
-							mac: macAddr.trim()
+							ip: ipMatch[1],
+							mac: macMatch ? macMatch[1] : ''
 						});
 					}
-				} catch (_error: unknown) {
+				} catch {
 					// Interface might be down
 				}
 			}
@@ -53,83 +67,66 @@ async function getSystemInfo(): Promise<SystemInfo> {
 			console.error('Error getting WiFi interfaces:', error);
 		}
 
-		// Get CPU usage
+		// CPU info from os module
 		const cpuInfo = os.cpus();
 		const cpuModel = cpuInfo[0].model;
 		const cpuCores = cpuInfo.length;
 
-		// Calculate CPU usage percentage
-		let cpuUsage = 0;
-		try {
-			const { stdout: cpuOutput } = await execAsync(
-				"top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
-			);
-			cpuUsage = parseFloat(cpuOutput.trim()) || 0;
-		} catch (_error: unknown) {
-			// Fallback CPU calculation
-			const loadAvg = os.loadavg()[0];
-			cpuUsage = Math.min(100, (loadAvg / cpuCores) * 100);
-		}
+		// CPU usage from load average (no shell pipe needed)
+		const loadAvg = os.loadavg()[0];
+		const cpuUsage = Math.min(100, (loadAvg / cpuCores) * 100);
 
-		// Get memory info
+		// Memory from os module
 		const totalMem = os.totalmem();
 		const freeMem = os.freemem();
 		const usedMem = totalMem - freeMem;
 		const memPercentage = (usedMem / totalMem) * 100;
 
-		// Get storage info
-		let storageInfo = {
-			total: 0,
-			used: 0,
-			free: 0,
-			percentage: 0
-		};
-
+		// Storage via df (replaces shell pipe with JS parsing)
+		let storageInfo = { total: 0, used: 0, free: 0, percentage: 0 };
 		try {
-			const { stdout: dfOutput } = await execAsync(
-				"df -B1 / | tail -1 | awk '{print $2,$3,$4,$5}'"
-			);
-			const [total, used, free, percentage] = dfOutput.trim().split(' ');
-			storageInfo = {
-				total: parseInt(total),
-				used: parseInt(used),
-				free: parseInt(free),
-				percentage: parseInt(percentage)
-			};
+			const { stdout: dfOutput } = await execFileAsync('/usr/bin/df', ['-B1', '/']);
+			const lines = dfOutput.trim().split('\n');
+			if (lines.length >= 2) {
+				const parts = lines[1].split(/\s+/);
+				storageInfo = {
+					total: parseInt(parts[1]),
+					used: parseInt(parts[2]),
+					free: parseInt(parts[3]),
+					percentage: parseInt(parts[4])
+				};
+			}
 		} catch (error: unknown) {
 			console.error('Error getting storage info:', error);
 		}
 
-		// Get temperature (Raspberry Pi specific)
+		// Temperature — read from sysfs first, fallback to vcgencmd
 		let temperature = 0;
 		try {
-			const { stdout: tempOutput } = await execAsync(
-				"vcgencmd measure_temp | sed 's/temp=//;s/°C//'"
-			);
-			temperature = parseFloat(tempOutput.trim());
-		} catch (_error: unknown) {
-			// Try alternative method
+			const tempStr = fs.readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf-8');
+			temperature = parseInt(tempStr.trim()) / 1000;
+		} catch {
 			try {
-				const { stdout: tempAlt } = await execAsync(
-					'cat /sys/class/thermal/thermal_zone0/temp'
-				);
-				temperature = parseInt(tempAlt.trim()) / 1000;
+				const { stdout: tempOutput } = await execFileAsync('/usr/bin/vcgencmd', [
+					'measure_temp'
+				]);
+				const match = tempOutput.match(/([\d.]+)/);
+				if (match) temperature = parseFloat(match[1]);
 			} catch (error: unknown) {
 				console.error('Error getting temperature:', error);
 			}
 		}
 
-		// Get uptime
 		const uptime = os.uptime();
 
-		// Battery info (not typically available on Pi, but check anyway)
+		// Battery (not typical on Pi, but check)
 		let battery = undefined;
 		try {
-			const { stdout: batteryOutput } = await execAsync(
-				"upower -i /org/freedesktop/UPower/devices/battery_BAT0 | grep -E 'percentage|state'"
-			);
+			const { stdout: batteryOutput } = await execFileAsync('/usr/bin/upower', [
+				'-i',
+				'/org/freedesktop/UPower/devices/battery_BAT0'
+			]);
 			if (batteryOutput) {
-				// Parse battery info if available
 				const percentageMatch = batteryOutput.match(/percentage:\s*(\d+)%/);
 				const stateMatch = batteryOutput.match(/state:\s*(\w+)/);
 				if (percentageMatch) {
@@ -139,8 +136,8 @@ async function getSystemInfo(): Promise<SystemInfo> {
 					};
 				}
 			}
-		} catch (_error: unknown) {
-			// No battery - this is normal for Raspberry Pi
+		} catch {
+			// No battery — normal for Raspberry Pi
 		}
 
 		return {
@@ -148,17 +145,8 @@ async function getSystemInfo(): Promise<SystemInfo> {
 			ip: primaryIp,
 			tailscaleIp,
 			wifiInterfaces,
-			cpu: {
-				usage: cpuUsage,
-				model: cpuModel,
-				cores: cpuCores
-			},
-			memory: {
-				total: totalMem,
-				used: usedMem,
-				free: freeMem,
-				percentage: memPercentage
-			},
+			cpu: { usage: cpuUsage, model: cpuModel, cores: cpuCores },
+			memory: { total: totalMem, used: usedMem, free: freeMem, percentage: memPercentage },
 			storage: storageInfo,
 			temperature,
 			uptime,

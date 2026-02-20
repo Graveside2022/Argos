@@ -1,23 +1,37 @@
 import { json } from '@sveltejs/kit';
+import { execFile, spawn } from 'child_process';
+import { promisify } from 'util';
 
-import { hostExec } from '$lib/server/host-exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 
 import type { RequestHandler } from './$types';
+
+const execFileAsync = promisify(execFile);
 
 export const POST: RequestHandler = async () => {
 	try {
 		console.warn('Starting intelligent GSM frequency scan...');
 
 		// Phase 1: Quick RF power scan
-		const { stdout: sweepData } = await hostExec(
-			'timeout 10 hackrf_sweep -f 935:960 -l 32 -g 20 | grep -E "^[0-9]" | sort -k6 -n | head -20',
-			{ timeout: 15000 }
-		).catch((error: unknown) => {
+		let sweepData = '';
+		try {
+			const { stdout } = await execFileAsync(
+				'/usr/bin/timeout',
+				['10', 'hackrf_sweep', '-f', '935:960', '-l', '32', '-g', '20'],
+				{ timeout: 15000 }
+			);
+			// Filter lines starting with a digit, sort by field 6 (power), take top 20
+			const lines = stdout.split('\n').filter((l) => /^[0-9]/.test(l));
+			lines.sort(
+				(a, b) => parseFloat(a.split(',')[5] || '0') - parseFloat(b.split(',')[5] || '0')
+			);
+			const sweepLines = lines.slice(-20);
+			sweepData = sweepLines.join('\n');
+		} catch (error: unknown) {
 			console.error('[gsm-evil-scan] HackRF sweep failed', { error: String(error) });
-			return { stdout: '' };
-		});
+			sweepData = '';
+		}
 
 		if (!sweepData) {
 			return json({
@@ -69,26 +83,49 @@ export const POST: RequestHandler = async () => {
 		for (const [freq, power] of candidateFreqs) {
 			console.warn(`Testing ${freq} MHz...`);
 
-			// Start grgsm_livemon briefly
-			const { stdout: gsmPid } = await hostExec(
-				`sudo grgsm_livemon_headless -f ${freq}M -g 40 >/dev/null 2>&1 & echo $!`
-			);
+			// Validate frequency from parsed sweep output before using in spawn
+			const validFreq = validateNumericParam(parseFloat(freq), 'frequency', 800, 1000);
 
-			const pid = gsmPid.trim();
-			validateNumericParam(pid, 'pid', 1, 4194304);
+			// Start grgsm_livemon briefly — detached spawn replaces shell backgrounding
+			const child = spawn(
+				'/usr/bin/sudo',
+				['grgsm_livemon_headless', '-f', `${validFreq}M`, '-g', '40'],
+				{ detached: true, stdio: ['ignore', 'ignore', 'ignore'] }
+			);
+			child.unref();
+			const pid = child.pid;
+
+			if (!pid) {
+				console.warn('[gsm-evil-scan] Failed to spawn grgsm_livemon_headless');
+				continue;
+			}
 
 			// Wait for initialization
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Count GSMTAP packets for 3 seconds
-			const { stdout: packetCount } = await hostExec(
-				'sudo timeout 3 tcpdump -i lo -nn port 4729 2>/dev/null | wc -l'
-			).catch((error: unknown) => {
-				console.warn('[gsm-evil-scan] tcpdump check failed', { error: String(error) });
-				return { stdout: '0' };
-			});
-
-			const frameCount = parseInt(packetCount.trim()) || 0;
+			let frameCount = 0;
+			try {
+				const { stdout: packetData } = await execFileAsync(
+					'/usr/bin/sudo',
+					['timeout', '3', 'tcpdump', '-i', 'lo', '-nn', 'port', '4729'],
+					{ timeout: 5000 }
+				);
+				frameCount = packetData.split('\n').filter((l) => l.trim()).length;
+			} catch (error: unknown) {
+				// tcpdump exits non-zero when timeout kills it — check if we got output
+				const execError = error as { stdout?: string };
+				if (execError.stdout) {
+					frameCount = execError.stdout
+						.split('\n')
+						.filter((l: string) => l.trim()).length;
+				} else {
+					console.warn('[gsm-evil-scan] tcpdump check failed', {
+						error: String(error)
+					});
+					frameCount = 0;
+				}
+			}
 
 			// Analyze channel types from actual grgsm output
 			let channelType = '';
@@ -101,12 +138,15 @@ export const POST: RequestHandler = async () => {
 				controlChannel = true;
 			}
 
-			// Kill grgsm_livemon
-			await hostExec(`sudo kill ${pid} 2>/dev/null`).catch((error: unknown) => {
+			// Kill grgsm_livemon — validate pid before passing to kill
+			try {
+				const validPid = validateNumericParam(pid, 'pid', 1, 4194304);
+				await execFileAsync('/usr/bin/sudo', ['kill', String(validPid)]);
+			} catch (error: unknown) {
 				console.warn('[gsm-evil] Cleanup: kill grgsm_livemon process failed', {
 					error: String(error)
 				});
-			});
+			}
 
 			// Determine strength category
 			let strength = 'Weak';
