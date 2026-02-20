@@ -20,10 +20,7 @@ export class CertManager {
 		if (!UUID_RE.test(configId)) {
 			throw new InputValidationError(`Invalid config ID — must be a UUID, got: ${configId}`);
 		}
-		return validatePathWithinDir(
-			path.join(this.BASE_DIR, configId),
-			path.resolve(this.BASE_DIR)
-		);
+		return validatePathWithinDir(configId, path.resolve(this.BASE_DIR));
 	}
 
 	/**
@@ -112,6 +109,17 @@ export class CertManager {
 			// Set strict permissions on extracted files
 			fs.chmodSync(certPath, 0o600);
 			fs.chmodSync(keyPath, 0o600);
+
+			// Validate extracted cert/key are non-empty — a CA-only truststore P12
+			// produces 0-byte client.crt and client.key
+			const certSize = fs.statSync(certPath).size;
+			const keySize = fs.statSync(keyPath).size;
+			if (certSize === 0 || keySize === 0) {
+				throw new InputValidationError(
+					'This .p12 file does not contain a client certificate and private key. ' +
+						'It may be a CA truststore — upload it in the Trust Store section instead.'
+				);
+			}
 
 			return { certPath, keyPath, caPath: fs.existsSync(caPath) ? caPath : undefined };
 		} catch (error) {
