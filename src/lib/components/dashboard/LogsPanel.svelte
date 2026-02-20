@@ -9,7 +9,7 @@
 	</div>
 	<div class="logs-content">
 		<TerminalTabContent
-			sessionId="dashboard-system-logs"
+			sessionId="tail-argos-logs"
 			shell="scripts/tmux/tmux-logs.sh"
 			isActive={true}
 		/>
