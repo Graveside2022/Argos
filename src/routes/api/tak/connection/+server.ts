@@ -9,6 +9,8 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async () => {
 	try {
 		const service = TakService.getInstance();
+		// Reload config from DB — cert/truststore uploads may have changed paths since last load
+		service.reloadConfig();
 		await service.connect();
 		const status = service.getStatus();
 		return json({ success: true, status: status.status });

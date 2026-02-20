@@ -53,6 +53,11 @@ export class TakService extends EventEmitter {
 		}
 	}
 
+	/** Reload config from DB — call before connect() if config may have changed externally. */
+	public reloadConfig() {
+		this.config = loadTakConfig(this.db.rawDb);
+	}
+
 	public getStatus(): TakStatus {
 		return {
 			status: this.tak?.open ? 'connected' : 'disconnected',
