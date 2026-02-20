@@ -8,12 +8,22 @@ const HACKRF_BLOCKING_PROCESSES = [
 	'hackrf_transfer',
 	'hackrf_info',
 	'grgsm_livemon',
+	'grgsm_livemon_headless',
 	'soapy_connector',
 	'btle_rx',
 	'urh',
 	'TempestSDR',
 	'multimon-ng'
 ];
+
+/** Map raw process names to user-friendly tool names for the status bar */
+const PROCESS_DISPLAY_NAMES: Record<string, string> = {
+	grgsm_livemon: 'GSM Evil',
+	grgsm_livemon_headless: 'GSM Evil',
+	hackrf_sweep: 'Spectrum Sweep',
+	soapy_connector: 'OpenWebRX',
+	btle_rx: 'BLE Scanner'
+};
 
 // Tool containers that actively use HackRF (ownership candidates)
 const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
@@ -42,10 +52,13 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 
 	for (const proc of HACKRF_BLOCKING_PROCESSES) {
 		try {
-			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-x', proc]);
+			// Use -f (full command line match) instead of -x (exact process name match)
+			// because Python-based tools like grgsm_livemon_headless have comm=python3,
+			// so -x never finds them.
+			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-f', proc]);
 			const pids = stdout.trim().split('\n').filter(Boolean);
 			for (const pid of pids) {
-				blocking.push({ pid, name: proc });
+				blocking.push({ pid, name: PROCESS_DISPLAY_NAMES[proc] ?? proc });
 			}
 		} catch (_error: unknown) {
 			// Process not found
@@ -58,7 +71,7 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 export async function killBlockingProcesses(): Promise<void> {
 	for (const proc of HACKRF_BLOCKING_PROCESSES) {
 		try {
-			await execFileAsync('/usr/bin/pkill', ['-9', '-x', proc]);
+			await execFileAsync('/usr/bin/pkill', ['-9', '-f', proc]);
 		} catch (_error: unknown) {
 			// Process not found or already dead
 		}
