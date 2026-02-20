@@ -38,7 +38,20 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		let result: { ca: string[]; cert: string; key: string };
 		try {
-			result = await api.Credentials.generate();
+			// TAK servers use self-signed certs — temporarily disable TLS verification
+			// for the enrollment HTTPS calls (config + signClient)
+			const prevTLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+			try {
+				result = await api.Credentials.generate();
+			} finally {
+				// Restore previous setting
+				if (prevTLS === undefined) {
+					delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+				} else {
+					process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevTLS;
+				}
+			}
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			if (msg.includes('401') || msg.includes('403') || msg.includes('auth')) {
@@ -63,7 +76,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					{ status: 502 }
 				);
 			}
-			throw err;
+			// Forward actual error message instead of generic 500
+			logger.error('Enrollment API call failed', { error: msg });
+			return json({ success: false, error: msg }, { status: 502 });
 		}
 
 		// Save PEM files
