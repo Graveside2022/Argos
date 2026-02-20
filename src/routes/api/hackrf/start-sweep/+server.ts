@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -45,7 +46,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const validationResult = StartSweepRequestSchema.safeParse(rawBody);
 
 		if (!validationResult.success) {
-			console.error('[start-sweep] Validation failed:', validationResult.error.format());
+			logger.error('[start-sweep] Validation failed', {
+				errors: validationResult.error.format()
+			});
 			return json(
 				{
 					status: 'error',
@@ -57,7 +60,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const body = validationResult.data;
-		console.warn('[start-sweep] Request body:', JSON.stringify(body, null, 2));
+		logger.debug('[start-sweep] Request body', { body });
 
 		// Extract validated frequencies from request
 		const frequencyRanges = body.frequencies;
@@ -85,13 +88,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		const cycleTimeMs = cycleTime * 1000;
 
 		// Start the sweep using sweepManager
-		console.warn('[start-sweep] Attempting to start sweep with:', { frequencies, cycleTimeMs });
+		logger.info('[start-sweep] Attempting to start sweep', { frequencies, cycleTimeMs });
 
 		try {
 			const success = await sweepManager.startCycle(frequencies, cycleTimeMs);
 
 			if (success) {
-				console.warn('[start-sweep] Sweep started successfully');
+				logger.info('[start-sweep] Sweep started successfully');
 				return json({
 					status: 'success',
 					message: 'Sweep started successfully',
@@ -99,9 +102,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					cycleTime: cycleTimeMs
 				});
 			} else {
-				console.error('[start-sweep] startCycle returned false');
+				logger.error('[start-sweep] startCycle returned false');
 				const status = sweepManager.getStatus();
-				console.error('[start-sweep] Current sweep manager status:', status);
+				logger.error('[start-sweep] Current sweep manager status', { status });
 
 				return json(
 					{
@@ -113,11 +116,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 			}
 		} catch (cycleError: unknown) {
-			console.error('[start-sweep] Error in startCycle:', cycleError);
+			logger.error('[start-sweep] Error in startCycle', {
+				error: cycleError instanceof Error ? cycleError.message : String(cycleError)
+			});
 			throw cycleError;
 		}
 	} catch (error: unknown) {
-		console.error('Error in start-sweep endpoint:', error);
+		logger.error('Error in start-sweep endpoint', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				status: 'error',

@@ -5,6 +5,7 @@ import * as os from 'os';
 import { promisify } from 'util';
 
 import type { SystemInfo } from '$lib/types/system';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -64,7 +65,9 @@ async function getSystemInfo(): Promise<SystemInfo> {
 				}
 			}
 		} catch (error: unknown) {
-			console.error('Error getting WiFi interfaces:', error);
+			logger.error('Error getting WiFi interfaces', {
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 
 		// CPU info from os module
@@ -97,7 +100,9 @@ async function getSystemInfo(): Promise<SystemInfo> {
 				};
 			}
 		} catch (error: unknown) {
-			console.error('Error getting storage info:', error);
+			logger.error('Error getting storage info', {
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 
 		// Temperature — read from sysfs first, fallback to vcgencmd
@@ -113,7 +118,9 @@ async function getSystemInfo(): Promise<SystemInfo> {
 				const match = tempOutput.match(/([\d.]+)/);
 				if (match) temperature = parseFloat(match[1]);
 			} catch (error: unknown) {
-				console.error('Error getting temperature:', error);
+				logger.error('Error getting temperature', {
+					error: error instanceof Error ? error.message : String(error)
+				});
 			}
 		}
 
@@ -153,7 +160,9 @@ async function getSystemInfo(): Promise<SystemInfo> {
 			battery
 		};
 	} catch (error: unknown) {
-		console.error('Error getting system info:', error);
+		logger.error('Error getting system info', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		throw error;
 	}
 }

@@ -2,6 +2,8 @@ import { json } from '@sveltejs/kit';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
@@ -86,7 +88,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ success: false, error: 'Invalid action' }, { status: 400 });
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
-		console.error('OpenWebRX control error:', msg);
+		logger.error('OpenWebRX control error', { error: msg });
 
 		return json(
 			{

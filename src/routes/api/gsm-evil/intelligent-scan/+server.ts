@@ -4,6 +4,7 @@ import { promisify } from 'util';
 
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -11,7 +12,7 @@ const execFileAsync = promisify(execFile);
 
 export const POST: RequestHandler = async () => {
 	try {
-		console.warn('Starting intelligent GSM frequency scan...');
+		logger.info('Starting intelligent GSM frequency scan');
 
 		// Phase 1: Quick RF power scan
 		let sweepData = '';
@@ -29,7 +30,7 @@ export const POST: RequestHandler = async () => {
 			const sweepLines = lines.slice(-20);
 			sweepData = sweepLines.join('\n');
 		} catch (error: unknown) {
-			console.error('[gsm-evil-scan] HackRF sweep failed', { error: String(error) });
+			logger.error('[gsm-evil-scan] HackRF sweep failed', { error: String(error) });
 			sweepData = '';
 		}
 
@@ -75,13 +76,13 @@ export const POST: RequestHandler = async () => {
 			});
 		}
 
-		console.warn(`Testing ${candidateFreqs.length} frequencies for GSM activity...`);
+		logger.info('Testing frequencies for GSM activity', { count: candidateFreqs.length });
 
 		// Phase 2: Test each candidate frequency for actual GSM frames
 		const results: FrequencyTestResult[] = [];
 
 		for (const [freq, power] of candidateFreqs) {
-			console.warn(`Testing ${freq} MHz...`);
+			logger.debug('Testing frequency', { freq });
 
 			// Validate frequency from parsed sweep output before using in spawn
 			const validFreq = validateNumericParam(parseFloat(freq), 'frequency', 800, 1000);
@@ -96,7 +97,7 @@ export const POST: RequestHandler = async () => {
 			const pid = child.pid;
 
 			if (!pid) {
-				console.warn('[gsm-evil-scan] Failed to spawn grgsm_livemon_headless');
+				logger.warn('[gsm-evil-scan] Failed to spawn grgsm_livemon_headless');
 				continue;
 			}
 
@@ -120,7 +121,7 @@ export const POST: RequestHandler = async () => {
 						.split('\n')
 						.filter((l: string) => l.trim()).length;
 				} else {
-					console.warn('[gsm-evil-scan] tcpdump check failed', {
+					logger.warn('[gsm-evil-scan] tcpdump check failed', {
 						error: String(error)
 					});
 					frameCount = 0;
@@ -143,7 +144,7 @@ export const POST: RequestHandler = async () => {
 				const validPid = validateNumericParam(pid, 'pid', 1, 4194304);
 				await execFileAsync('/usr/bin/sudo', ['kill', String(validPid)]);
 			} catch (error: unknown) {
-				console.warn('[gsm-evil] Cleanup: kill grgsm_livemon process failed', {
+				logger.warn('[gsm-evil] Cleanup: kill grgsm_livemon process failed', {
 					error: String(error)
 				});
 			}
@@ -191,7 +192,7 @@ export const POST: RequestHandler = async () => {
 			totalTested: results.length
 		});
 	} catch (error: unknown) {
-		console.error('Intelligent scan error:', error);
+		logger.error('Intelligent scan error', { error: (error as Error).message });
 		return json(
 			{
 				success: false,

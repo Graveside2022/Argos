@@ -5,6 +5,7 @@ import { getRFDatabase } from '$lib/server/db/database';
 import { loadTakConfig } from '$lib/server/tak/tak-db';
 import { TakService } from '$lib/server/tak/TakService';
 import type { TakServerConfig } from '$lib/types/tak';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -54,7 +55,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		return json({ success: true, config });
 	} catch (err) {
-		console.error('Failed to save TAK config:', err);
+		logger.error('Failed to save TAK config', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

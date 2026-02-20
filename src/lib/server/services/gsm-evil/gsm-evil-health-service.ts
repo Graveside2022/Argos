@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -101,7 +102,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 						}
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
-						console.warn('[gsm-evil-health] PID runtime check failed', { error: msg });
+						logger.warn('[gsm-evil-health] PID runtime check failed', { error: msg });
 					}
 				}
 			} else {
@@ -142,7 +143,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 							.some((line) => line.includes('LISTEN'));
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
-						console.warn('[gsm-evil-health] Port 8080 check failed', { error: msg });
+						logger.warn('[gsm-evil-health] Port 8080 check failed', { error: msg });
 					}
 
 					// Check HTTP response
@@ -154,7 +155,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 							health.gsmevil.webInterface = response.status === 200;
 						} catch (error: unknown) {
 							const msg = error instanceof Error ? error.message : String(error);
-							console.warn('[gsm-evil-health] HTTP check failed', { error: msg });
+							logger.warn('[gsm-evil-health] HTTP check failed', { error: msg });
 						}
 					}
 				}
@@ -173,7 +174,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			health.dataFlow.gsmtapActive = portCount > 0;
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
-			console.warn('[gsm-evil-health] GSMTAP port check failed', { error: msg });
+			logger.warn('[gsm-evil-health] GSMTAP port check failed', { error: msg });
 		}
 
 		// Database accessibility check
@@ -188,7 +189,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 					health.dataFlow.databaseAccessible = true;
 				} catch (error: unknown) {
 					const msg = error instanceof Error ? error.message : String(error);
-					console.warn('[gsm-evil-health] Database connectivity test failed', {
+					logger.warn('[gsm-evil-health] Database connectivity test failed', {
 						error: msg
 					});
 				}
@@ -204,7 +205,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 						health.dataFlow.recentData = (row?.count ?? 0) > 0;
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
-						console.warn('[gsm-evil-health] Recent data check failed', { error: msg });
+						logger.warn('[gsm-evil-health] Recent data check failed', { error: msg });
 					} finally {
 						db.close();
 					}
@@ -212,7 +213,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			}
 		} catch (dbError: unknown) {
 			const msg = dbError instanceof Error ? dbError.message : String(dbError);
-			console.warn('[gsm-evil-health] Database health check failed', { error: msg });
+			logger.warn('[gsm-evil-health] Database health check failed', { error: msg });
 			health.dataFlow.databaseAccessible = false;
 		}
 
@@ -268,7 +269,9 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 			health.overall.status = 'stopped';
 		}
 	} catch (error) {
-		console.error('Health check error:', error);
+		logger.error('[gsm-evil-health] Health check error', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		health.overall.status = 'error';
 		health.overall.issues.push('Health check failed');
 	}

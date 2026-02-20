@@ -5,6 +5,7 @@ import { promisify } from 'util';
 
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -49,7 +50,7 @@ export const GET: RequestHandler = async () => {
 				const stdout = (error as { stdout: string }).stdout;
 				packets = stdout.split('\n').filter((l: string) => l.trim()).length;
 			} else {
-				console.warn('[gsm-evil-activity] tcpdump check failed', {
+				logger.warn('[gsm-evil-activity] tcpdump check failed', {
 					error: String(error)
 				});
 				packets = 0;
@@ -110,7 +111,7 @@ export const GET: RequestHandler = async () => {
 						: null
 		});
 	} catch (error: unknown) {
-		console.error('Activity check error:', error);
+		logger.error('Activity check error', { error: String(error) });
 		return json({
 			success: false,
 			hasActivity: false,

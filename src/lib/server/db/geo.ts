@@ -5,6 +5,7 @@
 
 import { GEO } from '$lib/constants/limits';
 import type { SignalMarker } from '$lib/types/signals';
+import { logger } from '$lib/utils/logger';
 
 import type { DbSignal } from './types';
 
@@ -73,7 +74,7 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 			// Safe: JSON.parse returns unknown; metadata is stored as JSON object in DB column
 			metadata = JSON.parse(dbSignal.metadata) as Record<string, unknown>;
 		} catch (_error) {
-			console.warn('[geo] Invalid metadata JSON in database', {
+			logger.warn('[geo] Invalid metadata JSON in database', {
 				signal_id: dbSignal.signal_id
 			});
 		}
@@ -105,7 +106,7 @@ export function generateDeviceId(signal: SignalMarker): string {
 			try {
 				metadata = JSON.parse(signal.metadata);
 			} catch (_error) {
-				console.warn('[geo] Invalid metadata JSON in generateDeviceId');
+				logger.warn('[geo] Invalid metadata JSON in generateDeviceId');
 				metadata = {};
 			}
 		} else {

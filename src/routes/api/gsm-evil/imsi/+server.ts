@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import { z } from 'zod';
 
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -118,7 +119,9 @@ export const GET: RequestHandler = async () => {
 			// Validate with Zod schema
 			const parsed = GsmEvilImsiResultSchema.safeParse(rawResult);
 			if (!parsed.success) {
-				console.error('[gsm-evil-imsi] Schema validation failed:', parsed.error.message);
+				logger.error('[gsm-evil-imsi] Schema validation failed', {
+					error: parsed.error.message
+				});
 				return json(
 					{
 						success: false,
@@ -135,7 +138,7 @@ export const GET: RequestHandler = async () => {
 			db.close();
 		}
 	} catch (error: unknown) {
-		console.error('IMSI fetch error:', error);
+		logger.error('IMSI fetch error', { error: (error as Error).message });
 		return json({
 			success: false,
 			imsis: [],

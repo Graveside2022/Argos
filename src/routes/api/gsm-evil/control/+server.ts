@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { startGsmEvil, stopGsmEvil } from '$lib/server/services/gsm-evil/gsm-evil-control-service';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -66,13 +67,13 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 	} catch (error: unknown) {
-		console.error('Control API error:', error);
+		logger.error('Control API error', { error: (error as Error).message });
 		return json(
 			{
 				success: false,
 				message: 'Invalid request',
 				// Safe: Catch block error cast to Error for message extraction
-			// Safe: Catch block error cast to Error for message extraction
+				// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},
 			{ status: 400 }

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { startKismet } from '$lib/server/services/kismet/kismet-control-service';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -18,13 +19,13 @@ export const POST: RequestHandler = async () => {
 
 		return json(result);
 	} catch (error) {
-		console.error('Kismet start error:', error);
+		logger.error('Kismet start error', { error: (error as Error).message });
 
 		return json(
 			{
 				success: false,
 				// Safe: Catch block error from KismetProxy.start() throws Error instances
-			// Safe: Catch block error cast to Error for message extraction
+				// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message,
 				message: 'Failed to start Kismet'
 			},

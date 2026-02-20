@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -104,7 +105,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		});
 	} catch (error) {
-		console.error('Error getting Kismet status:', error);
+		logger.error('Error getting Kismet status', { error: (error as Error).message });
 
 		return json({
 			success: false,

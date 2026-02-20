@@ -14,6 +14,7 @@ import type {
 	SDRCapabilities,
 	WiFiCapabilities
 } from '$lib/server/hardware/detection-types';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -149,7 +150,7 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 					if (result.success) {
 						hardware.push(result.data);
 					} else {
-						console.error('[usb-detector] Invalid USRP device data, skipping:', {
+						logger.error('[usb-detector] Invalid USRP device data, skipping', {
 							device: currentDevice,
 							errors: result.error.format()
 						});
@@ -193,7 +194,7 @@ async function detectUSRP(): Promise<DetectedHardware[]> {
 			if (result.success) {
 				hardware.push(result.data);
 			} else {
-				console.error('[usb-detector] Invalid USRP device data (last device), skipping:', {
+				logger.error('[usb-detector] Invalid USRP device data (last device), skipping', {
 					device: currentDevice,
 					errors: result.error.format()
 				});
@@ -384,7 +385,7 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
  * Main USB detection function
  */
 export async function detectUSBDevices(): Promise<DetectedHardware[]> {
-	console.warn('[USBDetector] Scanning for USB hardware...');
+	logger.info('[USBDetector] Scanning for USB hardware...');
 
 	const results = await Promise.allSettled([
 		detectHackRF(),
@@ -402,7 +403,7 @@ export async function detectUSBDevices(): Promise<DetectedHardware[]> {
 		}
 	}
 
-	console.warn(`[USBDetector] Found ${allHardware.length} USB devices`);
+	logger.info('[USBDetector] Found USB devices', { count: allHardware.length });
 
 	return allHardware;
 }

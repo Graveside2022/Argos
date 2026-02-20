@@ -2,6 +2,8 @@ import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 
+import { logger } from '$lib/utils/logger';
+
 interface GsmFrame {
 	timestamp: number;
 	raw: string;
@@ -35,7 +37,7 @@ class GsmMonitorService extends EventEmitter {
 	public startMonitor(): void {
 		if (this.isRunning || this.tsharkProcess) return;
 
-		console.info('[GsmMonitorService] Starting tshark monitor...');
+		logger.info('[GsmMonitorService] Starting tshark monitor');
 		this.isRunning = true;
 		this.lastActivity = Date.now();
 
@@ -73,18 +75,20 @@ class GsmMonitorService extends EventEmitter {
 			// Ignore standard capture info, log errors
 			const msg = data.toString();
 			if (msg.includes('Error') || msg.includes('Permission denied')) {
-				console.error('[GsmMonitorService] tshark error:', msg);
+				logger.error('[GsmMonitorService] tshark error', { message: msg });
 			}
 		});
 
 		this.tsharkProcess.on('error', (err) => {
-			console.error('[GsmMonitorService] Failed to start tshark process:', err);
+			logger.error('[GsmMonitorService] Failed to start tshark process', {
+				error: err.message
+			});
 			this.isRunning = false;
 			this.tsharkProcess = null;
 		});
 
 		this.tsharkProcess.on('close', (code) => {
-			console.info(`[GsmMonitorService] tshark exited with code ${code}`);
+			logger.info('[GsmMonitorService] tshark exited', { code });
 			this.isRunning = false;
 			this.tsharkProcess = null;
 		});
@@ -92,7 +96,7 @@ class GsmMonitorService extends EventEmitter {
 
 	public stopMonitor(): void {
 		if (this.tsharkProcess) {
-			console.info('[GsmMonitorService] Stopping monitor...');
+			logger.info('[GsmMonitorService] Stopping monitor');
 			this.tsharkProcess.kill();
 			try {
 				// Ensure sudo child is also killed
@@ -166,7 +170,7 @@ class GsmMonitorService extends EventEmitter {
 
 	private checkIdle() {
 		if (this.isRunning && Date.now() - this.lastActivity > 30000) {
-			console.info('[GsmMonitorService] Idle timeout, stopping monitor');
+			logger.info('[GsmMonitorService] Idle timeout, stopping monitor');
 			this.stopMonitor();
 		}
 	}

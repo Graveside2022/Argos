@@ -4,6 +4,7 @@ import { SignalBatchRequestSchema, type SignalInput } from '$lib/schemas/api';
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
 import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
+import { logger } from '$lib/utils/logger';
 import { handleValidationError } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
@@ -84,7 +85,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 
 		if (signalMarkers.length === 0) {
-			console.warn('[batch] No signals to insert');
+			logger.warn('No signals to insert', { endpoint: 'batch' });
 			return json({
 				success: true,
 				count: 0,
@@ -102,7 +103,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			valid: count
 		});
 	} catch (err: unknown) {
-		console.error('[batch] Error storing signals:', err);
+		logger.error('Error storing signals', {
+			endpoint: 'batch',
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return error(500, 'Failed to batch store signals');
 	}
 };

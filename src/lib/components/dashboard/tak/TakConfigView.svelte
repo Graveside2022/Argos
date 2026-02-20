@@ -13,6 +13,7 @@
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { takStatus } from '$lib/stores/tak-store';
 	import type { TakServerConfig } from '$lib/types/tak';
+	import { logger } from '$lib/utils/logger';
 
 	const DEFAULT_CONFIG: TakServerConfig = {
 		id: '',
@@ -44,7 +45,7 @@
 			const data = await res.json();
 			if (data && data.id) config = data;
 		} catch (e) {
-			console.error('[TakConfigView] Failed to load config:', e);
+			logger.error('[TakConfigView] Failed to load config', { error: e });
 		} finally {
 			isLoading = false;
 		}

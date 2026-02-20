@@ -3,6 +3,8 @@ import { execFile } from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
@@ -85,7 +87,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		}
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
-		console.error(`Docker ${action} error for ${container}:`, msg);
+		logger.error('Docker action error', { action, container, error: msg });
 
 		return json(
 			{

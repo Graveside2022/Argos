@@ -7,6 +7,8 @@
 
 import { config } from 'dotenv';
 
+import { logger } from '$lib/utils/logger';
+
 import { apiFetch } from '../shared/api-client';
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
@@ -549,6 +551,8 @@ class HardwareDebugger extends BaseMCPServer {
 // Start server when run directly
 const server = new HardwareDebugger('argos-hardware-debugger');
 server.start().catch((error) => {
-	console.error('[Hardware Debugger] Fatal:', error);
+	logger.error('Hardware Debugger fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

@@ -3,7 +3,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
-import { logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -65,7 +65,7 @@ export const GET: RequestHandler = async () => {
 						}
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
-						logWarn(
+						logger.warn(
 							'[GSM-Evil] Runtime check failed for PID',
 							{ error: msg, pid },
 							'gsm-runtime-check'
@@ -130,7 +130,7 @@ export const GET: RequestHandler = async () => {
 					: 'GSM Evil is stopped'
 		});
 	} catch (error: unknown) {
-		console.error('Status check error:', error);
+		logger.error('Status check error', { error: (error as Error).message });
 		return json(
 			{
 				status: 'error',
