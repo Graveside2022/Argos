@@ -5,6 +5,7 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 import type { KismetServiceStatus } from './types';
 
@@ -103,7 +104,7 @@ export class KismetServiceManager {
 			await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
 			await new Promise((resolve) => setTimeout(resolve, 3000));
 			await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']).catch((error: unknown) => {
-				console.warn('[kismet] Cleanup: pkill -KILL kismet failed', {
+				logger.warn('[kismet] Cleanup: pkill -KILL kismet failed', {
 					error: String(error)
 				});
 			}); // Force kill if needed
@@ -111,7 +112,7 @@ export class KismetServiceManager {
 			// Remove monitor interface if it exists
 			await execFileAsync('/usr/sbin/iw', ['dev', 'kismon0', 'del']).catch(
 				(error: unknown) => {
-					console.warn('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
+					logger.warn('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
 						error: String(error)
 					});
 				}
@@ -136,7 +137,7 @@ export class KismetServiceManager {
 				for (const rawName of wifiInterfaces) {
 					try {
 						const interfaceName = validateInterfaceName(rawName);
-						console.warn(`Resetting USB WiFi interface: ${interfaceName}`);
+						logger.info('[kismet] Resetting USB WiFi interface', { interfaceName });
 
 						// Bring interface down
 						await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'down']);
@@ -183,14 +184,16 @@ export class KismetServiceManager {
 												'/sys/bus/usb/drivers/usb/bind',
 												`${bus}-${device}`
 											);
-											console.warn(
-												`Reset USB device at Bus ${bus} Device ${device}`
-											);
+											logger.info('[kismet] Reset USB device', {
+												bus,
+												device
+											});
 										} catch (usbResetError) {
-											console.warn(
-												`Failed to reset USB device ${bus}-${device}:`,
-												usbResetError
-											);
+											logger.warn('[kismet] Failed to reset USB device', {
+												bus,
+												device,
+												error: String(usbResetError)
+											});
 										}
 									}
 								}
@@ -202,13 +205,16 @@ export class KismetServiceManager {
 
 						// Bring interface back up
 						await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'up']);
-						console.warn(`Interface ${interfaceName} reset complete`);
+						logger.info('[kismet] Interface reset complete', { interfaceName });
 					} catch (interfaceError) {
-						console.warn(`Failed to reset interface ${rawName}:`, interfaceError);
+						logger.warn('[kismet] Failed to reset interface', {
+							interface: rawName,
+							error: String(interfaceError)
+						});
 					}
 				}
 			} catch (resetError) {
-				console.warn('USB adapter reset failed:', resetError);
+				logger.warn('[kismet] USB adapter reset failed', { error: String(resetError) });
 				// Continue anyway - basic stop still worked
 			}
 

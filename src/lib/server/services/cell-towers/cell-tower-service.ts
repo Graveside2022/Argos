@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
+import { logger } from '$lib/utils/logger';
+
 // OpenCellID getInArea limits bbox to 4 km² (~2km x 2km).
 // We tile a larger radius into ~1.5km x 1.5km tiles and fetch in parallel.
 const TILE_SIZE_DEG = 0.014; // ~1.5 km at mid-latitudes
@@ -103,7 +105,10 @@ async function queryLocalDatabase(
 			};
 		} catch (dbErr) {
 			// Safe: Error handling
-			console.warn(`Cell tower DB at ${dbPath} failed:`, (dbErr as Error).message);
+			logger.warn('[cell-tower] Database query failed', {
+				dbPath,
+				error: (dbErr as Error).message
+			});
 		}
 	}
 
@@ -199,7 +204,9 @@ async function queryOpenCellID(
 			};
 		}
 	} catch (err) {
-		console.error('OpenCellID tiled fetch error:', err);
+		logger.error('[cell-tower] OpenCellID tiled fetch error', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 	}
 
 	return null;

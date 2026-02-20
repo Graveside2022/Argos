@@ -9,6 +9,7 @@ import {
 	type SimplifiedSignal
 } from '$lib/stores/tactical-map/hackrf-store';
 import { SignalAggregator } from '$lib/tactical-map/utils/signal-aggregator';
+import { logger } from '$lib/utils/logger';
 
 export class HackRFService {
 	private spectrumUnsubscribe: (() => void) | null = null;
@@ -52,7 +53,7 @@ export class HackRFService {
 		setTargetFrequency(frequency);
 		setSearchingState(true);
 		clearAllSignals();
-		console.warn(`Searching for signals near ${frequency} MHz`);
+		logger.warn('Searching for signals near target frequency', { frequency });
 	}
 
 	stopSearch(): void {

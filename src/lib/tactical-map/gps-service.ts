@@ -1,6 +1,7 @@
 import { GPSApiResponseSchema } from '$lib/schemas/rf';
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
+import { logger } from '$lib/utils/logger';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
@@ -18,7 +19,7 @@ export class GPSService {
 			const result = safeParseWithHandling(GPSApiResponseSchema, rawData, 'background');
 
 			if (!result) {
-				console.error('Invalid GPS API response');
+				logger.error('Invalid GPS API response');
 				updateGPSStatus({
 					hasGPSFix: false,
 					gpsStatus: 'GPS: Invalid Response',
@@ -75,7 +76,7 @@ export class GPSService {
 				});
 			}
 		} catch (error) {
-			console.error('GPS fetch error:', error);
+			logger.error('GPS fetch error', { error });
 			updateGPSStatus({
 				hasGPSFix: false,
 				gpsStatus: 'GPS: Error',

@@ -7,6 +7,7 @@ import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -57,7 +58,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		if (!acquireResult.success) {
 			// Check if the owning process is actually running — if not, force-release stale lock
 			const owner = acquireResult.owner || 'unknown';
-			console.warn(`[gsm-evil] HackRF held by "${owner}" — checking if still active...`);
+			logger.warn('[gsm-evil] HackRF held by owner — checking if still active', { owner });
 			try {
 				let gsmProc = '';
 				try {
@@ -70,9 +71,9 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 					/* no match */
 				}
 				if (!gsmProc.trim()) {
-					console.warn(
-						`[gsm-evil] No active GSM process found — releasing stale "${owner}" lock`
-					);
+					logger.warn('[gsm-evil] No active GSM process found — releasing stale lock', {
+						owner
+					});
 					await resourceManager.forceRelease(HardwareDevice.HACKRF);
 					acquireResult = await resourceManager.acquire(
 						'gsm-evil',
@@ -80,8 +81,8 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 					);
 				} else {
 					// Active processes — kill them first
-					console.warn(
-						'[gsm-evil] Found running GSM processes — killing them to free HackRF...'
+					logger.warn(
+						'[gsm-evil] Found running GSM processes — killing them to free HackRF'
 					);
 					try {
 						await execFileAsync('/usr/bin/sudo', [
@@ -105,7 +106,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 					);
 				}
 			} catch (_error: unknown) {
-				console.warn('[gsm-evil] Process check failed — forcing resource release');
+				logger.warn('[gsm-evil] Process check failed — forcing resource release');
 				await resourceManager.forceRelease(HardwareDevice.HACKRF);
 				acquireResult = await resourceManager.acquire('gsm-evil', HardwareDevice.HACKRF);
 			}
@@ -123,7 +124,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		const validatedFreq = validateNumericParam(frequency || '947.2', 'frequency', 800, 1000);
 		const freq = String(validatedFreq);
 		const gain = '40';
-		console.warn(`[gsm-evil] Starting on ${freq} MHz...`);
+		logger.info('[gsm-evil] Starting GSM Evil', { freq });
 
 		// 1. Kill existing processes (ignore errors - may not be running)
 		try {
@@ -133,16 +134,14 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 				'grgsm_livemon_headless'
 			]);
 		} catch (error: unknown) {
-			console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+			logger.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
 				error: String(error)
 			});
 		}
 		try {
 			await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'GsmEvil']);
 		} catch (error: unknown) {
-			console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
-				error: String(error)
-			});
+			logger.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', { error: String(error) });
 		}
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -169,7 +168,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		);
 		grgsmChild.unref();
 		const grgsmPid = grgsmChild.pid;
-		console.warn(`[gsm-evil] grgsm started (daemonized), PID: ${grgsmPid}`);
+		logger.info('[gsm-evil] grgsm started (daemonized)', { pid: grgsmPid });
 
 		// 3. Ensure GsmEvil_auto.py exists with sniffers enabled
 		try {
@@ -182,7 +181,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 				content = content.replace('gsm_sniffer = "off"', 'gsm_sniffer = "on"');
 				await writeFile(`${gsmDir}/GsmEvil_auto.py`, content);
 			} catch {
-				console.warn('[gsm-evil] GsmEvil_auto.py setup note');
+				logger.warn('[gsm-evil] GsmEvil_auto.py setup note');
 			}
 		}
 
@@ -209,7 +208,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 		evilChild.unref();
 		closeSync(logFd);
 		const evilPid = evilChild.pid;
-		console.warn(`[gsm-evil] GsmEvil2 started (daemonized), PID: ${evilPid}`);
+		logger.info('[gsm-evil] GsmEvil2 started (daemonized)', { pid: evilPid });
 
 		// 5. Wait for processes to initialize
 		await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -249,14 +248,14 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 			}
 			throw new Error(`GsmEvil2 failed to start. Log: ${logOut}`);
 		}
-		console.warn('[gsm-evil] Both processes verified running');
+		logger.info('[gsm-evil] Both processes verified running');
 
 		return {
 			success: true,
 			message: 'GSM Evil started successfully'
 		};
 	} catch (error: unknown) {
-		console.error('Start error:', error);
+		logger.error('[gsm-evil] Start error', { error: (error as Error).message });
 		return {
 			success: false,
 			message: 'Failed to start GSM Evil',
@@ -275,7 +274,7 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 	let stopResult: GsmEvilStopResult;
 	try {
-		console.warn('[gsm-evil] Stopping GSM Evil...');
+		logger.info('[gsm-evil] Stopping GSM Evil');
 
 		// Kill processes directly (same pattern as working scan endpoint)
 		try {
@@ -285,21 +284,19 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 				'grgsm_livemon_headless'
 			]);
 		} catch (error: unknown) {
-			console.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
+			logger.warn('[gsm-evil] Cleanup: pkill grgsm_livemon_headless failed', {
 				error: String(error)
 			});
 		}
 		try {
 			await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'GsmEvil']);
 		} catch (error: unknown) {
-			console.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', {
-				error: String(error)
-			});
+			logger.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', { error: String(error) });
 		}
 		try {
 			await execFileAsync('/usr/bin/sudo', ['/usr/bin/fuser', '-k', '8080/tcp']);
 		} catch (error: unknown) {
-			console.warn('[gsm-evil] Cleanup: fuser kill port 8080 failed', {
+			logger.warn('[gsm-evil] Cleanup: fuser kill port 8080 failed', {
 				error: String(error)
 			});
 		}
@@ -327,27 +324,27 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 					'grgsm_livemon_headless'
 				]);
 			} catch (error: unknown) {
-				console.warn('[gsm-evil] Cleanup: pkill -9 grgsm_livemon_headless failed', {
+				logger.warn('[gsm-evil] Cleanup: pkill -9 grgsm_livemon_headless failed', {
 					error: String(error)
 				});
 			}
 			try {
 				await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-9', '-f', 'GsmEvil']);
 			} catch (error: unknown) {
-				console.warn('[gsm-evil] Cleanup: pkill -9 GsmEvil failed', {
+				logger.warn('[gsm-evil] Cleanup: pkill -9 GsmEvil failed', {
 					error: String(error)
 				});
 			}
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		}
 
-		console.warn('[gsm-evil] Processes stopped');
+		logger.info('[gsm-evil] Processes stopped');
 		stopResult = {
 			success: true,
 			message: 'GSM Evil stopped successfully'
 		};
 	} catch (error: unknown) {
-		console.error('Stop error:', error);
+		logger.error('[gsm-evil] Stop error', { error: (error as Error).message });
 
 		if (
 			// Safe: Error object cast to check for optional signal property (timeout detection)
@@ -374,7 +371,7 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 		// ALWAYS release HackRF — the stop was requested, so release the lock
 		// even if cleanup was partial. This prevents deadlocks.
 		await resourceManager.release('gsm-evil', HardwareDevice.HACKRF).catch((error: unknown) => {
-			console.warn('[gsm-evil] Graceful resource release failed, forcing.', {
+			logger.warn('[gsm-evil] Graceful resource release failed, forcing', {
 				error: String(error)
 			});
 			// If release fails (e.g., not owner), force-release as last resort

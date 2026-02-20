@@ -10,6 +10,7 @@ import type {
 	HardwareScanResult
 } from '$lib/server/hardware/detection-types';
 import { globalHardwareRegistry } from '$lib/server/hardware/hardware-registry';
+import { logger } from '$lib/utils/logger';
 
 import { detectNetworkDevices } from './network-detector';
 import { detectSerialDevices } from './serial-detector';
@@ -19,7 +20,7 @@ import { detectUSBDevices } from './usb-detector';
  * Scan system for all hardware
  */
 export async function scanAllHardware(): Promise<HardwareScanResult> {
-	console.warn('[HardwareDetector] Starting comprehensive hardware scan...');
+	logger.info('[HardwareDetector] Starting comprehensive hardware scan...');
 	const startTime = Date.now();
 
 	// Run all detectors in parallel
@@ -36,7 +37,7 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 		if (result.status === 'fulfilled') {
 			allHardware.push(...result.value);
 		} else {
-			console.error('[HardwareDetector] Detection error:', result.reason);
+			logger.error('[HardwareDetector] Detection error', { reason: String(result.reason) });
 		}
 	}
 
@@ -93,9 +94,16 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 	};
 
 	const duration = Date.now() - startTime;
-	console.warn(
-		`[HardwareDetector] Scan complete in ${duration}ms: ${scanResult.stats.total} total, ${scanResult.stats.connected} connected, SDR=${byCategory.sdr} WiFi=${byCategory.wifi} BT=${byCategory.bluetooth} GPS=${byCategory.gps} Cell=${byCategory.cellular}`
-	);
+	logger.info('[HardwareDetector] Scan complete', {
+		duration,
+		total: scanResult.stats.total,
+		connected: scanResult.stats.connected,
+		sdr: byCategory.sdr,
+		wifi: byCategory.wifi,
+		bluetooth: byCategory.bluetooth,
+		gps: byCategory.gps,
+		cellular: byCategory.cellular
+	});
 
 	return scanResult;
 }
@@ -155,22 +163,26 @@ export class HardwareMonitor {
 	 */
 	start(intervalMs: number = 30000): void {
 		if (this.running) {
-			console.warn('[HardwareMonitor] Already running');
+			logger.warn('[HardwareMonitor] Already running');
 			return;
 		}
 
-		console.warn(`[HardwareMonitor] Starting (interval: ${intervalMs}ms)`);
+		logger.info('[HardwareMonitor] Starting', { intervalMs });
 		this.running = true;
 
 		// Initial scan
 		scanAllHardware().catch((error) => {
-			console.error('[HardwareMonitor] Initial scan failed:', error);
+			logger.error('[HardwareMonitor] Initial scan failed', { error: String(error) });
 		});
 
 		// Periodic scans
 		this.interval = setInterval(() => {
 			scanAllHardware().catch((error) => {
-				console.error('[HardwareMonitor] Scan failed:', error);
+				logger.error(
+					'[HardwareMonitor] Scan failed',
+					{ error: String(error) },
+					'hw-monitor-scan'
+				);
 			});
 		}, intervalMs);
 	}
@@ -183,7 +195,7 @@ export class HardwareMonitor {
 			return;
 		}
 
-		console.warn('[HardwareMonitor] Stopping');
+		logger.info('[HardwareMonitor] Stopping');
 		this.running = false;
 
 		if (this.interval) {

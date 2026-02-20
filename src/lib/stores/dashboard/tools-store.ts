@@ -3,11 +3,12 @@
  * Manages navigation state, expanded categories, and tool runtime status
  */
 
-import { derived,writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
-import { findByPath,toolHierarchy } from '$lib/data/tool-hierarchy';
+import { findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
 import type { ToolStatus } from '$lib/types/tools';
+import { logger } from '$lib/utils/logger';
 
 // Validate stored path against current hierarchy (handles structure changes)
 function getValidatedPath(): string[] {
@@ -16,10 +17,9 @@ function getValidatedPath(): string[] {
 	try {
 		stored = JSON.parse(localStorage.getItem('toolNavigationPath') || '[]');
 	} catch (error) {
-		console.warn(
-			'[toolsStore] Corrupted toolNavigationPath in localStorage, using default',
+		logger.warn('[toolsStore] Corrupted toolNavigationPath in localStorage, using default', {
 			error
-		);
+		});
 		localStorage.removeItem('toolNavigationPath');
 		return [];
 	}
@@ -41,10 +41,9 @@ function getExpandedCategories(): Set<string> {
 	try {
 		return new Set(JSON.parse(localStorage.getItem('expandedCategories') || '[]'));
 	} catch (error) {
-		console.warn(
-			'[toolsStore] Corrupted expandedCategories in localStorage, using default',
+		logger.warn('[toolsStore] Corrupted expandedCategories in localStorage, using default', {
 			error
-		);
+		});
 		localStorage.removeItem('expandedCategories');
 		return new Set();
 	}

@@ -9,6 +9,8 @@ config();
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
+import { logger } from '$lib/utils/logger';
+
 import type { MCPConfiguration, MCPServerDefinition } from './types';
 
 /**
@@ -127,7 +129,7 @@ export async function generateContextBConfig(): Promise<MCPConfiguration> {
  */
 async function writeMCPConfig(mcpConfig: MCPConfiguration, path: string): Promise<void> {
 	await writeFile(path, JSON.stringify(mcpConfig, null, '\t') + '\n', 'utf-8');
-	console.warn(`[MCP Config] Written to: ${path}`);
+	logger.info('MCP config written', { path });
 }
 
 /**
@@ -178,10 +180,10 @@ export async function updateExistingConfig(configPath: string): Promise<void> {
 		// Write back
 		await writeMCPConfig(existingConfig, configPath);
 
-		console.warn('[MCP Config] Updated existing configuration with all Argos MCP servers');
+		logger.info('MCP config updated with all Argos MCP servers');
 	} catch (_error) {
 		// If file doesn't exist, create new one
-		console.warn('[MCP Config] Creating new configuration');
+		logger.info('MCP config creating new configuration');
 		const config = await generateContextBConfig();
 		await writeMCPConfig(config, configPath);
 	}

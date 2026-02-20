@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 
-import { logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -30,7 +30,7 @@ export async function isKismetRunning(): Promise<boolean> {
 		return stdout.trim().length > 0;
 	} catch (error: unknown) {
 		const msg = error instanceof Error ? error.message : String(error);
-		logWarn('[Kismet] Process check failed', { error: msg });
+		logger.warn('[Kismet] Process check failed', { error: msg });
 		return false;
 	}
 }
@@ -51,7 +51,7 @@ async function waitForKismetReady(maxAttempts = 15): Promise<boolean> {
 			}
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
-			logWarn('[Kismet] Readiness check failed', { error: msg });
+			logger.warn('[Kismet] Readiness check failed', { error: msg });
 		}
 		// Wait 1 second before next attempt
 		await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -66,11 +66,11 @@ async function startWithScript(): Promise<{ success: boolean; stderr?: string }>
 	const scriptPath = path.join(process.cwd(), 'scripts', 'dev', 'start-kismet-with-alfa.sh');
 
 	if (!fs.existsSync(scriptPath)) {
-		console.warn('Kismet startup script not found at:', scriptPath);
+		logger.warn('[Kismet] Startup script not found', { scriptPath });
 		return { success: false };
 	}
 
-	console.warn('Executing Kismet startup script...');
+	logger.info('[Kismet] Executing startup script');
 
 	try {
 		// Spawn detached process — replaces nohup/shell backgrounding
@@ -85,7 +85,9 @@ async function startWithScript(): Promise<{ success: boolean; stderr?: string }>
 
 		return { success: true };
 	} catch (error) {
-		console.error('Script execution failed:', error);
+		logger.error('[Kismet] Script execution failed', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return { success: false };
 	}
 }
@@ -94,7 +96,7 @@ async function startWithScript(): Promise<{ success: boolean; stderr?: string }>
  * Start Kismet directly (fallback when script not found)
  */
 async function startDirect(): Promise<boolean> {
-	console.warn('Attempting direct Kismet startup...');
+	logger.info('[Kismet] Attempting direct startup');
 
 	try {
 		// Spawn detached Kismet process — replaces nohup/shell backgrounding
@@ -112,7 +114,9 @@ async function startDirect(): Promise<boolean> {
 		// Check if it started
 		return await isKismetRunning();
 	} catch (error) {
-		console.error('Direct Kismet startup failed:', error);
+		logger.error('[Kismet] Direct startup failed', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return false;
 	}
 }
@@ -148,11 +152,11 @@ async function detectInterface(): Promise<string> {
  * @returns Result object with status and data
  */
 export async function startKismet(): Promise<KismetStartResult> {
-	console.warn('Starting Kismet WiFi discovery...');
+	logger.info('[Kismet] Starting WiFi discovery');
 
 	// Check if already running
 	if (await isKismetRunning()) {
-		console.warn('Kismet is already running');
+		logger.info('[Kismet] Already running');
 		return {
 			success: true,
 			status: 'already_running',
@@ -196,13 +200,13 @@ export async function startKismet(): Promise<KismetStartResult> {
 	}
 
 	// Script executed - wait for Kismet to be ready
-	console.warn('Waiting for Kismet to initialize...');
+	logger.info('[Kismet] Waiting for initialization');
 	const isReady = await waitForKismetReady();
 
 	if (!isReady) {
 		// Check if Kismet is at least running
 		if (await isKismetRunning()) {
-			console.warn('Kismet is running but may still be initializing');
+			logger.info('[Kismet] Running but may still be initializing');
 			return {
 				success: true,
 				status: 'starting',
@@ -217,7 +221,7 @@ export async function startKismet(): Promise<KismetStartResult> {
 		}
 
 		// Not running at all
-		console.error('Kismet failed to start - check /tmp/kismet-start.log');
+		logger.error('[Kismet] Failed to start - check /tmp/kismet-start.log');
 		return {
 			success: false,
 			status: 'failed',
@@ -227,7 +231,7 @@ export async function startKismet(): Promise<KismetStartResult> {
 	}
 
 	// Kismet is ready!
-	console.warn('Kismet started successfully');
+	logger.info('[Kismet] Started successfully');
 
 	const detectedInterface = await detectInterface();
 

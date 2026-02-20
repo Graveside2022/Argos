@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { json } from '@sveltejs/kit';
 
 import { CertManager } from '$lib/server/tak/CertManager';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -74,7 +75,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (err instanceof Error && err.name === 'InputValidationError') {
 			return json({ success: false, error: err.message }, { status: 400 });
 		}
-		console.error('Failed to process truststore:', err);
+		logger.error('Failed to process truststore', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

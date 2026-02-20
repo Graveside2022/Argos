@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -16,7 +17,7 @@ export const GET: RequestHandler = async () => {
 			grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']);
 		} catch (error: unknown) {
 			// pgrep exits 1 when no processes match — not a real error
-			console.warn('[gsm-evil-live-frames] GRGSM process check failed', {
+			logger.warn('[gsm-evil-live-frames] GRGSM process check failed', {
 				error: String(error)
 			});
 			grgsm = { stdout: '' };
@@ -60,7 +61,7 @@ export const GET: RequestHandler = async () => {
 			timestamp: new Date().toISOString()
 		});
 	} catch (error: unknown) {
-		console.error('Live frame capture error:', error);
+		logger.error('Live frame capture error', { error: (error as Error).message });
 		return json({
 			success: false,
 			frames: [],

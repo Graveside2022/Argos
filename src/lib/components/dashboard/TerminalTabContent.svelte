@@ -5,6 +5,7 @@
 	import { browser } from '$app/environment';
 	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { logger } from '$lib/utils/logger';
 	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	interface Props {
@@ -65,7 +66,7 @@
 
 		sock.onopen = () => {
 			connectionError = false;
-			console.warn(`[Terminal ${sessionId}] WebSocket connected, sending init`);
+			logger.info('Terminal WebSocket connected, sending init', { sessionId });
 			sock.send(JSON.stringify({ type: 'init', shell, sessionId }));
 		};
 
@@ -74,7 +75,7 @@
 				try {
 					const msg = JSON.parse(e.data);
 					if (msg.type === 'ready') {
-						console.warn(`[Terminal ${sessionId}] New PTY session spawned`);
+						logger.info('New PTY session spawned', { sessionId });
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';
@@ -94,7 +95,7 @@
 						return;
 					}
 					if (msg.type === 'reattached') {
-						console.warn(`[Terminal ${sessionId}] PTY session reattached successfully`);
+						logger.info('PTY session reattached successfully', { sessionId });
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';
@@ -137,14 +138,18 @@
 			// Retry with exponential backoff if we never connected successfully
 			if (!destroyed && attempt < WS_MAX_RETRIES && !connectionError) {
 				const delay = WS_BASE_DELAY_MS * Math.pow(2, attempt);
-				console.warn(
-					`[Terminal ${sessionId}] Connection failed, retry ${attempt + 1}/${WS_MAX_RETRIES} in ${delay}ms`
-				);
+				logger.warn('Terminal connection failed, retrying', {
+					sessionId,
+					attempt: attempt + 1,
+					maxRetries: WS_MAX_RETRIES,
+					delayMs: delay
+				});
 				wsRetryTimer = setTimeout(() => connectWebSocket(attempt + 1), delay);
 			} else if (!destroyed && attempt >= WS_MAX_RETRIES) {
-				console.warn(
-					`[Terminal ${sessionId}] All ${WS_MAX_RETRIES} retries exhausted, showing error`
-				);
+				logger.warn('Terminal retries exhausted, showing error', {
+					sessionId,
+					maxRetries: WS_MAX_RETRIES
+				});
 				connectionError = true;
 			}
 		};

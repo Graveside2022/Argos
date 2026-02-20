@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import * as alfaMgr from './alfa-manager';
 import * as hackrfMgr from './hackrf-manager';
@@ -37,7 +37,7 @@ class ResourceManager extends EventEmitter {
 			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
 			if (hackrfProcesses.length > 0) {
 				const owner = hackrfProcesses[0].name;
-				console.warn(`[ResourceManager] Orphan scan: HackRF process found: ${owner}`);
+				logger.info('[ResourceManager] Orphan scan: HackRF process found', { owner });
 				this.state.set(HardwareDevice.HACKRF, {
 					device: HardwareDevice.HACKRF,
 					available: false,
@@ -47,9 +47,10 @@ class ResourceManager extends EventEmitter {
 				});
 			} else {
 				const detected = await hackrfMgr.detectHackRF();
-				console.warn(
-					`[ResourceManager] Orphan scan: HackRF detected=${detected}, no blocking processes`
-				);
+				logger.info('[ResourceManager] Orphan scan: HackRF status', {
+					detected,
+					blockingProcesses: 0
+				});
 				const current = this.state.get(HardwareDevice.HACKRF);
 				if (current) {
 					current.detected = detected;
@@ -61,9 +62,9 @@ class ResourceManager extends EventEmitter {
 			const containers = await hackrfMgr.getContainerStatus(true);
 			for (const c of containers) {
 				if (c.running) {
-					console.warn(
-						`[ResourceManager] Orphan scan: HackRF tool container running: ${c.name}`
-					);
+					logger.info('[ResourceManager] Orphan scan: HackRF tool container running', {
+						container: c.name
+					});
 					this.state.set(HardwareDevice.HACKRF, {
 						device: HardwareDevice.HACKRF,
 						available: false,
@@ -79,9 +80,9 @@ class ResourceManager extends EventEmitter {
 			const alfaIface = await alfaMgr.detectAdapter();
 			const alfaProcesses = await alfaMgr.getBlockingProcesses();
 			if (alfaProcesses.length > 0) {
-				console.warn(
-					`[ResourceManager] Orphan scan: ALFA process found: ${alfaProcesses[0].name}`
-				);
+				logger.info('[ResourceManager] Orphan scan: ALFA process found', {
+					process: alfaProcesses[0].name
+				});
 				this.state.set(HardwareDevice.ALFA, {
 					device: HardwareDevice.ALFA,
 					available: false,
@@ -90,9 +91,10 @@ class ResourceManager extends EventEmitter {
 					detected: !!alfaIface
 				});
 			} else {
-				console.warn(
-					`[ResourceManager] Orphan scan: ALFA detected=${!!alfaIface}, no blocking processes`
-				);
+				logger.info('[ResourceManager] Orphan scan: ALFA status', {
+					detected: !!alfaIface,
+					blockingProcesses: 0
+				});
 				const current = this.state.get(HardwareDevice.ALFA);
 				if (current) {
 					current.detected = !!alfaIface;
@@ -100,9 +102,9 @@ class ResourceManager extends EventEmitter {
 				}
 			}
 
-			console.warn('[ResourceManager] Orphan scan complete');
+			logger.info('[ResourceManager] Orphan scan complete');
 		} catch (error) {
-			console.error('[ResourceManager] Orphan scan failed:', error);
+			logger.error('[ResourceManager] Orphan scan failed', { error: String(error) });
 		}
 	}
 
@@ -154,7 +156,7 @@ class ResourceManager extends EventEmitter {
 			this.state.set(HardwareDevice.ALFA, alfaCurrent);
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
-			logWarn(
+			logger.warn(
 				'[ResourceManager] Hardware detection refresh failed',
 				{ error: msg, operation: 'hardware.detect' },
 				'resource-detect'

@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
 
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
@@ -59,7 +60,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			db.close();
 		}
 	} catch (err: unknown) {
-		console.error('Error cleaning up signals:', err);
+		logger.error('Error cleaning up signals', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return error(500, 'Failed to clean up signals');
 	}
 };

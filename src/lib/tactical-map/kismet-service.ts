@@ -8,6 +8,7 @@ import {
 	setKismetStatus,
 	updateDistributions
 } from '$lib/stores/tactical-map/kismet-store';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 export interface KismetDevicesResponse {
@@ -42,7 +43,7 @@ export class KismetService {
 					'background'
 				);
 				if (!data) {
-					console.error('Invalid Kismet status response');
+					logger.error('Invalid Kismet status response');
 					return;
 				}
 
@@ -60,7 +61,7 @@ export class KismetService {
 				}
 			}
 		} catch (error) {
-			console.error('Error checking Kismet status:', error);
+			logger.error('Error checking Kismet status', { error });
 		}
 	}
 
@@ -95,7 +96,7 @@ export class KismetService {
 				throw new Error(`Failed to start Kismet: ${errorText}`);
 			}
 		} catch (error: unknown) {
-			console.error('Error starting Kismet:', error);
+			logger.error('Error starting Kismet', { error });
 			setKismetStatus('stopped');
 		}
 	}
@@ -133,7 +134,7 @@ export class KismetService {
 				throw new Error(data?.message || 'Failed to stop Kismet');
 			}
 		} catch (error: unknown) {
-			console.error('Error stopping Kismet:', error);
+			logger.error('Error stopping Kismet', { error });
 			setKismetStatus('running');
 		}
 	}
@@ -167,7 +168,7 @@ export class KismetService {
 					'background'
 				);
 				if (!data || !data.devices) {
-					console.error('Invalid Kismet devices response');
+					logger.error('Invalid Kismet devices response');
 					return [];
 				}
 				const devices = data.devices as unknown as KismetDevice[];
@@ -197,7 +198,7 @@ export class KismetService {
 				return devices;
 			}
 		} catch (error) {
-			console.error('Error fetching Kismet devices:', error);
+			logger.error('Error fetching Kismet devices', { error });
 		}
 
 		return [];

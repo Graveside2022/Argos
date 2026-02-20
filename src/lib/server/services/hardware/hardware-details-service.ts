@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { safeJsonParse } from '$lib/server/security/safe-json';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -295,7 +296,7 @@ async function getGpsDetails(): Promise<GpsDetails | null> {
 	for (const line of gpsdOutput.trim().split('\n')) {
 		const result = safeJsonParse(line, GpsdDeviceMessageSchema, 'hardware-details-gpsd');
 		if (!result.success) {
-			console.warn('[hardware-details] Malformed gpsd data, skipping line');
+			logger.warn('[hardware-details] Malformed gpsd data, skipping line');
 			continue;
 		}
 

@@ -12,6 +12,7 @@
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import type { FrequencyTestResult } from '$lib/types/gsm';
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
+	import { logger } from '$lib/utils/logger';
 
 	let imsiCaptureActive = false;
 	let imsiPollInterval: ReturnType<typeof setInterval>;
@@ -122,7 +123,7 @@
 				return data;
 			}
 		} catch (error) {
-			console.error('Failed to fetch tower location:', error);
+			logger.error('Failed to fetch tower location', { error });
 		}
 		return null;
 	}
@@ -151,13 +152,13 @@
 
 				if (!response.ok || !data.success) {
 					const errorMsg = data.message || data.error || 'Unknown error';
-					console.error('[GSM] Stop failed:', errorMsg);
+					logger.error('[GSM] Stop failed', { errorMsg });
 					// Show error but still clear UI state
 					errorDialogMessage = `Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`;
 					errorDialogOpen = true;
 				}
 			} catch (error: unknown) {
-				console.error('[GSM] Stop request failed:', error);
+				logger.error('[GSM] Stop request failed', { error });
 				errorDialogMessage =
 					'Failed to communicate with server. Processes may still be running.';
 				errorDialogOpen = true;
@@ -205,7 +206,7 @@
 				gsmEvilStore.completeScan();
 			}
 		} catch (error) {
-			console.error('[GSM] Status check failed:', error);
+			logger.error('[GSM] Status check failed', { error });
 			// Status check failed — page starts in default stopped state
 		}
 	});
@@ -242,10 +243,10 @@
 				checkActivity();
 				fetchRealFrames();
 			} else {
-				console.error('[GSM] Failed to start IMSI capture:', data.message);
+				logger.error('[GSM] Failed to start IMSI capture', { message: data.message });
 			}
 		} catch (error) {
-			console.error('[GSM] Error starting IMSI capture:', error);
+			logger.error('[GSM] Error starting IMSI capture', { error });
 		}
 	}
 
@@ -389,7 +390,7 @@
 								}
 							}
 						} catch (e) {
-							console.error('Error parsing SSE data:', e);
+							logger.error('Error parsing SSE data', { error: e });
 						}
 					}
 				}
@@ -401,7 +402,7 @@
 				gsmEvilStore.setScanStatus('Scan stopped');
 			} else {
 				// Real error - differentiate between network and process errors
-				console.error('Scan failed:', error);
+				logger.error('Scan failed', { error });
 				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
 				if (
@@ -454,12 +455,15 @@
 					// No frames in this polling batch
 				}
 			} else if (response.status === 401) {
-				console.error('[GSM Frames] Authentication failed - session may have expired');
+				logger.error('[GSM Frames] Authentication failed - session may have expired');
 			} else {
-				console.error('[GSM Frames] API error:', response.status, response.statusText);
+				logger.error('[GSM Frames] API error', {
+					status: response.status,
+					statusText: response.statusText
+				});
 			}
 		} catch (error) {
-			console.error('[GSM Frames] Failed to fetch:', error);
+			logger.error('[GSM Frames] Failed to fetch', { error });
 		}
 	}
 
@@ -477,7 +481,7 @@
 				};
 			}
 		} catch (error) {
-			console.error('Failed to check activity:', error);
+			logger.error('Failed to check activity', { error });
 		}
 	}
 
@@ -491,7 +495,7 @@
 				}
 			}
 		} catch (error) {
-			console.error('Failed to fetch IMSIs:', error);
+			logger.error('Failed to fetch IMSIs', { error });
 		}
 	}
 </script>

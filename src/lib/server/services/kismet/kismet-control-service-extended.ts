@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { promisify } from 'util';
 
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -39,12 +40,12 @@ async function pgrepKismet(): Promise<string> {
  */
 export async function startKismetExtended(): Promise<KismetControlResult> {
 	try {
-		console.warn('[kismet] Starting Kismet...');
+		logger.info('[kismet] Starting Kismet');
 
 		// Check if Kismet is already running
 		const existingPids = await pgrepKismet();
 		if (existingPids) {
-			console.warn('[kismet] Already running, PID:', existingPids);
+			logger.info('[kismet] Already running', { pid: existingPids });
 			return {
 				success: true,
 				message: 'Kismet is already running',
@@ -78,7 +79,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		}
 
 		if (!alfaInterface) {
-			console.warn('[kismet] No external WiFi adapter found');
+			logger.warn('[kismet] No external WiFi adapter found');
 			return {
 				success: false,
 				message:
@@ -87,7 +88,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			};
 		}
 
-		console.warn(`[kismet] Using interface: ${alfaInterface}`);
+		logger.info('[kismet] Using interface', { interface: alfaInterface });
 
 		// Clean up stale monitor interfaces
 		try {
@@ -115,7 +116,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			],
 			{ timeout: 15000, cwd: homedir() }
 		);
-		console.warn(`[kismet] Start command issued as ${kismetUser} user`);
+		logger.info('[kismet] Start command issued', { user: kismetUser });
 
 		// Wait for Kismet to initialize (needs time to bind port and set up capture)
 		await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -151,14 +152,14 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		} catch {
 			/* process gone */
 		}
-		console.warn(`[kismet] Running as user: ${userCheck}, PID: ${validPid}`);
+		logger.info('[kismet] Running', { user: userCheck, pid: validPid });
 
 		// Set up auth credentials if this is a first-time start
 		try {
 			const kismetAuthUser = process.env.KISMET_USER || 'admin';
 			const kismetPass = process.env.KISMET_PASSWORD;
 			if (!kismetPass) {
-				console.warn('[kismet] KISMET_PASSWORD not set, skipping initial credential setup');
+				logger.warn('[kismet] KISMET_PASSWORD not set, skipping initial credential setup');
 			} else {
 				const response = await fetch('http://localhost:2501/session/set_password', {
 					method: 'POST',
@@ -168,7 +169,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 				});
 				const authCheck = await response.text();
 				if (authCheck.includes('Login configured')) {
-					console.warn('[kismet] Initial credentials set');
+					logger.info('[kismet] Initial credentials set');
 				}
 			}
 		} catch {
@@ -182,7 +183,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 			pid: validPid
 		};
 	} catch (error: unknown) {
-		console.error('[kismet] Start error:', error);
+		logger.error('[kismet] Start error', { error: (error as Error).message });
 		return {
 			success: false,
 			message: 'Failed to start Kismet',
@@ -199,7 +200,7 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
  */
 export async function stopKismetExtended(): Promise<KismetControlResult> {
 	try {
-		console.warn('[kismet] Stopping Kismet...');
+		logger.info('[kismet] Stopping Kismet');
 
 		// Check if Kismet is running at all
 		const pids = await pgrepKismet();
@@ -228,7 +229,7 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 		// Force kill any remaining processes not managed by systemd
 		const remaining = await pgrepKismet();
 		if (remaining) {
-			console.warn('[kismet] Processes remain after systemctl stop, force killing...');
+			logger.warn('[kismet] Processes remain after systemctl stop, force killing');
 			try {
 				await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-x', '-9', 'kismet']);
 			} catch {
@@ -247,7 +248,7 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 			};
 		}
 
-		console.warn('[kismet] Stopped successfully');
+		logger.info('[kismet] Stopped successfully');
 		return {
 			success: true,
 			message: 'Kismet stopped successfully',

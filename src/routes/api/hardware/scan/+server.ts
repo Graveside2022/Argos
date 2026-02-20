@@ -6,6 +6,7 @@
 import { json } from '@sveltejs/kit';
 
 import { scanAllHardware } from '$lib/server/hardware/detection/hardware-detector';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -15,7 +16,7 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async () => {
 	try {
-		console.warn('[API /hardware/scan] Scanning system hardware...');
+		logger.info('Scanning system hardware', { endpoint: '/api/hardware/scan' });
 
 		const scanResult = await scanAllHardware();
 
@@ -47,7 +48,10 @@ export const GET: RequestHandler = async () => {
 			timestamp: scanResult.timestamp
 		});
 	} catch (error) {
-		console.error('[API /hardware/scan] Error:', error);
+		logger.error('Hardware scan error', {
+			endpoint: '/api/hardware/scan',
+			error: error instanceof Error ? error.message : String(error)
+		});
 
 		return json(
 			{

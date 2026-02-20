@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { CertManager } from '$lib/server/tak/CertManager';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -82,7 +83,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (err instanceof Error && err.name === 'InputValidationError') {
 			return json({ success: false, error: err.message }, { status: 400 });
 		}
-		console.error('Enrollment failed:', err);
+		logger.error('Enrollment failed', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

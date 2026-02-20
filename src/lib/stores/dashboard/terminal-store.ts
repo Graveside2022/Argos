@@ -7,6 +7,7 @@ import { derived, get, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
 import type { TerminalPanelState, TerminalSession } from '$lib/types/terminal';
+import { logger } from '$lib/utils/logger';
 
 import { activeBottomTab, closeBottomPanel, setBottomPanelHeight } from './dashboard-store';
 
@@ -40,9 +41,9 @@ function getInitialState(): TerminalPanelState {
 			// If we have restored sessions, auto-open the terminal panel
 			const hasRestorableSessions = restoredSessions.length > 0;
 			if (hasRestorableSessions) {
-				console.warn(
-					`[Terminal] Restoring ${restoredSessions.length} session(s), auto-opening panel`
-				);
+				logger.info('Restoring terminal sessions, auto-opening panel', {
+					sessionCount: restoredSessions.length
+				});
 				// Set activeBottomTab to 'terminal' to auto-open the panel
 				setTimeout(() => activeBottomTab.set('terminal'), 0);
 			}

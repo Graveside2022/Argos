@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { DatabaseCleanupService } from '$lib/server/db/cleanup-service';
 import { getRFDatabase } from '$lib/server/db/database';
 import { DatabaseOptimizer } from '$lib/server/db/db-optimizer';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -161,7 +162,9 @@ export const GET: RequestHandler = ({ url }) => {
 				);
 		}
 	} catch (error: unknown) {
-		console.error('Database cleanup error:', error);
+		logger.error('Database cleanup error', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				success: false,
@@ -218,7 +221,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 	} catch (error: unknown) {
-		console.error('Database cleanup error:', error);
+		logger.error('Database cleanup error', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				success: false,

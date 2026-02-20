@@ -142,7 +142,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				rawData = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in sweep_data event', error);
+				logWarn('[HackRFAPI] Invalid JSON in sweep_data event', { error });
 				return;
 			}
 			this.lastDataTimestamp = Date.now();
@@ -194,7 +194,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				status = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in status event', error);
+				logWarn('[HackRFAPI] Invalid JSON in status event', { error });
 				return;
 			}
 			logDebug('[EventSource] Status event received:', { status });
@@ -234,7 +234,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				config = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in cycle_config event', error);
+				logWarn('[HackRFAPI] Invalid JSON in cycle_config event', { error });
 				return;
 			}
 			updateCycleStatus({
@@ -252,7 +252,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				change = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in status_change event', error);
+				logWarn('[HackRFAPI] Invalid JSON in status_change event', { error });
 				return;
 			}
 			logDebug('[EventSource] Status change event:', { change });
@@ -276,7 +276,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				_data = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in heartbeat event', error);
+				logWarn('[HackRFAPI] Invalid JSON in heartbeat event', { error });
 				return;
 			}
 			logDebug('[HackRFAPI] Heartbeat received:', {
@@ -296,7 +296,7 @@ export class HackRFAPI {
 				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
 				recoveryData = JSON.parse(event.data as string);
 			} catch (error) {
-				console.warn('[HackRFAPI] Invalid JSON in recovery_start event', error);
+				logWarn('[HackRFAPI] Invalid JSON in recovery_start event', { error });
 				return;
 			}
 			updateConnectionStatus({

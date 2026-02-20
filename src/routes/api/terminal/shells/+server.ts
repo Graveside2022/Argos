@@ -8,6 +8,7 @@ import { access, constants } from 'fs/promises';
 import path from 'path';
 
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -99,7 +100,10 @@ export const GET: RequestHandler = async () => {
 
 		return json(response);
 	} catch (error) {
-		console.error('[terminal/shells] Error detecting shells:', error);
+		logger.error('Error detecting shells', {
+			endpoint: 'terminal/shells',
+			error: error instanceof Error ? error.message : String(error)
+		});
 
 		// Return at least zsh as fallback
 		return json({

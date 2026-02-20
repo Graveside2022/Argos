@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetService } from '$lib/server/services/kismet.service';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -129,7 +130,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		const response = await KismetService.getDevices(fetch);
 		return json(response);
 	} catch (error: unknown) {
-		console.error('Error in Kismet devices endpoint:', error);
+		logger.error('Error in Kismet devices endpoint', { error: (error as Error).message });
 
 		// Fallback to existing service implementation on error
 		try {

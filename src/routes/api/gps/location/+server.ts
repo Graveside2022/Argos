@@ -1,5 +1,7 @@
 import { error } from '@sveltejs/kit';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 /**
@@ -66,7 +68,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		);
 	} catch (err) {
-		console.error('Reverse geocoding error:', err);
+		logger.error('Reverse geocoding error', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		throw error(500, 'Failed to fetch location data');
 	}
 };

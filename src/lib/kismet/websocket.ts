@@ -10,6 +10,7 @@ import type {
 } from '$lib/kismet/types';
 import { updateKismetConnection } from '$lib/stores/connection';
 import { KismetEvent } from '$lib/types/enums';
+import { logger } from '$lib/utils/logger';
 import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/websocket/base';
 
 export type KismetWebSocketConfig = BaseWebSocketConfig;
@@ -124,7 +125,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	protected onError(error: Error): void {
-		console.error('[Kismet] WebSocket error:', error);
+		logger.error('[Kismet] WebSocket error', { error });
 
 		updateKismetConnection({
 			error: error.message,
@@ -381,7 +382,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	private handleError(error: unknown): void {
-		console.error('[Kismet] Server error:', error);
+		logger.error('[Kismet] Server error', { error });
 
 		const errorMessage =
 			error && typeof error === 'object' && 'message' in error
