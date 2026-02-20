@@ -202,7 +202,7 @@
 				<span class="text-[10px] font-semibold tracking-widest text-muted-foreground"
 					>AUTHENTICATION</span
 				>
-				<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — No RadioGroup component installed; native radio with bind:group is idiomatic Svelte -->
+				<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — No RadioGroup component installed; native radio with bind:group is idiomatic Svelte -->
 				<div class="flex flex-col gap-1.5">
 					<label
 						class="flex cursor-pointer flex-row items-center gap-1.5 text-xs font-medium text-foreground"

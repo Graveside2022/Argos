@@ -387,7 +387,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		const errorMessage =
 			error && typeof error === 'object' && 'message' in error
 				? // Safe: 'message' in error check on line above guarantees property exists
-					// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket error type narrowing — error event has message property
+					// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket error type narrowing — error event has message property
 					(error as { message: string }).message
 				: 'Unknown server error';
 

@@ -1,5 +1,5 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
-<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import Button from '$lib/components/ui/button/button.svelte';
 
@@ -48,7 +48,7 @@
 
 <div class="tool-card" class:isRunning class:not-installed={!isInstalled}>
 	<div class="tool-header">
-		<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
+		<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="tool-icon">
 			{@html icon}
 		</div>

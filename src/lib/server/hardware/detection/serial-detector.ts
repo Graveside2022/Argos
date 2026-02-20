@@ -95,7 +95,7 @@ async function detectGPSModules(): Promise<DetectedHardware[]> {
 					capabilities: {
 						device: '/var/run/gpsd.sock',
 						protocol: 'GPSD'
-						// @constitutional-exemption Article-II-2.1 issue:#999 — GPS capabilities type narrowing
+						// @constitutional-exemption Article-II-2.1 issue:#14 — GPS capabilities type narrowing
 						// Safe: Object literal satisfies GPSCapabilities — all required fields provided
 					} as GPSCapabilities,
 					lastSeen: Date.now(),

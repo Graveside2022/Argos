@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -788,7 +788,7 @@
 			<Marker lnglat={gpsLngLat} anchor="center">
 				{#snippet content()}
 					<div class="heading-cone">
-						<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — buildConeSVG() returns hardcoded SVG string from numeric heading, no user input -->
+						<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — buildConeSVG() returns hardcoded SVG string from numeric heading, no user input -->
 						{@html buildConeSVG(headingDeg)}
 					</div>
 				{/snippet}

@@ -1,5 +1,5 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
-<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Band filter chips, back button, and whitelist remove use custom 24x20px sizing incompatible with shadcn Button -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Band filter chips, back button, and whitelist remove use custom 24x20px sizing incompatible with shadcn Button -->
 <script lang="ts">
 	import { getContext } from 'svelte';
 

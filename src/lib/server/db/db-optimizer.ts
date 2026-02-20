@@ -418,7 +418,7 @@ export class DatabaseOptimizer {
 	 */
 	getHealthReport() {
 		const settings = this.getPragmaSettings();
-		// @constitutional-exemption Article-II-2.1 issue:#999 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
+		// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
 		const dbSize = this.db
 			.prepare(
 				'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()'
@@ -445,12 +445,12 @@ export class DatabaseOptimizer {
 		for (const table of tables) {
 			try {
 				// Safe: table rows from sqlite_master always have a 'name' column
-				// @constitutional-exemption Article-II-2.1 issue:#999 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
+				// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
 				const safeTableName = validateSqlIdentifier(
 					(table as { name: string }).name,
 					'tableName'
 				);
-				// @constitutional-exemption Article-II-2.1 issue:#999 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
+				// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
 				const count = this.db
 					.prepare(`SELECT COUNT(*) as count FROM ${safeTableName}`)
 					// Safe: COUNT(*) always returns a single numeric column aliased as 'count'

@@ -145,12 +145,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T045 [US5] Batch-replace all `issue:#999` occurrences with Article-IV-4.3 issue number (18 occurrences across 16 component files) — use the issue number from T002
-- [ ] T046 [P] [US5] Batch-replace all `issue:#999` occurrences with Article-IV-4.2 issue number (8 occurrences across 8 component files) — use the issue number from T003
-- [ ] T047 [P] [US5] Batch-replace all `issue:#999` occurrences with Article-IX-9.4 issue number (18 occurrences across 8 files) — use the issue number from T004
-- [ ] T048 [P] [US5] Batch-replace all `issue:#999` occurrences with Article-II-2.1 + IX-9.1 issue number (9 occurrences across 9 files) — use the issue number from T005
-- [ ] T049 [US5] Update template example in `src/lib/constitution/analysis-generator.ts` to use generic `issue:NNNN` placeholder instead of `issue:#999`
-- [ ] T050 [US5] Run `grep -rn '#999' src/` to verify zero remaining placeholders
+- [x] T045 [US5] Batch-replace all `issue:#999` → `issue:#11` for Article-IV-4.3 (18 occurrences)
+- [x] T046 [P] [US5] Batch-replace all `issue:#999` → `issue:#12` for Article-IV-4.2 (8 occurrences)
+- [x] T047 [P] [US5] Batch-replace all `issue:#999` → `issue:#13` for Article-IX-9.4 (18 occurrences)
+- [x] T048 [P] [US5] Batch-replace all `issue:#999` → `issue:#14` for Article-II-2.1 + IX-9.1 (9 occurrences)
+- [x] T049 [US5] Update template example in `src/lib/constitution/analysis-generator.ts` to use generic `issue:NNNN`
+- [x] T050 [US5] Verified zero remaining `#999` in codebase
 
 **Checkpoint**: Zero `#999` references in codebase. Each exemption comment references a real GitHub issue.
 

@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
+<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
 <script lang="ts">
 	import { getWeatherIcon, type WeatherData } from './weather-helpers';
 	import WeatherDropdown from './WeatherDropdown.svelte';
@@ -28,7 +28,7 @@
 				role="button"
 				tabindex="0"
 			>
-				<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
+				<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
 				<span class="weather-icon"
 					>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
 				>

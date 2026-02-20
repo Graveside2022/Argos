@@ -281,7 +281,7 @@ function getRemediationOptions(
 **Approach:**
 Add exemption to affected files:
 \`\`\`typescript
-// @constitutional-exemption: ${category.violations[0]?.articleReference || 'Article X'} issue:#999
+// @constitutional-exemption: ${category.violations[0]?.articleReference || 'Article X'} issue:NNNN
 // Justification: [Reason for exemption]
 \`\`\``;
 }

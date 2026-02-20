@@ -194,11 +194,11 @@ export function getClusterOptions(L: LeafletLibrary) {
 				c += 'large';
 			}
 
-			// @constitutional-exemption Article-II-2.1 issue:#999 — Leaflet constructor type narrowing — L.DivIcon/L.Point typing incomplete
+			// @constitutional-exemption Article-II-2.1 issue:#14 — Leaflet constructor type narrowing — L.DivIcon/L.Point typing incomplete
 			return new (L.DivIcon as new (options: Record<string, unknown>) => unknown)({
 				html: `<div><span>${childCount}</span></div>`,
 				className: 'marker-cluster' + c,
-				// @constitutional-exemption Article-II-2.1 issue:#999 — Leaflet constructor type narrowing — L.DivIcon/L.Point typing incomplete
+				// @constitutional-exemption Article-II-2.1 issue:#14 — Leaflet constructor type narrowing — L.DivIcon/L.Point typing incomplete
 				iconSize: new (L.Point as new (x: number, y: number) => unknown)(40, 40)
 			});
 		}
