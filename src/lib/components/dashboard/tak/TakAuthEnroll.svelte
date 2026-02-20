@@ -51,7 +51,7 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	<span class="text-[10px] font-semibold tracking-widest text-muted-foreground">ENROLLMENT</span>
+	<span class="text-xs font-semibold tracking-widest text-muted-foreground">ENROLLMENT</span>
 	<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
 		Username
 		<Input
@@ -80,7 +80,7 @@
 		/>
 	</label>
 	<div class="flex items-center gap-2">
-		<Button variant="secondary" size="sm" onclick={enrollCertificate} disabled={isEnrolling}>
+		<Button size="sm" onclick={enrollCertificate} disabled={isEnrolling}>
 			{isEnrolling ? 'Enrolling...' : 'Enroll Now'}
 		</Button>
 		{#if enrollStatus}

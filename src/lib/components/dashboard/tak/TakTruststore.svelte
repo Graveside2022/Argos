@@ -44,7 +44,11 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	<span class="text-[10px] font-semibold tracking-widest text-muted-foreground">TRUST STORE</span>
+	<span class="text-xs font-semibold tracking-widest text-muted-foreground">TRUST STORE</span>
+	<p class="text-[10px] leading-relaxed text-muted-foreground/70">
+		Upload the <strong class="text-muted-foreground">root CA truststore</strong> (.p12) — e.g.
+		<code class="rounded bg-muted/50 px-1 text-foreground/80">truststore-root.p12</code>
+	</p>
 	<label class="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
 		Truststore File (.p12)
 		<Input type="file" accept=".p12" bind:files={truststoreFile} class="h-8 text-[10px]" />
@@ -59,12 +63,12 @@
 		/>
 	</label>
 	<div class="flex items-center gap-2">
-		<Button variant="secondary" size="sm" onclick={uploadTruststore}>Upload Truststore</Button>
+		<Button size="sm" onclick={uploadTruststore}>Upload Truststore</Button>
 		{#if truststoreStatus}
 			<span class="text-[10px] text-muted-foreground">{truststoreStatus}</span>
 		{/if}
 	</div>
 	{#if config.truststorePath}
-		<span class="text-[10px] text-green-400">Truststore loaded</span>
+		<span class="text-[10px] text-green-400">✓ Truststore loaded</span>
 	{/if}
 </div>
