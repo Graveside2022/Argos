@@ -1,7 +1,7 @@
 # ============================================================
 # Argos .gitignore — SDR & Network Analysis Console
 # Organized by category. No duplicates. No dead patterns.
-# Last audit: 2026-02-19
+# Last audit: 2026-02-20
 # ============================================================
 
 # ── Dependencies ─────────────────────────────────────────────
@@ -146,6 +146,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .node_repl_history
 
 # ── Archives & Packed Files ──────────────────────────────────
+*.zip
 *.tgz
 *.tar
 *.tar.gz
@@ -193,16 +194,26 @@ completed/
 .agent/
 .development-archive/
 CLAUDE.local.md
+CLAUDE.md
+*/CLAUDE.md
+**/CLAUDE.md
 
-# ── Claude Code (tracked: CLAUDE.md, .claude/agents, .claude/settings.json, .claude/hooks)
-# Note: .claude/ is ignored but specific files are force-tracked.
-# New files in .claude/ require `git add -f`.
+# ── Claude Code ──────────────────────────────────────────────
+# Users generate their own CLAUDE.md via `claude /init` after cloning.
+# .claude/ contains local settings — never shared.
 .claude/
 
-# ── SpecifyKit (tracked: templates, scripts, constitution)
-# Note: .specify/ is ignored but specific files are force-tracked.
-# New files in .specify/ require `git add -f`.
+# ── SpecifyKit ───────────────────────────────────────────────
+# Dev specs/plans generated locally, not shipped with product.
 .specify/
+
+# ── Internal Dev Artifacts (not shipped) ─────────────────────
+# These folders contain development research, specs, and prompts
+# used during product development. Not part of the product.
+plans/
+specs/
+docs/prompts/
+docs/plans/
 
 # ── Husky Internals (only .husky/pre-commit is tracked) ────
 .husky/_/
