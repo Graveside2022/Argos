@@ -3,18 +3,20 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
-const HACKRF_BLOCKING_PROCESSES = [
+/** Native binaries — their /proc/PID/comm matches the binary name, so -x (exact) is safe */
+const HACKRF_NATIVE_PROCESSES = [
 	'hackrf_sweep',
 	'hackrf_transfer',
 	'hackrf_info',
-	'grgsm_livemon',
-	'grgsm_livemon_headless',
 	'soapy_connector',
 	'btle_rx',
 	'urh',
 	'TempestSDR',
 	'multimon-ng'
 ];
+
+/** Python-wrapped tools — their /proc/PID/comm is "python3", so we need -f (cmdline match) */
+const HACKRF_PYTHON_PROCESSES = ['grgsm_livemon', 'grgsm_livemon_headless'];
 
 /** Map raw process names to user-friendly tool names for the status bar */
 const PROCESS_DISPLAY_NAMES: Record<string, string> = {
@@ -50,11 +52,22 @@ export async function detectHackRF(): Promise<boolean> {
 export async function getBlockingProcesses(): Promise<{ pid: string; name: string }[]> {
 	const blocking: { pid: string; name: string }[] = [];
 
-	for (const proc of HACKRF_BLOCKING_PROCESSES) {
+	// Native binaries: use -x (exact comm match) — safe, no false positives
+	for (const proc of HACKRF_NATIVE_PROCESSES) {
 		try {
-			// Use -f (full command line match) instead of -x (exact process name match)
-			// because Python-based tools like grgsm_livemon_headless have comm=python3,
-			// so -x never finds them.
+			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-x', proc]);
+			const pids = stdout.trim().split('\n').filter(Boolean);
+			for (const pid of pids) {
+				blocking.push({ pid, name: PROCESS_DISPLAY_NAMES[proc] ?? proc });
+			}
+		} catch (_error: unknown) {
+			// Process not found
+		}
+	}
+
+	// Python-wrapped tools: use -f (full cmdline match) because their comm is "python3"
+	for (const proc of HACKRF_PYTHON_PROCESSES) {
+		try {
 			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-f', proc]);
 			const pids = stdout.trim().split('\n').filter(Boolean);
 			for (const pid of pids) {
@@ -69,7 +82,16 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 }
 
 export async function killBlockingProcesses(): Promise<void> {
-	for (const proc of HACKRF_BLOCKING_PROCESSES) {
+	// Native binaries: exact comm match
+	for (const proc of HACKRF_NATIVE_PROCESSES) {
+		try {
+			await execFileAsync('/usr/bin/pkill', ['-9', '-x', proc]);
+		} catch (_error: unknown) {
+			// Process not found or already dead
+		}
+	}
+	// Python-wrapped tools: full cmdline match
+	for (const proc of HACKRF_PYTHON_PROCESSES) {
 		try {
 			await execFileAsync('/usr/bin/pkill', ['-9', '-f', proc]);
 		} catch (_error: unknown) {
