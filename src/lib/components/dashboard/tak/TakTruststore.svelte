@@ -5,9 +5,10 @@
 	interface Props {
 		config: TakServerConfig;
 		onUploaded: (data: { truststorePath: string; caPath?: string; id?: string }) => void;
+		onTruststoreCleared?: () => void;
 	}
 
-	let { config, onUploaded }: Props = $props();
+	let { config, onUploaded, onTruststoreCleared }: Props = $props();
 
 	let truststoreFile: FileList | undefined = $state();
 	let truststoreStatus = $state('');
@@ -120,21 +121,46 @@
 	<!-- Status indicator -->
 	{#if config.truststorePath}
 		<div
-			class="flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-2.5 py-1.5"
+			class="flex items-center justify-between rounded-md border border-green-500/30 bg-green-500/10 px-2.5 py-1.5"
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="14"
-				height="14"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2.5"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="text-green-400"><polyline points="20 6 9 17 4 12" /></svg
+			<div class="flex items-center gap-1.5">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="text-green-400"><polyline points="20 6 9 17 4 12" /></svg
+				>
+				<span class="text-[10px] font-medium text-green-400">Truststore loaded</span>
+			</div>
+			<button
+				onclick={() => onTruststoreCleared?.()}
+				class="inline-flex items-center gap-1 rounded border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-500/25"
 			>
-			<span class="text-[10px] font-medium text-green-400">Truststore loaded</span>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="12"
+					height="12"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><line x1="18" y1="6" x2="6" y2="18" /><line
+						x1="6"
+						y1="6"
+						x2="18"
+						y2="18"
+					/></svg
+				>
+				Clear
+			</button>
 		</div>
 	{/if}
 </div>

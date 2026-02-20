@@ -150,6 +150,20 @@
 		messageType = type;
 		setTimeout(() => (message = ''), 4000);
 	}
+
+	function handleCertCleared() {
+		config.certPath = undefined;
+		config.keyPath = undefined;
+		config.caPath = undefined;
+		saveConfig();
+		showMessage('Certificates cleared', 'success');
+	}
+
+	function handleTruststoreCleared() {
+		config.truststorePath = undefined;
+		saveConfig();
+		showMessage('Truststore cleared', 'success');
+	}
 </script>
 
 <ToolViewWrapper
@@ -357,7 +371,11 @@
 			<!-- ═══ CLIENT CERTIFICATE / ENROLLMENT ═══ -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				{#if config.authMethod === 'import'}
-					<TakAuthImport {config} onCertUploaded={applyPaths} />
+					<TakAuthImport
+						{config}
+						onCertUploaded={applyPaths}
+						onCertCleared={handleCertCleared}
+					/>
 				{:else}
 					<TakAuthEnroll {config} onEnrolled={applyPaths} />
 				{/if}
@@ -367,7 +385,11 @@
 
 			<!-- ═══ TRUST STORE ═══ -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
-				<TakTruststore {config} onUploaded={handleTruststoreUploaded} />
+				<TakTruststore
+					{config}
+					onUploaded={handleTruststoreUploaded}
+					onTruststoreCleared={handleTruststoreCleared}
+				/>
 			</div>
 
 			<Separator />
