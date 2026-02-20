@@ -60,7 +60,7 @@ export class AlfaDetector {
 						const product = (await readFile(productPath, 'utf-8')).trim();
 						const usbId = `${vendor}:${product}`;
 
-						// @constitutional-exemption Article-II-2.1 issue:#999 — USB ID dictionary lookup type narrowing
+						// @constitutional-exemption Article-II-2.1 issue:#14 — USB ID dictionary lookup type narrowing
 						const alfaDevice =
 							this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
 						if (alfaDevice) {

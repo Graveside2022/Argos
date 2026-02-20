@@ -180,7 +180,7 @@ async function runValidators(options: AuditOptions, projectRoot: string): Promis
 			if (!articleMatch) {
 				throw new InvalidScopeError(scope, scopeFilter);
 			}
-			// @constitutional-exemption Article-II-2.1 issue:#999 — Article key validated by regex match before assertion
+			// @constitutional-exemption Article-II-2.1 issue:#14 — Article key validated by regex match before assertion
 			const articleId = articleMatch[1] as keyof typeof allValidators;
 			const validator = allValidators[articleId];
 			if (!validator) {

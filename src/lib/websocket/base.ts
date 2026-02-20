@@ -187,7 +187,7 @@ export abstract class BaseWebSocket {
 
 		this.ws.onmessage = (event) => {
 			try {
-				// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket message data type narrowing — browser API returns union type
+				// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 				const data = this.parseMessage(event.data as string | ArrayBuffer | Blob);
 				this.emit(WebSocketEventEnum.Message, { data, event });
 				this.handleMessage(data);
@@ -234,7 +234,7 @@ export abstract class BaseWebSocket {
 	protected handleMessage(data: unknown): void {
 		// Handle typed messages
 		if (data && typeof data === 'object' && 'type' in data) {
-			// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket message data type narrowing — browser API returns union type
+			// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 			const typedData = data as { type: string; data?: unknown };
 			const handlers = this.messageHandlers.get(typedData.type);
 			if (handlers) {

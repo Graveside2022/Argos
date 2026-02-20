@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';
@@ -162,7 +162,7 @@
 			>
 				<!-- Tab bar — shows only the active tab -->
 				<!-- Tab bar — shows all tabs -->
-				<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
+				<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
 				<div class="bottom-panel-tabs">
 					<div class="tab-list">
 						<!-- Terminal Tab -->
