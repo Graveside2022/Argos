@@ -35,7 +35,7 @@
 		"framework:full-check": "npm run framework:validate-all && npm run framework:check-visual",
 		"framework:install": "bash ./scripts/build/install-framework.sh",
 		"test": "vitest",
-		"test:unit": "vitest run tests/unit",
+		"test:unit": "vitest run src/ tests/unit --passWithNoTests",
 		"test:integration": "vitest run tests/integration",
 		"test:security": "vitest run tests/security",
 		"test:visual": "vitest run tests/visual",
