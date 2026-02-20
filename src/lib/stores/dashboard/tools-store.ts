@@ -5,50 +5,25 @@
 
 import { derived, get, writable } from 'svelte/store';
 
-import { browser } from '$app/environment';
 import { findByPath, toolHierarchy } from '$lib/data/tool-hierarchy';
+import { persistedWritable } from '$lib/stores/persisted-writable';
 import type { ToolStatus } from '$lib/types/tools';
-import { logger } from '$lib/utils/logger';
-
-// Validate stored path against current hierarchy (handles structure changes)
-function getValidatedPath(): string[] {
-	if (!browser) return [];
-	let stored: string[] = [];
-	try {
-		stored = JSON.parse(localStorage.getItem('toolNavigationPath') || '[]');
-	} catch (error) {
-		logger.warn('[toolsStore] Corrupted toolNavigationPath in localStorage, using default', {
-			error
-		});
-		localStorage.removeItem('toolNavigationPath');
-		return [];
-	}
-	if (stored.length === 0) return [];
-	const result = findByPath(stored, toolHierarchy.root);
-	if (result && 'children' in result) return stored;
-	// Stale path from old hierarchy, reset
-	localStorage.setItem('toolNavigationPath', '[]');
-	return [];
-}
 
 // Navigation state: stack of category IDs representing the path
 // Example: [] = root (TOOLS), ['offnet'] = OFFNET, ['offnet', 'recon'] = RECON
-export const toolNavigationPath = writable<string[]>(getValidatedPath());
+export const toolNavigationPath = persistedWritable<string[]>('toolNavigationPath', [], {
+	validate: (stored) => {
+		if (stored.length === 0) return stored;
+		const result = findByPath(stored, toolHierarchy.root);
+		return result && 'children' in result ? stored : null;
+	}
+});
 
 // Which categories are expanded (for collapsible sections)
-function getExpandedCategories(): Set<string> {
-	if (!browser) return new Set();
-	try {
-		return new Set(JSON.parse(localStorage.getItem('expandedCategories') || '[]'));
-	} catch (error) {
-		logger.warn('[toolsStore] Corrupted expandedCategories in localStorage, using default', {
-			error
-		});
-		localStorage.removeItem('expandedCategories');
-		return new Set();
-	}
-}
-export const expandedCategories = writable<Set<string>>(getExpandedCategories());
+export const expandedCategories = persistedWritable<Set<string>>('expandedCategories', new Set(), {
+	serialize: (set) => JSON.stringify([...set]),
+	deserialize: (raw) => new Set(JSON.parse(raw))
+});
 
 // Tool runtime states (overrides the static installed status)
 // Maps tool ID to current status
@@ -141,15 +116,4 @@ export function setToolStatus(toolId: string, status: ToolStatus) {
  */
 export function getToolStatus(toolId: string): ToolStatus {
 	return get(toolStates).get(toolId) || 'stopped';
-}
-
-// Persistence to localStorage
-if (browser) {
-	toolNavigationPath.subscribe((path) => {
-		localStorage.setItem('toolNavigationPath', JSON.stringify(path));
-	});
-
-	expandedCategories.subscribe((set) => {
-		localStorage.setItem('expandedCategories', JSON.stringify([...set]));
-	});
 }

@@ -24,7 +24,7 @@ export class HackRFService {
 	connectToHackRF(): void {
 		hackrfAPI.connectToDataStream();
 
-		// Subscribe to spectrum data
+		// @constitutional-exemption Article-IV-4.3 issue:#15 — class-managed reactive subscription with proper unsubscribe lifecycle, not a persistence pattern
 		this.spectrumUnsubscribe = spectrumData.subscribe((data) => {
 			const currentState = get(hackrfStore);
 

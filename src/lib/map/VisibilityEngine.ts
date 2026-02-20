@@ -1,51 +1,28 @@
-import { get, writable } from 'svelte/store';
+import { get } from 'svelte/store';
 
-import { browser } from '$app/environment';
+import { persistedWritable } from '$lib/stores/persisted-writable';
 
 export type VisibilityMode = 'dynamic' | 'all' | 'manual';
-
-const STORAGE_KEY = 'argos-visibility-mode-v2';
-const PROMOTED_KEY = 'argos-promoted-devices';
 
 /** Signal strength threshold for "Dynamic Filter" mode (dBm). Devices weaker than this are hidden. */
 const DYNAMIC_RSSI_THRESHOLD = -80;
 /** Recency threshold for "Dynamic Filter" mode (seconds). Devices older than this are hidden. */
 const DYNAMIC_RECENCY_SECS = 300;
 
-function loadMode(): VisibilityMode {
-	if (!browser) return 'manual';
-	const saved = localStorage.getItem(STORAGE_KEY);
-	if (saved === 'all' || saved === 'manual' || saved === 'dynamic') return saved;
-	return 'manual';
-}
-
-function loadPromoted(): Set<string> {
-	if (!browser) return new Set();
-	try {
-		const saved = localStorage.getItem(PROMOTED_KEY);
-		if (saved) return new Set(JSON.parse(saved));
-	} catch {
-		// Corrupted data — start fresh
-	}
-	return new Set();
-}
-
-function savePromoted(macs: Set<string>) {
-	if (!browser) return;
-	localStorage.setItem(PROMOTED_KEY, JSON.stringify([...macs]));
-}
-
 /** Visibility mode store — persisted to localStorage */
-export const visibilityMode = writable<VisibilityMode>(loadMode());
+export const visibilityMode = persistedWritable<VisibilityMode>(
+	'argos-visibility-mode-v2',
+	'manual',
+	{
+		validate: (v) => (['dynamic', 'all', 'manual'].includes(v) ? v : null)
+	}
+);
 
 /** Set of manually promoted device MACs — visible in all modes */
-export const promotedDevices = writable<Set<string>>(loadPromoted());
-
-// Persist on changes
-if (browser) {
-	visibilityMode.subscribe((mode) => localStorage.setItem(STORAGE_KEY, mode));
-	promotedDevices.subscribe((macs) => savePromoted(macs));
-}
+export const promotedDevices = persistedWritable<Set<string>>('argos-promoted-devices', new Set(), {
+	serialize: (macs) => JSON.stringify([...macs]),
+	deserialize: (raw) => new Set(JSON.parse(raw))
+});
 
 /** Toggle a device's promoted status */
 export function togglePromoted(mac: string) {

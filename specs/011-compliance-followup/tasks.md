@@ -125,13 +125,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Create `persistedWritable<T>()` utility in `src/lib/stores/persisted-writable.ts` with localStorage read/write, JSON serialization, and graceful fallback on parse errors
-- [ ] T039 [US4] Migrate `toolNavigationPath` and `expandedCategories` stores in `src/lib/stores/dashboard/tools-store.ts` to use `persistedWritable()` (remove .subscribe() at lines 148, 152)
-- [ ] T040 [US4] Migrate `terminalPanelState` store in `src/lib/stores/dashboard/terminal-store.ts` to use `persistedWritable()` (remove .subscribe() at line 85)
-- [ ] T041 [US4] Migrate `bottomPanelHeight` and `activeBottomTab` stores in `src/lib/stores/dashboard/dashboard-store.ts` to use `persistedWritable()` (remove .subscribe() at lines 54, 58)
-- [ ] T042 [US4] Migrate `visibilityMode` and `promotedDevices` stores in `src/lib/map/VisibilityEngine.ts` to use `persistedWritable()` (remove .subscribe() at lines 46, 47)
-- [ ] T043 [US4] Add constitutional exemption with real issue reference for HackRF spectrum `.subscribe()` in `src/lib/tactical-map/hackrf-service.ts:28` (legitimate reactive subscription, not persistence)
-- [ ] T044 [US4] Run `npm run typecheck` and `npm run test:unit` to verify store migration — 0 errors, 190+ tests pass
+- [x] T038 [US4] Create `persistedWritable<T>()` utility in `src/lib/stores/persisted-writable.ts` with localStorage read/write, JSON serialization, and graceful fallback on parse errors
+- [x] T039 [US4] Migrate `toolNavigationPath` and `expandedCategories` stores in `src/lib/stores/dashboard/tools-store.ts` to use `persistedWritable()` (remove .subscribe() at lines 148, 152)
+- [x] T040 [US4] Migrate `terminalPanelState` store in `src/lib/stores/dashboard/terminal-store.ts` to use `persistedWritable()` (remove .subscribe() at line 85)
+- [x] T041 [US4] Migrate `bottomPanelHeight` and `activeBottomTab` stores in `src/lib/stores/dashboard/dashboard-store.ts` to use `persistedWritable()` (remove .subscribe() at lines 54, 58)
+- [x] T042 [US4] Migrate `visibilityMode` and `promotedDevices` stores in `src/lib/map/VisibilityEngine.ts` to use `persistedWritable()` (remove .subscribe() at lines 46, 47)
+- [x] T043 [US4] Add constitutional exemption with real issue reference for HackRF spectrum `.subscribe()` in `src/lib/tactical-map/hackrf-service.ts:28` — Created issue #15
+- [x] T044 [US4] Run `npm run typecheck` and `npm run test:unit` to verify store migration — 0 errors, 190/190 tests pass
 
 **Checkpoint**: Zero `.subscribe()` calls in store modules (excluding hackrf-service.ts exemption and persistedWritable internal). Stores persist correctly.
 
