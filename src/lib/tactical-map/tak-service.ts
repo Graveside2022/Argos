@@ -1,5 +1,3 @@
-import { get } from 'svelte/store';
-
 import { takStatus } from '$lib/stores/tak-store';
 import { logger } from '$lib/utils/logger';
 
@@ -12,10 +10,8 @@ export class TakService {
 			if (res.ok) {
 				const takData = await res.json();
 				if (takData.success && takData.status) {
-					const currentTak = get(takStatus);
-					if (currentTak.status !== takData.status) {
-						takStatus.set({ status: takData.status } as any);
-					}
+					const { success: _success, ...rest } = takData;
+					takStatus.set(rest as any);
 				}
 			}
 		} catch (error) {
