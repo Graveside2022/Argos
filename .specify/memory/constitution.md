@@ -1,6 +1,6 @@
 # Argos Project Constitution
 
-**Version**: 2.3.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-16
+**Version**: 2.4.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-20
 
 ---
 
@@ -21,7 +21,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 *   **Hardware**: HackRF One, Alfa WiFi adapters, GPS receivers, USRP B205
 *   **Database**: SQLite (rf_signals.db)
 *   **Theme**: Dark mode only. Light mode removed.
-*   **Architecture**: No service layer. No barrel files (except shadcn). No ORMs.
+*   **Architecture**: No thin data-access wrappers. Hardware/protocol services in `src/lib/server/services/`. No barrel files (except shadcn). No ORMs.
 
 ---
 
@@ -43,7 +43,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 **2.4 Error Handling**: Explicit handling for all external ops. Typed error classes. No swallowed errors. User-visible errors must suggest action.
 **2.5 Documentation**: JSDoc for public functions. Block comments for complex algorithms. No commented-out code.
 **2.6 Forbidden Patterns**:
-*   No service layers (wrappers around simple data access).
+*   No thin data-access wrappers (use direct `better-sqlite3` calls). Hardware/protocol services (`src/lib/server/services/`) are allowed.
 *   No barrel files `index.ts` (except shadcn/ui).
 *   No catch-all utils (`utils.ts`, `helpers.ts`).
 *   No class-based UI components.
