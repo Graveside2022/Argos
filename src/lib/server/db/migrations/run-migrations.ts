@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+import { logger } from '$lib/utils/logger';
+
 export async function runMigrations(db: Database.Database, migrationsPath: string) {
 	// Create migrations tracking table if not exists
 	db.exec(`
@@ -36,16 +38,16 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 				filename,
 				Date.now()
 			);
-			console.error(`Migration applied: ${filename}`);
+			logger.info('[migrations] Migration applied', { filename });
 		} catch (error) {
-			console.error(`Migration failed: ${filename}`, error);
+			logger.error('[migrations] Migration failed', { filename, error: String(error) });
 			throw error;
 		}
 	});
 
 	for (const filename of migrationFiles) {
 		if (!appliedMigrations.has(filename)) {
-			console.error(`Applying migration: ${filename}`);
+			logger.info('[migrations] Applying migration', { filename });
 
 			if (filename.endsWith('.sql')) {
 				// SQL migration
@@ -64,7 +66,9 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 							typeof error.message === 'string' &&
 							error.message.includes('duplicate column name')
 						) {
-							console.error(`Column already exists in ${filename}, skipping...`);
+							logger.info('[migrations] Column already exists, skipping', {
+								filename
+							});
 							return;
 						}
 						// Re-throw other errors
@@ -78,10 +82,15 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 					if (migrationModule.migrate && typeof migrationModule.migrate === 'function') {
 						applyMigration(filename, () => migrationModule.migrate(db));
 					} else {
-						console.error(`Migration ${filename} does not export a migrate function`);
+						logger.error('[migrations] Migration does not export a migrate function', {
+							filename
+						});
 					}
 				} catch (error) {
-					console.error(`Failed to load TypeScript migration ${filename}:`, error);
+					logger.error('[migrations] Failed to load TypeScript migration', {
+						filename,
+						error: String(error)
+					});
 					throw error;
 				}
 			}

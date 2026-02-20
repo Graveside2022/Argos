@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import '$lib/styles/palantir-design-system.css';
 	import '$lib/styles/dashboard.css';
@@ -9,6 +9,7 @@
 	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
 	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
 	import IconRail from '$lib/components/dashboard/IconRail.svelte';
+	import LogsPanel from '$lib/components/dashboard/LogsPanel.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import GsmEvilPanel from '$lib/components/dashboard/panels/GsmEvilPanel.svelte';
@@ -39,9 +40,11 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { GPSService } from '$lib/tactical-map/gps-service';
 	import { KismetService } from '$lib/tactical-map/kismet-service';
+	import { TakService } from '$lib/tactical-map/tak-service';
 
 	const gpsService = new GPSService();
 	const kismetService = new KismetService();
+	const takService = new TakService();
 
 	function goBackToMap() {
 		activeView.set('map');
@@ -89,11 +92,13 @@
 		kismetService.startPeriodicDeviceFetch();
 		// Do an immediate device fetch (the interval only fires after 10s)
 		void kismetService.fetchKismetDevices();
+		takService.startPeriodicStatusCheck();
 	});
 
 	onDestroy(() => {
 		gpsService.stopPositionUpdates();
 		kismetService.stopPeriodicChecks();
+		takService.stopPeriodicChecks();
 	});
 </script>
 
@@ -162,7 +167,7 @@
 			>
 				<!-- Tab bar — shows only the active tab -->
 				<!-- Tab bar — shows all tabs -->
-				<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
+				<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
 				<div class="bottom-panel-tabs">
 					<div class="tab-list">
 						<!-- Terminal Tab -->
@@ -189,6 +194,54 @@
 								/>
 							</svg>
 							Terminal
+						</button>
+
+						<!-- Logs Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'logs'}
+							onclick={() => activeBottomTab.set('logs')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+								/>
+								<line x1="12" y1="8" x2="20" y2="8" />
+								<line x1="8" y1="12" x2="20" y2="12" />
+								<line x1="16" y1="16" x2="20" y2="16" />
+							</svg>
+							Logs
+						</button>
+
+						<!-- GSM Evil Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'gsm-evil'}
+							onclick={() => activeBottomTab.set('gsm-evil')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<rect x="2" y="7" width="20" height="15" rx="2" ry="2"
+								></rect><polyline points="17 2 12 7 7 2"></polyline>
+							</svg>
+							GSM Evil
 						</button>
 
 						<!-- Kismet Tab (Internal: devices) -->
@@ -221,28 +274,6 @@
 								/><circle cx="4" cy="18" r="1" fill="currentColor" />
 							</svg>
 							Kismet
-						</button>
-
-						<!-- GSM Evil Tab -->
-						<button
-							class="panel-tab"
-							class:active={$activeBottomTab === 'gsm-evil'}
-							onclick={() => activeBottomTab.set('gsm-evil')}
-						>
-							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							>
-								<rect x="2" y="7" width="20" height="15" rx="2" ry="2"
-								></rect><polyline points="17 2 12 7 7 2"></polyline>
-							</svg>
-							GSM Evil
 						</button>
 
 						<!-- Chat Tab (Hidden unless active, or kept for continuity) -->
@@ -295,6 +326,8 @@
 						<TerminalPanel />
 					{:else if $activeBottomTab === 'gsm-evil'}
 						<GsmEvilPanel />
+					{:else if $activeBottomTab === 'logs'}
+						<LogsPanel />
 					{:else if $activeBottomTab === 'chat'}
 						<AgentChatPanel />
 					{/if}

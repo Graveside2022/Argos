@@ -8,6 +8,8 @@ import { execFile } from 'child_process';
 import { config } from 'dotenv';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
 const execFileAsync = promisify(execFile);
@@ -236,6 +238,8 @@ class TestRunner extends BaseMCPServer {
 
 const server = new TestRunner('argos-test-runner');
 server.start().catch((error) => {
-	console.error('[Test Runner] Fatal:', error);
+	logger.error('Test Runner fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

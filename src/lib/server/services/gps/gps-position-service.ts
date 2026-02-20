@@ -2,7 +2,7 @@ import { Socket } from 'net';
 import { z } from 'zod';
 
 import { safeJsonParse } from '$lib/server/security/safe-json';
-import { logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 // Zod schema for gpsd JSON protocol messages (TPV, SKY, VERSION, DEVICES, etc.)
 const GpsdMessageSchema = z
@@ -308,7 +308,7 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 		if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN_MS) {
 			// Circuit is open -- serve cached data if fresh enough, otherwise soft error
 			if (!circuitBreakerLogged) {
-				logWarn(
+				logger.warn(
 					'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
 					{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
 					'gps-circuit-breaker'
@@ -347,7 +347,11 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 
 			const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
 			if (!result.success) {
-				console.warn('[gps] Malformed gpsd data, skipping line');
+				logger.warn(
+					'[gps] Malformed gpsd data, skipping line',
+					undefined,
+					'gps-malformed-data'
+				);
 				continue;
 			}
 
@@ -394,7 +398,7 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 		lastFailureTimestamp = Date.now();
 
 		if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-			logWarn(
+			logger.warn(
 				'[GPS] gpsd connection failed, circuit breaker activating',
 				{
 					consecutiveFailures,

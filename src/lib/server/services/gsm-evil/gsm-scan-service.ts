@@ -4,6 +4,7 @@ import { readFile } from 'fs/promises';
 import { promisify } from 'util';
 
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -36,22 +37,24 @@ export interface GsmScanResponse {
  */
 export async function performGsmScan(requestedFreq?: number | null): Promise<GsmScanResponse> {
 	try {
-		console.warn('Starting GSM frequency scan...');
+		logger.info('[gsm-scan] Starting GSM frequency scan');
 
 		if (requestedFreq) {
-			console.warn(`Requested frequency: ${requestedFreq} MHz`);
+			logger.info('[gsm-scan] Requested frequency', { requestedFreq });
 		}
 
 		// Target GSM frequencies
 		const checkFreqs: string[] = ['947.2', '950.0'];
 
-		console.warn(`Testing ${checkFreqs.length} frequencies for GSM activity...`);
+		logger.info('[gsm-scan] Testing frequencies for GSM activity', {
+			count: checkFreqs.length
+		});
 
 		const results: GsmScanResult[] = [];
 
 		// Test each frequency for actual GSM frames
 		for (const freq of checkFreqs) {
-			console.warn(`Testing ${freq} MHz...`);
+			logger.debug('[gsm-scan] Testing frequency', { freq });
 			let pid = '';
 
 			try {
@@ -68,7 +71,9 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					'--collectorport',
 					'4729'
 				];
-				console.warn(`Running command: sudo ${gsmArgs.join(' ')}`);
+				logger.debug('[gsm-scan] Running command', {
+					command: `sudo ${gsmArgs.join(' ')}`
+				});
 
 				// Test if GRGSM can start at all
 				let gsmTestOutput = '';
@@ -79,13 +84,17 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 						...gsmArgs
 					]);
 					gsmTestOutput = testResult.stdout + testResult.stderr;
-					console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 300)}`);
+					logger.debug('[gsm-scan] GRGSM test output', {
+						output: gsmTestOutput.substring(0, 300)
+					});
 				} catch (testError: unknown) {
 					const error = testError as { stdout?: string; stderr?: string };
 					gsmTestOutput = (error.stdout || '') + (error.stderr || '');
 				}
 
-				console.warn(`GRGSM test output: ${gsmTestOutput.substring(0, 500)}...`);
+				logger.debug('[gsm-scan] GRGSM test output (extended)', {
+					output: gsmTestOutput.substring(0, 500)
+				});
 
 				// Check for known hardware failure patterns
 				// If GSM frame data is present (hex lines), hardware is working regardless of other log messages
@@ -138,9 +147,11 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 				const captureTime = 3;
 				let frameCount = 0;
 
-				console.warn(
-					`Device: HackRF, Waiting ${initDelay}ms for init, capturing for ${captureTime}s`
-				);
+				logger.debug('[gsm-scan] Device init', {
+					device: 'HackRF',
+					initDelay,
+					captureTime
+				});
 
 				const logPath = '/tmp/grgsm_scan.log';
 				try {
@@ -170,13 +181,13 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 						// File may have been removed — frameCount stays 0
 					}
 
-					console.warn(
-						`Direct log analysis: ${frameCount} GSM frames detected on ${freq} MHz`
-					);
+					logger.debug('[gsm-scan] Direct log analysis', { frameCount, freq });
 
 					// Fallback to tcpdump only if log analysis fails
 					if (frameCount === 0) {
-						console.warn('Log analysis found no frames, trying tcpdump fallback...');
+						logger.debug(
+							'[gsm-scan] Log analysis found no frames, trying tcpdump fallback'
+						);
 						try {
 							const { stdout: tcpOut } = await execFileAsync('/usr/bin/sudo', [
 								'/usr/bin/timeout',
@@ -201,12 +212,12 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 								frameCount = tcpdumpFrames;
 							}
 						}
-						console.warn(`Tcpdump fallback: ${frameCount} packets`);
+						logger.debug('[gsm-scan] Tcpdump fallback result', { frameCount });
 					}
 				} catch (logError: unknown) {
-					console.warn(
-						`Direct log analysis failed: ${(logError as Error).message}, using tcpdump fallback`
-					);
+					logger.warn('[gsm-scan] Direct log analysis failed, using tcpdump fallback', {
+						error: (logError as Error).message
+					});
 					// tcpdump fallback in catch block
 					try {
 						const { stdout: tcpOut } = await execFileAsync('/usr/bin/sudo', [
@@ -230,7 +241,9 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 								.filter((l) => l.includes('127.0.0.1.4729')).length;
 						} else {
 							frameCount = 0;
-							console.warn(`Both log analysis and tcpdump failed for ${freq} MHz`);
+							logger.warn('[gsm-scan] Both log analysis and tcpdump failed', {
+								freq
+							});
 						}
 					}
 				}
@@ -311,9 +324,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					}
 				}
 
-				console.warn(
-					`Final values for ${freq} MHz: strength=${strength}, frames=${frameCount}`
-				);
+				logger.debug('[gsm-scan] Final values', { freq, strength, frameCount });
 
 				if (frameCount > 0) {
 					results.push({
@@ -327,7 +338,10 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 					});
 				}
 			} catch (freqError) {
-				console.warn(`Error testing ${freq} MHz: ${(freqError as Error).message}`);
+				logger.warn('[gsm-scan] Error testing frequency', {
+					freq,
+					error: (freqError as Error).message
+				});
 
 				if ((freqError as Error).message.includes('Hardware not available')) {
 					throw freqError;
@@ -342,7 +356,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 							String(validKillPid)
 						]);
 					} catch (_error: unknown) {
-						console.warn(`Warning: Failed to clean up process ${pid}`);
+						logger.warn('[gsm-scan] Failed to clean up process', { pid });
 						// Force kill fallback
 						try {
 							const validKillPid = validateNumericParam(
@@ -357,7 +371,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 								String(validKillPid)
 							]);
 						} catch (killError: unknown) {
-							console.warn('[gsm-evil] Cleanup: kill -9 process failed', {
+							logger.warn('[gsm-scan] Cleanup: kill -9 process failed', {
 								error: String(killError)
 							});
 						}
@@ -388,7 +402,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 			totalFound: results.length
 		};
 	} catch (error: unknown) {
-		console.error('Scan error:', error);
+		logger.error('[gsm-scan] Scan error', { error: (error as Error).message });
 		return {
 			success: false,
 			message: 'Scan failed. Make sure GSM Evil is stopped first.',

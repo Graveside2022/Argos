@@ -1,4 +1,6 @@
 // Proxy for Kismet REST API
+import { logger } from '$lib/utils/logger';
+
 import type { DeviceFilter, DeviceStats, KismetDevice } from './types';
 
 // Kismet API response types
@@ -166,7 +168,7 @@ export class KismetProxy {
 
 			return transformedDevices;
 		} catch (error) {
-			console.error('Error fetching devices:', error);
+			logger.error('[kismet-proxy] Error fetching devices', { error: String(error) });
 			throw error;
 		}
 	}
@@ -278,7 +280,7 @@ export class KismetProxy {
 
 			return stats;
 		} catch (error) {
-			console.error('Error calculating device stats:', error);
+			logger.error('[kismet-proxy] Error calculating device stats', { error: String(error) });
 			throw error;
 		}
 	}
@@ -292,7 +294,7 @@ export class KismetProxy {
 		const type = this.mapDeviceType(raw['kismet.device.base.type']);
 		const encryptionNumber = raw['kismet.device.base.crypt'];
 		const manufacturer = raw['kismet.device.base.manuf'] || 'Unknown';
-		// @constitutional-exemption Article-II-2.1 issue:#999 — Kismet REST API dynamic field access — external API returns untyped data
+		// @constitutional-exemption Article-II-2.1 issue:#14 — Kismet REST API dynamic field access — external API returns untyped data
 		const signalRaw = raw['kismet.device.base.signal'] as
 			| number
 			| Record<string, number>

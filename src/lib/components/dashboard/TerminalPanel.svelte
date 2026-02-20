@@ -1,5 +1,5 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
-<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 
@@ -367,6 +367,30 @@
 						<line x1="3" y1="21" x2="10" y2="14" />
 					</svg>
 				{/if}
+			</button>
+
+			<!-- System logs button -->
+			<button
+				class="toolbar-btn"
+				aria-label="View system logs"
+				title="View system logs"
+				onclick={() => handleCreateSession('scripts/tmux/tmux-logs.sh')}
+			>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path
+						d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+					/>
+					<line x1="12" y1="8" x2="20" y2="8" />
+					<line x1="8" y1="12" x2="20" y2="12" />
+					<line x1="16" y1="16" x2="20" y2="16" />
+				</svg>
 			</button>
 
 			<!-- Close panel button -->

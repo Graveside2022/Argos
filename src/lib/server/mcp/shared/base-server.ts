@@ -6,6 +6,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
+import { logger } from '$lib/utils/logger';
+
 import { getConnectionErrorMessage } from './api-client';
 
 export interface ToolDefinition {
@@ -82,10 +84,13 @@ export abstract class BaseMCPServer {
 	}
 
 	async start(): Promise<void> {
-		console.error(`[${this.serverName}] Starting with ${this.tools.length} tools`);
+		logger.info('MCP server starting', {
+			server: this.serverName,
+			toolCount: this.tools.length
+		});
 		const transport = new StdioServerTransport();
 		await this.server.connect(transport);
-		console.error(`[${this.serverName}] Server ready`);
+		logger.info('MCP server ready', { server: this.serverName });
 	}
 
 	async stop(): Promise<void> {

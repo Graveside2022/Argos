@@ -2,7 +2,7 @@ import { type Violation } from '../types.js';
 
 /**
  * Validate Article V — Performance Requirements
- * TODO: Implement performance budget checks (future version)
+ * TODO(#8): Implement performance budget checks (future version)
  *
  * Placeholder for v1 — requires benchmarking infrastructure
  */

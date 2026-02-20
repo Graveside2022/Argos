@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { countTools } from '$lib/data/tool-hierarchy';
 	import { uiIcons } from '$lib/data/tool-icons';
@@ -17,11 +17,11 @@
 <button class="category-card" onclick={() => navigateToCategory(category.id)}>
 	<div class="category-header">
 		{#if category.icon}
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
+			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 			<div class="category-icon">{@html category.icon}</div>
 		{/if}
 		<span class="category-name">{category.name}</span>
-		<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
+		<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="chevron-right">{@html uiIcons.chevronRight}</div>
 	</div>
 	{#if category.description}

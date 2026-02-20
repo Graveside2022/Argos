@@ -6,6 +6,8 @@
 
 import { config } from 'dotenv';
 
+import { logger } from '$lib/utils/logger';
+
 import { apiFetch } from '../shared/api-client';
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
@@ -100,7 +102,7 @@ class StreamingInspector extends BaseMCPServer {
 							eventTypes.add(event.type || 'message');
 						} catch (parseError) {
 							errors.push({
-				// Safe: Error handling for MCP server operations
+								// Safe: Error handling for MCP server operations
 								message: `Failed to parse event data: ${(parseError as Error).message}`,
 								timestamp: now
 							});
@@ -139,7 +141,7 @@ class StreamingInspector extends BaseMCPServer {
 								eventTypes.add(eventType);
 							} catch (parseError) {
 								errors.push({
-				// Safe: Error handling for MCP server operations
+									// Safe: Error handling for MCP server operations
 									message: `Failed to parse ${eventType}: ${(parseError as Error).message}`,
 									timestamp: now
 								});
@@ -493,6 +495,8 @@ class StreamingInspector extends BaseMCPServer {
 // Start server when run directly
 const server = new StreamingInspector('argos-streaming-inspector');
 server.start().catch((error) => {
-	console.error('[Streaming Inspector] Fatal:', error);
+	logger.error('Streaming Inspector fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

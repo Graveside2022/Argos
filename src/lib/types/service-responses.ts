@@ -4,7 +4,7 @@
  */
 
 export interface KismetStatusResponse {
-	running: boolean;
+	isRunning: boolean;
 	uptime: number;
 	interface: string;
 	deviceCount: number;
@@ -28,7 +28,7 @@ export interface ServiceHealthResponse {
 }
 
 export interface GPSStateResponse {
-	fix: boolean;
+	hasFix: boolean;
 	latitude: number;
 	longitude: number;
 	altitude?: number;
@@ -40,8 +40,8 @@ export interface GPSStateResponse {
 }
 
 export interface HackRFStatusResponse {
-	connected: boolean;
-	sweeping: boolean;
+	isConnected: boolean;
+	isSweeping: boolean;
 	device?: {
 		serial: string;
 		boardId: number;

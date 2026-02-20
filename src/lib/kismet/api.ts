@@ -14,7 +14,7 @@ import {
 } from '$lib/api/config';
 
 export interface KismetStatus {
-	running: boolean;
+	isRunning: boolean;
 	pid?: number;
 	uptime?: number;
 	version?: string;
@@ -189,7 +189,7 @@ class KismetAPI {
 	 */
 	async searchDevices(filter: DeviceFilter): Promise<KismetDevice[]> {
 		const queryString = buildQueryString(
-	// Safe: Type cast for dynamic access
+			// Safe: Type cast for dynamic access
 			filter as Record<string, string | number | boolean | null | undefined>
 		);
 		const response = await fetch(`${this.baseUrl}/devices/search${queryString}`, {

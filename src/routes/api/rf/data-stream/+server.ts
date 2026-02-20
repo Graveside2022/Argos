@@ -1,5 +1,6 @@
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -85,7 +86,9 @@ export const GET: RequestHandler = async ({ request }) => {
 					const message = `event: spectrumData\ndata: ${JSON.stringify(transformedData)}\n\n`;
 					controller.enqueue(encoder.encode(message));
 				} catch (error) {
-					console.error('Error processing HackRF spectrum data:', error);
+					logger.error('Error processing HackRF spectrum data', {
+						error: error instanceof Error ? error.message : String(error)
+					});
 				}
 			};
 

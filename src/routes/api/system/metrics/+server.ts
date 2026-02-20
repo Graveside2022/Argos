@@ -4,6 +4,8 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
@@ -13,7 +15,9 @@ export const GET: RequestHandler = async () => {
 		const metrics = await getSystemMetrics();
 		return json(metrics);
 	} catch (error: unknown) {
-		console.error('Failed to get system metrics:', error);
+		logger.error('Failed to get system metrics', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json({ error: 'Failed to get system metrics' }, { status: 500 });
 	}
 };

@@ -11,8 +11,8 @@ export type SortColumn = 'mac' | 'rssi' | 'type' | 'channel' | 'packets' | 'data
 
 export interface FilterOptions {
 	searchQuery: string;
-	hideNoSignal: boolean;
-	showOnlyWithClients: boolean;
+	shouldHideNoSignal: boolean;
+	shouldShowOnlyWithClients: boolean;
 	activeBands: Set<string>;
 	sortColumn: SortColumn;
 	sortDirection: 'asc' | 'desc';
@@ -47,10 +47,11 @@ export function filterAndSortDevices(
 	return all
 		.filter((d) => {
 			const rssi = getRSSI(d);
-			if (options.hideNoSignal && rssi === 0) return false;
+			if (options.shouldHideNoSignal && rssi === 0) return false;
 			const band = getSignalBandKey(rssi);
 			if (!options.activeBands.has(band)) return false;
-			if (options.showOnlyWithClients && !(d.clients && d.clients.length > 0)) return false;
+			if (options.shouldShowOnlyWithClients && !(d.clients && d.clients.length > 0))
+				return false;
 			if (!q) return true;
 			const mac = (d.mac || '').toLowerCase();
 			const ssid = (d.ssid || '').toLowerCase();

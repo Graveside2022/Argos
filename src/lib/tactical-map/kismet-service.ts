@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+
 import type { KismetDevice } from '$lib/kismet/types';
 import { KismetControlResponseSchema, KismetDevicesResponseSchema } from '$lib/schemas/rf';
 import {
@@ -8,6 +10,7 @@ import {
 	setKismetStatus,
 	updateDistributions
 } from '$lib/stores/tactical-map/kismet-store';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 export interface KismetDevicesResponse {
@@ -42,32 +45,25 @@ export class KismetService {
 					'background'
 				);
 				if (!data) {
-					console.error('Invalid Kismet status response');
+					logger.error('Invalid Kismet status response');
 					return;
 				}
 
-				// Get current status
-				let currentStatus: string = 'stopped';
-				const unsubscribe = kismetStore.subscribe(
-					(state) => (currentStatus = state.status)
-				);
-				unsubscribe();
+				const currentStatus = get(kismetStore).status;
 
-				if (data.running && currentStatus === 'stopped') {
+				if (data.isRunning && currentStatus === 'stopped') {
 					setKismetStatus('running');
-				} else if (!data.running && currentStatus === 'running') {
+				} else if (!data.isRunning && currentStatus === 'running') {
 					setKismetStatus('stopped');
 				}
 			}
 		} catch (error) {
-			console.error('Error checking Kismet status:', error);
+			logger.error('Error checking Kismet status', { error });
 		}
 	}
 
 	async startKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
 
@@ -95,15 +91,13 @@ export class KismetService {
 				throw new Error(`Failed to start Kismet: ${errorText}`);
 			}
 		} catch (error: unknown) {
-			console.error('Error starting Kismet:', error);
+			logger.error('Error starting Kismet', { error });
 			setKismetStatus('stopped');
 		}
 	}
 
 	async stopKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
 
@@ -133,15 +127,13 @@ export class KismetService {
 				throw new Error(data?.message || 'Failed to stop Kismet');
 			}
 		} catch (error: unknown) {
-			console.error('Error stopping Kismet:', error);
+			logger.error('Error stopping Kismet', { error });
 			setKismetStatus('running');
 		}
 	}
 
 	async toggleKismet(): Promise<void> {
-		let currentStatus: string = 'stopped';
-		const unsubscribe = kismetStore.subscribe((state) => (currentStatus = state.status));
-		unsubscribe();
+		const currentStatus = get(kismetStore).status;
 
 		if (currentStatus === 'running') {
 			await this.stopKismet();
@@ -151,9 +143,7 @@ export class KismetService {
 	}
 
 	async fetchKismetDevices(): Promise<KismetDevice[]> {
-		let currentState: { status: string; devices: Map<string, KismetDevice> } | undefined;
-		const unsubscribe = kismetStore.subscribe((state) => (currentState = state));
-		unsubscribe();
+		const currentState = get(kismetStore);
 
 		if (currentState?.status !== 'running') return [];
 
@@ -167,7 +157,7 @@ export class KismetService {
 					'background'
 				);
 				if (!data || !data.devices) {
-					console.error('Invalid Kismet devices response');
+					logger.error('Invalid Kismet devices response');
 					return [];
 				}
 				const devices = data.devices as unknown as KismetDevice[];
@@ -197,7 +187,7 @@ export class KismetService {
 				return devices;
 			}
 		} catch (error) {
-			console.error('Error fetching Kismet devices:', error);
+			logger.error('Error fetching Kismet devices', { error });
 		}
 
 		return [];

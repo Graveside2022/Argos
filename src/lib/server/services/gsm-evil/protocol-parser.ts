@@ -11,7 +11,7 @@
  */
 export interface ChannelAnalysis {
 	channelType: string;
-	controlChannel: boolean;
+	isControlChannel: boolean;
 }
 
 /**
@@ -68,7 +68,7 @@ const PAGING_MSG_TYPES = new Set([
  */
 export function analyzeGsmFrames(hexLines: string[], frameCount: number): ChannelAnalysis {
 	if (hexLines.length === 0 || frameCount === 0) {
-		return { channelType: '', controlChannel: false };
+		return { channelType: '', isControlChannel: false };
 	}
 
 	let hasSI = false;
@@ -89,15 +89,15 @@ export function analyzeGsmFrames(hexLines: string[], frameCount: number): Channe
 	}
 
 	if (hasSI) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: 'BCCH/CCCH', isControlChannel: true };
 	}
 	if (hasPaging) {
-		return { channelType: 'CCCH', controlChannel: true };
+		return { channelType: 'CCCH', isControlChannel: true };
 	}
 	if (frameCount > 100) {
-		return { channelType: 'TCH', controlChannel: false };
+		return { channelType: 'TCH', isControlChannel: false };
 	}
-	return { channelType: 'SDCCH', controlChannel: false };
+	return { channelType: 'SDCCH', isControlChannel: false };
 }
 
 /**
@@ -203,12 +203,12 @@ export function determineChannelType(
 	frameCount: number
 ): ChannelAnalysis {
 	if (frameCount === 0) {
-		return { channelType: '', controlChannel: false };
+		return { channelType: '', isControlChannel: false };
 	}
 
 	// Definitive: tshark decoded cell identity from SI3/SI4 = BCCH
 	if (cellIdentity.mcc && cellIdentity.lac && cellIdentity.ci) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: 'BCCH/CCCH', isControlChannel: true };
 	}
 
 	// Use hex frame analysis if available
@@ -218,7 +218,7 @@ export function determineChannelType(
 
 	// Fallback heuristic when hex log was unreadable
 	if (frameCount > 10) {
-		return { channelType: 'BCCH/CCCH', controlChannel: true };
+		return { channelType: 'BCCH/CCCH', isControlChannel: true };
 	}
-	return { channelType: 'SDCCH', controlChannel: false };
+	return { channelType: 'SDCCH', isControlChannel: false };
 }

@@ -2,7 +2,7 @@ import { type Violation } from '../types.js';
 
 /**
  * Validate Article XII — Git Workflow
- * TODO: Implement git commit validation (future version)
+ * TODO(#8): Implement version control validation (future version)
  *
  * Placeholder for v1 — requires git history analysis
  */

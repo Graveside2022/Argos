@@ -6,6 +6,8 @@
 
 import { config } from 'dotenv';
 
+import { logger } from '$lib/utils/logger';
+
 import { apiFetch } from '../shared/api-client';
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
@@ -327,6 +329,8 @@ class APIDebugger extends BaseMCPServer {
 
 const server = new APIDebugger('argos-api-debugger');
 server.start().catch((error) => {
-	console.error('[API Debugger] Fatal:', error);
+	logger.error('API Debugger fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

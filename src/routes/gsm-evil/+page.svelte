@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 
@@ -12,99 +12,125 @@
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import type { FrequencyTestResult } from '$lib/types/gsm';
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
+	import { logger } from '$lib/utils/logger';
 
-	let imsiCaptureActive = false;
+	let imsiCaptureActive = $state(false);
 	let imsiPollInterval: ReturnType<typeof setInterval>;
-	// Store-managed state via reactive statements
-	$: selectedFrequency = $gsmEvilStore.selectedFrequency;
-	$: isScanning = $gsmEvilStore.isScanning;
-	$: scanResults = $gsmEvilStore.scanResults;
-	$: capturedIMSIs = $gsmEvilStore.capturedIMSIs;
-	$: scanProgress = $gsmEvilStore.scanProgress;
 
-	$: towerLocations = $gsmEvilStore.towerLocations;
-	$: towerLookupAttempted = $gsmEvilStore.towerLookupAttempted;
-	$: scanButtonText = $gsmEvilStore.scanButtonText;
+	// Store-managed state via $derived runes
+	let selectedFrequency = $derived($gsmEvilStore.selectedFrequency);
+	let isScanning = $derived($gsmEvilStore.isScanning);
+	let scanResults = $derived($gsmEvilStore.scanResults);
+	let capturedIMSIs = $derived($gsmEvilStore.capturedIMSIs);
+	let scanProgress = $derived($gsmEvilStore.scanProgress);
+	let towerLocations = $derived($gsmEvilStore.towerLocations);
+	let towerLookupAttempted = $derived($gsmEvilStore.towerLookupAttempted);
+	let scanButtonText = $derived($gsmEvilStore.scanButtonText);
 
 	// Button shows "Stop Scan" (red) when scanning OR when IMSI capture is running
-	$: isActive = isScanning || imsiCaptureActive;
-	$: buttonText = isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan';
+	let isActive = $derived(isScanning || imsiCaptureActive);
+	let buttonText = $derived(
+		isScanning ? scanButtonText : imsiCaptureActive ? 'Stop Scan' : 'Start Scan'
+	);
 
 	// Error dialog state
-	let errorDialogOpen = false;
-	let errorDialogMessage = '';
+	let errorDialogOpen = $state(false);
+	let errorDialogMessage = $state('');
 
 	// Non-store managed state
-	let gsmFrames: string[] = [];
-	let activityStatus = {
+	let gsmFrames = $state<string[]>([]);
+	let activityStatus = $state({
 		hasActivity: false,
 		packetCount: 0,
 		recentIMSI: false,
 		currentFrequency: '947.2',
 		message: 'Checking...'
-	};
+	});
 
 	// Reactive variable for grouped towers that updates when IMSIs or locations change
-	$: groupedTowers = capturedIMSIs
-		? groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations)
-		: [];
+	let groupedTowers = $derived(
+		capturedIMSIs
+			? groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations)
+			: []
+	);
 
 	// Derive detected towers from scan results that have cell info (MCC/MNC/LAC/CI)
-	$: scanDetectedTowers = scanResults
-		.filter((r) => r.mcc && r.lac && r.ci)
-		.map((r) => {
-			const mcc = r.mcc || '';
-			const mnc = r.mnc || '';
-			const lac = r.lac || '';
-			const ci = r.ci || '';
-			const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
-			const towerId = `${mccMnc}-${lac}-${ci}`;
-			const country = mccToCountry[mcc] || { name: 'Unknown', flag: '', code: '??' };
-			const carrier = mncToCarrier[mccMnc] || 'Unknown';
-			return {
-				frequency: r.frequency,
-				mcc,
-				mnc,
-				mccMnc,
-				lac,
-				ci,
-				towerId,
-				country,
-				carrier,
-				frameCount: r.frameCount || 0,
-				strength: r.strength,
-				location: towerLocations[towerId] || null
-			};
-		});
+	let scanDetectedTowers = $derived(
+		scanResults
+			.filter((r) => r.mcc && r.lac && r.ci)
+			.map((r) => {
+				const mcc = r.mcc || '';
+				const mnc = r.mnc || '';
+				const lac = r.lac || '';
+				const ci = r.ci || '';
+				const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
+				const towerId = `${mccMnc}-${lac}-${ci}`;
+				const country = mccToCountry[mcc] || { name: 'Unknown', flag: '', code: '??' };
+				const carrier = mncToCarrier[mccMnc] || 'Unknown';
+				return {
+					frequency: r.frequency,
+					mcc,
+					mnc,
+					mccMnc,
+					lac,
+					ci,
+					towerId,
+					country,
+					carrier,
+					frameCount: r.frameCount || 0,
+					strength: r.strength,
+					location: towerLocations[towerId] || null
+				};
+			})
+	);
 
 	// Fetch tower locations when new IMSIs are captured
-	$: if (capturedIMSIs.length > 0) {
-		const towers = groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations);
-		towers.forEach(async (tower) => {
-			const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-			if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
-				gsmEvilStore.markTowerLookupAttempted(towerId);
+	$effect(() => {
+		if (capturedIMSIs.length > 0) {
+			const towers = groupIMSIsByTower(
+				capturedIMSIs,
+				mncToCarrier,
+				mccToCountry,
+				towerLocations
+			);
+			towers.forEach(async (tower) => {
+				const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
+				if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
+					gsmEvilStore.markTowerLookupAttempted(towerId);
 
-				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-				if (result && result.found) {
-					gsmEvilStore.updateTowerLocation(towerId, result.location);
+					const result = await fetchTowerLocation(
+						tower.mcc,
+						tower.mnc,
+						tower.lac,
+						tower.ci
+					);
+					if (result && result.found) {
+						gsmEvilStore.updateTowerLocation(towerId, result.location);
+					}
 				}
-			}
-		});
-	}
+			});
+		}
+	});
 
 	// Auto-fetch tower locations for scan-detected towers (post-scan cell identity)
-	$: if (scanDetectedTowers.length > 0) {
-		scanDetectedTowers.forEach(async (tower) => {
-			if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
-				gsmEvilStore.markTowerLookupAttempted(tower.towerId);
-				const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-				if (result && result.found) {
-					gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
+	$effect(() => {
+		if (scanDetectedTowers.length > 0) {
+			scanDetectedTowers.forEach(async (tower) => {
+				if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
+					gsmEvilStore.markTowerLookupAttempted(tower.towerId);
+					const result = await fetchTowerLocation(
+						tower.mcc,
+						tower.mnc,
+						tower.lac,
+						tower.ci
+					);
+					if (result && result.found) {
+						gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
+					}
 				}
-			}
-		});
-	}
+			});
+		}
+	});
 
 	// Fetch tower location
 	async function fetchTowerLocation(mcc: string, mnc: string, lac: string, ci: string) {
@@ -122,7 +148,7 @@
 				return data;
 			}
 		} catch (error) {
-			console.error('Failed to fetch tower location:', error);
+			logger.error('Failed to fetch tower location', { error });
 		}
 		return null;
 	}
@@ -151,13 +177,13 @@
 
 				if (!response.ok || !data.success) {
 					const errorMsg = data.message || data.error || 'Unknown error';
-					console.error('[GSM] Stop failed:', errorMsg);
+					logger.error('[GSM] Stop failed', { errorMsg });
 					// Show error but still clear UI state
 					errorDialogMessage = `Failed to stop GSM Evil: ${errorMsg}\nProcesses may still be running. Check system status.`;
 					errorDialogOpen = true;
 				}
 			} catch (error: unknown) {
-				console.error('[GSM] Stop request failed:', error);
+				logger.error('[GSM] Stop request failed', { error });
 				errorDialogMessage =
 					'Failed to communicate with server. Processes may still be running.';
 				errorDialogOpen = true;
@@ -205,7 +231,7 @@
 				gsmEvilStore.completeScan();
 			}
 		} catch (error) {
-			console.error('[GSM] Status check failed:', error);
+			logger.error('[GSM] Status check failed', { error });
 			// Status check failed — page starts in default stopped state
 		}
 	});
@@ -242,10 +268,10 @@
 				checkActivity();
 				fetchRealFrames();
 			} else {
-				console.error('[GSM] Failed to start IMSI capture:', data.message);
+				logger.error('[GSM] Failed to start IMSI capture', { message: data.message });
 			}
 		} catch (error) {
-			console.error('[GSM] Error starting IMSI capture:', error);
+			logger.error('[GSM] Error starting IMSI capture', { error });
 		}
 	}
 
@@ -389,7 +415,7 @@
 								}
 							}
 						} catch (e) {
-							console.error('Error parsing SSE data:', e);
+							logger.error('Error parsing SSE data', { error: e });
 						}
 					}
 				}
@@ -401,7 +427,7 @@
 				gsmEvilStore.setScanStatus('Scan stopped');
 			} else {
 				// Real error - differentiate between network and process errors
-				console.error('Scan failed:', error);
+				logger.error('Scan failed', { error });
 				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
 				if (
@@ -454,12 +480,15 @@
 					// No frames in this polling batch
 				}
 			} else if (response.status === 401) {
-				console.error('[GSM Frames] Authentication failed - session may have expired');
+				logger.error('[GSM Frames] Authentication failed - session may have expired');
 			} else {
-				console.error('[GSM Frames] API error:', response.status, response.statusText);
+				logger.error('[GSM Frames] API error', {
+					status: response.status,
+					statusText: response.statusText
+				});
 			}
 		} catch (error) {
-			console.error('[GSM Frames] Failed to fetch:', error);
+			logger.error('[GSM Frames] Failed to fetch', { error });
 		}
 	}
 
@@ -477,7 +506,7 @@
 				};
 			}
 		} catch (error) {
-			console.error('Failed to check activity:', error);
+			logger.error('Failed to check activity', { error });
 		}
 	}
 
@@ -491,7 +520,7 @@
 				}
 			}
 		} catch (error) {
-			console.error('Failed to fetch IMSIs:', error);
+			logger.error('Failed to fetch IMSIs', { error });
 		}
 	}
 </script>

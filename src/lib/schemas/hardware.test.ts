@@ -39,8 +39,8 @@ describe('SDRCapabilities Schema', () => {
 			minFrequency: 1_000_000,
 			maxFrequency: 6_000_000_000,
 			sampleRate: 20_000_000,
-			txCapable: true,
-			rxCapable: true
+			canTransmit: true,
+			canReceive: true
 		};
 
 		expect(SDRCapabilitiesSchema.parse(validSDR)).toEqual(validSDR);
@@ -52,8 +52,8 @@ describe('SDRCapabilities Schema', () => {
 			maxFrequency: 6_000_000_000,
 			sampleRate: 20_000_000,
 			bandwidth: 20_000_000,
-			txCapable: true,
-			rxCapable: true,
+			canTransmit: true,
+			canReceive: true,
 			fullDuplex: false
 		};
 
@@ -65,8 +65,8 @@ describe('SDRCapabilities Schema', () => {
 			minFrequency: -100,
 			maxFrequency: 6_000_000_000,
 			sampleRate: 20_000_000,
-			txCapable: true,
-			rxCapable: true
+			canTransmit: true,
+			canReceive: true
 		};
 
 		expect(() => SDRCapabilitiesSchema.parse(invalidSDR)).toThrow(
@@ -78,7 +78,7 @@ describe('SDRCapabilities Schema', () => {
 		const incomplete = {
 			minFrequency: 1_000_000,
 			maxFrequency: 6_000_000_000
-			// Missing sampleRate, txCapable, rxCapable
+			// Missing sampleRate, canTransmit, canReceive
 		};
 
 		expect(() => SDRCapabilitiesSchema.parse(incomplete)).toThrow();
@@ -89,8 +89,8 @@ describe('WiFiCapabilities Schema', () => {
 	it('should accept valid WiFi capabilities', () => {
 		const validWiFi = {
 			interface: 'wlan0',
-			monitorMode: true,
-			injectionCapable: true,
+			hasMonitorMode: true,
+			canInject: true,
 			frequencyBands: ['2.4GHz', '5GHz'],
 			channels: [1, 6, 11, 36, 40]
 		};
@@ -101,8 +101,8 @@ describe('WiFiCapabilities Schema', () => {
 	it('should reject empty interface name', () => {
 		const invalid = {
 			interface: '',
-			monitorMode: true,
-			injectionCapable: false,
+			hasMonitorMode: true,
+			canInject: false,
 			frequencyBands: [],
 			channels: []
 		};
@@ -115,8 +115,8 @@ describe('BluetoothCapabilities Schema', () => {
 	it('should accept valid Bluetooth capabilities', () => {
 		const validBT = {
 			interface: 'hci0',
-			bleSupport: true,
-			classicSupport: true
+			hasBleSupport: true,
+			hasClassicSupport: true
 		};
 
 		expect(BluetoothCapabilitiesSchema.parse(validBT)).toEqual(validBT);
@@ -125,8 +125,8 @@ describe('BluetoothCapabilities Schema', () => {
 	it('should accept optional fields', () => {
 		const btWithOptional = {
 			interface: 'hci0',
-			bleSupport: true,
-			classicSupport: false,
+			hasBleSupport: true,
+			hasClassicSupport: false,
 			version: '5.0',
 			manufacturer: 'Intel'
 		};
@@ -178,8 +178,8 @@ describe('DetectedHardware Schema', () => {
 				minFrequency: 1_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 20_000_000,
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: false
 			},
 			manufacturer: 'Great Scott Gadgets',
@@ -211,8 +211,8 @@ describe('DetectedHardware Schema', () => {
 				minFrequency: 70_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 61_440_000,
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: true
 			},
 			manufacturer: 'Ettus Research',
@@ -248,8 +248,8 @@ describe('DetectedHardware Schema', () => {
 				minFrequency: 1_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 20_000_000,
-				txCapable: true,
-				rxCapable: true
+				canTransmit: true,
+				canReceive: true
 			}
 		};
 
@@ -304,8 +304,8 @@ describe('validateDetectedHardware helper', () => {
 				minFrequency: 1_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 20_000_000,
-				txCapable: true,
-				rxCapable: true
+				canTransmit: true,
+				canReceive: true
 			}
 		};
 
@@ -335,8 +335,8 @@ describe('validateSDRCapabilities helper', () => {
 			minFrequency: 1_000_000,
 			maxFrequency: 6_000_000_000,
 			sampleRate: 20_000_000,
-			txCapable: true,
-			rxCapable: true
+			canTransmit: true,
+			canReceive: true
 		};
 
 		const result = validateSDRCapabilities(validSDR);
@@ -371,8 +371,8 @@ describe('Edge Cases', () => {
 			minFrequency: 1,
 			maxFrequency: Number.MAX_SAFE_INTEGER,
 			sampleRate: 1_000_000_000,
-			txCapable: true,
-			rxCapable: true
+			canTransmit: true,
+			canReceive: true
 		};
 
 		expect(SDRCapabilitiesSchema.parse(sdr)).toEqual(sdr);
@@ -395,8 +395,8 @@ describe('Edge Cases', () => {
 	it('should handle empty arrays in capabilities', () => {
 		const wifi = {
 			interface: 'wlan0',
-			monitorMode: false,
-			injectionCapable: false,
+			hasMonitorMode: false,
+			canInject: false,
 			frequencyBands: [],
 			channels: []
 		};

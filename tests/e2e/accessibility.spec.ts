@@ -12,7 +12,13 @@
  */
 
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
+// @axe-core/playwright bundles an older Page type — bridge with a helper
+// @constitutional-exemption Article-II-2.1 issue:#010 — library type version mismatch
+function axe(page: Page) {
+	return new AxeBuilder({ page } as unknown as ConstructorParameters<typeof AxeBuilder>[0]);
+}
 
 test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 	test.beforeEach(async ({ page }) => {
@@ -21,7 +27,7 @@ test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 	});
 
 	test('Dashboard passes axe accessibility audit', async ({ page }) => {
-		const accessibilityScanResults = await new AxeBuilder({ page })
+		const accessibilityScanResults = await axe(page)
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
 			.analyze();
 
@@ -46,9 +52,7 @@ test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 		await page.click('[data-testid="hackrf-panel"], button:has-text("HackRF")');
 		await page.waitForTimeout(500);
 
-		const accessibilityScanResults = await new AxeBuilder({ page })
-			.withTags(['wcag2a', 'wcag2aa'])
-			.analyze();
+		const accessibilityScanResults = await axe(page).withTags(['wcag2a', 'wcag2aa']).analyze();
 
 		expect(accessibilityScanResults.violations).toEqual([]);
 	});
@@ -57,9 +61,7 @@ test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 		await page.click('[data-testid="kismet-panel"], button:has-text("Kismet")');
 		await page.waitForTimeout(500);
 
-		const accessibilityScanResults = await new AxeBuilder({ page })
-			.withTags(['wcag2a', 'wcag2aa'])
-			.analyze();
+		const accessibilityScanResults = await axe(page).withTags(['wcag2a', 'wcag2aa']).analyze();
 
 		expect(accessibilityScanResults.violations).toEqual([]);
 	});
@@ -68,9 +70,7 @@ test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 		await page.click('[data-testid="gps-panel"], button:has-text("GPS")');
 		await page.waitForTimeout(500);
 
-		const accessibilityScanResults = await new AxeBuilder({ page })
-			.withTags(['wcag2a', 'wcag2aa'])
-			.analyze();
+		const accessibilityScanResults = await axe(page).withTags(['wcag2a', 'wcag2aa']).analyze();
 
 		expect(accessibilityScanResults.violations).toEqual([]);
 	});

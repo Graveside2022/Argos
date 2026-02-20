@@ -1,6 +1,8 @@
 import type { Feature } from 'geojson';
 import type maplibregl from 'maplibre-gl';
 
+import { logger } from '$lib/utils/logger';
+
 import { SymbolFactory } from '../symbols/SymbolFactory';
 
 export class SymbolLayer {
@@ -71,7 +73,7 @@ export class SymbolLayer {
 				features: features
 			});
 		} else {
-			console.warn('[SymbolLayer] Source not found during update!');
+			logger.warn('SymbolLayer source not found during update');
 		}
 	}
 
@@ -81,7 +83,7 @@ export class SymbolLayer {
 		try {
 			const dataUrl = SymbolFactory.createSymbolDataUrl(sidc, { size: 32 });
 			if (!dataUrl) {
-				console.warn(`[SymbolLayer] Empty render for SIDC: ${sidc}`);
+				logger.warn('SymbolLayer empty render for SIDC', { sidc });
 				return;
 			}
 
@@ -94,7 +96,7 @@ export class SymbolLayer {
 			};
 			img.src = dataUrl;
 		} catch (error) {
-			console.error(`[SymbolLayer] Error generating symbol for SIDC: ${sidc}`, error);
+			logger.error('SymbolLayer error generating symbol for SIDC', { sidc, error });
 		}
 	}
 

@@ -9,7 +9,9 @@ import type {
 	KismetStatus
 } from '$lib/kismet/types';
 import { updateKismetConnection } from '$lib/stores/connection';
+import { handleTakMessage } from '$lib/stores/tak-store';
 import { KismetEvent } from '$lib/types/enums';
+import { logger } from '$lib/utils/logger';
 import { BaseWebSocket, type BaseWebSocketConfig } from '$lib/websocket/base';
 
 export type KismetWebSocketConfig = BaseWebSocketConfig;
@@ -38,6 +40,14 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	private setupMessageHandlers(): void {
+		// TAK updates
+		this.onMessage('tak_status', (data) => {
+			handleTakMessage({ type: 'tak_status', data: data as Record<string, unknown> });
+		});
+		this.onMessage('tak_cot', (data) => {
+			handleTakMessage({ type: 'tak_cot', data: data as Record<string, unknown> });
+		});
+
 		// Status updates
 		this.onMessage('status', (data) => {
 			this.handleStatusUpdate(data);
@@ -94,8 +104,8 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		// console.info('[Kismet] WebSocket connected');
 
 		updateKismetConnection({
-			connected: true,
-			connecting: false,
+			isConnected: true,
+			isConnecting: false,
 			error: null,
 			reconnectAttempts: 0,
 			lastConnected: Date.now()
@@ -111,8 +121,8 @@ export class KismetWebSocketClient extends BaseWebSocket {
 		// console.info('[Kismet] WebSocket disconnected');
 
 		updateKismetConnection({
-			connected: false,
-			connecting: false
+			isConnected: false,
+			isConnecting: false
 		});
 
 		kismetStore.updateStatus({ kismet_running: false });
@@ -124,7 +134,7 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	protected onError(error: Error): void {
-		console.error('[Kismet] WebSocket error:', error);
+		logger.error('[Kismet] WebSocket error', { error });
 
 		updateKismetConnection({
 			error: error.message,
@@ -381,12 +391,12 @@ export class KismetWebSocketClient extends BaseWebSocket {
 	}
 
 	private handleError(error: unknown): void {
-		console.error('[Kismet] Server error:', error);
+		logger.error('[Kismet] Server error', { error });
 
 		const errorMessage =
 			error && typeof error === 'object' && 'message' in error
 				? // Safe: 'message' in error check on line above guarantees property exists
-					// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket error type narrowing — error event has message property
+					// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket error type narrowing — error event has message property
 					(error as { message: string }).message
 				: 'Unknown server error';
 

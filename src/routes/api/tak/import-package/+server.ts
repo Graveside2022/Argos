@@ -5,6 +5,7 @@ import { json } from '@sveltejs/kit';
 
 import { CertManager } from '$lib/server/tak/CertManager';
 import { TakPackageParser } from '$lib/server/tak/TakPackageParser';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -63,7 +64,17 @@ export const POST: RequestHandler = async ({ request }) => {
 				clientCertPath
 			};
 
-			return json({ success: true, id: configId, config });
+			// Determine if enrollment is needed
+			let warning: string | undefined;
+			if (parsed.enrollForCert && !clientCertPath) {
+				warning =
+					'This data package requires certificate enrollment. Switch to "Enroll for Certificate" in the Authentication section to get your client cert.';
+			} else if (!clientCertPath && !parsed.enrollForCert) {
+				warning =
+					'No client certificate found in package. You will need to upload one separately or enroll for one.';
+			}
+
+			return json({ success: true, id: configId, config, warning });
 		} finally {
 			// Clean up temp zip
 			if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
@@ -88,7 +99,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				{ status: 400 }
 			);
 		}
-		console.error('Failed to process data package:', err);
+		logger.error('Failed to process data package', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

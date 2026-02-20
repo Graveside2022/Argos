@@ -7,6 +7,7 @@
 import { writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
+import { logger } from '$lib/utils/logger';
 
 const STORAGE_KEY = 'gsm-evil-state';
 const STORAGE_VERSION = '1.0';
@@ -107,7 +108,7 @@ function createGSMEvilStore() {
 
 				// Version migration logic
 				if (parsedState.storageVersion !== STORAGE_VERSION) {
-					console.warn('GSM Evil state version mismatch, resetting to default');
+					logger.warn('GSM Evil state version mismatch, resetting to default');
 					localStorage.removeItem(STORAGE_KEY);
 					return;
 				}
@@ -119,7 +120,7 @@ function createGSMEvilStore() {
 				set(mergedState);
 			}
 		} catch (error) {
-			console.error('Failed to load GSM Evil state from localStorage:', error);
+			logger.error('Failed to load GSM Evil state from localStorage', { error });
 			localStorage.removeItem(STORAGE_KEY);
 		}
 	}
@@ -137,11 +138,11 @@ function createGSMEvilStore() {
 
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
 		} catch (error) {
-			console.error('Failed to persist GSM Evil state to localStorage:', error);
+			logger.error('Failed to persist GSM Evil state to localStorage', { error });
 
 			// Handle quota exceeded
 			if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-				console.warn('localStorage quota exceeded, clearing old data');
+				logger.warn('localStorage quota exceeded, clearing old data');
 				localStorage.removeItem(STORAGE_KEY);
 			}
 		}

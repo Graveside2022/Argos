@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { logger } from '$lib/utils/logger';
+
 /**
  * Parse JSON with schema validation.
  * Returns { success: true, data: T } or { success: false, error: string }
@@ -20,12 +22,12 @@ export function safeJsonParse<T>(
 	try {
 		parsed = JSON.parse(raw);
 	} catch {
-		console.warn(`[${context}] Invalid JSON`, { raw: raw.substring(0, 200) });
+		logger.warn(`[${context}] Invalid JSON`, { raw: raw.substring(0, 200) });
 		return { success: false, error: 'Invalid JSON' };
 	}
 	const result = schema.safeParse(parsed);
 	if (!result.success) {
-		console.warn(`[${context}] JSON validation failed`, {
+		logger.warn(`[${context}] JSON validation failed`, {
 			errors: result.error.issues.map((i) => i.message).join(', ')
 		});
 		return { success: false, error: 'Validation failed' };

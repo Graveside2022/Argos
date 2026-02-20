@@ -23,13 +23,20 @@ vi.mock('$lib/server/tak/CertManager', () => ({
 }));
 
 vi.mock('@tak-ps/node-tak', () => ({
-	TAKAPI: vi.fn().mockImplementation(() => ({
-		Credentials: { generate: mockGenerate }
-	})),
+	TAKAPI: Object.assign(
+		vi.fn().mockImplementation(() => ({
+			Credentials: { generate: mockGenerate }
+		})),
+		{
+			init: vi.fn().mockImplementation(async () => ({
+				Credentials: { generate: mockGenerate }
+			}))
+		}
+	),
 	APIAuthPassword: vi.fn()
 }));
 
-import { POST } from '$lib/../routes/api/tak/enroll/+server';
+import { POST } from './+server';
 
 // --- Helpers ---
 

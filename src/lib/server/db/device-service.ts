@@ -114,7 +114,7 @@ export function updateDeviceFromSignal(
 		const newDeviceData = {
 			device_id: signal.device_id,
 			type: detectDeviceType(signal.frequency),
-			manufacturer: null, // TODO: OUI lookup
+			manufacturer: null, // TODO(#9): OUI lookup
 			first_seen: signal.timestamp,
 			last_seen: signal.timestamp,
 			avg_power: signal.power,

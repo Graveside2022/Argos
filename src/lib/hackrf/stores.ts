@@ -34,7 +34,7 @@ export interface SignalHistoryEntry {
 }
 
 export interface SweepStatus {
-	active: boolean;
+	isActive: boolean;
 	startFreq: number;
 	endFreq: number;
 	currentFreq: number;
@@ -46,7 +46,7 @@ export interface SweepStatus {
 }
 
 export interface CycleStatus {
-	active: boolean;
+	isActive: boolean;
 	currentCycle: number;
 	totalCycles: number;
 	cycleTime?: number;
@@ -58,14 +58,14 @@ export interface CycleStatus {
 }
 
 export interface EmergencyStopStatus {
-	active: boolean;
+	isActive: boolean;
 	reason?: string;
 	timestamp?: number;
 }
 
 export interface ConnectionStatus {
-	connected: boolean;
-	connecting: boolean;
+	isConnected: boolean;
+	isConnecting: boolean;
 	error: string | null;
 	reconnectAttempts?: number;
 	lastError?: string;
@@ -94,7 +94,7 @@ export interface HackRFConfig {
 // Stores
 export const spectrumData: Writable<SpectrumData | null> = writable(null);
 export const sweepStatus: Writable<SweepStatus> = writable({
-	active: false,
+	isActive: false,
 	startFreq: 0,
 	endFreq: 0,
 	currentFreq: 0,
@@ -102,19 +102,19 @@ export const sweepStatus: Writable<SweepStatus> = writable({
 });
 
 export const cycleStatus: Writable<CycleStatus> = writable({
-	active: false,
+	isActive: false,
 	currentCycle: 0,
 	totalCycles: 0,
 	progress: 0
 });
 
 export const emergencyStopStatus: Writable<EmergencyStopStatus> = writable({
-	active: false
+	isActive: false
 });
 
 export const connectionStatus: Writable<ConnectionStatus> = writable({
-	connected: false,
-	connecting: false,
+	isConnected: false,
+	isConnecting: false,
 	error: null
 });
 
@@ -143,7 +143,7 @@ export const signalHistory: Writable<SignalHistoryEntry[]> = writable([]);
 // Derived stores
 export const isActive: Readable<boolean> = derived(
 	[sweepStatus, cycleStatus],
-	([$sweepStatus, $cycleStatus]) => $sweepStatus.active || $cycleStatus.active
+	([$sweepStatus, $cycleStatus]) => $sweepStatus.isActive || $cycleStatus.isActive
 );
 
 export const sweepProgress: Readable<number> = derived(
@@ -158,7 +158,7 @@ export const sweepDuration: Readable<number> = derived(
 
 export const isEmergencyStopped: Readable<boolean> = derived(
 	emergencyStopStatus,
-	($emergencyStopStatus) => $emergencyStopStatus.active
+	($emergencyStopStatus) => $emergencyStopStatus.isActive
 );
 
 export const peakFrequency: Readable<number | null> = derived(spectrumData, ($spectrumData) => {
@@ -258,24 +258,24 @@ export function updateSignalHistory(entry: SignalHistoryEntry) {
 export function resetStores() {
 	spectrumData.set(null);
 	sweepStatus.set({
-		active: false,
+		isActive: false,
 		startFreq: 0,
 		endFreq: 0,
 		currentFreq: 0,
 		progress: 0
 	});
 	cycleStatus.set({
-		active: false,
+		isActive: false,
 		currentCycle: 0,
 		totalCycles: 0,
 		progress: 0
 	});
 	emergencyStopStatus.set({
-		active: false
+		isActive: false
 	});
 	connectionStatus.set({
-		connected: false,
-		connecting: false,
+		isConnected: false,
+		isConnecting: false,
 		error: null
 	});
 	deviceInfo.set(null);

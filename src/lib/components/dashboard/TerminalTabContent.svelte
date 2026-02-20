@@ -1,11 +1,12 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 
 	import { browser } from '$app/environment';
+	import { buildTerminalTheme } from '$lib/components/dashboard/terminal/terminal-theme';
 	import { updateSessionConnection } from '$lib/stores/dashboard/terminal-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
-	import { resolveThemeColor } from '$lib/utils/theme-colors';
+	import { logger } from '$lib/utils/logger';
 
 	interface Props {
 		sessionId: string;
@@ -46,14 +47,7 @@
 		// Subscribe to reactive theme state to trigger re-resolution
 		const _palette = themeStore.palette;
 		if (!terminal) return;
-		terminal.options.theme = {
-			...terminal.options.theme,
-			background: '#0a0a0a',
-			foreground: resolveThemeColor('--foreground', '#e8eaed'),
-			cursor: resolveThemeColor('--primary', '#4a9eff'),
-			cursorAccent: '#0a0a0a',
-			selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)')
-		};
+		terminal.options.theme = buildTerminalTheme();
 	});
 
 	function connectWebSocket(attempt: number) {
@@ -65,7 +59,7 @@
 
 		sock.onopen = () => {
 			connectionError = false;
-			console.warn(`[Terminal ${sessionId}] WebSocket connected, sending init`);
+			logger.info('Terminal WebSocket connected, sending init', { sessionId });
 			sock.send(JSON.stringify({ type: 'init', shell, sessionId }));
 		};
 
@@ -74,7 +68,7 @@
 				try {
 					const msg = JSON.parse(e.data);
 					if (msg.type === 'ready') {
-						console.warn(`[Terminal ${sessionId}] New PTY session spawned`);
+						logger.info('New PTY session spawned', { sessionId });
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';
@@ -94,7 +88,7 @@
 						return;
 					}
 					if (msg.type === 'reattached') {
-						console.warn(`[Terminal ${sessionId}] PTY session reattached successfully`);
+						logger.info('PTY session reattached successfully', { sessionId });
 						_actualShell = msg.shell;
 						updateSessionConnection(sessionId, true);
 						let shellName = msg.shell.split('/').pop() || 'terminal';
@@ -137,14 +131,18 @@
 			// Retry with exponential backoff if we never connected successfully
 			if (!destroyed && attempt < WS_MAX_RETRIES && !connectionError) {
 				const delay = WS_BASE_DELAY_MS * Math.pow(2, attempt);
-				console.warn(
-					`[Terminal ${sessionId}] Connection failed, retry ${attempt + 1}/${WS_MAX_RETRIES} in ${delay}ms`
-				);
+				logger.warn('Terminal connection failed, retrying', {
+					sessionId,
+					attempt: attempt + 1,
+					maxRetries: WS_MAX_RETRIES,
+					delayMs: delay
+				});
 				wsRetryTimer = setTimeout(() => connectWebSocket(attempt + 1), delay);
 			} else if (!destroyed && attempt >= WS_MAX_RETRIES) {
-				console.warn(
-					`[Terminal ${sessionId}] All ${WS_MAX_RETRIES} retries exhausted, showing error`
-				);
+				logger.warn('Terminal retries exhausted, showing error', {
+					sessionId,
+					maxRetries: WS_MAX_RETRIES
+				});
 				connectionError = true;
 			}
 		};
@@ -172,32 +170,7 @@
 				"'FiraCode Nerd Font', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
 			lineHeight: 1.2,
 			scrollback: 10000,
-			theme: {
-				// UI chrome — near-black neutral to match dashboard aesthetic
-				background: '#0a0a0a',
-				foreground: resolveThemeColor('--foreground', '#e8eaed'),
-				cursor: resolveThemeColor('--primary', '#4a9eff'),
-				cursorAccent: '#0a0a0a',
-				selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
-				selectionForeground: '#ffffff',
-				// 16 ANSI standard colors — FIXED (terminal color standards for CLI output)
-				black: '#16181d',
-				red: '#f87171',
-				green: '#4ade80',
-				yellow: '#fbbf24',
-				blue: '#4a9eff',
-				magenta: '#a78bfa',
-				cyan: '#22d3ee',
-				white: '#e8eaed',
-				brightBlack: '#5f6368',
-				brightRed: '#fca5a5',
-				brightGreen: '#86efac',
-				brightYellow: '#fde047',
-				brightBlue: '#60a5fa',
-				brightMagenta: '#c4b5fd',
-				brightCyan: '#67e8f9',
-				brightWhite: '#ffffff'
-			}
+			theme: buildTerminalTheme()
 		});
 
 		fitAddon = new FitAddon();

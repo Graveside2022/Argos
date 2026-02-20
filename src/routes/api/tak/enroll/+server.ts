@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { CertManager } from '$lib/server/tak/CertManager';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -30,14 +31,27 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Usage: api.Credentials.generate() handles CSR + POST + PEM response
 		const { TAKAPI, APIAuthPassword } = await import('@tak-ps/node-tak');
 
-		const api = new TAKAPI(
-			new URL(`https://${hostname}:${port}`),
-			new APIAuthPassword(username, password)
-		);
-
 		let result: { ca: string[]; cert: string; key: string };
 		try {
-			result = await api.Credentials.generate();
+			// TAK servers use self-signed certs — temporarily disable TLS verification
+			// for the enrollment HTTPS calls (OAuth login + config + signClient)
+			const prevTLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+			try {
+				// Use TAKAPI.init() to perform OAuth login first — gets JWT for all API calls
+				const api = await TAKAPI.init(
+					new URL(`https://${hostname}:${port}`),
+					new APIAuthPassword(username, password)
+				);
+				result = await api.Credentials.generate();
+			} finally {
+				// Restore previous setting
+				if (prevTLS === undefined) {
+					delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+				} else {
+					process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevTLS;
+				}
+			}
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			if (msg.includes('401') || msg.includes('403') || msg.includes('auth')) {
@@ -62,7 +76,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					{ status: 502 }
 				);
 			}
-			throw err;
+			// Forward actual error message instead of generic 500
+			logger.error('Enrollment API call failed', { error: msg });
+			return json({ success: false, error: msg }, { status: 502 });
 		}
 
 		// Save PEM files
@@ -82,7 +98,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (err instanceof Error && err.name === 'InputValidationError') {
 			return json({ success: false, error: err.message }, { status: 400 });
 		}
-		console.error('Enrollment failed:', err);
+		logger.error('Enrollment failed', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

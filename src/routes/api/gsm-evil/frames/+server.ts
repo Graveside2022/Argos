@@ -3,6 +3,8 @@ import { execFile } from 'child_process';
 import { readFile } from 'fs/promises';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
@@ -12,7 +14,7 @@ export const GET: RequestHandler = async () => {
 		// Check if grgsm_livemon is running
 		const grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']).catch(
 			(error: unknown) => {
-				console.warn('[gsm-evil-frames] GRGSM process check failed', {
+				logger.warn('[gsm-evil-frames] GRGSM process check failed', {
 					error: String(error)
 				});
 				return { stdout: '' };
@@ -36,7 +38,7 @@ export const GET: RequestHandler = async () => {
 			const lastLines = allLines.slice(-10);
 			recentFrames = lastLines.filter((line) => frameRegex.test(line)).join('\n');
 		} catch (error: unknown) {
-			console.warn('[gsm-evil-frames] Frame log read failed', { error: String(error) });
+			logger.warn('[gsm-evil-frames] Frame log read failed', { error: String(error) });
 			recentFrames = '';
 		}
 
@@ -138,7 +140,7 @@ export const GET: RequestHandler = async () => {
 			message: frames.length > 0 ? 'Live frames captured' : 'No frames detected'
 		});
 	} catch (error: unknown) {
-		console.error('Frame capture error:', error);
+		logger.error('Frame capture error', { error: (error as Error).message });
 		return json({
 			success: false,
 			frames: [],

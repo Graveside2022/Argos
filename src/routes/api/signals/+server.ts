@@ -1,15 +1,16 @@
-import { error,json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 
 import { getRFDatabase } from '$lib/server/db/database';
 import type { SignalMarker } from '$lib/types/signals';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ url }) => {
 	try {
-		console.warn('GET /api/signals - Starting request');
+		logger.debug('GET /api/signals - Starting request');
 		const db = getRFDatabase();
-		console.warn('Database instance created');
+		logger.debug('Database instance created');
 
 		// Parse query parameters
 		const lat = parseFloat(url.searchParams.get('lat') || '0');
@@ -19,7 +20,7 @@ export const GET: RequestHandler = ({ url }) => {
 		const endTime = parseInt(url.searchParams.get('endTime') || String(Date.now()));
 		const limit = parseInt(url.searchParams.get('limit') || '1000');
 
-		console.warn('Query params:', { lat, lon, radiusMeters, startTime, endTime, limit });
+		logger.debug('Signal query params', { lat, lon, radiusMeters, startTime, endTime, limit });
 
 		// Execute spatial query
 		const signals = db.findSignalsInRadius({
@@ -31,11 +32,12 @@ export const GET: RequestHandler = ({ url }) => {
 			limit
 		});
 
-		console.warn(`Found ${signals.length} signals`);
+		logger.debug('Found signals', { count: signals.length });
 		return json({ signals });
 	} catch (err: unknown) {
-		console.error('Error querying signals:', err);
-		console.error('Signal query error:', err instanceof Error ? err.message : String(err));
+		logger.error('Error querying signals', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return error(500, 'Failed to query signals');
 	}
 };
@@ -43,7 +45,7 @@ export const GET: RequestHandler = ({ url }) => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const db = getRFDatabase();
-	// Safe: Request body validated as SignalMarker type before database insertion
+		// Safe: Request body validated as SignalMarker type before database insertion
 		const signal = (await request.json()) as SignalMarker;
 
 		// Store signal in database
@@ -54,7 +56,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			id: dbSignal.id
 		});
 	} catch (err: unknown) {
-		console.error('Error storing signal:', err);
+		logger.error('Error storing signal', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return error(500, 'Failed to store signal');
 	}
 };

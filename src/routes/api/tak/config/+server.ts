@@ -5,6 +5,7 @@ import { getRFDatabase } from '$lib/server/db/database';
 import { loadTakConfig } from '$lib/server/tak/tak-db';
 import { TakService } from '$lib/server/tak/TakService';
 import type { TakServerConfig } from '$lib/types/tak';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -17,14 +18,14 @@ const TakConfigSchema = z.object({
 	certPath: z.string().optional(),
 	keyPath: z.string().optional(),
 	caPath: z.string().optional(),
-	connectOnStartup: z.boolean(),
+	shouldConnectOnStartup: z.boolean(),
 	authMethod: z.enum(['enroll', 'import']).optional(),
 	truststorePath: z.string().optional(),
-	truststorePass: z.string().max(256),
-	certPass: z.string().max(256),
+	truststorePass: z.string().max(256).optional(),
+	certPass: z.string().max(256).optional(),
 	enrollmentUser: z.string().max(256).optional(),
 	enrollmentPass: z.string().max(256).optional(),
-	enrollmentPort: z.number().int().min(1).max(65535)
+	enrollmentPort: z.number().int().min(1).max(65535).optional()
 });
 
 export const GET: RequestHandler = async () => {
@@ -54,7 +55,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		return json({ success: true, config });
 	} catch (err) {
-		console.error('Failed to save TAK config:', err);
+		logger.error('Failed to save TAK config', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return json({ error: 'Internal Server Error' }, { status: 500 });
 	}
 };

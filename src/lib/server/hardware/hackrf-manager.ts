@@ -69,8 +69,8 @@ export async function killBlockingProcesses(): Promise<void> {
 
 export async function getContainerStatus(
 	toolOnly = false
-): Promise<{ name: string; running: boolean }[]> {
-	const results: { name: string; running: boolean }[] = [];
+): Promise<{ name: string; isRunning: boolean }[]> {
+	const results: { name: string; isRunning: boolean }[] = [];
 	const containers = toolOnly ? HACKRF_TOOL_CONTAINERS : HACKRF_ALL_CONTAINERS;
 
 	for (const container of containers) {
@@ -85,9 +85,9 @@ export async function getContainerStatus(
 			// Use exact name matching (docker filter does substring match)
 			const names = stdout.trim().split('\n').filter(Boolean);
 			const exactMatch = names.some((n) => n === container);
-			results.push({ name: container, running: exactMatch });
+			results.push({ name: container, isRunning: exactMatch });
 		} catch (_error: unknown) {
-			results.push({ name: container, running: false });
+			results.push({ name: container, isRunning: false });
 		}
 	}
 

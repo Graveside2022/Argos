@@ -6,10 +6,10 @@ export enum HardwareDevice {
 
 export interface ResourceState {
 	device: HardwareDevice;
-	available: boolean;
+	isAvailable: boolean;
 	owner: string | null;
 	connectedSince: number | null;
-	detected: boolean;
+	isDetected: boolean;
 }
 
 export interface ResourceRequest {

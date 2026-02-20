@@ -11,6 +11,8 @@
 
 import { ZodError, type ZodIssue } from 'zod';
 
+import { logger } from '$lib/utils/logger';
+
 /**
  * Validation error context - determines whether to show UI notifications
  */
@@ -89,28 +91,19 @@ export function logValidationError(
 ): void {
 	const formattedErrors = error.issues.map(formatZodIssue);
 
-	console.error('═══ Zod Validation Error ═══');
-	console.error(`Context: ${context}`);
-	console.error(`Timestamp: ${new Date().toISOString()}`);
-	console.error('\nValidation Failures:');
-	formattedErrors.forEach((err, idx) => {
-		console.error(`  ${idx + 1}. Field: ${err.field}`);
-		console.error(`     Path: ${err.path || 'root'}`);
-		console.error(`     Error: ${err.message}`);
-		console.error(`     Constraint: ${err.constraint}`);
-		if (err.receivedValue !== undefined) {
-			console.error(`     Received: ${JSON.stringify(err.receivedValue)}`);
-		}
+	logger.error('Zod Validation Error', {
+		context,
+		failures: formattedErrors.map((err, idx) => ({
+			index: idx + 1,
+			field: err.field,
+			path: err.path || 'root',
+			error: err.message,
+			constraint: err.constraint,
+			receivedValue: err.receivedValue
+		})),
+		inputData,
+		stack: error.stack
 	});
-
-	if (inputData) {
-		console.error('\nInput Data:');
-		console.error(JSON.stringify(inputData, null, 2));
-	}
-
-	console.error('\nStack Trace:');
-	console.error(error.stack);
-	console.error('═══════════════════════════');
 }
 
 /**
