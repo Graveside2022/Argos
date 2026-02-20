@@ -157,6 +157,8 @@ export interface KismetAlert {
 	};
 }
 
+/** Mirrors Kismet websocket JSON schema — snake_case fields match external API response keys.
+ * @constitutional-exemption Article-II-2.3 issue:#11 — external API mirror type */
 export interface KismetStatus {
 	kismet_running: boolean;
 	wigle_running: boolean;
