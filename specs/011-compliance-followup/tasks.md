@@ -19,11 +19,11 @@
 
 **Purpose**: Create GitHub issues needed for placeholder replacement and verify baseline
 
-- [ ] T001 Run `npm run typecheck` and `npm run test:unit` to confirm baseline: 0 errors, 190+ tests pass
-- [ ] T002 Create GitHub issue for Article-IV-4.3 exemptions (component state handling, 18 occurrences) via `gh issue create`
-- [ ] T003 [P] Create GitHub issue for Article-IV-4.2 exemptions (UI button patterns, 8 occurrences) via `gh issue create`
-- [ ] T004 [P] Create GitHub issue for Article-IX-9.4 exemptions (static SVG icons, 18 occurrences) via `gh issue create`
-- [ ] T005 [P] Create GitHub issue for Article-II-2.1 + IX-9.1 exemptions (type narrowing + HMAC salt, 9 occurrences) via `gh issue create`
+- [x] T001 Run `npm run typecheck` and `npm run test:unit` to confirm baseline: 0 errors, 190+ tests pass
+- [x] T002 Create GitHub issue for Article-IV-4.3 exemptions (component state handling, 18 occurrences) via `gh issue create` → **#11**
+- [x] T003 [P] Create GitHub issue for Article-IV-4.2 exemptions (UI button patterns, 8 occurrences) via `gh issue create` → **#12**
+- [x] T004 [P] Create GitHub issue for Article-IX-9.4 exemptions (static SVG icons, 18 occurrences) via `gh issue create` → **#13**
+- [x] T005 [P] Create GitHub issue for Article-II-2.1 + IX-9.1 exemptions (type narrowing + HMAC salt, 9 occurrences) via `gh issue create` → **#14**
 
 ---
 
@@ -43,20 +43,22 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Rename `running` to `isRunning` in KismetStatus interface in `src/lib/kismet/api.ts:17`
-- [ ] T007 [P] [US1] Rename `running` to `isRunning` in KismetServiceStatus interface in `src/lib/server/kismet/types.ts:97`
-- [ ] T008 [P] [US1] Rename `running` to `isRunning` in KismetStatusResult interface in `src/lib/server/services/kismet/kismet-control-service-extended.ts:21`
-- [ ] T009 [P] [US1] Rename `running` to `isRunning` in GsmEvilHealth.grgsm and GsmEvilHealth.gsmevil in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts:12,18`
-- [ ] T010 [P] [US1] Rename `running` to `isRunning` in return type of getContainerStatus() in `src/lib/server/hardware/hackrf-manager.ts:72`
-- [ ] T011 [P] [US1] Rename private `running` property to `isRunning` in HardwareMonitor class in `src/lib/server/hardware/detection/hardware-detector.ts` (5 sites: lines 165, 171, 194, 199, 211)
-- [ ] T012 [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/kismet/service-manager.ts` (4 sites: lines 67, 79, 99, 223)
-- [ ] T013 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/hardware/resource-manager.ts` (2 sites: lines 64, 121)
-- [ ] T014 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/tactical-map/kismet-service.ts` (2 sites: lines 54, 56)
-- [ ] T015 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/components/dashboard/panels/ToolsNavigationView.svelte` (2 sites: lines 98, 167)
-- [ ] T016 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/components/dashboard/panels/GsmEvilPanel.svelte` (line 90)
-- [ ] T017 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/mcp/servers/hardware-debugger.ts` (5 sites: lines 88, 107, 460, 466, 538)
-- [ ] T018 [P] [US1] Update CSS class `.running` → `.isRunning` in `src/lib/components/dashboard/shared/ToolCard.svelte` (lines 129, 154) and all class binding references
-- [ ] T019 [US1] Run `npm run typecheck` and `npm run test:unit` to verify boolean rename — 0 errors, 190+ tests pass
+- [x] T006 [P] [US1] Rename `running` to `isRunning` in KismetStatus interface in `src/lib/kismet/api.ts:17`
+- [x] T007 [P] [US1] Rename `running` to `isRunning` in KismetServiceStatus interface in `src/lib/server/kismet/types.ts:97`
+- [x] T008 [P] [US1] Rename `running` to `isRunning` in KismetStatusResult interface in `src/lib/server/services/kismet/kismet-control-service-extended.ts:21`
+- [x] T009 [P] [US1] Rename `running` to `isRunning` in GsmEvilHealth.grgsm and GsmEvilHealth.gsmevil in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts:12,18`
+- [x] T010 [P] [US1] Rename `running` to `isRunning` in return type of getContainerStatus() in `src/lib/server/hardware/hackrf-manager.ts:72`
+- [x] T011 [P] [US1] Rename private `running` property to `_isRunning` in HardwareMonitor class in `src/lib/server/hardware/detection/hardware-detector.ts` (5 sites)
+- [x] T012 [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/kismet/service-manager.ts` (4 sites)
+- [x] T013 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/hardware/resource-manager.ts` (2 sites)
+- [x] T014 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/tactical-map/kismet-service.ts` (2 sites)
+- [x] T015 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/components/dashboard/panels/ToolsNavigationView.svelte` (2 sites)
+- [x] T016 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/components/dashboard/panels/GsmEvilPanel.svelte` (line 90)
+- [x] T017 [P] [US1] Update all consumers of `.running` → `.isRunning` in `src/lib/server/mcp/servers/hardware-debugger.ts` (5 sites)
+- [x] T018 [P] [US1] Update CSS class `.running` → `.isRunning` in `src/lib/components/dashboard/shared/ToolCard.svelte` (lines 129, 154) and all class binding references
+- [x] T019 [US1] Run `npm run typecheck` and `npm run test:unit` to verify boolean rename — 0 errors, 190 tests pass
+- [x] EXTRA: Updated Zod schema `KismetControlResponseSchema` in `src/lib/schemas/rf.ts` — `running` → `isRunning`
+- [x] EXTRA: Updated JSON response keys in API routes (`/api/kismet/status`, `/api/kismet/control`, `/api/kismet/devices`, `/api/gsm-evil/status`, `/api/gsm-evil/health`)
 
 **Checkpoint**: All boolean properties use is/has/should/can/will prefix. `grep -rn 'running: boolean' src/lib/` returns 0 interface/type results.
 

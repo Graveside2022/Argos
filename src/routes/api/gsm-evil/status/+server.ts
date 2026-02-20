@@ -14,12 +14,12 @@ export const GET: RequestHandler = async () => {
 		// Safe: Status properties initialized as null, explicitly typed for union types (number|null, string|null)
 		const status = {
 			grgsm: {
-				running: false,
+				isRunning: false,
 				pid: null as number | null,
 				frequency: '948.6 MHz'
 			},
 			gsmevil: {
-				running: false,
+				isRunning: false,
 				pid: null as number | null,
 				webInterface: false
 			},
@@ -60,7 +60,7 @@ export const GET: RequestHandler = async () => {
 						const runtime = parseInt(pidTime.trim()) || 0;
 						// Only consider it "running" if it's been up for more than 10 seconds
 						if (runtime > 10) {
-							status.grgsm.running = true;
+							status.grgsm.isRunning = true;
 							status.grgsm.pid = validPid;
 						}
 					} catch (error: unknown) {
@@ -93,7 +93,7 @@ export const GET: RequestHandler = async () => {
 				const parts = gsmevilLine.trim().split(/\s+/);
 				const pid = parseInt(parts[0]);
 				if (!isNaN(pid)) {
-					status.gsmevil.running = true;
+					status.gsmevil.isRunning = true;
 					status.gsmevil.pid = pid;
 
 					// Check if web interface is accessible
@@ -112,14 +112,14 @@ export const GET: RequestHandler = async () => {
 		}
 
 		// If both are running, assume data collection is active
-		if (status.grgsm.running && status.gsmevil.running) {
+		if (status.grgsm.isRunning && status.gsmevil.isRunning) {
 			status.dataCollection.active = true;
 			status.dataCollection.lastActivity = 'Active';
 		}
 
 		// Determine overall status
 		const overallStatus =
-			status.grgsm.running && status.gsmevil.running ? 'running' : 'stopped';
+			status.grgsm.isRunning && status.gsmevil.isRunning ? 'running' : 'stopped';
 
 		return json({
 			status: overallStatus,

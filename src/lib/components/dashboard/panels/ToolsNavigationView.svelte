@@ -95,7 +95,7 @@
 						credentials: 'same-origin'
 					});
 					const statusData = await statusRes.json();
-					setLocalStatus(tool.id, statusData.running ? 'running' : 'stopped');
+					setLocalStatus(tool.id, statusData.isRunning ? 'running' : 'stopped');
 				} else {
 					setLocalStatus(tool.id, data.success ? 'running' : 'stopped');
 				}
@@ -164,7 +164,7 @@
 			})
 				.then((r) => r.json())
 				.then((data) => {
-					if (data.running) setLocalStatus('openwebrx', 'running');
+					if (data.isRunning) setLocalStatus('openwebrx', 'running');
 				})
 				.catch(() => {});
 		}

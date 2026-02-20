@@ -156,19 +156,19 @@ export function getCompatibleHardware(toolId: string): DetectedHardware[] {
  */
 export class HardwareMonitor {
 	private interval: NodeJS.Timeout | null = null;
-	private running = false;
+	private _isRunning = false;
 
 	/**
 	 * Start monitoring hardware changes
 	 */
 	start(intervalMs: number = 30000): void {
-		if (this.running) {
+		if (this._isRunning) {
 			logger.warn('[HardwareMonitor] Already running');
 			return;
 		}
 
 		logger.info('[HardwareMonitor] Starting', { intervalMs });
-		this.running = true;
+		this._isRunning = true;
 
 		// Initial scan
 		scanAllHardware().catch((error) => {
@@ -191,12 +191,12 @@ export class HardwareMonitor {
 	 * Stop monitoring
 	 */
 	stop(): void {
-		if (!this.running) {
+		if (!this._isRunning) {
 			return;
 		}
 
 		logger.info('[HardwareMonitor] Stopping');
-		this.running = false;
+		this._isRunning = false;
 
 		if (this.interval) {
 			clearInterval(this.interval);
@@ -208,7 +208,7 @@ export class HardwareMonitor {
 	 * Check if monitoring is active
 	 */
 	isRunning(): boolean {
-		return this.running;
+		return this._isRunning;
 	}
 }
 

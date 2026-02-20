@@ -51,9 +51,9 @@ export class KismetService {
 
 				const currentStatus = get(kismetStore).status;
 
-				if (data.running && currentStatus === 'stopped') {
+				if (data.isRunning && currentStatus === 'stopped') {
 					setKismetStatus('running');
-				} else if (!data.running && currentStatus === 'running') {
+				} else if (!data.isRunning && currentStatus === 'running') {
 					setKismetStatus('stopped');
 				}
 			}

@@ -116,7 +116,7 @@ export type KismetDevicesResponse = z.infer<typeof KismetDevicesResponseSchema>;
  */
 export const KismetControlResponseSchema = z.object({
 	success: z.boolean(),
-	running: z.boolean().optional(),
+	isRunning: z.boolean().optional(),
 	message: z.string().optional(),
 	error: z.string().optional()
 });

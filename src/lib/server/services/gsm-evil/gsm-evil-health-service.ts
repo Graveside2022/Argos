@@ -9,13 +9,13 @@ const execFileAsync = promisify(execFile);
 
 export interface GsmEvilHealth {
 	grgsm: {
-		running: boolean;
+		isRunning: boolean;
 		pid: number | null;
 		runtime: number;
 		status: string;
 	};
 	gsmevil: {
-		running: boolean;
+		isRunning: boolean;
 		pid: number | null;
 		hasWebInterface: boolean;
 		hasPort8080: boolean;
@@ -39,13 +39,13 @@ export interface GsmEvilHealth {
 export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 	const health: GsmEvilHealth = {
 		grgsm: {
-			running: false,
+			isRunning: false,
 			pid: null,
 			runtime: 0,
 			status: 'unknown'
 		},
 		gsmevil: {
-			running: false,
+			isRunning: false,
 			pid: null,
 			hasWebInterface: false,
 			hasPort8080: false,
@@ -93,7 +93,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 						const runtime = parseInt(pidTime.trim()) || 0;
 
 						if (runtime > 10) {
-							health.grgsm.running = true;
+							health.grgsm.isRunning = true;
 							health.grgsm.pid = validPid;
 							health.grgsm.runtime = runtime;
 							health.grgsm.status = 'running';
@@ -127,7 +127,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 				const parts = gsmevilLine.trim().split(/\s+/);
 				const pid = parseInt(parts[0]);
 				if (!isNaN(pid)) {
-					health.gsmevil.running = true;
+					health.gsmevil.isRunning = true;
 					health.gsmevil.pid = pid;
 					health.gsmevil.status = 'running';
 
@@ -228,12 +228,12 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		const issues: string[] = [];
 		const recommendations: string[] = [];
 
-		if (!health.grgsm.running) {
+		if (!health.grgsm.isRunning) {
 			issues.push('GRGSM monitor not running');
 			recommendations.push('Start GRGSM process to capture RF signals');
 		}
 
-		if (!health.gsmevil.running) {
+		if (!health.gsmevil.isRunning) {
 			issues.push('GSM Evil service not running');
 			recommendations.push('Start GSM Evil web service');
 		} else if (!health.gsmevil.hasWebInterface) {
@@ -252,8 +252,8 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 		}
 
 		health.overall.isPipelineHealthy =
-			health.grgsm.running &&
-			health.gsmevil.running &&
+			health.grgsm.isRunning &&
+			health.gsmevil.isRunning &&
 			health.gsmevil.hasWebInterface &&
 			health.dataFlow.isGsmtapActive &&
 			health.dataFlow.isDatabaseAccessible;
@@ -263,7 +263,7 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 
 		if (health.overall.isPipelineHealthy) {
 			health.overall.status = health.dataFlow.hasRecentData ? 'healthy' : 'healthy-idle';
-		} else if (health.grgsm.running || health.gsmevil.running) {
+		} else if (health.grgsm.isRunning || health.gsmevil.isRunning) {
 			health.overall.status = 'partial';
 		} else {
 			health.overall.status = 'stopped';
