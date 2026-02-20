@@ -70,6 +70,11 @@ function normalizeShellPath(shellPath: string): string {
 		);
 	}
 
+	// Resolve relative scripts/ paths to absolute paths so they match VALID_SHELLS
+	if (normalized.startsWith('scripts/')) {
+		normalized = path.join(PROJECT_ROOT, normalized);
+	}
+
 	return normalized;
 }
 
