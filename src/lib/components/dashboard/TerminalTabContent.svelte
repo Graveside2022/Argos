@@ -185,7 +185,7 @@
 				cursorAccent: '#0a0a0a',
 				selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
 				selectionForeground: '#ffffff',
-				// 16 ANSI standard colors — FIXED (terminal color standards for CLI output)
+				// @constitutional-exemption Article-IV — 16 ANSI standard colors are protocol constants, not theme colors
 				black: '#16181d',
 				red: '#f87171',
 				green: '#4ade80',
