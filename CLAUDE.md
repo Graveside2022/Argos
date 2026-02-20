@@ -34,6 +34,13 @@ Run BEFORE commit:
 
 ## Active Technologies
 
+- TypeScript 5.8 (strict mode) + SvelteKit 2.22, Svelte 5 (Runes), Tailwind CSS 4, xterm.js, MapLibre GL (011-compliance-followup)
+- SQLite via better-sqlite3 (no schema changes in this feature) (011-compliance-followup)
+
 - TypeScript 5.8 (strict mode) + SvelteKit 2.22, Svelte 5 (Runes), Tailwind 4
 - child_process (execFile, spawn only — no exec), better-sqlite3, fs/promises
 - SQLite via better-sqlite3 (no ORMs, no inline Python)
+
+## Recent Changes
+
+- 011-compliance-followup: Added TypeScript 5.8 (strict mode) + SvelteKit 2.22, Svelte 5 (Runes), Tailwind CSS 4, xterm.js, MapLibre GL
