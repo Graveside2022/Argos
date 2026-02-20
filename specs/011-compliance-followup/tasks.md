@@ -107,11 +107,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T033 [P] [US3] Create terminal ANSI color palette constants in `src/lib/components/dashboard/terminal/terminal-theme.ts` with typed ITerminalTheme export
-- [ ] T034 [P] [US3] Create map paint color constants in `src/lib/components/dashboard/map/map-colors.ts` with named exports for each map style color
-- [ ] T035 [US3] Update `src/lib/components/dashboard/TerminalTabContent.svelte` to import and use terminal theme from `terminal/terminal-theme.ts` instead of inline hex values
-- [ ] T036 [US3] Update DashboardMap component (or its extracted `map-styles.ts` from T027) to import and use map colors from `map/map-colors.ts` instead of inline hex values
-- [ ] T037 [US3] Run `npm run typecheck` to verify color extraction — 0 errors
+- [x] T033 [P] [US3] Create terminal ANSI color palette constants in `src/lib/components/dashboard/terminal/terminal-theme.ts` with typed ITerminalTheme export
+- [x] T034 [P] [US3] Create map paint color constants in `src/lib/components/dashboard/map/map-colors.ts` with named exports for each map style color
+- [x] T035 [US3] Update `src/lib/components/dashboard/TerminalTabContent.svelte` to import and use terminal theme from `terminal/terminal-theme.ts` instead of inline hex values
+- [x] T036 [US3] Update DashboardMap component (or its extracted `map-styles.ts` from T027) to import and use map colors from `map/map-colors.ts` instead of inline hex values
+- [x] T037 [US3] Run `npm run typecheck` to verify color extraction — 0 errors, 30 warnings (baseline)
 
 **Checkpoint**: Terminal and map colors defined in dedicated constants files. Component files reference named imports, not hex literals.
 

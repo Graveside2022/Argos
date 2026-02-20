@@ -19,6 +19,11 @@
 		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
+	import {
+		MAP_UI_COLORS,
+		resolveMapColor,
+		SIGNAL_COLORS
+	} from '$lib/components/dashboard/map/map-colors';
 	import type { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
 	import type { SymbolLayer } from '$lib/map/layers/SymbolLayer';
 	import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
@@ -42,7 +47,6 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { parseCotToFeature } from '$lib/utils/cot-parser';
 	import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
-	import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 	import DeviceOverlay from './map/DeviceOverlay.svelte';
 	import {
@@ -100,7 +104,7 @@
 	let accuracyColor = $derived.by(() => {
 		const _p = themeStore.palette;
 		const _r = cssReady;
-		return resolveThemeColor('--primary', '#4a9eff');
+		return resolveMapColor(MAP_UI_COLORS.primary);
 	});
 
 	let RANGE_BANDS = $derived.by(() => {
@@ -110,7 +114,7 @@
 				outerR: 25,
 				innerR: 0,
 				band: 'vstrong',
-				color: resolveThemeColor('--signal-critical', '#dc2626'),
+				color: resolveMapColor(SIGNAL_COLORS.critical),
 				rssi: '> -50',
 				label: '25m'
 			},
@@ -118,7 +122,7 @@
 				outerR: 60,
 				innerR: 25,
 				band: 'strong',
-				color: resolveThemeColor('--signal-strong', '#f97316'),
+				color: resolveMapColor(SIGNAL_COLORS.strong),
 				rssi: '-50 to -60',
 				label: '60m'
 			},
@@ -126,7 +130,7 @@
 				outerR: 100,
 				innerR: 60,
 				band: 'good',
-				color: resolveThemeColor('--signal-good', '#fbbf24'),
+				color: resolveMapColor(SIGNAL_COLORS.good),
 				rssi: '-60 to -70',
 				label: '100m'
 			},
@@ -134,7 +138,7 @@
 				outerR: 175,
 				innerR: 100,
 				band: 'fair',
-				color: resolveThemeColor('--signal-fair', '#10b981'),
+				color: resolveMapColor(SIGNAL_COLORS.fair),
 				rssi: '-70 to -80',
 				label: '175m'
 			},
@@ -142,7 +146,7 @@
 				outerR: 300,
 				innerR: 175,
 				band: 'weak',
-				color: resolveThemeColor('--signal-weak', '#4a90e2'),
+				color: resolveMapColor(SIGNAL_COLORS.weak),
 				rssi: '< -80',
 				label: '300m'
 			}
@@ -436,11 +440,11 @@
 	$effect(() => {
 		const _p = themeStore.palette;
 		if (!map) return;
-		const fg = resolveThemeColor('--foreground', '#e0e0e8'),
-			mutedFg = resolveThemeColor('--muted-foreground', '#888'),
-			bg = resolveThemeColor('--background', '#111119'),
-			secondary = resolveThemeColor('--secondary', '#3a3a5c'),
-			border = resolveThemeColor('--border', '#6a6a8e');
+		const fg = resolveMapColor(MAP_UI_COLORS.foreground),
+			mutedFg = resolveMapColor(MAP_UI_COLORS.mutedForeground),
+			bg = resolveMapColor(MAP_UI_COLORS.background),
+			secondary = resolveMapColor(MAP_UI_COLORS.secondary),
+			border = resolveMapColor(MAP_UI_COLORS.border);
 		if (map.getLayer('device-clusters')) {
 			map.setPaintProperty('device-clusters', 'circle-color', secondary);
 			map.setPaintProperty('device-clusters', 'circle-stroke-color', border);
@@ -667,7 +671,11 @@
 					'text-allow-overlap': false,
 					'text-optional': true
 				}}
-				paint={{ 'text-color': '#888', 'text-halo-color': '#111119', 'text-halo-width': 1 }}
+				paint={{
+					'text-color': MAP_UI_COLORS.mutedForeground.fallback,
+					'text-halo-color': MAP_UI_COLORS.background.fallback,
+					'text-halo-width': 1
+				}}
 			/>
 		</GeoJSONSource>
 
@@ -690,11 +698,11 @@
 				id="device-clusters"
 				filter={['has', 'point_count']}
 				paint={{
-					'circle-color': '#3a3a5c',
+					'circle-color': MAP_UI_COLORS.secondary.fallback,
 					'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26, 100, 32],
 					'circle-opacity': 0.85,
 					'circle-stroke-width': 2,
-					'circle-stroke-color': '#6a6a8e'
+					'circle-stroke-color': MAP_UI_COLORS.border.fallback
 				}}
 				onclick={handleClusterClick}
 			/>
@@ -707,7 +715,7 @@
 					'text-size': 12,
 					'text-allow-overlap': true
 				}}
-				paint={{ 'text-color': '#e0e0e8' }}
+				paint={{ 'text-color': MAP_UI_COLORS.foreground.fallback }}
 			/>
 			<CircleLayer
 				id="device-circles"
