@@ -4,6 +4,8 @@ import TAK from '@tak-ps/node-tak';
 import { EventEmitter } from 'events';
 import { readFile } from 'fs/promises';
 
+import { logger } from '$lib/utils/logger';
+
 import type { TakServerConfig, TakStatus } from '../../types/tak';
 import { RFDatabase } from '../db/database';
 import { loadTakConfig, saveTakConfig } from './tak-db';
@@ -43,12 +45,17 @@ export class TakService extends EventEmitter {
 	}
 
 	public async initialize() {
-		console.warn('[TakService] Initializing...');
+		logger.info('[TakService] Initializing...');
 		this.config = loadTakConfig(this.db.rawDb);
-		if (this.config?.connectOnStartup) {
+		if (this.config?.shouldConnectOnStartup) {
 			this.shouldConnect = true;
 			await this.connect();
 		}
+	}
+
+	/** Reload config from DB — call before connect() if config may have changed externally. */
+	public reloadConfig() {
+		this.config = loadTakConfig(this.db.rawDb);
 	}
 
 	public getStatus(): TakStatus {
@@ -65,7 +72,7 @@ export class TakService extends EventEmitter {
 
 	public async connect() {
 		if (!this.config) {
-			console.warn('[TakService] No configuration found.');
+			logger.warn('[TakService] No configuration found');
 			return;
 		}
 		if (this.tak) {
@@ -73,7 +80,7 @@ export class TakService extends EventEmitter {
 			this.tak = null;
 		}
 		if (!this.config.certPath || !this.config.keyPath) {
-			console.warn('[TakService] TLS certificates not configured.');
+			logger.warn('[TakService] TLS certificates not configured');
 			return;
 		}
 
@@ -83,7 +90,7 @@ export class TakService extends EventEmitter {
 			key = await readFile(this.config.keyPath, 'utf-8');
 			if (this.config.caPath) ca = await readFile(this.config.caPath, 'utf-8');
 		} catch (err) {
-			console.error('[TakService] Failed to load certificates:', err);
+			logger.error('[TakService] Failed to load certificates', { error: String(err) });
 			this.broadcastStatus(
 				'error',
 				err instanceof Error ? err.message : 'Certificate load failed'
@@ -93,12 +100,16 @@ export class TakService extends EventEmitter {
 
 		const url = new URL(`ssl://${this.config.hostname}:${this.config.port}`);
 		try {
-			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: true });
+			// TAK.connect in node-tak doesn't properly pass rejectUnauthorized to tls.connect
+			// Global bypass is required because tls.connect verifies asynchronously
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: false });
+
 			this.setupEventHandlers();
 			this.reconnectAttempt = 0;
-			console.warn('[TakService] Connection initiated');
+			logger.info('[TakService] Connection initiated');
 		} catch (err) {
-			console.error('[TakService] Connection failed:', err);
+			logger.error('[TakService] Connection failed', { error: String(err) });
 			this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
 			if (this.shouldConnect) this.scheduleReconnect();
 		}
@@ -108,7 +119,7 @@ export class TakService extends EventEmitter {
 		if (!this.tak) return;
 
 		this.tak.on('secureConnect', () => {
-			console.warn('[TakService] Securely connected');
+			logger.info('[TakService] Securely connected');
 			this.connectedAt = Date.now();
 			this.emit('status', 'connected');
 			this.broadcastStatus('connected');
@@ -121,19 +132,23 @@ export class TakService extends EventEmitter {
 		});
 
 		this.tak.on('end', () => {
-			console.warn('[TakService] Connection ended');
+			logger.info('[TakService] Connection ended');
 			this.connectedAt = null;
 			this.emit('status', 'disconnected');
 			this.broadcastStatus('disconnected');
 			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
-		this.tak.on('timeout', () => console.warn('[TakService] Connection timeout'));
+		this.tak.on('timeout', () => logger.warn('[TakService] Connection timeout'));
 
 		this.tak.on('error', (err: Error) => {
-			console.error('[TakService] Error:', err.message);
-			this.emit('error', err);
+			logger.error('[TakService] TAK socket error', { error: err.message });
+			// We don't use this.emit('error', err) because Node.js crashes on unhandled 'error' events
+			this.emit('tak-socket-error', err);
 			this.broadcastStatus('error', err.message);
+
+			this.connectedAt = null;
+			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
 		this.tak.on('ping', () => {
@@ -147,15 +162,16 @@ export class TakService extends EventEmitter {
 		const jitter = Math.random() * RECONNECT_BASE_MS;
 		const delay = Math.min(expDelay + jitter, RECONNECT_MAX_MS);
 		this.reconnectAttempt++;
-		console.warn(
-			`[TakService] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempt})`
-		);
+		logger.info('[TakService] Reconnecting', {
+			delayMs: Math.round(delay),
+			attempt: this.reconnectAttempt
+		});
 		this.reconnectTimeout = setTimeout(async () => {
 			this.reconnectTimeout = null;
 			try {
 				await this.connect();
 			} catch (err) {
-				console.error('[TakService] Reconnect failed:', err);
+				logger.error('[TakService] Reconnect failed', { error: String(err) });
 			}
 		}, delay);
 	}

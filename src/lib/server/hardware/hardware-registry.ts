@@ -3,6 +3,8 @@
  * Central registry for detected hardware with query capabilities
  */
 
+import { logger } from '$lib/utils/logger';
+
 import type {
 	ConnectionType,
 	DetectedHardware,
@@ -19,7 +21,11 @@ export class HardwareRegistry {
 	 */
 	register(hardware: DetectedHardware): void {
 		this.hardware.set(hardware.id, hardware);
-		console.warn(`[HardwareRegistry] Registered: ${hardware.name} (${hardware.id})`);
+		logger.debug(
+			'[HardwareRegistry] Registered',
+			{ name: hardware.name, id: hardware.id },
+			'hw-registry-register'
+		);
 	}
 
 	/**
@@ -37,7 +43,7 @@ export class HardwareRegistry {
 	unregister(id: string): boolean {
 		const result = this.hardware.delete(id);
 		if (result) {
-			console.warn(`[HardwareRegistry] Unregistered: ${id}`);
+			logger.debug('[HardwareRegistry] Unregistered', { id });
 		}
 		return result;
 	}
@@ -208,7 +214,7 @@ export class HardwareRegistry {
 	 */
 	clear(): void {
 		this.hardware.clear();
-		console.warn('[HardwareRegistry] Cleared all hardware');
+		logger.info('[HardwareRegistry] Cleared all hardware');
 	}
 
 	/**

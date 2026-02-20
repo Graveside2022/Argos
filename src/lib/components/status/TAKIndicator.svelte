@@ -31,7 +31,7 @@
 	}}
 />
 
-<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Status indicator toggle uses custom dot+label layout incompatible with shadcn Button -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Status indicator toggle uses custom dot+label layout incompatible with shadcn Button -->
 <div class="tak-indicator-wrapper">
 	<button class="tak-indicator" onclick={toggle}>
 		<span

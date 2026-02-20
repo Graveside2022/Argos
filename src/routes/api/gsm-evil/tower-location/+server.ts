@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -80,7 +81,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			result = stmt.get(mcc, mnc, lac, ci);
 			db.close();
 		} catch (_dbError) {
-			console.warn('Database not available, will try API');
+			logger.warn('Tower database not available, will try API');
 		}
 
 		// If no result from DB, try OpenCellID API
@@ -95,7 +96,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const apiUrl = `https://opencellid.org/cell/get?key=${apiKey}&mcc=${mcc}&mnc=${mnc}&lac=${lac}&cellid=${ci}&format=json`;
 
 			try {
-				console.warn('Querying OpenCellID API for:', { mcc, mnc, lac, ci });
+				logger.info('Querying OpenCellID API', { mcc, mnc, lac, ci });
 				const apiResponse = await fetch(apiUrl);
 
 				if (apiResponse.ok) {
@@ -103,14 +104,18 @@ export const POST: RequestHandler = async ({ request }) => {
 
 					// Check if API returned an error
 					if (apiData.error) {
-						console.warn('OpenCellID API error:', apiData.error, 'for tower:', {
+						logger.warn('OpenCellID API error', {
+							apiError: apiData.error,
 							mcc,
 							mnc,
 							lac,
 							ci
 						});
 					} else if (apiData.lat && apiData.lon) {
-						console.warn('Found in OpenCellID API:', apiData);
+						logger.info('Found in OpenCellID API', {
+							lat: apiData.lat,
+							lon: apiData.lon
+						});
 						return json({
 							success: true,
 							found: true,
@@ -123,17 +128,18 @@ export const POST: RequestHandler = async ({ request }) => {
 							}
 						});
 					} else {
-						console.warn('OpenCellID API returned incomplete data:', apiData);
+						logger.warn('OpenCellID API returned incomplete data', { apiData });
 					}
 				} else {
-					console.warn(
-						'OpenCellID API returned:',
-						apiResponse.status,
-						apiResponse.statusText
-					);
+					logger.warn('OpenCellID API returned error', {
+						status: apiResponse.status,
+						statusText: apiResponse.statusText
+					});
 				}
 			} catch (apiError) {
-				console.error('OpenCellID API error:', apiError);
+				logger.error('OpenCellID API error', {
+					error: apiError instanceof Error ? apiError.message : String(apiError)
+				});
 			}
 
 			// Check sample data as last resort
@@ -178,7 +184,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		});
 	} catch (error: unknown) {
-		console.error('Tower location lookup error:', error);
+		logger.error('Tower location lookup error', { error: (error as Error).message });
 		return json(
 			{
 				success: false,

@@ -1,9 +1,6 @@
-import {
-	GPSAPIResponseSchema,
-	RawKismetDeviceSchema,
-	SimplifiedKismetDeviceSchema
-} from '$lib/schemas/kismet';
+import { RawKismetDeviceSchema, SimplifiedKismetDeviceSchema } from '$lib/schemas/kismet';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
+import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
@@ -57,32 +54,17 @@ export class KismetService {
 	private static readonly DEFAULT_SIGNAL = -100;
 
 	/**
-	 * Retrieves current GPS position from the GPS API
-	 * @param fetchFn - The fetch function to use for HTTP requests
+	 * Retrieves current GPS position via direct service call.
+	 * Uses the GPS service directly instead of HTTP fetch to avoid auth gate blocking.
 	 * @returns GPS position or null if unavailable
 	 */
-	static async getGPSPosition(fetchFn: typeof fetch): Promise<GPSPosition | null> {
+	static async getGPSPosition(): Promise<GPSPosition | null> {
 		try {
-			const gpsResponse = await fetchFn('/api/gps/position');
-			if (gpsResponse.ok) {
-				const rawData = await gpsResponse.json();
-
-				// Validate GPS API response (T-kismet-1)
-				const validated = safeParseWithHandling(
-					GPSAPIResponseSchema,
-					rawData,
-					'background'
-				);
-				if (!validated) {
-					logError('Invalid GPS API response', { rawData }, 'gps-api-validation-failed');
-					return null;
-				}
-
-				if (validated.success && validated.data) {
-					return {
-						latitude: validated.data.latitude,
-						longitude: validated.data.longitude
-					};
+			const position = await getGpsPosition();
+			if (position.success && position.data) {
+				const { latitude, longitude } = position.data;
+				if (latitude && longitude && !(latitude === 0 && longitude === 0)) {
+					return { latitude, longitude };
 				}
 			}
 		} catch (error) {
@@ -94,11 +76,10 @@ export class KismetService {
 
 	/**
 	 * Retrieves wireless devices from Kismet using multiple fallback strategies
-	 * @param fetchFn - The fetch function to use for HTTP requests
 	 * @returns Device list with source information and any errors
 	 */
-	static async getDevices(fetchFn: typeof fetch): Promise<DevicesResponse> {
-		const gpsPosition = await this.getGPSPosition(fetchFn);
+	static async getDevices(): Promise<DevicesResponse> {
+		const gpsPosition = await this.getGPSPosition();
 		let devices: KismetDevice[] = [];
 		let error: string | null = null;
 

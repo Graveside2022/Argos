@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveThemeColor } from '../../src/lib/utils/theme-colors';
+import { resolveThemeColor } from './theme-colors';
 
 describe('resolveThemeColor', () => {
 	describe('SSR context (no document)', () => {

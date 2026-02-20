@@ -13,6 +13,7 @@ export interface ParsedTakPackage {
 	protocol: 'tls';
 	certFiles: { name: string; data: Buffer }[];
 	description?: string;
+	enrollForCert?: boolean;
 }
 
 /**
@@ -43,20 +44,22 @@ export class TakPackageParser {
 				throw new Error('Invalid data package — no manifest.xml found');
 			}
 
-			const prefPath = this.findFile(tmpDir, 'preference.pref');
+			// TAK data packages may name pref files differently (preference.pref, TAKServer.pref, etc.)
+			const prefPath = this.findFileByExt(tmpDir, '.pref');
 			if (!prefPath) {
-				throw new Error('Invalid data package — no preference.pref found');
+				throw new Error('Invalid data package — no .pref file found');
 			}
 
 			const prefXml = fs.readFileSync(prefPath, 'utf-8');
-			const { hostname, port, description } = this.parsePreferencePref(prefXml);
+			const { hostname, port, description, enrollForCert } =
+				this.parsePreferencePref(prefXml);
 
 			const certFiles = this.extractCertFiles(tmpDir);
 			if (certFiles.length === 0) {
 				throw new Error('No certificates found in data package');
 			}
 
-			return { hostname, port, protocol: 'tls', certFiles, description };
+			return { hostname, port, protocol: 'tls', certFiles, description, enrollForCert };
 		} finally {
 			fs.rmSync(tmpDir, { recursive: true, force: true });
 		}
@@ -71,6 +74,7 @@ export class TakPackageParser {
 		hostname: string;
 		port: number;
 		description?: string;
+		enrollForCert?: boolean;
 	} {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(xml, 'text/xml');
@@ -78,6 +82,7 @@ export class TakPackageParser {
 		let hostname = '';
 		let port = 8089;
 		let description: string | undefined;
+		let enrollForCert: boolean | undefined;
 
 		const entries = doc.getElementsByTagName('entry');
 		for (let i = 0; i < entries.length; i++) {
@@ -90,8 +95,10 @@ export class TakPackageParser {
 				const parsed = this.parseConnectString(value);
 				hostname = parsed.hostname;
 				port = parsed.port;
-			} else if (key === 'description') {
+			} else if (key === 'description0' || key === 'description') {
 				description = value || undefined;
+			} else if (key === 'enrollForCertificateWithTrust0') {
+				enrollForCert = value === 'true';
 			}
 		}
 
@@ -99,7 +106,7 @@ export class TakPackageParser {
 			throw new Error('Invalid data package — no connectString found in preference.pref');
 		}
 
-		return { hostname, port, description };
+		return { hostname, port, description, enrollForCert };
 	}
 
 	/**
@@ -144,6 +151,17 @@ export class TakPackageParser {
 		let found: string | null = null;
 		this.walkDir(dir, (filePath) => {
 			if (!found && path.basename(filePath) === filename) {
+				found = filePath;
+			}
+		});
+		return found;
+	}
+
+	/** Finds the first file matching a given extension (case-insensitive). */
+	private static findFileByExt(dir: string, ext: string): string | null {
+		let found: string | null = null;
+		this.walkDir(dir, (filePath) => {
+			if (!found && path.extname(filePath).toLowerCase() === ext.toLowerCase()) {
 				found = filePath;
 			}
 		});

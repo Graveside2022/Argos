@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			} else if (action === 'status') {
 				return json({
 					success: true,
-					running: false,
+					isRunning: false,
 					status: 'inactive'
 				});
 			}

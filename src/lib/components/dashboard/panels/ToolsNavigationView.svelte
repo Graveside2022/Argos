@@ -1,4 +1,4 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -95,7 +95,7 @@
 						credentials: 'same-origin'
 					});
 					const statusData = await statusRes.json();
-					setLocalStatus(tool.id, statusData.running ? 'running' : 'stopped');
+					setLocalStatus(tool.id, statusData.isRunning ? 'running' : 'stopped');
 				} else {
 					setLocalStatus(tool.id, data.success ? 'running' : 'stopped');
 				}
@@ -164,7 +164,7 @@
 			})
 				.then((r) => r.json())
 				.then((data) => {
-					if (data.running) setLocalStatus('openwebrx', 'running');
+					if (data.isRunning) setLocalStatus('openwebrx', 'running');
 				})
 				.catch(() => {});
 		}
@@ -193,9 +193,9 @@
 					name={item.name}
 					description={item.description}
 					icon={item.icon}
-					isInstalled={item.installed}
+					isInstalled={item.isInstalled}
 					canOpen={item.canOpen}
-					showControls={item.showControls}
+					shouldShowControls={item.shouldShowControls}
 					externalUrl={item.externalUrl}
 					status={getLiveStatus(item)}
 					count={getLiveCount(item)}

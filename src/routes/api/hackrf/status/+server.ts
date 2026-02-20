@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { getSweepManager } from '$lib/server/hackrf/sweep-manager';
 import { SystemStatus } from '$lib/types/enums';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -24,7 +25,9 @@ export const GET: RequestHandler = () => {
 			timestamp: Date.now()
 		});
 	} catch (error: unknown) {
-		console.error('Error getting HackRF status:', error);
+		logger.error('Error getting HackRF status', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 
 		return json(
 			{

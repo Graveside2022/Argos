@@ -15,8 +15,10 @@ OOM_PROTECT="-500"  # Negative = harder to kill. Range: -1000 to 1000
 VITE_PORT="${VITE_PORT:-5173}"
 
 # Launch Vite in the background
+# WARNING: Do NOT wrap with strace here. strace -f ptrace-attaches to all
+# child processes, stripping SUID bits from sudo and capture helpers
+# (Kismet, GSM Evil). See: Feb 2026 debugging incident.
 CI=true NODE_OPTIONS='--max-old-space-size=2048' \
-  /usr/bin/strace -f -e trace=signal,exit_group -o "/tmp/vite_strace_$(date +%s).log" \
   npx vite dev --port "$VITE_PORT" --host 0.0.0.0 --strictPort &
 VITE_PID=$!
 

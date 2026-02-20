@@ -151,13 +151,13 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 		}
 	});
 
-	console.warn(`WebSocket server listening on port ${port}`);
+	logger.info('[WebSocket] Server listening', { port });
 
 	wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 		const url = req.url || '/';
 		const endpoint = url.split('?')[0];
 
-		console.warn(`New WebSocket connection to ${endpoint}`);
+		logger.info('[WebSocket] New connection', { endpoint });
 
 		// Add to connections
 		if (!connections.has(endpoint)) {
@@ -177,7 +177,7 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 		// Setup message handling
 		ws.on('message', (data: Buffer) => {
 			try {
-	// Safe: WebSocket connection type assertion
+				// Safe: WebSocket connection type assertion
 				const message = JSON.parse(data.toString()) as WebSocketMessage;
 
 				// Handle ping/pong
@@ -199,7 +199,7 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 					);
 				}
 			} catch (error) {
-				console.error('WebSocket message error:', error);
+				logger.error('[WebSocket] Message error', { error: String(error) }, 'ws-msg-error');
 				ws.send(
 					JSON.stringify({
 						type: 'error',
@@ -210,7 +210,7 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 		});
 
 		ws.on('close', () => {
-			console.warn(`WebSocket connection closed for ${endpoint}`);
+			logger.debug('[WebSocket] Connection closed', { endpoint }, 'ws-close');
 			connections.get(endpoint)?.delete(ws);
 
 			// Clean up any active intervals for this connection (prevents memory leak)
@@ -222,7 +222,11 @@ export function initializeWebSocketServer(server: unknown, port: number = 5173) 
 		});
 
 		ws.on('error', (error: Error) => {
-			console.error(`WebSocket error for ${endpoint}:`, error);
+			logger.error(
+				'[WebSocket] Connection error',
+				{ endpoint, error: error.message },
+				'ws-error'
+			);
 
 			// Clean up intervals on error as well
 			const interval = activeIntervals.get(ws);
@@ -278,7 +282,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 				JSON.stringify({
 					type: 'sweep_status',
 					data: {
-						active: false,
+						isActive: false,
 						startFreq: 88000000,
 						endFreq: 108000000,
 						currentFreq: 0,
@@ -293,7 +297,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 				JSON.stringify({
 					type: 'sweep_status',
 					data: {
-						active: true,
+						isActive: true,
 						startFreq: message.config?.startFreq || 88000000,
 						endFreq: message.config?.endFreq || 108000000,
 						currentFreq: message.config?.startFreq || 88000000,
@@ -312,7 +316,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 					ws.send(
 						JSON.stringify({
 							type: 'sweep_status',
-							data: { active: false, progress: 100 }
+							data: { isActive: false, progress: 100 }
 						})
 					);
 				} else {
@@ -341,7 +345,7 @@ messageHandlers.set('/hackrf', (ws, rawMessage) => {
 			ws.send(
 				JSON.stringify({
 					type: 'sweep_status',
-					data: { active: false }
+					data: { isActive: false }
 				})
 			);
 			break;

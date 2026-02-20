@@ -9,7 +9,7 @@ import { z } from 'zod';
  * Kismet Status Response Schema
  */
 export const KismetStatusResponseSchema = z.object({
-	running: z.boolean(),
+	isRunning: z.boolean(),
 	uptime: z.number().nonnegative('Uptime must be non-negative'),
 	interface: z.string(),
 	deviceCount: z.number().int().nonnegative('Device count must be non-negative'),
@@ -55,7 +55,7 @@ export const ServiceHealthResponseSchema = z.object({
  * GPS State Response Schema
  */
 export const GPSStateResponseSchema = z.object({
-	fix: z.boolean(),
+	hasFix: z.boolean(),
 	latitude: z.number().min(-90, 'Latitude must be >= -90').max(90, 'Latitude must be <= 90'),
 	longitude: z
 		.number()
@@ -73,8 +73,8 @@ export const GPSStateResponseSchema = z.object({
  * HackRF Status Response Schema
  */
 export const HackRFStatusResponseSchema = z.object({
-	connected: z.boolean(),
-	sweeping: z.boolean(),
+	isConnected: z.boolean(),
+	isSweeping: z.boolean(),
 	device: z
 		.object({
 			serial: z.string().min(1, 'Serial number required'),

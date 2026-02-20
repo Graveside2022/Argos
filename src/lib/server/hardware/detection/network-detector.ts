@@ -8,6 +8,7 @@ import { promisify } from 'util';
 
 import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
+import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -34,7 +35,7 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 					if (result.success) {
 						hardware.push(result.data);
 					} else {
-						console.error('[network-detector] Invalid network USRP data, skipping:', {
+						logger.error('[network-detector] Invalid network USRP data, skipping', {
 							device: currentDevice,
 							errors: result.error.format()
 						});
@@ -69,8 +70,8 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 				minFrequency: 70_000_000,
 				maxFrequency: 6_000_000_000,
 				sampleRate: 61_440_000,
-				txCapable: true,
-				rxCapable: true,
+				canTransmit: true,
+				canReceive: true,
 				fullDuplex: true
 				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
 			} as SDRCapabilities;
@@ -81,8 +82,8 @@ async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 			if (result.success) {
 				hardware.push(result.data);
 			} else {
-				console.error(
-					'[network-detector] Invalid network USRP data (last device), skipping:',
+				logger.error(
+					'[network-detector] Invalid network USRP data (last device), skipping',
 					{
 						device: currentDevice,
 						errors: result.error.format()
@@ -221,7 +222,7 @@ async function detectOpenWebRX(): Promise<DetectedHardware[]> {
  * Main network device detection function
  */
 export async function detectNetworkDevices(): Promise<DetectedHardware[]> {
-	console.warn('[NetworkDetector] Scanning for network hardware...');
+	logger.info('[NetworkDetector] Scanning for network hardware...');
 
 	const results = await Promise.allSettled([
 		detectNetworkUSRP(),
@@ -238,7 +239,7 @@ export async function detectNetworkDevices(): Promise<DetectedHardware[]> {
 		}
 	}
 
-	console.warn(`[NetworkDetector] Found ${allHardware.length} network devices`);
+	logger.info('[NetworkDetector] Found network devices', { count: allHardware.length });
 
 	return allHardware;
 }

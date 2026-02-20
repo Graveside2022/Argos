@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
+import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import type { GPSPosition } from '$lib/server/services/kismet.service';
 import { KismetService } from '$lib/server/services/kismet.service';
 
@@ -10,6 +11,11 @@ vi.mock('$lib/server/kismet/kismet-proxy', () => ({
 		getDevices: vi.fn(),
 		proxyGet: vi.fn()
 	}
+}));
+
+// Mock the GPS position service (direct import, no HTTP round-trip)
+vi.mock('$lib/server/services/gps/gps-position-service', () => ({
+	getGpsPosition: vi.fn()
 }));
 
 // Mock the logger
@@ -25,64 +31,60 @@ describe('KismetService', () => {
 		longitude: 8.274061667
 	};
 
-	const mockFetch: Mock = vi.fn();
+	const mockGetGpsPosition = getGpsPosition as Mock;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockFetch.mockReset();
 	});
 
 	describe('getGPSPosition()', () => {
-		it('should return GPS position when API call succeeds', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					success: true,
-					data: {
-						latitude: 52.520008,
-						longitude: 13.404954
-					}
-				})
+		it('should return GPS position when service call succeeds', async () => {
+			mockGetGpsPosition.mockResolvedValueOnce({
+				success: true,
+				data: {
+					latitude: 52.520008,
+					longitude: 13.404954
+				}
 			});
 
-			const position = await KismetService.getGPSPosition(mockFetch);
+			const position = await KismetService.getGPSPosition();
 
-			expect(mockFetch).toHaveBeenCalledWith('/api/gps/position');
+			expect(mockGetGpsPosition).toHaveBeenCalled();
 			expect(position).toEqual({
 				latitude: 52.520008,
 				longitude: 13.404954
 			});
 		});
 
-		it('should return null when API call fails', async () => {
-			mockFetch.mockRejectedValueOnce(new Error('Network error'));
+		it('should return null when service call fails', async () => {
+			mockGetGpsPosition.mockRejectedValueOnce(new Error('GPS service error'));
 
-			const position = await KismetService.getGPSPosition(mockFetch);
-
-			expect(position).toBeNull();
-		});
-
-		it('should return null when API returns non-OK status', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: false,
-				status: 404
-			});
-
-			const position = await KismetService.getGPSPosition(mockFetch);
+			const position = await KismetService.getGPSPosition();
 
 			expect(position).toBeNull();
 		});
 
-		it('should return null when API returns success:false', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					success: false,
-					error: 'GPS not available'
-				})
+		it('should return null when service returns no data', async () => {
+			mockGetGpsPosition.mockResolvedValueOnce({
+				success: false,
+				error: 'GPS not available'
 			});
 
-			const position = await KismetService.getGPSPosition(mockFetch);
+			const position = await KismetService.getGPSPosition();
+
+			expect(position).toBeNull();
+		});
+
+		it('should return null when coordinates are 0,0', async () => {
+			mockGetGpsPosition.mockResolvedValueOnce({
+				success: true,
+				data: {
+					latitude: 0,
+					longitude: 0
+				}
+			});
+
+			const position = await KismetService.getGPSPosition();
 
 			expect(position).toBeNull();
 		});
@@ -91,15 +93,12 @@ describe('KismetService', () => {
 	describe('getDevices()', () => {
 		beforeEach(() => {
 			// Mock successful GPS position for all getDevices tests
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					success: true,
-					data: {
-						latitude: 52.520008,
-						longitude: 13.404954
-					}
-				})
+			mockGetGpsPosition.mockResolvedValueOnce({
+				success: true,
+				data: {
+					latitude: 52.520008,
+					longitude: 13.404954
+				}
 			});
 		});
 
@@ -123,7 +122,7 @@ describe('KismetService', () => {
 			// Safe: Test: Mock object typed for test expectations
 			(KismetProxy.getDevices as Mock).mockResolvedValueOnce(mockKismetDevices);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(KismetProxy.getDevices).toHaveBeenCalled();
 			expect(KismetProxy.proxyGet).not.toHaveBeenCalled();
@@ -164,7 +163,7 @@ describe('KismetService', () => {
 			// Safe: Test: Mock object typed for test expectations
 			(KismetProxy.proxyGet as Mock).mockResolvedValueOnce(mockRawDevices);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(KismetProxy.getDevices).toHaveBeenCalled();
 			expect(KismetProxy.proxyGet).toHaveBeenCalledWith(
@@ -203,7 +202,7 @@ describe('KismetService', () => {
 				.mockRejectedValueOnce(new Error('404 Not Found'))
 				.mockResolvedValueOnce(mockSummaryDevices);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(KismetProxy.getDevices).toHaveBeenCalled();
 			expect(KismetProxy.proxyGet).toHaveBeenCalledTimes(2);
@@ -222,23 +221,13 @@ describe('KismetService', () => {
 				.mockRejectedValueOnce(new Error('404 Not Found'))
 				.mockRejectedValueOnce(new Error('500 Server Error'));
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(KismetProxy.getDevices).toHaveBeenCalled();
 			expect(KismetProxy.proxyGet).toHaveBeenCalledTimes(2);
 			expect(result.source).toBe('fallback');
 			expect(result.error).toBe('Connection refused');
 			expect(result.devices).toHaveLength(0); // Empty when all methods fail
-
-			// 			// Check one of the fallback devices
-			// 			const arrisDevice = result.devices.find((d) => d.manufacturer === 'ARRIS');
-			// 			expect(arrisDevice).toBeDefined();
-			// 			expect(arrisDevice).toMatchObject({
-			// 				mac: '88:71:B1:95:65:3A',
-			// 				type: 'wifi ap',
-			// 				channel: 1,
-			// 				frequency: 2412
-			// 			});
 		});
 
 		it('should use GPS position for device locations in all scenarios', async () => {
@@ -256,7 +245,7 @@ describe('KismetService', () => {
 			// Safe: Test: Mock object typed for test expectations
 			(KismetProxy.getDevices as Mock).mockResolvedValueOnce(mockDeviceNoLocation);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			// Device should have location near GPS position with variance
 			expect(Math.abs(result.devices[0].location.lat - 52.520008)).toBeLessThanOrEqual(0.003);
@@ -272,7 +261,7 @@ describe('KismetService', () => {
 				.mockRejectedValueOnce(new Error('REST API error'))
 				.mockRejectedValueOnce(new Error('Summary API error'));
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(result.error).toBe('Custom error message');
 			expect(result.source).toBe('fallback');
@@ -295,7 +284,7 @@ describe('KismetService', () => {
 				.mockRejectedValueOnce(new Error('Failed'))
 				.mockResolvedValueOnce(manyDevices);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(result.devices).toHaveLength(50); // Should be limited to 50
 		});
@@ -308,7 +297,7 @@ describe('KismetService', () => {
 				.mockResolvedValueOnce({ error: 'Invalid response' }) // Non-array
 				.mockResolvedValueOnce(null); // Null response
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(result.source).toBe('fallback');
 			expect(result.devices).toHaveLength(0); // Empty when all methods fail
@@ -318,7 +307,7 @@ describe('KismetService', () => {
 			// Safe: Test: Mock object typed for test expectations
 			(KismetProxy.getDevices as Mock).mockResolvedValueOnce([]);
 
-			const result = await KismetService.getDevices(mockFetch);
+			const result = await KismetService.getDevices();
 
 			expect(result.source).toBe('kismet');
 			expect(result.error).toBeNull();

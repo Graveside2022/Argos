@@ -7,6 +7,7 @@ import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
+import { logger } from '$lib/utils/logger';
 import { validateGain } from '$lib/validators/gsm';
 
 import {
@@ -443,7 +444,7 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 
 				const channelResult = determineChannelType(cellId, frameAnalysis, frameCount);
 				const channelType = channelResult.channelType;
-				const controlChannel = channelResult.controlChannel;
+				const controlChannel = channelResult.isControlChannel;
 
 				if (cellMcc && cellLac && cellCi) {
 					yield sendUpdate(
@@ -568,17 +569,17 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 							`grgsm_livemon_headless.*-f ${freq}M`
 						]);
 					} catch (error: unknown) {
-						console.warn(
-							`[gsm-evil] Cleanup: pkill orphaned grgsm process for ${freq}M failed`,
-							{ error: String(error) }
-						);
+						logger.warn('[gsm-evil] Cleanup: pkill orphaned grgsm process failed', {
+							freq,
+							error: String(error)
+						});
 					}
 				}
 				// Clean up temp stderr log
 				try {
 					await unlink(stderrLog);
 				} catch (error: unknown) {
-					console.warn('[gsm-evil] Cleanup: rm stderr log failed (non-critical)', {
+					logger.warn('[gsm-evil] Cleanup: rm stderr log failed (non-critical)', {
 						error: String(error)
 					});
 				}
@@ -664,7 +665,10 @@ export async function* performIntelligentScan(): AsyncGenerator<ScanEvent> {
 			try {
 				await resourceManager.release('gsm-scan', HardwareDevice.HACKRF);
 			} catch (releaseError) {
-				console.error('[gsm-scan] Failed to release HackRF:', releaseError);
+				logger.error('[gsm-scan] Failed to release HackRF', {
+					error:
+						releaseError instanceof Error ? releaseError.message : String(releaseError)
+				});
 			}
 		}
 	}

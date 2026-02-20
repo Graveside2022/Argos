@@ -1,5 +1,7 @@
 import { DOMParser } from '@xmldom/xmldom';
 
+import { logger } from '$lib/utils/logger';
+
 export interface MapSourceConfig {
 	name: string;
 	url: string;
@@ -42,7 +44,7 @@ export class MapSourceParser {
 				maxZoom
 			};
 		} catch (e) {
-			console.error('Failed to parse Map Source XML', e);
+			logger.error('Failed to parse Map Source XML', { error: e });
 			return null;
 		}
 	}

@@ -1,5 +1,5 @@
-<!-- @constitutional-exemption Article-IV-4.3 issue:#999 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
-<!-- @constitutional-exemption Article-IV-4.2 issue:#999 — Button pattern extraction deferred to component library refactor -->
+<!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
+<!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import Button from '$lib/components/ui/button/button.svelte';
 
@@ -10,7 +10,7 @@
 		status?: 'stopped' | 'starting' | 'running' | 'stopping';
 		count?: number | null;
 		canOpen?: boolean;
-		showControls?: boolean;
+		shouldShowControls?: boolean;
 		externalUrl?: string | null;
 		isInstalled?: boolean;
 		onStart?: () => void;
@@ -25,7 +25,7 @@
 		status = 'stopped',
 		count = null,
 		canOpen = true,
-		showControls = true,
+		shouldShowControls = true,
 		externalUrl = null,
 		isInstalled = true,
 		onStart,
@@ -46,9 +46,9 @@
 	);
 </script>
 
-<div class="tool-card" class:running={isRunning} class:not-installed={!isInstalled}>
+<div class="tool-card" class:isRunning class:not-installed={!isInstalled}>
 	<div class="tool-header">
-		<!-- @constitutional-exemption Article-IX-9.4 issue:#999 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
+		<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string from tool-icons.ts, no user input -->
 		<div class="tool-icon">
 			{@html icon}
 		</div>
@@ -92,7 +92,7 @@
 					<Button variant="outline" size="sm" onclick={() => onOpen?.()}>Open</Button>
 				{/if}
 			{/if}
-			{#if showControls}
+			{#if shouldShowControls}
 				{#if isRunning}
 					<Button
 						variant="destructive"
@@ -126,7 +126,7 @@
 		transition: border-color 0.15s ease;
 	}
 
-	.tool-card.running {
+	.tool-card.isRunning {
 		border-color: var(--palantir-border-default);
 	}
 
@@ -151,7 +151,7 @@
 		color: var(--palantir-text-secondary);
 	}
 
-	.tool-card.running .tool-icon {
+	.tool-card.isRunning .tool-icon {
 		color: var(--palantir-accent);
 	}
 

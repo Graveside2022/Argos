@@ -52,7 +52,7 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 	if (!response.ok) {
 		let errorData: { message?: string; code?: string; details?: unknown } = {};
 		try {
-			// @constitutional-exemption Article-II-2.1 issue:#999 — HTTP response JSON type narrowing — fetch API returns unknown
+			// @constitutional-exemption Article-II-2.1 issue:#14 — HTTP response JSON type narrowing — fetch API returns unknown
 			errorData = (await response.json()) as {
 				message?: string;
 				code?: string;

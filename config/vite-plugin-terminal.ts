@@ -17,6 +17,7 @@ const VALID_SHELLS = [
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-1.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-2.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-3.sh'),
+	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-logs.sh'),
 	path.join(PROJECT_ROOT, 'scripts/tmux/tmux-zsh-wrapper.sh')
 ];
 
@@ -67,6 +68,11 @@ function normalizeShellPath(shellPath: string): string {
 			'/scripts/tmux-zsh-wrapper.sh',
 			'/scripts/tmux/tmux-zsh-wrapper.sh'
 		);
+	}
+
+	// Resolve relative scripts/ paths to absolute paths so they match VALID_SHELLS
+	if (normalized.startsWith('scripts/')) {
+		normalized = path.join(PROJECT_ROOT, normalized);
 	}
 
 	return normalized;

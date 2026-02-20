@@ -1,3 +1,5 @@
+import { logger } from '$lib/utils/logger';
+
 /**
  * Standard safe error response generator for Argos API endpoints.
  *
@@ -30,6 +32,6 @@ export function logAndRespond(
 	status: number,
 	publicMessage: string
 ): Response {
-	console.error(`${context} Error:`, error);
+	logger.error(`${context} Error`, { error: String(error) });
 	return safeErrorResponse(status, publicMessage);
 }

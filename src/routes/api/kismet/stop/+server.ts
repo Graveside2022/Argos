@@ -2,13 +2,15 @@ import { json } from '@sveltejs/kit';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
 
 export const POST: RequestHandler = async () => {
 	try {
-		console.warn('Stopping Kismet with robust cleanup...');
+		logger.info('Stopping Kismet with robust cleanup');
 
 		// First try to get Kismet PIDs
 		let pids: string[] = [];
@@ -20,11 +22,11 @@ export const POST: RequestHandler = async () => {
 				.filter((pid) => pid.length > 0);
 
 			if (pids.length > 0) {
-				console.warn('Found Kismet processes to terminate:', pids.join(', '));
+				logger.info('Found Kismet processes to terminate', { pids: pids.join(', ') });
 			}
 		} catch (_error: unknown) {
 			// No Kismet processes found
-			console.warn('No Kismet processes found');
+			logger.info('No Kismet processes found');
 			return json({
 				success: true,
 				status: 'stopped',
@@ -36,7 +38,7 @@ export const POST: RequestHandler = async () => {
 		if (pids.length > 0) {
 			try {
 				await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
-				console.warn('Sent SIGTERM to Kismet processes');
+				logger.info('Sent SIGTERM to Kismet processes');
 
 				// Give Kismet time to cleanup gracefully
 				await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -45,14 +47,16 @@ export const POST: RequestHandler = async () => {
 				try {
 					await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 					// If we get here, some processes are still running, force kill them
-					console.warn('Some Kismet processes still running, sending SIGKILL...');
+					logger.warn('Some Kismet processes still running, sending SIGKILL');
 					await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']);
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				} catch (_error: unknown) {
 					// Good - no processes remaining
 				}
 			} catch (error) {
-				console.error('Error during Kismet termination:', error);
+				logger.error('Error during Kismet termination', {
+					error: (error as Error).message
+				});
 			}
 		}
 
@@ -67,7 +71,7 @@ export const POST: RequestHandler = async () => {
 		try {
 			await execFileAsync('/usr/bin/pgrep', ['-x', 'kismet']);
 			// If we get here, Kismet is still running somehow
-			console.error('Warning: Kismet processes may still be running');
+			logger.error('Kismet processes may still be running');
 			return json(
 				{
 					success: false,
@@ -80,7 +84,7 @@ export const POST: RequestHandler = async () => {
 			);
 		} catch (_error: unknown) {
 			// Good - no Kismet processes found
-			console.warn('Verification passed: No Kismet processes found');
+			logger.info('Verification passed: No Kismet processes found');
 		}
 
 		return json({
@@ -89,7 +93,7 @@ export const POST: RequestHandler = async () => {
 			message: 'Kismet WiFi discovery stopped successfully'
 		});
 	} catch (error) {
-		console.error('Kismet stop error:', error);
+		logger.error('Kismet stop error', { error: (error as Error).message });
 
 		return json(
 			{

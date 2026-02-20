@@ -6,6 +6,8 @@
 
 import { config } from 'dotenv';
 
+import { logger } from '$lib/utils/logger';
+
 import { apiFetch } from '../shared/api-client';
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
@@ -440,6 +442,8 @@ class SystemInspector extends BaseMCPServer {
 // Start server when run directly
 const server = new SystemInspector('argos-system-inspector');
 server.start().catch((error) => {
-	console.error('[System Inspector] Fatal:', error);
+	logger.error('System Inspector fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

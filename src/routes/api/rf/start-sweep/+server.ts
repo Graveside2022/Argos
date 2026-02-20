@@ -3,6 +3,7 @@ import { error, json } from '@sveltejs/kit';
 import { StartSweepRequestSchema } from '$lib/schemas/rf';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
@@ -17,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const { frequencies: frequencyRanges, cycleTime } = validated;
-		console.warn('[rf/start-sweep] Validated request:', { frequencyRanges, cycleTime });
+		logger.debug('[rf/start-sweep] Validated request', { frequencyRanges, cycleTime });
 
 		// Always use the HackRF sweep manager which will auto-detect and use USRP if available
 		{
@@ -41,7 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							centerFreq =
 								((rangeObj.start as number) + (rangeObj.end as number)) / 2;
 						} else {
-							console.warn('Invalid frequency range format:', range);
+							logger.warn('Invalid frequency range format', { range: String(range) });
 							return null;
 						}
 						return {
@@ -54,14 +55,14 @@ export const POST: RequestHandler = async ({ request }) => {
 							unit: 'MHz'
 						};
 					} else {
-						console.warn('Invalid frequency range format:', range);
+						logger.warn('Invalid frequency range format', { range: String(range) });
 						return null;
 					}
 				})
 				.filter((freq): freq is { value: number; unit: string } => freq !== null); // Remove any null values
 
 			if (frequencies.length === 0) {
-				console.error('[rf/start-sweep] No valid frequencies after parsing');
+				logger.error('[rf/start-sweep] No valid frequencies after parsing');
 				return json(
 					{
 						status: 'error',
@@ -76,7 +77,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const cycleTimeMs = cycleTime * 1000;
 
 			// Start the sweep using sweepManager
-			console.warn('[rf/start-sweep] Attempting to start HackRF sweep with:', {
+			logger.info('[rf/start-sweep] Attempting to start HackRF sweep', {
 				frequencies,
 				cycleTimeMs
 			});
@@ -85,7 +86,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				const success = await sweepManager.startCycle(frequencies, cycleTimeMs);
 
 				if (success) {
-					console.warn('[rf/start-sweep] HackRF sweep started successfully');
+					logger.info('[rf/start-sweep] HackRF sweep started successfully');
 					return json({
 						status: 'success',
 						message: 'HackRF sweep started successfully',
@@ -94,9 +95,11 @@ export const POST: RequestHandler = async ({ request }) => {
 						cycleTime: cycleTimeMs
 					});
 				} else {
-					console.error('[rf/start-sweep] HackRF startCycle returned false');
+					logger.error('[rf/start-sweep] HackRF startCycle returned false');
 					const status = sweepManager.getStatus();
-					console.error('[rf/start-sweep] Current HackRF sweep manager status:', status);
+					logger.error('[rf/start-sweep] Current HackRF sweep manager status', {
+						status
+					});
 
 					return json(
 						{
@@ -108,12 +111,16 @@ export const POST: RequestHandler = async ({ request }) => {
 					);
 				}
 			} catch (cycleError: unknown) {
-				console.error('[rf/start-sweep] Error in HackRF startCycle:', cycleError);
+				logger.error('[rf/start-sweep] Error in HackRF startCycle', {
+					error: cycleError instanceof Error ? cycleError.message : String(cycleError)
+				});
 				throw cycleError;
 			}
 		}
 	} catch (error: unknown) {
-		console.error('Error in rf/start-sweep endpoint:', error);
+		logger.error('Error in rf/start-sweep endpoint', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				status: 'error',

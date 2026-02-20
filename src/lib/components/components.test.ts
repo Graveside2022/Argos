@@ -1,4 +1,4 @@
-import { describe, expect,it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // Note: Component testing requires browser environment
 // These tests demonstrate testing patterns for Svelte 5 components

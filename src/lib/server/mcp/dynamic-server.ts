@@ -17,6 +17,8 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { config } from 'dotenv';
 
+import { logger } from '$lib/utils/logger';
+
 // Load .env for ARGOS_API_KEY (standalone process, not SvelteKit)
 config();
 
@@ -696,11 +698,11 @@ export class ArgosMCPServer {
 	}
 
 	async start(): Promise<void> {
-		console.error(`[ArgosMCP] Starting with ${ARGOS_TOOLS.length} tools`);
-		console.error(`[ArgosMCP] Argos API: ${ARGOS_API}`);
+		logger.info('ArgosMCP starting', { toolCount: ARGOS_TOOLS.length });
+		logger.info('ArgosMCP API endpoint', { api: ARGOS_API });
 		const transport = new StdioServerTransport();
 		await this.server.connect(transport);
-		console.error('[ArgosMCP] Server ready');
+		logger.info('ArgosMCP server ready');
 	}
 
 	async stop(): Promise<void> {
@@ -711,6 +713,8 @@ export class ArgosMCPServer {
 // Start server when run directly
 const server = new ArgosMCPServer();
 server.start().catch((error) => {
-	console.error('[ArgosMCP] Fatal:', error);
+	logger.error('ArgosMCP fatal error', {
+		error: error instanceof Error ? error.message : String(error)
+	});
 	process.exit(1);
 });

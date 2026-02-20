@@ -1,5 +1,6 @@
 // Safe: WebSocket connection type assertion
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
+import { logger } from '$lib/utils/logger';
 
 export type WebSocketEventType = WebSocketEventEnum;
 
@@ -76,7 +77,7 @@ export abstract class BaseWebSocket {
 			}
 			this.setupEventHandlers();
 		} catch (error) {
-			console.error(`[${this.constructor.name}] Failed to create WebSocket:`, error);
+			logger.error('Failed to create WebSocket', { source: this.constructor.name, error });
 			this.handleConnectionError(error);
 		}
 	}
@@ -108,13 +109,13 @@ export abstract class BaseWebSocket {
 				this.ws.send(message);
 				return true;
 			} catch (error) {
-				console.error(`[${this.constructor.name}] Failed to send message:`, error);
+				logger.error('Failed to send message', { source: this.constructor.name, error });
 				return false;
 			}
 		} else {
-			console.warn(
-				`[${this.constructor.name}] Cannot send message, WebSocket is not connected`
-			);
+			logger.warn('Cannot send message, WebSocket is not connected', {
+				source: this.constructor.name
+			});
 			return false;
 		}
 	}
@@ -186,17 +187,17 @@ export abstract class BaseWebSocket {
 
 		this.ws.onmessage = (event) => {
 			try {
-				// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket message data type narrowing — browser API returns union type
+				// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 				const data = this.parseMessage(event.data as string | ArrayBuffer | Blob);
 				this.emit(WebSocketEventEnum.Message, { data, event });
 				this.handleMessage(data);
 			} catch (error) {
-				console.error(`[${this.constructor.name}] Failed to parse message:`, error);
+				logger.error('Failed to parse message', { source: this.constructor.name, error });
 			}
 		};
 
 		this.ws.onerror = (event) => {
-			console.error(`[${this.constructor.name}] WebSocket error:`, event);
+			logger.error('WebSocket error', { source: this.constructor.name, event });
 			const error = new Error('WebSocket error');
 			this.emit(WebSocketEventEnum.Error, { error, event });
 			this.handleConnectionError(error);
@@ -233,7 +234,7 @@ export abstract class BaseWebSocket {
 	protected handleMessage(data: unknown): void {
 		// Handle typed messages
 		if (data && typeof data === 'object' && 'type' in data) {
-			// @constitutional-exemption Article-II-2.1 issue:#999 — WebSocket message data type narrowing — browser API returns union type
+			// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 			const typedData = data as { type: string; data?: unknown };
 			const handlers = this.messageHandlers.get(typedData.type);
 			if (handlers) {
@@ -241,7 +242,10 @@ export abstract class BaseWebSocket {
 					try {
 						handler(typedData.data || data);
 					} catch (error) {
-						console.error(`[${this.constructor.name}] Message handler error:`, error);
+						logger.error('Message handler error', {
+							source: this.constructor.name,
+							error
+						});
 					}
 				});
 			}
@@ -307,9 +311,9 @@ export abstract class BaseWebSocket {
 					this.lastHeartbeat &&
 					Date.now() - this.lastHeartbeat > this.config.heartbeatInterval * 2
 				) {
-					console.warn(
-						`[${this.constructor.name}] Heartbeat timeout, closing connection`
-					);
+					logger.warn('Heartbeat timeout, closing connection', {
+						source: this.constructor.name
+					});
 					this.ws.close(4000, 'Heartbeat timeout');
 				}
 			}
@@ -356,7 +360,7 @@ export abstract class BaseWebSocket {
 				try {
 					listener(eventData);
 				} catch (error) {
-					console.error(`[${this.constructor.name}] Event listener error:`, error);
+					logger.error('Event listener error', { source: this.constructor.name, error });
 				}
 			});
 		}

@@ -3,6 +3,7 @@ import { error, json } from '@sveltejs/kit';
 import { StopSweepRequestSchema } from '$lib/schemas/rf';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
@@ -27,7 +28,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			device: deviceType || 'auto'
 		});
 	} catch (error: unknown) {
-		console.error('Error in rf/stop-sweep endpoint:', error);
+		logger.error('Error in rf/stop-sweep endpoint', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				status: 'error',

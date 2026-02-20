@@ -47,11 +47,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Argos built-in wideband spectrum analyzer using hackrf_sweep (1 MHz–6 GHz)',
 										icon: toolIcons.hackrf,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'hackrf',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'openwebrx',
@@ -59,11 +59,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Multi-user web-based SDR receiver with browser demodulation for multiple SDR hardware',
 										icon: toolIcons.external,
-										installed: true,
+										isInstalled: true,
 										deployment: 'docker',
 										viewName: 'openwebrx',
 										canOpen: true,
-										showControls: true
+										shouldShowControls: true
 									},
 									{
 										id: 'qspectrumanalyzer',
@@ -71,10 +71,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'PyQt5 real-time spectrum analyzer supporting hackrf_sweep, rtl_power, and SoapySDR backends',
 										icon: toolIcons.sdr,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -94,11 +94,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive wireless sniffer for WiFi, Bluetooth, and RF with device fingerprinting and GPS logging',
 										icon: toolIcons.kismet,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'kismet',
 										canOpen: true,
-										showControls: true
+										shouldShowControls: true
 									},
 									{
 										id: 'btle-scanner',
@@ -106,11 +106,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive BLE device discovery monitoring advertisement packets with RSSI and geolocation',
 										icon: toolIcons.btle,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'btle',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'sparrow-wifi',
@@ -118,10 +118,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'WiFi/Bluetooth spectrum analyzer with GPS hunt mode for field wardriving',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'wigle',
@@ -129,10 +129,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Crowdsourced wireless network geolocation database and OSINT enrichment API',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'wigletotak',
@@ -140,11 +140,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Flask bridge converting WiGLE wardriving data to TAK CoT messages for SA overlay',
 										icon: toolIcons.wigletotak,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'wigletotak',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -172,10 +172,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'GNU Radio blocks for receiving, decoding, and analyzing GSM transmissions',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'gsm-evil',
@@ -183,11 +183,11 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'GSM signal monitoring and IMSI detection',
 												icon: toolIcons.gsm,
-												installed: true,
+												isInstalled: true,
 												deployment: 'native',
 												viewName: 'gsm-evil',
 												canOpen: true,
-												showControls: true
+												shouldShowControls: true
 											},
 											{
 												id: 'imsi-catcher-oros42',
@@ -195,10 +195,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Lightweight passive IMSI collection using RTL-SDR and gr-gsm',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'docker',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'kalibrate-hackrf',
@@ -206,10 +206,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'GSM base station scanner and SDR frequency calibration tool',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'srsran',
@@ -217,10 +217,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Open-source 4G LTE and 5G NR software radio suite with passive sniffer mode',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'docker',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									},
@@ -240,10 +240,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Records and decodes calls from P25 & SmartNet trunked radio systems with multi-SDR support',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'docker',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'dsd-neo',
@@ -251,10 +251,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Modern digital voice decoder: DMR, P25, NXDN, D-STAR, EDACS, dPMR, ProVoice, X2-TDMA, M17, YSF',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'op25',
@@ -262,10 +262,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Open source P25 trunked radio decoder with real-time audio and web UI',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'osmo-tetra',
@@ -273,10 +273,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'TETRA protocol decoder with voice and SDS message decoding for European military/emergency radio',
 												icon: toolIcons.cellular,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									}
@@ -298,10 +298,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'ACARS multi-channel decoder for aircraft VHF text messages (position reports, weather, comms)',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'ais-catcher',
@@ -309,10 +309,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'High-performance AIS maritime vessel tracking via RTL-SDR with VHF signal decoding',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'dump1090',
@@ -320,10 +320,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Industry-standard ADS-B 1090 MHz decoder for real-time aircraft position plotting',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'dumpvdl2',
@@ -331,10 +331,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'VDL Mode 2 message decoder for CPDLC, ADS-C, and digital aviation datalink intelligence',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'readsb',
@@ -342,10 +342,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'ARM-optimized ADS-B decoder with 30-50% lower CPU than dump1090 (drop-in replacement)',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'tar1090',
@@ -353,10 +353,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Enhanced ADS-B web visualization with interactive mapping, trail history, and range rings',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -375,10 +375,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Iridium satellite burst detector and demodulator for L-band satellite SIGINT (1626 MHz)',
 										icon: toolIcons.rfSpectrum,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'gr-satellites',
@@ -386,10 +386,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'GNU Radio decoder for 100+ amateur and research satellite telemetry protocols',
 										icon: toolIcons.rfSpectrum,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -409,10 +409,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Multi-protocol decoder: POCSAG pagers, FLEX, EAS alerts, DTMF, AFSK/APRS, Morse, ZVEI',
 										icon: toolIcons.rfSpectrum,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'pagermon',
@@ -420,11 +420,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'POCSAG/FLEX pager signal monitoring and decoding with web interface',
 										icon: toolIcons.pagermon,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'pagermon',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -444,11 +444,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'ISM band decoder for 280+ IoT device protocols (433/315/868/915 MHz)',
 										icon: toolIcons.rtl433,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'rtl-433',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'sdr-lora',
@@ -456,10 +456,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'LoRa PHY-layer SDR implementation with GNU Radio for signal generation and analysis',
 										icon: toolIcons.iot,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'zigator',
@@ -467,10 +467,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'ZigBee traffic analysis and visualization with protocol dissection and encryption analysis',
 										icon: toolIcons.iot,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -489,11 +489,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive DJI DroneID decoding from WiFi traffic',
 										icon: toolIcons.droneid,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'droneid',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'dronesecurity',
@@ -501,10 +501,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive DJI DroneID protocol reverse-engineering and decoder',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'rf-drone-detection',
@@ -512,10 +512,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive RF drone detection using GNU Radio with ML classification',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -535,10 +535,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'AI/ML RF device fingerprinting with automatic modulation classification and CoT output',
 										icon: toolIcons.geolocation,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'find-lf',
@@ -546,10 +546,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Distributed WiFi device positioning using multiple RPi sensor nodes for passive triangulation',
 										icon: toolIcons.geolocation,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'trackerjacker',
@@ -557,10 +557,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Passive WiFi device tracker via probe request sniffing for covert location monitoring',
 										icon: toolIcons.geolocation,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							}
@@ -599,10 +599,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Packet injection for deauthentication, WPA handshake capture, and fragmentation attacks',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'mdk4',
@@ -610,10 +610,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Multi-mode WiFi DoS: beacon flooding, deauthentication, SSID brute force',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'block',
@@ -621,10 +621,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'WiFi 5/6 QoS Data frame interruption exploiting Block Ack frame vulnerabilities (802.11ac/ax)',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'scapy-80211',
@@ -632,10 +632,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Custom 802.11 frame crafting for beacon injection, spoofing, and deauth',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									},
@@ -655,11 +655,11 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Automated WiFi auditing chaining handshake capture, PMKID, WPS, and cracking',
 												icon: toolIcons.wifite,
-												installed: true,
+												isInstalled: true,
 												deployment: 'native',
 												viewName: 'wifite',
 												canOpen: true,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'hcxdumptool',
@@ -667,10 +667,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'PMKID and WPA handshake capture without client deauthentication',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'airgeddon',
@@ -678,10 +678,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Menu-driven WiFi multi-attack suite orchestrating handshake capture, WPS, and evil twin',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'wef',
@@ -689,10 +689,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Automated WiFi exploitation framework with guided workflows for common attacks',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'fragattacks',
@@ -700,10 +700,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'802.11 protocol flaw exploitation for fragmentation and aggregation vulnerabilities',
 												icon: toolIcons.wifi,
-												installed: false,
+												isInstalled: false,
 												deployment: 'docker',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									}
@@ -725,10 +725,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Rogue AP framework with MITM interception, SSL stripping, and DNS spoofing',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'wifiphisher',
@@ -736,10 +736,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Automated rogue AP framework with social engineering phishing templates',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'wifi-pineapple-pi',
@@ -747,10 +747,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Rogue AP, MITM, captive portal, and credential harvesting platform',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'eaphammer',
@@ -758,10 +758,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'WPA2-Enterprise evil twin targeting 802.1X/EAP networks for credential harvesting',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'fluxion',
@@ -769,10 +769,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Automated evil twin + captive portal social engineering for WPA/WPA2 password capture',
 										icon: toolIcons.wifi,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -792,10 +792,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Bluetooth OBEX exploitation for unauthorized access to phonebooks, SMS, and files',
 										icon: toolIcons.bluetooth,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'bluetoolkit',
@@ -803,10 +803,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Bluetooth Classic/BLE attack framework with vulnerability scanning and exploit execution',
 										icon: toolIcons.bluetooth,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'bluing',
@@ -814,10 +814,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Bluetooth Classic/BLE reconnaissance with service enumeration, vulnerability scanning, and JSON output',
 										icon: toolIcons.bluetooth,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'mirage-framework',
@@ -825,10 +825,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Multi-protocol wireless attack framework supporting BLE, ZigBee, Mosart, and IR',
 										icon: toolIcons.bluetooth,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -848,10 +848,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Modular drone exploitation framework with MAVLink/DJI protocol attacks',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'gps-sdr-sim',
@@ -859,10 +859,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'GPS L1 C/A signal simulator for generating spoofed GPS signals via SDR',
 										icon: toolIcons.drone,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -882,10 +882,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Smart RF jammer with adaptive frequency targeting and power control for wireless disruption',
 										icon: toolIcons.rfSpectrum,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'jamrf-rfid',
@@ -893,10 +893,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Broadband RF jamming with proactive/reactive modes, swept-sine, and Gaussian noise',
 										icon: toolIcons.rfSpectrum,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -915,10 +915,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Sub-GHz replay, brute force, and jamming for garage doors, key fobs, and IoT (300-928 MHz)',
 										icon: toolIcons.iot,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'laf-lora',
@@ -926,10 +926,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'LoRaWAN security auditing with packet injection, replay, and gateway impersonation',
 										icon: toolIcons.iot,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -957,10 +957,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'In-line CoT transformation proxy for intercepting, modifying, and re-routing TAK messages',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'push-cursor-on-target',
@@ -968,10 +968,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'CLI tool for injecting fabricated CoT position and event data into TAK networks',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									},
@@ -991,10 +991,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Computes exact LoRa frequency slots from Meshtastic channel names for precision RF targeting',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									}
@@ -1027,10 +1027,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'EFF 4G/LTE fake base station detector using srsRAN',
 										icon: toolIcons.cellular,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							}
@@ -1060,10 +1060,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Signal Metadata Format — standardized JSON sidecar format for IQ signal recordings',
 										icon: toolIcons.sdr,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'inspectrum',
@@ -1071,10 +1071,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Offline RF signal analysis for visualizing and decoding recorded IQ files',
 										icon: toolIcons.sdr,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -1094,10 +1094,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Stream any SoapySDR device over the network for distributed SDR architectures',
 										icon: toolIcons.sdr,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'fissure',
@@ -1105,10 +1105,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Comprehensive RF framework with 100+ attack scripts, signal detection, and protocol discovery',
 										icon: toolIcons.sdr,
-										installed: false,
+										isInstalled: false,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'rfsec-toolkit',
@@ -1116,10 +1116,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Curated RF security tool collection with scripts and documentation organized by SDR hardware',
 										icon: toolIcons.sdr,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'universal-radio-hacker',
@@ -1127,11 +1127,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Wireless protocol investigation with signal recording, demodulation, and reverse engineering',
 										icon: toolIcons.external,
-										installed: true,
+										isInstalled: true,
 										deployment: 'external',
 										externalUrl: 'http://localhost:8080',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									},
 									{
 										id: 'rf-emitter',
@@ -1139,11 +1139,11 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Argos built-in HackRF transmission module for active RF signal generation (1 MHz–6 GHz)',
 										icon: toolIcons.rfemitter,
-										installed: true,
+										isInstalled: true,
 										deployment: 'native',
 										viewName: 'rf-emitter',
 										canOpen: true,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -1163,10 +1163,10 @@ export const toolHierarchy: ToolHierarchy = {
 										description:
 											'Password recovery and WPA/WPA2/WPA3 cracking (CPU-only on RPi 5)',
 										icon: toolIcons.network,
-										installed: false,
+										isInstalled: false,
 										deployment: 'docker',
 										canOpen: false,
-										showControls: false
+										shouldShowControls: false
 									}
 								]
 							},
@@ -1194,10 +1194,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'ADS-B aircraft tracking to CoT bridge for TAK situational awareness displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'aiscot',
@@ -1205,10 +1205,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'AIS maritime vessel data to CoT bridge for TAK situational awareness displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'aprscot',
@@ -1216,10 +1216,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'APRS amateur radio position reports to CoT bridge for TAK displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'djicot',
@@ -1227,10 +1227,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'DJI drone telemetry to CoT bridge for TAK drone tracking displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'dronecot',
@@ -1238,10 +1238,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Drone Remote ID detection data to CoT bridge for TAK displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'inrcot',
@@ -1249,10 +1249,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Garmin inReach satellite tracker positions to CoT bridge for TAK displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'spotcot',
@@ -1260,10 +1260,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Globalstar SPOT satellite tracker positions to CoT bridge for TAK displays',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									},
@@ -1283,10 +1283,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Python TAK client/server framework for CoT message routing and data gateways',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'takproto',
@@ -1294,10 +1294,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Pure Python library for encoding/decoding TAK Protocol Protobuf and CoT messages',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											},
 											{
 												id: 'wireshark-tak-dissector',
@@ -1305,10 +1305,10 @@ export const toolHierarchy: ToolHierarchy = {
 												description:
 													'Lua-based Wireshark dissector for native TAK/CoT protocol traffic analysis',
 												icon: toolIcons.counterAttack,
-												installed: false,
+												isInstalled: false,
 												deployment: 'native',
 												canOpen: false,
-												showControls: false
+												shouldShowControls: false
 											}
 										]
 									}
@@ -1343,10 +1343,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'Passive OS fingerprinting from TCP/IP stack behavior without generating traffic',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'ndpi',
@@ -1354,10 +1354,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'Deep packet inspection identifying 300+ application protocols from network traffic',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'satori',
@@ -1365,10 +1365,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'Device fingerprinting via DHCP, CDP, mDNS, and UPnP signatures',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'cryptolyzer',
@@ -1376,10 +1376,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'TLS/SSL cipher suite and certificate analysis for cryptographic vulnerability detection',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							}
 						]
 					},
@@ -1399,10 +1399,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'Network MITM framework for ARP poisoning, DNS spoofing, and credential sniffing',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'responder',
@@ -1410,21 +1410,21 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'LLMNR/NBT-NS/mDNS poisoner for NTLMv2 hash and credential capture from Windows hosts',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'native',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'bettercap',
 								name: 'Bettercap',
 								description: 'Network attack and monitoring framework',
 								icon: toolIcons.bettercap,
-								installed: true,
+								isInstalled: true,
 								deployment: 'native',
 								viewName: 'bettercap',
 								canOpen: true,
-								showControls: false
+								shouldShowControls: false
 							},
 							{
 								id: 'mqtt-pwn',
@@ -1432,10 +1432,10 @@ export const toolHierarchy: ToolHierarchy = {
 								description:
 									'MQTT broker exploitation with topic enumeration, credential brute-forcing, and message injection',
 								icon: toolIcons.network,
-								installed: false,
+								isInstalled: false,
 								deployment: 'docker',
 								canOpen: false,
-								showControls: false
+								shouldShowControls: false
 							}
 						]
 					}
@@ -1483,7 +1483,7 @@ export function countTools(category: ToolCategory): { installed: number; total: 
 			total += childCount.total;
 		} else {
 			total++;
-			if (child.installed) installed++;
+			if (child.isInstalled) installed++;
 		}
 	}
 

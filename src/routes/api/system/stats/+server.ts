@@ -1,6 +1,8 @@
 import { json } from '@sveltejs/kit';
 import os from 'os';
 
+import { logger } from '$lib/utils/logger';
+
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -10,7 +12,7 @@ export const GET: RequestHandler = async () => {
 		let totalIdle = 0;
 		let totalTick = 0;
 
-		cpus.forEach(cpu => {
+		cpus.forEach((cpu) => {
 			for (const type in cpu.times) {
 				totalTick += cpu.times[type as keyof typeof cpu.times];
 			}
@@ -19,7 +21,7 @@ export const GET: RequestHandler = async () => {
 
 		const idle = totalIdle / cpus.length;
 		const total = totalTick / cpus.length;
-		const cpuPercentage = Math.round(100 - ~~(100 * idle / total));
+		const cpuPercentage = Math.round(100 - ~~((100 * idle) / total));
 
 		// Get memory usage
 		const totalMem = os.totalmem();
@@ -48,7 +50,9 @@ export const GET: RequestHandler = async () => {
 			timestamp: new Date().toISOString()
 		});
 	} catch (error) {
-		console.error('Error fetching system stats:', error);
+		logger.error('Error fetching system stats', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		// Return simulated values as fallback
 		return json({
 			cpu: Math.floor(Math.random() * 30) + 15,

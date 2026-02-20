@@ -17,8 +17,8 @@ interface CleanupConfig {
 	patternRetention: number; // Pattern expiry
 
 	// Aggregation intervals
-	aggregateHourly: boolean;
-	aggregateDaily: boolean;
+	shouldAggregateHourly: boolean;
+	shouldAggregateDaily: boolean;
 
 	// Cleanup limits
 	batchSize: number; // Records to process per batch
@@ -48,8 +48,8 @@ export class DatabaseCleanupService {
 			patternRetention: 24 * 60 * 60 * 1000, // 24 hours
 
 			// Aggregation
-			aggregateHourly: true,
-			aggregateDaily: true,
+			shouldAggregateHourly: true,
+			shouldAggregateDaily: true,
 
 			// Performance limits
 			batchSize: 1000,
@@ -176,7 +176,7 @@ export class DatabaseCleanupService {
         COUNT(DISTINCT CAST(timestamp / 3600000 AS INTEGER)) as active_hours,
         AVG(latitude) as avg_lat,
         AVG(longitude) as avg_lon,
-        0 as movement_distance -- TODO: Calculate actual movement
+        0 as movement_distance -- TODO(#9): Calculate actual movement
       FROM signals
       WHERE timestamp >= ? AND timestamp < ?
       GROUP BY CAST(timestamp / 86400000 AS INTEGER) * 86400000, device_id
@@ -339,7 +339,7 @@ export class DatabaseCleanupService {
 
 		try {
 			const aggregate = this.db.transaction(() => {
-				if (this.config.aggregateHourly) {
+				if (this.config.shouldAggregateHourly) {
 					// Aggregate last complete hour
 					const lastHour = currentHour - 3600000;
 
@@ -355,7 +355,7 @@ export class DatabaseCleanupService {
 					spatialStmt.run(lastHour, currentHour);
 				}
 
-				if (this.config.aggregateDaily) {
+				if (this.config.shouldAggregateDaily) {
 					// Aggregate last complete day
 					const lastDay = currentDay - 86400000;
 

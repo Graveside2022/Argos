@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -12,10 +13,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		if (useMock) {
 			return json({
 				success: true,
-				running: false,
+				isRunning: false,
 				status: 'inactive',
 				data: {
-					running: false,
+					isRunning: false,
 					interface: 'wlan0',
 					channels: [1, 6, 11],
 					deviceCount: 0,
@@ -44,10 +45,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			return json({
 				success: true,
-				running: true,
+				isRunning: true,
 				status: 'running',
 				data: {
-					running: true,
+					isRunning: true,
 					host: config.host,
 					port: config.port,
 					version,
@@ -72,10 +73,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			return json({
 				success: true,
-				running: status.running,
-				status: status.running ? 'running' : 'stopped',
+				isRunning: status.isRunning,
+				status: status.isRunning ? 'running' : 'stopped',
 				data: {
-					running: status.running,
+					isRunning: status.isRunning,
 					interface: status.interface,
 					channels: status.channels,
 					deviceCount: status.deviceCount,
@@ -90,10 +91,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Neither source available
 		return json({
 			success: true,
-			running: false,
+			isRunning: false,
 			status: 'inactive',
 			data: {
-				running: false,
+				isRunning: false,
 				interface: null,
 				channels: [],
 				deviceCount: 0,
@@ -104,7 +105,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			}
 		});
 	} catch (error) {
-		console.error('Error getting Kismet status:', error);
+		logger.error('Error getting Kismet status', { error: (error as Error).message });
 
 		return json({
 			success: false,
@@ -113,7 +114,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message,
 			data: {
-				running: false,
+				isRunning: false,
 				interface: null,
 				channels: [],
 				deviceCount: 0,

@@ -24,7 +24,7 @@ vi.mock('$lib/server/tak/TakService', () => ({
 }));
 
 // Import handlers after mocks are registered
-import { GET, POST } from '$lib/../routes/api/tak/config/+server';
+import { GET, POST } from './+server';
 
 // --- Helpers ---
 
@@ -41,7 +41,7 @@ const VALID_CONFIG = {
 	hostname: '192.168.1.100',
 	port: 8089,
 	protocol: 'tls' as const,
-	connectOnStartup: false,
+	shouldConnectOnStartup: false,
 	truststorePass: 'atakatak',
 	certPass: 'atakatak',
 	enrollmentPort: 8446

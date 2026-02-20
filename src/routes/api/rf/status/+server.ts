@@ -4,6 +4,7 @@ import { promisify } from 'util';
 
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -66,7 +67,9 @@ export const GET: RequestHandler = async () => {
 			data: status
 		});
 	} catch (error: unknown) {
-		console.error('Error in rf/status endpoint:', error);
+		logger.error('Error in rf/status endpoint', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json(
 			{
 				status: 'error',

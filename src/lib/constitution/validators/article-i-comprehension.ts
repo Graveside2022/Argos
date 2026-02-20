@@ -2,7 +2,7 @@ import { type Violation } from '../types.js';
 
 /**
  * Validate Article I — Comprehension Before Action
- * TODO: Implement comprehension lock checks (future version)
+ * TODO(#8): Implement comprehension lock checks (future version)
  *
  * Placeholder for v1 — requires manual review workflow
  */

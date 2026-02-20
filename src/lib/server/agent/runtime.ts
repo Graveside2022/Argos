@@ -4,6 +4,8 @@
  * Dynamically loads tools from Tool Execution Framework
  */
 
+import { logger } from '$lib/utils/logger';
+
 import { getAllTools, getSystemPrompt } from './tools';
 
 interface AgentMessage {
@@ -71,7 +73,7 @@ async function _executeTool(
 
 		return result.data;
 	} catch (error) {
-		console.error(`Tool execution error (${toolName}):`, error);
+		logger.error('[Agent] Tool execution error', { toolName, error: String(error) });
 		throw error;
 	}
 }

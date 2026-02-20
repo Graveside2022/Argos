@@ -7,6 +7,7 @@
 	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
+	import { logger } from '$lib/utils/logger';
 
 	let imsiCaptureActive = $state(false);
 	let imsiPollInterval: ReturnType<typeof setInterval>;
@@ -62,7 +63,7 @@
 			});
 			if (response.ok) return await response.json();
 		} catch (error) {
-			console.error('Failed to fetch tower location:', error);
+			logger.error('Failed to fetch tower location', { error });
 		}
 		return null;
 	}
@@ -77,7 +78,7 @@
 				}
 			}
 		} catch (error) {
-			console.error('Failed to fetch IMSIs:', error);
+			logger.error('Failed to fetch IMSIs', { error });
 		}
 	}
 
@@ -86,7 +87,7 @@
 		try {
 			const res = await fetch('/api/gsm-evil/status');
 			const data = await res.json();
-			const grgsmRunning = data.details?.grgsm?.running;
+			const grgsmRunning = data.details?.grgsm?.isRunning;
 			const bothRunning = data.status === 'running';
 
 			if (grgsmRunning || bothRunning) {
@@ -100,7 +101,7 @@
 				fetchIMSIs();
 			}
 		} catch (error) {
-			console.error('[GSM] Status check failed:', error);
+			logger.error('[GSM] Status check failed', { error });
 		}
 	});
 

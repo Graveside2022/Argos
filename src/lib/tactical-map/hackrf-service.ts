@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+
 import { hackrfAPI } from '$lib/hackrf/api-legacy';
 import { spectrumData } from '$lib/hackrf/stores';
 import {
@@ -9,6 +11,7 @@ import {
 	type SimplifiedSignal
 } from '$lib/stores/tactical-map/hackrf-store';
 import { SignalAggregator } from '$lib/tactical-map/utils/signal-aggregator';
+import { logger } from '$lib/utils/logger';
 
 export class HackRFService {
 	private spectrumUnsubscribe: (() => void) | null = null;
@@ -21,13 +24,9 @@ export class HackRFService {
 	connectToHackRF(): void {
 		hackrfAPI.connectToDataStream();
 
-		// Subscribe to spectrum data
+		// @constitutional-exemption Article-IV-4.3 issue:#15 — class-managed reactive subscription with proper unsubscribe lifecycle, not a persistence pattern
 		this.spectrumUnsubscribe = spectrumData.subscribe((data) => {
-			const _state = hackrfStore;
-			// Access current state synchronously
-			let currentState: { isSearching: boolean } | undefined;
-			const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
-			unsubscribe();
+			const currentState = get(hackrfStore);
 
 			if (data && currentState?.isSearching) {
 				this.aggregator.addSpectrumData(data);
@@ -52,7 +51,7 @@ export class HackRFService {
 		setTargetFrequency(frequency);
 		setSearchingState(true);
 		clearAllSignals();
-		console.warn(`Searching for signals near ${frequency} MHz`);
+		logger.warn('Searching for signals near target frequency', { frequency });
 	}
 
 	stopSearch(): void {
@@ -61,9 +60,7 @@ export class HackRFService {
 	}
 
 	toggleSearch(frequency: number): void {
-		let currentState: { isSearching: boolean } | undefined;
-		const unsubscribe = hackrfStore.subscribe((s) => (currentState = s));
-		unsubscribe();
+		const currentState = get(hackrfStore);
 
 		if (currentState?.isSearching) {
 			this.stopSearch();

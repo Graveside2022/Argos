@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import { z } from 'zod';
 
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -104,7 +105,9 @@ export const GET: RequestHandler = async () => {
 			data: parseResult.data
 		});
 	} catch (error) {
-		console.error('Failed to fetch IMSI data:', error);
+		logger.error('Failed to fetch IMSI data', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return json({
 			success: false,
 			message: 'Failed to fetch IMSI data',

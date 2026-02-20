@@ -1,5 +1,7 @@
 import type { Feature } from 'geojson';
 
+import { logger } from '$lib/utils/logger';
+
 import { SymbolFactory } from '../map/symbols/SymbolFactory';
 
 /**
@@ -51,7 +53,7 @@ export function parseCotToFeature(xml: string): Feature | null {
 			}
 		};
 	} catch (e) {
-		console.error('Failed to parse CoT', e);
+		logger.error('Failed to parse CoT', { error: e });
 		return null;
 	}
 }
