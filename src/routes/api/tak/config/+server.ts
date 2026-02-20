@@ -21,11 +21,11 @@ const TakConfigSchema = z.object({
 	shouldConnectOnStartup: z.boolean(),
 	authMethod: z.enum(['enroll', 'import']).optional(),
 	truststorePath: z.string().optional(),
-	truststorePass: z.string().max(256),
-	certPass: z.string().max(256),
+	truststorePass: z.string().max(256).optional(),
+	certPass: z.string().max(256).optional(),
 	enrollmentUser: z.string().max(256).optional(),
 	enrollmentPass: z.string().max(256).optional(),
-	enrollmentPort: z.number().int().min(1).max(65535)
+	enrollmentPort: z.number().int().min(1).max(65535).optional()
 });
 
 export const GET: RequestHandler = async () => {
