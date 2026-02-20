@@ -69,7 +69,8 @@ export type ActiveView =
 	| 'rf-emitter'
 	| 'wifite'
 	| 'wigletotak'
-	| 'tak-config';
+	| 'tak-config'
+	| 'logs-analytics';
 
 export const activeView = writable<ActiveView>('map');
 
