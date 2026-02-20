@@ -9,6 +9,7 @@
 	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
 	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
 	import IconRail from '$lib/components/dashboard/IconRail.svelte';
+	import LogsPanel from '$lib/components/dashboard/LogsPanel.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import GsmEvilPanel from '$lib/components/dashboard/panels/GsmEvilPanel.svelte';
@@ -249,6 +250,58 @@
 							Kismet
 						</button>
 
+						<!-- Logs Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'logs'}
+							onclick={() => activeBottomTab.set('logs')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+								/>
+								<line x1="12" y1="8" x2="20" y2="8" />
+								<line x1="8" y1="12" x2="20" y2="12" />
+								<line x1="16" y1="16" x2="20" y2="16" />
+							</svg>
+							Logs
+						</button>
+
+						<!-- Logs Tab -->
+						<button
+							class="panel-tab"
+							class:active={$activeBottomTab === 'logs'}
+							onclick={() => activeBottomTab.set('logs')}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+								/>
+								<line x1="12" y1="8" x2="20" y2="8" />
+								<line x1="8" y1="12" x2="20" y2="12" />
+								<line x1="16" y1="16" x2="20" y2="16" />
+							</svg>
+							Logs
+						</button>
+
 						<!-- Chat Tab (Hidden unless active, or kept for continuity) -->
 						{#if $activeBottomTab === 'chat'}
 							<button
@@ -299,6 +352,8 @@
 						<TerminalPanel />
 					{:else if $activeBottomTab === 'gsm-evil'}
 						<GsmEvilPanel />
+					{:else if $activeBottomTab === 'logs'}
+						<LogsPanel />
 					{:else if $activeBottomTab === 'chat'}
 						<AgentChatPanel />
 					{/if}
