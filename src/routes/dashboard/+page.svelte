@@ -39,9 +39,11 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { GPSService } from '$lib/tactical-map/gps-service';
 	import { KismetService } from '$lib/tactical-map/kismet-service';
+	import { TakService } from '$lib/tactical-map/tak-service';
 
 	const gpsService = new GPSService();
 	const kismetService = new KismetService();
+	const takService = new TakService();
 
 	function goBackToMap() {
 		activeView.set('map');
@@ -89,11 +91,13 @@
 		kismetService.startPeriodicDeviceFetch();
 		// Do an immediate device fetch (the interval only fires after 10s)
 		void kismetService.fetchKismetDevices();
+		takService.startPeriodicStatusCheck();
 	});
 
 	onDestroy(() => {
 		gpsService.stopPositionUpdates();
 		kismetService.stopPeriodicChecks();
+		takService.stopPeriodicChecks();
 	});
 </script>
 

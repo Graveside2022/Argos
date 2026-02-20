@@ -5,6 +5,20 @@ import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
+/** GET /api/tak/connection — Check current TAK server connection status */
+export const GET: RequestHandler = async () => {
+	try {
+		const service = TakService.getInstance();
+		const status = service.getStatus();
+		return json({ success: true, status: status.status });
+	} catch (err) {
+		logger.error('[TAK API] Status check failed', {
+			error: err instanceof Error ? err.message : String(err)
+		});
+		return json({ success: false, error: 'Status check failed' }, { status: 500 });
+	}
+};
+
 /** POST /api/tak/connection — Connect to the configured TAK server */
 export const POST: RequestHandler = async () => {
 	try {
