@@ -1,68 +1,35 @@
 import { derived, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
+import { persistedWritable } from '$lib/stores/persisted-writable';
 
 /** Which panel is open in the icon rail (null = closed) */
 export const activePanel = writable<string | null>(null);
 
 /** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
-const ACTIVE_BOTTOM_TAB_KEY = 'activeBottomTab';
-
 type BottomTab = 'terminal' | 'chat' | 'devices' | 'gsm-evil' | null;
 
-function getInitialBottomTab(): BottomTab {
-	if (!browser) return null;
-	try {
-		const stored = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
-		if (
-			stored === 'terminal' ||
-			stored === 'chat' ||
-			stored === 'devices' ||
-			stored === 'gsm-evil'
-		)
-			return stored;
-	} catch {
-		/* use default */
-	}
-	return null;
-}
+const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'devices', 'gsm-evil'];
 
-export const activeBottomTab = writable<BottomTab>(getInitialBottomTab());
+export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', null, {
+	serialize: (tab) => (tab === null ? 'null' : tab),
+	deserialize: (raw) => (VALID_TABS.includes(raw as BottomTab) ? (raw as BottomTab) : null)
+});
 
 /** Shared bottom panel height (persisted to localStorage) */
-const BOTTOM_PANEL_STORAGE_KEY = 'bottomPanelHeight';
 const DEFAULT_BOTTOM_HEIGHT = 300;
 const MIN_BOTTOM_HEIGHT = 100;
 const MAX_BOTTOM_HEIGHT_PERCENT = 0.8;
 
-function getInitialBottomHeight(): number {
-	if (!browser) return DEFAULT_BOTTOM_HEIGHT;
-	try {
-		const stored = localStorage.getItem(BOTTOM_PANEL_STORAGE_KEY);
-		if (stored)
-			return Math.max(MIN_BOTTOM_HEIGHT, parseInt(stored, 10) || DEFAULT_BOTTOM_HEIGHT);
-	} catch {
-		/* use default */
+export const bottomPanelHeight = persistedWritable<number>(
+	'bottomPanelHeight',
+	DEFAULT_BOTTOM_HEIGHT,
+	{
+		serialize: (h) => String(h),
+		deserialize: (raw) =>
+			Math.max(MIN_BOTTOM_HEIGHT, parseInt(raw, 10) || DEFAULT_BOTTOM_HEIGHT)
 	}
-	return DEFAULT_BOTTOM_HEIGHT;
-}
-
-export const bottomPanelHeight = writable<number>(getInitialBottomHeight());
-
-// Persist height and active tab
-if (browser) {
-	bottomPanelHeight.subscribe((h) => {
-		localStorage.setItem(BOTTOM_PANEL_STORAGE_KEY, String(h));
-	});
-
-	activeBottomTab.subscribe((tab: BottomTab) => {
-		if (tab === null) {
-			localStorage.removeItem(ACTIVE_BOTTOM_TAB_KEY);
-		} else {
-			localStorage.setItem(ACTIVE_BOTTOM_TAB_KEY, tab);
-		}
-	});
-}
+);
 
 /** Whether the bottom panel is open */
 export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);

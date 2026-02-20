@@ -3,9 +3,9 @@
  * Handles session state, panel visibility, and persistence
  */
 
-import { derived, get, writable } from 'svelte/store';
+import { derived, get } from 'svelte/store';
 
-import { browser } from '$app/environment';
+import { persistedWritable } from '$lib/stores/persisted-writable';
 import type { TerminalPanelState, TerminalSession } from '$lib/types/terminal';
 import { logger } from '$lib/utils/logger';
 
@@ -18,50 +18,6 @@ const DEFAULT_HEIGHT = 300;
 /** Generate unique session ID */
 function generateId(): string {
 	return Math.random().toString(36).substring(2, 9);
-}
-
-/** Get initial state from localStorage or defaults */
-function getInitialState(): TerminalPanelState {
-	if (!browser) {
-		return getDefaultState();
-	}
-
-	try {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			// Restore sessions marked as disconnected — they may reattach to server PTYs
-			const restoredSessions: TerminalSession[] = (parsed.sessions ?? []).map(
-				(s: TerminalSession) => ({
-					...s,
-					isConnected: false // Will be set true on reattach
-				})
-			);
-
-			// If we have restored sessions, auto-open the terminal panel
-			const hasRestorableSessions = restoredSessions.length > 0;
-			if (hasRestorableSessions) {
-				logger.info('Restoring terminal sessions, auto-opening panel', {
-					sessionCount: restoredSessions.length
-				});
-				// Set activeBottomTab to 'terminal' to auto-open the panel
-				setTimeout(() => activeBottomTab.set('terminal'), 0);
-			}
-
-			return {
-				...getDefaultState(),
-				height: parsed.height ?? DEFAULT_HEIGHT,
-				preferredShell: parsed.preferredShell ?? '',
-				sessions: restoredSessions,
-				activeTabId: restoredSessions.length > 0 ? restoredSessions[0].id : null,
-				isMaximized: false // Always start non-maximized
-			};
-		}
-	} catch {
-		// Invalid stored state, use defaults
-	}
-
-	return getDefaultState();
 }
 
 /** Default terminal panel state */
@@ -77,20 +33,45 @@ function getDefaultState(): TerminalPanelState {
 	};
 }
 
-/** Main terminal panel state store */
-export const terminalPanelState = writable<TerminalPanelState>(getInitialState());
+/** Main terminal panel state store — persists height, preferredShell, sessions to localStorage */
+export const terminalPanelState = persistedWritable<TerminalPanelState>(
+	STORAGE_KEY,
+	getDefaultState(),
+	{
+		serialize: (state) =>
+			JSON.stringify({
+				height: state.height,
+				preferredShell: state.preferredShell,
+				sessions: state.sessions
+			}),
+		deserialize: (raw) => {
+			const parsed = JSON.parse(raw);
+			// Restore sessions marked as disconnected — they may reattach to server PTYs
+			const restoredSessions: TerminalSession[] = (parsed.sessions ?? []).map(
+				(s: TerminalSession) => ({
+					...s,
+					isConnected: false
+				})
+			);
 
-// Persist relevant state to localStorage
-if (browser) {
-	terminalPanelState.subscribe((state) => {
-		const toPersist = {
-			height: state.height,
-			preferredShell: state.preferredShell,
-			sessions: state.sessions
-		};
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
-	});
-}
+			if (restoredSessions.length > 0) {
+				logger.info('Restoring terminal sessions, auto-opening panel', {
+					sessionCount: restoredSessions.length
+				});
+				setTimeout(() => activeBottomTab.set('terminal'), 0);
+			}
+
+			return {
+				...getDefaultState(),
+				height: parsed.height ?? DEFAULT_HEIGHT,
+				preferredShell: parsed.preferredShell ?? '',
+				sessions: restoredSessions,
+				activeTabId: restoredSessions.length > 0 ? restoredSessions[0].id : null,
+				isMaximized: false
+			};
+		}
+	}
+);
 
 // Derived stores for convenience
 export const terminalSessions = derived(terminalPanelState, ($state) => $state.sessions);
