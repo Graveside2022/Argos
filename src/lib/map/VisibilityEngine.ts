@@ -9,14 +9,14 @@ const DYNAMIC_RSSI_THRESHOLD = -80;
 /** Recency threshold for "Dynamic Filter" mode (seconds). Devices older than this are hidden. */
 const DYNAMIC_RECENCY_SECS = 300;
 
-/** Visibility mode store — persisted to localStorage */
-export const visibilityMode = persistedWritable<VisibilityMode>(
-	'argos-visibility-mode-v2',
-	'manual',
-	{
-		validate: (v) => (['dynamic', 'all', 'manual'].includes(v) ? v : null)
-	}
-);
+/** Visibility mode store — persisted to localStorage.
+ *  Default: 'all' — shows every detected device on the map.
+ *  'manual' only shows explicitly promoted devices (empty set on fresh load → nothing visible).
+ *  'dynamic' auto-squelches weak/stale signals.
+ */
+export const visibilityMode = persistedWritable<VisibilityMode>('argos-visibility-mode-v2', 'all', {
+	validate: (v) => (['dynamic', 'all', 'manual'].includes(v) ? v : null)
+});
 
 /** Set of manually promoted device MACs — visible in all modes */
 export const promotedDevices = persistedWritable<Set<string>>('argos-promoted-devices', new Set(), {
