@@ -153,11 +153,11 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 ### Logs Block (node: LhR9C)
 
-- Header row: "LOGS" label + badge "147" (fill #1A1A1A, border #2E2E2E, cornerRadius 3, text #AAAAAA 8px) + expand icon (maximize-2, #555555, 12px)
+- Header row: "LOGS" label + expand icon (maximize-2, #555555, 12px) — no badge (count shown in Events row only)
 - Data rows (18px height each):
     - "Events 24h" → "147" (#BBBBBB, 11px, weight 600)
     - "Warnings" → "3" (#D4A054 warning color, 11px, weight 600)
-    - "Errors" → "0" (#8BBFA0 healthy color = no errors, 11px, weight 600)
+    - "Errors" → "0" (#FF5C33 error color — always red regardless of value, 11px, weight 600)
     - "Last alert" → "12m ago" (#AAAAAA, 10px, normal)
 - Row labels: #666666, 9px | Spacer line: fill_container height 1
 
