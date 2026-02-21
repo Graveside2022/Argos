@@ -38,13 +38,14 @@ This feature has no database entities. The "data model" is the design token sche
 
 ### 4. Semantic Status Colors
 
-| Token               | Value   | Usage                                           |
-| ------------------- | ------- | ----------------------------------------------- |
-| `--status-healthy`  | #8BBFA0 | Connected, running, online, operational         |
-| `--status-warning`  | #D4A054 | Degraded, idle, needs attention                 |
-| `--status-error`    | #FF5C33 | Failed, offline, critical alert, target markers |
-| `--status-inactive` | #555555 | Stopped, disabled, unavailable                  |
-| `--status-info`     | #7B9FCC | Informational, neutral status                   |
+| Token                 | Value   | Usage                                                   |
+| --------------------- | ------- | ------------------------------------------------------- |
+| `--status-healthy`    | #8BBFA0 | Connected, running, online, operational                 |
+| `--status-warning`    | #D4A054 | Degraded, idle, needs attention                         |
+| `--status-error`      | #FF5C33 | High-visibility alerts: REC indicator, target markers   |
+| `--status-error-soft` | #C45B4A | Desaturated error: Logs error count, overview panel use |
+| `--status-inactive`   | #555555 | Stopped, disabled, unavailable                          |
+| `--status-info`       | #7B9FCC | Informational, neutral status                           |
 
 ### 5. Typography
 
