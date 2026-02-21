@@ -244,7 +244,8 @@ The Lunaris design token system has 5 categories:
 
 - `--status-healthy`: #8BBFA0 (muted sage green)
 - `--status-warning`: #D4A054 (warm gold)
-- `--status-error`: #FF5C33 (high-visibility red-orange)
+- `--status-error`: #FF5C33 (high-visibility alerts: REC indicator, target markers)
+- `--status-error-soft`: #C45B4A (desaturated error: Logs error count, overview panel use)
 - `--status-inactive`: #555555 (gray)
 - `--status-info`: #7B9FCC (desaturated blue)
 
