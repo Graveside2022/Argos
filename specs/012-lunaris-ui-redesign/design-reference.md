@@ -16,14 +16,14 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │ Icon Rail (48px) │ Right Area (fill)                             │
 │                  │ ┌────────────────────────────────────────────┐│
-│  argosLogo       │ │ Command Bar (40px height, full width)     ││
+│  navTerminal     │ │ Command Bar (40px height, full width)     ││
 │  navOverview     │ │ ARGOS | REC | NODE VIPER-6 | ... | 20:45Z││
 │  navDevices      │ ├────────────────────────────────────────────┤│
 │  navTools        │ │ Content Area (862px)                      ││
-│  navLayers       │ │ ┌──────────┬─────────────────────────────┐││
-│  navSettings     │ │ │Overview  │ Map Area (fill)             │││
-│                  │ │ │Panel     │                             │││
-│                  │ │ │(280px)   │   AP markers (steel blue)   │││
+│  ─── spacer ───  │ │ ┌──────────┬─────────────────────────────┐││
+│  argosLogo       │ │ │Overview  │ Map Area (fill)             │││
+│  navLayers       │ │ │Panel     │                             │││
+│  navSettings     │ │ │(280px)   │   AP markers (steel blue)   │││
 │                  │ │ │          │   Target markers (red)      │││
 │                  │ │ │ cpuTile  │                             │││
 │                  │ │ │ diskTile │   Map Legend (bottom-left)  │││
@@ -49,22 +49,23 @@
 - **Icon library**: Lucide
 - **Icon size**: 18×18 (logo 20×20)
 
-| Order | Name        | Icon (Lucide) | Fill Color              | Notes              |
-| ----- | ----------- | ------------- | ----------------------- | ------------------ |
-| 1     | argosLogo   | `waypoints`   | #FFFFFF                 | Brand mark, static |
-| 2     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line    |
-| 3     | navOverview | `house`       | #FFFFFF                 | Active state       |
-| 4     | navDevices  | `list`        | `$--sidebar-foreground` | Inactive           |
-| 5     | navTools    | `swords`      | `$--sidebar-foreground` | Inactive           |
-| —     | (spacer)    | —             | —                       | fill_container     |
-| 6     | navLayers   | `layers`      | `$--sidebar-foreground` | Inactive           |
-| 7     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line    |
-| 8     | navSettings | `settings`    | `$--sidebar-foreground` | Inactive           |
+| Order | Name        | Icon (Lucide) | Fill Color              | Notes                          |
+| ----- | ----------- | ------------- | ----------------------- | ------------------------------ |
+| 1     | navTerminal | `terminal`    | #809AD0 (accent)        | Terminal shortcut, accent fill |
+| 2     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                |
+| 3     | navOverview | `house`       | #FFFFFF                 | Active state                   |
+| 4     | navDevices  | `list`        | `$--sidebar-foreground` | Inactive                       |
+| 5     | navTools    | `swords`      | `$--sidebar-foreground` | Inactive                       |
+| —     | (spacer)    | —             | —                       | fill_container                 |
+| 6     | argosLogo   | `waypoints`   | #FFFFFF                 | Brand mark, 20×20, static      |
+| 7     | navLayers   | `layers`      | `$--sidebar-foreground` | Inactive                       |
+| 8     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                |
+| 9     | navSettings | `settings`    | `$--sidebar-foreground` | Inactive                       |
 
 **Active state**: Fill = #FFFFFF (full white)
 **Inactive state**: Fill = `$--sidebar-foreground` (#808080 dark mode)
-**Logo**: `waypoints` icon, 20×20, always #FFFFFF
-**Note**: Logo (waypoints) is at the top of the rail. No terminal shortcut — terminal access is via bottom panel tabs only.
+**Terminal shortcut**: `terminal` icon at top of rail, always accent (#809AD0) — focuses bottom panel terminal
+**Logo**: `waypoints` icon, 20×20, always #FFFFFF — positioned below spacer as brand watermark
 
 ---
 
@@ -187,8 +188,8 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 - Height: 40px, padding: 4 12px, gap: 4px
 - Font: **Geist** (sans-serif), 14px, weight 500
-- Active tab: fill #222222 (elevated), cornerRadius pill, border 1px #2E2E2E, text #809AD0 (accent). Terminal tab includes `plus` icon (12px, #555555) for new tmux windows.
-- Inactive tab: no fill, text #BBBBBB
+- Active tab: fill $--background, cornerRadius 6px, border 1px, shadow, text #809AD0 (accent). Terminal tab includes `plus` icon (12px, #555555) for new tmux windows.
+- Inactive tab: no fill, cornerRadius 6px, text $--muted-foreground
 - Collapse icon: `keyboard_arrow_down` (Material Symbols Sharp), 16×16, $--muted-foreground
 - Tab labels: "Terminal" | "Chat" | "Logs" | "Captures" | "Network Map"
 
