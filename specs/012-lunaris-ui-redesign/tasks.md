@@ -113,15 +113,15 @@
 
 ## Phase 6: User Story 4 — Icon Rail Navigation (Priority: P2)
 
-**Goal**: 48px icon rail with Lunaris-styled icons, active/hover states, static logo at top.
+**Goal**: 48px icon rail with Lunaris-styled icons, active/hover states, terminal shortcut at top, waypoints logo below spacer.
 
-**Independent Test**: Click each nav icon, verify correct panel opens with active state styling. Verify logo is static (not clickable). Verify hover highlights.
+**Independent Test**: Click each nav icon, verify correct panel opens with active state styling. Verify terminal icon (accent) focuses bottom panel. Verify waypoints logo is static (not clickable — reserved for future feature). Verify hover highlights.
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Restyle src/lib/components/dashboard/IconRail.svelte: update rail background to --bg-card, active icon state with --accent color/background, hover state with --bg-elevated, ensure logo at top is non-interactive, update icon colors to --text-secondary (inactive) and --text-primary (active)
+- [ ] T033 [US4] Restyle src/lib/components/dashboard/IconRail.svelte: update rail background to --bg-card, active icon state with --accent color/background, hover state with --bg-elevated, terminal icon at top (accent-colored, focuses bottom panel terminal), waypoints logo below spacer (static, non-interactive — reserved for future feature, not yet implemented), update icon colors to --text-secondary (inactive) and --text-primary (active)
 
-**Checkpoint**: Icon rail navigation works with Lunaris styling. Logo is a brand mark.
+**Checkpoint**: Icon rail navigation works with Lunaris styling. Terminal shortcut works. Waypoints logo is a static brand mark (future feature placeholder).
 
 ---
 

@@ -58,7 +58,7 @@ An operator uses the left-side overview panel to monitor system health at a glan
 
 ### User Story 4 - Icon Rail Navigation (Priority: P2)
 
-An operator uses a narrow vertical icon rail on the far left to switch between dashboard views — Overview, Devices, Tools/Integrations, Layers, and Settings. The rail is compact (48px) and uses subtle iconography. The Argos logo sits at the top of the rail as a brand anchor, not a clickable toggle.
+An operator uses a narrow vertical icon rail on the far left to switch between dashboard views — Overview, Devices, Tools/Integrations, Layers, and Settings. The rail is compact (48px) and uses subtle iconography. A terminal shortcut icon (accent-colored) sits at the top for quick terminal access. The Argos waypoints (polyline) logo sits below the spacer — it is reserved for a future feature (not yet implemented) and currently renders as a static brand watermark.
 
 **Why this priority**: The icon rail is the primary navigation mechanism but is structurally simpler than the content panels it controls. It already exists in code and primarily needs visual refinement.
 

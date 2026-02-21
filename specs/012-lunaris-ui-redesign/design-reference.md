@@ -49,23 +49,23 @@
 - **Icon library**: Lucide
 - **Icon size**: 18×18 (logo 20×20)
 
-| Order | Name        | Icon (Lucide) | Fill Color              | Notes                          |
-| ----- | ----------- | ------------- | ----------------------- | ------------------------------ |
-| 1     | navTerminal | `terminal`    | #809AD0 (accent)        | Terminal shortcut, accent fill |
-| 2     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                |
-| 3     | navOverview | `house`       | #FFFFFF                 | Active state                   |
-| 4     | navDevices  | `list`        | `$--sidebar-foreground` | Inactive                       |
-| 5     | navTools    | `swords`      | `$--sidebar-foreground` | Inactive                       |
-| —     | (spacer)    | —             | —                       | fill_container                 |
-| 6     | argosLogo   | `waypoints`   | #FFFFFF                 | Brand mark, 20×20, static      |
-| 7     | navLayers   | `layers`      | `$--sidebar-foreground` | Inactive                       |
-| 8     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                |
-| 9     | navSettings | `settings`    | `$--sidebar-foreground` | Inactive                       |
+| Order | Name        | Icon (Lucide) | Fill Color              | Notes                                                   |
+| ----- | ----------- | ------------- | ----------------------- | ------------------------------------------------------- |
+| 1     | navTerminal | `terminal`    | #809AD0 (accent)        | Terminal shortcut, accent fill                          |
+| 2     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                                         |
+| 3     | navOverview | `house`       | #FFFFFF                 | Active state                                            |
+| 4     | navDevices  | `list`        | `$--sidebar-foreground` | Inactive                                                |
+| 5     | navTools    | `swords`      | `$--sidebar-foreground` | Inactive                                                |
+| —     | (spacer)    | —             | —                       | fill_container                                          |
+| 6     | argosLogo   | `waypoints`   | #FFFFFF                 | Brand mark, 20×20, future feature (not yet implemented) |
+| 7     | navLayers   | `layers`      | `$--sidebar-foreground` | Inactive                                                |
+| 8     | (separator) | —             | `$--sidebar-border` 1px | Horizontal line                                         |
+| 9     | navSettings | `settings`    | `$--sidebar-foreground` | Inactive                                                |
 
 **Active state**: Fill = #FFFFFF (full white)
 **Inactive state**: Fill = `$--sidebar-foreground` (#808080 dark mode)
 **Terminal shortcut**: `terminal` icon at top of rail, always accent (#809AD0) — focuses bottom panel terminal
-**Logo**: `waypoints` icon, 20×20, always #FFFFFF — positioned below spacer as brand watermark
+**Logo**: `waypoints` (polyline) icon, 20×20, always #FFFFFF — positioned below spacer. Reserved for a future feature (not yet implemented); currently renders as a static brand watermark.
 
 ---
 
