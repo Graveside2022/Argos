@@ -64,7 +64,7 @@
 **Active state**: Fill = #FFFFFF (full white)
 **Inactive state**: Fill = `$--sidebar-foreground` (#808080 dark mode)
 **Logo**: `waypoints` icon, 20×20, always #FFFFFF
-**Note**: Terminal icon removed from rail — terminal access is via bottom panel tabs only
+**Note**: Logo (waypoints) is at the top of the rail. No terminal shortcut — terminal access is via bottom panel tabs only.
 
 ---
 
@@ -77,17 +77,18 @@
 
 | Element     | Content        | Font      | Size | Weight | Color            | Notes                |
 | ----------- | -------------- | --------- | ---- | ------ | ---------------- | -------------------- |
+| brandIcon   | terminal       | Lucide    | 16px | —      | #809AD0 (accent) | Brand logo icon      |
 | brandLabel  | "ARGOS"        | Fira Code | 13px | 700    | #809AD0 (accent) | letter-spacing: 2    |
 | recDot      | (circle)       | —         | 6×6  | —      | #FF5C33 (error)  | Ellipse, not text    |
 | recText     | "REC"          | Fira Code | 10px | 600    | #FF5C33          | letter-spacing: 1    |
 | nodeLabel   | "NODE VIPER-6" | Fira Code | 12px | 500    | $--foreground    | letter-spacing: 1    |
 | (spacer)    | —              | —         | —    | —      | —                | fill_container       |
 | netIcon     | signal         | Lucide    | 12px | —      | #809AD0          | Network latency icon |
-| netText     | "47ms"         | Fira Code | 11px | normal | #888888          |                      |
+| netText     | "47ms"         | Fira Code | 11px | normal | #666666          |                      |
 | meshIcon    | network        | Lucide    | 12px | —      | #809AD0          | Mesh status icon     |
 | meshNum     | "3"            | Fira Code | 11px | 600    | #809AD0          | Active nodes         |
-| meshSlash   | "/"            | Fira Code | 11px | normal | #888888          |                      |
-| meshDenom   | "4"            | Fira Code | 11px | normal | #888888          | Total nodes          |
+| meshSlash   | "/"            | Fira Code | 11px | normal | #666666          |                      |
+| meshDenom   | "4"            | Fira Code | 11px | normal | #666666          | Total nodes          |
 | weatherIcon | cloud-sun      | Lucide    | 14px | —      | $--muted-fg      |                      |
 | weatherText | "72°F Clear"   | Geist     | 11px | normal | $--muted-fg      | Only sans-serif here |
 | milDate     | "2026-02-20"   | Fira Code | 11px | normal | #555555          | letter-spacing: 0.5  |
@@ -131,7 +132,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 - Header: "NETWORK STATUS" + "connected" status text
 - Rows: Host IP, VPN IP+latency, ATAK server+latency
 - Speed Test button: cornerRadius 3, fill #1A1A1A, border #2E2E2E, gauge icon + "Speed Test" text
-- Label text: #666666, 9px | Value text: #AAAAAA, 9px | Latency: #888888, 9px
+- Label text: #666666, 9px | Value text: #AAAAAA, 9px | Latency: #666666, 9px
 
 ### Hardware Block (node: PShzr)
 
@@ -157,7 +158,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 - Data rows (18px height each):
     - "Events 24h" → "147" (#BBBBBB, 11px, weight 600)
     - "Warnings" → "3" (#D4A054 warning color, 11px, weight 600)
-    - "Errors" → "0" (#FF5C33 error color — always red regardless of value, 11px, weight 600)
+    - "Errors" → "0" (#C45B4A desaturated error — always red regardless of value, 11px, weight 600)
     - "Last alert" → "12m ago" (#AAAAAA, 10px, normal)
 - Row labels: #666666, 9px | Spacer line: fill_container height 1
 
@@ -186,8 +187,8 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 - Height: 40px, padding: 4 12px, gap: 4px
 - Font: **Geist** (sans-serif), 14px, weight 500
-- Active tab: fill $--background, cornerRadius pill, shadow, text $--foreground
-- Inactive tab: no fill, text $--muted-foreground
+- Active tab: fill #222222 (elevated), cornerRadius pill, border 1px #2E2E2E, text #809AD0 (accent). Terminal tab includes `plus` icon (12px, #555555) for new tmux windows.
+- Inactive tab: no fill, text #BBBBBB
 - Collapse icon: `keyboard_arrow_down` (Material Symbols Sharp), 16×16, $--muted-foreground
 - Tab labels: "Terminal" | "Chat" | "Logs" | "Captures" | "Network Map"
 
@@ -221,7 +222,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 | #B8B9B6 ($--muted-foreground) | Muted text, inactive tabs, weather                    |
 | #AAAAAA                       | IP values, latency, log row values, coordinates       |
 | #999999                       | Section labels (UPPERCASE), tile labels               |
-| #888888                       | Network latency, speed test text, mesh secondary      |
+| #666666                       | Network latency, speed test text, mesh secondary      |
 | #666666                       | Sub-values (temp, capacity), log row labels, disabled |
 | #555555                       | Chevrons, inactive status, date, expand icons         |
 
@@ -263,7 +264,7 @@ Located in Network Block. Design spec:
 - Height: 24px, cornerRadius: 3
 - Background: #1A1A1A ($--card)
 - Border: 1px #2E2E2E
-- Icon: `gauge` (Lucide), 11×11, #888888
-- Text: "Speed Test", Fira Code 9px, weight 500, #888888
+- Icon: `gauge` (Lucide), 11×11, #666666
+- Text: "Speed Test", Fira Code 9px, weight 500, #666666
 - Layout: center justified, gap 6px
 - Width: fill_container
