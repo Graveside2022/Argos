@@ -64,7 +64,7 @@
 **Active state**: Fill = #FFFFFF (full white)
 **Inactive state**: Fill = `$--sidebar-foreground` (#808080 dark mode)
 **Logo**: `waypoints` icon, 20×20, always #FFFFFF
-**Terminal icon**: `terminal` at top with fill #809AD0 (accent) — appears to be an alternate/additional nav item
+**Note**: Terminal icon removed from rail — terminal access is via bottom panel tabs only
 
 ---
 
@@ -105,7 +105,7 @@
 
 - Height: 40px, padding: 0 16px
 - "SYSTEM OVERVIEW" — Fira Code 11px weight 600, color $--muted-foreground, letter-spacing 1.5
-- Expand icon: `maximize-2` (Lucide), 14×14, #555555
+- No expand icon (removed — expand icon retained only on Logs block)
 
 ### Metric Tiles (4 identical structures)
 
@@ -189,7 +189,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 - Active tab: fill $--background, cornerRadius pill, shadow, text $--foreground
 - Inactive tab: no fill, text $--muted-foreground
 - Collapse icon: `keyboard_arrow_down` (Material Symbols Sharp), 16×16, $--muted-foreground
-- Tab labels: "Terminal" | "Chat" | "Captures" | "Network Map"
+- Tab labels: "Terminal" | "Chat" | "Logs" | "Captures" | "Network Map"
 
 ### Terminal Body (node: 3sibR)
 
