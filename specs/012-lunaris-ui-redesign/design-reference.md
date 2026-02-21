@@ -195,7 +195,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 ### Terminal Body (node: 3sibR)
 
-- Background: #0A0A0A (near-black), padding 12px, gap 2px
+- Background: #0F0F0F (near-black), padding 12px, gap 2px
 
 ---
 
@@ -212,7 +212,7 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 | #222222       | —       | Progress bar track, elevated surfaces            |
 | #333333       | —       | Tile borders (--border-strong)                   |
 | #1F1F1F       | —       | Subtle borders                                   |
-| #0A0A0A       | —       | Terminal body background                         |
+| #0F0F0F       | —       | Terminal body background                         |
 
 ### Text
 
