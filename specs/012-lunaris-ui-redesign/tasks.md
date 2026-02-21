@@ -105,7 +105,7 @@
 - [ ] T032 [US3] Update src/lib/components/dashboard/panels/OverviewPanel.svelte: import and render LogsSummaryCard after ServicesCard, adjust panel width to 280px, update padding and gap values to Lunaris spacing tokens
 - [ ] T032a [US3] Download librespeed-cli v1.0.12 linux_arm64 static binary (~3 MB) to static/bin/librespeed-cli, add to .gitignore (binary), document installation in specs/012-lunaris-ui-redesign/research.md
 - [ ] T032b [US3] Create API endpoint src/routes/api/speedtest/+server.ts: POST triggers librespeed-cli execution via hostExec, streams JSON result (download, upload, latency, server); GET returns last cached result. Input-validate server URL if custom. Timeout: 30s.
-- [ ] T032c [US3] Add speed test button and inline results display to the Network block in the overview panel: button styled per mockup (gauge icon, "Speed Test" label, #888888 text, #1A1A1A bg, #2E2E2E border), results replace button text temporarily showing "↓ XX Mbps ↑ XX Mbps · XXms", loading state shows spinner
+- [ ] T032c [US3] Add speed test button and inline results display to the Network block in the overview panel: button styled per mockup (gauge icon, "Speed Test" label, --text-tertiary #666666 text, --bg-card #1A1A1A bg, --border-default #2E2E2E border), results replace button text temporarily showing "↓ XX Mbps ↑ XX Mbps · XXms", loading state shows spinner
 
 **Checkpoint**: Overview panel is complete with all 9 blocks, text-based status indicators, new Logs summary, and working speed test. No colored dots remain.
 
@@ -150,7 +150,7 @@
 
 ### Implementation for User Story 6
 
-- [ ] T038 [US6] Restyle src/lib/components/dashboard/ResizableBottomPanel.svelte: update tab bar background to --bg-card, active tab indicator with --accent, inactive tabs with --text-tertiary, collapse caret with --text-secondary, drag handle with --border-default
+- [ ] T038 [US6] Restyle src/lib/components/dashboard/ResizableBottomPanel.svelte: update tab bar background to --bg-card, active tab fill #222222 with #2E2E2E border and --accent text, inactive tabs with --text-data (#BBBBBB), add 5 tabs (Terminal|Chat|Logs|Captures|Network Map), Terminal tab gets plus icon for tmux, collapse caret with --text-secondary, drag handle with --border-default
 - [ ] T039 [P] [US6] Restyle src/lib/components/dashboard/TerminalPanel.svelte and src/lib/components/dashboard/TerminalTabContent.svelte: update terminal font to --font-mono, background to --bg-base, text colors to Lunaris tokens
 - [ ] T040 [P] [US6] Restyle src/lib/components/dashboard/AgentChatPanel.svelte: update chat bubble backgrounds, text colors, input field styling to Lunaris tokens
 - [ ] T041 [P] [US6] Restyle src/lib/components/dashboard/LogsPanel.svelte: update log entry styling, severity colors using --status-* tokens, timestamps with --text-tertiary

@@ -32,7 +32,7 @@
 │                  │ │ │ netBlock │                             │││
 │                  │ │ │ hwBlock  ├─────────────────────────────┤││
 │                  │ │ │ toolsBlk │ Bottom Panel (240px)       │││
-│                  │ │ │ svcBlock │ Tab Bar: Terminal|Chat|     │││
+│                  │ │ │ svcBlock │ Tab Bar: Terminal|Chat|Logs│││
 │                  │ │ │ logBlock │         Captures|Net Map    │││
 │                  │ │ └──────────┴─────────────────────────────┘││
 │                  │ └────────────────────────────────────────────┘│
@@ -215,16 +215,14 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 ### Text
 
-| Color                         | Usage                                                 |
-| ----------------------------- | ----------------------------------------------------- |
-| #FFFFFF ($--foreground)       | Primary text, metric values, active tab, tool names   |
-| #BBBBBB                       | Device names, hardware names, log event values        |
-| #B8B9B6 ($--muted-foreground) | Muted text, inactive tabs, weather                    |
-| #AAAAAA                       | IP values, latency, log row values, coordinates       |
-| #999999                       | Section labels (UPPERCASE), tile labels               |
-| #666666                       | Network latency, speed test text, mesh secondary      |
-| #666666                       | Sub-values (temp, capacity), log row labels, disabled |
-| #555555                       | Chevrons, inactive status, date, expand icons         |
+| Token              | Color   | Usage                                                                  |
+| ------------------ | ------- | ---------------------------------------------------------------------- |
+| `--text-primary`   | #FFFFFF | Primary text, metric values, tool names                                |
+| `--text-data`      | #BBBBBB | Device names, hardware names, log event values, inactive tabs, weather |
+| `--text-secondary` | #AAAAAA | IP values, latency, log row values, coordinates                        |
+| `--text-label`     | #999999 | Section labels (UPPERCASE), tile labels                                |
+| `--text-tertiary`  | #666666 | Sub-values, row labels, network latency, speed test text               |
+| `--text-disabled`  | #555555 | Chevrons, inactive status, date, expand icons                          |
 
 ### Accent (Steel Blue)
 
@@ -234,19 +232,20 @@ Each tile: **72px height**, fill #111111, border-bottom 1px #2E2E2E
 
 ### Semantic Status
 
-| Color   | Meaning          | Examples                                 |
-| ------- | ---------------- | ---------------------------------------- |
-| #8BBFA0 | Healthy/Running  | "connected", "monitor", uptime, 0 errors |
-| #D4A054 | Warning/Idle     | "idle"                                   |
-| #FF5C33 | Error/Alert      | "REC" indicator, target markers          |
-| #555555 | Inactive/Stopped | "stopped"                                |
+| Color   | Meaning            | Examples                                |
+| ------- | ------------------ | --------------------------------------- |
+| #8BBFA0 | Healthy/Running    | "connected", "monitor", uptime          |
+| #D4A054 | Warning/Idle       | "idle"                                  |
+| #FF5C33 | Error/Alert (high) | "REC" indicator, target markers         |
+| #C45B4A | Error/Soft (panel) | Logs error count, overview panel errors |
+| #555555 | Inactive/Stopped   | "stopped"                               |
 
 ### Typography
 
-| Font      | Usage                                                                         |
-| --------- | ----------------------------------------------------------------------------- |
-| Fira Code | ALL data: metrics, labels, IPs, coordinates, status text, section headers     |
-| Geist     | Tab labels only ("Terminal", "Chat", "Captures", "Network Map"), weather text |
+| Font      | Usage                                                                            |
+| --------- | -------------------------------------------------------------------------------- |
+| Fira Code | ALL data: metrics, labels, IPs, coordinates, status text, section headers        |
+| Geist     | Tab labels ("Terminal", "Chat", "Logs", "Captures", "Network Map"), weather text |
 
 ### Icon Libraries
 

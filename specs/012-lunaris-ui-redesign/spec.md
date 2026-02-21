@@ -94,7 +94,7 @@ An operator accesses secondary tools through a bottom panel that can be expanded
 
 **Why this priority**: The bottom panel provides the interactive workspace (terminal, captures, chat) and already exists functionally. This story focuses on styling the tab bar, collapse/expand behavior, and drag handle to match the Lunaris design language.
 
-**Independent Test**: Can be fully tested by expanding, collapsing, and resizing the bottom panel, then switching between all four tabs and verifying consistent Lunaris styling.
+**Independent Test**: Can be fully tested by expanding, collapsing, and resizing the bottom panel, then switching between all five tabs and verifying consistent Lunaris styling.
 
 **Acceptance Scenarios**:
 
@@ -194,11 +194,11 @@ The definitive visual reference for this redesign is the Pencil mockup file `pen
 
 **Backgrounds**: Deep black base (#111111), slightly lighter card surfaces (#1A1A1A), border separations (#2E2E2E)
 
-**Text**: White foreground (#FFFFFF), muted foreground (#B8B9B6), secondary/disabled (#666666), section labels (#999999 equivalent via muted)
+**Text (6-token hierarchy)**: Primary (#FFFFFF), data (#BBBBBB), secondary (#AAAAAA), label (#999999), tertiary (#666666), disabled (#555555)
 
 **Accent Layer (Steel Blue)**: Primary accent #809AD0, lighter tint #A8BBD8 for secondary bars
 
-**Semantic Layer (Desaturated)**: Healthy #8BBFA0 (muted sage green), Warning #D4A054 (warm gold), Error #FF5C33 (unchanged, high-visibility), Inactive #555555 (gray)
+**Semantic Layer (Desaturated)**: Healthy #8BBFA0 (muted sage green), Warning #D4A054 (warm gold), Error #FF5C33 (high-visibility alerts) / #C45B4A (desaturated panel use), Inactive #555555 (gray)
 
 **Typography**: Monospace primary (Fira Code) for all data, metrics, labels. Sans-serif secondary (Geist) for tab labels and UI navigation. Six-step size scale: 24px hero → 13px brand → 12px secondary data → 11px primary rows → 10px status text → 9px section headers.
 
