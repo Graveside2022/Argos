@@ -90,7 +90,7 @@ An operator monitors the central map area showing the geographic operating envir
 
 ### User Story 6 - Resizable Bottom Panel with Tabs (Priority: P2)
 
-An operator accesses secondary tools through a bottom panel that can be expanded, collapsed, and resized by dragging. The panel contains tabs for Terminal, Chat (AI Agent), Captures, and Network Map. A downward caret collapses the panel; clicking it again restores it. The panel can be dragged to resize vertically.
+An operator accesses secondary tools through a bottom panel that can be expanded, collapsed, and resized by dragging. The panel contains tabs for Terminal, Chat (AI Agent), Logs, Captures, and Network Map. A downward caret collapses the panel; clicking it again restores it. The panel can be dragged to resize vertically.
 
 **Why this priority**: The bottom panel provides the interactive workspace (terminal, captures, chat) and already exists functionally. This story focuses on styling the tab bar, collapse/expand behavior, and drag handle to match the Lunaris design language.
 
@@ -142,7 +142,7 @@ The dashboard supports swappable accent colors that pervade the entire interface
 - **FR-007**: Status sections (Network, Hardware, Tools, Services) MUST use text-based status labels with color tinting — no colored dot indicators
 - **FR-008**: A Logs summary section MUST appear at the bottom of the overview panel showing aggregate event counters (total events 24h, warnings, errors, time since last alert)
 - **FR-009**: The bottom panel MUST support collapse/expand via a caret toggle and vertical resize via drag
-- **FR-010**: The bottom panel MUST contain tabs for Terminal, Chat, Captures, and Network Map
+- **FR-010**: The bottom panel MUST contain tabs for Terminal, Chat, Logs, Captures, and Network Map
 - **FR-011**: Semantic status colors (healthy, warning, error, inactive) MUST be independent of the accent color and MUST be visually desaturated to harmonize with the dark theme
 - **FR-012**: Color MUST NOT be the sole means of conveying status — every color-coded element MUST also have a text label or icon that communicates the same information
 - **FR-013**: The map area MUST fill remaining horizontal and vertical space after the icon rail, command bar, overview panel, and bottom panel are positioned
