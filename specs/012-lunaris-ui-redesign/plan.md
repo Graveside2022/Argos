@@ -307,34 +307,34 @@ For developers working on Lunaris-themed components:
 
 ## Files to Modify
 
-| File                                                                     | Changes                                                                                                   | Impact                   |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `src/app.css`                                                            | Replace oklch tokens with Lunaris hex, remove palette overrides, update `@theme inline`, change body font | HIGH — root token source |
-| `src/lib/styles/dashboard.css`                                           | Update `--font-sans`/`--font-mono`, change `--panel-width` to 280px, `--top-bar-height` to 40px           | MEDIUM — layout tokens   |
-| `src/routes/dashboard/+page.svelte`                                      | Change import from `palantir-design-system.css` to `lunaris-tokens.css`                                   | LOW — one import line    |
-| `src/lib/stores/theme-store.svelte.ts`                                   | Remove palette switching logic, simplify to accent-color-only                                             | MEDIUM — theme store     |
-| `src/lib/components/dashboard/TopStatusBar.svelte`                       | Restyle brand text, status icons, indicator dropdowns                                                     | MEDIUM                   |
-| `src/lib/components/dashboard/IconRail.svelte`                           | Active/hover states, logo treatment                                                                       | LOW                      |
-| `src/lib/components/dashboard/panels/OverviewPanel.svelte`               | Add LogsSummaryCard, adjust panel width/spacing                                                           | MEDIUM                   |
-| `src/lib/components/dashboard/panels/overview/SystemInfoCard.svelte`     | Metric tile restyling (progress bars, typography)                                                         | MEDIUM                   |
-| `src/lib/components/dashboard/panels/overview/HardwareCard.svelte`       | Remove dots, text status labels                                                                           | MEDIUM                   |
-| `src/lib/components/dashboard/panels/overview/ServicesCard.svelte`       | Remove dots, text status labels                                                                           | MEDIUM                   |
-| `src/lib/components/dashboard/panels/overview/WifiInterfacesCard.svelte` | Remove dots, network text status, add Speed Test button (FR-015)                                          | MEDIUM                   |
-| `src/lib/components/dashboard/panels/overview/GpsCard.svelte`            | Typography update                                                                                         | LOW                      |
-| `src/lib/components/dashboard/ResizableBottomPanel.svelte`               | Tab bar, caret, drag handle styling                                                                       | MEDIUM                   |
-| `src/lib/components/dashboard/DashboardMap.svelte`                       | Map chrome, marker tokens                                                                                 | LOW                      |
-| `src/lib/components/dashboard/map/DeviceOverlay.svelte`                  | Marker color tokens (accent vs error)                                                                     | LOW                      |
-| `src/lib/components/dashboard/map/TowerPopup.svelte`                     | Popup styling tokens                                                                                      | LOW                      |
-| `src/lib/components/dashboard/TerminalPanel.svelte`                      | Font/color tokens                                                                                         | LOW                      |
-| `src/lib/components/dashboard/AgentChatPanel.svelte`                     | Bubble styling tokens                                                                                     | LOW                      |
-| `src/lib/components/dashboard/LogsPanel.svelte`                          | Log entry styling                                                                                         | LOW                      |
-| `src/lib/components/dashboard/status/*.svelte` (6 files)                 | Dropdown/display token updates (incl. SatelliteTable.svelte)                                              | LOW each                 |
-| `src/lib/components/dashboard/panels/SettingsPanel.svelte`               | Token updates                                                                                             | LOW                      |
-| `src/lib/components/dashboard/panels/DevicesPanel.svelte`                | Token updates                                                                                             | LOW                      |
-| `src/lib/components/dashboard/panels/LayersPanel.svelte`                 | Token updates                                                                                             | LOW                      |
-| `src/lib/components/dashboard/panels/ToolsPanel.svelte`                  | Token updates                                                                                             | LOW                      |
-| `src/lib/components/dashboard/shared/ToolCard.svelte`                    | Card styling tokens                                                                                       | LOW                      |
-| `src/lib/components/dashboard/shared/ToolCategoryCard.svelte`            | Card styling tokens                                                                                       | LOW                      |
+| File                                                                     | Changes                                                                                                          | Impact                   |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `src/app.css`                                                            | Replace oklch tokens with Lunaris hex, remove palette overrides, update `@theme inline`, change body font        | HIGH — root token source |
+| `src/lib/styles/dashboard.css`                                           | Update `--font-sans`/`--font-mono`, change `--panel-width` to 280px, `--top-bar-height` to 40px                  | MEDIUM — layout tokens   |
+| `src/routes/dashboard/+page.svelte`                                      | Change import from `palantir-design-system.css` to `lunaris-tokens.css`                                          | LOW — one import line    |
+| `src/lib/stores/theme-store.svelte.ts`                                   | Remove palette switching logic, simplify to accent-color-only                                                    | MEDIUM — theme store     |
+| `src/lib/components/dashboard/TopStatusBar.svelte`                       | Restyle brand text, status icons, indicator dropdowns                                                            | MEDIUM                   |
+| `src/lib/components/dashboard/IconRail.svelte`                           | Active/hover states, terminal shortcut at top, waypoints logo below spacer (future feature, not yet implemented) | LOW                      |
+| `src/lib/components/dashboard/panels/OverviewPanel.svelte`               | Add LogsSummaryCard, adjust panel width/spacing                                                                  | MEDIUM                   |
+| `src/lib/components/dashboard/panels/overview/SystemInfoCard.svelte`     | Metric tile restyling (progress bars, typography)                                                                | MEDIUM                   |
+| `src/lib/components/dashboard/panels/overview/HardwareCard.svelte`       | Remove dots, text status labels                                                                                  | MEDIUM                   |
+| `src/lib/components/dashboard/panels/overview/ServicesCard.svelte`       | Remove dots, text status labels                                                                                  | MEDIUM                   |
+| `src/lib/components/dashboard/panels/overview/WifiInterfacesCard.svelte` | Remove dots, network text status, add Speed Test button (FR-015)                                                 | MEDIUM                   |
+| `src/lib/components/dashboard/panels/overview/GpsCard.svelte`            | Typography update                                                                                                | LOW                      |
+| `src/lib/components/dashboard/ResizableBottomPanel.svelte`               | Tab bar, caret, drag handle styling                                                                              | MEDIUM                   |
+| `src/lib/components/dashboard/DashboardMap.svelte`                       | Map chrome, marker tokens                                                                                        | LOW                      |
+| `src/lib/components/dashboard/map/DeviceOverlay.svelte`                  | Marker color tokens (accent vs error)                                                                            | LOW                      |
+| `src/lib/components/dashboard/map/TowerPopup.svelte`                     | Popup styling tokens                                                                                             | LOW                      |
+| `src/lib/components/dashboard/TerminalPanel.svelte`                      | Font/color tokens                                                                                                | LOW                      |
+| `src/lib/components/dashboard/AgentChatPanel.svelte`                     | Bubble styling tokens                                                                                            | LOW                      |
+| `src/lib/components/dashboard/LogsPanel.svelte`                          | Log entry styling                                                                                                | LOW                      |
+| `src/lib/components/dashboard/status/*.svelte` (6 files)                 | Dropdown/display token updates (incl. SatelliteTable.svelte)                                                     | LOW each                 |
+| `src/lib/components/dashboard/panels/SettingsPanel.svelte`               | Token updates                                                                                                    | LOW                      |
+| `src/lib/components/dashboard/panels/DevicesPanel.svelte`                | Token updates                                                                                                    | LOW                      |
+| `src/lib/components/dashboard/panels/LayersPanel.svelte`                 | Token updates                                                                                                    | LOW                      |
+| `src/lib/components/dashboard/panels/ToolsPanel.svelte`                  | Token updates                                                                                                    | LOW                      |
+| `src/lib/components/dashboard/shared/ToolCard.svelte`                    | Card styling tokens                                                                                              | LOW                      |
+| `src/lib/components/dashboard/shared/ToolCategoryCard.svelte`            | Card styling tokens                                                                                              | LOW                      |
 
 ## Files to Delete
 
