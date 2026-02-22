@@ -54,7 +54,7 @@ fi
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/22] Network configuration..."
+echo "[1/23] Network configuration..."
 
 configure_networking() {
   local changed=false
@@ -136,7 +136,7 @@ EOF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/22] System packages..."
+echo "[2/23] System packages..."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -155,7 +155,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 2. Node.js ---
-echo "[3/22] Node.js..."
+echo "[3/23] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -171,7 +171,7 @@ else
 fi
 
 # --- 3. Kismet ---
-echo "[4/22] Kismet..."
+echo "[4/23] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -191,7 +191,7 @@ else
 fi
 
 # --- 4. gpsd ---
-echo "[5/22] gpsd..."
+echo "[5/23] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -200,7 +200,7 @@ else
 fi
 
 # --- 5. Docker (for third-party tools only) ---
-echo "[6/22] Docker..."
+echo "[6/23] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -230,7 +230,7 @@ else
 fi
 
 # --- 6. OpenSSH Server ---
-echo "[7/22] OpenSSH server..."
+echo "[7/23] OpenSSH server..."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
 else
@@ -249,7 +249,7 @@ else
 fi
 
 # --- 7. udev rules for SDR devices ---
-echo "[8/22] udev rules..."
+echo "[8/23] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -268,7 +268,7 @@ UDEV
 fi
 
 # --- 8. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
-echo "[9/22] GSM Evil..."
+echo "[9/23] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
 
@@ -418,7 +418,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
 fi
 
 # --- 9. Kismet GPS config ---
-echo "[10/22] Kismet GPS config..."
+echo "[10/23] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -432,7 +432,7 @@ else
 fi
 
 # --- 8. npm dependencies ---
-echo "[11/22] npm dependencies..."
+echo "[11/23] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -456,7 +456,7 @@ else
 fi
 
 # --- 9. .env from template ---
-echo "[12/22] Environment file..."
+echo "[12/23] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -513,7 +513,7 @@ echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 10. Development Monitor Service ---
-echo "[13/22] Development Monitor Service..."
+echo "[13/23] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -542,7 +542,7 @@ else
 fi
 
 # --- 11. EarlyOOM Configuration ---
-echo "[14/22] Configure EarlyOOM..."
+echo "[14/23] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
   # Avoid list: system-critical + development tools + headless browser
@@ -557,7 +557,7 @@ else
 fi
 
 # --- 12. cgroup Memory Limit (defense against runaway processes) ---
-echo "[15/22] cgroup memory limit..."
+echo "[15/23] cgroup memory limit..."
 
 # Detect the primary UID (the user who will run Argos)
 SETUP_UID=$(id -u "$SETUP_USER")
@@ -607,7 +607,7 @@ EOF
 fi
 
 # --- 13. Tailscale ---
-echo "[16/22] Tailscale..."
+echo "[16/23] Tailscale..."
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
 else
@@ -617,7 +617,7 @@ else
 fi
 
 # --- 14. Claude Code ---
-echo "[17/22] Claude Code..."
+echo "[17/23] Claude Code..."
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
 else
@@ -627,7 +627,7 @@ else
 fi
 
 # --- 15. Gemini CLI ---
-echo "[18/22] Gemini CLI..."
+echo "[18/23] Gemini CLI..."
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
 else
@@ -636,8 +636,20 @@ else
   echo "  Gemini CLI installed. Run 'gemini' to authenticate."
 fi
 
-# --- 16. ChromaDB (claude-mem vector search backend) ---
-echo "[19/22] ChromaDB for claude-mem..."
+# --- 19. Agent Browser (Playwright-based browser automation for Claude Code) ---
+echo "[19/23] Agent Browser..."
+if command -v agent-browser &>/dev/null; then
+  echo "  agent-browser already installed"
+else
+  echo "  Installing agent-browser..."
+  npm install -g agent-browser
+  echo "  Installing Chromium for agent-browser..."
+  agent-browser install
+  echo "  agent-browser installed with Chromium"
+fi
+
+# --- 20. ChromaDB (claude-mem vector search backend) ---
+echo "[20/23] ChromaDB for claude-mem..."
 
 # pipx is needed to install chromadb in an isolated venv
 if ! sudo -u "$SETUP_USER" bash -c 'command -v pipx' &>/dev/null; then
@@ -726,8 +738,8 @@ fi
 
 echo "  ChromaDB service installed and running on port 8000."
 
-# --- 17. Zsh + Dotfiles ---
-echo "[20/22] Zsh + Dotfiles..."
+# --- 21. Zsh + Dotfiles ---
+echo "[21/23] Zsh + Dotfiles..."
 DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
 DOTFILES_DIR="$SETUP_HOME/.dotfiles"
 
@@ -825,8 +837,8 @@ else
   echo "  Warning: dotfiles repo missing zshrc. Skipping config copy."
 fi
 
-# --- 17. Set Zsh as default shell ---
-echo "[21/22] Default shell..."
+# --- 22. Set Zsh as default shell ---
+echo "[22/23] Default shell..."
 CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
 if [[ "$CURRENT_SHELL" == */zsh ]]; then
   echo "  $SETUP_USER already using zsh"
@@ -836,8 +848,8 @@ else
   echo "  Default shell set to zsh (takes effect on next login)"
 fi
 
-# --- 18. Headless Debug Service ---
-echo "[22/22] Headless Debug Service..."
+# --- 23. Headless Debug Service ---
+echo "[23/23] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
     sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \

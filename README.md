@@ -39,7 +39,7 @@ cd Argos
 sudo bash scripts/ops/setup-host.sh
 ```
 
-The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), ChromaDB, configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
+The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), ChromaDB, agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
 ## API Keys
 
