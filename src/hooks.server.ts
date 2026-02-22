@@ -111,7 +111,7 @@ if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
 }
 
 // Initialize TakService (Phase 5)
-import { TakService } from '$lib/server/tak/TakService';
+import { TakService } from '$lib/server/tak/tak-service';
 TakService.getInstance()
 	.initialize()
 	.catch((err) => {

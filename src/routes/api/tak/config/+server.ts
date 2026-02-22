@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { getRFDatabase } from '$lib/server/db/database';
 import { loadTakConfig } from '$lib/server/tak/tak-db';
-import { TakService } from '$lib/server/tak/TakService';
+import { TakService } from '$lib/server/tak/tak-service';
 import type { TakServerConfig } from '$lib/types/tak';
 import { logger } from '$lib/utils/logger';
 

@@ -3,7 +3,7 @@ import type maplibregl from 'maplibre-gl';
 
 import { logger } from '$lib/utils/logger';
 
-import { SymbolFactory } from '../symbols/SymbolFactory';
+import { SymbolFactory } from '../symbols/symbol-factory';
 
 export class SymbolLayer {
 	private map: maplibregl.Map;

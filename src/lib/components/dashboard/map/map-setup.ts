@@ -4,8 +4,8 @@
  */
 import type maplibregl from 'maplibre-gl';
 
-import { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
-import { SymbolLayer } from '$lib/map/layers/SymbolLayer';
+import { SatelliteLayer } from '$lib/map/layers/satellite-layer';
+import { SymbolLayer } from '$lib/map/layers/symbol-layer';
 
 import { LAYER_MAP } from './map-helpers';
 

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
-import { CertManager } from '$lib/server/tak/CertManager';
+import { CertManager } from '$lib/server/tak/cert-manager';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';

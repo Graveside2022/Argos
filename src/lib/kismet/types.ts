@@ -80,9 +80,8 @@ export type KismetDeviceValidated = z.infer<typeof KismetDeviceSchema>;
  * @deprecated Use KismetDeviceValidated (Zod-validated) instead
  */
 export interface KismetDevice {
-	// @constitutional-exemption Article-II-2.1 — Kismet REST API returns deeply nested dynamic fields (dot11.device.*, kismet.device.base.*) requiring index signature
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	[key: string]: any;
+	// Kismet REST API returns deeply nested dynamic fields (dot11.device.*, kismet.device.base.*) requiring index signature
+	[key: string]: unknown;
 
 	mac: string;
 	macaddr?: string; // Alias for mac

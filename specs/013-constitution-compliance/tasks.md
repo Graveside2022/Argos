@@ -151,17 +151,17 @@
 
 ### Map Module Renames
 
-- [ ] T058 [P] [US3] Rename `src/lib/map/symbols/SymbolFactory.ts` to `symbol-factory.ts` via `git mv`, update 3 importers: `SymbolLayer.ts`/`symbol-layer.ts`, `map-setup.ts`, `map-handlers.ts`
-- [ ] T059 [P] [US3] Rename `src/lib/map/layers/SatelliteLayer.ts` to `satellite-layer.ts` via `git mv`, update 1 importer: `map-setup.ts`
-- [ ] T060 [P] [US3] Rename `src/lib/map/layers/SymbolLayer.ts` to `symbol-layer.ts` via `git mv`, update 1 importer: `map-setup.ts`
-- [ ] T061 [P] [US3] Rename `src/lib/map/VisibilityEngine.ts` to `visibility-engine.ts` via `git mv`, update 2 importers: `LayersPanel.svelte`, `map-setup.ts`
+- [x] T058 [P] [US3] Rename `src/lib/map/symbols/SymbolFactory.ts` to `symbol-factory.ts` via `git mv`, update 3 importers: `SymbolLayer.ts`/`symbol-layer.ts`, `map-setup.ts`, `map-handlers.ts`
+- [x] T059 [P] [US3] Rename `src/lib/map/layers/SatelliteLayer.ts` to `satellite-layer.ts` via `git mv`, update 1 importer: `map-setup.ts`
+- [x] T060 [P] [US3] Rename `src/lib/map/layers/SymbolLayer.ts` to `symbol-layer.ts` via `git mv`, update 1 importer: `map-setup.ts`
+- [x] T061 [P] [US3] Rename `src/lib/map/VisibilityEngine.ts` to `visibility-engine.ts` via `git mv`, update 2 importers: `LayersPanel.svelte`, `map-setup.ts`
 
 ### TAK Module Renames
 
-- [ ] T062 [P] [US3] Rename `src/lib/server/tak/CertManager.ts` to `cert-manager.ts` via `git mv`, update 4 importers: `TakService.ts`/`tak-service.ts`, `TakPackageParser.ts`/`tak-package-parser.ts`, 2 API routes
-- [ ] T063 [P] [US3] Rename `src/lib/server/tak/TakPackageParser.ts` to `tak-package-parser.ts` via `git mv`, update 2 importers: `TakService.ts`/`tak-service.ts`, API route
-- [ ] T064 [US3] Rename `src/lib/server/tak/TakService.ts` to `tak-service.ts` via `git mv`, update all importers: `src/hooks.server.ts`, `src/routes/api/tak/connection/+server.ts`, `src/routes/api/tak/config/+server.ts`, and any test files
-- [ ] T065 [US3] Run `npm run build` to verify all import paths resolve correctly after all renames
+- [x] T062 [P] [US3] Rename `src/lib/server/tak/CertManager.ts` to `cert-manager.ts` via `git mv`, update 4 importers: `TakService.ts`/`tak-service.ts`, `TakPackageParser.ts`/`tak-package-parser.ts`, 2 API routes
+- [x] T063 [P] [US3] Rename `src/lib/server/tak/TakPackageParser.ts` to `tak-package-parser.ts` via `git mv`, update 2 importers: `TakService.ts`/`tak-service.ts`, API route
+- [x] T064 [US3] Rename `src/lib/server/tak/TakService.ts` to `tak-service.ts` via `git mv`, update all importers: `src/hooks.server.ts`, `src/routes/api/tak/connection/+server.ts`, `src/routes/api/tak/config/+server.ts`, and any test files
+- [x] T065 [US3] Run `npm run build` to verify all import paths resolve correctly after all renames
 
 **Checkpoint**: Zero PascalCase TypeScript files. Build passes.
 
@@ -175,17 +175,17 @@
 
 **Independent Test**: `grep -rn ': any\b\|as any\b' src/ --include='*.ts' | grep -v test | grep -v '.d.ts'` returns nothing. `npx tsc --noEmit` passes.
 
-- [ ] T066 [P] [US4] Replace `[key: string]: any` with `[key: string]: unknown` in `src/lib/kismet/types.ts:85`, verify downstream consumers handle `unknown`
-- [ ] T067 [P] [US4] Replace `[key: string]: any` with `[key: string]: unknown` in `src/lib/types/tak.ts:62`, verify downstream consumers handle `unknown`
-- [ ] T068 [P] [US4] Replace `child?: any` and `children?: any` with `unknown` in generics at `src/lib/utils.ts:9,11`, verify Svelte component type compatibility
-- [ ] T069 [P] [US4] Replace `as any` cast with typed interface assertion in `src/lib/tactical-map/tak-service.ts:14`
-- [ ] T069b [P] [US4] Replace `type LeafletLibrary = any` with proper Leaflet type import or `unknown` in `src/lib/tactical-map/map-service.ts:14`
-- [ ] T070 [P] [US4] Replace `as any` WebSocket constructor cast with proper typing in `src/lib/websocket/base.ts:73`
-- [ ] T071 [P] [US4] Replace `as any` service access cast with typed accessor in `src/routes/api/tak/connection/+server.ts:28`
-- [ ] T072 [P] [US4] Replace `(db as any).db` casts with properly typed database accessor in `src/routes/api/database/health/+server.ts:11`, `src/routes/api/database/query/+server.ts:77`, `src/routes/api/database/schema/+server.ts:12`
-- [ ] T073 [P] [US4] Replace `Record<string, any[]>` with typed alternative in `src/routes/api/hardware/scan/+server.ts:25` and `Record<string, any>` in `src/lib/server/mcp/types.ts:15`
-- [ ] T074 [P] [US4] Replace `as any` test casts with `as unknown as Type` pattern in `src/lib/utils/gsm-tower-utils.test.ts:403,423,442`
-- [ ] T075 [US4] Run `npx tsc --noEmit` to verify zero type errors after all `any` replacements
+- [x] T066 [P] [US4] Replace `[key: string]: any` with `[key: string]: unknown` in `src/lib/kismet/types.ts:85`, verify downstream consumers handle `unknown`
+- [x] T067 [P] [US4] Replace `[key: string]: any` with `[key: string]: unknown` in `src/lib/types/tak.ts:62`, verify downstream consumers handle `unknown`
+- [x] T068 [P] [US4] Replace `child?: any` and `children?: any` with `unknown` in generics at `src/lib/utils.ts:9,11`, verify Svelte component type compatibility
+- [x] T069 [P] [US4] Replace `as any` cast with typed interface assertion in `src/lib/tactical-map/tak-service.ts:14`
+- [x] T069b [P] [US4] Replace `type LeafletLibrary = any` with proper Leaflet type import or `unknown` in `src/lib/tactical-map/map-service.ts:14`
+- [x] T070 [P] [US4] Replace `as any` WebSocket constructor cast with proper typing in `src/lib/websocket/base.ts:73`
+- [x] T071 [P] [US4] Replace `as any` service access cast with typed accessor in `src/routes/api/tak/connection/+server.ts:28`
+- [x] T072 [P] [US4] Replace `(db as any).db` casts with properly typed database accessor in `src/routes/api/database/health/+server.ts:11`, `src/routes/api/database/query/+server.ts:77`, `src/routes/api/database/schema/+server.ts:12`
+- [x] T073 [P] [US4] Replace `Record<string, any[]>` with typed alternative in `src/routes/api/hardware/scan/+server.ts:25` and `Record<string, any>` in `src/lib/server/mcp/types.ts:15`
+- [x] T074 [P] [US4] Replace `as any` test casts with `as unknown as Type` pattern in `src/lib/utils/gsm-tower-utils.test.ts:403,423,442`
+- [x] T075 [US4] Run `npx tsc --noEmit` to verify zero type errors after all `any` replacements
 
 **Checkpoint**: Zero `any` types in production code. TypeScript strict mode passes.
 

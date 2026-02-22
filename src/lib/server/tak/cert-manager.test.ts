@@ -27,7 +27,7 @@ vi.mock('$lib/server/security/input-sanitizer', () => ({
 	}
 }));
 
-import { CertManager } from '$lib/server/tak/CertManager';
+import { CertManager } from '$lib/server/tak/cert-manager';
 
 // --- Helpers ---
 

@@ -9,8 +9,8 @@ import type { Feature, FeatureCollection } from 'geojson';
 import type { LngLatLike } from 'maplibre-gl';
 import maplibregl from 'maplibre-gl';
 
-import type { SymbolLayer } from '$lib/map/layers/SymbolLayer';
-import { SymbolFactory } from '$lib/map/symbols/SymbolFactory';
+import type { SymbolLayer } from '$lib/map/layers/symbol-layer';
+import { SymbolFactory } from '$lib/map/symbols/symbol-factory';
 import type { Affiliation } from '$lib/stores/tactical-map/kismet-store';
 import { parseCotToFeature } from '$lib/utils/cot-parser';
 

@@ -1,8 +1,8 @@
 import { performance } from 'perf_hooks';
 import { describe, expect, it } from 'vitest';
 
-import { SymbolFactory } from '../../src/lib/map/symbols/SymbolFactory';
-import { type DeviceForVisibility, filterByVisibility } from '../../src/lib/map/VisibilityEngine';
+import { SymbolFactory } from '../../src/lib/map/symbols/symbol-factory';
+import { type DeviceForVisibility, filterByVisibility } from '../../src/lib/map/visibility-engine';
 
 /**
  * Performance stress test for TAK marker pipeline (SC-006).

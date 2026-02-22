@@ -7,11 +7,23 @@ import {
 	setMap,
 	setUserMarker
 } from '$lib/stores/tactical-map/map-store';
-import type { LeafletCircle, LeafletMap, LeafletMarker } from '$lib/types/map';
+import type {
+	LeafletCircle,
+	LeafletLibrary as LeafletLibraryType,
+	LeafletMap,
+	LeafletMarker
+} from '$lib/types/map';
 import { resolveThemeColor } from '$lib/utils/theme-colors';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LeafletLibrary = any;
+/** Leaflet library with Icon.Default internals for marker icon path fixing */
+interface LeafletIconDefault {
+	prototype: { _getIconUrl?: unknown };
+	mergeOptions: (options: Record<string, string>) => void;
+}
+
+type LeafletLibrary = LeafletLibraryType & {
+	Icon: { Default: LeafletIconDefault };
+};
 
 declare global {
 	interface Window {
@@ -20,12 +32,12 @@ declare global {
 }
 
 export class MapService {
-	private L: LeafletLibrary = null;
+	private L: LeafletLibrary | null = null;
 
 	async initializeLeaflet(): Promise<void> {
 		if (typeof window !== 'undefined' && !this.L) {
 			// Dynamically import Leaflet on client side
-			this.L = (await import('leaflet')).default;
+			this.L = (await import('leaflet')).default as unknown as LeafletLibrary;
 
 			// Fix default icon paths
 			delete this.L.Icon.Default.prototype._getIconUrl;

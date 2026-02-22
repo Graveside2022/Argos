@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 
-import { TakService } from '$lib/server/tak/TakService';
+import { TakService } from '$lib/server/tak/tak-service';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -25,7 +25,7 @@ export const POST: RequestHandler = async () => {
 		const service = TakService.getInstance();
 		// Reload config from DB — cert/truststore uploads may have changed paths since last load
 		service.reloadConfig();
-		logger.info('[TAK API] Config before connect:', { config: (service as any).config });
+		logger.info('[TAK API] Config before connect:', { config: service.getStatus() });
 		await service.connect();
 		const status = service.getStatus();
 		return json({ success: true, status: status.status });

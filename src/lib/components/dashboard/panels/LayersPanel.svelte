@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Input from '$lib/components/ui/input/input.svelte';
-	import { type VisibilityMode, visibilityMode } from '$lib/map/VisibilityEngine';
+	import { type VisibilityMode, visibilityMode } from '$lib/map/visibility-engine';
 	import {
 		activeBands,
 		layerVisibility,
