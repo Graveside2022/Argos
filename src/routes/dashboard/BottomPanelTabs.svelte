@@ -187,7 +187,7 @@
 		white-space: nowrap;
 		transition:
 			color 0.1s,
-			bg 0.1s;
+			background 0.1s;
 	}
 
 	.panel-tab:hover {
