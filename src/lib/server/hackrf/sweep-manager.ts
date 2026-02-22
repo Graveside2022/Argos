@@ -629,6 +629,7 @@ export const sweepManager: SweepManager =
 	(((globalThis as Record<string, unknown>)[SWEEP_MANAGER_KEY] =
 		new SweepManager()) as SweepManager);
 
+/** Returns the singleton SweepManager instance for controlling HackRF spectrum sweeps. */
 export function getSweepManager(): SweepManager {
 	return sweepManager;
 }

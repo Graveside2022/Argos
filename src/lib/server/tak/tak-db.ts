@@ -45,6 +45,7 @@ function configToParams(config: TakServerConfig): unknown[] {
 	];
 }
 
+/** Loads the first TAK server configuration from the database, or null if none exists. */
 export function loadTakConfig(db: Database.Database): TakServerConfig | null {
 	const row = db.prepare('SELECT * FROM tak_configs LIMIT 1').get() as
 		| Record<string, unknown>
@@ -68,6 +69,7 @@ const INSERT_SQL = `INSERT INTO tak_configs (
 	enrollment_user, enrollment_pass, enrollment_port
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+/** Upserts a TAK server configuration into the database (inserts if new, updates if existing). */
 export function saveTakConfig(db: Database.Database, config: TakServerConfig): void {
 	const existing = db.prepare('SELECT id FROM tak_configs WHERE id = ?').get(config.id);
 	const params = configToParams(config);

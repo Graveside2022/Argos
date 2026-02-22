@@ -8,10 +8,12 @@ const execFileAsync = promisify(execFile);
 
 const ALFA_BLOCKING_PROCESSES = ['kismet', 'wifite', 'bettercap', 'airodump-ng', 'aireplay-ng'];
 
+/** Detects the ALFA USB Wi-Fi adapter and returns its interface name, or null if absent. */
 export async function detectAdapter(): Promise<string | null> {
 	return AlfaDetector.getAlfaInterface();
 }
 
+/** Returns the current wireless mode (monitor, managed, or unknown) for the given interface. */
 export async function getMode(iface: string): Promise<'monitor' | 'managed' | 'unknown'> {
 	const validIface = validateInterfaceName(iface);
 	try {
@@ -24,6 +26,7 @@ export async function getMode(iface: string): Promise<'monitor' | 'managed' | 'u
 	}
 }
 
+/** Returns a list of running processes (kismet, wifite, bettercap, etc.) that may block ALFA adapter access. */
 export async function getBlockingProcesses(): Promise<{ pid: string; name: string }[]> {
 	const blocking: { pid: string; name: string }[] = [];
 
@@ -42,6 +45,7 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 	return blocking;
 }
 
+/** Forcefully kills all processes that may block ALFA adapter access, then waits for cleanup. */
 export async function killBlockingProcesses(): Promise<void> {
 	for (const proc of ALFA_BLOCKING_PROCESSES) {
 		try {

@@ -1,5 +1,6 @@
 import type { Database } from 'better-sqlite3';
 
+/** Creates the tak_configs table for TAK server connection settings. */
 export function migrate(db: Database) {
 	db.exec(`
         CREATE TABLE IF NOT EXISTS tak_configs (

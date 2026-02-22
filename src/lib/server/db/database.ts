@@ -326,6 +326,7 @@ export class RFDatabase {
 // Singleton instance
 let dbInstance: RFDatabase | null = null;
 
+/** Returns the singleton RFDatabase instance, creating it on first call. */
 export function getRFDatabase(): RFDatabase {
 	if (!dbInstance) {
 		dbInstance = new RFDatabase();
