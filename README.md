@@ -47,6 +47,20 @@ sudo bash scripts/ops/setup-host.sh
 
 The setup script installs Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB (with systemd service), agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
+## Tailscale (Remote Access)
+
+Tailscale is installed by the setup script. After running `setup-host.sh`:
+
+```bash
+# 1. Authenticate with your Tailscale account
+sudo tailscale up
+
+# 2. Enable Tailscale DNS (REQUIRED — prevents empty resolv.conf)
+sudo tailscale set --accept-dns=true
+```
+
+**Why `accept-dns` is required:** On Kali Linux / Raspberry Pi, `eth0` is managed by `ifupdown` while NetworkManager manages WiFi. When no NM-managed connection provides DNS, NetworkManager writes an empty `/etc/resolv.conf` — breaking all name resolution (git, npm, apt, everything). Tailscale DNS (`100.100.100.100`) handles both MagicDNS and public DNS resolution. The setup script also installs a NetworkManager fallback DNS config (`8.8.8.8`, `1.1.1.1`) as a safety net.
+
 ## API Keys
 
 The setup script prompts for these during first run. All are stored in `.env`.
@@ -115,13 +129,14 @@ Plug the Alfa adapter, HackRF, and GPS dongle into the powered USB hub, then con
 
 ## Troubleshooting
 
-| Problem             | Fix                                              |
-| ------------------- | ------------------------------------------------ |
-| No GPS fix          | Go outside, wait 2 minutes                       |
-| Page is blank       | Check `npm run dev` output for errors            |
-| Alfa not detected   | Unplug and replug the USB hub                    |
-| HackRF not detected | Run `hackrf_info` on the Pi terminal             |
-| Port conflict       | Run `sudo lsof -i :5173` to find what's using it |
+| Problem                          | Fix                                              |
+| -------------------------------- | ------------------------------------------------ |
+| No DNS / can't resolve hostnames | Run `sudo tailscale set --accept-dns=true`       |
+| No GPS fix                       | Go outside, wait 2 minutes                       |
+| Page is blank                    | Check `npm run dev` output for errors            |
+| Alfa not detected                | Unplug and replug the USB hub                    |
+| HackRF not detected              | Run `hackrf_info` on the Pi terminal             |
+| Port conflict                    | Run `sudo lsof -i :5173` to find what's using it |
 
 ### Headless Debugging (Parrot Core / Field Ops)
 
