@@ -13,150 +13,76 @@ import {
 	withTimeout
 } from '$lib/api/config';
 
-export interface KismetStatus {
-	isRunning: boolean;
-	pid?: number;
-	uptime?: number;
-	version?: string;
-	devices?: number;
-	lastUpdate?: string;
-}
+import type {
+	ChannelStat,
+	DeviceFilter,
+	InterfaceInfo,
+	KismetConfig,
+	KismetDevice,
+	KismetScript,
+	KismetStats,
+	KismetStatus
+} from './api-types';
 
-export interface KismetDevice {
-	mac: string;
-	type?: 'AP' | 'CLIENT' | 'BRIDGE' | 'UNKNOWN';
-	firstSeen: string;
-	lastSeen: string;
-	ssid?: string;
-	manufacturer?: string;
-	signalStrength?: number;
-	signal?: number; // Alias for signalStrength
-	channel?: number;
-	encryption?: string[];
-	frequency?: number;
-	packets?: number;
-	lat?: number;
-	lon?: number;
-	alt?: number;
-	gps?: {
-		lat: number;
-		lon: number;
-		alt?: number;
-	};
-	bytes?: {
-		rate?: number;
-		total?: number;
-	};
-	wps?: {
-		enabled: boolean;
-		locked: boolean;
-		version?: string;
-	};
-	probes?: string[];
-}
-
-export interface KismetScript {
-	name: string;
-	path: string;
-	description?: string;
-	running?: boolean;
-	pid?: number;
-}
-
-export interface KismetStats {
-	totalDevices: number;
-	activeDevices: number;
-	packetsPerSecond: number;
-	memoryUsage: number;
-	cpuUsage: number;
-	uptime: number;
-}
-
-export interface KismetConfig {
-	interfaces: string[];
-	logLevel: string;
-	gpsd: {
-		enabled: boolean;
-		host: string;
-		port: number;
-	};
-	channels?: string[];
-	hopRate?: number;
-}
-
-export interface DeviceFilter {
-	ssid?: string;
-	manufacturer?: string;
-	minSignal?: number;
-	maxSignal?: number;
-	encryption?: string;
-	channel?: number;
-	lastSeenMinutes?: number;
-}
+// Re-export all types so existing callers don't break
+export type {
+	ChannelStat,
+	DeviceFilter,
+	InterfaceInfo,
+	KismetConfig,
+	KismetDevice,
+	KismetScript,
+	KismetStats,
+	KismetStatus
+} from './api-types';
 
 class KismetAPI {
 	private baseUrl = API_ENDPOINTS.kismet;
 
-	/**
-	 * Get Kismet service status
-	 */
+	/** Get Kismet service status */
 	async getStatus(): Promise<KismetStatus> {
 		const response = await fetch(`${this.baseUrl}/status`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse<KismetStatus>(response);
 	}
 
-	/**
-	 * Start Kismet service
-	 */
+	/** Start Kismet service */
 	async startService(): Promise<{ success: boolean; message: string; pid?: number }> {
 		const response = await retryRequest(async () => {
-			const res = await fetch(`${this.baseUrl}/service/start`, {
+			return fetch(`${this.baseUrl}/service/start`, {
 				...defaultRequestOptions,
 				method: 'POST'
 			});
-			return res;
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Stop Kismet service
-	 */
+	/** Stop Kismet service */
 	async stopService(): Promise<{ success: boolean; message: string }> {
 		const response = await fetch(`${this.baseUrl}/service/stop`, {
 			...defaultRequestOptions,
 			method: 'POST'
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Restart Kismet service
-	 */
+	/** Restart Kismet service */
 	async restartService(): Promise<{ success: boolean; message: string; pid?: number }> {
 		const response = await retryRequest(
 			async () => {
-				const res = await fetch(`${this.baseUrl}/service/restart`, {
+				return fetch(`${this.baseUrl}/service/restart`, {
 					...defaultRequestOptions,
 					method: 'POST'
 				});
-				return res;
 			},
 			{ delay: 2000 }
-		); // Longer delay for restart
-
+		);
 		return handleResponse(response);
 	}
 
-	/**
-	 * Get all devices
-	 */
+	/** Get all devices */
 	async getDevices(options?: {
 		limit?: number;
 		offset?: number;
@@ -168,25 +94,19 @@ class KismetAPI {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Get device by MAC address
-	 */
+	/** Get device by MAC address */
 	async getDevice(mac: string): Promise<KismetDevice> {
 		const response = await fetch(`${this.baseUrl}/devices/${encodeURIComponent(mac)}`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse<KismetDevice>(response);
 	}
 
-	/**
-	 * Search devices with filters
-	 */
+	/** Search devices with filters */
 	async searchDevices(filter: DeviceFilter): Promise<KismetDevice[]> {
 		const queryString = buildQueryString(
 			// Safe: Type cast for dynamic access
@@ -196,59 +116,42 @@ class KismetAPI {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse<KismetDevice[]>(response);
 	}
 
-	/**
-	 * Get available scripts
-	 */
+	/** Get available scripts */
 	async getScripts(): Promise<KismetScript[]> {
 		const response = await fetch(`${this.baseUrl}/scripts`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse<KismetScript[]>(response);
 	}
 
-	/**
-	 * Run a script
-	 */
+	/** Run a script */
 	async runScript(
 		scriptName: string,
 		args?: string[]
-	): Promise<{
-		success: boolean;
-		message: string;
-		pid?: number;
-		output?: string;
-	}> {
+	): Promise<{ success: boolean; message: string; pid?: number; output?: string }> {
 		const response = await fetch(`${this.baseUrl}/scripts/run`, {
 			...defaultRequestOptions,
 			method: 'POST',
 			body: JSON.stringify({ script: scriptName, args })
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Stop a running script
-	 */
+	/** Stop a running script */
 	async stopScript(scriptName: string): Promise<{ success: boolean; message: string }> {
 		const response = await fetch(`${this.baseUrl}/scripts/stop`, {
 			...defaultRequestOptions,
 			method: 'POST',
 			body: JSON.stringify({ script: scriptName })
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Get Kismet statistics
-	 */
+	/** Get Kismet statistics */
 	async getStats(): Promise<KismetStats> {
 		const response = await withTimeout(
 			fetch(`${this.baseUrl}/stats`, {
@@ -257,42 +160,31 @@ class KismetAPI {
 			}),
 			3000
 		);
-
 		return handleResponse<KismetStats>(response);
 	}
 
-	/**
-	 * Get Kismet configuration
-	 */
+	/** Get Kismet configuration */
 	async getConfig(): Promise<KismetConfig> {
 		const response = await fetch(`${this.baseUrl}/config`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse<KismetConfig>(response);
 	}
 
-	/**
-	 * Update Kismet configuration
-	 */
-	async updateConfig(config: Partial<KismetConfig>): Promise<{
-		success: boolean;
-		config: KismetConfig;
-		requiresRestart?: boolean;
-	}> {
+	/** Update Kismet configuration */
+	async updateConfig(
+		config: Partial<KismetConfig>
+	): Promise<{ success: boolean; config: KismetConfig; requiresRestart?: boolean }> {
 		const response = await fetch(`${this.baseUrl}/config`, {
 			...defaultRequestOptions,
 			method: 'PUT',
 			body: JSON.stringify(config)
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Get Kismet logs
-	 */
+	/** Get Kismet logs */
 	async getLogs(options?: {
 		lines?: number;
 		level?: 'error' | 'warn' | 'info' | 'debug';
@@ -302,79 +194,54 @@ class KismetAPI {
 			...options,
 			since: options?.since?.toISOString()
 		});
-
 		const response = await fetch(`${this.baseUrl}/logs${queryString}`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Clear device database
-	 */
+	/** Clear device database */
 	async clearDevices(): Promise<{ success: boolean; message: string }> {
 		const response = await fetch(`${this.baseUrl}/devices`, {
 			...defaultRequestOptions,
 			method: 'DELETE'
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Export devices data
-	 */
+	/** Export devices data */
 	async exportDevices(format: 'csv' | 'json' | 'wigle' = 'json'): Promise<Blob> {
 		const response = await fetch(`${this.baseUrl}/export?format=${format}`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		if (!response.ok) {
 			throw new APIError(`Export failed: ${response.statusText}`, response.status);
 		}
-
 		return response.blob();
 	}
 
-	/**
-	 * Get interface list
-	 */
-	async getInterfaces(): Promise<
-		{
-			name: string;
-			type: string;
-			hardware: string;
-			active: boolean;
-			monitoring: boolean;
-		}[]
-	> {
+	/** Get interface list */
+	async getInterfaces(): Promise<InterfaceInfo[]> {
 		const response = await fetch(`${this.baseUrl}/interfaces`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Add interface to Kismet
-	 */
+	/** Add interface to Kismet */
 	async addInterface(interfaceName: string): Promise<{ success: boolean; message: string }> {
 		const response = await fetch(`${this.baseUrl}/interfaces`, {
 			...defaultRequestOptions,
 			method: 'POST',
 			body: JSON.stringify({ interface: interfaceName })
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Remove interface from Kismet
-	 */
+	/** Remove interface from Kismet */
 	async removeInterface(interfaceName: string): Promise<{ success: boolean; message: string }> {
 		const response = await fetch(
 			`${this.baseUrl}/interfaces/${encodeURIComponent(interfaceName)}`,
@@ -383,13 +250,10 @@ class KismetAPI {
 				method: 'DELETE'
 			}
 		);
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Set channel hopping
-	 */
+	/** Set channel hopping */
 	async setChannelHopping(options: {
 		enabled: boolean;
 		channels?: number[];
@@ -400,27 +264,15 @@ class KismetAPI {
 			method: 'PUT',
 			body: JSON.stringify(options)
 		});
-
 		return handleResponse(response);
 	}
 
-	/**
-	 * Get channel usage statistics
-	 */
-	async getChannelStats(): Promise<
-		{
-			channel: number;
-			frequency: number;
-			devices: number;
-			packets: number;
-			utilization: number;
-		}[]
-	> {
+	/** Get channel usage statistics */
+	async getChannelStats(): Promise<ChannelStat[]> {
 		const response = await fetch(`${this.baseUrl}/channels/stats`, {
 			...defaultRequestOptions,
 			method: 'GET'
 		});
-
 		return handleResponse(response);
 	}
 }
