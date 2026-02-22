@@ -122,6 +122,27 @@ EOF
     echo "  No secondary WiFi adapters detected (plug in a USB WiFi for Kismet)"
   fi
 
+  # --- 1c. DNS defense: NetworkManager fallback DNS ---
+  # On Kali/RPi, eth0 is often managed by ifupdown (not NM). When NM has no managed
+  # connections with DNS, it writes an empty /etc/resolv.conf — breaking all name
+  # resolution. This fallback ensures NM always includes public DNS servers.
+  local NM_DNS_CONF="/etc/NetworkManager/conf.d/01-argos-dns-fallback.conf"
+  if [[ ! -f "$NM_DNS_CONF" ]]; then
+    echo "  Installing NetworkManager DNS fallback (8.8.8.8, 1.1.1.1)..."
+    mkdir -p /etc/NetworkManager/conf.d
+    cat > "$NM_DNS_CONF" << 'DNSCONF'
+# Argos: Fallback DNS servers for NetworkManager
+# Ensures resolv.conf always has nameservers even when no NM-managed
+# connection provides DNS (e.g., eth0 managed by ifupdown, not NM).
+# These are only used when Tailscale DNS (accept-dns) is disabled.
+[global-dns-domain-*]
+servers=8.8.8.8,1.1.1.1
+DNSCONF
+    changed=true
+  else
+    echo "  NetworkManager DNS fallback already configured."
+  fi
+
   # Restart NM if we changed anything
   if [[ "$changed" == "true" ]] && systemctl is-active --quiet NetworkManager; then
     echo "  Restarting NetworkManager..."
@@ -613,7 +634,29 @@ if command -v tailscale &>/dev/null; then
 else
   echo "  Installing Tailscale..."
   curl -fsSL https://tailscale.com/install.sh | bash
-  echo "  Tailscale installed. Run 'sudo tailscale up' to authenticate."
+  echo "  Tailscale installed."
+fi
+
+# Configure Tailscale DNS (accept-dns) if Tailscale is authenticated.
+# This is the primary DNS defense layer — Tailscale's MagicDNS resolves both
+# tailnet names and public DNS, writing resolv.conf with nameserver 100.100.100.100.
+# Without this, Kali's ifupdown/NetworkManager conflict leaves resolv.conf empty.
+if command -v tailscale &>/dev/null; then
+  TS_STATUS=$(tailscale status --json 2>/dev/null | grep -o '"BackendState":"[^"]*"' | head -1)
+  if [[ "$TS_STATUS" == *"Running"* ]]; then
+    TS_DNS=$(tailscale debug prefs 2>/dev/null | grep '"CorpDNS"' | grep -o 'true\|false')
+    if [[ "$TS_DNS" != "true" ]]; then
+      echo "  Enabling Tailscale DNS (accept-dns=true)..."
+      tailscale set --accept-dns=true
+      echo "  Tailscale DNS enabled — resolv.conf managed by Tailscale."
+    else
+      echo "  Tailscale DNS already enabled."
+    fi
+  else
+    echo "  Tailscale not yet authenticated. Run 'sudo tailscale up' to connect."
+    echo "  Then run: sudo tailscale set --accept-dns=true"
+    echo "  (Required: Tailscale DNS prevents empty resolv.conf on Kali/RPi)"
+  fi
 fi
 
 # --- 17. Claude Code ---
