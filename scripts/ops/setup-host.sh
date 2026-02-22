@@ -127,6 +127,9 @@ EOF
   # connections with DNS, it writes an empty /etc/resolv.conf — breaking all name
   # resolution. This fallback ensures NM always includes public DNS servers.
   local NM_DNS_CONF="/etc/NetworkManager/conf.d/01-argos-dns-fallback.conf"
+  local NM_DNS_MODE
+  NM_DNS_MODE=$(grep -s 'dns=' /etc/NetworkManager/NetworkManager.conf | head -1)
+  echo "  NM DNS plugin: ${NM_DNS_MODE:-default}"
   if [[ ! -f "$NM_DNS_CONF" ]]; then
     echo "  Installing NetworkManager DNS fallback (8.8.8.8, 1.1.1.1)..."
     mkdir -p /etc/NetworkManager/conf.d
@@ -644,19 +647,23 @@ fi
 if command -v tailscale &>/dev/null; then
   TS_STATUS=$(tailscale status --json 2>/dev/null | grep -o '"BackendState":"[^"]*"' | head -1)
   if [[ "$TS_STATUS" == *"Running"* ]]; then
-    TS_DNS=$(tailscale debug prefs 2>/dev/null | grep '"CorpDNS"' | grep -o 'true\|false')
-    if [[ "$TS_DNS" != "true" ]]; then
-      echo "  Enabling Tailscale DNS (accept-dns=true)..."
-      tailscale set --accept-dns=true
-      echo "  Tailscale DNS enabled — resolv.conf managed by Tailscale."
-    else
-      echo "  Tailscale DNS already enabled."
-    fi
+    echo "  Ensuring Tailscale DNS is enabled (accept-dns=true)..."
+    tailscale set --accept-dns=true
+    echo "  Tailscale DNS configured — resolv.conf managed by Tailscale."
   else
     echo "  Tailscale not yet authenticated. Run 'sudo tailscale up' to connect."
     echo "  Then run: sudo tailscale set --accept-dns=true"
     echo "  (Required: Tailscale DNS prevents empty resolv.conf on Kali/RPi)"
   fi
+fi
+
+# DNS health check — surface problems during provisioning, not later
+if ! grep -q '^nameserver' /etc/resolv.conf 2>/dev/null; then
+  echo "  ⚠ WARNING: /etc/resolv.conf has no nameservers!"
+  echo "  DNS will not work. Ensure Tailscale is authenticated and accept-dns is enabled."
+  echo "  Fallback: echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf"
+else
+  echo "  DNS health check: OK ($(grep -c '^nameserver' /etc/resolv.conf) nameservers)"
 fi
 
 # --- 17. Claude Code ---
