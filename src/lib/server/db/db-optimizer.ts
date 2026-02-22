@@ -7,23 +7,26 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 
 import { validateSqlIdentifier } from '$lib/server/security/input-sanitizer';
 
+import { getHealthReport } from './db-health-report';
+import { getIndexAnalysis } from './db-index-analysis';
+
 interface OptimizationConfig {
 	// Performance tuning
-	cacheSize: number; // Pages in cache (-2000 = 2MB)
-	pageSize: number; // Database page size
-	mmapSize: number; // Memory-mapped I/O size
-	isWalMode: boolean; // Use Write-Ahead Logging
+	cacheSize: number;
+	pageSize: number;
+	mmapSize: number;
+	isWalMode: boolean;
 	synchronous: 'OFF' | 'NORMAL' | 'FULL';
 
 	// Query optimization
-	shouldAnalyzeOnStart: boolean; // Run ANALYZE on startup
-	shouldAutoIndex: boolean; // Allow automatic indexes
-	shouldUseQueryPlanner: boolean; // Enable query planner stats
+	shouldAnalyzeOnStart: boolean;
+	shouldAutoIndex: boolean;
+	shouldUseQueryPlanner: boolean;
 
 	// Memory limits
 	tempStore: 'DEFAULT' | 'FILE' | 'MEMORY';
 	tempStoreDirectory?: string;
-	memoryLimit?: number; // Soft heap limit in bytes
+	memoryLimit?: number;
 }
 
 interface QueryStats {
@@ -38,93 +41,69 @@ export class DatabaseOptimizer {
 	private db: DatabaseType;
 	private config: OptimizationConfig;
 	private queryStats: Map<string, QueryStats> = new Map();
-	private optimizationTimer?: ReturnType<typeof setTimeout>;
 
 	constructor(db: DatabaseType, config?: Partial<OptimizationConfig>) {
 		this.db = db;
 		this.config = {
-			// Default optimizations for Raspberry Pi
-			cacheSize: -2000, // 2MB cache
-			pageSize: 4096, // 4KB pages
-			mmapSize: 30000000, // 30MB mmap
+			cacheSize: -2000,
+			pageSize: 4096,
+			mmapSize: 30000000,
 			isWalMode: true,
 			synchronous: 'NORMAL',
 			shouldAnalyzeOnStart: true,
 			shouldAutoIndex: true,
 			shouldUseQueryPlanner: false,
 			tempStore: 'MEMORY',
-			memoryLimit: 50 * 1024 * 1024, // 50MB soft limit
+			memoryLimit: 50 * 1024 * 1024,
 			...config
 		};
 
 		this.applyOptimizations();
 	}
 
-	/**
-	 * Apply database optimizations
-	 */
+	/** Apply database optimizations */
 	private applyOptimizations() {
-		// Cache configuration
 		this.db.pragma(`cache_size = ${this.config.cacheSize}`);
 
-		// WAL mode for better concurrency
 		if (this.config.isWalMode) {
 			this.db.pragma('journal_mode = WAL');
-			this.db.pragma('wal_autocheckpoint = 1000'); // Checkpoint every 1000 pages
+			this.db.pragma('wal_autocheckpoint = 1000');
 		}
 
-		// Synchronous mode
 		this.db.pragma(`synchronous = ${this.config.synchronous}`);
 
-		// Memory-mapped I/O
 		if (this.config.mmapSize > 0) {
 			this.db.pragma(`mmap_size = ${this.config.mmapSize}`);
 		}
 
-		// Temporary storage
 		this.db.pragma(`temp_store = ${this.config.tempStore}`);
 		if (this.config.tempStoreDirectory) {
-			// Use parameterized pragma to prevent injection via directory path
 			this.db.pragma(
 				`temp_store_directory = '${this.config.tempStoreDirectory.replace(/'/g, "''")}'`
 			);
 		}
 
-		// Memory limit
 		if (this.config.memoryLimit) {
 			this.db.pragma(`soft_heap_limit = ${this.config.memoryLimit}`);
 		}
 
-		// Query planner
 		if (this.config.shouldUseQueryPlanner) {
 			this.db.pragma('query_only = 0');
 		}
 
-		// Auto-index
 		this.db.pragma(`automatic_index = ${this.config.shouldAutoIndex ? 'ON' : 'OFF'}`);
 
-		// Initial analysis
 		if (this.config.shouldAnalyzeOnStart) {
 			this.analyze();
 		}
-
-		// Database optimizations applied
 	}
 
-	/**
-	 * Analyze database statistics
-	 */
+	/** Analyze database statistics */
 	analyze() {
-		// Analyzing database...
-		const start = Date.now();
 		this.db.exec('ANALYZE');
-		const _duration = Date.now() - start;
-		// Analysis completed in ${_duration}ms
 	}
 
-	/**
-	 * Get current pragma settings
-	 */
+	/** Get current pragma settings */
 	getPragmaSettings() {
 		const pragmas = [
 			'cache_size',
@@ -141,157 +120,32 @@ export class DatabaseOptimizer {
 		];
 
 		const settings: Record<string, unknown> = {};
-
 		for (const pragma of pragmas) {
 			try {
-				const result = this.db.pragma(pragma);
-				settings[pragma] = result;
+				settings[pragma] = this.db.pragma(pragma);
 			} catch (_error: unknown) {
 				// Some pragmas might not be available
 			}
 		}
-
 		return settings;
 	}
 
-	/**
-	 * Get index statistics and suggestions
-	 */
+	/** Get index statistics and suggestions -- delegates to db-index-analysis */
 	getIndexAnalysis() {
-		// Get all indexes
-		const indexes = this.db
-			.prepare(
-				`
-      SELECT 
-        name as index_name,
-        tbl_name as table_name,
-        sql
-      FROM sqlite_master 
-      WHERE type = 'index' 
-        AND name NOT LIKE 'sqlite_%'
-    `
-			)
-			// Safe: sqlite_master schema guarantees name, tbl_name, sql columns for index entries
-			.all() as Array<{ index_name: string; table_name: string; sql: string }>;
-
-		// Analyze index usage (approximate based on EXPLAIN QUERY PLAN)
-		const analysis = indexes.map((index) => {
-			// Check if index is used in common queries
-			const usage = this.checkIndexUsage(index.table_name, index.index_name);
-
-			return {
-				index_name: index.index_name,
-				table_name: index.table_name,
-				sql: index.sql,
-				usage,
-				recommendation:
-					usage.score < 0.1
-						? 'Consider dropping'
-						: usage.score > 0.8
-							? 'Heavily used'
-							: 'Moderate usage'
-			};
-		});
-
-		// Suggest missing indexes
-		const suggestions = this.suggestMissingIndexes();
-
-		return {
-			existing: analysis,
-			suggestions
-		};
+		return getIndexAnalysis(this.db);
 	}
 
-	/**
-	 * Check index usage for a specific index
-	 */
-	private checkIndexUsage(_tableName: string, _indexName: string) {
-		// This is a simplified check - in production, you'd analyze actual query plans
-		// Common queries would be: SELECT/DELETE/UPDATE FROM ${tableName} WHERE
-
-		let usageCount = 0;
-		let totalQueries = 0;
-
-		// Check if index columns are used in WHERE clauses
-		// This is a heuristic - actual implementation would analyze EXPLAIN QUERY PLAN
-
-		return {
-			score: 0.5, // Default moderate usage
-			usageCount,
-			totalQueries
-		};
-	}
-
-	/**
-	 * Suggest missing indexes based on query patterns
-	 */
-	private suggestMissingIndexes() {
-		const suggestions = [];
-
-		// Check for missing indexes on foreign keys
-		const foreignKeys = this.db
-			.prepare(
-				`
-      SELECT 
-        m.name as table_name,
-        p.name as column_name,
-        p."table" as referenced_table
-      FROM sqlite_master m
-      JOIN pragma_foreign_key_list(m.name) p
-      WHERE m.type = 'table'
-    `
-			)
-			// Safe: pragma_foreign_key_list returns name, table columns; joined with sqlite_master.name
-			.all() as Array<{ table_name: string; column_name: string; referenced_table: string }>;
-
-		for (const fk of foreignKeys) {
-			// Check if index exists on foreign key column
-			const indexExists = this.db
-				.prepare(
-					`
-        SELECT 1 FROM sqlite_master 
-        WHERE type = 'index' 
-          AND tbl_name = ?
-          AND sql LIKE ?
-      `
-				)
-				.get(fk.table_name, `%${fk.column_name}%`);
-
-			if (!indexExists) {
-				suggestions.push({
-					table: fk.table_name,
-					column: fk.column_name,
-					type: 'foreign_key',
-					sql: `CREATE INDEX idx_${fk.table_name}_${fk.column_name} ON ${fk.table_name}(${fk.column_name})`
-				});
-			}
-		}
-
-		// Check for common query patterns without indexes
-		// This would analyze actual query history in production
-
-		return suggestions;
-	}
-
-	/**
-	 * Optimize specific table
-	 */
+	/** Optimize specific table */
 	optimizeTable(tableName: string) {
-		// Validate table name — prevents SQL injection via template literal
 		const safeName = validateSqlIdentifier(tableName, 'tableName');
-
-		// Rebuild the table to defragment
 		this.db.exec(`VACUUM ${safeName}`);
-
-		// Update statistics
 		this.db.exec(`ANALYZE ${safeName}`);
 
-		// Check and optimize indexes
 		const indexes = this.db
 			.prepare(
 				`
-      SELECT name FROM sqlite_master 
-      WHERE type = 'index' 
+      SELECT name FROM sqlite_master
+      WHERE type = 'index'
         AND tbl_name = ?
         AND name NOT LIKE 'sqlite_%'
     `
@@ -303,18 +157,13 @@ export class DatabaseOptimizer {
 			const safeIndexName = validateSqlIdentifier(index.name, 'indexName');
 			this.db.exec(`REINDEX ${safeIndexName}`);
 		}
-
-		// Table ${tableName} optimized
 	}
 
-	/**
-	 * Get query execution plan
-	 */
+	/** Get query execution plan */
 	explainQuery(query: string, params: unknown[] = []) {
 		try {
 			// Safe: spread requires tuple type; params is unknown[] used as positional bind args
 			const plan = this.db.prepare(`EXPLAIN QUERY PLAN ${query}`).all(...(params as []));
-			// Safe: same spread-to-tuple cast as above for EXPLAIN positional bind args
 			const stats = this.db.prepare(`EXPLAIN ${query}`).all(...(params as []));
 
 			return {
@@ -323,19 +172,14 @@ export class DatabaseOptimizer {
 				estimatedCost: this.estimateQueryCost(plan)
 			};
 		} catch (error) {
-			// Safe: catch block error is from db.prepare() which throws Error instances
 			return { error: (error as Error).message };
 		}
 	}
 
-	/**
-	 * Estimate query cost from execution plan
-	 */
+	/** Estimate query cost from execution plan */
 	private estimateQueryCost(plan: unknown[]) {
 		let cost = 0;
-
 		for (const step of plan) {
-			// Safe: EXPLAIN QUERY PLAN rows contain detail property describing the query plan step
 			const stepData = step as { detail?: string };
 			if (stepData.detail) {
 				if (stepData.detail.includes('SCAN TABLE')) cost += 1000;
@@ -345,13 +189,10 @@ export class DatabaseOptimizer {
 				if (stepData.detail.includes('TEMP B-TREE')) cost += 500;
 			}
 		}
-
 		return cost;
 	}
 
-	/**
-	 * Monitor query performance
-	 */
+	/** Monitor query performance */
 	trackQuery(query: string, duration: number) {
 		const stats = this.queryStats.get(query) || {
 			query,
@@ -360,161 +201,46 @@ export class DatabaseOptimizer {
 			avgTime: 0,
 			lastRun: 0
 		};
-
 		stats.count++;
 		stats.totalTime += duration;
 		stats.avgTime = stats.totalTime / stats.count;
 		stats.lastRun = Date.now();
-
 		this.queryStats.set(query, stats);
 	}
 
-	/**
-	 * Get slow queries
-	 */
+	/** Get slow queries */
 	getSlowQueries(threshold: number = 100) {
-		const slowQueries = Array.from(this.queryStats.values())
+		return Array.from(this.queryStats.values())
 			.filter((stats) => stats.avgTime > threshold)
 			.sort((a, b) => b.avgTime - a.avgTime);
-
-		return slowQueries;
 	}
 
-	/**
-	 * Optimize for specific workload
-	 */
+	/** Optimize for specific workload */
 	optimizeForWorkload(workload: 'read_heavy' | 'write_heavy' | 'mixed') {
 		switch (workload) {
 			case 'read_heavy':
-				// Optimize for reads
-				this.db.pragma('cache_size = -4000'); // 4MB cache
-				this.db.pragma('mmap_size = 268435456'); // 256MB mmap
+				this.db.pragma('cache_size = -4000');
+				this.db.pragma('mmap_size = 268435456');
 				this.db.pragma('synchronous = NORMAL');
-				this.db.pragma('page_size = 8192'); // Larger pages
+				this.db.pragma('page_size = 8192');
 				break;
-
 			case 'write_heavy':
-				// Optimize for writes
-				this.db.pragma('cache_size = -1000'); // 1MB cache
-				this.db.pragma('synchronous = OFF'); // Faster but less safe
+				this.db.pragma('cache_size = -1000');
+				this.db.pragma('synchronous = OFF');
 				this.db.pragma('journal_mode = WAL');
-				this.db.pragma('wal_autocheckpoint = 100'); // Frequent checkpoints
+				this.db.pragma('wal_autocheckpoint = 100');
 				break;
-
 			case 'mixed':
-				// Balanced optimization
-				this.db.pragma('cache_size = -2000'); // 2MB cache
+				this.db.pragma('cache_size = -2000');
 				this.db.pragma('synchronous = NORMAL');
 				this.db.pragma('journal_mode = WAL');
 				this.db.pragma('wal_autocheckpoint = 1000');
 				break;
 		}
-
-		// Optimized for ${workload} workload
 	}
 
-	/**
-	 * Get database health report
-	 */
+	/** Get database health report -- delegates to db-health-report */
 	getHealthReport() {
-		const settings = this.getPragmaSettings();
-		// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
-		const dbSize = this.db
-			.prepare(
-				'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()'
-			)
-			// Safe: page_count * page_size SQL expression always returns single numeric 'size' column
-			.get() as { size: number };
-		const integrity = this.db.pragma('integrity_check');
-		const quickCheck = this.db.pragma('quick_check');
-
-		// Table statistics
-		const tables = this.db
-			.prepare(
-				`
-      SELECT 
-        name,
-        (SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name=m.name) as index_count
-      FROM sqlite_master m
-      WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-    `
-			)
-			.all();
-
-		// Add row counts
-		for (const table of tables) {
-			try {
-				// Safe: table rows from sqlite_master always have a 'name' column
-				// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
-				const safeTableName = validateSqlIdentifier(
-					(table as { name: string }).name,
-					'tableName'
-				);
-				// @constitutional-exemption Article-II-2.1 issue:#14 — SQLite pragma/query result type narrowing — better-sqlite3 returns generic objects
-				const count = this.db
-					.prepare(`SELECT COUNT(*) as count FROM ${safeTableName}`)
-					// Safe: COUNT(*) always returns a single numeric column aliased as 'count'
-					.get() as { count: number };
-				// Safe: augmenting untyped sqlite_master row with computed row_count property
-				(table as { row_count: number }).row_count = count.count;
-			} catch (_error: unknown) {
-				// Safe: augmenting untyped sqlite_master row with fallback row_count on error
-				(table as { row_count: number }).row_count = -1;
-			}
-		}
-
-		return {
-			database_size: dbSize.size,
-			settings,
-			integrity: integrity === 'ok',
-			quick_check: quickCheck === 'ok',
-			tables,
-			slow_queries: this.getSlowQueries(),
-			recommendations: this.generateRecommendations(dbSize.size, tables)
-		};
-	}
-
-	/**
-	 * Generate optimization recommendations
-	 */
-	private generateRecommendations(dbSize: number, tables: unknown[]) {
-		const recommendations = [];
-
-		// Database size recommendations
-		if (dbSize > 100 * 1024 * 1024) {
-			// > 100MB
-			recommendations.push({
-				type: 'size',
-				severity: 'medium',
-				message: 'Consider implementing more aggressive data retention policies'
-			});
-		}
-
-		// Table size recommendations
-		for (const table of tables) {
-			// Safe: table augmented with row_count above; index_count and name from sqlite_master query
-			const tableData = table as { row_count: number; index_count: number; name: string };
-			if (tableData.row_count > 100000 && tableData.index_count < 2) {
-				recommendations.push({
-					type: 'index',
-					severity: 'high',
-					message: `Table ${tableData.name} has ${tableData.row_count} rows but only ${tableData.index_count} indexes`
-				});
-			}
-		}
-
-		// Cache size recommendation
-		// Safe: cache_size pragma always returns a numeric value
-		const cacheSize = Math.abs((this.getPragmaSettings().cache_size as number) || 0);
-		if (dbSize > cacheSize * 1024 * 10) {
-			// Cache is < 10% of DB size
-			recommendations.push({
-				type: 'cache',
-				severity: 'medium',
-				message: 'Consider increasing cache_size for better performance'
-			});
-		}
-
-		return recommendations;
+		return getHealthReport(this.db, this.getPragmaSettings(), this.getSlowQueries());
 	}
 }

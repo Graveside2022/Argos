@@ -1,7 +1,6 @@
 import '$lib/server/env';
 
 import type { Handle, HandleServerError } from '@sveltejs/kit';
-import type { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 
@@ -16,8 +15,10 @@ import {
 	scanAllHardware
 } from '$lib/server/hardware/detection/hardware-detector';
 import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
+import { checkRateLimit, getSafeClientAddress } from '$lib/server/middleware/rate-limit-middleware';
+import { applySecurityHeaders } from '$lib/server/middleware/security-headers';
+import { handleWsConnection } from '$lib/server/middleware/ws-connection-handler';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
-import { RateLimiter } from '$lib/server/security/rate-limiter';
 import { logger } from '$lib/utils/logger';
 
 // Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
@@ -29,42 +30,7 @@ const HARDWARE_PATH_PATTERN =
 	/^\/api\/(hackrf|kismet|gsm-evil|rf|droneid|openwebrx|bettercap|wifite)\//;
 
 // FAIL-CLOSED: Halt startup if ARGOS_API_KEY is not configured or too short.
-// This runs at module load time, before the server accepts any connections.
-// If the key is missing, the process exits with a FATAL error. (Phase 2.1.1)
 validateSecurityConfig();
-
-// Safe client address getter - handles VPN/Tailscale networking issues
-// Returns 'unknown' when client address cannot be determined (e.g., behind Tailscale VPN)
-function getSafeClientAddress(event: Parameters<Handle>[0]['event']): string {
-	try {
-		return event.getClientAddress();
-	} catch {
-		return 'unknown';
-	}
-}
-
-// Get rate limit identifier - uses session cookie when IP unavailable
-// This prevents all Tailscale clients from sharing the same rate limit bucket
-function getRateLimitKey(event: Parameters<Handle>[0]['event'], prefix: string): string {
-	try {
-		const ip = event.getClientAddress();
-		return `${prefix}:${ip}`;
-	} catch {
-		// IP unavailable (Tailscale/Docker) - try session cookie as identifier
-		const cookieHeader = event.request.headers.get('cookie');
-		if (cookieHeader) {
-			// Extract session cookie value - all browser sessions share the same cookie
-			// (deterministic HMAC of API key), but this is better than 'unknown' for all
-			const sessionMatch = cookieHeader.match(/__argos_session=([^;]+)/);
-			if (sessionMatch) {
-				// Use first 16 chars of session token as identifier (sufficient uniqueness)
-				return `${prefix}:session:${sessionMatch[1].slice(0, 16)}`;
-			}
-		}
-		// Last resort: 'unknown' (shared bucket, but rate limits will be higher)
-		return `${prefix}:unknown`;
-	}
-}
 
 // Create WebSocket server with payload limit (Phase 2.1.6).
 // noServer mode does not support verifyClient -- authentication is enforced
@@ -84,31 +50,12 @@ scanAllHardware()
 			wifi: result.stats.byCategory.wifi || 0,
 			bluetooth: result.stats.byCategory.bluetooth || 0
 		});
-
-		// Start continuous hardware monitoring (scan every 30 seconds)
 		globalHardwareMonitor.start(30000);
 		logger.info('Hardware monitoring started');
 	})
 	.catch((error) => {
 		logger.error('Failed to scan hardware', { error });
 	});
-
-// Singleton rate limiter (globalThis for HMR persistence) - Phase 2.2.5
-const rateLimiter =
-	// Safe: globalThis typed as Record for dynamic property access, RateLimiter type guaranteed by initialization
-	((globalThis as Record<string, unknown>).__rateLimiter as RateLimiter) ?? new RateLimiter();
-// Safe: globalThis typed as Record for dynamic property assignment
-(globalThis as Record<string, unknown>).__rateLimiter = rateLimiter;
-
-// Cleanup interval (globalThis guard for HMR) - Phase 2.2.5
-// Safe: globalThis typed as Record to check for existing cleanup interval
-if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
-	// Safe: globalThis typed as Record for dynamic property assignment
-	(globalThis as Record<string, unknown>).__rateLimiterCleanup = setInterval(
-		() => rateLimiter.cleanup(),
-		300_000 // 5 minutes
-	);
-}
 
 // Initialize TakService (Phase 5)
 import { TakService } from '$lib/server/tak/tak-service';
@@ -118,69 +65,9 @@ TakService.getInstance()
 		logger.error('Failed to initialize TakService', { error: err });
 	});
 
-// Handle WebSocket connections (Phase 2.1.6: authentication enforced here
-// because noServer mode does not support the verifyClient callback).
-wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
-	// --- Authentication (Phase 2.1.6) ---
-	// Extract API key from token query param or X-API-Key header.
-	// Token in query string is acceptable for WebSocket because the WS upgrade
-	// request is not logged like HTTP requests, and there is no Referer header
-	// leak. This is standard practice (Socket.IO, Phoenix Channels, Action Cable).
-	const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
-	// Safe: Header value is string | string[] | undefined, narrowing to string for auth validation
-	const apiKey = url.searchParams.get('token') || (request.headers['x-api-key'] as string);
-
-	// Build mock Request with API key header AND cookies (for browser session auth).
-	// validateApiKey checks X-API-Key header first, then falls back to session cookie.
-	const mockHeaders: Record<string, string> = {};
-	if (apiKey) {
-		mockHeaders['X-API-Key'] = apiKey;
-	}
-	const cookieHeader = request.headers.cookie;
-	if (cookieHeader) {
-		mockHeaders['cookie'] = cookieHeader;
-	}
-	const mockRequest = new Request('http://localhost', { headers: mockHeaders });
-
-	let authenticated = false;
-	try {
-		authenticated = validateApiKey(mockRequest);
-	} catch {
-		// validateApiKey throws if ARGOS_API_KEY is not configured -- fail closed
-	}
-
-	if (!authenticated) {
-		logAuthEvent({
-			eventType: 'WS_AUTH_FAILURE',
-			ip: request.socket.remoteAddress || 'unknown',
-			method: 'WS',
-			path: url.pathname,
-			reason: 'Invalid or missing API key on WebSocket connection'
-		});
-		ws.close(1008, 'Unauthorized'); // 1008 = Policy Violation
-		return;
-	}
-
-	logAuthEvent({
-		eventType: 'WS_AUTH_SUCCESS',
-		ip: request.socket.remoteAddress || 'unknown',
-		method: 'WS',
-		path: url.pathname
-	});
-
-	// Parse URL for subscription preferences
-	const types: string[] | undefined = url.searchParams.get('types')?.split(',') || undefined;
-	const minSignal: string | null = url.searchParams.get('minSignal');
-	const deviceTypes: string[] | undefined = url.searchParams.get('deviceTypes')?.split(',');
-
-	// Add client with optional subscription preferences
-	wsManager.addClient(ws, {
-		types: types ? new Set(types) : undefined,
-		filters: {
-			minSignal: minSignal ? parseInt(minSignal, 10) : undefined,
-			deviceTypes
-		}
-	});
+// Handle WebSocket connections -- delegates to ws-connection-handler module
+wss.on('connection', (ws: WebSocket, request) => {
+	handleWsConnection(ws, request, wsManager);
 });
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -189,18 +76,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.url.pathname === '/api/kismet/ws' &&
 		event.request.headers.get('upgrade') === 'websocket'
 	) {
-		// Validate API key before allowing WebSocket upgrade.
-		// Accept token via query param (standard for WS), X-API-Key header, or session cookie.
 		const wsApiKey =
 			event.url.searchParams.get('token') || event.request.headers.get('X-API-Key');
 		const wsMockHeaders: Record<string, string> = {};
-		if (wsApiKey) {
-			wsMockHeaders['X-API-Key'] = wsApiKey;
-		}
+		if (wsApiKey) wsMockHeaders['X-API-Key'] = wsApiKey;
 		const wsCookie = event.request.headers.get('cookie');
-		if (wsCookie) {
-			wsMockHeaders['cookie'] = wsCookie;
-		}
+		if (wsCookie) wsMockHeaders['cookie'] = wsCookie;
 		const wsMockRequest = new Request('http://localhost', { headers: wsMockHeaders });
 
 		let wsAuthenticated = false;
@@ -225,20 +106,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 
-		// WebSocket upgrade handling requires platform-specific implementation
-		// In production, this would be handled by the deployment platform (e.g., Node.js adapter)
 		logger.warn('WebSocket upgrade requested but platform context not available', {
 			path: event.url.pathname,
 			headers: { upgrade: event.request.headers.get('upgrade') }
 		});
 	}
 
-	// API Authentication gate — all /api/ routes except /api/health (Phase 2.1.1)
-	// /api/health is exempt to support monitoring infrastructure without credentials.
-	// All other API routes require a valid X-API-Key header or session cookie.
+	// API Authentication gate -- all /api/ routes except /api/health (Phase 2.1.1)
 	if (event.url.pathname.startsWith('/api/') && event.url.pathname !== '/api/health') {
 		if (!validateApiKey(event.request)) {
-			// Determine if credentials were missing vs invalid
 			const hasApiKeyHeader = !!event.request.headers.get('X-API-Key');
 			const hasCookie = !!event.request.headers.get('cookie');
 			const eventType = hasApiKeyHeader || hasCookie ? 'AUTH_FAILURE' : 'AUTH_MISSING';
@@ -269,65 +145,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	// Rate limiting -- runs after auth, before route processing (Phase 2.2.5)
-	const path = event.url.pathname;
-	const clientIp = getSafeClientAddress(event);
+	// Rate limiting -- delegates to rate-limit-middleware
+	const rateLimitResponse = checkRateLimit(event);
+	if (rateLimitResponse) return rateLimitResponse;
 
-	// Skip rate limiting for streaming/SSE endpoints and map tiles
-	// Map tiles can make 50+ requests during initial load (style, sprites, fonts, vector tiles)
-	if (
-		!path.includes('data-stream') &&
-		!path.includes('/stream') &&
-		!path.endsWith('/sse') &&
-		!path.startsWith('/api/map-tiles/')
-	) {
-		if (isHardwareControlPath(path)) {
-			// Hardware control: 60 requests/minute (1 token/second) for Tailscale, 30 for direct IP
-			// GSM Evil makes rapid start/stop/status calls, needs higher limit on Tailscale
-			const hwKey = getRateLimitKey(event, 'hw');
-			const hwLimit = hwKey.includes('unknown') ? 60 : 30;
-			if (!rateLimiter.check(hwKey, hwLimit, hwLimit / 60)) {
-				logAuthEvent({
-					eventType: 'RATE_LIMIT_EXCEEDED',
-					ip: clientIp,
-					method: event.request.method,
-					path,
-					reason: `Hardware control rate limit exceeded (${hwLimit} req/min)`
-				});
-				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-					status: 429,
-					headers: {
-						'Content-Type': 'application/json',
-						'Retry-After': '60'
-					}
-				});
-			}
-		} else if (path.startsWith('/api/')) {
-			// Data queries: 200 requests/minute (~3.3 tokens/second)
-			// Dashboard makes 60+ API calls on initial load (polling endpoints)
-			const apiKey = getRateLimitKey(event, 'api');
-			if (!rateLimiter.check(apiKey, 200, 200 / 60)) {
-				logAuthEvent({
-					eventType: 'RATE_LIMIT_EXCEEDED',
-					ip: clientIp,
-					method: event.request.method,
-					path,
-					reason: 'API rate limit exceeded (200 req/min)'
-				});
-				return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-					status: 429,
-					headers: {
-						'Content-Type': 'application/json',
-						'Retry-After': '10'
-					}
-				});
-			}
-		}
-	}
-
-	// Body size limit check -- runs after auth, before route processing (Phase 2.1.7)
-	// Two-tier limits: 64KB for hardware control endpoints, 10MB for general endpoints.
-	// Content-Length is checked before body buffering to prevent memory allocation.
+	// Body size limit check (Phase 2.1.7)
 	if (event.request.method === 'POST' || event.request.method === 'PUT') {
 		const contentLength = parseInt(event.request.headers.get('content-length') || '0');
 		const isHardwareEndpoint = HARDWARE_PATH_PATTERN.test(event.url.pathname);
@@ -341,13 +163,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// For non-WebSocket requests, continue with normal handling
 	const response = await resolve(event);
 
-	// Set session cookie for browser clients on page requests.
-	// The cookie contains an HMAC-derived token (not the raw API key).
-	// HttpOnly prevents XSS access; SameSite=Strict prevents CSRF;
-	// Path=/api/ limits the cookie to API requests only.
+	// Set session cookie for browser clients on page requests
 	if (!event.url.pathname.startsWith('/api/')) {
 		response.headers.append('Set-Cookie', getSessionCookieHeader());
 		logAuthEvent({
@@ -359,94 +177,29 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	// Content Security Policy (Phase 2.2.3)
-	// MapLibre GL JS creates Web Workers from blob: URLs (non-CSP build inlines worker code
-	// as a Blob and calls new Worker(URL.createObjectURL(blob))). Without worker-src blob:,
-	// the browser blocks Worker creation and the map renders an empty canvas.
-	response.headers.set(
-		'Content-Security-Policy',
-		[
-			"default-src 'self'",
-			"script-src 'self' 'unsafe-inline'", // SvelteKit requires unsafe-inline for hydration
-			"style-src 'self' 'unsafe-inline'", // Tailwind CSS requires unsafe-inline
-			"img-src 'self' data: blob: https://*.tile.openstreetmap.org https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com", // Map tiles (OSM, Google Hybrid, Esri)
-			"connect-src 'self' ws: wss: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com https://demotiles.maplibre.org", // WebSocket + tile fetch + fallback glyphs
-			"worker-src 'self' blob:", // MapLibre GL JS Web Workers (vector tile parsing)
-			"child-src 'self' blob:", // Fallback for older browsers that check child-src before worker-src
-			"frame-src 'self' http://*:2501 http://*:8073 http://*:80", // Kismet (:2501), OpenWebRX (:8073), Bettercap (:80)
-			"font-src 'self'",
-			"object-src 'none'",
-			"frame-ancestors 'self'",
-			"base-uri 'self'",
-			"form-action 'self'"
-		].join('; ')
-	);
-
-	// Additional security headers (Phase 2.2.3)
-	response.headers.set('X-Content-Type-Options', 'nosniff');
-	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-	response.headers.set('X-XSS-Protection', '0'); // Disabled per OWASP recommendation
-	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-	response.headers.set(
-		'Permissions-Policy',
-		'geolocation=(self), microphone=(), camera=(), payment=(), usb=()'
-	);
-
-	// Force cache refresh in development to prevent stale error messages
-	if (dev) {
-		response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-		response.headers.set('Pragma', 'no-cache');
-		response.headers.set('Expires', '0');
-	}
+	// Apply security headers (CSP, HSTS, etc.) -- delegates to security-headers
+	applySecurityHeaders(response);
 
 	return response;
 };
 
 /**
- * Check if a path is a hardware control endpoint.
- * Hardware control endpoints have stricter rate limits (10 req/min).
- */
-function isHardwareControlPath(path: string): boolean {
-	const hwPatterns = [
-		'/api/hackrf/',
-		'/api/kismet/control/',
-		'/api/gsm-evil/control', // Only rate limit the control endpoint, not data polling
-		'/api/droneid/',
-		'/api/rf/',
-		'/api/openwebrx/control/'
-	];
-	return hwPatterns.some((p) => path.startsWith(p));
-}
-
-/**
  * Global error handler for unhandled server-side errors
- *
- * This hook catches all unhandled errors that occur during request processing,
- * logs them with full context for debugging, and returns a safe, standardized
- * response to the client without leaking sensitive information.
- *
- * @param error - The error that was thrown
- * @param event - The request event that caused the error
- * @returns A safe error response with a unique ID for tracking
  */
 export const handleError: HandleServerError = ({ error, event }) => {
-	// Generate a unique error ID for tracking and correlation
 	const errorId = crypto.randomUUID();
 
-	// Extract error details safely
 	const errorDetails = {
 		errorId,
 		url: event.url.pathname,
 		method: event.request.method,
 		userAgent: event.request.headers.get('user-agent'),
 		timestamp: new Date().toISOString(),
-		// Include error details based on type
 		...(error instanceof Error
 			? {
 					name: error.name,
 					message: error.message,
 					stack: error.stack,
-					// Include any custom properties that might be on the error
 					...Object.getOwnPropertyNames(error).reduce(
 						(acc, prop) => {
 							if (!['name', 'message', 'stack'].includes(prop)) {
@@ -455,40 +208,25 @@ export const handleError: HandleServerError = ({ error, event }) => {
 							}
 							return acc;
 						},
-						// Safe: Empty object initialized as Record for accumulating error properties
 						{} as Record<string, unknown>
 					)
 				}
-			: {
-					// Handle non-Error objects
-					error: String(error),
-					type: typeof error
-				})
+			: { error: String(error), type: typeof error })
 	};
 
-	// Log the full error for debugging with all available context
 	logger.error('Unhandled server error occurred', errorDetails);
 
-	// Return a generic, safe response to the client
-	// Only include sensitive information in development mode
 	return {
 		message: 'An internal server error occurred. We have been notified.',
 		errorId,
-		// Only include stack trace in development for debugging
-		// This prevents sensitive information leakage in production
 		stack: dev && error instanceof Error ? error.stack : undefined
 	};
 };
 
-// Graceful shutdown — guarded via globalThis to prevent listener accumulation
-// on Vite HMR reloads. A module-level boolean would be reset on each reload,
-// so we use globalThis which persists across module re-evaluations.
-// Docker logs confirmed 11+ SIGINT listeners without this guard.
+// Graceful shutdown -- guarded via globalThis to prevent listener accumulation on HMR
 const SHUTDOWN_KEY = '__argos_hooks_shutdown_registered';
 if (dev) {
-	// Safe: globalThis typed as Record to check for shutdown guard flag
 	if (typeof process !== 'undefined' && !(globalThis as Record<string, unknown>)[SHUTDOWN_KEY]) {
-		// Safe: globalThis typed as Record for dynamic property assignment of shutdown guard
 		(globalThis as Record<string, unknown>)[SHUTDOWN_KEY] = true;
 		process.on('SIGINT', () => {
 			logger.info('Shutting down WebSocket server...');
