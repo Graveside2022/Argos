@@ -26,9 +26,11 @@ Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, an
     - `~/.zshenv` -- interactive zsh sessions
 5. Switches claude-mem to `remote` mode (connects to the pre-running server instead of spawning ephemeral environments)
 
+6. Installs a `SessionStart` hook (`~/.claude/hooks/ensure-chroma-env.sh`) that cleans up orphaned workers (>30s old) and kills workers missing `CHROMA_SSL=false`
+
 The `CHROMA_SSL=false` variable is critical because `chroma-mcp` 0.2.6+ defaults `--ssl` to `true`. Without it, the MCP bridge tries HTTPS against the local HTTP server and fails silently.
 
-If you encounter orphaned `bun worker-service.cjs --daemon` processes, they are cleaned up automatically by the SessionStart hook.
+**Important:** The orphan cleanup hook uses a 30-second age check to avoid a race condition with claude-mem's own `SessionStart` hook. Without this guard, the cleanup kills the freshly-spawned worker before it can register the session, causing observations to silently stop recording for the entire Claude Code session.
 
 To verify ChromaDB is running:
 

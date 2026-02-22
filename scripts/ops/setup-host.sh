@@ -878,15 +878,26 @@ sudo -u "$SETUP_USER" tee "$HOOK_SCRIPT" > /dev/null << 'HOOK_CONTENT'
 #!/usr/bin/env bash
 set -u
 # Ensure running claude-mem worker has CHROMA_SSL=false.
-# The env field in settings.json handles NEW workers. This hook restarts
-# any existing worker spawned before the env fix was in place.
+# Also cleans up stale orphaned workers (>30s old) to prevent memory bloat.
+#
+# IMPORTANT: The 30-second age check prevents a race condition where this hook
+# fires AFTER claude-mem's own SessionStart hook has spawned a fresh worker.
+# Without it, the freshly-started worker gets killed immediately, breaking
+# observations for the entire Claude Code session.
 
-# Kill orphaned claude-mem workers (reparented to init or systemd --user)
+MIN_AGE_SECS=30
+NOW=$(date +%s)
+
+# Kill orphaned claude-mem workers older than MIN_AGE_SECS
 for pid in $(pgrep -f 'worker-service.cjs --daemon' 2>/dev/null); do
     ppid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
     parent_comm=$(ps -o comm= -p "$ppid" 2>/dev/null | tr -d ' ')
     if [ "$ppid" = "1" ] || [ "$parent_comm" = "systemd" ]; then
-        kill "$pid" 2>/dev/null
+        start_time=$(stat -c %Y "/proc/$pid" 2>/dev/null || echo "$NOW")
+        age=$((NOW - start_time))
+        if [ "$age" -ge "$MIN_AGE_SECS" ]; then
+            kill "$pid" 2>/dev/null
+        fi
     fi
 done
 
