@@ -18,9 +18,9 @@ vi.mock('$lib/server/security/input-sanitizer', () => ({
 			this.name = 'InputValidationError';
 		}
 	},
-	validatePathWithinDir: (value: string, _allowedDir: string) => {
-		const resolved = path.resolve(value);
-		if (!resolved.startsWith(path.resolve('data/certs'))) {
+	validatePathWithinDir: (value: string, allowedDir: string) => {
+		const resolved = path.resolve(allowedDir, value);
+		if (!resolved.startsWith(path.resolve(allowedDir))) {
 			throw new Error('Path traversal detected');
 		}
 		return resolved;
@@ -183,7 +183,10 @@ describe('CertManager', () => {
 			const caWrite = writeSpy.mock.calls.find(
 				(c) => typeof c[0] === 'string' && (c[0] as string).includes('ca.crt')
 			);
-			expect(caWrite?.[1]).toBe('ca1-pem\nca2-pem');
+			// savePemCerts wraps bare strings in PEM headers
+			expect(caWrite?.[1]).toContain('ca1-pem');
+			expect(caWrite?.[1]).toContain('ca2-pem');
+			expect(caWrite?.[1]).toContain('-----BEGIN CERTIFICATE-----');
 		});
 
 		it('removes existing dir before writing', () => {

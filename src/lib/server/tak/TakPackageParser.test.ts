@@ -82,9 +82,9 @@ describe('TakPackageParser', () => {
 			);
 		});
 
-		it('returns undefined description when key is "description0" not "description"', () => {
+		it('extracts description from "description0" key', () => {
 			const result = parser.parsePreferencePref(SAMPLE_PREF_XML);
-			expect(result.description).toBeUndefined();
+			expect(result.description).toBe('Unit TAK Server');
 		});
 	});
 
