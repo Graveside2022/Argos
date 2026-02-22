@@ -7,6 +7,12 @@
 - **Node.js 22.x** (LTS)
 - **npm 10.x** (comes with Node.js)
 - **Git**
+- **Bun** (claude-mem worker daemon runtime)
+- **uv** (Python package runner -- provides `uvx` for chroma-mcp)
+- **pipx** (installs ChromaDB CLI in isolated venv)
+- **ChromaDB** (vector database for claude-mem semantic search)
+
+All of the above are installed automatically by `scripts/ops/setup-host.sh`.
 
 ### System Requirements
 

@@ -651,6 +651,30 @@ sudo -u "$SETUP_USER" agent-browser install
 # --- 20. ChromaDB (claude-mem vector search backend) ---
 echo "[20/23] ChromaDB for claude-mem..."
 
+# claude-mem runtime dependencies:
+#   - bun: runs the worker daemon (worker-service.cjs)
+#   - uv/uvx: spawns chroma-mcp subprocess for vector search
+#   - pipx: installs chromadb CLI in isolated venv
+#   - chromadb: the vector database server itself
+
+# Install Bun (JavaScript runtime for claude-mem worker)
+if sudo -u "$SETUP_USER" bash -c 'command -v bun' &>/dev/null; then
+  echo "  Bun already installed: $(sudo -u "$SETUP_USER" bash -c 'bun --version' 2>/dev/null)"
+else
+  echo "  Installing Bun..."
+  sudo -u "$SETUP_USER" bash -c 'curl -fsSL https://bun.sh/install | bash'
+  echo "  Bun installed: $(sudo -u "$SETUP_USER" bash -c '$HOME/.bun/bin/bun --version' 2>/dev/null)"
+fi
+
+# Install uv (Python package runner — provides uvx for chroma-mcp)
+if sudo -u "$SETUP_USER" bash -c 'command -v uv' &>/dev/null; then
+  echo "  uv already installed: $(sudo -u "$SETUP_USER" bash -c 'uv --version' 2>/dev/null)"
+else
+  echo "  Installing uv..."
+  sudo -u "$SETUP_USER" bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+  echo "  uv installed: $(sudo -u "$SETUP_USER" bash -c '$HOME/.local/bin/uv --version' 2>/dev/null)"
+fi
+
 # pipx is needed to install chromadb in an isolated venv
 if ! sudo -u "$SETUP_USER" bash -c 'command -v pipx' &>/dev/null; then
   echo "  Installing pipx..."
@@ -709,6 +733,29 @@ sudo -u "$SETUP_USER" systemctl --user enable chroma-server
 sudo -u "$SETUP_USER" systemctl --user restart chroma-server
 
 # Set CHROMA_SSL=false for chroma-mcp client (defaults to SSL=true in 0.2.6+)
+# Three layers ensure the env var reaches chroma-mcp regardless of login method:
+#   1. /etc/environment — PAM-level, read on any SSH/Termius/local login
+#   2. ~/.config/environment.d/ — systemd user services and spawned processes
+#   3. ~/.zshenv — interactive zsh sessions (belt-and-suspenders)
+if ! grep -q "CHROMA_SSL" /etc/environment 2>/dev/null; then
+  echo "  Setting CHROMA_SSL=false in /etc/environment..."
+  echo 'CHROMA_SSL=false' >> /etc/environment
+else
+  echo "  CHROMA_SSL already set in /etc/environment"
+fi
+
+ENVD_DIR="$SETUP_HOME/.config/environment.d"
+sudo -u "$SETUP_USER" mkdir -p "$ENVD_DIR"
+cat > "$ENVD_DIR/chroma.conf" << 'ENVD_CONTENT'
+# ChromaDB MCP client: disable SSL for local server connections
+# Required because chroma-mcp 0.2.6+ defaults to SSL=true
+CHROMA_SSL=false
+ENVD_CONTENT
+chown "$SETUP_USER":"$SETUP_USER" "$ENVD_DIR/chroma.conf"
+# Import into running systemd user session immediately (environment.d is only read at login)
+sudo -u "$SETUP_USER" bash -c "CHROMA_SSL=false systemctl --user import-environment CHROMA_SSL" 2>/dev/null || true
+echo "  Created $ENVD_DIR/chroma.conf"
+
 ZSHENV="$SETUP_HOME/.zshenv"
 if [[ -f "$ZSHENV" ]] && grep -q "CHROMA_SSL" "$ZSHENV"; then
   echo "  CHROMA_SSL already set in .zshenv"
