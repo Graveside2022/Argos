@@ -4,6 +4,11 @@ import { join } from 'path';
 
 import { logger } from '$lib/utils/logger';
 
+/**
+ * Applies all pending SQL and TypeScript migrations in order, tracking each in a migrations table.
+ * @param db The better-sqlite3 database connection
+ * @param migrationsPath Absolute path to the directory containing migration files
+ */
 export async function runMigrations(db: Database.Database, migrationsPath: string) {
 	// Create migrations tracking table if not exists
 	db.exec(`

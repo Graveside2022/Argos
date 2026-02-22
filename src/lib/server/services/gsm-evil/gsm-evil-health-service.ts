@@ -36,6 +36,7 @@ export interface GsmEvilHealth {
 	};
 }
 
+/** Performs a comprehensive health check of the GSM Evil pipeline (GRGSM, web service, GSMTAP data flow, and database). */
 export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 	const health: GsmEvilHealth = {
 		grgsm: {

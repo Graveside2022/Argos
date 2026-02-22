@@ -33,6 +33,7 @@ const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
 // All containers that may hold the HackRF USB device (for force-release cleanup)
 const HACKRF_ALL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
 
+/** Detects whether a HackRF device is physically connected, falling back to lsusb if hackrf_info fails. */
 export async function detectHackRF(): Promise<boolean> {
 	try {
 		const { stdout } = await execFileAsync('/usr/bin/hackrf_info', [], { timeout: 3000 });
@@ -49,6 +50,7 @@ export async function detectHackRF(): Promise<boolean> {
 	}
 }
 
+/** Returns running native and Python processes (hackrf_sweep, grgsm_livemon, etc.) that hold the HackRF device. */
 export async function getBlockingProcesses(): Promise<{ pid: string; name: string }[]> {
 	const blocking: { pid: string; name: string }[] = [];
 
@@ -81,6 +83,7 @@ export async function getBlockingProcesses(): Promise<{ pid: string; name: strin
 	return blocking;
 }
 
+/** SIGKILL-s all native and Python processes holding the HackRF, then waits for USB device release. */
 export async function killBlockingProcesses(): Promise<void> {
 	// Native binaries: exact comm match
 	for (const proc of HACKRF_NATIVE_PROCESSES) {
@@ -102,6 +105,10 @@ export async function killBlockingProcesses(): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
+/**
+ * Checks Docker container running status for HackRF-related tools.
+ * @param toolOnly If true, only checks tool containers (openwebrx, pagermon); otherwise checks all.
+ */
 export async function getContainerStatus(
 	toolOnly = false
 ): Promise<{ name: string; isRunning: boolean }[]> {
@@ -129,6 +136,7 @@ export async function getContainerStatus(
 	return results;
 }
 
+/** Stops all Docker containers that may hold the HackRF USB device, then waits for release. */
 export async function stopContainers(): Promise<void> {
 	for (const container of HACKRF_ALL_CONTAINERS) {
 		try {

@@ -1,5 +1,6 @@
 import type { Database } from 'better-sqlite3';
 
+/** Adds truststore, cert password, and enrollment columns to tak_configs (idempotent). */
 export function migrate(db: Database) {
 	const columns = [
 		'ALTER TABLE tak_configs ADD COLUMN truststore_path TEXT',
