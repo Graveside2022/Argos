@@ -733,31 +733,34 @@ sudo -u "$SETUP_USER" systemctl --user enable chroma-server
 sudo -u "$SETUP_USER" systemctl --user restart chroma-server
 
 # Set CHROMA_SSL=false for chroma-mcp client (defaults to SSL=true in 0.2.6+)
+# See: https://github.com/chroma-core/chroma-mcp/issues/49
 # Three layers ensure the env var reaches chroma-mcp regardless of login method:
 #   1. /etc/environment — PAM-level, read on any SSH/Termius/local login
 #   2. ~/.config/environment.d/ — systemd user services and spawned processes
 #   3. ~/.zshenv — interactive zsh sessions (belt-and-suspenders)
-if ! grep -q "CHROMA_SSL" /etc/environment 2>/dev/null; then
+if grep -q "^CHROMA_SSL=false$" /etc/environment 2>/dev/null; then
+  echo "  CHROMA_SSL=false already set in /etc/environment"
+else
+  # Remove any stale CHROMA_SSL line (e.g. CHROMA_SSL=true) before appending
+  sed -i '/^CHROMA_SSL=/d' /etc/environment 2>/dev/null || true
   echo "  Setting CHROMA_SSL=false in /etc/environment..."
   echo 'CHROMA_SSL=false' >> /etc/environment
-else
-  echo "  CHROMA_SSL already set in /etc/environment"
 fi
 
 ENVD_DIR="$SETUP_HOME/.config/environment.d"
 sudo -u "$SETUP_USER" mkdir -p "$ENVD_DIR"
-cat > "$ENVD_DIR/chroma.conf" << 'ENVD_CONTENT'
+sudo -u "$SETUP_USER" tee "$ENVD_DIR/chroma.conf" > /dev/null << 'ENVD_CONTENT'
 # ChromaDB MCP client: disable SSL for local server connections
 # Required because chroma-mcp 0.2.6+ defaults to SSL=true
+# See: https://github.com/chroma-core/chroma-mcp/issues/49
 CHROMA_SSL=false
 ENVD_CONTENT
-chown "$SETUP_USER":"$SETUP_USER" "$ENVD_DIR/chroma.conf"
 # Import into running systemd user session immediately (environment.d is only read at login)
 sudo -u "$SETUP_USER" bash -c "CHROMA_SSL=false systemctl --user import-environment CHROMA_SSL" 2>/dev/null || true
 echo "  Created $ENVD_DIR/chroma.conf"
 
 ZSHENV="$SETUP_HOME/.zshenv"
-if [[ -f "$ZSHENV" ]] && grep -q "CHROMA_SSL" "$ZSHENV"; then
+if [[ -f "$ZSHENV" ]] && grep -q "^export CHROMA_SSL=" "$ZSHENV"; then
   echo "  CHROMA_SSL already set in .zshenv"
 else
   echo "  Setting CHROMA_SSL=false in .zshenv..."

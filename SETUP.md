@@ -37,7 +37,7 @@ sudo bash scripts/ops/setup-host.sh
 npm run dev
 ```
 
-The provisioning script handles: Node.js, Kismet, gpsd, Docker (for third-party tools), udev rules, npm dependencies, `.env` generation, Claude Code, Gemini CLI, agent-browser (browser automation), and ChromaDB.
+The provisioning script handles: Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools), udev rules, npm dependencies, `.env` generation, Claude Code, Gemini CLI, agent-browser (browser automation), and ChromaDB (with systemd service).
 
 ### Manual Setup
 
