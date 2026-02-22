@@ -1,0 +1,34 @@
+.gps-dot {
+	width: 16px;
+	height: 16px;
+	background: var(--primary);
+	border: 2px solid var(--primary-foreground);
+	border-radius: 50%;
+	box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+.heading-cone {
+	pointer-events: none;
+}
+.locate-btn {
+	width: 34px;
+	height: 34px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	background: var(--card);
+	color: var(--primary);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 0;
+	margin: 0;
+}
+.locate-btn:hover {
+	background: var(--accent);
+	color: color-mix(in srgb, var(--primary) 80%, white);
+}
+.control-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
