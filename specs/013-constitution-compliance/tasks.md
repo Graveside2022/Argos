@@ -197,8 +197,8 @@
 
 **Independent Test**: Constitution audit does not flag `var()` fallback hex values as violations.
 
-- [ ] T076 [US5] Verify T002 constitutional amendment is in place, then update the constitution auditor's hex-color detection in `src/lib/constitution/validators/article-ii-code-quality.ts` to skip hex values inside `var()` fallback positions
-- [ ] T077 [US5] Run constitution audit to verify zero hex-color violations are reported for `var()` fallbacks
+- [x] T076 [US5] Verify T002 constitutional amendment is in place, then update the constitution auditor's hex-color detection in `src/lib/constitution/validators/article-ii-code-quality.ts` to skip hex values inside `var()` fallback positions
+- [x] T077 [US5] Run constitution audit to verify zero hex-color violations are reported for `var()` fallbacks
 
 **Checkpoint**: Hex colors in `var()` fallbacks are no longer flagged. Constitution amended.
 
@@ -210,11 +210,11 @@
 
 **Independent Test**: `npm run test:all` reports zero failures.
 
-- [ ] T078 [P] [US6] Fix 5 failures in `tests/constitution/auditor.test.ts` — update mock constitution string to include valid Zod-schema-compliant sections structure (at least 1 section with articles)
-- [ ] T079 [P] [US6] Fix 2 failures in `tests/constitution/validators/article-ix-security.test.ts` — align dynamic constructor detection test and multi-violation count test with actual validator behavior
-- [ ] T080 [P] [US6] Fix 3 failures in `tests/load/dataVolumes.test.ts` — fix test data generator: use `Math.floor()` for timestamps, convert frequencies from Hz to MHz (divide by 1e6), adjust event scenario expectations, increase timeout to 120s for 24-hour test
-- [ ] T081 [P] [US6] Fix 1 failure in `tests/performance/tak-markers.test.ts` — mock SvelteKit `__sveltekit` package import or restructure test to avoid SvelteKit runtime dependency
-- [ ] T082 [US6] Run `npm run test:all` to verify zero failures across all test suites
+- [x] T078 [P] [US6] Fix 5 failures in `tests/constitution/auditor.test.ts` — update mock constitution string to include valid Zod-schema-compliant sections structure (at least 1 section with articles)
+- [x] T079 [P] [US6] Fix 2 failures in `tests/constitution/validators/article-ix-security.test.ts` — align dynamic constructor detection test and multi-violation count test with actual validator behavior
+- [x] T080 [P] [US6] Fix 3 failures in `tests/load/dataVolumes.test.ts` — fix test data generator: use `Math.floor()` for timestamps, convert frequencies from Hz to MHz (divide by 1e6), adjust event scenario expectations, increase timeout to 120s for 24-hour test
+- [x] T081 [P] [US6] Fix 1 failure in `tests/performance/tak-markers.test.ts` — mock SvelteKit `__sveltekit` package import or restructure test to avoid SvelteKit runtime dependency
+- [x] T082 [US6] Run `npm run test:all` to verify zero failures across all test suites
 
 **Checkpoint**: All tests pass. Zero pre-existing failures.
 

@@ -1,5 +1,16 @@
 import { performance } from 'perf_hooks';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Mock $app/environment before importing modules that depend on it.
+// visibility-engine.ts → persisted-writable.ts → $app/environment
+// The $app virtual module requires SvelteKit's internal __sveltekit package
+// which is only available during build/dev, not in isolated vitest runs.
+vi.mock('$app/environment', () => ({
+	browser: false,
+	dev: true,
+	building: false,
+	version: 'test'
+}));
 
 import { SymbolFactory } from '../../src/lib/map/symbols/symbol-factory';
 import { type DeviceForVisibility, filterByVisibility } from '../../src/lib/map/visibility-engine';
