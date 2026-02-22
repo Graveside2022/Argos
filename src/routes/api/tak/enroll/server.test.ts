@@ -159,14 +159,14 @@ describe('POST /api/tak/enroll', () => {
 		expect(response.status).toBe(502);
 	});
 
-	it('returns 500 for unexpected errors', async () => {
+	it('returns 502 for unexpected TAK API errors', async () => {
 		mockGenerate.mockRejectedValue(new Error('unexpected internal error'));
 
 		const response = await POST({ request: makeRequest(VALID_ENROLL) } as never);
 		const data = await response.json();
 
-		expect(response.status).toBe(500);
-		expect(data.error).toBe('Internal Server Error');
+		expect(response.status).toBe(502);
+		expect(data.error).toBe('unexpected internal error');
 	});
 
 	it('uses default port 8446 when port is omitted', async () => {

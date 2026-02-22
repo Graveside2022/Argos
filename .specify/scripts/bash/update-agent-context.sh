@@ -515,12 +515,18 @@ update_agent_file() {
     fi
     
     log_info "Updating $agent_name context file: $target_file"
-    
+
+    # Skip files that contain the SKIP AUTO-UPDATE marker (manually maintained)
+    if [[ -f "$target_file" ]] && grep -q '<!-- SKIP AUTO-UPDATE -->' "$target_file"; then
+        log_info "Skipping $agent_name — file contains <!-- SKIP AUTO-UPDATE --> marker"
+        return 0
+    fi
+
     local project_name
     project_name=$(basename "$REPO_ROOT")
     local current_date
     current_date=$(date +%Y-%m-%d)
-    
+
     # Create directory if it doesn't exist
     local target_dir
     target_dir=$(dirname "$target_file")
@@ -530,7 +536,7 @@ update_agent_file() {
             return 1
         fi
     fi
-    
+
     if [[ ! -f "$target_file" ]]; then
         # Create new file from template
         local temp_file

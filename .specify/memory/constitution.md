@@ -1,6 +1,6 @@
 # Argos Project Constitution
 
-**Version**: 2.4.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-20
+**Version**: 2.5.0 | **Ratified**: 2026-02-13 | **Last Amended**: 2026-02-22
 
 ---
 
@@ -17,7 +17,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 *   **Framework**: SvelteKit (No Next.js/Nuxt)
 *   **Build Tool**: Vite
 *   **Styling**: Tailwind CSS (No proprietary CSS/Sass). Tokens in `src/app.css` (Tailwind v4).
-*   **Target OS**: Dragon OS / ParrotOS / Debian / Ubuntu
+*   **Target OS**: Kali Linux / ParrotOS / Debian / Ubuntu
 *   **Hardware**: HackRF One, Alfa WiFi adapters, GPS receivers, USRP B205
 *   **Database**: SQLite (rf_signals.db)
 *   **Theme**: Dark mode only. Light mode removed.
@@ -27,8 +27,8 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 
 ## Universal Verification Commands
 **Enforcement**: A task is NOT complete if any of these commands produce errors.
-*   File-Scoped: `npx tsc --noEmit src/lib/FILE.ts`, `npx eslint src/lib/FILE.ts`, `npx vitest run src/lib/FILE.test.ts`
-*   Full Project: `npx tsc --noEmit --strict`, `npx eslint src/`, `npm run build`
+*   File-Scoped: `npx tsc --noEmit src/lib/FILE.ts`, `npx eslint src/lib/FILE.ts --config config/eslint.config.js`, `npx vitest run src/lib/FILE.test.ts`
+*   Full Project: `npx tsc --noEmit --strict`, `npx eslint src/ --config config/eslint.config.js`, `npm run build`
 
 ---
 
@@ -59,7 +59,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 **3.5 Organization**: Tests live alongside source (`.test.ts`). Integration in `tests/`.
 
 ## Article IV — User Experience
-**4.1 Design Language**: Cyberpunk theme. Monospaced data. High density. Visual hierarchy.
+**4.1 Design Language**: Lunaris design system. Military-grade enterprise dashboard. Dark mode only. Dual-font (Fira Code data, Geist UI chrome). Steel blue accent (#809AD0). Desaturated semantic status colors. Visual hierarchy with consistent spacing tokens. Reference: `specs/012-lunaris-ui-redesign/design-reference.md`.
 **4.2 Reuse Workflow**: Search `src/lib/` -> Extend existing -> Create new only if necessary. Document decision.
 **4.3 State Communication**: Handle ALL states: Empty, Loading, Default, Active, Error, Success, Disabled, Disconnected. No generic placeholders.
 **4.4 Accessibility**: Contrast ratios. Semantic HTML. Keyboard navigation. Screen reader support. Reduced motion.
