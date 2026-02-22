@@ -19,6 +19,13 @@ export interface SweepConfig {
 
 import type { SweepManagerState } from '$lib/types/shared';
 
+/** Mutable state shared by reference between SweepManager and cycle-init functions. */
+export interface SweepMutableState {
+	isRunning: boolean;
+	isInitialized: boolean;
+	status: SweepStatus;
+}
+
 export interface SweepStatus {
 	state: SweepManagerState;
 	currentFrequency?: number;

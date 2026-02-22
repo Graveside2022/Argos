@@ -4,6 +4,7 @@ import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { forceCleanupExistingProcesses } from '$lib/hackrf/sweep-manager/sweep-health-checker';
 import { convertToHz } from '$lib/hackrf/sweep-manager/sweep-utils';
+import type { SweepMutableState } from '$lib/server/hackrf/types';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { SystemStatus } from '$lib/types/enums';
@@ -11,13 +12,11 @@ import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import type { SweepCoordinatorContext } from './sweep-coordinator';
 import { handleSweepError } from './sweep-coordinator';
-import type { SweepStatus } from './types';
 
-/** Mutable state refs passed from SweepManager into cycle init functions. */
+/** Context passed from SweepManager into cycle init functions. */
 export interface CycleInitContext {
-	isInitialized: boolean;
-	isRunning: boolean;
-	status: SweepStatus;
+	/** Mutable state object — mutations propagate back to SweepManager. */
+	state: SweepMutableState;
 	processManager: ProcessManager;
 	frequencyCycler: FrequencyCycler;
 	emitEvent: (event: string, data: unknown) => void;
@@ -28,7 +27,8 @@ export interface CycleInitContext {
 
 /** Context for frequency runtime cycling operations. */
 export interface CycleRuntimeContext {
-	isRunning: boolean;
+	/** Mutable state object — mutations propagate back to SweepManager. */
+	state: SweepMutableState;
 	frequencyCycler: FrequencyCycler;
 	processManager: ProcessManager;
 	errorTracker: ErrorTracker;
@@ -44,14 +44,14 @@ export async function startCycle(
 	frequencies: Array<{ value: number; unit: string }>,
 	cycleTime: number
 ): Promise<boolean> {
-	if (!ctx.isInitialized) {
+	if (!ctx.state.isInitialized) {
 		logWarn('Service not yet initialized, waiting...');
 		let waitTime = 0;
-		while (!ctx.isInitialized && waitTime < 10000) {
+		while (!ctx.state.isInitialized && waitTime < 10000) {
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			waitTime += 500;
 		}
-		if (!ctx.isInitialized) {
+		if (!ctx.state.isInitialized) {
 			logError('Service failed to initialize within 10 seconds');
 			return false;
 		}
@@ -60,7 +60,7 @@ export async function startCycle(
 	await ctx.processManager.cleanup();
 	await new Promise((resolve) => setTimeout(resolve, 1000));
 
-	if (ctx.isRunning) {
+	if (ctx.state.isRunning) {
 		const processState = ctx.processManager.getProcessState();
 		if (
 			processState.isRunning &&
@@ -71,9 +71,9 @@ export async function startCycle(
 			return false;
 		} else {
 			logWarn('Detected stale running state, resetting...');
-			ctx.isRunning = false;
-			ctx.status = { state: SystemStatus.Idle };
-			ctx.emitEvent('status', ctx.status);
+			ctx.state.isRunning = false;
+			ctx.state.status = { state: SystemStatus.Idle };
+			ctx.emitEvent('status', ctx.state.status);
 		}
 	}
 
@@ -125,10 +125,10 @@ async function initializeCycleAndRun(
 		switchingTime: 1000
 	});
 
-	ctx.isRunning = true;
+	ctx.state.isRunning = true;
 	ctx.resetErrorTracking();
 
-	ctx.status = {
+	ctx.state.status = {
 		state: SystemStatus.Running,
 		currentFrequency: convertToHz(validatedFreqs[0].value, validatedFreqs[0].unit),
 		sweepProgress: 0,
@@ -137,7 +137,7 @@ async function initializeCycleAndRun(
 		startTime: Date.now()
 	};
 
-	ctx.emitEvent('status', ctx.status);
+	ctx.emitEvent('status', ctx.state.status);
 	const currentCycleState = ctx.frequencyCycler.getCycleState();
 	ctx.emitEvent('cycle_config', {
 		frequencies: currentCycleState.frequencies,
@@ -159,7 +159,7 @@ async function initializeCycleAndRun(
 
 /** Run the sweep process for the current frequency, set up cycle timer if multi-freq. */
 export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> {
-	if (!ctx.isRunning) return;
+	if (!ctx.state.isRunning) return;
 	const cycleState = ctx.frequencyCycler.getCycleState();
 	if (!cycleState.currentFrequency) return;
 	try {
@@ -195,7 +195,7 @@ export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> 
 /** Switch to the next frequency in the cycle and restart sweep. */
 export async function cycleToNextFrequency(ctx: CycleRuntimeContext): Promise<void> {
 	const cycleState = ctx.frequencyCycler.getCycleState();
-	if (!cycleState.isCycling || !ctx.isRunning) return;
+	if (!cycleState.isCycling || !ctx.state.isRunning) return;
 	await ctx.frequencyCycler.cycleToNext(async (nextFreq) => {
 		ctx.emitEvent('status_change', { status: 'switching', nextFrequency: nextFreq });
 	});

@@ -23,14 +23,28 @@ import {
 	type SweepCoordinatorContext,
 	testHackrfAvailability
 } from './sweep-coordinator';
-import { type CycleRuntimeContext, runNextFrequency, startCycle } from './sweep-cycle-init';
-import type { HackRFHealth, SpectrumData, SweepConfig, SweepStatus } from './types';
+import {
+	type CycleInitContext,
+	type CycleRuntimeContext,
+	runNextFrequency,
+	startCycle
+} from './sweep-cycle-init';
+import type {
+	HackRFHealth,
+	SpectrumData,
+	SweepConfig,
+	SweepMutableState,
+	SweepStatus
+} from './types';
 
 /** Manages HackRF sweep operations using modular service architecture. */
 export class SweepManager extends EventEmitter {
-	private status: SweepStatus = { state: SystemStatus.Idle };
-	private isRunning = false;
-	private isInitialized = false;
+	/** Shared mutable state — passed by reference to cycle-init/runtime contexts. */
+	private readonly mutableState: SweepMutableState = {
+		isRunning: false,
+		isInitialized: false,
+		status: { state: SystemStatus.Idle }
+	};
 	private processManager: ProcessManager;
 	private frequencyCycler: FrequencyCycler;
 	private bufferManager: BufferManager;
@@ -78,8 +92,8 @@ export class SweepManager extends EventEmitter {
 	}
 	private async _performStartupValidation(): Promise<void> {
 		logInfo('[SEARCH] SweepManager: Performing startup state validation...');
-		this.isRunning = false;
-		this.status = { state: SystemStatus.Idle };
+		this.mutableState.isRunning = false;
+		this.mutableState.status = { state: SystemStatus.Idle };
 		await forceCleanupExistingProcesses(this.processManager);
 		await this.processManager.cleanup();
 		this.frequencyCycler.resetCycling();
@@ -96,7 +110,7 @@ export class SweepManager extends EventEmitter {
 			lastRecoveryAttempt: rs.lastRecoveryAttempt,
 			isRecovering: rs.isRecovering
 		});
-		this.isInitialized = true;
+		this.mutableState.isInitialized = true;
 		logInfo('[OK] SweepManager startup validation complete');
 	}
 
@@ -114,7 +128,7 @@ export class SweepManager extends EventEmitter {
 				if (update.processHealth !== undefined)
 					this.cyclingHealth.processHealth = update.processHealth;
 			},
-			isRunning: this.isRunning
+			isRunning: this.mutableState.isRunning
 		};
 	}
 
@@ -132,7 +146,7 @@ export class SweepManager extends EventEmitter {
 	}
 
 	async startSweep(config: SweepConfig): Promise<void> {
-		if (this.status.state === SystemStatus.Running)
+		if (this.mutableState.status.state === SystemStatus.Running)
 			throw new Error('Sweep already in progress');
 		const frequencies = config.frequencies || [{ value: config.centerFrequency, unit: 'Hz' }];
 		const success = await startCycle(
@@ -150,11 +164,9 @@ export class SweepManager extends EventEmitter {
 		return startCycle(this._getCycleInitContext(), frequencies, cycleTime);
 	}
 
-	private _getCycleInitContext() {
+	private _getCycleInitContext(): CycleInitContext {
 		return {
-			isInitialized: this.isInitialized,
-			isRunning: this.isRunning,
-			status: this.status,
+			state: this.mutableState,
 			processManager: this.processManager,
 			frequencyCycler: this.frequencyCycler,
 			emitEvent: (event: string, data: unknown) => this._emitEvent(event, data),
@@ -165,22 +177,24 @@ export class SweepManager extends EventEmitter {
 	}
 
 	async stopSweep(): Promise<void> {
-		logInfo('[STOP] Stopping sweep... Current state:', { state: this.status.state });
-		if (this.status.state === SystemStatus.Idle) {
+		logInfo('[STOP] Stopping sweep... Current state:', {
+			state: this.mutableState.status.state
+		});
+		if (this.mutableState.status.state === SystemStatus.Idle) {
 			logInfo('Sweep already stopped');
 			return;
 		}
-		this.status.state = SystemStatus.Stopping;
-		this._emitEvent('status', this.status);
+		this.mutableState.status.state = SystemStatus.Stopping;
+		this._emitEvent('status', this.mutableState.status);
 		this.frequencyCycler.stopCycling();
-		this.isRunning = false;
+		this.mutableState.isRunning = false;
 		this.frequencyCycler.clearAllTimers();
 		const processState = this.processManager.getProcessState();
 		await this.processManager.stopProcess(processState);
 		this.bufferManager.clearBuffer();
 		this.errorTracker.resetErrorTracking();
-		this.status = { state: SystemStatus.Idle };
-		this._emitEvent('status', this.status);
+		this.mutableState.status = { state: SystemStatus.Idle };
+		this._emitEvent('status', this.mutableState.status);
 		this._emitEvent('status_change', { status: 'stopped' });
 		await resourceManager.release('hackrf-sweep', HardwareDevice.HACKRF);
 		setTimeout(() => this._emitEvent('status', { state: SystemStatus.Idle }), 100);
@@ -189,7 +203,7 @@ export class SweepManager extends EventEmitter {
 
 	async emergencyStop(): Promise<void> {
 		logWarn('[ALERT] Emergency stop initiated');
-		this.isRunning = false;
+		this.mutableState.isRunning = false;
 		this.frequencyCycler.emergencyStop();
 		await this.processManager.forceKillProcess();
 		this.bufferManager.clearBuffer();
@@ -197,19 +211,19 @@ export class SweepManager extends EventEmitter {
 		this.cyclingHealth.status = SystemStatus.Idle;
 		this.cyclingHealth.processHealth = 'stopped';
 		this.cyclingHealth.lastDataReceived = null;
-		this.status = { state: SystemStatus.Idle };
-		this._emitEvent('status', this.status);
+		this.mutableState.status = { state: SystemStatus.Idle };
+		this._emitEvent('status', this.mutableState.status);
 		this._emitEvent('status_change', { status: 'emergency_stopped' });
 		logWarn('[ALERT] Emergency stop completed');
 	}
 
 	async forceCleanup(): Promise<void> {
 		await forceCleanupExistingProcesses(this.processManager);
-		this.status = { state: SystemStatus.Idle };
+		this.mutableState.status = { state: SystemStatus.Idle };
 	}
 
 	getStatus(): SweepStatus {
-		return { ...this.status };
+		return { ...this.mutableState.status };
 	}
 
 	async checkHealth(): Promise<HackRFHealth> {
@@ -224,7 +238,7 @@ export class SweepManager extends EventEmitter {
 
 	private _getCycleRuntimeContext(): CycleRuntimeContext {
 		return {
-			isRunning: this.isRunning,
+			state: this.mutableState,
 			frequencyCycler: this.frequencyCycler,
 			processManager: this.processManager,
 			errorTracker: this.errorTracker,
