@@ -47,7 +47,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 *   No barrel files `index.ts` (except shadcn/ui).
 *   No catch-all utils (`utils.ts`, `helpers.ts`).
 *   No class-based UI components.
-*   No hardcoded hex colors (use Tailwind theme variables).
+*   No hardcoded hex colors (use Tailwind theme variables). Hex values are permitted as CSS `var()` fallback parameters.
 *   No `alert()`, `confirm()`, `prompt()`.
 *   No untracked TODOs.
 
