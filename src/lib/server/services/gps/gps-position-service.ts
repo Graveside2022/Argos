@@ -288,8 +288,130 @@ function buildGpsResponse(
 }
 
 /**
- * Get current GPS position from gpsd with circuit breaker and caching
- * Uses TCP socket to query gpsd for TPV (position) and SKY (satellite) messages
+ * Check the circuit breaker and return a cached or error response if the
+ * breaker is still open.  Returns null when the caller should proceed
+ * with a fresh gpsd query (breaker closed or half-open).
+ */
+function checkPositionCircuitBreaker(): GpsPositionResponse | null {
+	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) {
+		return null;
+	}
+
+	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
+
+	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
+		// Cooldown elapsed -- allow a retry (half-open state)
+		return null;
+	}
+
+	if (!circuitBreakerLogged) {
+		logger.warn(
+			'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
+			{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+			'gps-circuit-breaker'
+		);
+		circuitBreakerLogged = true;
+	}
+
+	if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
+		return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
+	}
+
+	return buildGpsResponse(
+		false,
+		null,
+		'GPS service temporarily unavailable (circuit breaker active)'
+	);
+}
+
+/**
+ * Parse all gpsd output lines, extracting the first TPV message and
+ * updating the cached satellite count from any SKY messages encountered.
+ */
+function parseGpsdPositionLines(rawOutput: string): TPVData | null {
+	let tpvData: TPVData | null = null;
+	const lines = rawOutput.trim().split('\n');
+
+	for (const line of lines) {
+		if (line.trim() === '') continue;
+
+		const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
+		if (!result.success) {
+			logger.warn(
+				'[gps] Malformed gpsd data, skipping line',
+				undefined,
+				'gps-malformed-data'
+			);
+			continue;
+		}
+
+		try {
+			const parsed = result.data;
+
+			if (!tpvData) {
+				tpvData = parseTPVData(parsed);
+			}
+
+			updateSatelliteCountFromSky(parsed);
+		} catch (_error: unknown) {
+			// Skip non-JSON lines (e.g. gpsd banner)
+		}
+	}
+
+	return tpvData;
+}
+
+/**
+ * Extract satellite count from a parsed SKY message and update the
+ * module-level cached satellite count.
+ */
+function updateSatelliteCountFromSky(parsed: unknown): void {
+	const skyMsg = parseSkyMessage(parsed);
+	if (!skyMsg) return;
+
+	// gpsd 3.20+ provides uSat (used satellite count) directly
+	if (typeof skyMsg.uSat === 'number') {
+		cachedSatelliteCount = skyMsg.uSat;
+	} else if (skyMsg.satellites && skyMsg.satellites.length > 0) {
+		// Fallback: count satellites with used=true (older gpsd versions)
+		cachedSatelliteCount = skyMsg.satellites.filter((sat) => sat.used === true).length;
+	}
+}
+
+/**
+ * Record a gpsd connection failure and return a cached or error response.
+ * Activates the circuit breaker after reaching the failure threshold.
+ */
+function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
+	consecutiveFailures++;
+	lastFailureTimestamp = Date.now();
+
+	if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
+		logger.warn(
+			'[GPS] gpsd connection failed, circuit breaker activating',
+			{
+				consecutiveFailures,
+				error: error instanceof Error ? error.message : String(error)
+			},
+			'gps-circuit-open'
+		);
+	}
+
+	if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
+		return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
+	}
+
+	return buildGpsResponse(
+		false,
+		null,
+		'GPS service not available. Make sure gpsd is running.',
+		error instanceof Error ? error.message : 'Unknown error'
+	);
+}
+
+/**
+ * Get current GPS position from gpsd with circuit breaker and caching.
+ * Uses TCP socket to query gpsd for TPV (position) and SKY (satellite) messages.
  *
  * Features:
  * - Circuit breaker pattern (3 failures triggers 30s cooldown)
@@ -300,35 +422,8 @@ function buildGpsResponse(
  * @returns GPS position data with fix status, coordinates, and satellite info
  */
 export async function getGpsPosition(): Promise<GpsPositionResponse> {
-	// Circuit breaker: if gpsd has been unreachable, return cached data
-	// or a soft error without attempting a connection.
-	if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
-		const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
-
-		if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN_MS) {
-			// Circuit is open -- serve cached data if fresh enough, otherwise soft error
-			if (!circuitBreakerLogged) {
-				logger.warn(
-					'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
-					{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
-					'gps-circuit-breaker'
-				);
-				circuitBreakerLogged = true;
-			}
-
-			if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
-				return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
-			}
-
-			return buildGpsResponse(
-				false,
-				null,
-				'GPS service temporarily unavailable (circuit breaker active)'
-			);
-		}
-
-		// Cooldown elapsed -- allow a retry (half-open state)
-	}
+	const circuitBreakerResponse = checkPositionCircuitBreaker();
+	if (circuitBreakerResponse) return circuitBreakerResponse;
 
 	// Serve cached data if it is still fresh (avoids redundant queries)
 	if (cachedTPV && Date.now() - cachedTPVTimestamp < TPV_CACHE_TTL_MS) {
@@ -337,47 +432,7 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 
 	try {
 		const allLines = await queryGpsd(3000);
-
-		// Parse both TPV and SKY from the output.
-		let tpvData: TPVData | null = null;
-		const lines = allLines.trim().split('\n');
-
-		for (const line of lines) {
-			if (line.trim() === '') continue;
-
-			const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
-			if (!result.success) {
-				logger.warn(
-					'[gps] Malformed gpsd data, skipping line',
-					undefined,
-					'gps-malformed-data'
-				);
-				continue;
-			}
-
-			try {
-				const parsed = result.data;
-
-				if (!tpvData) {
-					tpvData = parseTPVData(parsed);
-				}
-
-				const skyMsg = parseSkyMessage(parsed);
-				if (skyMsg) {
-					// gpsd 3.20+ provides uSat (used satellite count) directly
-					if (typeof skyMsg.uSat === 'number') {
-						cachedSatelliteCount = skyMsg.uSat;
-					} else if (skyMsg.satellites && skyMsg.satellites.length > 0) {
-						// Fallback: count satellites with used=true (older gpsd versions)
-						cachedSatelliteCount = skyMsg.satellites.filter(
-							(sat) => sat.used === true
-						).length;
-					}
-				}
-			} catch (_error: unknown) {
-				// Skip non-JSON lines (e.g. gpsd banner)
-			}
-		}
+		const tpvData = parseGpsdPositionLines(allLines);
 
 		if (!tpvData) {
 			throw new Error('Failed to parse TPV data from gpsd response');
@@ -393,31 +448,6 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 
 		return buildGpsResponse(tpvData.mode >= 2, tpvData);
 	} catch (error: unknown) {
-		// Record failure for circuit breaker
-		consecutiveFailures++;
-		lastFailureTimestamp = Date.now();
-
-		if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-			logger.warn(
-				'[GPS] gpsd connection failed, circuit breaker activating',
-				{
-					consecutiveFailures,
-					error: error instanceof Error ? error.message : String(error)
-				},
-				'gps-circuit-open'
-			);
-		}
-
-		// Still serve cached data if available
-		if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
-			return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
-		}
-
-		return buildGpsResponse(
-			false,
-			null,
-			'GPS service not available. Make sure gpsd is running.',
-			error instanceof Error ? error.message : 'Unknown error'
-		);
+		return handlePositionQueryFailure(error);
 	}
 }
