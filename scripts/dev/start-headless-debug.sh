@@ -4,7 +4,7 @@
 
 # Configuration
 DEBUG_PORT=99
-DEBUG_TARGET=9222
+DEBUG_TARGET=9224
 LOG_FILE="logs/socat.log"
 
 # Colors
