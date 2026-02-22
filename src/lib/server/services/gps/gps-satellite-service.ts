@@ -3,7 +3,15 @@ import { z } from 'zod';
 
 import type { Satellite, SatellitesApiResponse } from '$lib/gps/types';
 import { safeJsonParse } from '$lib/server/security/safe-json';
-import { logWarn } from '$lib/utils/logger';
+
+import {
+	CACHE_TTL_MS,
+	checkSatelliteCircuitBreaker,
+	getCachedSatellites,
+	handleSatelliteQueryFailure,
+	resetCircuitBreaker,
+	updateCache
+} from './gps-satellite-circuit-breaker';
 
 // Zod schema for gpsd SKY message with full satellite data
 const GpsdSkySchema = z
@@ -25,18 +33,6 @@ const GpsdSkySchema = z
 			.optional()
 	})
 	.passthrough();
-
-// Circuit breaker state
-let consecutiveFailures = 0;
-const CIRCUIT_BREAKER_THRESHOLD = 3;
-const CIRCUIT_BREAKER_COOLDOWN_MS = 30000;
-let lastFailureTimestamp = 0;
-let circuitBreakerLogged = false;
-
-// Cache satellite data
-let cachedSatellites: Satellite[] = [];
-let cachedTimestamp = 0;
-const CACHE_TTL_MS = 5000;
 
 /**
  * Query gpsd using TCP socket (same pattern as position endpoint).
@@ -169,39 +165,6 @@ function parseSatellites(data: unknown): Satellite[] {
 		}));
 }
 
-/**
- * Check the satellite circuit breaker and return a cached or error response
- * if the breaker is still open.  Returns null when the caller should proceed
- * with a fresh gpsd query (breaker closed or half-open).
- */
-function checkSatelliteCircuitBreaker(): SatellitesApiResponse | null {
-	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) {
-		return null;
-	}
-
-	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
-
-	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
-		// Cooldown elapsed -- allow a retry (half-open state)
-		return null;
-	}
-
-	if (!circuitBreakerLogged) {
-		logWarn(
-			'[GPS Satellites] Circuit breaker open: gpsd unreachable',
-			{ consecutiveFailures },
-			'gps-satellites-circuit-breaker'
-		);
-		circuitBreakerLogged = true;
-	}
-
-	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
-		return { success: true, satellites: cachedSatellites };
-	}
-
-	return { success: false, satellites: [], error: 'GPS service temporarily unavailable' };
-}
-
 interface ParsedSkyResult {
 	satellites: Satellite[];
 	usedSatCount: number;
@@ -253,32 +216,6 @@ function markUsedSatellitesBySnr(satellites: Satellite[], usedSatCount: number):
 }
 
 /**
- * Record a gpsd satellite connection failure and return a cached or error
- * response.  Activates the circuit breaker after reaching the threshold.
- */
-function handleSatelliteQueryFailure(error: unknown): SatellitesApiResponse {
-	consecutiveFailures++;
-	lastFailureTimestamp = Date.now();
-
-	if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-		logWarn(
-			'[GPS Satellites] gpsd connection failed, circuit breaker activating',
-			{
-				consecutiveFailures,
-				error: error instanceof Error ? error.message : String(error)
-			},
-			'gps-satellites-circuit-open'
-		);
-	}
-
-	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
-		return { success: true, satellites: cachedSatellites };
-	}
-
-	return { success: false, satellites: [], error: 'GPS service not available' };
-}
-
-/**
  * Get satellite data from gpsd with circuit breaker and caching.
  * Uses TCP socket to query gpsd for SKY messages containing satellite visibility data.
  *
@@ -294,8 +231,9 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 	if (circuitBreakerResponse) return circuitBreakerResponse;
 
 	// Serve cached data if fresh
-	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < CACHE_TTL_MS) {
-		return { success: true, satellites: cachedSatellites };
+	const cached = getCachedSatellites();
+	if (cached.satellites.length > 0 && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+		return { success: true, satellites: cached.satellites };
 	}
 
 	try {
@@ -305,12 +243,10 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 		markUsedSatellitesBySnr(satellites, usedSatCount);
 
 		// Success - reset circuit breaker
-		consecutiveFailures = 0;
-		circuitBreakerLogged = false;
+		resetCircuitBreaker();
 
 		// Update cache
-		cachedSatellites = satellites;
-		cachedTimestamp = Date.now();
+		updateCache(satellites);
 
 		return { success: true, satellites };
 	} catch (error: unknown) {
