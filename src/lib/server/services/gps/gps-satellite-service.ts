@@ -1,4 +1,3 @@
-import { Socket } from 'net';
 import { z } from 'zod';
 
 import type { Satellite, SatellitesApiResponse } from '$lib/gps/types';
@@ -12,6 +11,7 @@ import {
 	resetCircuitBreaker,
 	updateCache
 } from './gps-satellite-circuit-breaker';
+import { queryGpsd } from './gps-socket';
 
 // Zod schema for gpsd SKY message with full satellite data
 const GpsdSkySchema = z
@@ -33,76 +33,6 @@ const GpsdSkySchema = z
 			.optional()
 	})
 	.passthrough();
-
-/**
- * Query gpsd using TCP socket (same pattern as position endpoint).
- */
-function queryGpsd(timeoutMs: number = 3000): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		let resolved = false;
-
-		const socket = new Socket();
-		socket.setTimeout(timeoutMs);
-
-		const cleanup = () => {
-			if (!socket.destroyed) {
-				socket.destroy();
-			}
-		};
-
-		const finish = (result: string | null, error?: Error) => {
-			if (resolved) return;
-			resolved = true;
-			cleanup();
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result || '');
-			}
-		};
-
-		socket.on('connect', () => {
-			socket.write('?WATCH={"enable":true,"json":true}\n');
-
-			// Collect data for 10 seconds to catch SKY message with satellite array.
-			// gpsd only includes per-satellite data in ~1 of every 7 SKY messages,
-			// so 5s was too short. This endpoint is only called when the satellite
-			// panel is expanded (not on every poll), so the extra latency is acceptable.
-			setTimeout(() => {
-				finish(Buffer.concat(chunks).toString('utf8'));
-			}, 10000);
-		});
-
-		socket.on('data', (chunk: Buffer) => {
-			chunks.push(chunk);
-		});
-
-		socket.on('timeout', () => {
-			if (chunks.length > 0) {
-				finish(Buffer.concat(chunks).toString('utf8'));
-			} else {
-				finish(null, new Error('Connection to gpsd timed out'));
-			}
-		});
-
-		socket.on('error', (err: Error) => {
-			finish(null, err);
-		});
-
-		socket.on('close', () => {
-			if (!resolved) {
-				if (chunks.length > 0) {
-					finish(Buffer.concat(chunks).toString('utf8'));
-				} else {
-					finish(null, new Error('Connection closed without data'));
-				}
-			}
-		});
-
-		socket.connect(2947, 'localhost');
-	});
-}
 
 /**
  * Map gpsd gnssid to constellation name.
@@ -237,7 +167,8 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 	}
 
 	try {
-		const allLines = await queryGpsd(12000);
+		// Collect for 10s to catch per-satellite SKY messages (~1 in 7 cycles)
+		const allLines = await queryGpsd({ timeoutMs: 12000, collectMs: 10000 });
 		const { satellites, usedSatCount } = parseGpsdSkyLines(allLines);
 
 		markUsedSatellitesBySnr(satellites, usedSatCount);
