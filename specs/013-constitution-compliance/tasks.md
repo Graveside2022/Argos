@@ -20,9 +20,9 @@
 
 **Purpose**: Baseline verification and constitution amendment
 
-- [ ] T001 Verify baseline: run `npm run build` and `npm run test:unit` to confirm current state, document pass/fail counts
-- [ ] T002 [P] Amend constitution Article 2.6 in `.specify/memory/constitution.md` to add exemption: "Hex values are permitted as CSS `var()` fallback parameters" (resolves US5)
-- [ ] T003 [P] Delete dead code file `src/lib/map/MapSourceParser.ts` (zero importers confirmed in research.md)
+- [x] T001 Verify baseline: run `npm run build` and `npm run test:unit` to confirm current state, document pass/fail counts
+- [x] T002 [P] Amend constitution Article 2.6 in `.specify/memory/constitution.md` to add exemption: "Hex values are permitted as CSS `var()` fallback parameters" (resolves US5)
+- [x] T003 [P] Delete dead code file `src/lib/map/MapSourceParser.ts` (zero importers confirmed in research.md)
 
 **Checkpoint**: Baseline documented, constitution amended, dead code removed
 
