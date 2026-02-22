@@ -1,35 +1,8 @@
 import { Socket } from 'net';
-import { z } from 'zod';
 
-import { safeJsonParse } from '$lib/server/security/safe-json';
 import { logger } from '$lib/utils/logger';
 
-// Zod schema for gpsd JSON protocol messages (TPV, SKY, VERSION, DEVICES, etc.)
-const GpsdMessageSchema = z
-	.object({
-		class: z.string(),
-		mode: z.number().optional(),
-		lat: z.number().optional(),
-		lon: z.number().optional(),
-		alt: z.number().optional(),
-		speed: z.number().optional(),
-		track: z.number().optional(),
-		epx: z.number().optional(),
-		epy: z.number().optional(),
-		time: z.string().optional(),
-		satellites: z
-			.array(
-				z
-					.object({
-						used: z.boolean().optional()
-					})
-					.passthrough()
-			)
-			.optional(),
-		uSat: z.number().optional(),
-		nSat: z.number().optional()
-	})
-	.passthrough();
+import { parseGpsdLines, type TPVData } from './gps-data-parser';
 
 // Cache last known satellite count from full SKY messages (accurate per-satellite data).
 // Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
@@ -48,32 +21,6 @@ const CIRCUIT_BREAKER_COOLDOWN_MS = 30000; // 30 seconds between retries when ci
 let lastFailureTimestamp = 0;
 let circuitBreakerLogged = false;
 
-interface TPVData {
-	class: string;
-	mode: number;
-	lat?: number;
-	lon?: number;
-	alt?: number;
-	speed?: number;
-	track?: number;
-	epx?: number;
-	epy?: number;
-	time?: string;
-}
-
-interface SkyMessage {
-	class: string;
-	satellites?: Array<{
-		used?: boolean;
-	}>;
-	uSat?: number; // Used satellites count (GPSD 3.20+)
-	nSat?: number; // Total visible satellites
-}
-
-interface SatelliteData {
-	used?: boolean;
-}
-
 export interface GpsPositionResponse {
 	success: boolean;
 	data: {
@@ -90,66 +37,6 @@ export interface GpsPositionResponse {
 	error?: string;
 	details?: string;
 	mode?: number;
-}
-
-function isSatelliteArray(value: unknown): value is SatelliteData[] {
-	return (
-		Array.isArray(value) &&
-		value.every(
-			(item) =>
-				typeof item === 'object' &&
-				item !== null &&
-				// Safe: item cast to SatelliteData for 'used' field type check; validated by condition
-				(typeof (item as SatelliteData).used === 'boolean' ||
-					(item as SatelliteData).used === undefined) // Safe: same SatelliteData cast as line above
-		)
-	);
-}
-
-function parseTPVData(data: unknown): TPVData | null {
-	if (typeof data !== 'object' || data === null) {
-		return null;
-	}
-
-	// Safe: Type cast for dynamic data access
-	const obj = data as Record<string, unknown>;
-
-	if (typeof obj.class !== 'string' || obj.class !== 'TPV') {
-		return null;
-	}
-
-	return {
-		class: obj.class,
-		mode: typeof obj.mode === 'number' ? obj.mode : 0,
-		lat: typeof obj.lat === 'number' ? obj.lat : undefined,
-		lon: typeof obj.lon === 'number' ? obj.lon : undefined,
-		alt: typeof obj.alt === 'number' ? obj.alt : undefined,
-		speed: typeof obj.speed === 'number' ? obj.speed : undefined,
-		track: typeof obj.track === 'number' ? obj.track : undefined,
-		epx: typeof obj.epx === 'number' ? obj.epx : undefined,
-		epy: typeof obj.epy === 'number' ? obj.epy : undefined,
-		time: typeof obj.time === 'string' ? obj.time : undefined
-	};
-}
-
-function parseSkyMessage(data: unknown): SkyMessage | null {
-	if (typeof data !== 'object' || data === null) {
-		return null;
-	}
-
-	// Safe: Type cast for dynamic data access
-	const obj = data as Record<string, unknown>;
-
-	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {
-		return null;
-	}
-
-	return {
-		class: obj.class,
-		satellites: isSatelliteArray(obj.satellites) ? obj.satellites : undefined,
-		uSat: typeof obj.uSat === 'number' ? obj.uSat : undefined,
-		nSat: typeof obj.nSat === 'number' ? obj.nSat : undefined
-	};
 }
 
 /**
@@ -198,7 +85,6 @@ function queryGpsd(timeoutMs: number = 3000): Promise<string> {
 		});
 
 		socket.on('timeout', () => {
-			// If we have data, return it; otherwise error
 			if (chunks.length > 0) {
 				finish(Buffer.concat(chunks).toString('utf8'));
 			} else {
@@ -289,7 +175,7 @@ function buildGpsResponse(
 
 /**
  * Check the circuit breaker and return a cached or error response if the
- * breaker is still open.  Returns null when the caller should proceed
+ * breaker is still open. Returns null when the caller should proceed
  * with a fresh gpsd query (breaker closed or half-open).
  */
 function checkPositionCircuitBreaker(): GpsPositionResponse | null {
@@ -300,7 +186,6 @@ function checkPositionCircuitBreaker(): GpsPositionResponse | null {
 	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
 
 	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
-		// Cooldown elapsed -- allow a retry (half-open state)
 		return null;
 	}
 
@@ -322,60 +207,6 @@ function checkPositionCircuitBreaker(): GpsPositionResponse | null {
 		null,
 		'GPS service temporarily unavailable (circuit breaker active)'
 	);
-}
-
-/**
- * Parse all gpsd output lines, extracting the first TPV message and
- * updating the cached satellite count from any SKY messages encountered.
- */
-function parseGpsdPositionLines(rawOutput: string): TPVData | null {
-	let tpvData: TPVData | null = null;
-	const lines = rawOutput.trim().split('\n');
-
-	for (const line of lines) {
-		if (line.trim() === '') continue;
-
-		const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
-		if (!result.success) {
-			logger.warn(
-				'[gps] Malformed gpsd data, skipping line',
-				undefined,
-				'gps-malformed-data'
-			);
-			continue;
-		}
-
-		try {
-			const parsed = result.data;
-
-			if (!tpvData) {
-				tpvData = parseTPVData(parsed);
-			}
-
-			updateSatelliteCountFromSky(parsed);
-		} catch (_error: unknown) {
-			// Skip non-JSON lines (e.g. gpsd banner)
-		}
-	}
-
-	return tpvData;
-}
-
-/**
- * Extract satellite count from a parsed SKY message and update the
- * module-level cached satellite count.
- */
-function updateSatelliteCountFromSky(parsed: unknown): void {
-	const skyMsg = parseSkyMessage(parsed);
-	if (!skyMsg) return;
-
-	// gpsd 3.20+ provides uSat (used satellite count) directly
-	if (typeof skyMsg.uSat === 'number') {
-		cachedSatelliteCount = skyMsg.uSat;
-	} else if (skyMsg.satellites && skyMsg.satellites.length > 0) {
-		// Fallback: count satellites with used=true (older gpsd versions)
-		cachedSatelliteCount = skyMsg.satellites.filter((sat) => sat.used === true).length;
-	}
 }
 
 /**
@@ -418,8 +249,6 @@ function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
  * - Response caching (5s TTL for fresh data, 30s for fallback)
  * - Satellite count tracking from SKY messages
  * - Graceful degradation (serves cached data when gpsd unavailable)
- *
- * @returns GPS position data with fix status, coordinates, and satellite info
  */
 export async function getGpsPosition(): Promise<GpsPositionResponse> {
 	const circuitBreakerResponse = checkPositionCircuitBreaker();
@@ -432,7 +261,12 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 
 	try {
 		const allLines = await queryGpsd(3000);
-		const tpvData = parseGpsdPositionLines(allLines);
+		const { tpvData, satelliteCount } = parseGpsdLines(allLines);
+
+		// Update satellite count if a SKY message was found
+		if (satelliteCount !== null) {
+			cachedSatelliteCount = satelliteCount;
+		}
 
 		if (!tpvData) {
 			throw new Error('Failed to parse TPV data from gpsd response');
