@@ -15,14 +15,20 @@ Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, an
 
 ### Claude Code / claude-mem
 
-`claude-mem` uses ChromaDB for vector search (semantic memory retrieval). The setup script automatically:
+`claude-mem` uses ChromaDB for vector search (semantic memory retrieval). It requires **Bun** (worker daemon) and **uv** (spawns `chroma-mcp` subprocess). The setup script automatically:
 
-1. Installs ChromaDB via `pipx` and creates a systemd user service on port 8000
-2. Enables `loginctl linger` so the service survives headless reboots
-3. Sets `CHROMA_SSL=false` in `~/.zshenv` (required for local connections)
-4. Switches claude-mem to `remote` mode (connects to the pre-running server instead of spawning ephemeral environments)
+1. Installs **Bun** and **uv** if not present (claude-mem runtime dependencies)
+2. Installs ChromaDB via `pipx` and creates a systemd user service on port 8000
+3. Enables `loginctl linger` so the service survives headless reboots
+4. Sets `CHROMA_SSL=false` in three locations for reliable propagation:
+    - `/etc/environment` -- PAM-level, read on any login (SSH, Termius, local)
+    - `~/.config/environment.d/chroma.conf` -- systemd user services
+    - `~/.zshenv` -- interactive zsh sessions
+5. Switches claude-mem to `remote` mode (connects to the pre-running server instead of spawning ephemeral environments)
 
-If you encounter orphaned `bun worker-service.cjs --daemon` processes, they are cleaned up automatically by the SessionStart hook in `.claude/hooks/cleanup-stale-daemons.sh`.
+The `CHROMA_SSL=false` variable is critical because `chroma-mcp` 0.2.6+ defaults `--ssl` to `true`. Without it, the MCP bridge tries HTTPS against the local HTTP server and fails silently.
+
+If you encounter orphaned `bun worker-service.cjs --daemon` processes, they are cleaned up automatically by the SessionStart hook.
 
 To verify ChromaDB is running:
 
@@ -39,7 +45,7 @@ cd Argos
 sudo bash scripts/ops/setup-host.sh
 ```
 
-The setup script installs Node.js, Kismet, gpsd, Docker (for third-party tools only), ChromaDB, agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
+The setup script installs Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB (with systemd service), agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
 ## API Keys
 
