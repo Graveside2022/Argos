@@ -154,7 +154,7 @@ for pkg in "${PACKAGES[@]}"; do
   fi
 done
 
-# --- 2. Node.js ---
+# --- 3. Node.js ---
 echo "[3/23] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
@@ -170,7 +170,7 @@ else
   echo "  Installed Node.js $(node --version), npm $(npm --version)"
 fi
 
-# --- 3. Kismet ---
+# --- 4. Kismet ---
 echo "[4/23] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
@@ -190,7 +190,7 @@ else
   fi
 fi
 
-# --- 4. gpsd ---
+# --- 5. gpsd ---
 echo "[5/23] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
@@ -199,7 +199,7 @@ else
   apt-get install -y -qq gpsd gpsd-clients
 fi
 
-# --- 5. Docker (for third-party tools only) ---
+# --- 6. Docker (for third-party tools only) ---
 echo "[6/23] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
@@ -229,7 +229,7 @@ else
   echo "  Docker installed. User $SETUP_USER added to docker group."
 fi
 
-# --- 6. OpenSSH Server ---
+# --- 7. OpenSSH Server ---
 echo "[7/23] OpenSSH server..."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
@@ -248,7 +248,7 @@ else
   echo "  SSH server running"
 fi
 
-# --- 7. udev rules for SDR devices ---
+# --- 8. udev rules for SDR devices ---
 echo "[8/23] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
@@ -267,7 +267,7 @@ UDEV
   usermod -aG plugdev "$SETUP_USER" 2>/dev/null || true
 fi
 
-# --- 8. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
+# --- 9. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
 echo "[9/23] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
@@ -417,7 +417,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
   fi
 fi
 
-# --- 9. Kismet GPS config ---
+# --- 10. Kismet GPS config ---
 echo "[10/23] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
@@ -431,7 +431,7 @@ else
   echo "  Kismet config not found at $KISMET_CONF — configure after installation"
 fi
 
-# --- 8. npm dependencies ---
+# --- 11. npm dependencies ---
 echo "[11/23] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
@@ -455,7 +455,7 @@ else
   fi
 fi
 
-# --- 9. .env from template ---
+# --- 12. .env from template ---
 echo "[12/23] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
@@ -512,7 +512,7 @@ fi
 echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
-# --- 10. Development Monitor Service ---
+# --- 13. Development Monitor Service ---
 echo "[13/23] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
@@ -541,7 +541,7 @@ else
   echo "  Warning: deployment/argos-dev-monitor.service not found. Skipping."
 fi
 
-# --- 11. EarlyOOM Configuration ---
+# --- 14. EarlyOOM Configuration ---
 echo "[14/23] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
@@ -556,7 +556,7 @@ else
   echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
 fi
 
-# --- 12. cgroup Memory Limit (defense against runaway processes) ---
+# --- 15. cgroup Memory Limit (defense against runaway processes) ---
 echo "[15/23] cgroup memory limit..."
 
 # Detect the primary UID (the user who will run Argos)
@@ -606,7 +606,7 @@ EOF
   fi
 fi
 
-# --- 13. Tailscale ---
+# --- 16. Tailscale ---
 echo "[16/23] Tailscale..."
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
@@ -616,7 +616,7 @@ else
   echo "  Tailscale installed. Run 'sudo tailscale up' to authenticate."
 fi
 
-# --- 14. Claude Code ---
+# --- 17. Claude Code ---
 echo "[17/23] Claude Code..."
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
@@ -626,7 +626,7 @@ else
   echo "  Claude Code installed. Run 'claude' to authenticate."
 fi
 
-# --- 15. Gemini CLI ---
+# --- 18. Gemini CLI ---
 echo "[18/23] Gemini CLI..."
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
@@ -638,15 +638,15 @@ fi
 
 # --- 19. Agent Browser (Playwright-based browser automation for Claude Code) ---
 echo "[19/23] Agent Browser..."
-if command -v agent-browser &>/dev/null; then
+if sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null; then
   echo "  agent-browser already installed"
 else
   echo "  Installing agent-browser..."
-  npm install -g agent-browser
-  echo "  Installing Chromium for agent-browser..."
-  agent-browser install
-  echo "  agent-browser installed with Chromium"
+  sudo -u "$SETUP_USER" npm install -g agent-browser
 fi
+# Always ensure Chromium is available (handles partial installs)
+echo "  Ensuring Chromium for agent-browser..."
+sudo -u "$SETUP_USER" agent-browser install
 
 # --- 20. ChromaDB (claude-mem vector search backend) ---
 echo "[20/23] ChromaDB for claude-mem..."
