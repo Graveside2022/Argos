@@ -21,7 +21,6 @@ export interface KismetStatusResult {
 	isRunning: boolean;
 	status: 'active' | 'inactive';
 }
-
 /** Run pgrep -x kismet, returning stdout or empty string if not found. */
 async function pgrepKismet(): Promise<string> {
 	try {

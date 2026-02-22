@@ -1,15 +1,8 @@
 import type { HackRFStatus } from '$lib/api/hackrf';
-import {
-	type SpectrumData,
-	updateConnectionStatus,
-	updateCycleStatus,
-	updateEmergencyStopStatus,
-	updateSpectrumData,
-	updateSweepStatus
-} from '$lib/hackrf/stores';
-import { SystemStatus } from '$lib/types/enums';
-import type { HackRFData } from '$lib/types/signals';
+import { updateConnectionStatus, updateEmergencyStopStatus } from '$lib/hackrf/stores';
 import { logDebug, logError, logInfo, logWarn } from '$lib/utils/logger';
+
+import { registerStreamListeners } from './api-legacy-stream';
 
 export class HackRFAPI {
 	eventSource: EventSource | null = null;
@@ -27,7 +20,7 @@ export class HackRFAPI {
 	/**
 	 * Add event listener with automatic cleanup tracking
 	 */
-	private addTrackedListener(eventName: string, handler: (event: MessageEvent) => void) {
+	addTrackedListener(eventName: string, handler: (event: MessageEvent) => void): void {
 		if (!this.eventSource) return;
 		this.eventSource.addEventListener(eventName, handler);
 		this.eventListeners.set(eventName, handler);
@@ -36,7 +29,6 @@ export class HackRFAPI {
 	async getStatus(): Promise<HackRFStatus> {
 		const response = await fetch('/api/hackrf/status');
 		if (!response.ok) throw new Error('Failed to get status');
-		// Safe: /api/hackrf/status endpoint returns HackRFStatus shape per route contract
 		return response.json() as Promise<HackRFStatus>;
 	}
 
@@ -49,50 +41,31 @@ export class HackRFAPI {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ frequencies, cycleTime })
 		});
-
 		if (!response.ok) throw new Error('Failed to start sweep');
-
-		// Connect to SSE for real-time data
 		this.connectToDataStream();
-
-		// Safe: /api/hackrf/start-sweep returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
 	async stopSweep(): Promise<{ message: string }> {
 		this.disconnectDataStream();
-
-		const response = await fetch('/api/hackrf/stop-sweep', {
-			method: 'POST'
-		});
-
+		const response = await fetch('/api/hackrf/stop-sweep', { method: 'POST' });
 		if (!response.ok) throw new Error('Failed to stop sweep');
-
-		// Safe: /api/hackrf/stop-sweep returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
 	async emergencyStop(): Promise<{ message: string }> {
-		const response = await fetch('/api/hackrf/emergency-stop', {
-			method: 'POST'
-		});
-
+		const response = await fetch('/api/hackrf/emergency-stop', { method: 'POST' });
 		if (!response.ok) throw new Error('Failed to emergency stop');
-
 		updateEmergencyStopStatus({ isActive: true, timestamp: Date.now() });
-
-		// Safe: /api/hackrf/emergency-stop returns {message} on success per route contract
 		return response.json() as Promise<{ message: string }>;
 	}
 
-	connectToDataStream() {
-		// Prevent multiple simultaneous reconnection attempts
+	connectToDataStream(): void {
 		if (this.isReconnecting) {
 			logDebug('[HackRFAPI] Already reconnecting, skipping...');
 			return;
 		}
 
-		// Close existing connection properly
 		if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) {
 			logDebug('[HackRFAPI] Closing existing connection before reconnecting...');
 			this.eventSource.close();
@@ -100,236 +73,14 @@ export class HackRFAPI {
 		}
 
 		logDebug('[HackRFAPI] Connecting to data stream...');
-
 		this.eventSource = new EventSource('/api/hackrf/data-stream');
-
-		// Clear any existing listeners from previous connections
 		this.eventListeners.clear();
 
-		// Connected event
-		this.addTrackedListener('connected', (_event) => {
-			logInfo('[HackRFAPI] Connected to data stream');
-			updateConnectionStatus({ isConnected: true, isConnecting: false, error: null });
-			this.lastDataTimestamp = Date.now();
-
-			// Reset reconnection state
-			this.reconnectAttempts = 0;
-			this.isReconnecting = false;
-
-			// Clear any reconnect timer
-			if (this.reconnectTimer) {
-				clearTimeout(this.reconnectTimer);
-				this.reconnectTimer = null;
-			}
-
-			// Start connection health monitoring
-			this.startConnectionMonitoring();
-
-			// Handle browser tab visibility changes
-			this.setupVisibilityHandler();
-		});
-
-		this.addTrackedListener('sweep_data', (event) => {
-			let rawData: HackRFData & {
-				binData?: number[];
-				metadata?: {
-					frequencyRange?: { low?: number; high?: number; center?: number };
-					binWidth?: number;
-				};
-				sweepId?: string;
-			};
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				rawData = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in sweep_data event', { error });
-				return;
-			}
-			this.lastDataTimestamp = Date.now();
-
-			// Convert SSE data format to SpectrumData format
-			const spectrumData: SpectrumData = {
-				frequencies: [], // Not provided in current format
-				power: [],
-				power_levels: rawData.binData || [],
-				start_freq: rawData.metadata?.frequencyRange?.low
-					? rawData.metadata.frequencyRange.low / 1e6
-					: undefined,
-				stop_freq: rawData.metadata?.frequencyRange?.high
-					? rawData.metadata.frequencyRange.high / 1e6
-					: undefined,
-				center_freq: rawData.metadata?.frequencyRange?.center
-					? rawData.metadata.frequencyRange.center / 1e6
-					: undefined,
-				peak_power: rawData.power,
-				peak_freq: rawData.frequency,
-				avg_power: rawData.binData
-					? rawData.binData.reduce((a: number, b: number) => a + b, 0) /
-						rawData.binData.length
-					: undefined,
-				centerFreq: rawData.frequency,
-				sampleRate: 20e6, // Default
-				binSize: rawData.metadata?.binWidth || 0,
-				timestamp: new Date(rawData.timestamp).getTime(),
-				sweepId: rawData.sweepId,
-				processed: true
-			};
-
-			updateSpectrumData(spectrumData);
-		});
-
-		this.addTrackedListener('status', (event) => {
-			let status: {
-				state?: string;
-				startFrequency?: number;
-				endFrequency?: number;
-				currentFrequency?: number;
-				sweepProgress?: number;
-				totalSweeps?: number;
-				completedSweeps?: number;
-				cycleTime?: number;
-				startTime?: number;
-			};
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				status = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in status event', { error });
-				return;
-			}
-			logDebug('[EventSource] Status event received:', { status });
-
-			// Update sweep status
-			const newStatus = {
-				isActive:
-					status.state === SystemStatus.Running || status.state === SystemStatus.Sweeping,
-				startFreq: status.startFrequency || 0,
-				endFreq: status.endFrequency || 0,
-				currentFreq: status.currentFrequency || 0,
-				progress: status.sweepProgress || 0
-			};
-			logDebug('[EventSource] Updating sweep status to:', { newStatus });
-			updateSweepStatus(newStatus);
-
-			// Update cycle status if cycling
-			if (status.totalSweeps && status.completedSweeps !== undefined) {
-				const cycleTime = status.cycleTime || 10000;
-				const elapsed = status.startTime ? Date.now() - status.startTime : 0;
-				const timeRemaining = Math.max(0, cycleTime - (elapsed % cycleTime));
-
-				updateCycleStatus({
-					isActive: true,
-					currentCycle: status.completedSweeps + 1,
-					totalCycles: status.totalSweeps,
-					cycleTime: cycleTime,
-					timeRemaining: timeRemaining,
-					progress: ((elapsed % cycleTime) / cycleTime) * 100
-				});
-			}
-		});
-
-		this.addTrackedListener('cycle_config', (event) => {
-			let config: Record<string, unknown>;
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				config = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in cycle_config event', { error });
-				return;
-			}
-			updateCycleStatus({
-				...config,
-				isActive: true
-			});
-		});
-
-		this.addTrackedListener('status_change', (event) => {
-			let change: {
-				isSweping?: boolean;
-				status?: string;
-			};
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				change = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in status_change event', { error });
-				return;
-			}
-			logDebug('[EventSource] Status change event:', { change });
-			if (change.isSweping !== undefined) {
-				updateSweepStatus({ isActive: change.isSweping });
-			}
-			if (change.status === 'stopped') {
-				logDebug('[EventSource] Received stopped status, setting isActive to false');
-				updateSweepStatus({ isActive: false });
-			}
-		});
-
-		// Heartbeat event - critical for connection health
-		this.addTrackedListener('heartbeat', (event) => {
-			this.lastDataTimestamp = Date.now();
-			let _data: {
-				uptime: number;
-				connectionId: string;
-			};
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				_data = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in heartbeat event', { error });
-				return;
-			}
-			logDebug('[HackRFAPI] Heartbeat received:', {
-				uptime: Math.floor(_data.uptime / 1000) + 's',
-				connectionId: _data.connectionId
-			});
-		});
-
-		// Recovery events
-		this.addTrackedListener('recovery_start', (event) => {
-			let recoveryData: {
-				reason: string;
-				attempt: number;
-				maxAttempts: number;
-			};
-			try {
-				// Safe: SSE MessageEvent.data is always string (not ArrayBuffer/Blob)
-				recoveryData = JSON.parse(event.data as string);
-			} catch (error) {
-				logWarn('[HackRFAPI] Invalid JSON in recovery_start event', { error });
-				return;
-			}
-			updateConnectionStatus({
-				isConnected: true,
-				isConnecting: false,
-				error: `Recovering: ${recoveryData.reason} (attempt ${recoveryData.attempt}/${recoveryData.maxAttempts})`
-			});
-		});
-
-		this.addTrackedListener('recovery_complete', (_event) => {
-			updateConnectionStatus({
-				isConnected: true,
-				isConnecting: false,
-				error: null
-			});
-		});
-
-		this.addTrackedListener('error', (_event) => {
-			const errorData = { message: 'Connection error' };
-			// Don't disconnect on recovery errors
-			if (this.eventSource?.readyState === EventSource.CLOSED) {
-				updateConnectionStatus({
-					isConnected: false,
-					isConnecting: false,
-					error: errorData.message
-				});
-			}
-		});
+		// Register all SSE event listeners (extracted to api-legacy-stream.ts)
+		registerStreamListeners(this);
 
 		this.eventSource.onerror = (_error) => {
 			logError('[HackRFAPI] EventSource error:', { error: _error });
-
-			// Increment reconnection attempts
 			this.reconnectAttempts++;
 
 			if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -343,28 +94,19 @@ export class HackRFAPI {
 				return;
 			}
 
-			// Show reconnecting status
 			updateConnectionStatus({
 				isConnected: false,
 				isConnecting: true,
 				error: `Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
 			});
 
-			// Exponential backoff for reconnection
 			const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
-
-			// Clear existing reconnect timer
 			if (this.reconnectTimer) {
 				clearTimeout(this.reconnectTimer);
 			}
-
-			// Mark as reconnecting
 			this.isReconnecting = true;
-
-			// Attempt to reconnect after backoff delay
 			this.reconnectTimer = setTimeout(() => {
 				logInfo(`[HackRFAPI] Reconnecting after ${backoffDelay}ms delay...`);
-				// Clear reconnecting flag before attempting connection
 				this.isReconnecting = false;
 				this.connectToDataStream();
 				this.reconnectTimer = null;
@@ -372,22 +114,16 @@ export class HackRFAPI {
 		};
 	}
 
-	disconnectDataStream() {
+	disconnectDataStream(): void {
 		logDebug('[HackRFAPI] Disconnecting data stream');
-
-		// Stop monitoring first to prevent any race conditions
 		this.stopConnectionMonitoring();
-
-		// Clean up visibility handler
 		this.cleanupVisibilityHandler();
 
 		if (this.eventSource) {
-			// Remove all event listeners before closing (prevents memory leak)
 			this.eventListeners.forEach((handler, eventName) => {
 				this.eventSource?.removeEventListener(eventName, handler);
 			});
 			this.eventListeners.clear();
-
 			this.eventSource.close();
 			this.eventSource = null;
 		}
@@ -397,62 +133,49 @@ export class HackRFAPI {
 			this.reconnectTimer = null;
 		}
 
-		// Reset connection state
 		this.isReconnecting = false;
 		this.reconnectAttempts = 0;
 		this.lastDataTimestamp = 0;
 	}
 
-	private startConnectionMonitoring() {
+	startConnectionMonitoring(): void {
 		this.stopConnectionMonitoring();
-
-		// Check for data timeout every 30 seconds (less aggressive)
 		this.connectionCheckInterval = setInterval(() => {
 			const timeSinceLastData = Date.now() - this.lastDataTimestamp;
-
-			// Much more lenient - 90 seconds without data (server sends heartbeat every 15s, so this allows for 6 missed heartbeats)
 			if (timeSinceLastData > 90000) {
 				logWarn(
 					`[HackRFAPI] No data received for ${Math.floor(timeSinceLastData / 1000)} seconds, connection may be stale`
 				);
-
-				// Only show stale message if not already reconnecting
 				if (!this.isReconnecting) {
 					updateConnectionStatus({
 						isConnected: true,
 						isConnecting: false,
 						error: 'Connection stale - attempting to reconnect...'
 					});
-
-					// Force reconnect
 					logInfo('[HackRFAPI] Forcing reconnection due to stale connection');
-					// Properly close and reset before reconnecting
 					if (this.eventSource) {
 						this.eventSource.close();
 						this.eventSource = null;
 					}
-					// Reset reconnection state to allow new connection
 					this.isReconnecting = false;
 					this.connectToDataStream();
 				}
 			}
-		}, 30000); // Check every 30 seconds (less frequent)
+		}, 30000);
 	}
 
-	private stopConnectionMonitoring() {
+	private stopConnectionMonitoring(): void {
 		if (this.connectionCheckInterval) {
 			clearInterval(this.connectionCheckInterval);
 			this.connectionCheckInterval = null;
 		}
 	}
 
-	private setupVisibilityHandler() {
-		// Remove existing handler if any
+	setupVisibilityHandler(): void {
 		if (this.visibilityHandler && typeof document !== 'undefined') {
 			document.removeEventListener('visibilitychange', this.visibilityHandler);
 		}
 
-		// Set up new handler
 		if (typeof document !== 'undefined') {
 			this.visibilityHandler = () => {
 				if (document.hidden) {
@@ -460,11 +183,8 @@ export class HackRFAPI {
 					this.stopConnectionMonitoring();
 				} else {
 					logDebug('[HackRFAPI] Tab became visible, resuming connection monitoring');
-					// Reset last data timestamp to prevent false stale detection
 					this.lastDataTimestamp = Date.now();
 					this.startConnectionMonitoring();
-
-					// If connection was lost while hidden, try to reconnect
 					if (this.eventSource?.readyState !== EventSource.OPEN) {
 						logInfo(
 							'[HackRFAPI] Connection lost while tab was hidden, reconnecting...'
@@ -473,33 +193,29 @@ export class HackRFAPI {
 					}
 				}
 			};
-
 			document.addEventListener('visibilitychange', this.visibilityHandler);
 		}
 	}
 
-	private cleanupVisibilityHandler() {
+	private cleanupVisibilityHandler(): void {
 		if (this.visibilityHandler && typeof document !== 'undefined') {
 			document.removeEventListener('visibilitychange', this.visibilityHandler);
 			this.visibilityHandler = null;
 		}
 	}
 
-	disconnect() {
+	disconnect(): void {
 		this.disconnectDataStream();
 		this.cleanupVisibilityHandler();
 		updateConnectionStatus({ isConnected: false, isConnecting: false, error: null });
 	}
 
-	// Manual reconnect method that resets attempts
-	reconnect() {
+	reconnect(): void {
 		logInfo('[HackRFAPI] Manual reconnect requested');
-		// Reset all connection state
 		this.reconnectAttempts = 0;
 		this.isReconnecting = false;
-		this.lastDataTimestamp = Date.now(); // Reset timestamp to prevent immediate stale detection
+		this.lastDataTimestamp = Date.now();
 		this.disconnectDataStream();
-		// Small delay to ensure clean disconnect
 		setTimeout(() => {
 			this.connectToDataStream();
 		}, 100);

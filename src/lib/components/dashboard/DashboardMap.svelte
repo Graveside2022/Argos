@@ -2,9 +2,6 @@
 <script lang="ts">
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
-	import type { FeatureCollection } from 'geojson';
-	import type { LngLatLike } from 'maplibre-gl';
-	import maplibregl from 'maplibre-gl';
 	import { setContext } from 'svelte';
 	import {
 		CircleLayer,
@@ -19,256 +16,35 @@
 		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
-	import type { SatelliteLayer } from '$lib/map/layers/satellite-layer';
-	import type { SymbolLayer } from '$lib/map/layers/symbol-layer';
-	import { promotedDevices, visibilityMode } from '$lib/map/visibility-engine';
-	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
-	import {
-		activeBands,
-		isolatedDeviceMAC,
-		isolateDevice,
-		layerVisibility
-	} from '$lib/stores/dashboard/dashboard-store';
-	import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
-	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
-	import { takCotMessages } from '$lib/stores/tak-store';
-	import { themeStore } from '$lib/stores/theme-store.svelte';
+	import { isolatedDeviceMAC } from '$lib/stores/dashboard/dashboard-store';
 
+	import { createMapState, MAP_UI_COLORS, onClusterClick } from './dashboard-map-logic.svelte';
 	import DeviceOverlay from './map/DeviceOverlay.svelte';
-	import { MAP_UI_COLORS, resolveMapColor } from './map/map-colors';
-	import {
-		buildAccuracyGeoJSON,
-		buildConnectionLinesGeoJSON,
-		buildDetectionRangeGeoJSON,
-		buildDeviceGeoJSON
-	} from './map/map-geojson';
-	import {
-		buildRangeBands,
-		type CellTowerFetchState,
-		handleClusterClick as onClusterClick,
-		handleDeviceClick as deviceClickHandler,
-		handleTowerClick as towerClickHandler,
-		maybeFetchCellTowers,
-		type PopupState,
-		syncClusterVisibility,
-		syncLayerVisibility,
-		syncThemePaint,
-		type TowerPopupState,
-		updateSymbolLayer
-	} from './map/map-handlers';
 	import { buildConeSVG } from './map/map-helpers';
-	import { setupMap } from './map/map-setup';
 	import TowerPopup from './map/TowerPopup.svelte';
 
-	let map: maplibregl.Map | undefined = $state();
-	let symbolLayer: SymbolLayer | undefined = $state();
-	let satLayer: SatelliteLayer | undefined = $state();
-	let initialViewSet = false;
-	let layersInitialized = false;
-	let cssReady = $state(false);
-	let mapStyle: maplibregl.StyleSpecification | string = $state(GOOGLE_SATELLITE_STYLE);
-
-	let cellTowerGeoJSON: FeatureCollection = $state({ type: 'FeatureCollection', features: [] });
-	const towerFetchState: CellTowerFetchState = { lastLat: 0, lastLon: 0 };
-
-	let _popupLngLat: LngLatLike | null = $state(null);
-	let popupContent: PopupState | null = $state(null);
-	let towerPopupLngLat: LngLatLike | null = $state(null);
-	let towerPopupContent: TowerPopupState | null = $state(null);
-
-	let accuracyColor = $derived.by(() => {
-		const _p = themeStore.palette;
-		const _r = cssReady;
-		return resolveMapColor(MAP_UI_COLORS.primary);
-	});
-
-	let RANGE_BANDS = $derived.by(() => {
-		const _p = themeStore.palette;
-		return buildRangeBands();
-	});
-
-	let gpsLngLat: LngLatLike | null = $derived.by(() => {
-		const { lat, lon } = $gpsStore.position;
-		if (lat === 0 && lon === 0) return null;
-		return [lon, lat] as LngLatLike;
-	});
-
-	let headingDeg: number | null = $derived.by(() => {
-		const h = $gpsStore.status.heading;
-		const spd = $gpsStore.status.speed;
-		const hasH = h !== null && h !== undefined && !isNaN(h);
-		const moving = spd !== null && spd !== undefined && spd > 0.5;
-		return hasH && moving ? h : null;
-	});
-
-	let showCone = $derived(headingDeg !== null);
-
-	let accuracyGeoJSON: FeatureCollection = $derived(
-		buildAccuracyGeoJSON(
-			$gpsStore.position.lat,
-			$gpsStore.position.lon,
-			$gpsStore.status.accuracy
-		)
-	);
-
-	let detectionRangeGeoJSON: FeatureCollection = $derived(
-		buildDetectionRangeGeoJSON($gpsStore.position.lat, $gpsStore.position.lon, RANGE_BANDS)
-	);
-
-	let deviceGeoJSON: FeatureCollection = $derived(
-		buildDeviceGeoJSON(
-			$kismetStore,
-			$isolatedDeviceMAC,
-			$activeBands,
-			$visibilityMode,
-			$promotedDevices
-		)
-	);
-
-	let visibleDeviceMACs: Set<string> = $derived(
-		new Set(deviceGeoJSON.features.map((f) => f.properties?.mac as string).filter(Boolean))
-	);
-
-	let connectionLinesGeoJSON: FeatureCollection = $derived(
-		buildConnectionLinesGeoJSON(
-			$kismetStore,
-			$isolatedDeviceMAC,
-			$layerVisibility.connectionLines,
-			visibleDeviceMACs
-		)
-	);
+	const ms = createMapState();
 
 	setContext('dashboardMap', {
-		getMap: () => map,
+		getMap: () => ms.map,
 		flyTo: (lat: number, lon: number, zoom?: number) => {
-			if (map) map.flyTo({ center: [lon, lat], zoom: zoom ?? map.getZoom() });
+			if (ms.map) ms.map.flyTo({ center: [lon, lat], zoom: zoom ?? ms.map.getZoom() });
 		}
 	});
-
-	// ── Effects ──
-
-	$effect(() => {
-		fetch('/api/map-tiles/styles/alidade_smooth_dark.json', { method: 'HEAD' })
-			.then((res) => {
-				mapStyle = res.ok
-					? '/api/map-tiles/styles/alidade_smooth_dark.json'
-					: GOOGLE_SATELLITE_STYLE;
-				mapSettings.stadiaAvailable.set(res.ok);
-			})
-			.catch(() => mapSettings.stadiaAvailable.set(false));
-	});
-
-	$effect(() => {
-		queueMicrotask(() => {
-			cssReady = true;
-		});
-	});
-
-	$effect(() => {
-		if (map && !layersInitialized) {
-			handleMapLoad();
-			layersInitialized = true;
-		}
-	});
-
-	$effect(() => {
-		if (!satLayer) return;
-		const settings = $mapSettings;
-		if (settings.type === 'satellite') {
-			satLayer.add(settings.url, settings.attribution);
-			satLayer.setVisible(true);
-		} else satLayer.setVisible(false);
-	});
-
-	$effect(() => {
-		if (symbolLayer)
-			updateSymbolLayer(
-				symbolLayer,
-				deviceGeoJSON,
-				$kismetStore.deviceAffiliations,
-				$takCotMessages
-			);
-	});
-
-	$effect(() => {
-		const { lat, lon } = $gpsStore.position;
-		if (!initialViewSet && $gpsStore.status.hasGPSFix && map && lat !== 0 && lon !== 0) {
-			map.flyTo({ center: [lon, lat], zoom: 15 });
-			initialViewSet = true;
-		}
-	});
-
-	$effect(() => {
-		const { lat, lon } = $gpsStore.position;
-		maybeFetchCellTowers(lat, lon, towerFetchState).then((r) => {
-			if (r) cellTowerGeoJSON = r;
-		});
-	});
-
-	$effect(() => {
-		if (map) syncLayerVisibility(map, $layerVisibility, $isolatedDeviceMAC, symbolLayer);
-	});
-
-	$effect(() => {
-		if (map)
-			syncClusterVisibility(map, $isolatedDeviceMAC, $layerVisibility.deviceDots !== false);
-	});
-
-	$effect(() => {
-		const _p = themeStore.palette;
-		if (map) syncThemePaint(map);
-	});
-
-	// ── Handlers ──
-
-	function handleMapLoad() {
-		if (!map) return;
-		const m = map;
-		const init = () => {
-			const r = setupMap(
-				m,
-				(ev: maplibregl.MapMouseEvent) => {
-					const result = deviceClickHandler(m, ev, $kismetStore.deviceAffiliations);
-					if (!result) return;
-					_popupLngLat = result.lngLat;
-					popupContent = result.content;
-					selectDevice(result.content.mac, { ...result.content });
-					if (result.content.clientCount > 0) isolateDevice(result.content.mac);
-					else if (result.content.parentAP) isolateDevice(result.content.parentAP);
-					else isolateDevice(null);
-				},
-				() => {
-					_popupLngLat = null;
-					popupContent = null;
-					isolateDevice(null);
-				},
-				$layerVisibility
-			);
-			satLayer = r.satLayer;
-			symbolLayer = r.symbolLayer;
-		};
-		if (!map.loaded()) map.once('load', init);
-		else init();
-	}
-
-	function handleLocateClick() {
-		if (map && gpsLngLat) map.flyTo({ center: gpsLngLat as [number, number], zoom: 18 });
-	}
 </script>
 
 <div class="map-area">
 	<MapLibre
-		bind:map
-		style={mapStyle}
+		bind:map={ms.map}
+		style={ms.mapStyle}
 		center={[0, 0]}
 		zoom={3}
 		attributionControl={false}
 		autoloadGlobalCss={false}
 		class="map-container"
-		onload={handleMapLoad}
+		onload={ms.handleMapLoad}
 	>
-		<GeoJSONSource id="detection-range-src" data={detectionRangeGeoJSON}>
+		<GeoJSONSource id="detection-range-src" data={ms.detectionRangeGeoJSON}>
 			<FillLayer
 				id="detection-range-fill"
 				paint={{
@@ -298,7 +74,7 @@
 			<div class="control-stack">
 				<button
 					class="locate-btn"
-					onclick={handleLocateClick}
+					onclick={ms.handleLocateClick}
 					title="Center on my location"
 				>
 					<svg
@@ -334,14 +110,14 @@
 			</div>
 		</CustomControl>
 
-		<GeoJSONSource id="accuracy-src" data={accuracyGeoJSON}>
+		<GeoJSONSource id="accuracy-src" data={ms.accuracyGeoJSON}>
 			<FillLayer
 				id="accuracy-fill"
-				paint={{ 'fill-color': accuracyColor, 'fill-opacity': 0.18 }}
+				paint={{ 'fill-color': ms.accuracyColor, 'fill-opacity': 0.18 }}
 			/>
 		</GeoJSONSource>
 
-		<GeoJSONSource id="cell-towers-src" data={cellTowerGeoJSON}>
+		<GeoJSONSource id="cell-towers-src" data={ms.cellTowerGeoJSON}>
 			<CircleLayer
 				id="cell-tower-circles"
 				source="cell-towers-src"
@@ -353,14 +129,7 @@
 					'circle-stroke-color': ['get', 'color'],
 					'circle-stroke-opacity': 0.9
 				}}
-				onclick={(ev) => {
-					if (!map) return;
-					const result = towerClickHandler(map, ev);
-					if (result) {
-						towerPopupLngLat = result.lngLat;
-						towerPopupContent = result.content;
-					}
-				}}
+				onclick={ms.handleTowerCircleClick}
 			/>
 			<MapLibreSymbolLayer
 				id="cell-tower-labels"
@@ -381,7 +150,7 @@
 			/>
 		</GeoJSONSource>
 
-		<GeoJSONSource id="connection-lines-src" data={connectionLinesGeoJSON}>
+		<GeoJSONSource id="connection-lines-src" data={ms.connectionLinesGeoJSON}>
 			<LineLayer
 				id="device-connection-lines"
 				paint={{ 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': 0.7 }}
@@ -390,7 +159,7 @@
 
 		<GeoJSONSource
 			id="devices-src"
-			data={deviceGeoJSON}
+			data={ms.deviceGeoJSON}
 			cluster={!$isolatedDeviceMAC}
 			clusterRadius={50}
 			clusterMaxZoom={16}
@@ -407,7 +176,7 @@
 					'circle-stroke-color': MAP_UI_COLORS.border.fallback
 				}}
 				onclick={(ev) => {
-					if (map) onClusterClick(map, ev);
+					if (ms.map) onClusterClick(ms.map, ev);
 				}}
 			/>
 			<MapLibreSymbolLayer
@@ -478,66 +247,47 @@
 					'circle-stroke-color': ['get', 'color'],
 					'circle-stroke-opacity': ['case', ['>', ['get', 'clientCount'], 0], 0.7, 0.5]
 				}}
-				onclick={(ev) => {
-					if (!map) return;
-					const result = deviceClickHandler(map, ev, $kismetStore.deviceAffiliations);
-					if (!result) return;
-					_popupLngLat = result.lngLat;
-					popupContent = result.content;
-					selectDevice(result.content.mac, { ...result.content });
-					if (result.content.clientCount > 0) isolateDevice(result.content.mac);
-					else if (result.content.parentAP) isolateDevice(result.content.parentAP);
-					else isolateDevice(null);
-				}}
+				onclick={ms.handleDeviceCircleClick}
 			/>
 		</GeoJSONSource>
 
-		{#if towerPopupLngLat && towerPopupContent}
+		{#if ms.towerPopupLngLat && ms.towerPopupContent}
 			<Popup
-				lnglat={towerPopupLngLat}
+				lnglat={ms.towerPopupLngLat}
 				class="palantir-popup"
 				closeButton={true}
-				onclose={() => {
-					towerPopupLngLat = null;
-					towerPopupContent = null;
-				}}
+				onclose={ms.closeTowerPopup}
 			>
-				<TowerPopup content={towerPopupContent} />
+				<TowerPopup content={ms.towerPopupContent} />
 			</Popup>
 		{/if}
 
-		{#if gpsLngLat && showCone && headingDeg !== null}
-			<Marker lnglat={gpsLngLat} anchor="center">
+		{#if ms.gpsLngLat && ms.showCone && ms.headingDeg !== null}
+			<Marker lnglat={ms.gpsLngLat} anchor="center">
 				{#snippet content()}
 					<div class="heading-cone">
 						<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — buildConeSVG() returns hardcoded SVG string from numeric heading, no user input -->
-						{@html buildConeSVG(headingDeg)}
+						{@html buildConeSVG(ms.headingDeg ?? 0)}
 					</div>
 				{/snippet}
 			</Marker>
 		{/if}
 
-		{#if gpsLngLat}
-			<Marker lnglat={gpsLngLat} anchor="center">
+		{#if ms.gpsLngLat}
+			<Marker lnglat={ms.gpsLngLat} anchor="center">
 				{#snippet content()}<div class="gps-dot"></div>{/snippet}
 			</Marker>
 		{/if}
 	</MapLibre>
 
-	{#if popupContent}
-		<DeviceOverlay
-			content={popupContent}
-			onclose={() => {
-				_popupLngLat = null;
-				popupContent = null;
-			}}
-		/>
+	{#if ms.popupContent}
+		<DeviceOverlay content={ms.popupContent} onclose={ms.closeDevicePopup} />
 	{/if}
 </div>
 
 <style>
 	@import './map/map-overrides.css';
-
+	@import './map/map-markers.css';
 	.map-area {
 		flex: 1;
 		position: relative;
@@ -546,39 +296,5 @@
 	.map-area :global(.map-container) {
 		width: 100%;
 		height: 100%;
-	}
-	.gps-dot {
-		width: 16px;
-		height: 16px;
-		background: var(--primary);
-		border: 2px solid var(--primary-foreground);
-		border-radius: 50%;
-		box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
-	}
-	.heading-cone {
-		pointer-events: none;
-	}
-	.locate-btn {
-		width: 34px;
-		height: 34px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		background: var(--card);
-		color: var(--primary);
-		border: 1px solid var(--border);
-		border-radius: 4px;
-		padding: 0;
-		margin: 0;
-	}
-	.locate-btn:hover {
-		background: var(--accent);
-		color: color-mix(in srgb, var(--primary) 80%, white);
-	}
-	.control-stack {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
 	}
 </style>
