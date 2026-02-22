@@ -1,12 +1,27 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 
-	import { browser } from '$app/environment';
-	import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agent-context-store';
+	import { lastInteractionEvent } from '$lib/stores/dashboard/agent-context-store';
 
-	// Props are no longer needed - context comes from store
+	import {
+		clearChat,
+		getInputValue,
+		getIsCheckingLLM,
+		getIsStreaming,
+		getLlmProvider,
+		getMessages,
+		handleInteractionEvent,
+		handleKeydown,
+		initializeChat,
+		sendMessage,
+		setChatContainer,
+		setInputValue
+	} from './agent-chat-logic.svelte';
+	import AgentChatMessage from './AgentChatMessage.svelte';
+	import AgentChatToolbar from './AgentChatToolbar.svelte';
+
+	// Props (kept for backward compatibility — currently unused by consumer)
 	interface Props {
 		selectedDevice?: string;
 		mapBounds?: { north: number; south: number; east: number; west: number };
@@ -15,290 +30,51 @@
 	}
 
 	let {
-		selectedDevice = $bindable(),
+		selectedDevice: _selectedDevice = $bindable(),
 		mapBounds: _mapBounds,
 		activeSignals: _activeSignals,
 		userLocation: _userLocation
 	}: Props = $props();
 
-	// Chat state
-	let messages = $state<
-		Array<{ role: 'user' | 'assistant' | 'system'; content: string; timestamp: string }>
-	>([]);
-	let inputValue = $state('');
-	let isStreaming = $state(false);
-	let currentRunId = $state<string | null>(null);
-	let _eventSource = $state<EventSource | null>(null);
-	let chatContainer: HTMLDivElement;
+	let chatContainerEl: HTMLDivElement;
 
-	// System info
-	let llmProvider = $state<'anthropic' | 'unavailable'>('unavailable');
-	let isCheckingLLM = $state(true);
+	// Reactive accessors from logic module
+	const messages = $derived(getMessages());
+	const inputValue = $derived(getInputValue());
+	const isStreaming = $derived(getIsStreaming());
+	const llmProvider = $derived(getLlmProvider());
+	const isCheckingLLM = $derived(getIsCheckingLLM());
 
-	// Check LLM availability on mount
-	onMount(async () => {
-		if (!browser) return;
+	const lastMessage = $derived(messages[messages.length - 1]);
+	const showTypingIndicator = $derived(
+		isStreaming && lastMessage?.role === 'assistant' && !lastMessage.content
+	);
 
-		try {
-			const res = await fetch('/api/agent/status');
-			if (res.ok) {
-				const data = await res.json();
-				llmProvider = data.provider;
-			}
-		} catch {
-			llmProvider = 'unavailable';
-		} finally {
-			isCheckingLLM = false;
-		}
-
-		// Add welcome message
-		messages.push({
-			role: 'system',
-			content:
-				llmProvider === 'anthropic'
-					? 'Argos Agent online (Claude Sonnet 4.5)'
-					: 'Agent unavailable. Set ANTHROPIC_API_KEY environment variable.',
-			timestamp: new Date().toISOString()
-		});
+	onMount(() => {
+		setChatContainer(chatContainerEl);
+		initializeChat();
 	});
 
 	// Auto-send device context when operator clicks a device on the map
 	$effect(() => {
-		const event = $lastInteractionEvent;
-		if (!event || isStreaming || llmProvider === 'unavailable') return;
-
-		if (event.type === 'device_selected' && event.data.mac) {
-			const deviceData = event.data;
-			// Build contextual message that embeds device data
-			const contextMessage =
-				`[OPERATOR SELECTED DEVICE]\n` +
-				`SSID: ${deviceData.ssid}\n` +
-				`MAC: ${deviceData.mac}\n` +
-				`RSSI: ${deviceData.rssi} dBm\n` +
-				`Type: ${deviceData.type}\n` +
-				`Manufacturer: ${deviceData.manufacturer}\n` +
-				`Channel: ${deviceData.channel}\n` +
-				`Frequency: ${deviceData.frequency} MHz\n` +
-				`Packets: ${deviceData.packets}\n\n` +
-				`Provide tactical analysis of this device.`;
-
-			// Auto-send to agent
-			sendMessageWithContent(contextMessage);
-
-			// Clear the event to prevent re-triggering
-			lastInteractionEvent.set(null);
-		}
+		handleInteractionEvent($lastInteractionEvent);
 	});
 
-	// Generate UUID (works in both secure and non-secure contexts)
-	function generateUUID(): string {
-		if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-			return crypto.randomUUID();
-		}
-		// Fallback UUID v4 generator for non-secure contexts
-		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-			const r = (Math.random() * 16) | 0;
-			const v = c === 'x' ? r : (r & 0x3) | 0x8;
-			return v.toString(16);
-		});
-	}
-
-	// Send message with specific content (used by auto-query and manual input)
-	async function sendMessageWithContent(content: string) {
-		if (isStreaming) return;
-
-		const userMessage = content;
-
-		// Add user message
-		messages.push({
-			role: 'user',
-			content: userMessage,
-			timestamp: new Date().toISOString()
-		});
-
-		// Start streaming response
-		isStreaming = true;
-		currentRunId = generateUUID();
-
-		// Create placeholder for assistant response
-		const assistantMessageIndex = messages.length;
-		messages.push({
-			role: 'assistant',
-			content: '',
-			timestamp: new Date().toISOString()
-		});
-
-		try {
-			// Get current agent context from store (AG-UI shared state)
-			const currentContext = get(agentContext);
-
-			// Build conversation history for context (last 10 messages)
-			const conversationHistory = messages
-				.filter((m) => m.role !== 'system')
-				.slice(-10)
-				.map((m) => ({ role: m.role, content: m.content }));
-
-			const response = await fetch('/api/agent/stream', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					message: userMessage,
-					messages: conversationHistory,
-					runId: currentRunId,
-					context: currentContext
-				})
-			});
-
-			if (!response.ok) throw new Error('Agent stream failed');
-
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
-
-			if (!reader) throw new Error('No response body');
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				const chunk = decoder.decode(value);
-				const lines = chunk.split('\n');
-
-				for (const line of lines) {
-					if (line.startsWith('data: ')) {
-						try {
-							const event = JSON.parse(line.slice(6));
-
-							if (event.type === 'TextMessageContent') {
-								// Append delta to assistant message
-								messages[assistantMessageIndex].content += event.delta;
-								scrollToBottom();
-							} else if (event.type === 'RunError') {
-								messages[assistantMessageIndex].content +=
-									`\n\n[Error: ${event.message}]`;
-							}
-						} catch {
-							// Skip invalid JSON
-						}
-					}
-				}
-			}
-		} catch (error) {
-			messages[assistantMessageIndex].content =
-				`Error: ${error instanceof Error ? error.message : String(error)}`;
-		} finally {
-			isStreaming = false;
-			currentRunId = null;
-		}
-	}
-
-	// Send message from input (wrapper for sendMessageWithContent)
-	async function sendMessage() {
-		if (!inputValue.trim() || isStreaming) return;
-		const userMessage = inputValue.trim();
-		inputValue = '';
-		await sendMessageWithContent(userMessage);
-	}
-
-	function scrollToBottom() {
-		if (chatContainer) {
-			setTimeout(() => {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
-			}, 0);
-		}
-	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			sendMessage();
-		}
-	}
-
-	function clearChat() {
-		messages = [
-			{
-				role: 'system',
-				content:
-					llmProvider === 'anthropic'
-						? 'Chat cleared. Argos Agent ready.'
-						: 'Chat cleared. Argos Agent ready (offline mode).',
-				timestamp: new Date().toISOString()
-			}
-		];
+	function onInput(e: Event) {
+		setInputValue((e.target as HTMLTextAreaElement).value);
 	}
 </script>
 
 <div class="agent-chat-panel">
-	<!-- Chat toolbar -->
-	<div class="chat-toolbar">
-		<div class="toolbar-left">
-			<svg
-				width="16"
-				height="16"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				class="agent-icon"
-			>
-				<path d="M12 2L2 7l10 5 10-5-10-5z" />
-				<path d="M2 17l10 5 10-5" />
-				<path d="M2 12l10 5 10-5" />
-			</svg>
-			<span class="toolbar-title">Argos Agent</span>
-			{#if !isCheckingLLM}
-				<span class="llm-badge" class:online={llmProvider !== 'unavailable'}>
-					{llmProvider === 'anthropic' ? 'Claude' : 'Offline'}
-				</span>
-			{/if}
-		</div>
-		<div class="toolbar-right">
-			<button class="toolbar-btn" title="Clear chat" onclick={clearChat}>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<polyline points="3 6 5 6 21 6" />
-					<path
-						d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-					/>
-				</svg>
-			</button>
-		</div>
-	</div>
+	<AgentChatToolbar {llmProvider} {isCheckingLLM} onClear={clearChat} />
 
 	<!-- Messages container -->
-	<div class="chat-messages" bind:this={chatContainer}>
+	<div class="chat-messages" bind:this={chatContainerEl}>
 		{#each messages as message}
-			<div
-				class="message"
-				class:user={message.role === 'user'}
-				class:assistant={message.role === 'assistant'}
-				class:system={message.role === 'system'}
-			>
-				<div class="message-header">
-					<span class="message-role">
-						{message.role === 'user'
-							? 'OPERATOR'
-							: message.role === 'assistant'
-								? 'AGENT'
-								: 'SYSTEM'}
-					</span>
-					<span class="message-timestamp">
-						{new Date(message.timestamp).toLocaleTimeString()}
-					</span>
-				</div>
-				<div class="message-content">
-					{message.content}
-				</div>
-			</div>
+			<AgentChatMessage {message} />
 		{/each}
 
-		{#if isStreaming && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1].content}
+		{#if showTypingIndicator}
 			<div class="typing-indicator">
 				<span class="dot"></span>
 				<span class="dot"></span>
@@ -310,7 +86,8 @@
 	<!-- Input area -->
 	<div class="chat-input-area">
 		<textarea
-			bind:value={inputValue}
+			value={inputValue}
+			oninput={onInput}
 			onkeydown={handleKeydown}
 			placeholder={llmProvider === 'unavailable'
 				? 'Agent unavailable. Configure ANTHROPIC_API_KEY in environment.'
@@ -366,69 +143,6 @@
 		font-size: 13px;
 	}
 
-	/* Toolbar */
-	.chat-toolbar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 8px 12px;
-		background: var(--card);
-		border-bottom: 1px solid var(--border);
-	}
-
-	.toolbar-left {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.agent-icon {
-		color: var(--primary);
-	}
-
-	.toolbar-title {
-		color: var(--foreground);
-		font-weight: 500;
-	}
-
-	.llm-badge {
-		padding: 2px 8px;
-		border-radius: 3px;
-		background: var(--border);
-		color: var(--muted-foreground);
-		font-size: 11px;
-		text-transform: uppercase;
-	}
-
-	.llm-badge.online {
-		background: color-mix(in srgb, var(--success) 20%, transparent);
-		color: var(--success);
-	}
-
-	.toolbar-right {
-		display: flex;
-		gap: 4px;
-	}
-
-	.toolbar-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		background: transparent;
-		border: none;
-		color: var(--foreground);
-		cursor: pointer;
-		border-radius: 4px;
-		transition: background 0.1s;
-	}
-
-	.toolbar-btn:hover {
-		background: var(--accent);
-	}
-
-	/* Messages */
 	.chat-messages {
 		flex: 1;
 		overflow-y: auto;
@@ -438,67 +152,6 @@
 		gap: 8px;
 	}
 
-	.message {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-	}
-
-	.message-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.message-role {
-		font-size: 11px;
-		font-weight: 600;
-		letter-spacing: 0.5px;
-	}
-
-	.message.user .message-role {
-		color: var(--chart-2);
-	}
-
-	.message.assistant .message-role {
-		color: var(--chart-4);
-	}
-
-	.message.system .message-role {
-		color: var(--chart-1);
-	}
-
-	.message-timestamp {
-		font-size: 10px;
-		color: var(--muted-foreground);
-	}
-
-	.message-content {
-		padding: 8px 12px;
-		border-radius: 4px;
-		line-height: 1.5;
-		white-space: pre-wrap;
-		word-wrap: break-word;
-	}
-
-	.message.user .message-content {
-		background: color-mix(in srgb, var(--accent) 60%, transparent);
-		border-left: 3px solid var(--chart-2);
-	}
-
-	.message.assistant .message-content {
-		background: var(--card);
-		border-left: 3px solid var(--chart-4);
-	}
-
-	.message.system .message-content {
-		background: var(--muted);
-		border-left: 3px solid var(--chart-1);
-		font-size: 12px;
-		color: var(--muted-foreground);
-	}
-
-	/* Typing indicator */
 	.typing-indicator {
 		display: flex;
 		gap: 4px;
@@ -532,7 +185,6 @@
 		}
 	}
 
-	/* Input area */
 	.chat-input-area {
 		display: flex;
 		gap: 8px;
@@ -599,7 +251,6 @@
 		}
 	}
 
-	/* Scrollbar styling */
 	.chat-messages::-webkit-scrollbar {
 		width: 10px;
 	}
