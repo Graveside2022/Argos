@@ -1,0 +1,44 @@
+/* PanelContainer styles — drag handle and position-specific overrides */
+
+/* ---- Drag handle ---- */
+.drag-handle {
+	height: 6px;
+	min-height: 6px;
+	background: var(--palantir-bg-surface);
+	cursor: ns-resize;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.15s ease;
+}
+
+.panel-container[data-position='top'] .drag-handle {
+	border-top: 1px solid var(--palantir-border-subtle);
+}
+
+.panel-container[data-position='bottom'] .drag-handle {
+	border-bottom: 1px solid var(--palantir-border-subtle);
+}
+
+.drag-handle:hover,
+.drag-handle:focus {
+	background: var(--palantir-bg-elevated);
+}
+
+.drag-handle:focus {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--palantir-accent);
+}
+
+.drag-indicator {
+	width: 40px;
+	height: 3px;
+	background: var(--palantir-border-default);
+	border-radius: 2px;
+	transition: background 0.15s ease;
+}
+
+.drag-handle:hover .drag-indicator,
+.drag-handle:focus .drag-indicator {
+	background: var(--palantir-text-tertiary);
+}
