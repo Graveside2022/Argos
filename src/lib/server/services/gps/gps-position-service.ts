@@ -1,8 +1,12 @@
-import { Socket } from 'net';
-
 import { logger } from '$lib/utils/logger';
 
 import { parseGpsdLines, type TPVData } from './gps-data-parser';
+import {
+	buildFixedPositionResponse,
+	buildNoDataResponse,
+	buildNoFixResponse
+} from './gps-response-builder';
+import { queryGpsd } from './gps-socket';
 
 // Cache last known satellite count from full SKY messages (accurate per-satellite data).
 // Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
@@ -39,80 +43,7 @@ export interface GpsPositionResponse {
 	mode?: number;
 }
 
-/**
- * Query gpsd using a short-lived TCP socket connection.
- * This avoids spawning bash/nc/timeout child processes on every call,
- * eliminating the ~12,960 process spawns over 6 hours that contributed
- * to memory exhaustion.
- */
-function queryGpsd(timeoutMs: number = 3000): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		let resolved = false;
-
-		const socket = new Socket();
-		socket.setTimeout(timeoutMs);
-
-		const cleanup = () => {
-			if (!socket.destroyed) {
-				socket.destroy();
-			}
-		};
-
-		const finish = (result: string | null, error?: Error) => {
-			if (resolved) return;
-			resolved = true;
-			cleanup();
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result || '');
-			}
-		};
-
-		socket.on('connect', () => {
-			// Send WATCH command to enable JSON output
-			socket.write('?WATCH={"enable":true,"json":true}\n');
-
-			// Collect data for up to 2 seconds, then close
-			setTimeout(() => {
-				finish(Buffer.concat(chunks).toString('utf8'));
-			}, 2000);
-		});
-
-		socket.on('data', (chunk: Buffer) => {
-			chunks.push(chunk);
-		});
-
-		socket.on('timeout', () => {
-			if (chunks.length > 0) {
-				finish(Buffer.concat(chunks).toString('utf8'));
-			} else {
-				finish(null, new Error('Connection to gpsd timed out'));
-			}
-		});
-
-		socket.on('error', (err: Error) => {
-			finish(null, err);
-		});
-
-		socket.on('close', () => {
-			if (!resolved) {
-				if (chunks.length > 0) {
-					finish(Buffer.concat(chunks).toString('utf8'));
-				} else {
-					finish(null, new Error('Connection closed without data'));
-				}
-			}
-		});
-
-		socket.connect(2947, 'localhost');
-	});
-}
-
-/**
- * Build a GPS response JSON payload.
- */
+/** Build a GPS response JSON payload, dispatching to the appropriate response builder */
 function buildGpsResponse(
 	success: boolean,
 	tpvData: TPVData | null,
@@ -120,57 +51,12 @@ function buildGpsResponse(
 	details?: string
 ): GpsPositionResponse {
 	if (success && tpvData && tpvData.mode >= 2) {
-		return {
-			success: true,
-			data: {
-				latitude: tpvData.lat ?? null,
-				longitude: tpvData.lon ?? null,
-				altitude: tpvData.alt ?? null,
-				speed: tpvData.speed ?? null,
-				heading: tpvData.track ?? null,
-				accuracy: tpvData.epx ?? tpvData.epy ?? 10,
-				satellites: cachedSatelliteCount,
-				fix: tpvData.mode,
-				time: tpvData.time ?? null
-			}
-		};
+		return buildFixedPositionResponse(tpvData, cachedSatelliteCount);
 	}
-
 	if (tpvData) {
-		return {
-			success: false,
-			error: error || 'No GPS fix available',
-			data: {
-				latitude: null,
-				longitude: null,
-				altitude: null,
-				speed: null,
-				heading: null,
-				accuracy: null,
-				satellites: cachedSatelliteCount,
-				fix: tpvData.mode,
-				time: tpvData.time ?? null
-			},
-			mode: tpvData.mode
-		};
+		return buildNoFixResponse(tpvData, cachedSatelliteCount, error);
 	}
-
-	return {
-		success: false,
-		error: error || 'GPS service not available. Make sure gpsd is running.',
-		details: details || undefined,
-		data: {
-			latitude: null,
-			longitude: null,
-			altitude: null,
-			speed: null,
-			heading: null,
-			accuracy: null,
-			satellites: null,
-			fix: 0,
-			time: null
-		}
-	};
+	return buildNoDataResponse(error, details);
 }
 
 /**
@@ -260,7 +146,7 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 	}
 
 	try {
-		const allLines = await queryGpsd(3000);
+		const allLines = await queryGpsd({ timeoutMs: 3000, collectMs: 2000 });
 		const { tpvData, satelliteCount } = parseGpsdLines(allLines);
 
 		// Update satellite count if a SKY message was found
