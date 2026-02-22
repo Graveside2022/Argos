@@ -170,8 +170,117 @@ function parseSatellites(data: unknown): Satellite[] {
 }
 
 /**
- * Get satellite data from gpsd with circuit breaker and caching
- * Uses TCP socket to query gpsd for SKY messages containing satellite visibility data
+ * Check the satellite circuit breaker and return a cached or error response
+ * if the breaker is still open.  Returns null when the caller should proceed
+ * with a fresh gpsd query (breaker closed or half-open).
+ */
+function checkSatelliteCircuitBreaker(): SatellitesApiResponse | null {
+	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) {
+		return null;
+	}
+
+	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
+
+	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
+		// Cooldown elapsed -- allow a retry (half-open state)
+		return null;
+	}
+
+	if (!circuitBreakerLogged) {
+		logWarn(
+			'[GPS Satellites] Circuit breaker open: gpsd unreachable',
+			{ consecutiveFailures },
+			'gps-satellites-circuit-breaker'
+		);
+		circuitBreakerLogged = true;
+	}
+
+	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
+		return { success: true, satellites: cachedSatellites };
+	}
+
+	return { success: false, satellites: [], error: 'GPS service temporarily unavailable' };
+}
+
+interface ParsedSkyResult {
+	satellites: Satellite[];
+	usedSatCount: number;
+}
+
+/**
+ * Parse all gpsd output lines, collecting satellite arrays from SKY messages
+ * and tracking the maximum uSat (used satellite count) seen.
+ */
+function parseGpsdSkyLines(rawOutput: string): ParsedSkyResult {
+	let satellites: Satellite[] = [];
+	let usedSatCount = 0;
+	const lines = rawOutput.trim().split('\n');
+
+	for (const line of lines) {
+		if (line.trim() === '') continue;
+
+		const result = safeJsonParse(line, GpsdSkySchema, 'gps-satellites');
+		if (!result.success) continue;
+
+		const parsed = parseSatellites(result.data);
+		if (parsed.length > satellites.length) {
+			satellites = parsed;
+		}
+
+		// Capture uSat (used satellite count) if present
+		// Safe: gpsd response data cast to Record for SKY/TPV field access
+		const obj = result.data as Record<string, unknown>;
+		if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
+			usedSatCount = obj.uSat;
+		}
+	}
+
+	return { satellites, usedSatCount };
+}
+
+/**
+ * Mark the top N satellites (by signal strength) as "used" based on the
+ * uSat count from gpsd.  Mutates the satellite array in place.
+ */
+function markUsedSatellitesBySnr(satellites: Satellite[], usedSatCount: number): void {
+	if (usedSatCount <= 0 || satellites.length === 0) return;
+
+	const sorted = [...satellites].sort((a, b) => b.snr - a.snr);
+	for (let i = 0; i < Math.min(usedSatCount, sorted.length); i++) {
+		const sat = satellites.find((s) => s.prn === sorted[i].prn);
+		if (sat) sat.used = true;
+	}
+}
+
+/**
+ * Record a gpsd satellite connection failure and return a cached or error
+ * response.  Activates the circuit breaker after reaching the threshold.
+ */
+function handleSatelliteQueryFailure(error: unknown): SatellitesApiResponse {
+	consecutiveFailures++;
+	lastFailureTimestamp = Date.now();
+
+	if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
+		logWarn(
+			'[GPS Satellites] gpsd connection failed, circuit breaker activating',
+			{
+				consecutiveFailures,
+				error: error instanceof Error ? error.message : String(error)
+			},
+			'gps-satellites-circuit-open'
+		);
+	}
+
+	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
+		return { success: true, satellites: cachedSatellites };
+	}
+
+	return { success: false, satellites: [], error: 'GPS service not available' };
+}
+
+/**
+ * Get satellite data from gpsd with circuit breaker and caching.
+ * Uses TCP socket to query gpsd for SKY messages containing satellite visibility data.
  *
  * Features:
  * - Circuit breaker pattern (3 failures triggers 30s cooldown)
@@ -181,87 +290,19 @@ function parseSatellites(data: unknown): Satellite[] {
  * @returns Satellite data with success status and error messages
  */
 export async function getSatelliteData(): Promise<SatellitesApiResponse> {
-	// Circuit breaker
-	if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
-		const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
-
-		if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN_MS) {
-			if (!circuitBreakerLogged) {
-				logWarn(
-					'[GPS Satellites] Circuit breaker open: gpsd unreachable',
-					{ consecutiveFailures },
-					'gps-satellites-circuit-breaker'
-				);
-				circuitBreakerLogged = true;
-			}
-
-			// Serve cached data if available
-			if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
-				return {
-					success: true,
-					satellites: cachedSatellites
-				};
-			}
-
-			return {
-				success: false,
-				satellites: [],
-				error: 'GPS service temporarily unavailable'
-			};
-		}
-	}
+	const circuitBreakerResponse = checkSatelliteCircuitBreaker();
+	if (circuitBreakerResponse) return circuitBreakerResponse;
 
 	// Serve cached data if fresh
 	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < CACHE_TTL_MS) {
-		return {
-			success: true,
-			satellites: cachedSatellites
-		};
+		return { success: true, satellites: cachedSatellites };
 	}
 
 	try {
-		const allLines = await queryGpsd(12000); // 12s timeout to ensure satellite array capture
+		const allLines = await queryGpsd(12000);
+		const { satellites, usedSatCount } = parseGpsdSkyLines(allLines);
 
-		let satellites: Satellite[] = [];
-		let usedSatCount = 0;
-		const lines = allLines.trim().split('\n');
-
-		// Collect all SKY messages with satellite arrays and use the one with most satellites
-		// Also capture uSat (used satellite count) from SKY messages that have it
-		// (gpsd sends multiple SKY messages - some with uSat count, some with satellite details)
-		for (const line of lines) {
-			if (line.trim() === '') continue;
-
-			const result = safeJsonParse(line, GpsdSkySchema, 'gps-satellites');
-			if (!result.success) {
-				continue;
-			}
-
-			const parsed = parseSatellites(result.data);
-			// Keep the SKY message with the most satellites
-			if (parsed.length > satellites.length) {
-				satellites = parsed;
-			}
-
-			// Capture uSat (used satellite count) if present
-			// Safe: Type cast for dynamic data access
-			// Safe: gpsd response data cast to Record for SKY/TPV field access
-			const obj = result.data as Record<string, unknown>;
-			if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
-				usedSatCount = obj.uSat;
-			}
-		}
-
-		// Mark the first N satellites as "used" based on uSat count
-		// (gpsd doesn't mark individual satellites as used in the satellite array messages)
-		if (usedSatCount > 0 && satellites.length > 0) {
-			// Sort by SNR (descending) and mark top N as used
-			const sorted = [...satellites].sort((a, b) => b.snr - a.snr);
-			for (let i = 0; i < Math.min(usedSatCount, sorted.length); i++) {
-				const sat = satellites.find((s) => s.prn === sorted[i].prn);
-				if (sat) sat.used = true;
-			}
-		}
+		markUsedSatellitesBySnr(satellites, usedSatCount);
 
 		// Success - reset circuit breaker
 		consecutiveFailures = 0;
@@ -271,37 +312,8 @@ export async function getSatelliteData(): Promise<SatellitesApiResponse> {
 		cachedSatellites = satellites;
 		cachedTimestamp = Date.now();
 
-		return {
-			success: true,
-			satellites
-		};
+		return { success: true, satellites };
 	} catch (error: unknown) {
-		consecutiveFailures++;
-		lastFailureTimestamp = Date.now();
-
-		if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-			logWarn(
-				'[GPS Satellites] gpsd connection failed, circuit breaker activating',
-				{
-					consecutiveFailures,
-					error: error instanceof Error ? error.message : String(error)
-				},
-				'gps-satellites-circuit-open'
-			);
-		}
-
-		// Serve cached data if available
-		if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
-			return {
-				success: true,
-				satellites: cachedSatellites
-			};
-		}
-
-		return {
-			success: false,
-			satellites: [],
-			error: 'GPS service not available'
-		};
+		return handleSatelliteQueryFailure(error);
 	}
 }

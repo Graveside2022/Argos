@@ -15,9 +15,23 @@ export function generateCategoryREADME(
 	category: ViolationCategory,
 	depAnalysis: DependencyAnalysis
 ): string {
-	const lines: string[] = [];
+	const sections = [
+		buildHeaderSection(category),
+		buildQuickSummarySection(category),
+		buildDependencySection(category, depAnalysis),
+		buildViolationDetailsSection(category),
+		buildAnalysisBodySections(category, depAnalysis),
+		buildComplianceImpactSection(category, depAnalysis)
+	];
 
-	// Header
+	return sections.join('\n');
+}
+
+// --- Section builders for generateCategoryREADME ---
+
+/** Build the document header with category metadata and priority */
+function buildHeaderSection(category: ViolationCategory): string {
+	const lines: string[] = [];
 	lines.push(`# ${category.name} Analysis`);
 	lines.push('');
 	lines.push(
@@ -32,8 +46,12 @@ export function generateCategoryREADME(
 	lines.push('');
 	lines.push('---');
 	lines.push('');
+	return lines.join('\n');
+}
 
-	// Quick Summary
+/** Build the quick summary section with problem, rule, and solution */
+function buildQuickSummarySection(category: ViolationCategory): string {
+	const lines: string[] = [];
 	lines.push('## 📊 Quick Summary');
 	lines.push('');
 	lines.push(`**Problem:** ${category.description}`);
@@ -44,10 +62,30 @@ export function generateCategoryREADME(
 	lines.push('');
 	lines.push('---');
 	lines.push('');
+	return lines.join('\n');
+}
 
-	// Dependency Analysis
+/** Build the dependency requirements section including install/verify commands */
+function buildDependencySection(
+	category: ViolationCategory,
+	depAnalysis: DependencyAnalysis
+): string {
+	const lines: string[] = [];
 	lines.push('## 📦 Dependency Requirements');
 	lines.push('');
+	lines.push(formatDependencyDetails(category, depAnalysis));
+	lines.push(formatCommandBlocks(depAnalysis));
+	lines.push('---');
+	lines.push('');
+	return lines.join('\n');
+}
+
+/** Format dependency listing: either zero-dep rationale or per-package breakdown */
+function formatDependencyDetails(
+	category: ViolationCategory,
+	depAnalysis: DependencyAnalysis
+): string {
+	const lines: string[] = [];
 
 	if (depAnalysis.newDependencies.length === 0) {
 		lines.push('✅ **ZERO new dependencies required!**');
@@ -59,7 +97,6 @@ export function generateCategoryREADME(
 		lines.push(`**Bundle Size Impact:** +${depAnalysis.bundleSizeImpactKB}KB`);
 		lines.push(`**Total Cost:** ${depAnalysis.totalCost}`);
 		lines.push('');
-
 		for (const dep of depAnalysis.newDependencies) {
 			lines.push(`### ${dep.name}`);
 			lines.push(`- **Version:** ${dep.version}`);
@@ -70,7 +107,13 @@ export function generateCategoryREADME(
 		}
 	}
 
-	// Installation Commands
+	return lines.join('\n');
+}
+
+/** Format install and verification command blocks */
+function formatCommandBlocks(depAnalysis: DependencyAnalysis): string {
+	const lines: string[] = [];
+
 	if (depAnalysis.installCommands.length > 0) {
 		lines.push('**Installation:**');
 		lines.push('');
@@ -82,7 +125,6 @@ export function generateCategoryREADME(
 		lines.push('');
 	}
 
-	// Verification Commands
 	lines.push('**Verification:**');
 	lines.push('');
 	lines.push('```bash');
@@ -91,17 +133,18 @@ export function generateCategoryREADME(
 	}
 	lines.push('```');
 	lines.push('');
-	lines.push('---');
-	lines.push('');
+	return lines.join('\n');
+}
 
-	// Violation Details
+/** Build the detected violations section with a sample of up to 10 entries */
+function buildViolationDetailsSection(category: ViolationCategory): string {
+	const lines: string[] = [];
 	lines.push('## 🔍 Detected Violations');
 	lines.push('');
 	lines.push(`**Files Affected:** ${getUniqueFiles(category.violations).length}`);
 	lines.push(`**Total Occurrences:** ${category.violations.length}`);
 	lines.push('');
 
-	// Sample violations (limit to 10)
 	const sampleViolations = category.violations.slice(0, 10);
 	for (const [idx, violation] of sampleViolations.entries()) {
 		lines.push(`### ${idx + 1}. ${violation.filePath}`);
@@ -125,8 +168,16 @@ export function generateCategoryREADME(
 
 	lines.push('---');
 	lines.push('');
+	return lines.join('\n');
+}
 
-	// Implementation Options
+/** Build the remediation, risk, recommendation, and next steps sections */
+function buildAnalysisBodySections(
+	category: ViolationCategory,
+	depAnalysis: DependencyAnalysis
+): string {
+	const lines: string[] = [];
+
 	lines.push('## 🔄 Remediation Strategy');
 	lines.push('');
 	lines.push(getRemediationOptions(category, depAnalysis));
@@ -134,7 +185,6 @@ export function generateCategoryREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Risk Assessment
 	lines.push('## ⚖️ Risk Assessment');
 	lines.push('');
 	lines.push(`**Overall Risk Level:** ${depAnalysis.riskLevel}`);
@@ -144,7 +194,6 @@ export function generateCategoryREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Recommendation
 	lines.push('## 🎯 Recommendation');
 	lines.push('');
 	lines.push(getRecommendation(category, depAnalysis));
@@ -152,15 +201,21 @@ export function generateCategoryREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Next Steps
 	lines.push('## 📖 Next Steps');
 	lines.push('');
 	lines.push(getNextSteps(category, depAnalysis));
 	lines.push('');
 	lines.push('---');
 	lines.push('');
+	return lines.join('\n');
+}
 
-	// Compliance Impact
+/** Build the compliance impact section showing post-remediation projections */
+function buildComplianceImpactSection(
+	category: ViolationCategory,
+	depAnalysis: DependencyAnalysis
+): string {
+	const lines: string[] = [];
 	lines.push('## 📊 Impact on Compliance Score');
 	lines.push('');
 	lines.push('**After Remediation:**');
@@ -171,11 +226,10 @@ export function generateCategoryREADME(
 	lines.push(`- **Estimated Timeline:** ${category.estimatedTimelineWeeks} weeks`);
 	lines.push(`- **Risk Level:** ${depAnalysis.riskLevel}`);
 	lines.push('');
-
 	return lines.join('\n');
 }
 
-// Helper functions
+// --- Lookup helpers ---
 
 function getPriorityIcon(priority: string): string {
 	switch (priority) {
@@ -328,11 +382,26 @@ function getRiskIcon(risk: string): string {
 	}
 }
 
+/** Build priority-specific recommendation with cost-benefit analysis */
 function getRecommendation(category: ViolationCategory, depAnalysis: DependencyAnalysis): string {
 	const lines: string[] = [];
 
 	lines.push(`### ✅ **Recommended Approach for ${category.name}**`);
 	lines.push('');
+	lines.push(getPriorityGuidance(category));
+	lines.push('');
+	lines.push('**Cost-Benefit Analysis:**');
+	lines.push(`- Dependencies: ${depAnalysis.totalCost}`);
+	lines.push(`- Risk: ${depAnalysis.riskLevel}`);
+	lines.push(`- Timeline: ${category.estimatedTimelineWeeks} weeks`);
+	lines.push(`- Impact: Resolves ${category.violations.length} violations`);
+
+	return lines.join('\n');
+}
+
+/** Return priority-specific guidance text for the recommendation section */
+function getPriorityGuidance(category: ViolationCategory): string {
+	const lines: string[] = [];
 
 	if (category.priority === 'CRITICAL') {
 		lines.push('**Priority:** Immediate attention required');
@@ -371,13 +440,6 @@ function getRecommendation(category: ViolationCategory, depAnalysis: DependencyA
 			'LOW priority violations are not urgent. Focus on CRITICAL and HIGH priorities first.'
 		);
 	}
-
-	lines.push('');
-	lines.push('**Cost-Benefit Analysis:**');
-	lines.push(`- Dependencies: ${depAnalysis.totalCost}`);
-	lines.push(`- Risk: ${depAnalysis.riskLevel}`);
-	lines.push(`- Timeline: ${category.estimatedTimelineWeeks} weeks`);
-	lines.push(`- Impact: Resolves ${category.violations.length} violations`);
 
 	return lines.join('\n');
 }

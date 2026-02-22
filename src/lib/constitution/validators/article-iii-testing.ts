@@ -36,26 +36,32 @@ export async function validateArticleIII(projectRoot: string): Promise<Violation
 		// Check for missing test files (§3.1)
 		violations.push(...(await checkMissingTestFiles(projectRoot)));
 	} catch (_error) {
-		// If coverage file not found, report as violation
-		violations.push({
-			id: randomUUID(),
-			severity: 'CRITICAL',
-			articleReference: 'Article III §3.2',
-			ruleViolated: 'Coverage data not available',
-			filePath: 'coverage/coverage-final.json',
-			lineNumber: 1,
-			violationType: 'coverage-not-found',
-			suggestedFix: 'Run `npm run test:coverage` to generate coverage data',
-			isPreExisting: false,
-			exemptionStatus: 'none'
-		});
+		violations.push(buildCoverageNotFoundViolation());
 	}
 
 	return violations;
 }
 
 /**
- * Check for source files without corresponding test files (§3.1)
+ * Build a violation for missing coverage data
+ */
+function buildCoverageNotFoundViolation(): Violation {
+	return {
+		id: randomUUID(),
+		severity: 'CRITICAL',
+		articleReference: 'Article III §3.2',
+		ruleViolated: 'Coverage data not available',
+		filePath: 'coverage/coverage-final.json',
+		lineNumber: 1,
+		violationType: 'coverage-not-found',
+		suggestedFix: 'Run `npm run test:coverage` to generate coverage data',
+		isPreExisting: false,
+		exemptionStatus: 'none'
+	};
+}
+
+/**
+ * Check for source files without corresponding test files (section 3.1)
  */
 async function checkMissingTestFiles(projectRoot: string): Promise<Violation[]> {
 	const violations: Violation[] = [];
@@ -75,18 +81,7 @@ async function checkMissingTestFiles(projectRoot: string): Promise<Violation[]> 
 		const testExists = await glob(testFile, { cwd: projectRoot });
 
 		if (testExists.length === 0 && shouldHaveTests(sourceFile)) {
-			violations.push({
-				id: randomUUID(),
-				severity: 'MEDIUM',
-				articleReference: 'Article III §3.1',
-				ruleViolated: 'Components and utilities must have tests',
-				filePath: sourceFile,
-				lineNumber: 1,
-				violationType: 'missing-test-file',
-				suggestedFix: `Create test file: ${testFile}`,
-				isPreExisting: false,
-				exemptionStatus: 'none'
-			});
+			violations.push(buildMissingTestViolation(sourceFile, testFile));
 		}
 	}
 
@@ -94,34 +89,68 @@ async function checkMissingTestFiles(projectRoot: string): Promise<Violation[]> 
 }
 
 /**
- * Determine if file should have tests
- * Realistic exclusions for files that are integration-tested, type-only, or config-like
+ * Build a violation for a source file missing its test file
+ */
+function buildMissingTestViolation(sourceFile: string, testFile: string): Violation {
+	return {
+		id: randomUUID(),
+		severity: 'MEDIUM',
+		articleReference: 'Article III §3.1',
+		ruleViolated: 'Components and utilities must have tests',
+		filePath: sourceFile,
+		lineNumber: 1,
+		violationType: 'missing-test-file',
+		suggestedFix: `Create test file: ${testFile}`,
+		isPreExisting: false,
+		exemptionStatus: 'none'
+	};
+}
+
+/**
+ * Determine if file should have tests.
+ * Realistic exclusions for files that are integration-tested, type-only, or config-like.
  */
 function shouldHaveTests(filePath: string): boolean {
-	// SvelteKit route files — integration/e2e tested, not unit tested
-	if (filePath.includes('/routes/')) {
+	if (isRouteOrSpecialFile(filePath)) {
 		return false;
 	}
 
-	// SvelteKit special files — layout, page, error, server handlers
-	const basename = filePath.split('/').pop() || '';
-	if (/^\+(page|layout|error|server)\.(ts|svelte)$/.test(basename)) {
+	if (isTypeOrStaticDataFile(filePath)) {
 		return false;
 	}
+
+	if (isIntegrationTestedModule(filePath)) {
+		return false;
+	}
+
+	if (isBarrelFile(filePath)) {
+		return false;
+	}
+
+	return isTestableSourceFile(filePath);
+}
+
+/**
+ * Check if file is a SvelteKit route or special framework file (layout, page, error, server)
+ */
+function isRouteOrSpecialFile(filePath: string): boolean {
+	if (filePath.includes('/routes/')) {
+		return true;
+	}
+
+	const basename = getBasename(filePath);
+	return /^\+(page|layout|error|server)\.(ts|svelte)$/.test(basename);
+}
+
+/**
+ * Check if file is a type definition, constants, config, or static data file
+ */
+function isTypeOrStaticDataFile(filePath: string): boolean {
+	const basename = getBasename(filePath);
 
 	// Type/interface-only files — no runtime behavior to test
 	if (filePath.includes('/types') || filePath.endsWith('.d.ts') || basename === 'types.ts') {
-		return false;
-	}
-
-	// MCP server files — diagnostic tools, tested via integration
-	if (filePath.includes('/server/mcp/')) {
-		return false;
-	}
-
-	// Constitution/audit infrastructure — self-validates
-	if (filePath.includes('/constitution/')) {
-		return false;
+		return true;
 	}
 
 	// Constants and static data files
@@ -130,69 +159,69 @@ function shouldHaveTests(filePath: string): boolean {
 		basename.includes('config') ||
 		basename.includes('data')
 	) {
-		return false;
-	}
-
-	// Store files with simple reactive wrappers
-	if (filePath.includes('/stores/') && basename.endsWith('.ts')) {
-		return false;
-	}
-
-	// Dashboard components — tested via E2E tests, not unit tests
-	if (filePath.includes('/components/dashboard/')) {
-		return false;
-	}
-
-	// API client modules — integration tested via API endpoints
-	if (basename.includes('api') || filePath.includes('/api/')) {
-		return false;
-	}
-
-	// Service modules — integration tested
-	if (filePath.includes('/services/') || basename.includes('service')) {
-		return false;
-	}
-
-	// Server-side modules — integration tested via API endpoints
-	if (filePath.includes('/lib/server/')) {
-		return false;
-	}
-
-	// Utility modules — integration tested
-	if (filePath.includes('/lib/utils/') || filePath.includes('/lib/validators/')) {
-		return false;
-	}
-
-	// WebSocket modules — integration tested
-	if (filePath.includes('/websocket/')) {
-		return false;
-	}
-
-	// Hardware integration modules — integration tested
-	if (
-		filePath.includes('/hackrf/') ||
-		filePath.includes('/usrp/') ||
-		filePath.includes('/gps/') ||
-		filePath.includes('/kismet/')
-	) {
-		return false;
-	}
-
-	// Tactical map modules — integration tested
-	if (filePath.includes('/tactical-map/')) {
-		return false;
+		return true;
 	}
 
 	// Data files — static data, no logic to test
 	if (filePath.includes('/lib/data/') || filePath.includes('/constants/')) {
-		return false;
+		return true;
 	}
 
-	// Barrel files (index.ts) — just re-exports, no logic
-	if (filePath.endsWith('/index.ts')) {
-		return false;
+	return false;
+}
+
+/**
+ * Check if file belongs to a module category that is validated via integration/E2E tests
+ * rather than unit tests (MCP servers, services, stores, server modules, etc.)
+ */
+function isIntegrationTestedModule(filePath: string): boolean {
+	const basename = getBasename(filePath);
+
+	const integrationTestedPaths = [
+		'/server/mcp/',
+		'/constitution/',
+		'/components/dashboard/',
+		'/api/',
+		'/services/',
+		'/lib/server/',
+		'/lib/utils/',
+		'/lib/validators/',
+		'/websocket/',
+		'/hackrf/',
+		'/usrp/',
+		'/gps/',
+		'/kismet/',
+		'/tactical-map/'
+	];
+
+	for (const pathSegment of integrationTestedPaths) {
+		if (filePath.includes(pathSegment)) {
+			return true;
+		}
 	}
 
+	// Store files with simple reactive wrappers (.ts only — .svelte stores may need tests)
+	if (filePath.includes('/stores/') && basename.endsWith('.ts')) {
+		return true;
+	}
+
+	// API client modules — integration tested via API endpoints
+	if (basename.includes('api')) {
+		return true;
+	}
+
+	// Service modules — integration tested
+	if (basename.includes('service')) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Check if file is a testable source file (components or library code)
+ */
+function isTestableSourceFile(filePath: string): boolean {
 	// Components should have tests
 	if (filePath.includes('/components/') || filePath.endsWith('.svelte')) {
 		return true;
@@ -207,135 +236,166 @@ function shouldHaveTests(filePath: string): boolean {
 }
 
 /**
- * Determine if file should require high (80%) test coverage
- * Realistic exclusions for files where unit test coverage is impractical or unnecessary
+ * Determine if file should require high (80%) test coverage.
+ * Realistic exclusions for files where unit test coverage is impractical or unnecessary.
  */
 function shouldRequireHighCoverage(filePath: string): boolean {
-	// Exclude vendor/third-party code
-	if (filePath.includes('node_modules/') || filePath.includes('.venv/')) {
+	if (isVendorOrBuildOutput(filePath)) {
 		return false;
 	}
 
-	// Exclude compiled/build output (service/dist contains compiled JS)
-	if (filePath.includes('/dist/') || filePath.includes('/build/')) {
+	if (isScriptOrConfigFile(filePath)) {
 		return false;
 	}
 
-	// Exclude all scripts (build tools, ops scripts, one-off utilities)
-	if (filePath.startsWith('scripts/')) {
+	if (isFrameworkOrTypeFile(filePath)) {
 		return false;
 	}
 
-	// Exclude config directory
-	if (filePath.startsWith('config/')) {
+	if (isCoverageExemptModule(filePath)) {
 		return false;
 	}
 
-	// Exclude benchmark and audit scripts
-	if (filePath.includes('benchmark-') || filePath.includes('run-audit')) {
-		return false;
-	}
-
-	// Exclude constitution/audit infrastructure (self-validates, has own test suite)
-	if (filePath.includes('/constitution/')) {
-		return false;
-	}
-
-	// Exclude configuration files
-	if (
-		filePath.endsWith('.config.ts') ||
-		filePath.endsWith('.config.js') ||
-		filePath.endsWith('.config.cjs')
-	) {
-		return false;
-	}
-
-	// Exclude type definition files
-	if (filePath.endsWith('.d.ts')) {
-		return false;
-	}
-
-	// Exclude SvelteKit route files — these are integration tested, not unit tested
-	const basename = filePath.split('/').pop() || '';
-	if (/^\+(page|layout|error|server)\.(ts|js|svelte)$/.test(basename)) {
-		return false;
-	}
-
-	// Exclude Svelte components — coverage tooling for Svelte is unreliable
-	if (filePath.endsWith('.svelte')) {
-		return false;
-	}
-
-	// Exclude MCP server files — diagnostic tools, tested via integration
-	if (filePath.includes('/server/mcp/')) {
-		return false;
-	}
-
-	// Exclude type-only files
-	if (basename === 'types.ts' || filePath.includes('/types/')) {
-		return false;
-	}
-
-	// Exclude store files (simple reactive wrappers)
-	if (filePath.includes('/stores/')) {
-		return false;
-	}
-
-	// Exclude server-side modules — integration tested via API endpoints
-	if (filePath.includes('/lib/server/')) {
-		return false;
-	}
-
-	// Exclude utility modules — integration tested
-	if (filePath.includes('/lib/utils/') || filePath.includes('/lib/validators/')) {
-		return false;
-	}
-
-	// Exclude WebSocket modules — integration tested
-	if (filePath.includes('/websocket/')) {
-		return false;
-	}
-
-	// Exclude hardware integration modules — integration tested
-	if (
-		filePath.includes('/hackrf/') ||
-		filePath.includes('/usrp/') ||
-		filePath.includes('/gps/') ||
-		filePath.includes('/kismet/')
-	) {
-		return false;
-	}
-
-	// Exclude tactical map modules — integration tested
-	if (filePath.includes('/tactical-map/')) {
-		return false;
-	}
-
-	// Exclude API modules — integration tested
-	if (filePath.includes('/lib/api/')) {
-		return false;
-	}
-
-	// Exclude hook files — SvelteKit infrastructure
-	if (basename === 'hooks.server.ts' || basename === 'hooks.client.ts') {
-		return false;
-	}
-
-	// Exclude barrel files (index.ts) — just re-exports, no logic
-	if (basename === 'index.ts') {
-		return false;
-	}
-
-	// Exclude web workers — tested via integration
-	if (filePath.startsWith('static/workers/')) {
-		return false;
-	}
-
-	// Exclude data files — static data, no logic
-	if (filePath.includes('/lib/data/') || filePath.includes('/constants/')) {
+	if (isInfrastructureOrDataFile(filePath)) {
 		return false;
 	}
 
 	// Require coverage for remaining core application code
 	return true;
+}
+
+/**
+ * Check if file is vendor code or compiled build output
+ */
+function isVendorOrBuildOutput(filePath: string): boolean {
+	return (
+		filePath.includes('node_modules/') ||
+		filePath.includes('.venv/') ||
+		filePath.includes('/dist/') ||
+		filePath.includes('/build/')
+	);
+}
+
+/**
+ * Check if file is a script, config file, or benchmark/audit utility
+ */
+function isScriptOrConfigFile(filePath: string): boolean {
+	if (filePath.startsWith('scripts/') || filePath.startsWith('config/')) {
+		return true;
+	}
+
+	if (filePath.includes('benchmark-') || filePath.includes('run-audit')) {
+		return true;
+	}
+
+	if (filePath.includes('/constitution/')) {
+		return true;
+	}
+
+	if (
+		filePath.endsWith('.config.ts') ||
+		filePath.endsWith('.config.js') ||
+		filePath.endsWith('.config.cjs')
+	) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Check if file is a SvelteKit framework file, type definition, or Svelte component
+ * (coverage tooling for Svelte is unreliable)
+ */
+function isFrameworkOrTypeFile(filePath: string): boolean {
+	const basename = getBasename(filePath);
+
+	if (filePath.endsWith('.d.ts')) {
+		return true;
+	}
+
+	if (/^\+(page|layout|error|server)\.(ts|js|svelte)$/.test(basename)) {
+		return true;
+	}
+
+	if (filePath.endsWith('.svelte')) {
+		return true;
+	}
+
+	if (filePath.includes('/server/mcp/')) {
+		return true;
+	}
+
+	if (basename === 'types.ts' || filePath.includes('/types/')) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Check if file belongs to a module category exempt from coverage requirements
+ * (stores, server modules, utilities, WebSocket, hardware, map, API modules)
+ */
+function isCoverageExemptModule(filePath: string): boolean {
+	const exemptPaths = [
+		'/stores/',
+		'/lib/server/',
+		'/lib/utils/',
+		'/lib/validators/',
+		'/websocket/',
+		'/hackrf/',
+		'/usrp/',
+		'/gps/',
+		'/kismet/',
+		'/tactical-map/',
+		'/lib/api/'
+	];
+
+	for (const pathSegment of exemptPaths) {
+		if (filePath.includes(pathSegment)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Check if file is infrastructure (hooks, barrel files, workers) or static data
+ */
+function isInfrastructureOrDataFile(filePath: string): boolean {
+	const basename = getBasename(filePath);
+
+	if (basename === 'hooks.server.ts' || basename === 'hooks.client.ts') {
+		return true;
+	}
+
+	if (basename === 'index.ts') {
+		return true;
+	}
+
+	if (filePath.startsWith('static/workers/')) {
+		return true;
+	}
+
+	if (filePath.includes('/lib/data/') || filePath.includes('/constants/')) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Check if file is a barrel file (index.ts) — just re-exports, no logic
+ */
+function isBarrelFile(filePath: string): boolean {
+	return filePath.endsWith('/index.ts');
+}
+
+/**
+ * Extract the basename (final path segment) from a file path
+ */
+function getBasename(filePath: string): string {
+	return filePath.split('/').pop() || '';
 }

@@ -69,6 +69,190 @@ const ALLOWED_ORIGINS: string[] = [
 	`http://${process.env.HOSTNAME || 'localhost'}:5173`
 ];
 
+/** Info object passed to verifyClient by the ws library */
+interface VerifyClientInfo {
+	origin: string;
+	secure: boolean;
+	req: IncomingMessage;
+}
+
+/** Callback signature for async client verification */
+type VerifyClientCallback = (result: boolean, code?: number, message?: string) => void;
+
+/**
+ * Authenticate a WebSocket upgrade request via API key or session cookie.
+ *
+ * Extracts API key from query string `token` param or `X-API-Key` header.
+ * Token in query string is acceptable for WebSocket because the WS upgrade
+ * request is not logged like HTTP requests, and there is no Referer header
+ * leak. This is standard practice (Socket.IO, Phoenix Channels, Action Cable).
+ * See RFC 6455 Section 10.1.
+ */
+function authenticateUpgrade(info: VerifyClientInfo, callback: VerifyClientCallback): boolean {
+	const url = new URL(info.req.url || '', `http://${info.req.headers.host || 'localhost'}`);
+	const apiKey = url.searchParams.get('token') || (info.req.headers['x-api-key'] as string);
+
+	const mockHeaders: Record<string, string> = {};
+	if (apiKey) {
+		mockHeaders['X-API-Key'] = apiKey;
+	}
+	const cookieHeader = info.req.headers.cookie;
+	if (cookieHeader) {
+		mockHeaders['cookie'] = cookieHeader;
+	}
+	const mockRequest = new Request('http://localhost', { headers: mockHeaders });
+
+	try {
+		if (!validateApiKey(mockRequest)) {
+			logger.warn('WebSocket connection rejected: invalid API key', {
+				ip: info.req.socket.remoteAddress
+			});
+			callback(false, 401, 'Unauthorized');
+			return false;
+		}
+	} catch {
+		logger.error('WebSocket connection rejected: ARGOS_API_KEY not configured');
+		callback(false, 401, 'Unauthorized');
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Build the verifyClient callback that enforces authentication and origin
+ * checking on every WebSocket upgrade handshake.
+ */
+function buildVerifyClient(): (info: VerifyClientInfo, callback: VerifyClientCallback) => void {
+	return (info: VerifyClientInfo, callback: VerifyClientCallback) => {
+		if (!authenticateUpgrade(info, callback)) {
+			return;
+		}
+
+		// Prevent cross-origin WebSocket hijacking from malicious pages.
+		// Non-browser clients (curl, wscat, scripts) typically omit the Origin
+		// header, so we only reject when Origin IS present and NOT in the allowlist.
+		const origin = info.origin || info.req.headers.origin;
+		if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+			logger.warn('WebSocket connection rejected: forbidden origin', { origin });
+			callback(false, 403, 'Forbidden origin');
+			return;
+		}
+
+		callback(true);
+	};
+}
+
+/** Per-message deflate options tuned for RF data throughput on RPi 5 */
+function buildDeflateOptions() {
+	return {
+		zlibDeflateOptions: {
+			chunkSize: 1024,
+			memLevel: 7,
+			level: 3
+		},
+		zlibInflateOptions: {
+			chunkSize: 10 * 1024
+		},
+		clientNoContextTakeover: true,
+		serverNoContextTakeover: true,
+		serverMaxWindowBits: 10,
+		concurrencyLimit: 10,
+		threshold: 1024
+	};
+}
+
+/** Track a new WebSocket connection under its endpoint path */
+function trackConnection(endpoint: string, ws: WebSocket): void {
+	if (!connections.has(endpoint)) {
+		connections.set(endpoint, new Set());
+	}
+	connections.get(endpoint)?.add(ws);
+}
+
+/** Remove a WebSocket from its endpoint set and clear any active intervals */
+function cleanupConnection(endpoint: string, ws: WebSocket): void {
+	connections.get(endpoint)?.delete(ws);
+
+	const interval = activeIntervals.get(ws);
+	if (interval) {
+		clearInterval(interval);
+		activeIntervals.delete(ws);
+	}
+}
+
+/**
+ * Route an incoming WebSocket message buffer to the appropriate endpoint
+ * handler. Handles ping/pong heartbeats and JSON parse errors.
+ */
+function handleIncomingMessage(endpoint: string, ws: WebSocket, data: Buffer): void {
+	try {
+		const message = JSON.parse(data.toString()) as WebSocketMessage;
+
+		if (message.type === 'ping') {
+			ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+			return;
+		}
+
+		const handler = messageHandlers.get(endpoint);
+		if (handler) {
+			handler(ws, message);
+		} else {
+			ws.send(
+				JSON.stringify({
+					type: 'error',
+					message: `No handler for endpoint ${endpoint}`
+				})
+			);
+		}
+	} catch (error) {
+		logger.error('[WebSocket] Message error', { error: String(error) }, 'ws-msg-error');
+		ws.send(
+			JSON.stringify({
+				type: 'error',
+				message: 'Invalid message format'
+			})
+		);
+	}
+}
+
+/**
+ * Handle a newly established WebSocket connection: register it, send the
+ * connection acknowledgement, and wire up message/close/error listeners.
+ */
+function handleConnection(ws: WebSocket, req: IncomingMessage): void {
+	const url = req.url || '/';
+	const endpoint = url.split('?')[0];
+
+	logger.info('[WebSocket] New connection', { endpoint });
+	trackConnection(endpoint, ws);
+
+	ws.send(
+		JSON.stringify({
+			type: 'connected',
+			endpoint,
+			timestamp: Date.now()
+		})
+	);
+
+	ws.on('message', (data: Buffer) => {
+		handleIncomingMessage(endpoint, ws, data);
+	});
+
+	ws.on('close', () => {
+		logger.debug('[WebSocket] Connection closed', { endpoint }, 'ws-close');
+		cleanupConnection(endpoint, ws);
+	});
+
+	ws.on('error', (error: Error) => {
+		logger.error(
+			'[WebSocket] Connection error',
+			{ endpoint, error: error.message },
+			'ws-error'
+		);
+		cleanupConnection(endpoint, ws);
+	});
+}
+
 /**
  * Initialize WebSocket server
  *
@@ -80,162 +264,13 @@ const ALLOWED_ORIGINS: string[] = [
 export function initializeWebSocketServer(server: unknown, port: number = 5173) {
 	const wss = new WebSocketServer({
 		port,
-		maxPayload: 1048576, // 1MB -- RF data messages should not exceed this
-		verifyClient: (info, callback) => {
-			// --- Authentication ---
-			// Extract API key from query string token param or X-API-Key header.
-			// Token in query string is acceptable for WebSocket because the WS
-			// upgrade request is not logged like HTTP requests, and there is no
-			// Referer header leak. This is standard practice (Socket.IO, Phoenix
-			// Channels, Action Cable). See RFC 6455 Section 10.1.
-			const url = new URL(
-				info.req.url || '',
-				`http://${info.req.headers.host || 'localhost'}`
-			);
-			const apiKey =
-				url.searchParams.get('token') || (info.req.headers['x-api-key'] as string);
-
-			// Build mock Request with API key AND cookies for browser session auth.
-			const mockHeaders: Record<string, string> = {};
-			if (apiKey) {
-				mockHeaders['X-API-Key'] = apiKey;
-			}
-			const cookieHeader = info.req.headers.cookie;
-			if (cookieHeader) {
-				mockHeaders['cookie'] = cookieHeader;
-			}
-			const mockRequest = new Request('http://localhost', { headers: mockHeaders });
-
-			try {
-				if (!validateApiKey(mockRequest)) {
-					logger.warn('WebSocket connection rejected: invalid API key', {
-						ip: info.req.socket.remoteAddress
-					});
-					callback(false, 401, 'Unauthorized');
-					return;
-				}
-			} catch {
-				// validateApiKey throws if ARGOS_API_KEY is not configured -- fail closed
-				logger.error('WebSocket connection rejected: ARGOS_API_KEY not configured');
-				callback(false, 401, 'Unauthorized');
-				return;
-			}
-
-			// --- Origin checking ---
-			// Prevent cross-origin WebSocket hijacking from malicious pages.
-			// Non-browser clients (curl, wscat, scripts) typically omit the Origin
-			// header, so we only reject when Origin IS present and NOT in the allowlist.
-			const origin = info.origin || info.req.headers.origin;
-			if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-				logger.warn('WebSocket connection rejected: forbidden origin', { origin });
-				callback(false, 403, 'Forbidden origin');
-				return;
-			}
-
-			callback(true);
-		},
-		perMessageDeflate: {
-			zlibDeflateOptions: {
-				chunkSize: 1024,
-				memLevel: 7,
-				level: 3
-			},
-			zlibInflateOptions: {
-				chunkSize: 10 * 1024
-			},
-			clientNoContextTakeover: true,
-			serverNoContextTakeover: true,
-			serverMaxWindowBits: 10,
-			concurrencyLimit: 10,
-			threshold: 1024
-		}
+		maxPayload: 1048576,
+		verifyClient: buildVerifyClient(),
+		perMessageDeflate: buildDeflateOptions()
 	});
 
 	logger.info('[WebSocket] Server listening', { port });
-
-	wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-		const url = req.url || '/';
-		const endpoint = url.split('?')[0];
-
-		logger.info('[WebSocket] New connection', { endpoint });
-
-		// Add to connections
-		if (!connections.has(endpoint)) {
-			connections.set(endpoint, new Set());
-		}
-		connections.get(endpoint)?.add(ws);
-
-		// Send initial connection success
-		ws.send(
-			JSON.stringify({
-				type: 'connected',
-				endpoint,
-				timestamp: Date.now()
-			})
-		);
-
-		// Setup message handling
-		ws.on('message', (data: Buffer) => {
-			try {
-				// Safe: WebSocket connection type assertion
-				const message = JSON.parse(data.toString()) as WebSocketMessage;
-
-				// Handle ping/pong
-				if (message.type === 'ping') {
-					ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-					return;
-				}
-
-				// Route to appropriate handler
-				const handler = messageHandlers.get(endpoint);
-				if (handler) {
-					handler(ws, message);
-				} else {
-					ws.send(
-						JSON.stringify({
-							type: 'error',
-							message: `No handler for endpoint ${endpoint}`
-						})
-					);
-				}
-			} catch (error) {
-				logger.error('[WebSocket] Message error', { error: String(error) }, 'ws-msg-error');
-				ws.send(
-					JSON.stringify({
-						type: 'error',
-						message: 'Invalid message format'
-					})
-				);
-			}
-		});
-
-		ws.on('close', () => {
-			logger.debug('[WebSocket] Connection closed', { endpoint }, 'ws-close');
-			connections.get(endpoint)?.delete(ws);
-
-			// Clean up any active intervals for this connection (prevents memory leak)
-			const interval = activeIntervals.get(ws);
-			if (interval) {
-				clearInterval(interval);
-				activeIntervals.delete(ws);
-			}
-		});
-
-		ws.on('error', (error: Error) => {
-			logger.error(
-				'[WebSocket] Connection error',
-				{ endpoint, error: error.message },
-				'ws-error'
-			);
-
-			// Clean up intervals on error as well
-			const interval = activeIntervals.get(ws);
-			if (interval) {
-				clearInterval(interval);
-				activeIntervals.delete(ws);
-			}
-		});
-	});
+	wss.on('connection', handleConnection);
 
 	return wss;
 }

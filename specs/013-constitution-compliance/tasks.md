@@ -44,32 +44,32 @@
 
 ### GSM Evil Functions (Critical — largest violations)
 
-- [ ] T004 [US1] Extract `performGsmScan` (374 lines) into scan-phase helpers in `src/lib/server/services/gsm-evil/gsm-scan-service.ts` — split into: initScan, executeFrequencyScan, parseResults, buildScanResponse
-- [ ] T004b [P] [US1] Extract `createGSMEvilStore` (321 lines) into store-action helpers in `src/lib/stores/gsm-evil-store.ts` — split into: createScanActions, createCaptureActions, createPersistenceActions, initializeStore
-- [ ] T005 [P] [US1] Extract `checkGsmEvilHealth` (242 lines) into health-check helpers in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` — split into: checkProcess, checkDatabase, checkFrequency, aggregateHealthStatus
-- [ ] T006 [P] [US1] Extract `startGsmEvil` (232 lines) into startup-phase helpers in `src/lib/server/services/gsm-evil/gsm-evil-control-service.ts` — split into: validateConfig, spawnProcess, setupMonitoring, handleStartupErrors
+- [x] T004 [US1] Extract `performGsmScan` (374 lines) into scan-phase helpers in `src/lib/server/services/gsm-evil/gsm-scan-service.ts` — split into: initScan, executeFrequencyScan, parseResults, buildScanResponse
+- [x] T004b [P] [US1] Extract `createGSMEvilStore` (321 lines) into store-action helpers in `src/lib/stores/gsm-evil-store.ts` — split into: createScanActions, createCaptureActions, createPersistenceActions, initializeStore
+- [x] T005 [P] [US1] Extract `checkGsmEvilHealth` (242 lines) into health-check helpers in `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` — split into: checkProcess, checkDatabase, checkFrequency, aggregateHealthStatus
+- [x] T006 [P] [US1] Extract `startGsmEvil` (232 lines) into startup-phase helpers in `src/lib/server/services/gsm-evil/gsm-evil-control-service.ts` — split into: validateConfig, spawnProcess, setupMonitoring, handleStartupErrors
 
 ### Constitution Module Functions
 
-- [ ] T007 [P] [US1] Extract `generateMasterREADME` (249 lines) and `generateCategoryREADME` (162 lines) into markdown-generation helpers in `src/lib/constitution/master-report-generator.ts`
-- [ ] T008 [P] [US1] Extract `organizeViolations` (159 lines) and `generateAnalysis` (146 lines) into category-processing helpers in `src/lib/constitution/analysis-generator.ts`
-- [ ] T009 [P] [US1] Extract `generateDependencyReport` (149 lines) into report-section helpers in `src/lib/constitution/dependency-analyzer.ts`
-- [ ] T010 [P] [US1] Extract `validateArticleIII` (~95 lines) by splitting `shouldHaveTests` (108 lines) and `shouldRequireHighCoverage` (129 lines) into focused validators in `src/lib/constitution/validators/article-iii-testing.ts`
+- [x] T007 [P] [US1] Extract `generateMasterREADME` (249 lines) and `generateCategoryREADME` (162 lines) into markdown-generation helpers in `src/lib/constitution/master-report-generator.ts`
+- [x] T008 [P] [US1] Extract `organizeViolations` (159 lines) and `generateAnalysis` (146 lines) into category-processing helpers in `src/lib/constitution/analysis-generator.ts`
+- [x] T009 [P] [US1] Extract `generateDependencyReport` (149 lines) into report-section helpers in `src/lib/constitution/dependency-analyzer.ts`
+- [x] T010 [P] [US1] Extract `validateArticleIII` (~95 lines) by splitting `shouldHaveTests` (108 lines) and `shouldRequireHighCoverage` (129 lines) into focused validators in `src/lib/constitution/validators/article-iii-testing.ts`
 
 ### Server Functions
 
-- [ ] T011 [P] [US1] Extract `initializeWebSocketServer` (162 lines) into setup helpers in `src/lib/server/websocket-server.ts` — split into: createServer, setupVerifyClient, setupConnectionHandler, registerMessageHandlers
-- [ ] T012 [P] [US1] Extract `decodeRR` (128 lines) and `decodeMM` (98 lines) into message-type decoders in `src/lib/server/gsm/l3-decoder.ts`
-- [ ] T013 [P] [US1] Extract `updateGPSPosition` (125 lines) into position-parsing helpers in `src/lib/server/services/gps/gps-position-service.ts`
-- [ ] T014 [P] [US1] Extract `startGPSSatelliteTracking` (122 lines) into satellite-parsing helpers in `src/lib/server/services/gps/gps-satellite-service.ts`
-- [ ] T015 [P] [US1] Extract `detectHardwareDevices` (~110 lines) into detection-phase helpers in `src/lib/server/hardware/detection/hardware-detector.ts`
-- [ ] T016 [P] [US1] Extract `runMigrations` (~108 lines) into migration-phase helpers in `scripts/db-migrate.ts`
+- [x] T011 [P] [US1] Extract `initializeWebSocketServer` (162 lines) into setup helpers in `src/lib/server/websocket-server.ts` — split into: createServer, setupVerifyClient, setupConnectionHandler, registerMessageHandlers
+- [x] T012 [P] [US1] Extract `decodeRR` (128 lines) and `decodeMM` (98 lines) into message-type decoders in `src/lib/server/gsm/l3-decoder.ts`
+- [x] T013 [P] [US1] Extract `updateGPSPosition` (125 lines) into position-parsing helpers in `src/lib/server/services/gps/gps-position-service.ts`
+- [x] T014 [P] [US1] Extract `startGPSSatelliteTracking` (122 lines) into satellite-parsing helpers in `src/lib/server/services/gps/gps-satellite-service.ts`
+- [x] T015 [P] [US1] Extract `detectHardwareDevices` (~110 lines) into detection-phase helpers in `src/lib/server/hardware/detection/hardware-detector.ts`
+- [x] T016 [P] [US1] Extract `runMigrations` (~108 lines) into migration-phase helpers in `scripts/db-migrate.ts`
 
 ### Client Functions
 
-- [ ] T017 [P] [US1] Extract `createKismetStore` (~125 lines) into store-action helpers in `src/lib/kismet/websocket.ts`
-- [ ] T018 [P] [US1] Extract `setupMap` (118 lines) into map-initialization helpers in `src/lib/components/dashboard/map/map-setup.ts`
-- [ ] T019 [US1] Run `npm run build` and `npm run test:unit` to verify zero regressions from function extraction
+- [x] T017 [P] [US1] Extract `createKismetStore` (~125 lines) into store-action helpers in `src/lib/kismet/websocket.ts`
+- [x] T018 [P] [US1] Extract `setupMap` (118 lines) into map-initialization helpers in `src/lib/components/dashboard/map/map-setup.ts`
+- [x] T019 [US1] Run `npm run build` and `npm run test:unit` to verify zero regressions from function extraction
 
 **Checkpoint**: All functions ≤50 lines. Build passes. Existing tests pass. Ready for US2 (file splitting).
 

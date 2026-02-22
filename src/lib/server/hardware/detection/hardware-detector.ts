@@ -17,22 +17,17 @@ import { detectSerialDevices } from './serial-detector';
 import { detectUSBDevices } from './usb-detector';
 
 /**
- * Scan system for all hardware
+ * Run all hardware detectors in parallel and collect successful results.
+ * Logs errors for any detector that fails without blocking others.
  */
-export async function scanAllHardware(): Promise<HardwareScanResult> {
-	logger.info('[HardwareDetector] Starting comprehensive hardware scan...');
-	const startTime = Date.now();
-
-	// Run all detectors in parallel
+async function collectDetectionResults(): Promise<DetectedHardware[]> {
 	const results = await Promise.allSettled([
 		detectUSBDevices(),
 		detectSerialDevices(),
 		detectNetworkDevices()
 	]);
 
-	// Collect all detected hardware
 	const allHardware: DetectedHardware[] = [];
-
 	for (const result of results) {
 		if (result.status === 'fulfilled') {
 			allHardware.push(...result.value);
@@ -40,19 +35,26 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 			logger.error('[HardwareDetector] Detection error', { reason: String(result.reason) });
 		}
 	}
+	return allHardware;
+}
 
-	// Deduplicate hardware by ID
+/**
+ * Remove duplicate hardware entries, keeping the first occurrence by ID.
+ */
+function deduplicateHardware(hardware: DetectedHardware[]): DetectedHardware[] {
 	const seen = new Set<string>();
-	const deduplicated = allHardware.filter((hw) => {
+	return hardware.filter((hw) => {
 		if (seen.has(hw.id)) return false;
 		seen.add(hw.id);
 		return true;
 	});
+}
 
-	// Register all hardware
-	globalHardwareRegistry.registerBulk(deduplicated);
-
-	// Calculate statistics
+/**
+ * Compute scan statistics from a list of detected hardware devices.
+ * Returns category counts, connection type counts, and connected device count.
+ */
+function computeScanStatistics(devices: DetectedHardware[]): HardwareScanResult['stats'] {
 	const byCategory: Record<HardwareCategory, number> = {
 		sdr: 0,
 		wifi: 0,
@@ -64,7 +66,6 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 		audio: 0,
 		unknown: 0
 	};
-
 	const byConnectionType: Record<ConnectionType, number> = {
 		usb: 0,
 		network: 0,
@@ -73,36 +74,46 @@ export async function scanAllHardware(): Promise<HardwareScanResult> {
 		internal: 0,
 		virtual: 0
 	};
-
 	let connected = 0;
 
-	for (const hw of deduplicated) {
+	for (const hw of devices) {
 		byCategory[hw.category]++;
 		byConnectionType[hw.connectionType]++;
 		if (hw.status === 'connected') connected++;
 	}
 
+	return { total: devices.length, connected, byCategory, byConnectionType };
+}
+
+/**
+ * Scan system for all hardware
+ */
+export async function scanAllHardware(): Promise<HardwareScanResult> {
+	logger.info('[HardwareDetector] Starting comprehensive hardware scan...');
+	const startTime = Date.now();
+
+	const allHardware = await collectDetectionResults();
+	const deduplicated = deduplicateHardware(allHardware);
+
+	globalHardwareRegistry.registerBulk(deduplicated);
+
+	const stats = computeScanStatistics(deduplicated);
 	const scanResult: HardwareScanResult = {
 		detected: deduplicated,
-		stats: {
-			total: deduplicated.length,
-			connected,
-			byCategory,
-			byConnectionType
-		},
+		stats,
 		timestamp: Date.now()
 	};
 
 	const duration = Date.now() - startTime;
 	logger.info('[HardwareDetector] Scan complete', {
 		duration,
-		total: scanResult.stats.total,
-		connected: scanResult.stats.connected,
-		sdr: byCategory.sdr,
-		wifi: byCategory.wifi,
-		bluetooth: byCategory.bluetooth,
-		gps: byCategory.gps,
-		cellular: byCategory.cellular
+		total: stats.total,
+		connected: stats.connected,
+		sdr: stats.byCategory.sdr,
+		wifi: stats.byCategory.wifi,
+		bluetooth: stats.byCategory.bluetooth,
+		gps: stats.byCategory.gps,
+		cellular: stats.byCategory.cellular
 	});
 
 	return scanResult;

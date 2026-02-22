@@ -5,12 +5,9 @@ import { join } from 'path';
 import { logger } from '$lib/utils/logger';
 
 /**
- * Applies all pending SQL and TypeScript migrations in order, tracking each in a migrations table.
- * @param db The better-sqlite3 database connection
- * @param migrationsPath Absolute path to the directory containing migration files
+ * Create the migrations tracking table if it does not already exist.
  */
-export async function runMigrations(db: Database.Database, migrationsPath: string) {
-	// Create migrations tracking table if not exists
+function ensureMigrationsTable(db: Database.Database): void {
 	db.exec(`
     CREATE TABLE IF NOT EXISTS migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,24 +15,113 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
       applied_at INTEGER NOT NULL
     )
   `);
+}
 
-	// Get list of applied migrations
-	const appliedMigrations = new Set(
-		// Safe: migrations table has filename column — schema guaranteed
-		(db.prepare('SELECT filename FROM migrations').all() as Array<{ filename: string }>).map(
-			(row) => row.filename
-		)
-	);
+/**
+ * Return the set of migration filenames that have already been applied.
+ */
+function getAppliedMigrations(db: Database.Database): Set<string> {
+	const rows = db.prepare('SELECT filename FROM migrations').all() as Array<{
+		filename: string;
+	}>;
+	return new Set(rows.map((row) => row.filename));
+}
 
-	// Get all migration files (SQL and TypeScript, but exclude the migration runner itself)
-	const migrationFiles = readdirSync(migrationsPath)
+/**
+ * Read the migrations directory and return sorted filenames for .sql and .ts files,
+ * excluding the migration runner itself.
+ */
+function getMigrationFiles(migrationsPath: string): string[] {
+	return readdirSync(migrationsPath)
 		.filter(
 			(file) =>
 				(file.endsWith('.sql') || file.endsWith('.ts')) && file !== 'run-migrations.ts'
 		)
-		.sort(); // Ensure migrations run in order
+		.sort();
+}
 
-	// Apply pending migrations
+/**
+ * Check whether a caught error is a SQLite duplicate-column error that can be safely ignored.
+ */
+function isDuplicateColumnError(error: unknown): boolean {
+	return (
+		error !== null &&
+		typeof error === 'object' &&
+		'code' in error &&
+		(error as Record<string, unknown>).code === 'SQLITE_ERROR' &&
+		'message' in error &&
+		typeof (error as Record<string, unknown>).message === 'string' &&
+		((error as Record<string, unknown>).message as string).includes('duplicate column name')
+	);
+}
+
+/**
+ * Execute a SQL migration file within a transaction, silently skipping
+ * duplicate-column errors that indicate the migration was partially applied.
+ */
+function applySqlMigration(
+	db: Database.Database,
+	migrationsPath: string,
+	filename: string,
+	applyMigration: (filename: string, migrationFn: () => void) => void
+): void {
+	const sql = readFileSync(join(migrationsPath, filename), 'utf-8');
+	applyMigration(filename, () => {
+		try {
+			db.exec(sql);
+		} catch (error) {
+			if (isDuplicateColumnError(error)) {
+				logger.info('[migrations] Column already exists, skipping', { filename });
+				return;
+			}
+			throw error;
+		}
+	});
+}
+
+/**
+ * Dynamically import and execute a TypeScript migration file within a transaction.
+ * The module must export a `migrate(db)` function.
+ */
+async function applyTsMigration(
+	db: Database.Database,
+	migrationsPath: string,
+	filename: string,
+	applyMigration: (filename: string, migrationFn: () => void) => void
+): Promise<void> {
+	try {
+		const migrationModule: Record<string, unknown> = await import(
+			join(migrationsPath, filename)
+		);
+		if (typeof migrationModule.migrate === 'function') {
+			applyMigration(filename, () =>
+				(migrationModule.migrate as (d: Database.Database) => void)(db)
+			);
+		} else {
+			logger.error('[migrations] Migration does not export a migrate function', {
+				filename
+			});
+		}
+	} catch (error) {
+		logger.error('[migrations] Failed to load TypeScript migration', {
+			filename,
+			error: String(error)
+		});
+		throw error;
+	}
+}
+
+/**
+ * Applies all pending SQL and TypeScript migrations in order, tracking each in a migrations table.
+ * @param db The better-sqlite3 database connection
+ * @param migrationsPath Absolute path to the directory containing migration files
+ */
+export async function runMigrations(db: Database.Database, migrationsPath: string) {
+	ensureMigrationsTable(db);
+
+	const appliedMigrations = getAppliedMigrations(db);
+	const migrationFiles = getMigrationFiles(migrationsPath);
+
 	const applyMigration = db.transaction((filename: string, migrationFn: () => void) => {
 		try {
 			migrationFn();
@@ -51,54 +137,14 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 	});
 
 	for (const filename of migrationFiles) {
-		if (!appliedMigrations.has(filename)) {
-			logger.info('[migrations] Applying migration', { filename });
+		if (appliedMigrations.has(filename)) continue;
 
-			if (filename.endsWith('.sql')) {
-				// SQL migration
-				const sql = readFileSync(join(migrationsPath, filename), 'utf-8');
-				applyMigration(filename, () => {
-					try {
-						db.exec(sql);
-					} catch (error) {
-						// Handle common SQLite errors that can be safely ignored
-						if (
-							error &&
-							typeof error === 'object' &&
-							'code' in error &&
-							error.code === 'SQLITE_ERROR' &&
-							'message' in error &&
-							typeof error.message === 'string' &&
-							error.message.includes('duplicate column name')
-						) {
-							logger.info('[migrations] Column already exists, skipping', {
-								filename
-							});
-							return;
-						}
-						// Re-throw other errors
-						throw error;
-					}
-				});
-			} else if (filename.endsWith('.ts')) {
-				// TypeScript migration
-				try {
-					const migrationModule = await import(join(migrationsPath, filename));
-					if (migrationModule.migrate && typeof migrationModule.migrate === 'function') {
-						applyMigration(filename, () => migrationModule.migrate(db));
-					} else {
-						logger.error('[migrations] Migration does not export a migrate function', {
-							filename
-						});
-					}
-				} catch (error) {
-					logger.error('[migrations] Failed to load TypeScript migration', {
-						filename,
-						error: String(error)
-					});
-					throw error;
-				}
-			}
+		logger.info('[migrations] Applying migration', { filename });
+
+		if (filename.endsWith('.sql')) {
+			applySqlMigration(db, migrationsPath, filename, applyMigration);
+		} else if (filename.endsWith('.ts')) {
+			await applyTsMigration(db, migrationsPath, filename, applyMigration);
 		}
 	}
 }

@@ -8,6 +8,31 @@
 import { type ViolationCategory } from './category-organizer.js';
 import { type DependencyAnalysis } from './dependency-analyzer.js';
 
+/** Priority level used for sorting and grouping categories */
+type PriorityLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+/** Categories grouped by their priority level */
+interface SeverityGroups {
+	critical: ViolationCategory[];
+	high: ViolationCategory[];
+	medium: ViolationCategory[];
+	low: ViolationCategory[];
+}
+
+/** Parsed timestamp with formatted date string */
+interface ParsedTimestamp {
+	date: Date;
+	dateStr: string;
+}
+
+/** Sort-order mapping for priority levels */
+const PRIORITY_ORDER: Record<PriorityLevel, number> = {
+	CRITICAL: 0,
+	HIGH: 1,
+	MEDIUM: 2,
+	LOW: 3
+};
+
 /**
  * Generate master README for the dated audit folder
  */
@@ -17,48 +42,131 @@ export function generateMasterREADME(
 	totalViolations: number,
 	timestamp: string
 ): string {
+	const parsed = parseTimestamp(timestamp);
+	const groups = groupByPriority(categories);
+	const sortedCategories = sortByPriority(categories);
+
+	const sections = [
+		buildMasterHeader(parsed, overallCompliance, totalViolations, groups),
+		buildReportStructureSection(categories, timestamp),
+		buildPriorityMatrixSection(groups),
+		buildImplementationOrderSection(sortedCategories),
+		buildComplianceProjectionsSection(sortedCategories, overallCompliance, totalViolations),
+		buildUsageGuideSection(),
+		buildNextActionsSection(),
+		buildSupportSection(parsed, timestamp)
+	];
+
+	return sections.join('\n');
+}
+
+/**
+ * Generate DEPENDENCY-INVESTIGATION-REPORT.md
+ */
+export function generateDependencyReport(
+	categories: ViolationCategory[],
+	depAnalyses: Map<string, DependencyAnalysis>,
+	timestamp: string
+): string {
+	const parsed = parseTimestamp(timestamp);
+
+	const sections = [
+		buildDepReportHeader(parsed),
+		buildExecutiveSummaryTable(categories, depAnalyses),
+		buildCriticalFindingsSection(categories, depAnalyses),
+		buildPerCategoryAnalysis(categories, depAnalyses),
+		buildDepReportFooter(parsed)
+	];
+
+	return sections.join('\n');
+}
+
+// ============================================================================
+// SHARED HELPERS
+// ============================================================================
+
+/** Parse a timestamp string into a Date and formatted date string */
+function parseTimestamp(timestamp: string): ParsedTimestamp {
+	const date = new Date(timestamp);
+	const dateStr = date.toLocaleDateString('en-US', {
+		month: 'long',
+		day: 'numeric',
+		year: 'numeric'
+	});
+	return { date, dateStr };
+}
+
+/** Group categories by their severity/priority level */
+function groupByPriority(categories: ViolationCategory[]): SeverityGroups {
+	return {
+		critical: categories.filter((c) => c.priority === 'CRITICAL'),
+		high: categories.filter((c) => c.priority === 'HIGH'),
+		medium: categories.filter((c) => c.priority === 'MEDIUM'),
+		low: categories.filter((c) => c.priority === 'LOW')
+	};
+}
+
+/** Sort categories by priority (CRITICAL first, LOW last) */
+function sortByPriority(categories: ViolationCategory[]): ViolationCategory[] {
+	return [...categories].sort(
+		(a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+	);
+}
+
+/** Count total violations across a set of categories */
+function countViolations(cats: ViolationCategory[]): number {
+	return cats.reduce((sum, c) => sum + c.violations.length, 0);
+}
+
+/** Join category names into a comma-separated string */
+function joinNames(cats: ViolationCategory[]): string {
+	return cats.map((c) => c.name).join(', ');
+}
+
+// ============================================================================
+// MASTER README SECTION BUILDERS
+// ============================================================================
+
+/** Build the master README header with quick summary and severity breakdown */
+function buildMasterHeader(
+	parsed: ParsedTimestamp,
+	overallCompliance: number,
+	totalViolations: number,
+	groups: SeverityGroups
+): string {
 	const lines: string[] = [];
 
-	// Header
-	const date = new Date(timestamp);
-	const dateStr = `${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-
-	lines.push(`# Constitutional Audit Report - ${dateStr}`);
+	lines.push(`# Constitutional Audit Report - ${parsed.dateStr}`);
 	lines.push('');
-	lines.push(`**Report Directory**: \`/docs/reports/${date.toISOString().split('T')[0]}/\``);
-	lines.push(`**Audit Execution**: ${date.toLocaleTimeString()}, ${dateStr}`);
+	lines.push(`**Report Directory**: \`/docs/reports/${parsed.date.toISOString().split('T')[0]}/\``);
+	lines.push(`**Audit Execution**: ${parsed.date.toLocaleTimeString()}, ${parsed.dateStr}`);
 	lines.push(`**Constitution Version**: 2.0.0`);
 	lines.push('');
 	lines.push('---');
 	lines.push('');
-
-	// Quick Summary
 	lines.push('## 📊 Quick Summary');
 	lines.push('');
 	lines.push(`**Overall Compliance**: ${overallCompliance}% (Baseline)`);
 	lines.push(`**Total Violations**: ${totalViolations}`);
 	lines.push('');
-
-	// Breakdown by severity
-	const critical = categories.filter((c) => c.priority === 'CRITICAL');
-	const high = categories.filter((c) => c.priority === 'HIGH');
-	const medium = categories.filter((c) => c.priority === 'MEDIUM');
-	const low = categories.filter((c) => c.priority === 'LOW');
-
-	const criticalCount = critical.reduce((sum, c) => sum + c.violations.length, 0);
-	const highCount = high.reduce((sum, c) => sum + c.violations.length, 0);
-	const mediumCount = medium.reduce((sum, c) => sum + c.violations.length, 0);
-	const lowCount = low.reduce((sum, c) => sum + c.violations.length, 0);
-
-	lines.push(`- 🔴 CRITICAL: ${criticalCount} (${critical.map((c) => c.name).join(', ')})`);
-	lines.push(`- 🟠 HIGH: ${highCount} (${high.map((c) => c.name).join(', ')})`);
-	lines.push(`- 🟡 MEDIUM: ${mediumCount} (${medium.map((c) => c.name).join(', ')})`);
-	lines.push(`- ⚪ LOW: ${lowCount} (${low.map((c) => c.name).join(', ')})`);
+	lines.push(`- 🔴 CRITICAL: ${countViolations(groups.critical)} (${joinNames(groups.critical)})`);
+	lines.push(`- 🟠 HIGH: ${countViolations(groups.high)} (${joinNames(groups.high)})`);
+	lines.push(`- 🟡 MEDIUM: ${countViolations(groups.medium)} (${joinNames(groups.medium)})`);
+	lines.push(`- ⚪ LOW: ${countViolations(groups.low)} (${joinNames(groups.low)})`);
 	lines.push('');
 	lines.push('---');
 	lines.push('');
 
-	// Report Structure
+	return lines.join('\n');
+}
+
+/** Build the report structure section listing each category folder */
+function buildReportStructureSection(
+	categories: ViolationCategory[],
+	timestamp: string
+): string {
+	const lines: string[] = [];
+
 	lines.push('## 📁 Report Structure');
 	lines.push('');
 
@@ -80,7 +188,6 @@ export function generateMasterREADME(
 		lines.push('');
 	}
 
-	// Core Audit Files
 	lines.push('### **Core Audit Files**');
 	lines.push('');
 	lines.push(
@@ -92,68 +199,91 @@ export function generateMasterREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Priority Matrix
+	return lines.join('\n');
+}
+
+/** Build a single priority tier within the priority matrix */
+function buildPriorityTier(
+	heading: string,
+	cats: ViolationCategory[],
+	showRecommendation: ((cat: ViolationCategory) => string) | null,
+	showImpact: boolean
+): string[] {
+	if (cats.length === 0) return [];
+
+	const lines: string[] = [];
+	lines.push(heading);
+	lines.push('');
+	for (const [idx, cat] of cats.entries()) {
+		lines.push(`${idx + 1}. **${cat.name}** (${cat.violations.length} violations)`);
+		if (showImpact) {
+			lines.push(`    - **Impact:** ${cat.impact}`);
+		}
+		if (showRecommendation) {
+			lines.push(`    - **Recommendation:** ${showRecommendation(cat)}`);
+		}
+		if (showImpact) {
+			lines.push(`    - **Timeline:** ${cat.estimatedTimelineWeeks} weeks`);
+		}
+		lines.push('');
+	}
+	return lines;
+}
+
+/** Build the full priority matrix section across all severity levels */
+function buildPriorityMatrixSection(groups: SeverityGroups): string {
+	const lines: string[] = [];
+
 	lines.push('## 🎯 Priority Matrix');
 	lines.push('');
-
-	if (critical.length > 0) {
-		lines.push('### 🔴 **CRITICAL (Immediate Attention)**');
-		lines.push('');
-		for (const [idx, cat] of critical.entries()) {
-			lines.push(`${idx + 1}. **${cat.name}** (${cat.violations.length} violations)`);
-			lines.push(`    - **Impact:** ${cat.impact}`);
-			lines.push(`    - **Recommendation:** ${getCriticalRecommendation(cat)}`);
-			lines.push(`    - **Timeline:** ${cat.estimatedTimelineWeeks} weeks`);
-			lines.push('');
-		}
-	}
-
-	if (high.length > 0) {
-		lines.push('### 🟠 **HIGH (Should Fix Soon)**');
-		lines.push('');
-		for (const [idx, cat] of high.entries()) {
-			lines.push(`${idx + 1}. **${cat.name}** (${cat.violations.length} violations)`);
-			lines.push(`    - **Impact:** ${cat.impact}`);
-			lines.push(`    - **Recommendation:** ${getHighRecommendation(cat)}`);
-			lines.push(`    - **Timeline:** ${cat.estimatedTimelineWeeks} weeks`);
-			lines.push('');
-		}
-	}
-
-	if (medium.length > 0) {
-		lines.push('### 🟡 **MEDIUM (Plan for Later)**');
-		lines.push('');
-		for (const [idx, cat] of medium.entries()) {
-			lines.push(`${idx + 1}. **${cat.name}** (${cat.violations.length} violations)`);
-			lines.push(`    - **Impact:** ${cat.impact}`);
-			lines.push(`    - **Timeline:** ${cat.estimatedTimelineWeeks} weeks`);
-			lines.push('');
-		}
-	}
-
-	if (low.length > 0) {
-		lines.push('### ⚪ **LOW (Optional)**');
-		lines.push('');
-		for (const [idx, cat] of low.entries()) {
-			lines.push(`${idx + 1}. **${cat.name}** (${cat.violations.length} violations)`);
-			lines.push(`    - **Recommendation:** Optional - address if time permits`);
-			lines.push('');
-		}
-	}
-
+	lines.push(
+		...buildPriorityTier(
+			'### 🔴 **CRITICAL (Immediate Attention)**',
+			groups.critical,
+			getCriticalRecommendation,
+			true
+		)
+	);
+	lines.push(
+		...buildPriorityTier(
+			'### 🟠 **HIGH (Should Fix Soon)**',
+			groups.high,
+			getHighRecommendation,
+			true
+		)
+	);
+	lines.push(
+		...buildPriorityTier(
+			'### 🟡 **MEDIUM (Plan for Later)**',
+			groups.medium,
+			null,
+			true
+		)
+	);
+	lines.push(
+		...buildPriorityTier(
+			'### ⚪ **LOW (Optional)**',
+			groups.low,
+			() => 'Optional - address if time permits',
+			false
+		)
+	);
 	lines.push('---');
 	lines.push('');
 
-	// Recommended Implementation Order
+	return lines.join('\n');
+}
+
+/** Build the recommended implementation order section */
+function buildImplementationOrderSection(
+	sortedCategories: ViolationCategory[]
+): string {
+	const lines: string[] = [];
+
 	lines.push('## 🚀 Recommended Implementation Order');
 	lines.push('');
 	lines.push('Based on priority and impact:');
 	lines.push('');
-
-	const sortedCategories = [...categories].sort((a, b) => {
-		const priorityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-		return priorityOrder[a.priority] - priorityOrder[b.priority];
-	});
 
 	for (const [idx, cat] of sortedCategories.entries()) {
 		lines.push(
@@ -165,7 +295,17 @@ export function generateMasterREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Compliance Score Projections
+	return lines.join('\n');
+}
+
+/** Build the compliance score projections table */
+function buildComplianceProjectionsSection(
+	sortedCategories: ViolationCategory[],
+	overallCompliance: number,
+	totalViolations: number
+): string {
+	const lines: string[] = [];
+
 	lines.push('## 📊 Compliance Score Projections');
 	lines.push('');
 	lines.push('| Action | Compliance | Timeline | Risk |');
@@ -188,7 +328,13 @@ export function generateMasterREADME(
 	lines.push('---');
 	lines.push('');
 
-	// How to Use This Report
+	return lines.join('\n');
+}
+
+/** Build the usage guide section with strategic, implementation, and tracking advice */
+function buildUsageGuideSection(): string {
+	const lines: string[] = [];
+
 	lines.push('## 📖 How to Use This Report');
 	lines.push('');
 	lines.push('### **For Strategic Decision-Making:**');
@@ -215,7 +361,13 @@ export function generateMasterREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Next Actions
+	return lines.join('\n');
+}
+
+/** Build the next actions section with immediate, weekly, and audit milestones */
+function buildNextActionsSection(): string {
+	const lines: string[] = [];
+
 	lines.push('## 🎯 Next Actions');
 	lines.push('');
 	lines.push('### **Immediate (Today):**');
@@ -238,7 +390,13 @@ export function generateMasterREADME(
 	lines.push('---');
 	lines.push('');
 
-	// Support
+	return lines.join('\n');
+}
+
+/** Build the support section and report footer with metadata */
+function buildSupportSection(parsed: ParsedTimestamp, timestamp: string): string {
+	const lines: string[] = [];
+
 	lines.push('## 📞 Support');
 	lines.push('');
 	lines.push('**Documentation:**');
@@ -257,38 +415,38 @@ export function generateMasterREADME(
 	lines.push('');
 	lines.push(`**Generated by:** Constitutional Audit System v2.0.0`);
 	lines.push(`**Audit ID:** \`audit-${timestamp.replace(/[:.]/g, '-')}\``);
-	lines.push(`**Timestamp:** ${dateStr}, ${date.toLocaleTimeString()}`);
+	lines.push(`**Timestamp:** ${parsed.dateStr}, ${parsed.date.toLocaleTimeString()}`);
 
 	return lines.join('\n');
 }
 
-/**
- * Generate DEPENDENCY-INVESTIGATION-REPORT.md
- */
-export function generateDependencyReport(
-	categories: ViolationCategory[],
-	depAnalyses: Map<string, DependencyAnalysis>,
-	timestamp: string
-): string {
-	const lines: string[] = [];
+// ============================================================================
+// DEPENDENCY REPORT SECTION BUILDERS
+// ============================================================================
 
-	const date = new Date(timestamp);
-	const dateStr = date.toLocaleDateString('en-US', {
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric'
-	});
+/** Build the dependency report header */
+function buildDepReportHeader(parsed: ParsedTimestamp): string {
+	const lines: string[] = [];
 
 	lines.push('# Dependency Investigation Report');
 	lines.push('');
-	lines.push(`**Generated:** ${dateStr}`);
+	lines.push(`**Generated:** ${parsed.dateStr}`);
 	lines.push('**Methodology:** Dependency Verification Rulebook v2.0');
 	lines.push('**Purpose:** Validate dependencies for constitutional audit remediation');
 	lines.push('');
 	lines.push('---');
 	lines.push('');
 
-	// Executive Summary
+	return lines.join('\n');
+}
+
+/** Build the executive summary table for the dependency report */
+function buildExecutiveSummaryTable(
+	categories: ViolationCategory[],
+	depAnalyses: Map<string, DependencyAnalysis>
+): string {
+	const lines: string[] = [];
+
 	lines.push('## 📊 Executive Summary');
 	lines.push('');
 	lines.push('| Goal | New Dependencies | Bundle Impact | Cost | Risk |');
@@ -309,7 +467,16 @@ export function generateDependencyReport(
 	lines.push('---');
 	lines.push('');
 
-	// Critical Findings
+	return lines.join('\n');
+}
+
+/** Build the critical findings section showing zero-dep and needs-dep categories */
+function buildCriticalFindingsSection(
+	categories: ViolationCategory[],
+	depAnalyses: Map<string, DependencyAnalysis>
+): string {
+	const lines: string[] = [];
+
 	lines.push('## ✅ Critical Findings');
 	lines.push('');
 
@@ -348,76 +515,113 @@ export function generateDependencyReport(
 	lines.push('---');
 	lines.push('');
 
-	// Per-Category Analysis
-	for (const category of categories) {
-		const analysis = depAnalyses.get(category.id);
-		if (!analysis) continue;
+	return lines.join('\n');
+}
 
-		lines.push(`# ${category.name}`);
-		lines.push('');
-		lines.push(`**Priority:** ${category.priority}`);
-		lines.push(`**New Dependencies:** ${analysis.newDependencies.length} packages`);
-		lines.push(`**Bundle Impact:** +${analysis.bundleSizeImpactKB}KB`);
-		lines.push(`**Cost:** ${analysis.totalCost}`);
-		lines.push(`**Risk:** ${analysis.riskLevel}`);
-		lines.push('');
+/** Build a single category's dependency detail block */
+function buildSingleCategoryDepDetail(
+	category: ViolationCategory,
+	analysis: DependencyAnalysis
+): string {
+	const lines: string[] = [];
 
-		if (analysis.newDependencies.length > 0) {
-			lines.push('## Required Dependencies');
-			lines.push('');
-			for (const dep of analysis.newDependencies) {
-				lines.push(`### ${dep.name}@${dep.version}`);
-				lines.push(`- **Purpose:** ${dep.purpose}`);
-				lines.push(`- **Size:** ~${dep.sizeKB}KB`);
-				lines.push(`- **License:** ${dep.license}`);
-				lines.push(`- **Type:** ${dep.packageType}`);
-				lines.push('');
-			}
+	lines.push(`# ${category.name}`);
+	lines.push('');
+	lines.push(`**Priority:** ${category.priority}`);
+	lines.push(`**New Dependencies:** ${analysis.newDependencies.length} packages`);
+	lines.push(`**Bundle Impact:** +${analysis.bundleSizeImpactKB}KB`);
+	lines.push(`**Cost:** ${analysis.totalCost}`);
+	lines.push(`**Risk:** ${analysis.riskLevel}`);
+	lines.push('');
 
-			lines.push('## Installation');
-			lines.push('');
-			lines.push('```bash');
-			for (const cmd of analysis.installCommands) {
-				lines.push(cmd);
-			}
-			lines.push('```');
-			lines.push('');
-		} else {
-			lines.push('## ✅ Zero Dependencies Required');
-			lines.push('');
-			lines.push('This category requires no new dependencies. Ready to proceed immediately.');
-			lines.push('');
-		}
-
-		lines.push('## Prerequisites');
+	if (analysis.newDependencies.length > 0) {
+		lines.push(...buildDepListAndInstall(analysis));
+	} else {
+		lines.push('## ✅ Zero Dependencies Required');
 		lines.push('');
-		for (const prereq of analysis.prerequisites) {
-			lines.push(`- ✅ ${prereq}`);
-		}
-		lines.push('');
-
-		lines.push('## Verification');
-		lines.push('');
-		lines.push('```bash');
-		for (const cmd of analysis.verificationCommands) {
-			lines.push(cmd);
-		}
-		lines.push('```');
-		lines.push('');
-		lines.push('---');
+		lines.push('This category requires no new dependencies. Ready to proceed immediately.');
 		lines.push('');
 	}
 
-	// Footer
-	lines.push(`**Report Generated:** ${dateStr}`);
+	lines.push('## Prerequisites');
+	lines.push('');
+	for (const prereq of analysis.prerequisites) {
+		lines.push(`- ✅ ${prereq}`);
+	}
+	lines.push('');
+	lines.push('## Verification');
+	lines.push('');
+	lines.push('```bash');
+	for (const cmd of analysis.verificationCommands) {
+		lines.push(cmd);
+	}
+	lines.push('```');
+	lines.push('');
+	lines.push('---');
+	lines.push('');
+
+	return lines.join('\n');
+}
+
+/** Build the dependency list and installation commands for a category */
+function buildDepListAndInstall(analysis: DependencyAnalysis): string[] {
+	const lines: string[] = [];
+
+	lines.push('## Required Dependencies');
+	lines.push('');
+	for (const dep of analysis.newDependencies) {
+		lines.push(`### ${dep.name}@${dep.version}`);
+		lines.push(`- **Purpose:** ${dep.purpose}`);
+		lines.push(`- **Size:** ~${dep.sizeKB}KB`);
+		lines.push(`- **License:** ${dep.license}`);
+		lines.push(`- **Type:** ${dep.packageType}`);
+		lines.push('');
+	}
+
+	lines.push('## Installation');
+	lines.push('');
+	lines.push('```bash');
+	for (const cmd of analysis.installCommands) {
+		lines.push(cmd);
+	}
+	lines.push('```');
+	lines.push('');
+
+	return lines;
+}
+
+/** Build per-category analysis sections for the dependency report */
+function buildPerCategoryAnalysis(
+	categories: ViolationCategory[],
+	depAnalyses: Map<string, DependencyAnalysis>
+): string {
+	const sections: string[] = [];
+
+	for (const category of categories) {
+		const analysis = depAnalyses.get(category.id);
+		if (!analysis) continue;
+		sections.push(buildSingleCategoryDepDetail(category, analysis));
+	}
+
+	return sections.join('\n');
+}
+
+/** Build the dependency report footer */
+function buildDepReportFooter(parsed: ParsedTimestamp): string {
+	const lines: string[] = [];
+
+	lines.push(`**Report Generated:** ${parsed.dateStr}`);
 	lines.push('**Methodology:** Dependency Verification Rulebook v2.0 (8 phases)');
 	lines.push('**Status:** ✅ All dependencies validated, ready for implementation');
 
 	return lines.join('\n');
 }
 
-// Helper functions
+// ============================================================================
+// RECOMMENDATION HELPERS
+// ============================================================================
 
+/** Get the recommendation string for a CRITICAL-priority category */
 function getCriticalRecommendation(category: ViolationCategory): string {
 	if (category.folderName === '02-service-layer-violations') {
 		return 'Exempt for now, refactor incrementally';
@@ -425,6 +629,7 @@ function getCriticalRecommendation(category: ViolationCategory): string {
 	return 'Address immediately or document exemption';
 }
 
+/** Get the recommendation string for a HIGH-priority category */
 function getHighRecommendation(category: ViolationCategory): string {
 	if (category.folderName === '03-type-safety-violations') {
 		return 'Add justification comments (Option A) - high ROI';
