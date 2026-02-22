@@ -8,6 +8,8 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 	import { logger } from '$lib/utils/logger';
 
+	import TerminalErrorOverlay from './TerminalErrorOverlay.svelte';
+
 	interface Props {
 		sessionId: string;
 		shell: string;
@@ -235,28 +237,7 @@
 
 <div class="terminal-tab-content" class:active={isActive} class:hidden={!isActive}>
 	{#if connectionError}
-		<div class="error-overlay">
-			<div class="error-content">
-				<svg
-					width="32"
-					height="32"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<polyline points="4 17 10 11 4 5" />
-					<line x1="12" y1="19" x2="20" y2="19" />
-				</svg>
-				<span class="error-title">Terminal Unavailable</span>
-				<span class="error-detail"
-					>Could not connect to terminal server after {WS_MAX_RETRIES} attempts.</span
-				>
-				<code class="error-cmd">Check that the dev server is running (npm run dev)</code>
-			</div>
-		</div>
+		<TerminalErrorOverlay maxRetries={WS_MAX_RETRIES} />
 	{/if}
 	<div class="terminal-container" bind:this={terminalEl}></div>
 </div>
@@ -269,87 +250,29 @@
 		display: flex;
 		flex-direction: column;
 	}
-
 	.terminal-tab-content.hidden {
 		display: none;
 	}
-
 	.terminal-container {
 		width: 100%;
 		height: 100%;
 		padding: 4px 0 0 4px;
 	}
 
-	/* xterm.js overrides */
 	.terminal-container :global(.xterm) {
 		height: 100%;
 	}
-
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar) {
 		width: 8px;
 	}
-
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar-track) {
 		background: transparent;
 	}
-
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar-thumb) {
 		background: rgba(255, 255, 255, 0.1);
 		border-radius: 4px;
 	}
-
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
 		background: rgba(255, 255, 255, 0.2);
-	}
-
-	/* Error overlay */
-	.error-overlay {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(14, 17, 22, 0.9);
-		z-index: 10;
-	}
-
-	.error-content {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-8);
-		color: var(--palantir-text-secondary);
-		text-align: center;
-	}
-
-	.error-content svg {
-		color: var(--palantir-text-tertiary);
-	}
-
-	.error-title {
-		font-size: var(--text-lg);
-		font-weight: var(--font-weight-semibold);
-		color: var(--palantir-text-primary);
-	}
-
-	.error-detail {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
-	}
-
-	.error-detail code {
-		font-family: var(--font-mono);
-		color: var(--palantir-accent);
-	}
-
-	.error-cmd {
-		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-		background: var(--palantir-bg-elevated);
-		padding: var(--space-2) var(--space-4);
-		border-radius: var(--radius-md);
-		color: var(--palantir-accent);
-		border: 1px solid var(--palantir-border-subtle);
 	}
 </style>

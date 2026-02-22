@@ -7,26 +7,23 @@
 	import {
 		activeSession,
 		closeSession,
-		closeTerminalPanel,
 		createSession,
 		renameSession,
-		setActiveSession,
 		terminalPanelState,
-		terminalSessions,
-		toggleMaximize,
-		unsplit
+		terminalSessions
 	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
 
+	import TerminalTabBar from './TerminalTabBar.svelte';
 	import TerminalTabContent from './TerminalTabContent.svelte';
+	import TerminalToolbar from './TerminalToolbar.svelte';
 
 	// Available shells from API
 	let availableShells = $state<ShellInfo[]>([]);
 	let showShellDropdown = $state(false);
 	let showMoreMenu = $state(false);
-	let pendingSplitSessionId = $state<string | null>(null); // Track if we're adding a split
+	let pendingSplitSessionId = $state<string | null>(null);
 
-	// Fetch available shells on mount
 	onMount(async () => {
 		if (!browser) return;
 
@@ -37,7 +34,6 @@
 				availableShells = data.shells;
 			}
 		} catch {
-			// Use fallback
 			availableShells = [{ path: '/bin/zsh', name: 'zsh', isDefault: true }];
 		}
 	});
@@ -45,14 +41,11 @@
 	function handleCreateSession(shell?: string) {
 		const newSessionId = createSession(shell);
 
-		// If we're adding a split (pendingSplitSessionId is set)
 		if (pendingSplitSessionId) {
 			const originalSessionId = pendingSplitSessionId;
 			terminalPanelState.update((s) => {
 				if (s.splits) {
-					// Already split - add to existing split (max 4 panes)
 					if (s.splits.sessionIds.length >= 4) return s;
-
 					const newSessionIds = [...s.splits.sessionIds, newSessionId];
 					const equalWidth = 100 / newSessionIds.length;
 					return {
@@ -64,7 +57,6 @@
 						}
 					};
 				} else {
-					// Create new split with the original session and the new one
 					return {
 						...s,
 						splits: {
@@ -91,24 +83,20 @@
 	}
 
 	function handleSplit(e: MouseEvent) {
-		e.stopPropagation(); // Prevent window click handler from closing the dropdown
+		e.stopPropagation();
 		const active = $activeSession;
 		if (active) {
-			// Instead of auto-creating a split, open the dropdown to choose
 			pendingSplitSessionId = active.id;
 			showShellDropdown = true;
 		}
 		showMoreMenu = false;
 	}
 
-	// Close dropdowns when clicking outside
 	function handleWindowClick(e: MouseEvent) {
-		// Safe: MouseEvent.target is EventTarget, narrowing to HTMLElement for DOM navigation methods
 		const target = e.target as HTMLElement;
-		// Don't close dropdown if clicking the split button (it opens the dropdown)
 		if (!target.closest('.shell-dropdown-wrapper') && !target.closest('.split-btn')) {
 			showShellDropdown = false;
-			pendingSplitSessionId = null; // Clear pending split if clicking away
+			pendingSplitSessionId = null;
 		}
 		if (!target.closest('.more-menu-wrapper')) {
 			showMoreMenu = false;
@@ -121,304 +109,29 @@
 <div class="terminal-panel" class:maximized={$terminalPanelState.isMaximized}>
 	<!-- VS Code-style toolbar -->
 	<div class="terminal-toolbar">
-		<!-- Left side: Tabs -->
-		<div class="toolbar-left">
-			<div class="tab-list" role="tablist">
-				{#each $terminalSessions as session (session.id)}
-					<div
-						class="terminal-tab"
-						class:active={session.id === $terminalPanelState.activeTabId}
-						role="tab"
-						aria-selected={session.id === $terminalPanelState.activeTabId}
-						tabindex="0"
-						onclick={() => setActiveSession(session.id)}
-						onkeydown={(e) => e.key === 'Enter' && setActiveSession(session.id)}
-					>
-						<span class="tab-icon">
-							<svg
-								width="12"
-								height="12"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<polyline points="4 17 10 11 4 5" />
-								<line x1="12" y1="19" x2="20" y2="19" />
-							</svg>
-						</span>
-						<span class="tab-title">{session.title}</span>
-						<button
-							class="tab-close"
-							aria-label="Close terminal"
-							onclick={(e) => handleCloseSession(e, session.id)}
-						>
-							<svg
-								width="12"
-								height="12"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<line x1="18" y1="6" x2="6" y2="18" />
-								<line x1="6" y1="6" x2="18" y2="18" />
-							</svg>
-						</button>
-					</div>
-				{/each}
-			</div>
+		<TerminalTabBar
+			{availableShells}
+			{showShellDropdown}
+			onCreateSession={handleCreateSession}
+			onCloseSession={handleCloseSession}
+			onToggleShellDropdown={() => (showShellDropdown = !showShellDropdown)}
+		/>
 
-			<!-- Add new terminal button with dropdown -->
-			<div class="shell-dropdown-wrapper">
-				<button
-					class="toolbar-btn add-btn"
-					aria-label={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
-					title={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
-					onclick={() => handleCreateSession()}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<line x1="12" y1="5" x2="12" y2="19" />
-						<line x1="5" y1="12" x2="19" y2="12" />
-					</svg>
-				</button>
-				<button
-					class="toolbar-btn dropdown-toggle"
-					aria-label={$terminalPanelState.splits
-						? 'Select tmux profile for split'
-						: 'Select tmux profile'}
-					title={$terminalPanelState.splits
-						? 'Select tmux profile for split'
-						: 'Select tmux profile'}
-					onclick={() => (showShellDropdown = !showShellDropdown)}
-				>
-					<svg
-						width="10"
-						height="10"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<polyline points="6 9 12 15 18 9" />
-					</svg>
-				</button>
-
-				{#if showShellDropdown}
-					<div class="dropdown-menu shell-menu">
-						{#each availableShells as shell}
-							<button
-								class="dropdown-item"
-								onclick={() => handleCreateSession(shell.path)}
-							>
-								<span class="shell-name">{shell.name}</span>
-								{#if shell.isDefault}
-									<span class="default-badge">default</span>
-								{/if}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Right side: Actions -->
-		<div class="toolbar-right">
-			<!-- Split/Unsplit button -->
-			{#if $terminalPanelState.splits}
-				<button
-					class="toolbar-btn"
-					aria-label="Unsplit terminal"
-					title="Unsplit terminal"
-					onclick={() => unsplit()}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<rect x="3" y="3" width="18" height="18" rx="2" />
-					</svg>
-				</button>
-			{:else}
-				<button
-					class="toolbar-btn split-btn"
-					aria-label="Split terminal"
-					title="Split terminal"
-					onclick={handleSplit}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<rect x="3" y="3" width="18" height="18" rx="2" />
-						<line x1="12" y1="3" x2="12" y2="21" />
-					</svg>
-				</button>
-			{/if}
-
-			<!-- More menu -->
-			<div class="more-menu-wrapper">
-				<button
-					class="toolbar-btn"
-					aria-label="More actions"
-					onclick={() => (showMoreMenu = !showMoreMenu)}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<circle cx="12" cy="12" r="1" />
-						<circle cx="12" cy="5" r="1" />
-						<circle cx="12" cy="19" r="1" />
-					</svg>
-				</button>
-
-				{#if showMoreMenu}
-					<div class="dropdown-menu more-menu">
-						<button
-							class="dropdown-item"
-							onclick={() => {
-								showMoreMenu = false;
-							}}
-						>
-							Clear
-						</button>
-						{#if $terminalPanelState.splits}
-							<button
-								class="dropdown-item"
-								onclick={() => {
-									unsplit();
-									showMoreMenu = false;
-								}}
-							>
-								Unsplit
-							</button>
-						{:else}
-							<button class="dropdown-item" onclick={handleSplit}>
-								Split Right
-							</button>
-						{/if}
-						<div class="dropdown-divider"></div>
-						<button
-							class="dropdown-item danger"
-							onclick={() => {
-								closeSession($terminalPanelState.activeTabId || '');
-								showMoreMenu = false;
-							}}
-						>
-							Kill Terminal
-						</button>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Maximize/restore button -->
-			<button
-				class="toolbar-btn"
-				aria-label={$terminalPanelState.isMaximized ? 'Restore panel' : 'Maximize panel'}
-				title={$terminalPanelState.isMaximized ? 'Restore panel' : 'Maximize panel'}
-				onclick={toggleMaximize}
-			>
-				{#if $terminalPanelState.isMaximized}
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<polyline points="4 14 10 14 10 20" />
-						<polyline points="20 10 14 10 14 4" />
-						<line x1="14" y1="10" x2="21" y2="3" />
-						<line x1="3" y1="21" x2="10" y2="14" />
-					</svg>
-				{:else}
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<polyline points="15 3 21 3 21 9" />
-						<polyline points="9 21 3 21 3 15" />
-						<line x1="21" y1="3" x2="14" y2="10" />
-						<line x1="3" y1="21" x2="10" y2="14" />
-					</svg>
-				{/if}
-			</button>
-
-			<!-- System logs button -->
-			<button
-				class="toolbar-btn"
-				aria-label="View system logs"
-				title="View system logs"
-				onclick={() => handleCreateSession('scripts/tmux/tmux-logs.sh')}
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<path
-						d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-					/>
-					<line x1="12" y1="8" x2="20" y2="8" />
-					<line x1="8" y1="12" x2="20" y2="12" />
-					<line x1="16" y1="16" x2="20" y2="16" />
-				</svg>
-			</button>
-
-			<!-- Close panel button -->
-			<button
-				class="toolbar-btn"
-				aria-label="Close panel"
-				title="Close panel"
-				onclick={closeTerminalPanel}
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<line x1="18" y1="6" x2="6" y2="18" />
-					<line x1="6" y1="6" x2="18" y2="18" />
-				</svg>
-			</button>
-		</div>
+		<TerminalToolbar
+			{showMoreMenu}
+			onSplit={handleSplit}
+			onCreateSession={handleCreateSession}
+			onToggleMoreMenu={() => (showMoreMenu = !showMoreMenu)}
+			onCloseActiveSession={() => {
+				closeSession($terminalPanelState.activeTabId || '');
+				showMoreMenu = false;
+			}}
+		/>
 	</div>
 
 	<!-- Terminal content area -->
 	<div class="terminal-content">
 		{#if $terminalPanelState.splits}
-			<!-- Split pane view -->
 			<div class="split-container">
 				{#each $terminalPanelState.splits.sessionIds as sessionId, index (sessionId)}
 					{@const session = $terminalSessions.find((s) => s.id === sessionId)}
@@ -442,7 +155,6 @@
 				{/each}
 			</div>
 		{:else}
-			<!-- Single terminal view (tabs) -->
 			{#each $terminalSessions as session (session.id)}
 				<TerminalTabContent
 					sessionId={session.id}
@@ -478,7 +190,6 @@
 		z-index: 100;
 	}
 
-	/* Toolbar */
 	.terminal-toolbar {
 		height: 32px;
 		min-height: 32px;
@@ -491,219 +202,6 @@
 		gap: var(--space-2);
 	}
 
-	.toolbar-left {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		flex: 1;
-		min-width: 0;
-	}
-
-	.toolbar-right {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		flex-shrink: 0;
-	}
-
-	/* Tab list */
-	.tab-list {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-
-	.tab-list::-webkit-scrollbar {
-		display: none;
-	}
-
-	/* Individual tab */
-	.terminal-tab {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		padding: 6px 12px;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
-		font-size: var(--text-sm);
-		cursor: pointer;
-		white-space: nowrap;
-		transition:
-			background 0.1s ease,
-			color 0.1s ease;
-	}
-
-	.terminal-tab:hover {
-		background: var(--palantir-bg-elevated, #1a1f27);
-		color: var(--palantir-text-primary);
-	}
-
-	.terminal-tab.active {
-		display: flex !important;
-		align-items: center;
-		background: var(--palantir-bg-elevated, #1a1f27);
-		color: var(--palantir-text-primary);
-	}
-
-	.tab-icon {
-		display: flex;
-		align-items: center;
-		color: var(--palantir-text-tertiary);
-	}
-
-	.tab-title {
-		max-width: 200px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.tab-close {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 16px;
-		height: 16px;
-		padding: 0;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--palantir-text-tertiary);
-		cursor: pointer;
-		opacity: 0;
-		transition:
-			opacity 0.1s ease,
-			background 0.1s ease;
-	}
-
-	.terminal-tab:hover .tab-close,
-	.terminal-tab.active .tab-close {
-		opacity: 1;
-	}
-
-	.tab-close:hover {
-		background: var(--palantir-bg-panel);
-		color: var(--palantir-text-primary);
-	}
-
-	/* Toolbar buttons */
-	.toolbar-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
-		cursor: pointer;
-		transition:
-			background 0.1s ease,
-			color 0.1s ease;
-	}
-
-	.toolbar-btn:hover {
-		background: var(--palantir-bg-elevated, #1a1f27);
-		color: var(--palantir-text-primary);
-	}
-
-	.add-btn {
-		border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-	}
-
-	.dropdown-toggle {
-		width: 16px;
-		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-		border-left: 1px solid var(--palantir-border-subtle);
-	}
-
-	/* Dropdown wrapper */
-	.shell-dropdown-wrapper,
-	.more-menu-wrapper {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-
-	.shell-dropdown-wrapper {
-		margin-left: var(--space-1);
-		padding-left: var(--space-2);
-		border-left: 1px solid var(--palantir-border-subtle);
-	}
-
-	/* Dropdown menu */
-	.dropdown-menu {
-		position: absolute;
-		top: calc(100% + 4px);
-		background: var(--palantir-bg-panel, #0e1116);
-		border: 1px solid var(--palantir-border-default, #2a2f38);
-		border-radius: var(--radius-md);
-		padding: var(--space-2);
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--background) 40%, transparent);
-		z-index: 1000;
-		min-width: 140px;
-	}
-
-	.shell-menu {
-		left: 0;
-	}
-
-	.more-menu {
-		right: 0;
-	}
-
-	.dropdown-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-		width: 100%;
-		padding: var(--space-2) var(--space-3);
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
-		font-size: var(--text-sm);
-		text-align: left;
-		cursor: pointer;
-		transition: background 0.1s ease;
-		white-space: nowrap;
-	}
-
-	.dropdown-item:hover {
-		background: var(--palantir-bg-elevated, #1a1f27);
-		color: var(--palantir-text-primary);
-	}
-
-	.dropdown-item.danger:hover {
-		background: color-mix(in srgb, var(--palantir-error) 10%, transparent);
-		color: var(--palantir-error, #f87171);
-	}
-
-	.dropdown-divider {
-		height: 1px;
-		background: var(--palantir-border-subtle);
-		margin: var(--space-1) 0;
-	}
-
-	.shell-name {
-		flex: 1;
-	}
-
-	.default-badge {
-		font-size: 10px;
-		padding: 1px 4px;
-		background: var(--palantir-bg-elevated);
-		border-radius: var(--radius-sm);
-		color: var(--palantir-text-tertiary);
-	}
-
-	/* Terminal content */
 	.terminal-content {
 		flex: 1;
 		overflow: hidden;
@@ -711,7 +209,6 @@
 		display: flex;
 	}
 
-	/* Empty state */
 	.empty-state {
 		flex: 1;
 		display: flex;
@@ -738,7 +235,6 @@
 		background: var(--palantir-accent-hover, #3d8ae6);
 	}
 
-	/* Split pane layout */
 	.split-container {
 		display: flex;
 		flex: 1;
