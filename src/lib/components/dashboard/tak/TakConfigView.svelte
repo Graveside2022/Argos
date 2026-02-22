@@ -4,6 +4,7 @@
 	import TakAuthEnroll from '$lib/components/dashboard/tak/TakAuthEnroll.svelte';
 	import TakAuthImport from '$lib/components/dashboard/tak/TakAuthImport.svelte';
 	import TakDataPackage from '$lib/components/dashboard/tak/TakDataPackage.svelte';
+	import TakStatusSection from '$lib/components/dashboard/tak/TakStatusSection.svelte';
 	import TakTruststore from '$lib/components/dashboard/tak/TakTruststore.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
@@ -12,20 +13,20 @@
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { takStatus } from '$lib/stores/tak-store';
 	import type { TakServerConfig } from '$lib/types/tak';
-	import { logger } from '$lib/utils/logger';
 
-	const DEFAULT_CONFIG: TakServerConfig = {
-		id: '',
-		name: 'TAK Server',
-		hostname: '',
-		port: 8089,
-		protocol: 'tls',
-		shouldConnectOnStartup: false,
-		authMethod: 'import',
-		truststorePass: 'atakatak',
-		certPass: 'atakatak',
-		enrollmentPort: 8446
-	};
+	// takStatus used in ToolViewWrapper status prop below
+	import {
+		applyCertPaths,
+		applyPackageImport,
+		applyTruststoreResult,
+		clearCertPaths,
+		clearTruststore,
+		connectToServer,
+		DEFAULT_CONFIG,
+		disconnectFromServer,
+		loadConfig,
+		saveConfig
+	} from './tak-config-logic';
 
 	let config: TakServerConfig = $state({ ...DEFAULT_CONFIG });
 	let isLoading = $state(false);
@@ -35,88 +36,53 @@
 	let messageType: 'success' | 'error' = $state('success');
 
 	$effect(() => {
-		untrack(() => loadConfig());
+		untrack(() => initConfig());
 	});
 
-	async function loadConfig() {
+	async function initConfig() {
 		isLoading = true;
-		try {
-			const res = await fetch('/api/tak/config');
-			const data = await res.json();
-			if (data && data.id) config = data;
-		} catch (e) {
-			logger.error('[TakConfigView] Failed to load config', { error: e });
-		} finally {
-			isLoading = false;
-		}
+		config = await loadConfig();
+		isLoading = false;
 	}
 
-	async function saveConfig() {
+	async function handleSave() {
 		isSaving = true;
-		try {
-			if (!config.id) config.id = crypto.randomUUID();
-			const res = await fetch('/api/tak/config', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(config)
-			});
-			const data = await res.json();
-			if (data.success && data.config) {
-				config = data.config;
-				showMessage('Configuration saved', 'success');
-			} else {
-				showMessage(data.error ?? 'Save failed', 'error');
-			}
-		} catch {
-			showMessage('Failed to save configuration', 'error');
-		} finally {
-			isSaving = false;
+		const result = await saveConfig(config);
+		if (result.success && result.config) {
+			config = result.config;
+			showMessage('Configuration saved', 'success');
+		} else {
+			showMessage(result.error ?? 'Save failed', 'error');
 		}
+		isSaving = false;
 	}
 
 	async function handleConnect() {
 		isConnecting = true;
-		try {
-			const res = await fetch('/api/tak/connection', { method: 'POST' });
-			const data = await res.json();
-			if (data.success) {
-				showMessage('Connecting...', 'success');
-			} else {
-				showMessage(data.error ?? 'Connection failed', 'error');
-			}
-		} catch {
-			showMessage('Connection request failed', 'error');
-		} finally {
-			isConnecting = false;
-		}
+		const result = await connectToServer();
+		showMessage(
+			result.success ? 'Connecting...' : (result.error ?? 'Connection failed'),
+			result.success ? 'success' : 'error'
+		);
+		isConnecting = false;
 	}
 
 	async function handleDisconnect() {
 		isConnecting = true;
-		try {
-			const res = await fetch('/api/tak/connection', { method: 'DELETE' });
-			const data = await res.json();
-			if (data.success) {
-				showMessage('Disconnected', 'success');
-			} else {
-				showMessage(data.error ?? 'Disconnect failed', 'error');
-			}
-		} catch {
-			showMessage('Disconnect request failed', 'error');
-		} finally {
-			isConnecting = false;
-		}
+		const result = await disconnectFromServer();
+		showMessage(
+			result.success ? 'Disconnected' : (result.error ?? 'Disconnect failed'),
+			result.success ? 'success' : 'error'
+		);
+		isConnecting = false;
 	}
 
 	function applyPaths(data: {
 		id?: string;
 		paths?: { certPath?: string; keyPath?: string; caPath?: string };
 	}) {
-		if (data.id) config.id = data.id;
-		if (data.paths?.certPath) config.certPath = data.paths.certPath;
-		if (data.paths?.keyPath) config.keyPath = data.paths.keyPath;
-		if (data.paths?.caPath) config.caPath = data.paths.caPath;
-		saveConfig();
+		config = applyCertPaths(config, data);
+		handleSave();
 	}
 
 	function handleTruststoreUploaded(data: {
@@ -124,10 +90,8 @@
 		caPath?: string;
 		id?: string;
 	}) {
-		config.truststorePath = data.truststorePath;
-		if (data.caPath) config.caPath = data.caPath;
-		if (data.id) config.id = data.id;
-		saveConfig();
+		config = applyTruststoreResult(config, data);
+		handleSave();
 	}
 
 	function handlePackageImported(data: {
@@ -137,12 +101,8 @@
 		truststorePath?: string;
 		id?: string;
 	}) {
-		if (data.hostname) config.hostname = data.hostname;
-		if (data.port) config.port = data.port;
-		if (data.description) config.name = data.description;
-		if (data.truststorePath) config.truststorePath = data.truststorePath;
-		if (data.id) config.id = data.id;
-		saveConfig();
+		config = applyPackageImport(config, data);
+		handleSave();
 	}
 
 	function showMessage(text: string, type: 'success' | 'error') {
@@ -152,16 +112,14 @@
 	}
 
 	function handleCertCleared() {
-		config.certPath = undefined;
-		config.keyPath = undefined;
-		config.caPath = undefined;
-		saveConfig();
+		config = clearCertPaths(config);
+		handleSave();
 		showMessage('Certificates cleared', 'success');
 	}
 
 	function handleTruststoreCleared() {
-		config.truststorePath = undefined;
-		saveConfig();
+		config = clearTruststore(config);
+		handleSave();
 		showMessage('Truststore cleared', 'success');
 	}
 </script>
@@ -175,88 +133,18 @@
 		{#if isLoading}
 			<p class="py-5 text-xs text-muted-foreground">Loading configuration...</p>
 		{:else}
-			<!-- ═══ STATUS ═══ -->
-			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
-				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
-					>STATUS</span
-				>
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2 text-xs">
-						<span
-							class="size-2.5 shrink-0 rounded-full {$takStatus.status === 'connected'
-								? 'bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]'
-								: $takStatus.status === 'error'
-									? 'bg-destructive'
-									: 'bg-muted-foreground'}"
-						></span>
-						<span class="font-semibold text-foreground"
-							>{$takStatus.status.toUpperCase()}</span
-						>
-						{#if $takStatus.serverHost}
-							<span class="text-muted-foreground"
-								>{$takStatus.serverHost}:{config.port}</span
-							>
-						{/if}
-					</div>
-					<div>
-						{#if $takStatus.status === 'connected'}
-							<button
-								onclick={handleDisconnect}
-								disabled={isConnecting}
-								class="inline-flex items-center gap-1.5 rounded-md border border-red-500/50 bg-red-600/20 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-600/40 disabled:opacity-50"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line
-										x1="12"
-										y1="2"
-										x2="12"
-										y2="12"
-									/></svg
-								>
-								{isConnecting ? 'Disconnecting...' : 'Disconnect'}
-							</button>
-						{:else}
-							<button
-								onclick={handleConnect}
-								disabled={isConnecting || !config.hostname}
-								class="inline-flex items-center gap-1.5 rounded-md border border-green-500/50 bg-green-600/20 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-600/40 disabled:opacity-50"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line
-										x1="12"
-										y1="2"
-										x2="12"
-										y2="12"
-									/></svg
-								>
-								{isConnecting ? 'Connecting...' : 'Connect'}
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
+			<!-- STATUS -->
+			<TakStatusSection
+				port={config.port}
+				{isConnecting}
+				onConnect={handleConnect}
+				onDisconnect={handleDisconnect}
+				hasHostname={!!config.hostname}
+			/>
 
 			<Separator />
 
-			<!-- ═══ SERVER ═══ -->
+			<!-- SERVER -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
 					>SERVER</span
@@ -308,7 +196,7 @@
 
 			<Separator />
 
-			<!-- ═══ AUTHENTICATION ═══ -->
+			<!-- AUTHENTICATION -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				<span class="mb-2 block text-xs font-semibold tracking-widest text-muted-foreground"
 					>AUTHENTICATION</span
@@ -327,9 +215,9 @@
 								? 'border-primary'
 								: 'border-muted-foreground/50'}"
 						>
-							{#if config.authMethod === 'import'}
-								<span class="size-2 rounded-full bg-primary"></span>
-							{/if}
+							{#if config.authMethod === 'import'}<span
+									class="size-2 rounded-full bg-primary"
+								></span>{/if}
 						</span>
 						<input
 							type="radio"
@@ -351,9 +239,9 @@
 								? 'border-primary'
 								: 'border-muted-foreground/50'}"
 						>
-							{#if config.authMethod === 'enroll'}
-								<span class="size-2 rounded-full bg-primary"></span>
-							{/if}
+							{#if config.authMethod === 'enroll'}<span
+									class="size-2 rounded-full bg-primary"
+								></span>{/if}
 						</span>
 						<input
 							type="radio"
@@ -368,7 +256,7 @@
 
 			<Separator />
 
-			<!-- ═══ CLIENT CERTIFICATE / ENROLLMENT ═══ -->
+			<!-- CLIENT CERTIFICATE / ENROLLMENT -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				{#if config.authMethod === 'import'}
 					<TakAuthImport
@@ -383,7 +271,7 @@
 
 			<Separator />
 
-			<!-- ═══ TRUST STORE ═══ -->
+			<!-- TRUST STORE -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				<TakTruststore
 					{config}
@@ -394,17 +282,17 @@
 
 			<Separator />
 
-			<!-- ═══ DATA PACKAGE ═══ -->
+			<!-- DATA PACKAGE -->
 			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
 				<TakDataPackage configId={config.id} onImported={handlePackageImported} />
 			</div>
 
 			<Separator />
 
-			<!-- ═══ SAVE ═══ -->
+			<!-- SAVE -->
 			<div class="flex items-center gap-2">
 				<button
-					onclick={saveConfig}
+					onclick={handleSave}
 					disabled={isSaving}
 					class="inline-flex items-center gap-1.5 rounded-md border border-primary/50 bg-primary/20 px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/40 disabled:opacity-50"
 				>
