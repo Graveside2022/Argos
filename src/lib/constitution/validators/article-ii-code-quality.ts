@@ -233,6 +233,14 @@ function checkHardcodedColors(file: string, content: string): Violation[] {
 				continue;
 			}
 
+			// Skip hex colors used as CSS var() fallback values: var(--token, #hex)
+			if (match.index !== undefined) {
+				const textBefore = line.substring(0, match.index);
+				if (/var\(\s*--[\w-]+\s*,\s*$/.test(textBefore)) {
+					continue;
+				}
+			}
+
 			violations.push({
 				id: randomUUID(),
 				// Safe: String literal narrowed to const for severity enum type

@@ -1,7 +1,68 @@
-import { describe, expect, it } from 'vitest';
+import { join } from 'path';
+import { describe, expect, it, vi } from 'vitest';
 
-import { runAudit } from '../../src/lib/constitution/auditor.js';
 import { AuditTimeoutError } from '../../src/lib/constitution/types.js';
+
+// Mock parseConstitution to return valid articles matching the Zod schema,
+// avoiding dependency on the constitution.md file format which uses inline
+// bold sections (**N.N Title**:) rather than the ### N.N Title headings
+// the parser expects.
+vi.mock('../../src/lib/constitution/constitution-parser.js', () => ({
+	parseConstitution: vi.fn().mockResolvedValue(
+		Array.from({ length: 12 }, (_, i) => {
+			const romanNumerals = [
+				'I',
+				'II',
+				'III',
+				'IV',
+				'V',
+				'VI',
+				'VII',
+				'VIII',
+				'IX',
+				'X',
+				'XI',
+				'XII'
+			];
+			const titles = [
+				'Comprehension & Inventory',
+				'Code Quality',
+				'Testing',
+				'User Experience',
+				'Performance',
+				'Dependencies',
+				'Debugging',
+				'Operations & Security',
+				'Spec-Kit Governance',
+				'Reserved',
+				'Reserved',
+				'Reserved'
+			];
+			return {
+				id: romanNumerals[i],
+				number: i + 1,
+				title: titles[i],
+				sections: [
+					{
+						id: `${i + 1}.1`,
+						articleId: romanNumerals[i],
+						title: `${titles[i]} — Primary Section`,
+						rules: [],
+						examples: []
+					}
+				],
+				forbiddenPatterns: [],
+				priority: i === 8 ? 'CRITICAL' : i <= 2 ? 'HIGH' : 'LOW'
+			};
+		})
+	)
+}));
+
+// Import after mock is set up
+const { runAudit } = await import('../../src/lib/constitution/auditor.js');
+
+// Use a temporary directory for report output to avoid polluting docs/reports
+const testReportDir = join(process.cwd(), 'tests/constitution/fixtures/temp-reports');
 
 describe('runAudit - Integration Tests', () => {
 	it('should complete full audit within timeout', async () => {
@@ -9,6 +70,7 @@ describe('runAudit - Integration Tests', () => {
 			scope: 'full' as const,
 			outputFormats: ['json' as const],
 			timeoutMs: 60000,
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
@@ -28,6 +90,7 @@ describe('runAudit - Integration Tests', () => {
 			scopeFilter: 'Article II',
 			outputFormats: ['json' as const],
 			timeoutMs: 30000,
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
@@ -44,6 +107,7 @@ describe('runAudit - Integration Tests', () => {
 			scopeFilter: 'src/lib/constitution/',
 			outputFormats: ['json' as const],
 			timeoutMs: 30000,
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
@@ -58,6 +122,7 @@ describe('runAudit - Integration Tests', () => {
 			scope: 'full' as const,
 			outputFormats: ['json' as const],
 			timeoutMs: 60000,
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
@@ -80,6 +145,7 @@ describe('runAudit - Integration Tests', () => {
 			scope: 'full' as const,
 			outputFormats: ['json' as const],
 			timeoutMs: 60000,
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
@@ -99,6 +165,7 @@ describe('runAudit - Integration Tests', () => {
 			scope: 'full' as const,
 			outputFormats: ['json' as const],
 			timeoutMs: 1, // 1ms - will definitely timeout
+			reportOutputDir: testReportDir,
 			verbose: false
 		};
 
