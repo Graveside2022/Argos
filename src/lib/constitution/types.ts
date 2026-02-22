@@ -277,39 +277,9 @@ export class VitestNotConfiguredError extends ConstitutionalAuditError {
 	}
 }
 
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
-export function validateViolation(violation: unknown): ValidationResult {
-	const result = ViolationSchema.safeParse(violation);
-	if (result.success) {
-		return { valid: true };
-	}
-	return {
-		valid: false,
-		errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`)
-	};
-}
-
-export function validateAuditReport(report: unknown): ValidationResult {
-	const result = AuditReportSchema.safeParse(report);
-	if (result.success) {
-		return { valid: true };
-	}
-	return {
-		valid: false,
-		errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`)
-	};
-}
-
-export function validateAuditOptions(options: unknown): ValidationResult {
-	const result = AuditOptionsSchema.safeParse(options);
-	if (result.success) {
-		return { valid: true };
-	}
-	return {
-		valid: false,
-		errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`)
-	};
-}
+// Re-export validation helpers from co-located module
+export {
+	validateAuditOptions,
+	validateAuditReport,
+	validateViolation
+} from './validation-helpers';
