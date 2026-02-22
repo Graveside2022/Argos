@@ -19,7 +19,7 @@ vi.mock('$lib/server/tak/tak-db', () => ({
 	loadTakConfig: (...args: unknown[]) => mockLoadTakConfig(...args)
 }));
 
-vi.mock('$lib/server/tak/TakService', () => ({
+vi.mock('$lib/server/tak/tak-service', () => ({
 	TakService: { getInstance: () => mockGetInstance() }
 }));
 

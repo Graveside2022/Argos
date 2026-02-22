@@ -19,9 +19,9 @@
 		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
-	import type { SatelliteLayer } from '$lib/map/layers/SatelliteLayer';
-	import type { SymbolLayer } from '$lib/map/layers/SymbolLayer';
-	import { promotedDevices, visibilityMode } from '$lib/map/VisibilityEngine';
+	import type { SatelliteLayer } from '$lib/map/layers/satellite-layer';
+	import type { SymbolLayer } from '$lib/map/layers/symbol-layer';
+	import { promotedDevices, visibilityMode } from '$lib/map/visibility-engine';
 	import { selectDevice } from '$lib/stores/dashboard/agent-context-store';
 	import {
 		activeBands,

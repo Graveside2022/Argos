@@ -69,8 +69,11 @@ export abstract class BaseWebSocket {
 			if (typeof window !== 'undefined' && window.WebSocket) {
 				this.ws = new WebSocket(this.config.url, this.config.protocols);
 			} else if (typeof global !== 'undefined' && global.WebSocket) {
-				// Safe: Global WebSocket cast to any for Node.js environment compatibility (constructor signature)
-				this.ws = new (global.WebSocket as any)(this.config.url, this.config.protocols);
+				// Safe: Global WebSocket constructor — cast via unknown for Node.js environment compatibility
+				const WsCtor = global.WebSocket as unknown as {
+					new (url: string, protocols?: string | string[]): WebSocket;
+				};
+				this.ws = new WsCtor(this.config.url, this.config.protocols);
 			} else {
 				// In Node.js environment, we'd need to import ws package
 				throw new Error('WebSocket not available in this environment');

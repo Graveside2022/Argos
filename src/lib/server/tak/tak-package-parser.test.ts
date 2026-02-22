@@ -10,7 +10,7 @@ import path from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TakPackageParser } from '$lib/server/tak/TakPackageParser';
+import { TakPackageParser } from '$lib/server/tak/tak-package-parser';
 
 // Safe: Test: Accessing private static methods for focused unit testing
 // Use a standalone interface (not intersection) to avoid TS collapsing to `never`

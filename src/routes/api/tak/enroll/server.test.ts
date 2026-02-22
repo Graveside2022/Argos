@@ -14,7 +14,7 @@ const mockSavePemCerts = vi.fn((_id: string, _cert: string, _key: string, _ca: s
 	caPath: 'data/certs/test-id/ca.crt'
 }));
 
-vi.mock('$lib/server/tak/CertManager', () => ({
+vi.mock('$lib/server/tak/cert-manager', () => ({
 	CertManager: {
 		init: () => mockInit(),
 		savePemCerts: (id: string, cert: string, key: string, ca: string[]) =>

@@ -2,7 +2,7 @@ import type { Feature } from 'geojson';
 
 import { logger } from '$lib/utils/logger';
 
-import { SymbolFactory } from '../map/symbols/SymbolFactory';
+import { SymbolFactory } from '../map/symbols/symbol-factory';
 
 /**
  * Parses a CoT XML string into a GeoJSON Feature with SIDC and properties.

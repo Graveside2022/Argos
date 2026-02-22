@@ -1,4 +1,5 @@
 import { takStatus } from '$lib/stores/tak-store';
+import type { TakStatus } from '$lib/types/tak';
 import { logger } from '$lib/utils/logger';
 
 export class TakService {
@@ -11,7 +12,7 @@ export class TakService {
 				const takData = await res.json();
 				if (takData.success && takData.status) {
 					const { success: _success, ...rest } = takData;
-					takStatus.set(rest as any);
+					takStatus.set(rest as TakStatus);
 				}
 			}
 		} catch (error) {

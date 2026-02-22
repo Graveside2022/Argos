@@ -58,8 +58,7 @@ export interface CotMessage {
 		detail: {
 			contact?: { callsign: string };
 			track?: { course: number; speed: number };
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			[key: string]: any;
+			[key: string]: unknown;
 		};
 	};
 }

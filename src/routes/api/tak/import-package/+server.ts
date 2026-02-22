@@ -3,8 +3,8 @@ import path from 'node:path';
 
 import { json } from '@sveltejs/kit';
 
-import { CertManager } from '$lib/server/tak/CertManager';
-import { TakPackageParser } from '$lib/server/tak/TakPackageParser';
+import { CertManager } from '$lib/server/tak/cert-manager';
+import { TakPackageParser } from '$lib/server/tak/tak-package-parser';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';

@@ -12,7 +12,7 @@ import {
 	type DeviceForVisibility,
 	filterByVisibility,
 	type VisibilityMode
-} from '$lib/map/VisibilityEngine';
+} from '$lib/map/visibility-engine';
 import type { KismetState } from '$lib/stores/tactical-map/kismet-store';
 import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 

@@ -77,37 +77,41 @@ export const selectedDeviceDetails = derived(
 		if (!device) return null;
 
 		// Extract relevant device details for agent context
+		// Cast raw Kismet fields to Record for dotted-key access (index signature is unknown)
+		const raw = device as Record<string, unknown>;
+		const dot11 = raw['dot11.device'] as Record<string, unknown> | undefined;
+		const baseSignal = raw['kismet.device.base.signal'] as Record<string, unknown> | undefined;
+		const ssidMap = dot11?.['dot11.device.advertised_ssid_map'] as
+			| Record<string, unknown>[]
+			| undefined;
+
 		return {
 			mac: device.mac || $mac,
 			ssid:
-				device.ssid ||
-				device['dot11.device']?.['dot11.device.last_beaconed_ssid'] ||
-				'Unknown',
-			type: device.type || device['kismet.device.base.type'] || 'unknown',
+				device.ssid || (dot11?.['dot11.device.last_beaconed_ssid'] as string) || 'Unknown',
+			type: device.type || (raw['kismet.device.base.type'] as string) || 'unknown',
 			manufacturer:
 				device.manufacturer ||
 				device.manuf ||
-				device['kismet.device.base.manuf'] ||
+				(raw['kismet.device.base.manuf'] as string) ||
 				'Unknown',
 			signal:
 				device.signal?.last_signal ??
-				device['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] ??
+				(baseSignal?.['kismet.common.signal.last_signal'] as number) ??
 				null,
 			signalDbm:
 				device.signal?.last_signal ??
-				device['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] ??
+				(baseSignal?.['kismet.common.signal.last_signal'] as number) ??
 				null,
-			channel: device.channel || device['kismet.device.base.channel'] || null,
-			frequency: device.frequency || device['kismet.device.base.frequency'] || null,
-			packets: device.packets || device['kismet.device.base.packets.total'] || 0,
+			channel: device.channel || (raw['kismet.device.base.channel'] as string) || null,
+			frequency: device.frequency || (raw['kismet.device.base.frequency'] as number) || null,
+			packets: device.packets || (raw['kismet.device.base.packets.total'] as number) || 0,
 			encryption:
 				device.encryption ||
-				device['dot11.device']?.['dot11.device.advertised_ssid_map']?.[0]?.[
-					'dot11.advertisedssid.crypt_set'
-				] ||
+				(ssidMap?.[0]?.['dot11.advertisedssid.crypt_set'] as string) ||
 				null,
-			lastSeen: device.last_seen || device['kismet.device.base.last_time'] || null,
-			firstSeen: device.first_seen || device['kismet.device.base.first_time'] || null
+			lastSeen: device.last_seen || (raw['kismet.device.base.last_time'] as number) || null,
+			firstSeen: device.first_seen || (raw['kismet.device.base.first_time'] as number) || null
 		};
 	}
 );

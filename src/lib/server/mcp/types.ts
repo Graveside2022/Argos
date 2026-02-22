@@ -4,6 +4,20 @@
  */
 
 /**
+ * JSON Schema property descriptor for MCP tool input schemas
+ */
+export interface JsonSchemaProperty {
+	type: string;
+	description?: string;
+	enum?: string[];
+	default?: unknown;
+	items?: JsonSchemaProperty;
+	properties?: Record<string, JsonSchemaProperty>;
+	required?: string[];
+	[key: string]: unknown;
+}
+
+/**
  * MCP Tool Definition (Anthropic format)
  */
 export interface MCPTool {
@@ -11,8 +25,7 @@ export interface MCPTool {
 	description: string;
 	inputSchema: {
 		type: 'object';
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		properties: Record<string, any>;
+		properties: Record<string, JsonSchemaProperty>;
 		required?: string[];
 	};
 }

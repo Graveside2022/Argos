@@ -21,8 +21,19 @@ export const GET: RequestHandler = async () => {
 		const scanResult = await scanAllHardware();
 
 		// Build detailed response
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const hardwareByCategory: Record<string, any[]> = {};
+		const hardwareByCategory: Record<
+			string,
+			Array<{
+				id: string;
+				name: string;
+				status: string;
+				connectionType: string;
+				capabilities: unknown;
+				manufacturer?: string;
+				model?: string;
+				compatibleTools?: string[];
+			}>
+		> = {};
 
 		for (const hw of scanResult.detected) {
 			if (!hardwareByCategory[hw.category]) {
