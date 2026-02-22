@@ -17,7 +17,7 @@ The monitor checks the following ports every 10 seconds:
 | Service               | Port   | Action on Failure                                        |
 | --------------------- | ------ | -------------------------------------------------------- |
 | **Vite Dev Server**   | `5173` | Restarts the `npm run dev` tmux session.                 |
-| **Chromium Debugger** | `9222` | Restarts headless Chromium (and Xvfb/Display :99).       |
+| **Chromium Debugger** | `9224` | Restarts headless Chromium (and Xvfb/Display :99).       |
 | **Debug Proxy**       | `99`   | Restarts `socat` to expose debugger on port 99.          |
 | **Claude Mem Plugin** | N/A    | Checks every 60s for plugin updates and applies patches. |
 
@@ -61,7 +61,7 @@ We explicitly cap the memory usage of the Vite development server to prevent it 
 
 For headless environments (SSH only), we run Chromium with remote debugging enabled.
 
-- **Port 9222**: Native Chromium debug port (bound to localhost).
+- **Port 9224**: Native Chromium debug port (bound to localhost). Port 9222 is reserved for dev-browser/agent-browser automation tools.
 - **Port 99**: Proxied port accessible from other machines (via `socat`).
 
 To manually start the debug proxy without the full monitor:

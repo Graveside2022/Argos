@@ -121,7 +121,7 @@ Plug the Alfa adapter, HackRF, and GPS dongle into the powered USB hub, then con
 
 When running on Parrot Core or in the field without a monitor, Argos includes tools for remote debugging:
 
-1.  **Service Status**: The debug service runs automatically on port `9222`.
+1.  **Service Status**: The debug service runs automatically on port `9224`.
     ```bash
     systemctl status argos-headless
     ```
@@ -132,7 +132,7 @@ When running on Parrot Core or in the field without a monitor, Argos includes to
 3.  **Connect from Laptop**:
     Tunnel the remote debug port to your local machine:
     ```bash
-    ssh -L 9222:localhost:9222 user@<pi-ip-address>
+    ssh -L 9224:localhost:9224 user@<pi-ip-address>
     ```
     Then open `chrome://inspect` in Chrome/Edge on your laptop to see the remote UI.
 

@@ -859,7 +859,7 @@ if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     systemctl daemon-reload
     systemctl enable argos-headless.service
     systemctl start argos-headless.service
-    echo "  Headless debug service installed and started on port 9222."
+    echo "  Headless debug service installed and started on port 9224."
 else
     echo "  Warning: deployment/argos-headless.service not found. Skipping."
 fi

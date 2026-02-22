@@ -137,10 +137,10 @@ check_socat() {
     if ! lsof -ti:99 > /dev/null; then
         warn "Debug proxy (port 99) is DOWN. Attempting restart..."
         
-        # Check if Chromium is actually running on 9222 first
-        if lsof -ti:9222 > /dev/null; then
+        # Check if Chromium is actually running on 9224 first
+        if lsof -ti:9224 > /dev/null; then
             # Start socat in background
-            nohup socat TCP-LISTEN:99,fork TCP:127.0.0.1:9222 >> "$LOG_DIR/keepalive_socat.log" 2>&1 &
+            nohup socat TCP-LISTEN:99,fork TCP:127.0.0.1:9224 >> "$LOG_DIR/keepalive_socat.log" 2>&1 &
             sleep 1
             if lsof -ti:99 > /dev/null; then
                 log "Debug proxy (socat) restarted successfully."
@@ -148,14 +148,14 @@ check_socat() {
                 warn "Failed to start socat on port 99."
             fi
         else
-            warn "Cannot start proxy: Chromium debugger (port 9222) is not running."
+            warn "Cannot start proxy: Chromium debugger (port 9224) is not running."
         fi
     fi
 }
 
 check_chromium() {
-    if ! lsof -ti:9222 > /dev/null; then
-        warn "Chromium debugger (port 9222) is DOWN. Checking Xvfb..."
+    if ! lsof -ti:9224 > /dev/null; then
+        warn "Chromium debugger (port 9224) is DOWN. Checking Xvfb..."
         
         # Check Xvfb (Display :99)
         if ! pgrep -f "Xvfb.*:99" > /dev/null; then
@@ -166,11 +166,11 @@ check_chromium() {
         
         export DISPLAY=:99
         warn "Restarting Chromium in headless debug mode..."
-        # Launch Chromium with remote debugging on 9222
-        nohup chromium --no-sandbox --remote-debugging-port=9222 http://localhost:5173/dashboard >> "$LOG_DIR/chromium.log" 2>&1 &
+        # Launch Chromium with remote debugging on 9224
+        nohup chromium --no-sandbox --remote-debugging-port=9224 http://localhost:5173/dashboard >> "$LOG_DIR/chromium.log" 2>&1 &
         sleep 5
         
-        if lsof -ti:9222 > /dev/null; then
+        if lsof -ti:9224 > /dev/null; then
             log "Chromium restarted successfully."
         else
             warn "Failed to restart Chromium."
@@ -185,7 +185,7 @@ check_claude_mem() {
 }
 
 log "Starting Argos Dev Keepalive Monitor..."
-log "Monitoring Vite (5173), Chromium (9222), Proxy (99), and Claude Mem."
+log "Monitoring Vite (5173), Chromium (9224), Proxy (99), and Claude Mem."
 
 LOOP_COUNT=0
 while true; do

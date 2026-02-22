@@ -5,7 +5,7 @@
 
 URL="${1:-http://localhost:5173}"
 DISPLAY_NUM=":99"
-DEBUG_PORT="9222"
+DEBUG_PORT="9224"
 
 # Check dependencies
 if ! command -v Xvfb &>/dev/null; then
