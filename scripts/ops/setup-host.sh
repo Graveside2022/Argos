@@ -734,10 +734,11 @@ sudo -u "$SETUP_USER" systemctl --user restart chroma-server
 
 # Set CHROMA_SSL=false for chroma-mcp client (defaults to SSL=true in 0.2.6+)
 # See: https://github.com/chroma-core/chroma-mcp/issues/49
-# Three layers ensure the env var reaches chroma-mcp regardless of login method:
+# Four layers ensure the env var reaches chroma-mcp regardless of launch method:
 #   1. /etc/environment — PAM-level, read on any SSH/Termius/local login
 #   2. ~/.config/environment.d/ — systemd user services and spawned processes
 #   3. ~/.zshenv — interactive zsh sessions (belt-and-suspenders)
+#   4. ~/.claude/settings.json env field — Claude Code spawned processes (MCP servers, workers)
 if grep -q "^CHROMA_SSL=false$" /etc/environment 2>/dev/null; then
   echo "  CHROMA_SSL=false already set in /etc/environment"
 else
@@ -784,6 +785,103 @@ if [[ -f "$CLAUDE_MEM_SETTINGS" ]]; then
   fi
 else
   echo "  claude-mem settings not found (will be created on first run)"
+fi
+
+# Layer 4: Claude Code settings.json env field
+# Claude Code's Node.js runtime doesn't source /etc/environment or ~/.zshenv.
+# The env field in settings.json is the only way to inject vars into its process tree.
+CLAUDE_SETTINGS="$SETUP_HOME/.claude/settings.json"
+if [[ -f "$CLAUDE_SETTINGS" ]]; then
+  if python3 -c "
+import json, sys
+with open('$CLAUDE_SETTINGS') as f:
+    s = json.load(f)
+env = s.get('env', {})
+if env.get('CHROMA_SSL') == 'false':
+    sys.exit(0)
+else:
+    sys.exit(1)
+" 2>/dev/null; then
+    echo "  CHROMA_SSL=false already in Claude Code settings.json env"
+  else
+    echo "  Adding CHROMA_SSL=false to Claude Code settings.json env..."
+    python3 -c "
+import json
+with open('$CLAUDE_SETTINGS') as f:
+    s = json.load(f)
+s.setdefault('env', {})['CHROMA_SSL'] = 'false'
+with open('$CLAUDE_SETTINGS', 'w') as f:
+    json.dump(s, f, indent=2)
+    f.write('\n')
+"
+    chown "$SETUP_USER":"$SETUP_USER" "$CLAUDE_SETTINGS"
+  fi
+else
+  echo "  Claude Code settings.json not found (will be created on first run)"
+fi
+
+# Install claude-mem orphan cleanup hook
+CLAUDE_HOOKS_DIR="$SETUP_HOME/.claude/hooks"
+HOOK_SCRIPT="$CLAUDE_HOOKS_DIR/ensure-chroma-env.sh"
+sudo -u "$SETUP_USER" mkdir -p "$CLAUDE_HOOKS_DIR"
+sudo -u "$SETUP_USER" tee "$HOOK_SCRIPT" > /dev/null << 'HOOK_CONTENT'
+#!/usr/bin/env bash
+set -u
+# Ensure running claude-mem worker has CHROMA_SSL=false.
+# The env field in settings.json handles NEW workers. This hook restarts
+# any existing worker spawned before the env fix was in place.
+
+# Kill orphaned claude-mem workers (reparented to init or systemd --user)
+for pid in $(pgrep -f 'worker-service.cjs --daemon' 2>/dev/null); do
+    ppid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    parent_comm=$(ps -o comm= -p "$ppid" 2>/dev/null | tr -d ' ')
+    if [ "$ppid" = "1" ] || [ "$parent_comm" = "systemd" ]; then
+        kill "$pid" 2>/dev/null
+    fi
+done
+
+# Check if running worker has CHROMA_SSL=false; kill to trigger auto-restart if not
+WORKER_PID=$(pgrep -f 'worker-service.cjs --daemon' 2>/dev/null | head -1)
+if [ -n "${WORKER_PID:-}" ]; then
+    if ! tr '\0' '\n' < "/proc/$WORKER_PID/environ" 2>/dev/null | grep -q '^CHROMA_SSL=false$'; then
+        kill "$WORKER_PID" 2>/dev/null
+    fi
+fi
+
+exit 0
+HOOK_CONTENT
+chmod +x "$HOOK_SCRIPT"
+echo "  Installed $HOOK_SCRIPT"
+
+# Register hook in Claude Code settings if not already present
+if [[ -f "$CLAUDE_SETTINGS" ]]; then
+  if python3 -c "
+import json, sys
+with open('$CLAUDE_SETTINGS') as f:
+    s = json.load(f)
+hooks = s.get('hooks', {})
+for entry in hooks.get('SessionStart', []):
+    for h in entry.get('hooks', []):
+        if 'ensure-chroma-env' in h.get('command', ''):
+            sys.exit(0)
+sys.exit(1)
+" 2>/dev/null; then
+    echo "  SessionStart hook already registered"
+  else
+    echo "  Registering ensure-chroma-env.sh as SessionStart hook..."
+    python3 -c "
+import json
+with open('$CLAUDE_SETTINGS') as f:
+    s = json.load(f)
+s.setdefault('hooks', {}).setdefault('SessionStart', []).append({
+    'hooks': [{'type': 'command', 'command': '$HOOK_SCRIPT', 'timeout': 10}]
+})
+with open('$CLAUDE_SETTINGS', 'w') as f:
+    json.dump(s, f, indent=2)
+    f.write('\n')
+"
+    chown "$SETUP_USER":"$SETUP_USER" "$CLAUDE_SETTINGS"
+  fi
 fi
 
 echo "  ChromaDB service installed and running on port 8000."
