@@ -1,13 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 /** Extract first non-timeout PID line from pgrep output. */
 function extractFirstPidLine(stdout: string, excludePattern?: string): string | undefined {

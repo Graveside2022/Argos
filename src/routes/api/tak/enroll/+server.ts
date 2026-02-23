@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { CertManager } from '$lib/server/tak/cert-manager';
 import { logger } from '$lib/utils/logger';
 
@@ -13,11 +14,6 @@ const EnrollSchema = z.object({
 	password: z.string().min(1).max(256),
 	id: z.string().uuid().optional()
 });
-
-/** Extract error message from an unknown thrown value. */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Return true if the error is an InputValidationError from the security layer. */
 function isInputValidationError(err: unknown): err is Error {

@@ -1,13 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 function formatHexDisplay(hex: string): string {
 	const formatted = hex.match(/.{1,2}/g)?.join(' ') || hex;

@@ -1,14 +1,10 @@
 import { error, json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { getRFDatabase } from '$lib/server/db/database';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-/** Extract error message from unknown error values. */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Read a float search param with a fallback default. */
 function floatParam(sp: URLSearchParams, key: string, fallback: string): number {

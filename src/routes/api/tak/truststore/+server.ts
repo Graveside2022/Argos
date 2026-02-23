@@ -1,22 +1,16 @@
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import { CertManager } from '$lib/server/tak/cert-manager';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
-const execFileAsync = promisify(execFile);
 const MAX_TRUSTSTORE_SIZE = 1024 * 1024; // 1 MB
-
-/** Extract error message from an unknown thrown value. */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Return true if the error is an InputValidationError from the security layer. */
 function isInputValidationError(err: unknown): err is Error {

@@ -1,15 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
 import { stat } from 'fs/promises';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 async function checkGrgsmRunning(): Promise<boolean> {
 	try {

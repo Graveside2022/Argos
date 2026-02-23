@@ -1,16 +1,12 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { CertManager } from '$lib/server/tak/cert-manager';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
 const MAX_P12_SIZE = 1024 * 1024; // 1 MB
-
-/** Extract error message from an unknown thrown value. */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Return true if the error is an InputValidationError from the security layer. */
 function isInputValidationError(err: unknown): err is Error {

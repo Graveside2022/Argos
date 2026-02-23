@@ -1,12 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 const CONTAINER_NAME = 'openwebrx-hackrf';
 
@@ -48,10 +46,6 @@ const LIFECYCLE_EXTRAS: Record<string, Record<string, unknown> | undefined> = {
 function executeAction(action: string): Promise<Response> {
 	if (action === 'status') return getContainerStatus();
 	return dockerLifecycle(action, `OpenWebRX ${action}ed successfully`, LIFECYCLE_EXTRAS[action]);
-}
-
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
 }
 
 /**
