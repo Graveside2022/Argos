@@ -1,7 +1,7 @@
 /** Reactive logic for DashboardMap: effects, derived state, and event handlers. */
 import type { FeatureCollection } from 'geojson';
 import type { LngLatLike } from 'maplibre-gl';
-import maplibregl from 'maplibre-gl';
+import type maplibregl from 'maplibre-gl';
 import { fromStore } from 'svelte/store';
 
 import type { SatelliteLayer } from '$lib/map/layers/satellite-layer';
@@ -71,6 +71,13 @@ export function createMapState() {
 	let popupContent: PopupState | null = $state(null);
 	let towerPopupLngLat: LngLatLike | null = $state(null);
 	let towerPopupContent: TowerPopupState | null = $state(null);
+	// GPS memoization: skip expensive GeoJSON rebuilds when position hasn't changed
+	let prevGpsLat = NaN;
+	let prevGpsLon = NaN;
+	let prevGpsAccuracy = NaN;
+	let cachedAccuracyGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
+	let cachedDetectionGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
+
 	const accuracyColor = $derived.by(() => {
 		const _p = themeStore.palette;
 		const _r = cssReady;
@@ -93,20 +100,29 @@ export function createMapState() {
 		return hasH && moving ? h : null;
 	});
 	const showCone = $derived(headingDeg !== null);
-	const accuracyGeoJSON: FeatureCollection = $derived(
-		buildAccuracyGeoJSON(
-			gps$.current.position.lat,
-			gps$.current.position.lon,
-			gps$.current.status.accuracy
-		)
-	);
-	const detectionRangeGeoJSON: FeatureCollection = $derived(
-		buildDetectionRangeGeoJSON(
-			gps$.current.position.lat,
-			gps$.current.position.lon,
-			RANGE_BANDS
-		)
-	);
+	const accuracyGeoJSON: FeatureCollection = $derived.by(() => {
+		const lat = gps$.current.position.lat;
+		const lon = gps$.current.position.lon;
+		const acc = gps$.current.status.accuracy ?? 0;
+		const latChanged = Math.abs(lat - prevGpsLat) > 0.00001;
+		const lonChanged = Math.abs(lon - prevGpsLon) > 0.00001;
+		const accChanged = Math.abs(acc - prevGpsAccuracy) > 0.1;
+		if (!latChanged && !lonChanged && !accChanged) return cachedAccuracyGeoJSON;
+		prevGpsLat = lat;
+		prevGpsLon = lon;
+		prevGpsAccuracy = acc;
+		cachedAccuracyGeoJSON = buildAccuracyGeoJSON(lat, lon, acc);
+		return cachedAccuracyGeoJSON;
+	});
+	const detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
+		const lat = gps$.current.position.lat;
+		const lon = gps$.current.position.lon;
+		const latChanged = Math.abs(lat - prevGpsLat) > 0.00001;
+		const lonChanged = Math.abs(lon - prevGpsLon) > 0.00001;
+		if (!latChanged && !lonChanged) return cachedDetectionGeoJSON;
+		cachedDetectionGeoJSON = buildDetectionRangeGeoJSON(lat, lon, RANGE_BANDS);
+		return cachedDetectionGeoJSON;
+	});
 	const deviceGeoJSON: FeatureCollection = $derived(
 		buildDeviceGeoJSON(
 			kismet$.current,

@@ -1,9 +1,9 @@
 /** Cycle initialization and runtime frequency cycling extracted from SweepManager. */
 import type { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
 import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
+import { convertToHz } from '$lib/hackrf/sweep-manager/frequency-utils';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { forceCleanupExistingProcesses } from '$lib/hackrf/sweep-manager/sweep-health-checker';
-import { convertToHz } from '$lib/hackrf/sweep-manager/sweep-utils';
 import type { SweepMutableState } from '$lib/server/hackrf/types';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';

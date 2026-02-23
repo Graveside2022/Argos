@@ -1,39 +1,7 @@
 /**
- * Pure utility functions for frequency conversion, normalization, and signal classification.
- * Extracted from SweepManager to keep the orchestrator focused on process lifecycle.
+ * Signal classification and error detection utilities for HackRF sweep operations.
+ * Frequency conversion functions live in frequency-utils.ts (canonical home).
  */
-
-/** Convert frequency value to Hz from any unit */
-export function convertToHz(value: number, unit: string): number {
-	switch (unit.toLowerCase()) {
-		case 'hz':
-			return value;
-		case 'khz':
-			return value * 1000;
-		case 'mhz':
-			return value * 1000000;
-		case 'ghz':
-			return value * 1000000000;
-		default:
-			return value * 1000000;
-	}
-}
-
-/** Convert frequency value to MHz from any unit */
-export function convertToMHz(value: number, unit: string): number {
-	switch (unit.toLowerCase()) {
-		case 'hz':
-			return value / 1000000;
-		case 'khz':
-			return value / 1000;
-		case 'mhz':
-			return value;
-		case 'ghz':
-			return value * 1000;
-		default:
-			return value;
-	}
-}
 
 /** Categorize dB power level into human-readable signal strength */
 export function getSignalStrength(dB: number): string {
@@ -43,24 +11,6 @@ export function getSignalStrength(dB: number): string {
 	if (dB >= -50 && dB < -30) return 'Moderate';
 	if (dB >= -30 && dB < -10) return 'Strong';
 	return 'Very Strong';
-}
-
-/** Normalize heterogeneous frequency inputs to standard { value, unit } format */
-export function normalizeFrequencies(
-	frequencies: (number | { frequency?: number; value?: number; unit?: string })[]
-): Array<{ value: number; unit: string }> {
-	return frequencies
-		.map((freq) => {
-			if (typeof freq === 'number') {
-				return { value: freq, unit: 'MHz' };
-			} else if (freq.frequency !== undefined) {
-				return { value: freq.frequency, unit: freq.unit || 'MHz' };
-			} else if (freq.value !== undefined) {
-				return { value: freq.value, unit: freq.unit || 'MHz' };
-			}
-			throw new Error('Invalid frequency format');
-		})
-		.filter((f) => f.value > 0);
 }
 
 /** Check if an error message indicates a critical HackRF startup failure */

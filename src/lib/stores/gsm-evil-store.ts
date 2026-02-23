@@ -1,16 +1,17 @@
 /**
  * GSM Evil Persistent State Store
- * Provides centralized state management with localStorage persistence
+ * Provides centralized state management with debounced localStorage persistence
  * for GSM Evil scan results and related data.
  */
 
-import { type Updater, writable } from 'svelte/store';
+import { get, type Readable, type Updater, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
 import { logger } from '$lib/utils/logger';
 
 const STORAGE_KEY = 'gsm-evil-state';
 const STORAGE_VERSION = '1.0';
+const DEBOUNCE_MS = 2000;
 
 export interface IMSICapture {
 	imsi: string;
@@ -22,7 +23,7 @@ export interface IMSICapture {
 	lat?: number;
 	lon?: number;
 	timestamp: string;
-	frequency?: string; // Extra field for store tracking
+	frequency?: string;
 }
 
 export interface TowerLocation {
@@ -50,26 +51,19 @@ export interface ScanResult {
 }
 
 export interface GSMEvilState {
-	// Core scan data
 	scanResults: ScanResult[];
 	scanProgress: string[];
 	scanStatus: string;
 	selectedFrequency: string;
 	isScanning: boolean;
 	showScanProgress: boolean;
-
-	// Scan control
 	scanAbortController: AbortController | null;
 	canStopScan: boolean;
 	scanButtonText: string;
-
-	// IMSI and tower data
 	capturedIMSIs: IMSICapture[];
 	totalIMSIs: number;
 	towerLocations: Record<string, TowerLocation>;
 	towerLookupAttempted: Record<string, boolean>;
-
-	// Metadata
 	lastScanTime: string | null;
 	storageVersion: string;
 }
@@ -92,32 +86,25 @@ const defaultState: GSMEvilState = {
 	storageVersion: STORAGE_VERSION
 };
 
-/** Svelte store update function type for GSMEvilState */
-type StoreUpdate = (updater: Updater<GSMEvilState>) => void;
+/** Fields excluded from localStorage — transient runtime state */
+const TRANSIENT_KEYS: (keyof GSMEvilState)[] = ['scanProgress', 'scanAbortController'];
 
-/** Svelte store set function type for GSMEvilState */
+type StoreUpdate = (updater: Updater<GSMEvilState>) => void;
 type StoreSet = (value: GSMEvilState) => void;
 
-/**
- * Load persisted GSM Evil state from localStorage, merging with defaults.
- * Handles version migration by clearing stale data.
- */
 function loadFromStorage(set: StoreSet): void {
 	try {
 		const saved = localStorage.getItem(STORAGE_KEY);
 		if (saved) {
 			const parsedState = JSON.parse(saved) as Partial<GSMEvilState>;
 
-			// Version migration logic
 			if (parsedState.storageVersion !== STORAGE_VERSION) {
 				logger.warn('GSM Evil state version mismatch, resetting to default');
 				localStorage.removeItem(STORAGE_KEY);
 				return;
 			}
 
-			// Merge with defaults to handle missing properties
-			// CRITICAL: scanAbortController cannot survive JSON serialization (becomes {} not null)
-			// Always reset it to null on load to prevent .abort() crashes
+			// CRITICAL: scanAbortController cannot survive JSON serialization
 			const mergedState = { ...defaultState, ...parsedState, scanAbortController: null };
 			set(mergedState);
 		}
@@ -128,49 +115,64 @@ function loadFromStorage(set: StoreSet): void {
 }
 
 /**
- * Persist GSM Evil state to localStorage with timestamp and version.
- * Handles quota exceeded errors by clearing stale data.
+ * Persist structural state to localStorage, excluding transient fields.
+ * Called by the debounce timer — not directly by store actions.
  */
 function persistState(state: GSMEvilState): void {
 	if (!browser) return;
 
 	try {
-		const stateToSave = {
+		const stateToSave: Record<string, unknown> = {
 			...state,
 			lastScanTime: new Date().toISOString(),
 			storageVersion: STORAGE_VERSION
 		};
 
+		for (const key of TRANSIENT_KEYS) {
+			delete stateToSave[key];
+		}
+
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
 	} catch (error) {
-		logger.error('Failed to persist GSM Evil state to localStorage', { error });
-
-		// Handle quota exceeded
 		if (error instanceof DOMException && error.name === 'QuotaExceededError') {
 			logger.warn('localStorage quota exceeded, clearing old data');
 			localStorage.removeItem(STORAGE_KEY);
+		} else {
+			logger.error('Failed to persist GSM Evil state to localStorage', { error });
 		}
 	}
 }
 
-/** Helper: update state and persist in one step */
+/** Debounce timer for persistence — 2s trailing edge */
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePersist(state: GSMEvilState): void {
+	if (debounceTimer) clearTimeout(debounceTimer);
+	debounceTimer = setTimeout(() => {
+		debounceTimer = null;
+		persistState(state);
+	}, DEBOUNCE_MS);
+}
+
+/** Update store and schedule debounced persistence */
 function updateAndPersist(
 	update: StoreUpdate,
 	updater: (state: GSMEvilState) => GSMEvilState
 ): void {
 	update((state) => {
 		const newState = updater(state);
-		persistState(newState);
+		schedulePersist(newState);
 		return newState;
 	});
 }
 
-/** Create scan result management actions (add, set, update, clear results) */
+/** Update store without triggering persistence (for transient state) */
+function updateOnly(update: StoreUpdate, updater: (state: GSMEvilState) => GSMEvilState): void {
+	update((state) => updater(state));
+}
+
 function createScanResultActions(update: StoreUpdate) {
 	return {
-		updateScanResults: (results: ScanResult[]) =>
-			updateAndPersist(update, (state) => ({ ...state, scanResults: results })),
-
 		setScanResults: (results: ScanResult[]) =>
 			updateAndPersist(update, (state) => ({ ...state, scanResults: results })),
 
@@ -200,27 +202,24 @@ function createScanResultActions(update: StoreUpdate) {
 	};
 }
 
-/** Create scan progress and status management actions */
 function createScanProgressActions(update: StoreUpdate) {
 	return {
 		addScanProgress: (message: string) =>
-			updateAndPersist(update, (state) => ({
+			updateOnly(update, (state) => ({
 				...state,
 				scanProgress: [...state.scanProgress, message].slice(-500)
 			})),
 
 		setScanProgress: (progress: string[]) =>
-			updateAndPersist(update, (state) => ({ ...state, scanProgress: progress })),
+			updateOnly(update, (state) => ({ ...state, scanProgress: progress })),
 
-		clearScanProgress: () =>
-			updateAndPersist(update, (state) => ({ ...state, scanProgress: [] })),
+		clearScanProgress: () => updateOnly(update, (state) => ({ ...state, scanProgress: [] })),
 
 		setScanStatus: (status: string) =>
 			updateAndPersist(update, (state) => ({ ...state, scanStatus: status }))
 	};
 }
 
-/** Create scan field setter actions (frequency, scanning flag, progress visibility) */
 function createScanStateActions(update: StoreUpdate) {
 	return {
 		setSelectedFrequency: (frequency: string) =>
@@ -234,8 +233,7 @@ function createScanStateActions(update: StoreUpdate) {
 	};
 }
 
-/** Create scan lifecycle actions (start, stop, complete, abort controller access) */
-function createScanLifecycleActions(update: StoreUpdate) {
+function createScanLifecycleActions(update: StoreUpdate, store: Readable<GSMEvilState>) {
 	return {
 		startScan: () =>
 			updateAndPersist(update, (state) => {
@@ -276,17 +274,11 @@ function createScanLifecycleActions(update: StoreUpdate) {
 				scanAbortController: null
 			})),
 		getAbortController: (): AbortController | null => {
-			let controller: AbortController | null = null;
-			update((state) => {
-				controller = state.scanAbortController;
-				return state;
-			});
-			return controller;
+			return get(store).scanAbortController;
 		}
 	};
 }
 
-/** Create IMSI capture and tower location management actions */
 function createCaptureActions(update: StoreUpdate) {
 	return {
 		setCapturedIMSIs: (imsis: IMSICapture[]) =>
@@ -329,13 +321,13 @@ function createCaptureActions(update: StoreUpdate) {
 	};
 }
 
-/** Create store utility actions (batch update, reset, persist, snapshot) */
 function createUtilityActions(update: StoreUpdate, set: StoreSet) {
 	return {
 		batchUpdate: (updates: Partial<GSMEvilState>) =>
 			updateAndPersist(update, (state) => ({ ...state, ...updates })),
 
 		reset: () => {
+			if (debounceTimer) clearTimeout(debounceTimer);
 			set(defaultState);
 			if (browser) {
 				localStorage.removeItem(STORAGE_KEY);
@@ -344,6 +336,7 @@ function createUtilityActions(update: StoreUpdate, set: StoreSet) {
 
 		forcePersist: () =>
 			update((state) => {
+				if (debounceTimer) clearTimeout(debounceTimer);
 				persistState(state);
 				return state;
 			}),
@@ -359,11 +352,6 @@ function createUtilityActions(update: StoreUpdate, set: StoreSet) {
 	};
 }
 
-/**
- * Create the GSM Evil persistent state store.
- * Provides centralized state management with localStorage persistence
- * for GSM Evil scan results, IMSI captures, and tower data.
- */
 function createGSMEvilStore() {
 	const { subscribe, set, update } = writable<GSMEvilState>(defaultState);
 
@@ -371,12 +359,14 @@ function createGSMEvilStore() {
 		loadFromStorage(set);
 	}
 
+	const store = { subscribe };
+
 	return {
 		subscribe,
 		...createScanResultActions(update),
 		...createScanProgressActions(update),
 		...createScanStateActions(update),
-		...createScanLifecycleActions(update),
+		...createScanLifecycleActions(update, store),
 		...createCaptureActions(update),
 		...createUtilityActions(update, set)
 	};

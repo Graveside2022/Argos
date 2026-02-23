@@ -3,6 +3,7 @@ import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import sonarjs from 'eslint-plugin-sonarjs';
 import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
 import svelteParser from 'svelte-eslint-parser';
@@ -84,7 +85,8 @@ export default [
 			}
 		},
 		plugins: {
-			'@typescript-eslint': ts
+			'@typescript-eslint': ts,
+			sonarjs
 		},
 		rules: {
 			...ts.configs.recommended.rules, // Use non-type-checked rules
@@ -99,7 +101,9 @@ export default [
 			'@typescript-eslint/no-explicit-any': 'warn', // Enforce proper typing
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
 			'@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards
-			'no-console': ['warn', { allow: ['warn', 'error'] }] // Use proper logging
+			'no-console': ['warn', { allow: ['warn', 'error'] }], // Use proper logging
+			complexity: ['warn', 15], // Cyclomatic complexity threshold
+			'sonarjs/cognitive-complexity': ['warn', 20] // Cognitive complexity threshold
 		}
 	},
 	{

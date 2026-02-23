@@ -3,6 +3,20 @@
  * Extracted from error-tracker.ts for constitutional compliance (Article 2.2).
  */
 
+export interface DeviceState {
+	status: 'unknown' | 'available' | 'busy' | 'stuck' | 'disconnected';
+	lastSuccessfulOperation: Date | null;
+	consecutiveBusyErrors: number;
+	recoveryState: 'none' | 'retrying' | 'escalating' | 'cooling_down';
+}
+
+export interface RecoveryConfig {
+	maxRecoveryAttempts?: number;
+	recoveryDelayMs?: number;
+	escalationThreshold?: number;
+	cooldownPeriodMs?: number;
+}
+
 export interface ErrorAnalysis {
 	errorType: 'device_busy' | 'permission_denied' | 'device_not_found' | 'usb_error' | 'unknown';
 	severity: 'low' | 'medium' | 'high' | 'critical';

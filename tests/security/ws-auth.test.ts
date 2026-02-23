@@ -7,16 +7,13 @@
  * Standards: OWASP A01:2021 (Broken Access Control), NIST SP 800-53 AC-3
  */
 
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { WebSocket } from 'ws';
 
-import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+import { setupSecurityTest } from '../helpers/server-check';
 
-restoreRealFetch();
-
+const { API_KEY, canRun } = await setupSecurityTest();
 const BASE_URL = 'ws://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
-const canRun = API_KEY.length >= 32 && (await isServerAvailable());
 
 describe.runIf(canRun)('WebSocket Authentication Security', () => {
 	describe('Unauthenticated Connection Attempts', () => {

@@ -4,11 +4,13 @@ import {
 	analyzeError,
 	calculateHealthScore,
 	deriveDeviceStatus,
+	type DeviceState,
 	type ErrorAnalysis,
-	findMostProblematicFrequency
+	findMostProblematicFrequency,
+	type RecoveryConfig
 } from './error-analysis';
 
-export type { ErrorAnalysis };
+export type { DeviceState, ErrorAnalysis, RecoveryConfig };
 
 export interface ErrorState {
 	consecutiveErrors: number;
@@ -16,20 +18,6 @@ export interface ErrorState {
 	frequencyErrors: Map<number, number>;
 	recentFailures: number[];
 	maxFailuresPerMinute: number;
-}
-
-export interface DeviceState {
-	status: 'unknown' | 'available' | 'busy' | 'stuck' | 'disconnected';
-	lastSuccessfulOperation: Date | null;
-	consecutiveBusyErrors: number;
-	recoveryState: 'none' | 'retrying' | 'escalating' | 'cooling_down';
-}
-
-export interface RecoveryConfig {
-	maxRecoveryAttempts?: number;
-	recoveryDelayMs?: number;
-	escalationThreshold?: number;
-	cooldownPeriodMs?: number;
 }
 
 /**

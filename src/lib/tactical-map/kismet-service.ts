@@ -3,12 +3,10 @@ import { get } from 'svelte/store';
 import type { KismetDevice } from '$lib/kismet/types';
 import { KismetControlResponseSchema, KismetDevicesResponseSchema } from '$lib/schemas/rf';
 import {
-	addKismetDevice,
+	batchUpdateDevices,
 	clearAllKismetDevices,
 	kismetStore,
-	removeKismetDevice,
-	setKismetStatus,
-	updateDistributions
+	setKismetStatus
 } from '$lib/stores/tactical-map/kismet-store';
 import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
@@ -162,27 +160,8 @@ export class KismetService {
 				}
 				const devices = data.devices as unknown as KismetDevice[];
 
-				// Track which devices we've seen this fetch
-				const currentDeviceMACs = new Set(devices.map((d) => d.mac));
-
-				// Remove devices that are no longer present
-				currentState?.devices.forEach((device: KismetDevice, mac: string) => {
-					if (!currentDeviceMACs.has(mac)) {
-						removeKismetDevice(mac);
-					}
-				});
-
-				// Add or update current devices
-				devices.forEach((device: KismetDevice) => {
-					addKismetDevice(device);
-				});
-
-				// Update distributions
-				const deviceMap = new Map();
-				devices.forEach((device) => {
-					deviceMap.set(device.mac, device);
-				});
-				updateDistributions(deviceMap);
+				// Single atomic batch: remove stale, add/update all, rebuild distributions
+				batchUpdateDevices(devices, currentState.devices);
 
 				return devices;
 			}

@@ -80,6 +80,7 @@ export function bezierArc(
 
 /**
  * Build a GeoJSON polygon approximating a circle (for accuracy visualization).
+ * Delegates to createRingPolygon with no inner hole.
  */
 export function createCirclePolygon(
 	lng: number,
@@ -87,20 +88,7 @@ export function createCirclePolygon(
 	radiusMeters: number,
 	steps = 48
 ): Feature {
-	const coords: [number, number][] = [];
-	const earthRadius = 6371000;
-	for (let i = 0; i <= steps; i++) {
-		const angle = (i / steps) * 2 * Math.PI;
-		const dLat = (radiusMeters * Math.cos(angle)) / earthRadius;
-		const dLng =
-			(radiusMeters * Math.sin(angle)) / (earthRadius * Math.cos((lat * Math.PI) / 180));
-		coords.push([lng + (dLng * 180) / Math.PI, lat + (dLat * 180) / Math.PI]);
-	}
-	return {
-		type: 'Feature',
-		properties: {},
-		geometry: { type: 'Polygon', coordinates: [coords] }
-	};
+	return createRingPolygon(lng, lat, radiusMeters, 0, steps);
 }
 
 /**
@@ -161,24 +149,23 @@ export function buildConeSVG(heading: number): string {
 	</svg>`;
 }
 
+/** Radio type → [CSS variable, fallback hex]. */
+const RADIO_COLOR_MAP: Record<string, [string, string]> = {
+	LTE: ['--chart-1', '#4a9eff'],
+	NR: ['--chart-5', '#ec4899'],
+	UMTS: ['--chart-2', '#10b981'],
+	GSM: ['--chart-3', '#f97316'],
+	CDMA: ['--chart-4', '#8b5cf6']
+};
+
 /**
  * Cell tower radio type → color (resolved from chart CSS variables).
  */
 export function getRadioColor(radio: string): string {
-	switch (radio?.toUpperCase()) {
-		case 'LTE':
-			return resolveThemeColor('--chart-1', '#4a9eff');
-		case 'NR':
-			return resolveThemeColor('--chart-5', '#ec4899');
-		case 'UMTS':
-			return resolveThemeColor('--chart-2', '#10b981');
-		case 'GSM':
-			return resolveThemeColor('--chart-3', '#f97316');
-		case 'CDMA':
-			return resolveThemeColor('--chart-4', '#8b5cf6');
-		default:
-			return resolveThemeColor('--muted-foreground', '#9aa0a6');
-	}
+	const entry = RADIO_COLOR_MAP[radio?.toUpperCase()];
+	return entry
+		? resolveThemeColor(entry[0], entry[1])
+		: resolveThemeColor('--muted-foreground', '#9aa0a6');
 }
 
 /**
@@ -196,21 +183,26 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
 	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** Thresholds for relative time formatting: [divisor, max, suffix]. */
+const TIME_UNITS: [number, number, string][] = [
+	[1, 60, 's'],
+	[60, 60, 'm'],
+	[60, 24, 'h'],
+	[24, Infinity, 'd']
+];
+
 /**
  * Format a timestamp as a relative time string (e.g., "5m ago").
  */
 export function formatTimeAgo(timestamp: number): string {
 	if (!timestamp) return '—';
-	const now = Date.now();
 	const ts = timestamp < 1e12 ? timestamp * 1000 : timestamp;
-	const diff = Math.max(0, now - ts);
-	const secs = Math.floor(diff / 1000);
-	if (secs < 60) return `${secs}s ago`;
-	const mins = Math.floor(secs / 60);
-	if (mins < 60) return `${mins}m ago`;
-	const hrs = Math.floor(mins / 60);
-	if (hrs < 24) return `${hrs}h ago`;
-	return `${Math.floor(hrs / 24)}d ago`;
+	let value = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+	for (const [divisor, max, suffix] of TIME_UNITS) {
+		value = Math.floor(value / divisor);
+		if (value < max) return `${value}${suffix} ago`;
+	}
+	return `${value}d ago`;
 }
 
 /**

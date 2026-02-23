@@ -1,12 +1,6 @@
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
-import {
-	convertToHz,
-	convertToMHz,
-	FrequencyBlacklist,
-	type FrequencyConfig,
-	normalizeFrequencies
-} from './frequency-utils';
+import { FrequencyBlacklist, type FrequencyConfig, normalizeFrequencies } from './frequency-utils';
 
 // Re-export so existing callers don't break
 export type { FrequencyConfig } from './frequency-utils';
@@ -185,39 +179,14 @@ export class FrequencyCycler {
 		logInfo('[STOP] Frequency cycling stopped');
 	}
 
-	// Delegate frequency utility methods to extracted modules
 	blacklistFrequency(frequency: FrequencyConfig): void {
 		this.frequencyBlacklist.add(frequency);
-	}
-
-	isFrequencyBlacklisted(frequency: FrequencyConfig): boolean {
-		return this.frequencyBlacklist.has(frequency);
-	}
-
-	getValidFrequencies(): FrequencyConfig[] {
-		return this.frequencyBlacklist.filterValid(this.cycleConfig.frequencies);
-	}
-
-	unblacklistFrequency(frequency: FrequencyConfig): void {
-		this.frequencyBlacklist.remove(frequency);
-	}
-
-	clearBlacklist(): void {
-		this.frequencyBlacklist.clear();
 	}
 
 	normalizeFrequencies(
 		frequencies: (number | { frequency?: number; value?: number; unit?: string })[]
 	): FrequencyConfig[] {
 		return normalizeFrequencies(frequencies);
-	}
-
-	convertToHz(value: number, unit: string): number {
-		return convertToHz(value, unit);
-	}
-
-	convertToMHz(value: number, unit: string): number {
-		return convertToMHz(value, unit);
 	}
 
 	/** Get current cycle state */
@@ -263,32 +232,16 @@ export class FrequencyCycler {
 		});
 	}
 
-	/** Reset cycling state */
+	/** Reset cycling state to initial values */
 	resetCycling(): void {
 		this.stopCycling();
 		this.cycleState.currentIndex = 0;
-		this.cycleState.isCycling = false;
-		this.cycleState.inFrequencyTransition = false;
 		logInfo('[RETRY] Cycling reset');
 	}
 
-	/** Clear all active timers */
-	clearAllTimers(): void {
-		if (this.cycleState.cycleTimer) {
-			clearTimeout(this.cycleState.cycleTimer);
-			this.cycleState.cycleTimer = null;
-		}
-		if (this.cycleState.switchTimer) {
-			clearTimeout(this.cycleState.switchTimer);
-			this.cycleState.switchTimer = null;
-		}
-		logInfo('[TIMER] All timers cleared');
-	}
-
-	/** Emergency stop all cycling operations */
+	/** Emergency stop — alias for stopCycling with warning log */
 	emergencyStop(): void {
 		this.stopCycling();
-		this.clearAllTimers();
 		logWarn('[ALERT] Emergency stop - frequency cycling halted');
 	}
 
