@@ -155,3 +155,9 @@ The "dual store" is confirmed: two independently managed stores for the same dom
 **svelte-sonner**: Installed (`1.0.7`) but zero imports anywhere in `src/`. Needs explicit `<Toaster />` component mount + `toast()` calls.
 
 **No existing retry/timeout wrappers**: `withRetry`, `withTimeout` patterns are absent from the codebase. These are genuinely new abstractions.
+
+## R11: safeJsonParse — Keep as Niche Utility (T013 Decision)
+
+**Decision**: Keep `src/lib/server/security/safe-json.ts` as-is.
+**Rationale**: 3 active consumers (gps-data-parser, gps-satellite-service, hardware-details-service) use it for raw-string → typed-data parsing at the service layer. This is a different use case from the route handler factory's Zod body validation (HTTP request → business logic). Not a duplication.
+**Also**: `safeErrorResponse()` and `logAndRespond()` in `src/lib/server/security/error-response.ts` had zero consumers — file deleted (T012).

@@ -61,8 +61,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 - [x] T010 [P] [US2] Replace all 19 local `errMsg()` definitions with import from `src/lib/server/api/error-utils.ts` — files listed in `specs/016-code-expressiveness/research.md` R1
 - [x] T011 [P] [US2] Replace all 36 local `execFileAsync`/`promisify(execFile)` declarations with import from `src/lib/server/exec.ts` — files listed in `specs/016-code-expressiveness/research.md` R2
-- [ ] T012 [US2] Absorb `safeErrorResponse()` and `logAndRespond()` into factory pattern. Remove `src/lib/server/security/error-response.ts` if fully superseded (0 external consumers confirmed)
-- [ ] T013 [US2] Evaluate `safeJsonParse()` in `src/lib/server/security/safe-json.ts` (3 consumers) — absorb into factory or keep as niche utility. Document decision in research.md
+- [x] T012 [US2] Absorb `safeErrorResponse()` and `logAndRespond()` into factory pattern. Remove `src/lib/server/security/error-response.ts` if fully superseded (0 external consumers confirmed)
+- [x] T013 [US2] Evaluate `safeJsonParse()` in `src/lib/server/security/safe-json.ts` (3 consumers) — absorb into factory or keep as niche utility. Document decision in research.md
 
 ---
 
