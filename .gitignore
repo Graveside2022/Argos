@@ -282,13 +282,5 @@ software_requirements*.md
 ESLint_*.txt
 hackrfbackup.*
 
-# Constitutional Audit System (dev tool, not production)
-src/lib/constitution/
-scripts/run-audit.ts
-tests/constitution/fixtures/temp-reports/
-
 # Large data files
 map-data/*.csv
-
-# ── Visual testing baselines ────────────────────────────────
-build-tools/css-integrity-report.json
