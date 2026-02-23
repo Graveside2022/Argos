@@ -3,7 +3,7 @@
  * Parses RR, MM, CC, and SMS protocol messages from byte arrays
  */
 
-import type { L3DecodedMessage } from './l3-decoder';
+import type { L3DecodedMessage } from './l3-types';
 
 /** Decode RR System Information messages (SI1-SI4) — returns null for non-SI types */
 export function decodeRRSystemInfo(bytes: number[], msgType: number): L3DecodedMessage | null {

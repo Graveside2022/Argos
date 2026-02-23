@@ -13,9 +13,6 @@ import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilPageState } from './gsm-evil-page-types';
 
-// Re-export processScanStream from the dedicated scan-stream module
-export { processScanStream } from './gsm-evil-scan-stream';
-
 /** Scroll a DOM element to its bottom by CSS selector. */
 function scrollToBottom(selector: string) {
 	const el = document.querySelector(selector);

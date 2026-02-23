@@ -10,7 +10,7 @@ import { HardwareDevice } from '$lib/server/hardware/types';
 import { safe } from '$lib/server/result';
 import { logger } from '$lib/utils/logger';
 
-import type { GsmEvilStopResult } from './gsm-evil-control-service';
+import type { GsmEvilStopResult } from './gsm-evil-types';
 
 /** Gracefully kill GSM Evil processes and free port 8080 */
 export async function gracefulStopGsmProcesses(): Promise<void> {

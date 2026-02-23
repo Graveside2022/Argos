@@ -11,16 +11,10 @@ import {
 	decodeRRSystemInfo,
 	decodeSMS
 } from './l3-message-decoders';
+import type { L3DecodedMessage } from './l3-types';
 
-export interface L3DecodedMessage {
-	messageType: string;
-	protocol: string;
-	details: string[];
-	imsi?: string;
-	tmsi?: string;
-	lac?: number;
-	ci?: number;
-}
+// Re-export type for backward compatibility
+export type { L3DecodedMessage } from './l3-types';
 
 /** Convert hex string to byte array. */
 function hexToBytes(hexData: string): number[] | null {

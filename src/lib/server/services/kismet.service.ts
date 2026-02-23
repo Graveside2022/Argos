@@ -5,48 +5,10 @@ import { logError, logInfo, logWarn } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import { buildRawDevice, buildSimplifiedDevice } from './kismet-service-transform';
+import type { DevicesResponse, GPSPosition, KismetDevice } from './kismet-service-types';
 
-/**
- * Represents a wireless device detected by Kismet
- */
-export interface KismetDevice {
-	mac: string;
-	last_seen: number;
-	signal: {
-		last_signal: number;
-		max_signal: number;
-		min_signal: number;
-	};
-	manufacturer: string;
-	type: string;
-	channel: number;
-	frequency: number;
-	packets: number;
-	datasize: number;
-	ssid?: string;
-	encryption?: string[];
-	location: {
-		lat: number;
-		lon: number;
-	};
-}
-
-/**
- * GPS coordinates for device location
- */
-export interface GPSPosition {
-	latitude: number;
-	longitude: number;
-}
-
-/**
- * Response from the Kismet device service
- */
-export interface DevicesResponse {
-	devices: KismetDevice[];
-	error: string | null;
-	source: 'kismet' | 'fallback';
-}
+// Re-export types for backward compatibility
+export type { DevicesResponse, GPSPosition, KismetDevice } from './kismet-service-types';
 
 /**
  * Service layer for Kismet device operations

@@ -4,7 +4,7 @@
  */
 
 import type { TPVData } from './gps-data-parser';
-import type { GpsPositionResponse } from './gps-position-service';
+import type { GpsPositionResponse } from './gps-types';
 
 /** Null position data shared by no-fix and error responses */
 function buildEmptyPositionData(

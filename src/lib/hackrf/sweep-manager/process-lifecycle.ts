@@ -7,7 +7,7 @@ import { type ChildProcess, execFile } from 'child_process';
 
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
-import type { ProcessState } from './process-manager';
+import type { ProcessState } from './process-manager-types';
 
 /**
  * Stop a specific process with graceful SIGTERM then SIGKILL fallback

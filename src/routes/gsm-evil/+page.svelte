@@ -18,9 +18,9 @@
 		fetchIMSIs,
 		fetchRealFrames,
 		fetchTowerLocationsForIMSIs,
-		fetchTowerLocationsForScanResults,
-		processScanStream
+		fetchTowerLocationsForScanResults
 	} from './gsm-evil-page-logic';
+	import { processScanStream } from './gsm-evil-scan-stream';
 	import { hasCellInfo, toDetectedTower } from './gsm-evil-tower-helpers';
 
 	let imsiCaptureActive = $state(false);

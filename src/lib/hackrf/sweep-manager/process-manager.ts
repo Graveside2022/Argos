@@ -6,20 +6,10 @@ import { type ChildProcess, execFile, spawn } from 'child_process';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import { forceCleanupAllProcesses, forceKillAllProcesses, stopProcess } from './process-lifecycle';
+import type { ProcessConfig, ProcessState } from './process-manager-types';
 
-export interface ProcessState {
-	sweepProcess: ChildProcess | null;
-	sweepProcessPgid: number | null;
-	actualProcessPid: number | null;
-	processStartTime: number | null;
-}
-
-export interface ProcessConfig {
-	detached: boolean;
-	stdio: ('pipe' | 'inherit' | 'ignore')[];
-	timeout?: number;
-	startupTimeoutMs?: number;
-}
+// Re-export types for backward compatibility
+export type { ProcessConfig, ProcessState } from './process-manager-types';
 
 /**
  * Manages HackRF process lifecycle - spawning, monitoring, and cleanup

@@ -8,7 +8,7 @@ import type { Affiliation } from '$lib/stores/tactical-map/kismet-store';
 
 import { resolveMapColor, SIGNAL_COLORS } from './map-colors';
 import type { RangeBand } from './map-geojson';
-import type { PopupState, TowerPopupState } from './map-handlers';
+import type { PopupState, TowerPopupState } from './map-handler-types';
 
 export interface ClickResult {
 	coordinates: [number, number];

@@ -5,7 +5,7 @@
 
 import type { RawKismetDevice, SimplifiedKismetDevice } from '$lib/schemas/kismet';
 
-import type { GPSPosition, KismetDevice } from './kismet.service';
+import type { GPSPosition, KismetDevice } from './kismet-service-types';
 
 const DEFAULT_SIGNAL = -100;
 

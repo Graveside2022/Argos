@@ -19,20 +19,10 @@ import {
 	gracefulStopGsmProcesses,
 	releaseHackRfResource
 } from './gsm-evil-stop-helpers';
+import type { GsmEvilStartResult, GsmEvilStopResult } from './gsm-evil-types';
 
-export interface GsmEvilStartResult {
-	success: boolean;
-	message: string;
-	error?: string;
-	conflictingService?: string;
-}
-
-export interface GsmEvilStopResult {
-	success: boolean;
-	message: string;
-	error?: string;
-	suggestion?: string;
-}
+// Re-export types for backward compatibility
+export type { GsmEvilStartResult, GsmEvilStopResult } from './gsm-evil-types';
 
 /**
  * Start GSM Evil monitoring with grgsm_livemon_headless and GsmEvil2.
