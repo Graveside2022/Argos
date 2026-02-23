@@ -24,11 +24,6 @@ export const GPSPositionSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from GPSPositionSchema
- */
-export type GPSPosition = z.infer<typeof GPSPositionSchema>;
-
-/**
  * GPSStatus Schema - Validates GPS fix status and metadata
  *
  * Validation rules:
@@ -63,11 +58,6 @@ export const GPSStatusSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from GPSStatusSchema
- */
-export type GPSStatus = z.infer<typeof GPSStatusSchema>;
-
-/**
  * SimplifiedSignal Schema - Validates HackRF signal data
  *
  * Validation rules:
@@ -88,8 +78,3 @@ export const SimplifiedSignalSchema = z.object({
 	timestamp: z.number().int().positive(),
 	count: z.number().int().positive()
 });
-
-/**
- * TypeScript type inferred from SimplifiedSignalSchema
- */
-export type SimplifiedSignal = z.infer<typeof SimplifiedSignalSchema>;

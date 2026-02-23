@@ -1,5 +1,5 @@
 import type { Writable } from 'svelte/store';
-import { derived, get, writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 
 import type { KismetAlert, KismetDevice, KismetNetwork, KismetStatus, KismetStore } from './types';
 
@@ -172,32 +172,3 @@ function createKismetStore() {
 }
 
 export const kismetStore = createKismetStore();
-
-// Derived stores for filtered data
-export const activeDevices = derived(kismetStore, ($store) => {
-	const fiveMinutesAgo = Date.now() / 1000 - 300;
-	return $store.devices.filter((d) => d.last_seen > fiveMinutesAgo);
-});
-
-export const recentAlerts = derived(kismetStore, ($store) => {
-	const oneHourAgo = Date.now() / 1000 - 3600;
-	return $store.alerts.filter((a) => a.timestamp > oneHourAgo);
-});
-
-export const devicesByType = derived(kismetStore, ($store) => {
-	const types: Record<string, number> = {};
-	$store.devices.forEach((device) => {
-		types[device.type] = (types[device.type] || 0) + 1;
-	});
-	return types;
-});
-
-export const channelDistribution = derived(kismetStore, ($store) => {
-	const channels: Record<number, number> = {};
-	$store.devices.forEach((device) => {
-		if (device.channel > 0) {
-			channels[device.channel] = (channels[device.channel] || 0) + 1;
-		}
-	});
-	return channels;
-});

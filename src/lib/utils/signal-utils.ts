@@ -78,13 +78,6 @@ export function getSignalBandKey(rssi: number): string {
 	return SIGNAL_THRESHOLDS.find(([min]) => rssi > min)?.[1] ?? 'weak';
 }
 
-/** Get the Palantir CSS variable name for an RSSI value */
-export function getSignalColor(rssi: number): string {
-	const key = getSignalBandKey(rssi);
-	const band = signalBands.find((b) => b.key === key);
-	return band?.cssVar ?? '--palantir-signal-weak';
-}
-
 /** Signal hex color thresholds: [minRssi, cssVar, fallbackHex]. First match wins. */
 const SIGNAL_HEX_THRESHOLDS: [number, string, string][] = [
 	[-50, '--signal-critical', '#dc2626'],
@@ -106,14 +99,4 @@ export function getSignalHex(rssi: number): string {
 	if (rssi === 0) return '#9a9a9a';
 	const [cssVar, fallback] = resolveSignalPair(rssi);
 	return resolveThemeColor(cssVar, fallback);
-}
-
-/** Format "last seen" timestamp to human-readable relative time */
-export function formatLastSeen(timestamp: number): string {
-	const msTs = timestamp > 1e12 ? timestamp : timestamp * 1000;
-	const secs = Math.floor((Date.now() - msTs) / 1000);
-	if (secs < 5) return 'Just now';
-	if (secs < 60) return `${secs}s ago`;
-	if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-	return `${Math.floor(secs / 3600)}h ago`;
 }

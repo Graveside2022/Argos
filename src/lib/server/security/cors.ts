@@ -37,11 +37,3 @@ export function getCorsHeaders(requestOrigin: string | null): Record<string, str
 
 	return headers;
 }
-
-/**
- * Check if an origin is allowed.
- */
-export function isOriginAllowed(origin: string | null): boolean {
-	if (!origin) return true; // Non-browser requests (curl, etc.) have no origin
-	return ALLOWED_ORIGINS.includes(origin);
-}

@@ -48,11 +48,6 @@ export const DbSignalSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from DbSignalSchema
- */
-export type DbSignal = z.infer<typeof DbSignalSchema>;
-
-/**
  * DbDevice Schema - Validates device records from database
  *
  * Validation rules:
@@ -79,11 +74,6 @@ export const DbDeviceSchema = z.object({
 	freq_max: z.number().positive().optional(),
 	metadata: z.string().optional()
 });
-
-/**
- * TypeScript type inferred from DbDeviceSchema
- */
-export type DbDevice = z.infer<typeof DbDeviceSchema>;
 
 /**
  * DbNetwork Schema - Validates network records from database
@@ -116,11 +106,6 @@ export const DbNetworkSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from DbNetworkSchema
- */
-export type DbNetwork = z.infer<typeof DbNetworkSchema>;
-
-/**
  * DbRelationship Schema - Validates relationship records from database
  *
  * Validation rules:
@@ -143,8 +128,3 @@ export const DbRelationshipSchema = z.object({
 	first_seen: z.number().int().positive(),
 	last_seen: z.number().int().positive()
 });
-
-/**
- * TypeScript type inferred from DbRelationshipSchema
- */
-export type DbRelationship = z.infer<typeof DbRelationshipSchema>;

@@ -48,11 +48,6 @@ export const FrequencyRangeSchema = z.union([
 ]);
 
 /**
- * TypeScript type inferred from FrequencyRangeSchema
- */
-export type FrequencyRange = z.infer<typeof FrequencyRangeSchema>;
-
-/**
  * Start Sweep Request Schema - Validates sweep start requests
  *
  * Validation rules:
@@ -70,11 +65,6 @@ export const StartSweepRequestSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from StartSweepRequestSchema
- */
-export type StartSweepRequest = z.infer<typeof StartSweepRequestSchema>;
-
-/**
  * Stop Sweep Request Schema - Validates sweep stop requests
  */
 export const StopSweepRequestSchema = z.object({
@@ -82,21 +72,11 @@ export const StopSweepRequestSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from StopSweepRequestSchema
- */
-export type StopSweepRequest = z.infer<typeof StopSweepRequestSchema>;
-
-/**
  * Emergency Stop Request Schema - Validates emergency stop requests
  */
 export const EmergencyStopRequestSchema = z.object({
 	deviceType: DeviceTypeSchema.optional()
 });
-
-/**
- * TypeScript type inferred from EmergencyStopRequestSchema
- */
-export type EmergencyStopRequest = z.infer<typeof EmergencyStopRequestSchema>;
 
 /**
  * Kismet Devices Response Schema - Validates Kismet API responses
@@ -107,11 +87,6 @@ export const KismetDevicesResponseSchema = z.object({
 });
 
 /**
- * TypeScript type inferred from KismetDevicesResponseSchema
- */
-export type KismetDevicesResponse = z.infer<typeof KismetDevicesResponseSchema>;
-
-/**
  * Kismet Control Response Schema - Validates Kismet control API responses
  */
 export const KismetControlResponseSchema = z.object({
@@ -120,11 +95,6 @@ export const KismetControlResponseSchema = z.object({
 	message: z.string().optional(),
 	error: z.string().optional()
 });
-
-/**
- * TypeScript type inferred from KismetControlResponseSchema
- */
-export type KismetControlResponse = z.infer<typeof KismetControlResponseSchema>;
 
 /**
  * GPS API Response Schema - Validates GPS position API responses
@@ -146,11 +116,6 @@ export const GPSApiResponseSchema = z.object({
 		.optional(),
 	error: z.string().optional()
 });
-
-/**
- * TypeScript type inferred from GPSApiResponseSchema
- */
-export type GPSApiResponse = z.infer<typeof GPSApiResponseSchema>;
 
 /**
  * Kismet Raw Device Schema - Validates external Kismet API device responses

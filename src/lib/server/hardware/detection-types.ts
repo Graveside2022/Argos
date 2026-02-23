@@ -157,13 +157,3 @@ export interface HardwareQueryOptions {
 	search?: string;
 	compatibleWithTool?: string; // Tool ID
 }
-
-/**
- * Hardware requirement (for tools)
- */
-export interface HardwareRequirement {
-	category: HardwareCategory;
-	isRequired: boolean;
-	capabilities?: Partial<HardwareCapabilities>;
-	message?: string; // Error message if not available
-}

@@ -36,12 +36,6 @@ export interface SweepStatus {
 	error?: string;
 }
 
-export interface SpectrumDataPoint {
-	frequency: number;
-	power: number;
-	timestamp: number;
-}
-
 export interface SpectrumData {
 	timestamp: Date;
 	frequency: number; // Peak frequency in MHz
@@ -77,11 +71,4 @@ export interface HackRFHealth {
 	deviceInfo?: string;
 	error?: string;
 	lastUpdate: number;
-}
-
-export interface ApiResponse<T = unknown> {
-	success: boolean;
-	data?: T;
-	error?: string;
-	timestamp: number;
 }

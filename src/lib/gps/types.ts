@@ -66,20 +66,6 @@ export interface GPSPositionData {
 	time?: string;
 }
 
-/**
- * Validate GPS position data at runtime
- */
-export function validateGPSPosition(data: unknown): GPSPosition {
-	return GPSPositionSchema.parse(data);
-}
-
-/**
- * Safe GPS position validation
- */
-export function safeValidateGPSPosition(data: unknown) {
-	return GPSPositionSchema.safeParse(data);
-}
-
 export interface GPSApiResponse {
 	success: boolean;
 	data?: GPSPositionData;

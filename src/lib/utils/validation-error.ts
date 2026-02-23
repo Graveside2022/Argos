@@ -116,17 +116,6 @@ export function getUserFriendlyMessage(error: ZodError): string {
 }
 
 /**
- * Get multiple user-friendly messages for UI display (for toast stacking)
- */
-export function getAllUserFriendlyMessages(error: ZodError, maxMessages = 3): string[] {
-	return error.issues.slice(0, maxMessages).map((issue) => {
-		const formatted = formatZodIssue(issue);
-		const fieldName = formatted.field || 'Input';
-		return `${fieldName}: ${formatted.message}`;
-	});
-}
-
-/**
  * Handle Zod validation error with context-aware logging and notifications
  *
  * @param error - ZodError from validation failure
@@ -157,13 +146,6 @@ export function handleValidationError(
 		const message = getUserFriendlyMessage(error);
 		showToast(message, 'error');
 	}
-}
-
-/**
- * Type guard to check if an error is a ZodError
- */
-export function isZodError(error: unknown): error is ZodError {
-	return error instanceof ZodError;
 }
 
 /**

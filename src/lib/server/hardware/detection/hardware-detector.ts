@@ -133,35 +133,6 @@ export async function detectHardwareById(id: string): Promise<DetectedHardware |
 }
 
 /**
- * Check if specific hardware is available
- */
-export async function isHardwareAvailable(id: string): Promise<boolean> {
-	const hardware = await detectHardwareById(id);
-	return hardware !== null && hardware.status === 'connected';
-}
-
-/**
- * Check if hardware category is available
- */
-export async function isCategoryAvailable(category: HardwareCategory): Promise<boolean> {
-	// Check registry first
-	if (globalHardwareRegistry.hasCategory(category)) {
-		return true;
-	}
-
-	// Run scan and check again
-	await scanAllHardware();
-	return globalHardwareRegistry.hasCategory(category);
-}
-
-/**
- * Get hardware compatible with a tool
- */
-export function getCompatibleHardware(toolId: string): DetectedHardware[] {
-	return globalHardwareRegistry.getCompatibleWith(toolId);
-}
-
-/**
  * Continuous hardware monitoring
  * Scans for hardware changes at regular intervals
  */

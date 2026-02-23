@@ -49,19 +49,3 @@ export function formatMGRS(mgrsString: string): string {
 	// If format doesn't match, return as-is
 	return mgrsString;
 }
-
-/**
- * Get precision description for MGRS
- */
-const MGRS_PRECISION: Record<number, string> = {
-	0: '100km',
-	2: '10km',
-	4: '1km',
-	6: '100m',
-	8: '10m',
-	10: '1m'
-};
-
-export function getMGRSPrecision(digits: number): string {
-	return MGRS_PRECISION[digits] || 'Unknown';
-}
