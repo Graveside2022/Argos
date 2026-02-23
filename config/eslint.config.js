@@ -102,8 +102,8 @@ export default [
 			'@typescript-eslint/explicit-module-boundary-types': 'off',
 			'@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards
 			'no-console': ['warn', { allow: ['warn', 'error'] }], // Use proper logging
-			complexity: ['warn', 15], // Cyclomatic complexity threshold
-			'sonarjs/cognitive-complexity': ['warn', 20] // Cognitive complexity threshold
+			complexity: ['error', 10], // Cyclomatic complexity — hard block, no exceptions
+			'sonarjs/cognitive-complexity': ['error', 10] // Cognitive complexity — hard block, no exceptions
 		}
 	},
 	{
