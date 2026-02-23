@@ -15,40 +15,40 @@ export interface CSSLoadOptions {
  * @param options - Loading options
  * @returns Promise that resolves when CSS is loaded
  */
+/** Create and configure the <link> element for CSS loading. */
+function createLink(href: string, options: CSSLoadOptions, resolve: () => void): HTMLLinkElement {
+	const link = document.createElement('link');
+	link.rel = options.preload ? 'preload' : 'stylesheet';
+	link.href = href;
+	link.media = options.media || 'all';
+	if (options.preload) {
+		link.as = 'style';
+		link.onload = () => {
+			link.rel = 'stylesheet';
+			resolve();
+		};
+	} else {
+		link.onload = () => resolve();
+	}
+	return link;
+}
+
+/** Apply fetchPriority hint if browser supports it. */
+function applyPriority(link: HTMLLinkElement, priority?: 'high' | 'low'): void {
+	if (priority && 'fetchPriority' in link) {
+		(link as HTMLLinkElement & { fetchPriority?: 'high' | 'low' }).fetchPriority = priority;
+	}
+}
+
 export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<void> {
 	return new Promise((resolve, reject) => {
-		// Check if already loaded
-		const existing = document.querySelector(`link[href="${href}"]`);
-		if (existing) {
+		if (document.querySelector(`link[href="${href}"]`)) {
 			resolve();
 			return;
 		}
-
-		const link = document.createElement('link');
-		link.rel = options.preload ? 'preload' : 'stylesheet';
-		link.href = href;
-		link.media = options.media || 'all';
-
-		if (options.preload) {
-			link.as = 'style';
-			link.onload = () => {
-				// Convert preload to stylesheet
-				link.rel = 'stylesheet';
-				resolve();
-			};
-		} else {
-			link.onload = () => resolve();
-		}
-
+		const link = createLink(href, options, resolve);
 		link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
-
-		// Add priority hint if supported
-		if (options.priority && 'fetchPriority' in link) {
-			// Safe: HTMLLinkElement extended with optional fetchPriority property for resource loading priority hints
-			(link as HTMLLinkElement & { fetchPriority?: 'high' | 'low' }).fetchPriority =
-				options.priority;
-		}
-
+		applyPriority(link, options.priority);
 		document.head.appendChild(link);
 	});
 }

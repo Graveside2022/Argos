@@ -2,21 +2,17 @@
  * Resolves a CSS custom property to its computed hex value.
  * Returns fallback if SSR context (no DOM) or variable not found.
  */
+/** Normalize CSS var name to include -- prefix. */
+function normalizeVarName(varName: string): string {
+	return varName.startsWith('--') ? varName : `--${varName}`;
+}
+
 export function resolveThemeColor(varName: string, fallback = '#000000'): string {
-	if (typeof document === 'undefined') {
-		return fallback;
-	}
-
-	// Normalize: accept both "--signal-critical" and "signal-critical"
-	const normalized = varName.startsWith('--') ? varName : `--${varName}`;
-
-	const value = getComputedStyle(document.documentElement).getPropertyValue(normalized).trim();
-
-	if (!value) {
-		return fallback;
-	}
-
-	return cssColorToHex(value) ?? fallback;
+	if (typeof document === 'undefined') return fallback;
+	const value = getComputedStyle(document.documentElement)
+		.getPropertyValue(normalizeVarName(varName))
+		.trim();
+	return (value && cssColorToHex(value)) || fallback;
 }
 
 /**

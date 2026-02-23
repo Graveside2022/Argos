@@ -1,14 +1,30 @@
-import { execFile } from 'child_process';
-import { readdir, readFile, readlink } from 'fs/promises';
-import { createConnection } from 'net';
-import { promisify } from 'util';
+/**
+ * Hardware details service — enumerates WiFi, SDR, and GPS devices
+ * via sysfs, iw commands, and gpsd queries.
+ */
 import { z } from 'zod';
 
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { safeJsonParse } from '$lib/server/security/safe-json';
 import { logger } from '$lib/utils/logger';
 
-const execFileAsync = promisify(execFile);
+import {
+	CHANNEL_REGEX,
+	extractGpsdDevice,
+	findUsbDevice,
+	formatChannel,
+	type InterfaceInfo,
+	isWifiDriver,
+	mapDriverToChipset,
+	parseBands,
+	parseInterfaceBlock,
+	queryGpsd,
+	readSdrAttributes,
+	readUsbIdentity,
+	run,
+	sysLink,
+	sysRead
+} from './hardware-details-helpers';
 
 // Zod schema for gpsd JSON messages (VERSION, DEVICES, etc.)
 const GpsdDeviceMessageSchema = z
@@ -28,47 +44,6 @@ const GpsdDeviceMessageSchema = z
 			.optional()
 	})
 	.passthrough();
-
-/** Run a command safely via execFile — no shell interpretation */
-async function run(binary: string, args: string[]): Promise<string> {
-	try {
-		const { stdout } = await execFileAsync(binary, args, { timeout: 5000 });
-		return stdout.trim();
-	} catch (_error: unknown) {
-		return '';
-	}
-}
-
-/** Read a sysfs file — works inside containers with host device access */
-async function sysRead(path: string): Promise<string> {
-	try {
-		return (await readFile(path, 'utf-8')).trim();
-	} catch (_error: unknown) {
-		return '';
-	}
-}
-
-/** Resolve a sysfs symlink and return the final component */
-async function sysLink(path: string): Promise<string> {
-	try {
-		const link = await readlink(path);
-		return link.split('/').pop() || '';
-	} catch (_error: unknown) {
-		return '';
-	}
-}
-
-/** List top-level USB device paths (e.g. /sys/bus/usb/devices/1-2) */
-async function listUsbDevices(): Promise<string[]> {
-	try {
-		const entries = await readdir('/sys/bus/usb/devices');
-		return entries
-			.filter((e) => /^\d+-\d+(\.\d+)*$/.test(e))
-			.map((e) => `/sys/bus/usb/devices/${e}`);
-	} catch (_error: unknown) {
-		return [];
-	}
-}
 
 export interface WifiDetails {
 	interface: string;
@@ -109,250 +84,208 @@ export interface HardwareDetails {
 	gps: GpsDetails | null;
 }
 
-async function getWifiDetails(): Promise<WifiDetails | null> {
-	const iwDev = await run('/usr/sbin/iw', ['dev']);
-	if (!iwDev) return null;
+// ── WiFi detection ──
 
-	let iface = '';
-	let monIface = '';
-	let mac = '';
-	let channel = '';
-	let phyIdx = '0';
+interface WifiIfaceState {
+	iface: string;
+	monIface: string;
+	mac: string;
+	channel: string;
+}
 
-	const phySections = iwDev.split(/(?=phy#\d+)/);
+function applyMonitorInfo(state: WifiIfaceState, info: InterfaceInfo): void {
+	state.monIface = info.name;
+	if (!state.mac && info.mac) state.mac = info.mac;
+	if (!state.channel && info.channel) state.channel = info.channel;
+}
+
+function applyManagedInfo(state: WifiIfaceState, info: InterfaceInfo): void {
+	state.iface = info.name;
+	if (info.mac) state.mac = info.mac;
+	if (info.channel) state.channel = info.channel;
+}
+
+function applyInterfaceInfo(state: WifiIfaceState, info: InterfaceInfo | null): void {
+	if (!info) return;
+	if (info.isMonitor) applyMonitorInfo(state, info);
+	else applyManagedInfo(state, info);
+}
+
+async function findWifiPhy(
+	phySections: string[]
+): Promise<{ phyIdx: string; section: string } | null> {
 	for (const section of phySections) {
 		const phyMatch = section.match(/phy#(\d+)/);
 		if (!phyMatch) continue;
-		const phyNum = phyMatch[1];
-
-		// Check if this phy is the USB WiFi adapter via sysfs driver symlink
-		const driver = await sysLink(`/sys/class/ieee80211/phy${phyNum}/device/driver`);
-		if (!/mt79|mt76|rtl8|ath9k/i.test(driver)) continue;
-		phyIdx = String(validateNumericParam(phyNum, 'phyIdx', 0, 255));
-
-		const ifaceBlocks = section.split(/(?=\tInterface )/);
-		for (const block of ifaceBlocks) {
-			const ifMatch = block.match(/Interface\s+(\S+)/);
-			if (!ifMatch) continue;
-			const name = validateInterfaceName(ifMatch[1]);
-			const typeMatch = block.match(/type\s+(\S+)/);
-			const addrMatch = block.match(/addr\s+([0-9a-f:]+)/i);
-			const chanMatch = block.match(
-				/channel\s+(\d+)\s+\((\d+)\s+MHz\),\s+width:\s+(\d+)\s+MHz/
-			);
-
-			if (typeMatch?.[1] === 'monitor') {
-				monIface = name;
-				if (!mac && addrMatch) mac = addrMatch[1];
-				if (!channel && chanMatch) {
-					channel = `Ch ${chanMatch[1]} (${chanMatch[2]} MHz, ${chanMatch[3]} MHz)`;
-				}
-			} else {
-				iface = name;
-				if (addrMatch) mac = addrMatch[1];
-				if (chanMatch) {
-					channel = `Ch ${chanMatch[1]} (${chanMatch[2]} MHz, ${chanMatch[3]} MHz)`;
-				}
-			}
-		}
-		break;
+		const driver = await sysLink(`/sys/class/ieee80211/phy${phyMatch[1]}/device/driver`);
+		if (!isWifiDriver(driver)) continue;
+		const phyIdx = String(validateNumericParam(phyMatch[1], 'phyIdx', 0, 255));
+		return { phyIdx, section };
 	}
+	return null;
+}
 
-	if (!iface && !monIface) return null;
-
-	// Get channel from iw dev info if not captured
-	if (!channel) {
-		const devInfo = await run('/usr/sbin/iw', ['dev', monIface || iface, 'info']);
-		const chanMatch = devInfo.match(
-			/channel\s+(\d+)\s+\((\d+)\s+MHz\),\s+width:\s+(\d+)\s+MHz/
-		);
-		if (chanMatch) {
-			channel = `Ch ${chanMatch[1]} (${chanMatch[2]} MHz, ${chanMatch[3]} MHz)`;
-		}
+function parsePhyInterfaces(section: string): WifiIfaceState {
+	const state: WifiIfaceState = { iface: '', monIface: '', mac: '', channel: '' };
+	const blocks = section.split(/(?=\tInterface )/);
+	for (const block of blocks) {
+		applyInterfaceInfo(state, parseInterfaceBlock(block, validateInterfaceName));
 	}
+	return state;
+}
 
-	// Get driver from sysfs uevent (works in containers without ethtool)
-	const targetIface = iface || monIface;
-	const uevent = await sysRead(`/sys/class/net/${targetIface}/device/uevent`);
-	let driver = '';
+async function resolveChannel(state: WifiIfaceState): Promise<string> {
+	if (state.channel) return state.channel;
+	const devInfo = await run('/usr/sbin/iw', ['dev', state.monIface || state.iface, 'info']);
+	const chanMatch = devInfo.match(CHANNEL_REGEX);
+	return chanMatch ? formatChannel(chanMatch) : '';
+}
+
+async function resolveDriver(iface: string): Promise<string> {
+	const uevent = await sysRead(`/sys/class/net/${iface}/device/uevent`);
 	const driverMatch = uevent.match(/DRIVER=(\S+)/);
-	if (driverMatch) driver = driverMatch[1];
+	return driverMatch ? driverMatch[1] : '';
+}
 
-	// Map driver to chipset name
-	let chipset = '';
-	if (driver === 'mt7921u') chipset = 'MediaTek MT7921AU';
-	else if (driver.startsWith('mt76')) chipset = `MediaTek ${driver.toUpperCase()}`;
-	else if (driver.startsWith('rtl')) chipset = `Realtek ${driver.toUpperCase()}`;
-	else if (driver) chipset = driver.toUpperCase();
+async function resolveAlfaUsb(): Promise<{ manufacturer: string; product: string }> {
+	const devPath = await findUsbDevice('0e8d', '7961');
+	if (!devPath) return { manufacturer: '', product: '' };
+	return readUsbIdentity(devPath);
+}
 
-	// Get USB manufacturer/product from sysfs
-	let usbManufacturer = '';
-	let usbProduct = '';
-	const usbDevices = await listUsbDevices();
-	for (const dev of usbDevices) {
-		const vendor = await sysRead(`${dev}/idVendor`);
-		const product = await sysRead(`${dev}/idProduct`);
-		// MediaTek MT7921 Alfa USB ID: 0e8d:7961
-		if (vendor === '0e8d' && product === '7961') {
-			usbManufacturer = await sysRead(`${dev}/manufacturer`);
-			usbProduct = await sysRead(`${dev}/product`);
-			break;
-		}
-	}
-
-	// Determine bands from phy info
-	const phyInfo = await run('/usr/sbin/iw', ['phy', `phy${phyIdx}`, 'info']);
-	const bands: string[] = [];
-	if (phyInfo.includes('Band 1:')) bands.push('2.4 GHz');
-	if (phyInfo.includes('Band 2:')) bands.push('5 GHz');
-	if (phyInfo.includes('Band 4:')) bands.push('6 GHz');
-
+function assembleWifiDetails(
+	state: WifiIfaceState,
+	channel: string,
+	driver: string,
+	usb: { manufacturer: string; product: string },
+	bands: string[]
+): WifiDetails {
 	return {
-		interface: iface || '',
-		monitorInterface: monIface,
-		mac: mac.toUpperCase(),
+		interface: state.iface,
+		monitorInterface: state.monIface,
+		mac: state.mac.toUpperCase(),
 		driver,
-		chipset,
-		usbManufacturer,
-		usbProduct,
-		mode: monIface ? 'monitor' : 'managed',
+		chipset: mapDriverToChipset(driver),
+		usbManufacturer: usb.manufacturer,
+		usbProduct: usb.product,
+		mode: state.monIface ? 'monitor' : 'managed',
 		channel,
 		bands
 	};
 }
 
-async function getSdrDetails(): Promise<SdrDetails | null> {
-	// Read HackRF info from USB sysfs (works in containers)
-	const usbDevices = await listUsbDevices();
-	for (const dev of usbDevices) {
-		const vendor = await sysRead(`${dev}/idVendor`);
-		const product = await sysRead(`${dev}/idProduct`);
-
-		// HackRF One USB ID: 1d50:6089
-		if (vendor === '1d50' && product === '6089') {
-			// bcdDevice encodes firmware API version (e.g. 0108 → 1.08)
-			const bcd = await sysRead(`${dev}/bcdDevice`);
-			let firmwareApi = '';
-			if (bcd.length === 4) {
-				const major = parseInt(bcd.slice(0, 2), 10);
-				const minor = bcd.slice(2);
-				firmwareApi = `${major}.${minor}`;
-			}
-
-			// USB bus speed in Mbps
-			const speed = await sysRead(`${dev}/speed`);
-			let usbSpeed = '';
-			if (speed === '480') usbSpeed = '480 Mbps (USB 2.0)';
-			else if (speed === '5000') usbSpeed = '5 Gbps (USB 3.0)';
-			else if (speed) usbSpeed = `${speed} Mbps`;
-
-			return {
-				serial: await sysRead(`${dev}/serial`),
-				product: (await sysRead(`${dev}/product`)) || 'HackRF One',
-				manufacturer: (await sysRead(`${dev}/manufacturer`)) || 'Great Scott Gadgets',
-				usbVersion: (await sysRead(`${dev}/version`)).trim(),
-				firmwareApi,
-				usbSpeed,
-				maxPower: await sysRead(`${dev}/bMaxPower`),
-				configuration: await sysRead(`${dev}/configuration`)
-			};
-		}
-	}
-	return null;
+function hasAnyInterface(state: WifiIfaceState): boolean {
+	return state.iface !== '' || state.monIface !== '';
 }
 
-/** Query GPSD via direct TCP socket (no nc dependency) */
-function queryGpsd(command: string, timeoutMs = 3000): Promise<string> {
-	return new Promise((resolve) => {
-		let data = '';
-		const sock = createConnection({ host: '127.0.0.1', port: 2947 }, () => {
-			sock.write(command + '\n');
-		});
-		sock.setEncoding('utf-8');
-		sock.on('data', (chunk) => {
-			data += chunk;
-		});
-		sock.on('error', () => resolve(''));
-		const timer = setTimeout(() => {
-			sock.destroy();
-			resolve(data);
-		}, timeoutMs);
-		sock.on('end', () => {
-			clearTimeout(timer);
-			resolve(data);
-		});
-	});
+function primaryInterface(state: WifiIfaceState): string {
+	return state.iface || state.monIface;
+}
+
+async function getWifiDetails(): Promise<WifiDetails | null> {
+	const iwDev = await run('/usr/sbin/iw', ['dev']);
+	if (!iwDev) return null;
+
+	const phy = await findWifiPhy(iwDev.split(/(?=phy#\d+)/));
+	if (!phy) return null;
+
+	const state = parsePhyInterfaces(phy.section);
+	if (!hasAnyInterface(state)) return null;
+
+	const channel = await resolveChannel(state);
+	const driver = await resolveDriver(primaryInterface(state));
+	const usb = await resolveAlfaUsb();
+	const phyInfo = await run('/usr/sbin/iw', ['phy', `phy${phy.phyIdx}`, 'info']);
+
+	return assembleWifiDetails(state, channel, driver, usb, parseBands(phyInfo));
+}
+
+// ── SDR detection ──
+
+async function getSdrDetails(): Promise<SdrDetails | null> {
+	const devPath = await findUsbDevice('1d50', '6089');
+	if (!devPath) return null;
+	return readSdrAttributes(devPath);
+}
+
+// ── GPS detection ──
+
+interface GpsdState {
+	device: string;
+	protocol: string;
+	baudRate: number;
+	gpsdVersion: string;
+}
+
+function processGpsdVersion(parsed: { release?: string }, state: GpsdState): void {
+	state.gpsdVersion = (parsed.release as string) || '';
+}
+
+function processGpsdDevices(
+	devices: Record<string, unknown>[] | undefined,
+	state: GpsdState
+): void {
+	if (!Array.isArray(devices)) return;
+	const dev = devices[0] as Record<string, unknown> | undefined;
+	if (!dev) return;
+	const extracted = extractGpsdDevice(dev);
+	state.device = extracted.device;
+	state.protocol = extracted.protocol;
+	state.baudRate = extracted.baudRate;
+}
+
+function processGpsdLine(line: string, state: GpsdState): void {
+	const result = safeJsonParse(line, GpsdDeviceMessageSchema, 'hardware-details-gpsd');
+	if (!result.success) {
+		logger.warn('[hardware-details] Malformed gpsd data, skipping line');
+		return;
+	}
+	const parsed = result.data;
+	if (parsed.class === 'VERSION') processGpsdVersion(parsed, state);
+	if (parsed.class === 'DEVICES') processGpsdDevices(parsed.devices, state);
+}
+
+function parseGpsdOutput(output: string): GpsdState {
+	const state: GpsdState = { device: '', protocol: '', baudRate: 0, gpsdVersion: '' };
+	for (const line of output.trim().split('\n')) {
+		processGpsdLine(line, state);
+	}
+	return state;
+}
+
+async function resolveGpsUsb(): Promise<{ adapter: string; serial: string }> {
+	const devPath = await findUsbDevice('067b', '23a3');
+	if (!devPath) return { adapter: '', serial: '' };
+	const identity = await readUsbIdentity(devPath);
+	const adapter = identity.manufacturer
+		? `${identity.manufacturer} ${identity.product}`.trim()
+		: identity.product;
+	return { adapter, serial: await sysRead(`${devPath}/serial`) };
 }
 
 async function getGpsDetails(): Promise<GpsDetails | null> {
 	const gpsdOutput = await queryGpsd('?DEVICES;');
 	if (!gpsdOutput) return null;
 
-	let device = '';
-	let protocol = '';
-	let baudRate = 0;
-	let gpsdVersion = '';
+	const state = parseGpsdOutput(gpsdOutput);
+	if (!state.device && !state.gpsdVersion) return null;
 
-	for (const line of gpsdOutput.trim().split('\n')) {
-		const result = safeJsonParse(line, GpsdDeviceMessageSchema, 'hardware-details-gpsd');
-		if (!result.success) {
-			logger.warn('[hardware-details] Malformed gpsd data, skipping line');
-			continue;
-		}
-
-		try {
-			const parsed = result.data;
-			if (parsed.class === 'VERSION') {
-				gpsdVersion = (parsed.release as string) || '';
-			}
-			if (parsed.class === 'DEVICES' && Array.isArray(parsed.devices)) {
-				// Safe: Type cast for dynamic data access
-				const dev = parsed.devices[0] as Record<string, unknown> | undefined;
-				if (dev) {
-					device = (dev.path as string) || '';
-					protocol = (dev.driver as string) || '';
-					baudRate = (dev.bps as number) || 0;
-				}
-			}
-		} catch (_error: unknown) {
-			// Skip non-JSON
-		}
-	}
-
-	if (!device && !gpsdVersion) return null;
-
-	// Get USB adapter info from sysfs (Prolific USB-Serial: 067b:23a3)
-	let usbAdapter = '';
-	let usbSerial = '';
-	const usbDevices = await listUsbDevices();
-	for (const dev of usbDevices) {
-		const vendor = await sysRead(`${dev}/idVendor`);
-		const product = await sysRead(`${dev}/idProduct`);
-		// Prolific USB-Serial (common GPS adapter chipset)
-		if (vendor === '067b' && product === '23a3') {
-			const mfr = await sysRead(`${dev}/manufacturer`);
-			const prod = await sysRead(`${dev}/product`);
-			usbAdapter = mfr ? `${mfr} ${prod}`.trim() : prod;
-			usbSerial = await sysRead(`${dev}/serial`);
-			break;
-		}
-	}
-
+	const usb = await resolveGpsUsb();
 	return {
-		device,
-		protocol,
-		baudRate,
-		usbAdapter,
-		usbSerial,
-		gpsdVersion
+		device: state.device,
+		protocol: state.protocol,
+		baudRate: state.baudRate,
+		usbAdapter: usb.adapter,
+		usbSerial: usb.serial,
+		gpsdVersion: state.gpsdVersion
 	};
 }
 
+// ── Public API ──
+
 /**
- * Get comprehensive hardware details for WiFi, SDR, and GPS devices
- * Uses sysfs, iw commands, and gpsd queries to enumerate USB devices
- *
- * @returns Hardware details for all three device types
+ * Get comprehensive hardware details for WiFi, SDR, and GPS devices.
+ * Uses sysfs, iw commands, and gpsd queries to enumerate USB devices.
  */
 export async function getAllHardwareDetails(): Promise<HardwareDetails> {
 	const [wifi, sdr, gps] = await Promise.all([
@@ -360,6 +293,5 @@ export async function getAllHardwareDetails(): Promise<HardwareDetails> {
 		getSdrDetails(),
 		getGpsDetails()
 	]);
-
 	return { wifi, sdr, gps };
 }

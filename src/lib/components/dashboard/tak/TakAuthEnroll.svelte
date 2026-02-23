@@ -15,8 +15,26 @@
 	let enrollStatus = $state('');
 	let isEnrolling = $state(false);
 
+	/** Validate that required enrollment fields are present. */
+	function hasEnrollmentFields(): boolean {
+		return !!(config.hostname && config.enrollmentUser && config.enrollmentPass);
+	}
+
+	/** Handle the enrollment API response. */
+	function handleEnrollResponse(data: Record<string, unknown>): void {
+		if (data.success) {
+			onEnrolled({
+				id: data.id as string,
+				paths: data.paths as { certPath: string; keyPath: string; caPath?: string }
+			});
+			enrollStatus = 'Enrollment successful';
+		} else {
+			enrollStatus = (data.error as string) ?? 'Enrollment failed';
+		}
+	}
+
 	async function enrollCertificate() {
-		if (!config.hostname || !config.enrollmentUser || !config.enrollmentPass) {
+		if (!hasEnrollmentFields()) {
 			enrollStatus = 'Fill hostname, username, and password';
 			return;
 		}
@@ -34,13 +52,7 @@
 					id: config.id || crypto.randomUUID()
 				})
 			});
-			const data = await res.json();
-			if (data.success) {
-				onEnrolled({ id: data.id, paths: data.paths });
-				enrollStatus = 'Enrollment successful';
-			} else {
-				enrollStatus = data.error ?? 'Enrollment failed';
-			}
+			handleEnrollResponse(await res.json());
 		} catch {
 			enrollStatus = 'Enrollment error';
 		} finally {

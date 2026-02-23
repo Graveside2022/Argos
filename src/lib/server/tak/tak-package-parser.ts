@@ -70,59 +70,70 @@ export class TakPackageParser {
 	 * TAK preference files use <preference> elements with <entry> children.
 	 * The connectString entry format is: <host>:<port>:<protocol>
 	 */
+	/** Extract key and text content from a single XML entry element */
+	private static extractEntry(entry: Element | null): [string, string] | null {
+		if (!entry) return null;
+		const key = entry.getAttribute('key');
+		if (!key) return null;
+		return [key, entry.textContent?.trim() ?? ''];
+	}
+
+	/** Extract key-value entries from a preference XML document */
+	private static extractEntries(xml: string): Map<string, string> {
+		const doc = new DOMParser().parseFromString(xml, 'text/xml');
+		const map = new Map<string, string>();
+		const entries = doc.getElementsByTagName('entry');
+		for (let i = 0; i < entries.length; i++) {
+			const kv = this.extractEntry(entries[i]);
+			if (kv) map.set(kv[0], kv[1]);
+		}
+		return map;
+	}
+
+	/** Look up a description value from possible keys */
+	private static findDescription(entries: Map<string, string>): string | undefined {
+		const val = entries.get('description0') ?? entries.get('description') ?? '';
+		return val || undefined;
+	}
+
 	private static parsePreferencePref(xml: string): {
 		hostname: string;
 		port: number;
 		description?: string;
 		enrollForCert?: boolean;
 	} {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(xml, 'text/xml');
-
-		let hostname = '';
-		let port = 8089;
-		let description: string | undefined;
-		let enrollForCert: boolean | undefined;
-
-		const entries = doc.getElementsByTagName('entry');
-		for (let i = 0; i < entries.length; i++) {
-			const entry = entries[i];
-			if (!entry) continue;
-			const key = entry.getAttribute('key');
-			const value = entry.textContent?.trim() ?? '';
-
-			if (key === 'connectString0') {
-				const parsed = this.parseConnectString(value);
-				hostname = parsed.hostname;
-				port = parsed.port;
-			} else if (key === 'description0' || key === 'description') {
-				description = value || undefined;
-			} else if (key === 'enrollForCertificateWithTrust0') {
-				enrollForCert = value === 'true';
-			}
-		}
-
-		if (!hostname) {
+		const entries = this.extractEntries(xml);
+		const connectString = entries.get('connectString0') ?? '';
+		if (!connectString) {
 			throw new Error('Invalid data package — no connectString found in preference.pref');
 		}
+		const { hostname, port } = this.parseConnectString(connectString);
 
-		return { hostname, port, description, enrollForCert };
+		const enrollVal = entries.get('enrollForCertificateWithTrust0');
+		return {
+			hostname,
+			port,
+			description: this.findDescription(entries),
+			enrollForCert: enrollVal === 'true' ? true : undefined
+		};
 	}
 
 	/**
 	 * Parses TAK connectString format: "<host>:<port>:<protocol>"
 	 * Example: "192.168.1.100:8089:ssl"
 	 */
+	/** Validate that a parsed port is within the valid range */
+	private static isValidPort(port: number): boolean {
+		return !isNaN(port) && port >= 1 && port <= 65535;
+	}
+
 	private static parseConnectString(cs: string): { hostname: string; port: number } {
 		const parts = cs.split(':');
-		if (parts.length < 2) {
-			throw new Error(`Invalid connectString format: ${cs}`);
-		}
+		if (parts.length < 2) throw new Error(`Invalid connectString format: ${cs}`);
 		const hostname = parts[0];
 		const port = parseInt(parts[1], 10);
-		if (!hostname || isNaN(port) || port < 1 || port > 65535) {
+		if (!hostname || !this.isValidPort(port))
 			throw new Error(`Invalid connectString values: ${cs}`);
-		}
 		return { hostname, port };
 	}
 

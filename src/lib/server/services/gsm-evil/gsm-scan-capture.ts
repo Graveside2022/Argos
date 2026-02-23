@@ -139,6 +139,52 @@ export async function captureTshark(captureTime: number): Promise<string> {
  * @param cellLac - Parsed LAC value
  * @param cellCi - Parsed CI value
  */
+/** Count valid cell-identity lines in tshark output */
+function countCellLines(tsharkOutput: string): number {
+	return tsharkOutput
+		.trim()
+		.split('\n')
+		.filter((l: string) => l.trim() && !/^,*$/.test(l)).length;
+}
+
+/** Encode cell identity presence as a 3-bit key: mcc|lac|ci */
+function cellPresenceKey(cellMcc: string, cellLac: string, cellCi: string): number {
+	return (cellMcc ? 4 : 0) | (cellLac ? 2 : 0) | (cellCi ? 1 : 0);
+}
+
+/** Map presence bitmask to completeness label */
+const COMPLETENESS_MAP: Record<number, string> = {
+	7: 'complete', // mcc + lac + ci
+	3: 'missing-mcc', // lac + ci
+	4: 'missing-lac-ci', // mcc only
+	6: 'missing-lac-ci', // mcc + lac (no ci)
+	5: 'missing-lac-ci' // mcc + ci (no lac — treat as partial)
+};
+
+/** Classify the completeness of parsed cell identity fields */
+function classifyCellCompleteness(cellMcc: string, cellLac: string, cellCi: string): string {
+	return COMPLETENESS_MAP[cellPresenceKey(cellMcc, cellLac, cellCi)] ?? 'incomplete';
+}
+
+/** Map cell completeness to a user-facing message */
+function cellCompletenessMessage(
+	label: string,
+	completeness: string,
+	cellMcc: string,
+	cellLac: string,
+	cellCi: string
+): string {
+	const messages: Record<string, string> = {
+		complete: `${label} [PASS] Complete cell identity captured!`,
+		'missing-mcc': `${label} [WARN] Partial: LAC/CI captured but no MCC/MNC (need IMSI packet)`,
+		'missing-lac-ci': `${label} [WARN] Partial: MCC/MNC captured but no LAC/CI (need Cell Identity packet)`
+	};
+	return (
+		messages[completeness] ??
+		`${label} [WARN] Cell identity incomplete (MCC=${cellMcc || 'missing'}, LAC=${cellLac || 'missing'}, CI=${cellCi || 'missing'})`
+	);
+}
+
 export function appendCellIdentityEvents(
 	events: ScanEvent[],
 	label: string,
@@ -148,38 +194,19 @@ export function appendCellIdentityEvents(
 	cellLac: string,
 	cellCi: string
 ): void {
-	if (tsharkOutput) {
-		const cellLineCount = tsharkOutput
-			.trim()
-			.split('\n')
-			.filter((l: string) => l.trim() && !/^,*$/.test(l)).length;
-		events.push(
-			createUpdateEvent(`${label} Found ${cellLineCount} packets with cell/identity data`)
-		);
-		if (cellMcc && cellLac && cellCi) {
-			events.push(createUpdateEvent(`${label} [PASS] Complete cell identity captured!`));
-		} else if (cellLac && cellCi) {
-			events.push(
-				createUpdateEvent(
-					`${label} [WARN] Partial: LAC/CI captured but no MCC/MNC (need IMSI packet)`
-				)
-			);
-		} else if (cellMcc) {
-			events.push(
-				createUpdateEvent(
-					`${label} [WARN] Partial: MCC/MNC captured but no LAC/CI (need Cell Identity packet)`
-				)
-			);
-		} else {
-			events.push(
-				createUpdateEvent(
-					`${label} [WARN] Cell identity incomplete (MCC=${cellMcc || 'missing'}, LAC=${cellLac || 'missing'}, CI=${cellCi || 'missing'})`
-				)
-			);
-		}
-	} else {
+	if (!tsharkOutput) {
 		events.push(createUpdateEvent(`${label} [WARN] No cell identity data captured`));
+		return;
 	}
+	events.push(
+		createUpdateEvent(
+			`${label} Found ${countCellLines(tsharkOutput)} packets with cell/identity data`
+		)
+	);
+	const completeness = classifyCellCompleteness(cellMcc, cellLac, cellCi);
+	events.push(
+		createUpdateEvent(cellCompletenessMessage(label, completeness, cellMcc, cellLac, cellCi))
+	);
 }
 
 /**
@@ -196,6 +223,36 @@ export function appendCellIdentityEvents(
  * @param frameCount - Number of GSM frames detected
  * @param channelType - Determined channel type string
  */
+/** Emit cell tower identification or channel warning events */
+function emitTowerIdentified(
+	events: ScanEvent[],
+	label: string,
+	cellMcc: string,
+	cellMnc: string | undefined,
+	cellLac: string,
+	cellCi: string
+): void {
+	events.push(
+		createUpdateEvent(
+			`${label} [RF] Cell Tower Identified: MCC=${cellMcc} MNC=${cellMnc || 'N/A'} LAC=${cellLac} CI=${cellCi}`
+		)
+	);
+}
+
+/** Emit channel-detected-without-identity warning events */
+function emitChannelWarning(events: ScanEvent[], label: string, channelType: string): void {
+	events.push(
+		createUpdateEvent(
+			`${label} [WARN] ${channelType || 'Unknown'} channel detected but no cell identity captured`
+		)
+	);
+	events.push(
+		createUpdateEvent(
+			`${label} [TIP] TIP: Cell identity (MCC/LAC/CI) requires BCCH channel with System Information messages`
+		)
+	);
+}
+
 export function appendChannelEvents(
 	events: ScanEvent[],
 	label: string,
@@ -207,37 +264,43 @@ export function appendChannelEvents(
 	channelType: string
 ): void {
 	if (cellMcc && cellLac && cellCi) {
-		events.push(
-			createUpdateEvent(
-				`${label} [RF] Cell Tower Identified: MCC=${cellMcc} MNC=${cellMnc || 'N/A'} LAC=${cellLac} CI=${cellCi}`
-			)
-		);
+		emitTowerIdentified(events, label, cellMcc, cellMnc, cellLac, cellCi);
 	} else if (frameCount > 0) {
-		events.push(
-			createUpdateEvent(
-				`${label} [WARN] ${channelType || 'Unknown'} channel detected but no cell identity captured`
-			)
-		);
-		events.push(
-			createUpdateEvent(
-				`${label} [TIP] TIP: Cell identity (MCC/LAC/CI) requires BCCH channel with System Information messages`
-			)
-		);
+		emitChannelWarning(events, label, channelType);
 	}
 }
 
-/**
- * Kill the grgsm_livemon_headless process and any orphans for a given frequency.
- *
- * Attempts SIGTERM first, falls back to SIGKILL, then runs pkill
- * to catch orphaned processes matching the frequency.
- *
- * @param pid - PID string of the spawned process
- * @param freq - Frequency being tested (for orphan cleanup)
- * @param index - Zero-based frequency index
- * @param total - Total frequency count
- * @param events - Mutable array to push cleanup events into
- */
+/** Kill a process by PID with SIGTERM, falling back to SIGKILL */
+async function killWithFallback(validPid: number): Promise<boolean> {
+	try {
+		await execFileAsync('/usr/bin/sudo', ['/usr/bin/kill', String(validPid)]);
+		return true;
+	} catch {
+		try {
+			await execFileAsync('/usr/bin/sudo', ['/usr/bin/kill', '-9', String(validPid)]);
+		} catch {
+			// Process already exited
+		}
+		return false;
+	}
+}
+
+/** Kill orphaned grgsm processes matching a frequency */
+async function killOrphans(freq: string): Promise<void> {
+	try {
+		await execFileAsync('/usr/bin/sudo', [
+			'/usr/bin/pkill',
+			'-f',
+			`grgsm_livemon_headless.*-f ${freq}M`
+		]);
+	} catch (error: unknown) {
+		logger.warn('[gsm-evil] Cleanup: pkill orphaned grgsm process failed', {
+			freq,
+			error: String(error)
+		});
+	}
+}
+
 export async function cleanupProcess(
 	pid: string,
 	freq: string,
@@ -245,30 +308,10 @@ export async function cleanupProcess(
 	total: number,
 	events: ScanEvent[]
 ): Promise<void> {
+	if (!pid || pid === '0') return;
+	const validKillPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
 	const label = `[FREQ ${index + 1}/${total}]`;
-	if (pid && pid !== '0') {
-		const validKillPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
-		try {
-			await execFileAsync('/usr/bin/sudo', ['/usr/bin/kill', String(validKillPid)]);
-			events.push(createUpdateEvent(`${label} Cleaned up process ${pid}`));
-		} catch (_error: unknown) {
-			try {
-				await execFileAsync('/usr/bin/sudo', ['/usr/bin/kill', '-9', String(validKillPid)]);
-			} catch (_error: unknown) {
-				// Process already exited — that's fine
-			}
-		}
-		try {
-			await execFileAsync('/usr/bin/sudo', [
-				'/usr/bin/pkill',
-				'-f',
-				`grgsm_livemon_headless.*-f ${freq}M`
-			]);
-		} catch (error: unknown) {
-			logger.warn('[gsm-evil] Cleanup: pkill orphaned grgsm process failed', {
-				freq,
-				error: String(error)
-			});
-		}
-	}
+	const killed = await killWithFallback(validKillPid);
+	if (killed) events.push(createUpdateEvent(`${label} Cleaned up process ${pid}`));
+	await killOrphans(freq);
 }

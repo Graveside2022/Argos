@@ -51,184 +51,123 @@ function initializeOptimizer() {
 	}
 }
 
+/** Safe error message extraction. */
+function errMsg(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+/** Timestamped success response helper. */
+function okJson(data: Record<string, unknown>) {
+	return json({ success: true, ...data, timestamp: Date.now() });
+}
+
+type CleanupAction = (
+	cleanupService: DatabaseCleanupService,
+	url: URL
+) => ReturnType<RequestHandler>;
+
+function handleStatus(cleanupService: DatabaseCleanupService): ReturnType<RequestHandler> {
+	return okJson({
+		stats: cleanupService.getStats(),
+		growth: cleanupService.getGrowthTrends(24),
+		health: optimizer?.getHealthReport()
+	});
+}
+
+function handleExport(
+	cleanupService: DatabaseCleanupService,
+	url: URL
+): ReturnType<RequestHandler> {
+	const days = parseInt(url.searchParams.get('days') || '7');
+	const endTime = Date.now();
+	const startTime = endTime - days * 24 * 60 * 60 * 1000;
+	return okJson({
+		data: cleanupService.exportAggregatedData(startTime, endTime),
+		period: { startTime, endTime, days }
+	});
+}
+
+const GET_ACTIONS: Record<string, CleanupAction> = {
+	status: handleStatus,
+	manual: (svc) => okJson({ message: 'Manual cleanup completed', stats: svc.runCleanup() }),
+	vacuum: (svc) => okJson({ message: 'VACUUM completed', result: svc.vacuum() }),
+	analyze: (svc) => {
+		svc.analyze();
+		optimizer?.analyze();
+		return okJson({ message: 'Database statistics updated' });
+	},
+	aggregate: (svc) => {
+		svc.runAggregation();
+		return okJson({ message: 'Aggregation completed' });
+	},
+	optimize: () =>
+		okJson({
+			indexAnalysis: optimizer?.getIndexAnalysis(),
+			slowQueries: optimizer?.getSlowQueries(),
+			pragmas: optimizer?.getPragmaSettings()
+		}),
+	export: handleExport
+};
+
 export const GET: RequestHandler = ({ url }) => {
 	try {
 		initializeOptimizer();
 		const cleanupService = getCleanupService();
-
 		const action = url.searchParams.get('action') || 'status';
-
-		switch (action) {
-			case 'status': {
-				// Get cleanup statistics
-				const stats = cleanupService.getStats();
-				const growth = cleanupService.getGrowthTrends(24);
-				const health = optimizer?.getHealthReport();
-
-				return json({
-					success: true,
-					stats,
-					growth,
-					health,
-					timestamp: Date.now()
-				});
-			}
-
-			case 'manual': {
-				// Run manual cleanup
-				const cleanupStats = cleanupService.runCleanup();
-
-				return json({
-					success: true,
-					message: 'Manual cleanup completed',
-					stats: cleanupStats,
-					timestamp: Date.now()
-				});
-			}
-
-			case 'vacuum': {
-				// Run VACUUM
-				const vacuumResult = cleanupService.vacuum();
-
-				return json({
-					success: true,
-					message: 'VACUUM completed',
-					result: vacuumResult,
-					timestamp: Date.now()
-				});
-			}
-
-			case 'analyze': {
-				// Update statistics
-				cleanupService.analyze();
-				optimizer?.analyze();
-
-				return json({
-					success: true,
-					message: 'Database statistics updated',
-					timestamp: Date.now()
-				});
-			}
-
-			case 'optimize': {
-				// Get optimization suggestions
-				const indexAnalysis = optimizer?.getIndexAnalysis();
-				const slowQueries = optimizer?.getSlowQueries();
-				const pragmas = optimizer?.getPragmaSettings();
-
-				return json({
-					success: true,
-					indexAnalysis,
-					slowQueries,
-					pragmas,
-					timestamp: Date.now()
-				});
-			}
-
-			case 'aggregate': {
-				// Run aggregation manually
-				cleanupService.runAggregation();
-
-				return json({
-					success: true,
-					message: 'Aggregation completed',
-					timestamp: Date.now()
-				});
-			}
-
-			case 'export': {
-				// Export aggregated data
-				const days = parseInt(url.searchParams.get('days') || '7');
-				const endTime = Date.now();
-				const startTime = endTime - days * 24 * 60 * 60 * 1000;
-
-				const exportData = cleanupService.exportAggregatedData(startTime, endTime);
-
-				return json({
-					success: true,
-					data: exportData,
-					period: { startTime, endTime, days },
-					timestamp: Date.now()
-				});
-			}
-
-			default:
-				return json(
-					{
-						success: false,
-						error: 'Invalid action'
-					},
-					{ status: 400 }
-				);
-		}
+		const handler = GET_ACTIONS[action];
+		if (!handler) return json({ success: false, error: 'Invalid action' }, { status: 400 });
+		return handler(cleanupService, url);
 	} catch (error: unknown) {
-		logger.error('Database cleanup error', {
-			error: error instanceof Error ? error.message : String(error)
-		});
+		logger.error('Database cleanup error', { error: errMsg(error) });
 		return json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : 'Database cleanup failed'
-			},
+			{ success: false, error: errMsg(error) || 'Database cleanup failed' },
 			{ status: 500 }
 		);
 	}
 };
 
+/** Validate and parse POST body. Returns parsed body or error response. */
+function parsePostBody(rawBody: unknown) {
+	const result = CleanupPostSchema.safeParse(rawBody);
+	if (!result.success) {
+		return {
+			error: json(
+				{ success: false, error: 'Invalid request body', details: result.error.format() },
+				{ status: 400 }
+			)
+		};
+	}
+	return { body: result.data };
+}
+
+type PostAction = z.infer<typeof CleanupPostSchema>;
+
+/** Dispatch POST action to the correct handler. */
+function executePostAction(body: PostAction, cleanupService: DatabaseCleanupService) {
+	if (body.action === 'configure')
+		return okJson({
+			success: false,
+			message: 'Configuration must be updated in database initialization'
+		});
+	if (body.action === 'optimize-workload') {
+		optimizer?.optimizeForWorkload(body.workload);
+		return okJson({ message: `Optimized for ${body.workload} workload` });
+	}
+	cleanupService.cleanupAggregatedData(body.daysToKeep);
+	return okJson({ message: `Cleaned up aggregated data older than ${body.daysToKeep} days` });
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		initializeOptimizer();
 		const cleanupService = getCleanupService();
-
-		const rawBody = await request.json();
-		const result = CleanupPostSchema.safeParse(rawBody);
-		if (!result.success) {
-			return json(
-				{
-					success: false,
-					error: 'Invalid request body',
-					details: result.error.format()
-				},
-				{ status: 400 }
-			);
-		}
-		const body = result.data;
-
-		switch (body.action) {
-			case 'configure':
-				return json({
-					success: false,
-					message: 'Configuration must be updated in database initialization',
-					timestamp: Date.now()
-				});
-
-			case 'optimize-workload': {
-				optimizer?.optimizeForWorkload(body.workload);
-				return json({
-					success: true,
-					message: `Optimized for ${body.workload} workload`,
-					timestamp: Date.now()
-				});
-			}
-
-			case 'cleanup-aggregated': {
-				cleanupService.cleanupAggregatedData(body.daysToKeep);
-				return json({
-					success: true,
-					message: `Cleaned up aggregated data older than ${body.daysToKeep} days`,
-					timestamp: Date.now()
-				});
-			}
-		}
+		const parsed = parsePostBody(await request.json());
+		if (parsed.error) return parsed.error;
+		return executePostAction(parsed.body as PostAction, cleanupService);
 	} catch (error: unknown) {
-		logger.error('Database cleanup error', {
-			error: error instanceof Error ? error.message : String(error)
-		});
+		logger.error('Database cleanup error', { error: errMsg(error) });
 		return json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : 'Database cleanup failed'
-			},
+			{ success: false, error: errMsg(error) || 'Database cleanup failed' },
 			{ status: 500 }
 		);
 	}

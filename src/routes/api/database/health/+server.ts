@@ -1,159 +1,145 @@
 import { json } from '@sveltejs/kit';
+import type Database from 'better-sqlite3';
 
 import { getRFDatabase } from '$lib/server/db/database';
 
 import type { RequestHandler } from './$types';
 
+interface HealthIssue {
+	type: string;
+	table: string;
+	count?: number;
+	severity: string;
+	message: string;
+}
+
+/** Query a COUNT(*) and return the result. */
+function queryCount(db: Database.Database, sql: string, params?: unknown[]): number {
+	const row = params
+		? (db.prepare(sql).get(...params) as { count: number })
+		: (db.prepare(sql).get() as { count: number });
+	return row.count;
+}
+
+/** Check for orphaned signals referencing non-existent devices. */
+function checkOrphanedSignals(db: Database.Database): { issues: HealthIssue[]; recs: string[] } {
+	const count = queryCount(
+		db,
+		`SELECT COUNT(*) as count FROM signals WHERE device_id IS NOT NULL AND device_id NOT IN (SELECT device_id FROM devices)`
+	);
+	if (count === 0) return { issues: [], recs: [] };
+	return {
+		issues: [{ type: 'orphaned_records', table: 'signals', count, severity: 'medium', message: `${count} signals reference non-existent devices` }],
+		recs: ['💡 Clean up orphaned signals: DELETE FROM signals WHERE device_id NOT IN (SELECT device_id FROM devices)']
+	};
+}
+
+/** Check for orphaned relationships. */
+function checkOrphanedRelationships(db: Database.Database): { issues: HealthIssue[]; recs: string[] } {
+	const count = queryCount(
+		db,
+		`SELECT COUNT(*) as count FROM relationships WHERE source_device_id NOT IN (SELECT device_id FROM devices) OR target_device_id NOT IN (SELECT device_id FROM devices)`
+	);
+	if (count === 0) return { issues: [], recs: [] };
+	return {
+		issues: [{ type: 'orphaned_records', table: 'relationships', count, severity: 'medium', message: `${count} relationships reference non-existent devices` }],
+		recs: []
+	};
+}
+
+/** Check for stale devices not seen in >7 days. */
+function checkStaleDevices(db: Database.Database): { issues: HealthIssue[]; recs: string[] } {
+	const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+	const count = queryCount(db, `SELECT COUNT(*) as count FROM devices WHERE last_seen < ?`, [sevenDaysAgo]);
+	if (count <= 100) return { issues: [], recs: [] };
+	return {
+		issues: [{ type: 'stale_data', table: 'devices', count, severity: 'low', message: `${count} devices not seen in >7 days` }],
+		recs: ['💡 Consider archiving old devices to reduce database size']
+	};
+}
+
+/** Check if signals table is excessively large. */
+function checkSignalTableSize(db: Database.Database): { issues: HealthIssue[]; recs: string[] } {
+	const count = queryCount(db, `SELECT COUNT(*) as count FROM signals`);
+	if (count <= 500000) return { issues: [], recs: [] };
+	const severity = count > 1000000 ? 'high' : 'medium';
+	return {
+		issues: [{ type: 'large_table', table: 'signals', count, severity, message: `Signals table has ${count} records` }],
+		recs: ['⚠️ Large signals table may impact performance - consider cleanup policy']
+	};
+}
+
+/** Run PRAGMA integrity_check. */
+function checkIntegrity(db: Database.Database): { ok: boolean; issues: HealthIssue[] } {
+	try {
+		const row = db.prepare(`PRAGMA integrity_check`).get() as { integrity_check: string };
+		return { ok: row.integrity_check === 'ok', issues: [] };
+	} catch {
+		return { ok: false, issues: [{ type: 'integrity_check_failed', table: 'database', severity: 'high', message: 'Database integrity check failed' }] };
+	}
+}
+
+const CRITICAL_INDEXES = ['idx_signals_timestamp', 'idx_signals_location', 'idx_signals_spatial_grid'];
+
+/** Check if critical indexes exist. */
+function checkIndexes(db: Database.Database): { issues: HealthIssue[]; recs: string[] } {
+	const placeholders = CRITICAL_INDEXES.map(() => '?').join(',');
+	const existing = db
+		.prepare(`SELECT name FROM sqlite_master WHERE type='index' AND name IN (${placeholders})`)
+		.all(...CRITICAL_INDEXES) as Array<{ name: string }>;
+	const missing = CRITICAL_INDEXES.filter((idx) => !existing.some((e) => e.name === idx));
+	if (missing.length === 0) return { issues: [], recs: [] };
+	return {
+		issues: [{ type: 'missing_indexes', table: 'signals', severity: 'high', message: `Missing critical indexes: ${missing.join(', ')}` }],
+		recs: ['🔴 CRITICAL: Re-run schema.sql to create missing indexes']
+	};
+}
+
+/** Classify overall health from issues. */
+function classifyHealth(issues: HealthIssue[]): string {
+	if (issues.some((i) => i.severity === 'high')) return 'CRITICAL';
+	if (issues.some((i) => i.severity === 'medium')) return 'DEGRADED';
+	return 'HEALTHY';
+}
+
+/** Count issues by severity. */
+function countBySeverity(issues: HealthIssue[], severity: string): number {
+	return issues.filter((i) => i.severity === severity).length;
+}
+
 export const GET: RequestHandler = async () => {
 	try {
-		const db = getRFDatabase();
-		const dbInternal = db.rawDb;
+		const db = getRFDatabase().rawDb;
 
-		const issues = [];
-		const recommendations = [];
-
-		// Check for orphaned signals (signals without devices)
-		const orphanedSignals = dbInternal
-			.prepare(
-				`SELECT COUNT(*) as count FROM signals WHERE device_id IS NOT NULL AND device_id NOT IN (SELECT device_id FROM devices)`
-			)
-			.get() as { count: number };
-
-		if (orphanedSignals.count > 0) {
-			issues.push({
-				type: 'orphaned_records',
-				table: 'signals',
-				count: orphanedSignals.count,
-				severity: 'medium',
-				message: `${orphanedSignals.count} signals reference non-existent devices`
-			});
-			recommendations.push(
-				'💡 Clean up orphaned signals: DELETE FROM signals WHERE device_id NOT IN (SELECT device_id FROM devices)'
-			);
-		}
-
-		// Check for orphaned relationships
-		const orphanedRelationships = dbInternal
-			.prepare(
-				`SELECT COUNT(*) as count FROM relationships WHERE source_device_id NOT IN (SELECT device_id FROM devices) OR target_device_id NOT IN (SELECT device_id FROM devices)`
-			)
-			.get() as { count: number };
-
-		if (orphanedRelationships.count > 0) {
-			issues.push({
-				type: 'orphaned_records',
-				table: 'relationships',
-				count: orphanedRelationships.count,
-				severity: 'medium',
-				message: `${orphanedRelationships.count} relationships reference non-existent devices`
-			});
-		}
-
-		// Check for stale devices (not seen in >7 days)
-		const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-		const staleDevices = dbInternal
-			.prepare(`SELECT COUNT(*) as count FROM devices WHERE last_seen < ?`)
-			.get(sevenDaysAgo) as { count: number };
-
-		if (staleDevices.count > 100) {
-			issues.push({
-				type: 'stale_data',
-				table: 'devices',
-				count: staleDevices.count,
-				severity: 'low',
-				message: `${staleDevices.count} devices not seen in >7 days`
-			});
-			recommendations.push('💡 Consider archiving old devices to reduce database size');
-		}
-
-		// Check for large signal table
-		const signalCount = dbInternal
-			.prepare(`SELECT COUNT(*) as count FROM signals`)
-			.get() as { count: number };
-
-		if (signalCount.count > 500000) {
-			issues.push({
-				type: 'large_table',
-				table: 'signals',
-				count: signalCount.count,
-				severity: signalCount.count > 1000000 ? 'high' : 'medium',
-				message: `Signals table has ${signalCount.count} records`
-			});
-			recommendations.push(
-				'⚠️ Large signals table may impact performance - consider cleanup policy'
-			);
-		}
-
-		// Check database integrity
-		let integrityOk = false;
-		try {
-			const integrityCheck = dbInternal.prepare(`PRAGMA integrity_check`).get() as { integrity_check: string };
-			integrityOk = integrityCheck.integrity_check === 'ok';
-		} catch {
-			issues.push({
-				type: 'integrity_check_failed',
-				table: 'database',
-				severity: 'high',
-				message: 'Database integrity check failed'
-			});
-		}
-
-		// Check if indexes exist on critical columns
-		const criticalIndexes = [
-			'idx_signals_timestamp',
-			'idx_signals_location',
-			'idx_signals_spatial_grid'
+		const checks = [
+			checkOrphanedSignals(db),
+			checkOrphanedRelationships(db),
+			checkStaleDevices(db),
+			checkSignalTableSize(db),
+			checkIndexes(db)
 		];
 
-		const existingIndexes = dbInternal
-			.prepare(`SELECT name FROM sqlite_master WHERE type='index' AND name IN (${criticalIndexes.map(() => '?').join(',')})`)
-			// Safe: sqlite_master WHERE type='index' guarantees name column
-			.all(...criticalIndexes) as Array<{ name: string }>;
-
-		const missingIndexes = criticalIndexes.filter(
-			(idx) => !existingIndexes.some((e) => e.name === idx)
-		);
-
-		if (missingIndexes.length > 0) {
-			issues.push({
-				type: 'missing_indexes',
-				table: 'signals',
-				severity: 'high',
-				message: `Missing critical indexes: ${missingIndexes.join(', ')}`
-			});
-			recommendations.push('🔴 CRITICAL: Re-run schema.sql to create missing indexes');
-		}
-
-		// Overall health
-		const overallHealth =
-			issues.filter((i) => i.severity === 'high').length > 0
-				? 'CRITICAL'
-				: issues.filter((i) => i.severity === 'medium').length > 0
-					? 'DEGRADED'
-					: 'HEALTHY';
-
-		if (recommendations.length === 0 && issues.length === 0) {
-			recommendations.push('✅ Database health looks good');
-		}
+		const issues = checks.flatMap((c) => c.issues);
+		const recs = checks.flatMap((c) => c.recs);
+		const integrity = checkIntegrity(db);
+		issues.push(...integrity.issues);
+		if (recs.length === 0 && issues.length === 0) recs.push('✅ Database health looks good');
 
 		return json({
 			success: true,
-			overall_health: overallHealth,
-			integrity_ok: integrityOk,
+			overall_health: classifyHealth(issues),
+			integrity_ok: integrity.ok,
 			issues,
-			recommendations,
+			recommendations: recs,
 			stats: {
 				total_issues: issues.length,
-				critical: issues.filter((i) => i.severity === 'high').length,
-				warnings: issues.filter((i) => i.severity === 'medium').length,
-				info: issues.filter((i) => i.severity === 'low').length
+				critical: countBySeverity(issues, 'high'),
+				warnings: countBySeverity(issues, 'medium'),
+				info: countBySeverity(issues, 'low')
 			}
 		});
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
-		return json({
-			success: false,
-			error: msg
-		});
+		return json({ success: false, error: msg });
 	}
 };

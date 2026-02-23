@@ -85,44 +85,50 @@ export function getHealthReport(
 	};
 }
 
+/** Check for large database size recommendation. */
+function checkDbSize(dbSize: number): Recommendation | null {
+	if (dbSize <= 100 * 1024 * 1024) return null;
+	return {
+		type: 'size',
+		severity: 'medium',
+		message: 'Consider implementing more aggressive data retention policies'
+	};
+}
+
+/** Check for under-indexed tables. */
+function checkUnderIndexedTables(tables: TableInfo[]): Recommendation[] {
+	return tables
+		.filter((t) => t.row_count > 100000 && t.index_count < 2)
+		.map((t) => ({
+			type: 'index',
+			severity: 'high',
+			message: `Table ${t.name} has ${t.row_count} rows but only ${t.index_count} indexes`
+		}));
+}
+
+/** Check for insufficient cache size. */
+function checkCacheSize(
+	dbSize: number,
+	pragmaSettings: Record<string, unknown>
+): Recommendation | null {
+	const cacheSize = Math.abs((pragmaSettings.cache_size as number) || 0);
+	if (dbSize <= cacheSize * 1024 * 10) return null;
+	return {
+		type: 'cache',
+		severity: 'medium',
+		message: 'Consider increasing cache_size for better performance'
+	};
+}
+
 /** Generate optimization recommendations based on DB size and table stats */
 function generateRecommendations(
 	dbSize: number,
 	tables: TableInfo[],
 	pragmaSettings: Record<string, unknown>
 ): Recommendation[] {
-	const recommendations: Recommendation[] = [];
-
-	// Database size recommendations
-	if (dbSize > 100 * 1024 * 1024) {
-		recommendations.push({
-			type: 'size',
-			severity: 'medium',
-			message: 'Consider implementing more aggressive data retention policies'
-		});
-	}
-
-	// Table size recommendations
-	for (const table of tables) {
-		if (table.row_count > 100000 && table.index_count < 2) {
-			recommendations.push({
-				type: 'index',
-				severity: 'high',
-				message: `Table ${table.name} has ${table.row_count} rows but only ${table.index_count} indexes`
-			});
-		}
-	}
-
-	// Cache size recommendation
-	// Safe: cache_size pragma always returns a numeric value
-	const cacheSize = Math.abs((pragmaSettings.cache_size as number) || 0);
-	if (dbSize > cacheSize * 1024 * 10) {
-		recommendations.push({
-			type: 'cache',
-			severity: 'medium',
-			message: 'Consider increasing cache_size for better performance'
-		});
-	}
-
-	return recommendations;
+	return [
+		checkDbSize(dbSize),
+		...checkUnderIndexedTables(tables),
+		checkCacheSize(dbSize, pragmaSettings)
+	].filter((r): r is Recommendation => r !== null);
 }

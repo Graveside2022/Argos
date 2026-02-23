@@ -61,41 +61,42 @@ export class DatabaseOptimizer {
 		this.applyOptimizations();
 	}
 
+	/** Conditional pragmas that depend on config flags. */
+	private conditionalPragmas(): Array<[boolean, ...string[]]> {
+		const c = this.config;
+		return [
+			[c.isWalMode, 'journal_mode = WAL', 'wal_autocheckpoint = 1000'],
+			[c.mmapSize > 0, `mmap_size = ${c.mmapSize}`],
+			[!!c.memoryLimit, `soft_heap_limit = ${c.memoryLimit}`],
+			[c.shouldUseQueryPlanner, 'query_only = 0'],
+			[
+				!!c.tempStoreDirectory,
+				`temp_store_directory = '${(c.tempStoreDirectory ?? '').replace(/'/g, "''")}'`
+			]
+		];
+	}
+
+	/** Build the list of pragma statements to apply based on config. */
+	private buildPragmaList(): string[] {
+		const c = this.config;
+		const pragmas: string[] = [
+			`cache_size = ${c.cacheSize}`,
+			`synchronous = ${c.synchronous}`,
+			`temp_store = ${c.tempStore}`,
+			`automatic_index = ${c.shouldAutoIndex ? 'ON' : 'OFF'}`
+		];
+		for (const [enabled, ...stmts] of this.conditionalPragmas()) {
+			if (enabled) pragmas.push(...stmts);
+		}
+		return pragmas;
+	}
+
 	/** Apply database optimizations */
 	private applyOptimizations() {
-		this.db.pragma(`cache_size = ${this.config.cacheSize}`);
-
-		if (this.config.isWalMode) {
-			this.db.pragma('journal_mode = WAL');
-			this.db.pragma('wal_autocheckpoint = 1000');
+		for (const pragma of this.buildPragmaList()) {
+			this.db.pragma(pragma);
 		}
-
-		this.db.pragma(`synchronous = ${this.config.synchronous}`);
-
-		if (this.config.mmapSize > 0) {
-			this.db.pragma(`mmap_size = ${this.config.mmapSize}`);
-		}
-
-		this.db.pragma(`temp_store = ${this.config.tempStore}`);
-		if (this.config.tempStoreDirectory) {
-			this.db.pragma(
-				`temp_store_directory = '${this.config.tempStoreDirectory.replace(/'/g, "''")}'`
-			);
-		}
-
-		if (this.config.memoryLimit) {
-			this.db.pragma(`soft_heap_limit = ${this.config.memoryLimit}`);
-		}
-
-		if (this.config.shouldUseQueryPlanner) {
-			this.db.pragma('query_only = 0');
-		}
-
-		this.db.pragma(`automatic_index = ${this.config.shouldAutoIndex ? 'ON' : 'OFF'}`);
-
-		if (this.config.shouldAnalyzeOnStart) {
-			this.analyze();
-		}
+		if (this.config.shouldAnalyzeOnStart) this.analyze();
 	}
 
 	/** Analyze database statistics */
@@ -176,20 +177,29 @@ export class DatabaseOptimizer {
 		}
 	}
 
+	/** Cost weights for query plan operations. */
+	private static readonly PLAN_COSTS: Array<{ pattern: string; cost: number }> = [
+		{ pattern: 'SCAN TABLE', cost: 1000 },
+		{ pattern: 'SEARCH TABLE', cost: 100 },
+		{ pattern: 'TEMP B-TREE', cost: 500 },
+		{ pattern: 'USING COVERING INDEX', cost: 5 },
+		{ pattern: 'USING INDEX', cost: 10 }
+	];
+
+	/** Calculate the cost contribution of a single plan step. */
+	private static stepCost(detail: string): number {
+		return DatabaseOptimizer.PLAN_COSTS.reduce(
+			(sum, entry) => sum + (detail.includes(entry.pattern) ? entry.cost : 0),
+			0
+		);
+	}
+
 	/** Estimate query cost from execution plan */
 	private estimateQueryCost(plan: unknown[]) {
-		let cost = 0;
-		for (const step of plan) {
-			const stepData = step as { detail?: string };
-			if (stepData.detail) {
-				if (stepData.detail.includes('SCAN TABLE')) cost += 1000;
-				if (stepData.detail.includes('SEARCH TABLE')) cost += 100;
-				if (stepData.detail.includes('USING INDEX')) cost += 10;
-				if (stepData.detail.includes('USING COVERING INDEX')) cost += 5;
-				if (stepData.detail.includes('TEMP B-TREE')) cost += 500;
-			}
-		}
-		return cost;
+		return plan.reduce((cost: number, step) => {
+			const detail = (step as { detail?: string }).detail;
+			return detail ? cost + DatabaseOptimizer.stepCost(detail) : cost;
+		}, 0);
 	}
 
 	/** Monitor query performance */

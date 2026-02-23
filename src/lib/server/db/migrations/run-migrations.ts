@@ -40,18 +40,21 @@ function getMigrationFiles(migrationsPath: string): string[] {
 		.sort();
 }
 
+/** Type guard for objects with code and message string properties. */
+function isSqliteErrorLike(error: unknown): error is { code: string; message: string } {
+	if (error === null || typeof error !== 'object') return false;
+	const rec = error as Record<string, unknown>;
+	return typeof rec.code === 'string' && typeof rec.message === 'string';
+}
+
 /**
  * Check whether a caught error is a SQLite duplicate-column error that can be safely ignored.
  */
 function isDuplicateColumnError(error: unknown): boolean {
 	return (
-		error !== null &&
-		typeof error === 'object' &&
-		'code' in error &&
-		(error as Record<string, unknown>).code === 'SQLITE_ERROR' &&
-		'message' in error &&
-		typeof (error as Record<string, unknown>).message === 'string' &&
-		((error as Record<string, unknown>).message as string).includes('duplicate column name')
+		isSqliteErrorLike(error) &&
+		error.code === 'SQLITE_ERROR' &&
+		error.message.includes('duplicate column name')
 	);
 }
 
@@ -136,11 +139,9 @@ export async function runMigrations(db: Database.Database, migrationsPath: strin
 		}
 	});
 
-	for (const filename of migrationFiles) {
-		if (appliedMigrations.has(filename)) continue;
-
+	const pending = migrationFiles.filter((f) => !appliedMigrations.has(f));
+	for (const filename of pending) {
 		logger.info('[migrations] Applying migration', { filename });
-
 		if (filename.endsWith('.sql')) {
 			applySqlMigration(db, migrationsPath, filename, applyMigration);
 		} else if (filename.endsWith('.ts')) {

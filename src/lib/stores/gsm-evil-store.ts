@@ -118,28 +118,33 @@ function loadFromStorage(set: StoreSet): void {
  * Persist structural state to localStorage, excluding transient fields.
  * Called by the debounce timer — not directly by store actions.
  */
+/** Build a saveable state object with transient keys removed. */
+function buildSaveableState(state: GSMEvilState): string {
+	const stateToSave: Record<string, unknown> = {
+		...state,
+		lastScanTime: new Date().toISOString(),
+		storageVersion: STORAGE_VERSION
+	};
+	for (const key of TRANSIENT_KEYS) delete stateToSave[key];
+	return JSON.stringify(stateToSave);
+}
+
+/** Handle localStorage write errors. */
+function handlePersistError(error: unknown): void {
+	if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+		logger.warn('localStorage quota exceeded, clearing old data');
+		localStorage.removeItem(STORAGE_KEY);
+	} else {
+		logger.error('Failed to persist GSM Evil state to localStorage', { error });
+	}
+}
+
 function persistState(state: GSMEvilState): void {
 	if (!browser) return;
-
 	try {
-		const stateToSave: Record<string, unknown> = {
-			...state,
-			lastScanTime: new Date().toISOString(),
-			storageVersion: STORAGE_VERSION
-		};
-
-		for (const key of TRANSIENT_KEYS) {
-			delete stateToSave[key];
-		}
-
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+		localStorage.setItem(STORAGE_KEY, buildSaveableState(state));
 	} catch (error) {
-		if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-			logger.warn('localStorage quota exceeded, clearing old data');
-			localStorage.removeItem(STORAGE_KEY);
-		} else {
-			logger.error('Failed to persist GSM Evil state to localStorage', { error });
-		}
+		handlePersistError(error);
 	}
 }
 

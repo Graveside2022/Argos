@@ -67,52 +67,103 @@ export const workflowGoal = writable<string>('');
  * Full device details derived from kismetStore when a device is selected
  * This provides rich context about the selected device for the agent
  */
+/** Read a string field from device or raw Kismet data. */
+function devStr(
+	device: Record<string, unknown>,
+	raw: Record<string, unknown>,
+	deviceKey: string,
+	rawKey: string,
+	fallback: string
+): string {
+	return (device[deviceKey] as string) || (raw[rawKey] as string) || fallback;
+}
+
+/** Read a nullable field from device or raw Kismet data. */
+function devField<T>(
+	device: Record<string, unknown>,
+	raw: Record<string, unknown>,
+	deviceKey: string,
+	rawKey: string
+): T | null {
+	return (device[deviceKey] as T) || (raw[rawKey] as T) || null;
+}
+
+/** Read signal strength from device signal sub-object or raw base signal. */
+function readSignal(
+	device: Record<string, unknown>,
+	baseSignal: Record<string, unknown> | undefined
+): number | null {
+	const sig = device.signal as { last_signal?: number } | undefined;
+	return sig?.last_signal ?? (baseSignal?.['kismet.common.signal.last_signal'] as number) ?? null;
+}
+
+/** Resolve manufacturer from multiple fallback keys. */
+function resolveManuf(device: Record<string, unknown>, raw: Record<string, unknown>): string {
+	return (
+		(device.manufacturer as string) ||
+		(device.manuf as string) ||
+		(raw['kismet.device.base.manuf'] as string) ||
+		'Unknown'
+	);
+}
+
+/** Resolve SSID from dot11 data. */
+function resolveSsid(
+	device: Record<string, unknown>,
+	dot11: Record<string, unknown> | undefined
+): string {
+	return (
+		(device.ssid as string) ||
+		(dot11?.['dot11.device.last_beaconed_ssid'] as string) ||
+		'Unknown'
+	);
+}
+
+/** Resolve encryption from SSID map. */
+function resolveEncryption(
+	device: Record<string, unknown>,
+	ssidMap: Record<string, unknown>[] | undefined
+): string | null {
+	return (
+		(device.encryption as string) ||
+		(ssidMap?.[0]?.['dot11.advertisedssid.crypt_set'] as string) ||
+		null
+	);
+}
+
+/** Build the full device details context for the agent. */
+function buildDeviceDetails(device: Record<string, unknown>, mac: string) {
+	const raw = device;
+	const dot11 = raw['dot11.device'] as Record<string, unknown> | undefined;
+	const baseSignal = raw['kismet.device.base.signal'] as Record<string, unknown> | undefined;
+	const ssidMap = dot11?.['dot11.device.advertised_ssid_map'] as
+		| Record<string, unknown>[]
+		| undefined;
+	const signal = readSignal(device, baseSignal);
+
+	return {
+		mac: (device.mac as string) || mac,
+		ssid: resolveSsid(device, dot11),
+		type: devStr(device, raw, 'type', 'kismet.device.base.type', 'unknown'),
+		manufacturer: resolveManuf(device, raw),
+		signal,
+		signalDbm: signal,
+		channel: devField<string>(device, raw, 'channel', 'kismet.device.base.channel'),
+		frequency: devField<number>(device, raw, 'frequency', 'kismet.device.base.frequency'),
+		packets:
+			(device.packets as number) || (raw['kismet.device.base.packets.total'] as number) || 0,
+		encryption: resolveEncryption(device, ssidMap),
+		lastSeen: devField<number>(device, raw, 'last_seen', 'kismet.device.base.last_time'),
+		firstSeen: devField<number>(device, raw, 'first_seen', 'kismet.device.base.first_time')
+	};
+}
+
 export const selectedDeviceDetails = derived(
 	[selectedDeviceMAC, kismetStore],
 	([$mac, $kismet]) => {
 		if (!$mac) return null;
-
-		// Find device in Kismet store
 		const device = $kismet.devices.get($mac);
-		if (!device) return null;
-
-		// Extract relevant device details for agent context
-		// Cast raw Kismet fields to Record for dotted-key access (index signature is unknown)
-		const raw = device as Record<string, unknown>;
-		const dot11 = raw['dot11.device'] as Record<string, unknown> | undefined;
-		const baseSignal = raw['kismet.device.base.signal'] as Record<string, unknown> | undefined;
-		const ssidMap = dot11?.['dot11.device.advertised_ssid_map'] as
-			| Record<string, unknown>[]
-			| undefined;
-
-		return {
-			mac: device.mac || $mac,
-			ssid:
-				device.ssid || (dot11?.['dot11.device.last_beaconed_ssid'] as string) || 'Unknown',
-			type: device.type || (raw['kismet.device.base.type'] as string) || 'unknown',
-			manufacturer:
-				device.manufacturer ||
-				device.manuf ||
-				(raw['kismet.device.base.manuf'] as string) ||
-				'Unknown',
-			signal:
-				device.signal?.last_signal ??
-				(baseSignal?.['kismet.common.signal.last_signal'] as number) ??
-				null,
-			signalDbm:
-				device.signal?.last_signal ??
-				(baseSignal?.['kismet.common.signal.last_signal'] as number) ??
-				null,
-			channel: device.channel || (raw['kismet.device.base.channel'] as string) || null,
-			frequency: device.frequency || (raw['kismet.device.base.frequency'] as number) || null,
-			packets: device.packets || (raw['kismet.device.base.packets.total'] as number) || 0,
-			encryption:
-				device.encryption ||
-				(ssidMap?.[0]?.['dot11.advertisedssid.crypt_set'] as string) ||
-				null,
-			lastSeen: device.last_seen || (raw['kismet.device.base.last_time'] as number) || null,
-			firstSeen: device.first_seen || (raw['kismet.device.base.first_time'] as number) || null
-		};
+		return device ? buildDeviceDetails(device as Record<string, unknown>, $mac) : null;
 	}
 );
 

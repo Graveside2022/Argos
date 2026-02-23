@@ -58,60 +58,93 @@ export class TakService extends EventEmitter {
 		this.config = loadTakConfig(this.db.rawDb);
 	}
 
+	/** Calculate uptime in seconds from connection start, or undefined */
+	private getUptime(): number | undefined {
+		if (!this.connectedAt) return undefined;
+		return Math.floor((Date.now() - this.connectedAt) / 1000);
+	}
+
 	public getStatus(): TakStatus {
 		return {
 			status: this.tak?.open ? 'connected' : 'disconnected',
 			serverName: this.config?.name,
 			serverHost: this.config?.hostname,
-			uptime: this.connectedAt
-				? Math.floor((Date.now() - this.connectedAt) / 1000)
-				: undefined,
+			uptime: this.getUptime(),
 			messageCount: this.messageCount
 		};
 	}
 
-	public async connect() {
+	/** Validate that config has TLS certs configured; returns false if not */
+	private validateTlsConfig(): boolean {
 		if (!this.config) {
 			logger.warn('[TakService] No configuration found');
-			return;
-		}
-		if (this.tak) {
-			this.tak.destroy();
-			this.tak = null;
+			return false;
 		}
 		if (!this.config.certPath || !this.config.keyPath) {
 			logger.warn('[TakService] TLS certificates not configured');
-			return;
+			return false;
 		}
+		return true;
+	}
 
-		let cert: string, key: string, ca: string | undefined;
+	/** Load TLS certificate files from disk */
+	private async loadCertificates(): Promise<{ cert: string; key: string; ca?: string } | null> {
 		try {
-			cert = await readFile(this.config.certPath, 'utf-8');
-			key = await readFile(this.config.keyPath, 'utf-8');
-			if (this.config.caPath) ca = await readFile(this.config.caPath, 'utf-8');
+			const cert = await readFile(this.config!.certPath!, 'utf-8');
+			const key = await readFile(this.config!.keyPath!, 'utf-8');
+			const ca = this.config!.caPath
+				? await readFile(this.config!.caPath, 'utf-8')
+				: undefined;
+			return { cert, key, ca };
 		} catch (err) {
 			logger.error('[TakService] Failed to load certificates', { error: String(err) });
 			this.broadcastStatus(
 				'error',
 				err instanceof Error ? err.message : 'Certificate load failed'
 			);
-			return;
+			return null;
 		}
+	}
 
-		const url = new URL(`ssl://${this.config.hostname}:${this.config.port}`);
+	/** Establish the TAK TLS connection */
+	private async establishConnection(certs: {
+		cert: string;
+		key: string;
+		ca?: string;
+	}): Promise<void> {
+		const url = new URL(`ssl://${this.config!.hostname}:${this.config!.port}`);
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+		this.tak = await TAK.connect(url, { ...certs, rejectUnauthorized: false });
+		this.setupEventHandlers();
+		this.reconnectAttempt = 0;
+		logger.info('[TakService] Connection initiated');
+	}
+
+	/** Destroy existing TAK connection if any */
+	private destroyExisting(): void {
+		if (!this.tak) return;
+		this.tak.destroy();
+		this.tak = null;
+	}
+
+	/** Handle a connection failure: log, broadcast, optionally reconnect */
+	private handleConnectError(err: unknown): void {
+		logger.error('[TakService] Connection failed', { error: String(err) });
+		this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
+		if (this.shouldConnect) this.scheduleReconnect();
+	}
+
+	public async connect() {
+		if (!this.validateTlsConfig()) return;
+		this.destroyExisting();
+
+		const certs = await this.loadCertificates();
+		if (!certs) return;
+
 		try {
-			// TAK.connect in node-tak doesn't properly pass rejectUnauthorized to tls.connect
-			// Global bypass is required because tls.connect verifies asynchronously
-			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-			this.tak = await TAK.connect(url, { cert, key, ca, rejectUnauthorized: false });
-
-			this.setupEventHandlers();
-			this.reconnectAttempt = 0;
-			logger.info('[TakService] Connection initiated');
+			await this.establishConnection(certs);
 		} catch (err) {
-			logger.error('[TakService] Connection failed', { error: String(err) });
-			this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
-			if (this.shouldConnect) this.scheduleReconnect();
+			this.handleConnectError(err);
 		}
 	}
 
@@ -195,9 +228,38 @@ export class TakService extends EventEmitter {
 		this.broadcastStatus('disconnected');
 	}
 
+	/** Whether a throttle entry is ready to send (no entry or cooldown elapsed) */
+	private isThrottleReady(entry: ThrottleEntry | undefined, now: number): boolean {
+		return !entry || now - entry.lastSent >= COT_THROTTLE_MS;
+	}
+
+	/** Send immediately and reset throttle entry */
+	private sendImmediate(uid: string, cot: CoT, entry: ThrottleEntry | undefined): void {
+		if (entry?.pendingTimeout) clearTimeout(entry.pendingTimeout);
+		this.throttleMap.set(uid, { lastSent: Date.now(), pendingTimeout: null, pendingCot: null });
+		this.tak!.write([cot]);
+	}
+
+	/** Schedule a deferred send after the throttle cooldown */
+	private scheduleDeferredSend(entry: ThrottleEntry, cot: CoT, now: number): void {
+		if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
+		entry.pendingCot = cot;
+		entry.pendingTimeout = setTimeout(
+			() => {
+				if (this.tak?.open && entry.pendingCot) {
+					this.tak.write([entry.pendingCot]);
+					entry.lastSent = Date.now();
+					entry.pendingCot = null;
+					entry.pendingTimeout = null;
+				}
+			},
+			COT_THROTTLE_MS - (now - entry.lastSent)
+		);
+	}
+
 	/** Sends a CoT message, throttled to max 1 update/sec per entity UID. */
 	public sendCot(cot: CoT) {
-		if (!this.tak || !this.tak.open) return;
+		if (!this.tak?.open) return;
 		const uid = cot.uid();
 		if (!uid) {
 			this.tak.write([cot]);
@@ -206,22 +268,10 @@ export class TakService extends EventEmitter {
 
 		const now = Date.now();
 		const entry = this.throttleMap.get(uid);
-		if (!entry || now - entry.lastSent >= COT_THROTTLE_MS) {
-			if (entry?.pendingTimeout) clearTimeout(entry.pendingTimeout);
-			this.throttleMap.set(uid, { lastSent: now, pendingTimeout: null, pendingCot: null });
-			this.tak.write([cot]);
+		if (this.isThrottleReady(entry, now)) {
+			this.sendImmediate(uid, cot, entry);
 		} else {
-			if (entry.pendingTimeout) clearTimeout(entry.pendingTimeout);
-			const delay = COT_THROTTLE_MS - (now - entry.lastSent);
-			entry.pendingCot = cot;
-			entry.pendingTimeout = setTimeout(() => {
-				if (this.tak?.open && entry.pendingCot) {
-					this.tak.write([entry.pendingCot]);
-					entry.lastSent = Date.now();
-					entry.pendingCot = null;
-					entry.pendingTimeout = null;
-				}
-			}, delay);
+			this.scheduleDeferredSend(entry!, cot, now);
 		}
 	}
 

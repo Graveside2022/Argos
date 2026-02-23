@@ -14,6 +14,32 @@ interface AggregationConfig {
 	shouldAggregateDaily: boolean;
 }
 
+/** Get a required prepared statement or throw. */
+function getStmt(statements: Map<string, Database.Statement>, name: string): Database.Statement {
+	const stmt = statements.get(name);
+	if (!stmt) throw new Error(`${name} statement not found`);
+	return stmt;
+}
+
+/** Run hourly signal and spatial heatmap aggregation. */
+function aggregateHourly(
+	statements: Map<string, Database.Statement>,
+	lastHour: number,
+	currentHour: number
+): void {
+	getStmt(statements, 'aggregateHourlySignals').run(lastHour, currentHour);
+	getStmt(statements, 'aggregateSpatialHeatmap').run(lastHour, currentHour);
+}
+
+/** Run daily device aggregation. */
+function aggregateDaily(
+	statements: Map<string, Database.Statement>,
+	lastDay: number,
+	currentDay: number
+): void {
+	getStmt(statements, 'aggregateDailyDevices').run(lastDay, currentDay);
+}
+
 /** Run hourly and daily aggregation tasks */
 export function runAggregation(
 	db: DatabaseType,
@@ -25,29 +51,12 @@ export function runAggregation(
 	const currentDay = Math.floor(now / 86400000) * 86400000;
 
 	try {
-		const aggregate = db.transaction(() => {
-			if (config.shouldAggregateHourly) {
-				const lastHour = currentHour - 3600000;
-
-				const hourlyStmt = statements.get('aggregateHourlySignals');
-				if (!hourlyStmt) throw new Error('aggregateHourlySignals statement not found');
-				hourlyStmt.run(lastHour, currentHour);
-
-				const spatialStmt = statements.get('aggregateSpatialHeatmap');
-				if (!spatialStmt) throw new Error('aggregateSpatialHeatmap statement not found');
-				spatialStmt.run(lastHour, currentHour);
-			}
-
-			if (config.shouldAggregateDaily) {
-				const lastDay = currentDay - 86400000;
-
-				const dailyStmt = statements.get('aggregateDailyDevices');
-				if (!dailyStmt) throw new Error('aggregateDailyDevices statement not found');
-				dailyStmt.run(lastDay, currentDay);
-			}
-		});
-
-		aggregate();
+		db.transaction(() => {
+			if (config.shouldAggregateHourly)
+				aggregateHourly(statements, currentHour - 3600000, currentHour);
+			if (config.shouldAggregateDaily)
+				aggregateDaily(statements, currentDay - 86400000, currentDay);
+		})();
 		logInfo('Aggregation completed', {}, 'aggregation-completed');
 	} catch (error) {
 		logError('Aggregation failed', { error }, 'aggregation-failed');

@@ -8,73 +8,71 @@ import type { RequestHandler } from '@sveltejs/kit';
  * Standards: OWASP A05:2021 (Security Misconfiguration)
  * Phase 2.1.3 Subtask 2.1.3.2
  */
-export const GET: RequestHandler = async ({ params, url }) => {
+const ALLOWED_PREFIXES = ['styles/', 'tiles/', 'data/', 'fonts/'];
+
+/** Validate request params, returning error Response or validated { apiKey, path }. */
+function validateTileRequest(params: { path?: string }): {
+	error?: Response;
+	apiKey?: string;
+	path?: string;
+} {
 	const apiKey = process.env.STADIA_MAPS_API_KEY;
 	if (!apiKey) {
-		return new Response(JSON.stringify({ error: 'Map tile service not configured' }), {
-			status: 503,
-			headers: { 'Content-Type': 'application/json' }
+		return {
+			error: new Response(JSON.stringify({ error: 'Map tile service not configured' }), {
+				status: 503,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		};
+	}
+	const path = params.path;
+	if (!path) return { error: new Response('Not found', { status: 404 }) };
+	const isAllowed = ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
+	if (!isAllowed) return { error: new Response('Forbidden', { status: 403 }) };
+	return { apiKey, path };
+}
+
+/** Rewrite Stadia Maps URLs to route through our proxy and strip leaked API keys. */
+function rewriteJsonBody(text: string, baseUrl: string): string {
+	const proxied = text.replace(
+		/https:\/\/tiles\.stadiamaps\.com\//g,
+		`${baseUrl}/api/map-tiles/`
+	);
+	return proxied.replace(/([?&])api_key=[^"&\s]+/g, () => '');
+}
+
+/** Build a tile response, rewriting JSON bodies to proxy through our server. */
+function buildTileResponse(contentType: string, body: ArrayBuffer, baseUrl: string): Response {
+	if (contentType.includes('json')) {
+		const rewritten = rewriteJsonBody(new TextDecoder().decode(body), baseUrl);
+		return new Response(rewritten, {
+			headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' }
 		});
 	}
+	return new Response(body, {
+		headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400' }
+	});
+}
 
-	const path = params.path;
-	if (!path) {
-		return new Response('Not found', { status: 404 });
-	}
+/** Fetch a tile from Stadia Maps upstream and build the proxied response. */
+async function fetchAndProxy(path: string, apiKey: string, baseUrl: string): Promise<Response> {
+	const sep = path.includes('?') ? '&' : '?';
+	const response = await fetch(`https://tiles.stadiamaps.com/${path}${sep}api_key=${apiKey}`);
+	if (!response.ok) return new Response(response.statusText, { status: response.status });
+	const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
+	return buildTileResponse(contentType, await response.arrayBuffer(), baseUrl);
+}
 
-	// Only allow requests to known Stadia Maps paths
-	const allowedPrefixes = ['styles/', 'tiles/', 'data/', 'fonts/'];
-	const isAllowed = allowedPrefixes.some((prefix) => path.startsWith(prefix));
-	if (!isAllowed) {
-		return new Response('Forbidden', { status: 403 });
-	}
+export const GET: RequestHandler = async ({ params, url }) => {
+	const validated = validateTileRequest(params);
+	if (validated.error) return validated.error;
 
 	try {
-		const upstreamUrl = `https://tiles.stadiamaps.com/${path}${path.includes('?') ? '&' : '?'}api_key=${apiKey}`;
-		const response = await fetch(upstreamUrl);
-
-		if (!response.ok) {
-			return new Response(response.statusText, { status: response.status });
-		}
-
-		const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-		const body = await response.arrayBuffer();
-
-		// Rewrite Stadia Maps URLs in ALL JSON responses (style JSON, TileJSON, etc.)
-		// to route through our proxy. This is critical for:
-		//   1. TileJSON (data/openmaptiles.json) — contains tile URL templates
-		//   2. Style JSON — contains source, sprite, and glyph URLs
-		// Without this, MapLibre fetches tiles directly from tiles.stadiamaps.com,
-		// which CSP connect-src 'self' blocks, AND leaks the paid API key to clients.
-		if (contentType.includes('json')) {
-			const text = new TextDecoder().decode(body);
-			const baseUrl = `${url.protocol}//${url.host}`;
-			let rewritten = text.replace(
-				/https:\/\/tiles\.stadiamaps\.com\//g,
-				`${baseUrl}/api/map-tiles/`
-			);
-			// Strip any api_key query params that leaked into the rewritten URLs.
-			// The upstream response embeds api_key in source URLs (e.g. openmaptiles.json?api_key=XXX).
-			// Our proxy injects the key server-side, so clients must not see it.
-			rewritten = rewritten.replace(/([?&])api_key=[^"&\s]+/g, (match, prefix) => {
-				// If api_key was the only param (?api_key=...), remove the ?
-				// If it followed another param (&api_key=...), remove the &
-				return prefix === '?' ? '' : '';
-			});
-			return new Response(rewritten, {
-				headers: {
-					'Content-Type': contentType,
-					'Cache-Control': 'public, max-age=3600'
-				}
-			});
-		}
-
-		return new Response(body, {
-			headers: {
-				'Content-Type': contentType,
-				'Cache-Control': 'public, max-age=86400'
-			}
-		});
+		return await fetchAndProxy(
+			validated.path!,
+			validated.apiKey!,
+			`${url.protocol}//${url.host}`
+		);
 	} catch {
 		return new Response('Upstream error', { status: 502 });
 	}

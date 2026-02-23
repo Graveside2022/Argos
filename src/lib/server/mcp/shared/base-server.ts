@@ -10,6 +10,23 @@ import { logger } from '$lib/utils/logger';
 
 import { getConnectionErrorMessage } from './api-client';
 
+/** Build an MCP error response. */
+function mcpError(text: string) {
+	return { content: [{ type: 'text' as const, text: `Error: ${text}` }], isError: true };
+}
+
+/** Check if error indicates Argos app is unreachable. */
+function isConnectionError(msg: string): boolean {
+	return msg.includes('ECONNREFUSED') || msg.includes('fetch failed');
+}
+
+/** Format a tool execution error into an MCP response. */
+function formatToolError(toolName: string, error: unknown) {
+	const msg = error instanceof Error ? error.message : String(error);
+	if (isConnectionError(msg)) return mcpError(getConnectionErrorMessage());
+	return mcpError(`executing ${toolName}: ${msg}`);
+}
+
 export interface ToolDefinition {
 	name: string;
 	description: string;
@@ -51,34 +68,13 @@ export abstract class BaseMCPServer {
 		this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			const { name, arguments: args } = request.params;
 			const tool = this.tools.find((t) => t.name === name);
-
-			if (!tool) {
-				return {
-					content: [{ type: 'text', text: `Error: Unknown tool "${name}"` }],
-					isError: true
-				};
-			}
+			if (!tool) return mcpError(`Unknown tool "${name}"`);
 
 			try {
 				const result = await tool.execute(args || {});
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
-				};
+				return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
 			} catch (error) {
-				const msg = error instanceof Error ? error.message : String(error);
-
-				// Check if Argos app is running
-				if (msg.includes('ECONNREFUSED') || msg.includes('fetch failed')) {
-					return {
-						content: [{ type: 'text', text: getConnectionErrorMessage() }],
-						isError: true
-					};
-				}
-
-				return {
-					content: [{ type: 'text', text: `Error executing ${name}: ${msg}` }],
-					isError: true
-				};
+				return formatToolError(name, error);
 			}
 		});
 	}

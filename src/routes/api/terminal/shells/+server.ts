@@ -35,25 +35,18 @@ async function isShellAvailable(shellPath: string): Promise<boolean> {
 	}
 }
 
-/**
- * Get the display name for a shell
- */
+/** Friendly names for known tmux profiles. */
+const SHELL_NAMES: Record<string, string> = {
+	'tmux-0.sh': 'Tmux 0',
+	'tmux-1.sh': 'Tmux 1',
+	'tmux-2.sh': 'Tmux 2',
+	'tmux-3.sh': 'Tmux 3'
+};
+
+/** Get the display name for a shell. */
 function getShellName(shellPath: string): string {
-	// Friendly names for the four tmux profiles
-	if (shellPath.includes('tmux-0.sh')) {
-		return 'Tmux 0';
-	}
-	if (shellPath.includes('tmux-1.sh')) {
-		return 'Tmux 1';
-	}
-	if (shellPath.includes('tmux-2.sh')) {
-		return 'Tmux 2';
-	}
-	if (shellPath.includes('tmux-3.sh')) {
-		return 'Tmux 3';
-	}
 	const basename = shellPath.split('/').pop() || shellPath;
-	return basename;
+	return SHELL_NAMES[basename] || basename;
 }
 
 export const GET: RequestHandler = async () => {

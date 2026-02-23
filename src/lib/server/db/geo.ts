@@ -52,16 +52,20 @@ export function convertRadiusToGrid(
 	};
 }
 
+/** Frequency band definitions for device type classification. */
+const FREQUENCY_BANDS: Array<{ min: number; max: number; type: string }> = [
+	{ min: 2400, max: 2500, type: 'wifi' },
+	{ min: 5150, max: 5850, type: 'wifi' },
+	{ min: 2400, max: 2485, type: 'bluetooth' },
+	{ min: 800, max: 900, type: 'cellular' },
+	{ min: 1800, max: 1900, type: 'cellular' }
+];
+
 /**
  * Detect device type based on frequency in MHz.
  */
 export function detectDeviceType(freq: number): string {
-	if (freq >= 2400 && freq <= 2500) return 'wifi';
-	if (freq >= 5150 && freq <= 5850) return 'wifi';
-	if (freq >= 2400 && freq <= 2485) return 'bluetooth';
-	if (freq >= 800 && freq <= 900) return 'cellular';
-	if (freq >= 1800 && freq <= 1900) return 'cellular';
-	return 'unknown';
+	return FREQUENCY_BANDS.find((b) => freq >= b.min && freq <= b.max)?.type ?? 'unknown';
 }
 
 /**
@@ -95,24 +99,24 @@ export function dbSignalToMarker(dbSignal: DbSignal): SignalMarker {
 	};
 }
 
+/** Parse signal metadata to a Record, handling both string and object forms. */
+function resolveMetadata(metadata: SignalMarker['metadata']): Record<string, unknown> {
+	if (!metadata) return {};
+	if (typeof metadata !== 'string') return metadata;
+	try {
+		return JSON.parse(metadata) as Record<string, unknown>;
+	} catch {
+		logger.warn('[geo] Invalid metadata JSON in generateDeviceId');
+		return {};
+	}
+}
+
 /**
  * Generate a synthetic device ID from a signal's characteristics.
  * Uses signal type, frequency, and power band as a composite key.
  */
 export function generateDeviceId(signal: SignalMarker): string {
-	let metadata: Record<string, unknown> = {};
-	if (signal.metadata) {
-		if (typeof signal.metadata === 'string') {
-			try {
-				metadata = JSON.parse(signal.metadata);
-			} catch (_error) {
-				logger.warn('[geo] Invalid metadata JSON in generateDeviceId');
-				metadata = {};
-			}
-		} else {
-			metadata = signal.metadata;
-		}
-	}
+	const metadata = resolveMetadata(signal.metadata);
 	const signalType = metadata.signalType || metadata.type || 'unknown';
 	return `${signalType}_${Math.floor(signal.frequency)}_${Math.floor(signal.power / 10) * 10}`;
 }

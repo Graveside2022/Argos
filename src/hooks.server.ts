@@ -70,114 +70,155 @@ wss.on('connection', (ws: WebSocket, request) => {
 	handleWsConnection(ws, request, wsManager);
 });
 
-export const handle: Handle = async ({ event, resolve }) => {
-	// Handle WebSocket upgrade requests (Phase 2.1.6: authenticate before upgrade)
-	if (
+/** Build a mock request carrying WS auth credentials (token param or cookie). */
+function buildWsMockRequest(event: Parameters<Handle>[0]['event']): Request {
+	const wsApiKey = event.url.searchParams.get('token') || event.request.headers.get('X-API-Key');
+	const headers: Record<string, string> = {};
+	if (wsApiKey) headers['X-API-Key'] = wsApiKey;
+	const wsCookie = event.request.headers.get('cookie');
+	if (wsCookie) headers['cookie'] = wsCookie;
+	return new Request('http://localhost', { headers });
+}
+
+/** Check if a request is a WebSocket upgrade for the Kismet WS endpoint. */
+function isKismetWsUpgrade(event: Parameters<Handle>[0]['event']): boolean {
+	return (
 		event.url.pathname === '/api/kismet/ws' &&
 		event.request.headers.get('upgrade') === 'websocket'
-	) {
-		const wsApiKey =
-			event.url.searchParams.get('token') || event.request.headers.get('X-API-Key');
-		const wsMockHeaders: Record<string, string> = {};
-		if (wsApiKey) wsMockHeaders['X-API-Key'] = wsApiKey;
-		const wsCookie = event.request.headers.get('cookie');
-		if (wsCookie) wsMockHeaders['cookie'] = wsCookie;
-		const wsMockRequest = new Request('http://localhost', { headers: wsMockHeaders });
+	);
+}
 
-		let wsAuthenticated = false;
-		try {
-			wsAuthenticated = validateApiKey(wsMockRequest);
-		} catch {
-			// fail closed
-		}
-
-		if (!wsAuthenticated) {
-			logAuthEvent({
-				eventType: 'WS_AUTH_FAILURE',
-				ip: getSafeClientAddress(event),
-				method: event.request.method,
-				path: event.url.pathname,
-				userAgent: event.request.headers.get('user-agent') || undefined,
-				reason: 'WebSocket upgrade rejected: invalid or missing credentials'
-			});
-			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-				status: 401,
-				headers: { 'Content-Type': 'application/json' }
-			});
-		}
-
-		logger.warn('WebSocket upgrade requested but platform context not available', {
-			path: event.url.pathname,
-			headers: { upgrade: event.request.headers.get('upgrade') }
-		});
+/** Validate API key, returning false on any exception (fail-closed). */
+function safeValidateApiKey(request: Request): boolean {
+	try {
+		return validateApiKey(request);
+	} catch {
+		return false;
 	}
+}
 
-	// API Authentication gate -- all /api/ routes except /api/health (Phase 2.1.1)
-	if (event.url.pathname.startsWith('/api/') && event.url.pathname !== '/api/health') {
-		if (!validateApiKey(event.request)) {
-			const hasApiKeyHeader = !!event.request.headers.get('X-API-Key');
-			const hasCookie = !!event.request.headers.get('cookie');
-			const eventType = hasApiKeyHeader || hasCookie ? 'AUTH_FAILURE' : 'AUTH_MISSING';
+/** Build an unauthorized JSON response. */
+function unauthorizedResponse(): Response {
+	return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+		status: 401,
+		headers: { 'Content-Type': 'application/json' }
+	});
+}
 
-			logAuthEvent({
-				eventType,
-				ip: getSafeClientAddress(event),
-				method: event.request.method,
-				path: event.url.pathname,
-				userAgent: event.request.headers.get('user-agent') || undefined,
-				reason:
-					eventType === 'AUTH_MISSING'
-						? 'No credentials provided'
-						: 'Invalid API key or session cookie'
-			});
-			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-				status: 401,
-				headers: { 'Content-Type': 'application/json' }
-			});
-		}
+/** Authenticate WebSocket upgrade requests. Returns 401 Response or null to continue. */
+function handleWsAuth(event: Parameters<Handle>[0]['event']): Response | null {
+	if (!isKismetWsUpgrade(event)) return null;
 
+	if (!safeValidateApiKey(buildWsMockRequest(event))) {
 		logAuthEvent({
-			eventType: 'AUTH_SUCCESS',
+			eventType: 'WS_AUTH_FAILURE',
 			ip: getSafeClientAddress(event),
 			method: event.request.method,
 			path: event.url.pathname,
-			userAgent: event.request.headers.get('user-agent') || undefined
+			userAgent: event.request.headers.get('user-agent') || undefined,
+			reason: 'WebSocket upgrade rejected: invalid or missing credentials'
 		});
+		return unauthorizedResponse();
 	}
 
-	// Rate limiting -- delegates to rate-limit-middleware
+	logger.warn('WebSocket upgrade requested but platform context not available', {
+		path: event.url.pathname,
+		headers: { upgrade: event.request.headers.get('upgrade') }
+	});
+	return null;
+}
+
+/** Determine auth event type from request headers. */
+function resolveAuthEventType(request: Request): 'AUTH_FAILURE' | 'AUTH_MISSING' {
+	const hasApiKeyHeader = !!request.headers.get('X-API-Key');
+	const hasCookie = !!request.headers.get('cookie');
+	return hasApiKeyHeader || hasCookie ? 'AUTH_FAILURE' : 'AUTH_MISSING';
+}
+
+/** Map auth event type to human-readable reason. */
+const AUTH_REASONS: Record<string, string> = {
+	AUTH_MISSING: 'No credentials provided',
+	AUTH_FAILURE: 'Invalid API key or session cookie'
+};
+
+/** Whether the path requires API authentication. */
+function requiresApiAuth(pathname: string): boolean {
+	return pathname.startsWith('/api/') && pathname !== '/api/health';
+}
+
+/** Build common auth log fields from a request event. */
+function authLogFields(event: Parameters<Handle>[0]['event']) {
+	return {
+		ip: getSafeClientAddress(event),
+		method: event.request.method,
+		path: event.url.pathname,
+		userAgent: event.request.headers.get('user-agent') || undefined
+	};
+}
+
+/** Authenticate API requests. Returns 401 Response or null to continue. */
+function handleApiAuth(event: Parameters<Handle>[0]['event']): Response | null {
+	if (!requiresApiAuth(event.url.pathname)) return null;
+
+	if (!validateApiKey(event.request)) {
+		const eventType = resolveAuthEventType(event.request);
+		logAuthEvent({ eventType, ...authLogFields(event), reason: AUTH_REASONS[eventType] });
+		return unauthorizedResponse();
+	}
+
+	logAuthEvent({ eventType: 'AUTH_SUCCESS', ...authLogFields(event) });
+	return null;
+}
+
+/** Whether the request method has a body that needs size checking. */
+const BODY_METHODS = new Set(['POST', 'PUT']);
+
+/** Determine the body size limit for a given path. */
+function getBodyLimit(pathname: string): number {
+	return HARDWARE_PATH_PATTERN.test(pathname) ? HARDWARE_BODY_LIMIT : MAX_BODY_SIZE;
+}
+
+/** Check body size limits for POST/PUT. Returns 413 Response or null to continue. */
+function checkBodySize(event: Parameters<Handle>[0]['event']): Response | null {
+	if (!BODY_METHODS.has(event.request.method)) return null;
+	const contentLength = parseInt(event.request.headers.get('content-length') || '0');
+	if (contentLength <= getBodyLimit(event.url.pathname)) return null;
+	return new Response(JSON.stringify({ error: 'Payload too large' }), {
+		status: 413,
+		headers: { 'Content-Type': 'application/json' }
+	});
+}
+
+/** Attach session cookie and log session creation for browser page requests. */
+function attachSessionCookie(event: Parameters<Handle>[0]['event'], response: Response) {
+	if (event.url.pathname.startsWith('/api/')) return;
+	response.headers.append('Set-Cookie', getSessionCookieHeader());
+	logAuthEvent({
+		eventType: 'SESSION_CREATED',
+		ip: getSafeClientAddress(event),
+		method: event.request.method,
+		path: event.url.pathname,
+		userAgent: event.request.headers.get('user-agent') || undefined
+	});
+}
+
+export const handle: Handle = async ({ event, resolve }) => {
+	// Security middleware pipeline — each returns Response to short-circuit or null to continue
+	const wsAuthResponse = handleWsAuth(event);
+	if (wsAuthResponse) return wsAuthResponse;
+
+	const apiAuthResponse = handleApiAuth(event);
+	if (apiAuthResponse) return apiAuthResponse;
+
 	const rateLimitResponse = checkRateLimit(event);
 	if (rateLimitResponse) return rateLimitResponse;
 
-	// Body size limit check (Phase 2.1.7)
-	if (event.request.method === 'POST' || event.request.method === 'PUT') {
-		const contentLength = parseInt(event.request.headers.get('content-length') || '0');
-		const isHardwareEndpoint = HARDWARE_PATH_PATTERN.test(event.url.pathname);
-		const limit = isHardwareEndpoint ? HARDWARE_BODY_LIMIT : MAX_BODY_SIZE;
-
-		if (contentLength > limit) {
-			return new Response(JSON.stringify({ error: 'Payload too large' }), {
-				status: 413,
-				headers: { 'Content-Type': 'application/json' }
-			});
-		}
-	}
+	const bodySizeResponse = checkBodySize(event);
+	if (bodySizeResponse) return bodySizeResponse;
 
 	const response = await resolve(event);
 
-	// Set session cookie for browser clients on page requests
-	if (!event.url.pathname.startsWith('/api/')) {
-		response.headers.append('Set-Cookie', getSessionCookieHeader());
-		logAuthEvent({
-			eventType: 'SESSION_CREATED',
-			ip: getSafeClientAddress(event),
-			method: event.request.method,
-			path: event.url.pathname,
-			userAgent: event.request.headers.get('user-agent') || undefined
-		});
-	}
-
-	// Apply security headers (CSP, HSTS, etc.) -- delegates to security-headers
+	attachSessionCookie(event, response);
 	applySecurityHeaders(response);
 
 	return response;

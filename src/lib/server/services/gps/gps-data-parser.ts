@@ -73,51 +73,63 @@ function isSatelliteArray(value: unknown): value is SatelliteData[] {
 	);
 }
 
+/** Extract a numeric field from a dynamic object, returning undefined if not a number */
+function numField(obj: Record<string, unknown>, key: string): number | undefined {
+	const val = obj[key];
+	return typeof val === 'number' ? val : undefined;
+}
+
+/** Extract a string field from a dynamic object, returning undefined if not a string */
+function strField(obj: Record<string, unknown>, key: string): string | undefined {
+	const val = obj[key];
+	return typeof val === 'string' ? val : undefined;
+}
+
+/** Validate that data is a TPV-class gpsd object, returning the typed Record or null */
+function asTPVObject(data: unknown): Record<string, unknown> | null {
+	if (typeof data !== 'object' || data === null) return null;
+	const obj = data as Record<string, unknown>;
+	if (obj.class !== 'TPV') return null;
+	return obj;
+}
+
 /** Parse a TPV (Time-Position-Velocity) message from gpsd output. */
 export function parseTPVData(data: unknown): TPVData | null {
-	if (typeof data !== 'object' || data === null) {
-		return null;
-	}
-
-	// Safe: Type cast for dynamic data access
-	const obj = data as Record<string, unknown>;
-
-	if (typeof obj.class !== 'string' || obj.class !== 'TPV') {
-		return null;
-	}
+	const obj = asTPVObject(data);
+	if (!obj) return null;
 
 	return {
-		class: obj.class,
-		mode: typeof obj.mode === 'number' ? obj.mode : 0,
-		lat: typeof obj.lat === 'number' ? obj.lat : undefined,
-		lon: typeof obj.lon === 'number' ? obj.lon : undefined,
-		alt: typeof obj.alt === 'number' ? obj.alt : undefined,
-		speed: typeof obj.speed === 'number' ? obj.speed : undefined,
-		track: typeof obj.track === 'number' ? obj.track : undefined,
-		epx: typeof obj.epx === 'number' ? obj.epx : undefined,
-		epy: typeof obj.epy === 'number' ? obj.epy : undefined,
-		time: typeof obj.time === 'string' ? obj.time : undefined
+		class: 'TPV',
+		mode: numField(obj, 'mode') ?? 0,
+		lat: numField(obj, 'lat'),
+		lon: numField(obj, 'lon'),
+		alt: numField(obj, 'alt'),
+		speed: numField(obj, 'speed'),
+		track: numField(obj, 'track'),
+		epx: numField(obj, 'epx'),
+		epy: numField(obj, 'epy'),
+		time: strField(obj, 'time')
 	};
+}
+
+/** Validate that data is a SKY-class gpsd object, returning the typed Record or null */
+function asSKYObject(data: unknown): Record<string, unknown> | null {
+	if (typeof data !== 'object' || data === null) return null;
+	const obj = data as Record<string, unknown>;
+	if (obj.class !== 'SKY') return null;
+	return obj;
 }
 
 /** Parse a SKY message from gpsd output. */
 function parseSkyMessage(data: unknown): SkyMessage | null {
-	if (typeof data !== 'object' || data === null) {
-		return null;
-	}
-
-	// Safe: Type cast for dynamic data access
-	const obj = data as Record<string, unknown>;
-
-	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {
-		return null;
-	}
+	const obj = asSKYObject(data);
+	if (!obj) return null;
 
 	return {
-		class: obj.class,
+		class: 'SKY',
 		satellites: isSatelliteArray(obj.satellites) ? obj.satellites : undefined,
-		uSat: typeof obj.uSat === 'number' ? obj.uSat : undefined,
-		nSat: typeof obj.nSat === 'number' ? obj.nSat : undefined
+		uSat: numField(obj, 'uSat'),
+		nSat: numField(obj, 'nSat')
 	};
 }
 
@@ -146,42 +158,38 @@ export function extractSatelliteCount(parsed: unknown): number | null {
  *
  * @returns Object with tpvData and updated satellite count (if any SKY msg found)
  */
+/** Parse a single gpsd line, returning validated data or null */
+function parseGpsdLine(line: string): z.infer<typeof GpsdMessageSchema> | null {
+	if (line.trim() === '') return null;
+	const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
+	if (!result.success) {
+		logger.warn('[gps] Malformed gpsd data, skipping line', undefined, 'gps-malformed-data');
+		return null;
+	}
+	return result.data;
+}
+
+/** Process a parsed gpsd message, updating tpv and satellite state */
+function processGpsdMessage(
+	parsed: z.infer<typeof GpsdMessageSchema>,
+	state: { tpvData: TPVData | null; satelliteCount: number | null }
+): void {
+	if (!state.tpvData) state.tpvData = parseTPVData(parsed);
+	const skyCount = extractSatelliteCount(parsed);
+	if (skyCount !== null) state.satelliteCount = skyCount;
+}
+
 export function parseGpsdLines(rawOutput: string): {
 	tpvData: TPVData | null;
 	satelliteCount: number | null;
 } {
-	let tpvData: TPVData | null = null;
-	let satelliteCount: number | null = null;
+	const state = { tpvData: null as TPVData | null, satelliteCount: null as number | null };
 	const lines = rawOutput.trim().split('\n');
 
 	for (const line of lines) {
-		if (line.trim() === '') continue;
-
-		const result = safeJsonParse(line, GpsdMessageSchema, 'gps-position');
-		if (!result.success) {
-			logger.warn(
-				'[gps] Malformed gpsd data, skipping line',
-				undefined,
-				'gps-malformed-data'
-			);
-			continue;
-		}
-
-		try {
-			const parsed = result.data;
-
-			if (!tpvData) {
-				tpvData = parseTPVData(parsed);
-			}
-
-			const skyCount = extractSatelliteCount(parsed);
-			if (skyCount !== null) {
-				satelliteCount = skyCount;
-			}
-		} catch (_error: unknown) {
-			// Skip non-JSON lines (e.g. gpsd banner)
-		}
+		const parsed = parseGpsdLine(line);
+		if (parsed) processGpsdMessage(parsed, state);
 	}
 
-	return { tpvData, satelliteCount };
+	return state;
 }

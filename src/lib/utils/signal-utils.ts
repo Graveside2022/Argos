@@ -64,15 +64,18 @@ export const signalBands: SignalBand[] = [
 	}
 ];
 
+/** Signal band thresholds: [minRssi, bandKey]. First match wins. */
+const SIGNAL_THRESHOLDS: [number, string][] = [
+	[-50, 'critical'],
+	[-60, 'strong'],
+	[-70, 'good'],
+	[-80, 'fair']
+];
+
 /** Get the signal band key for an RSSI value */
 export function getSignalBandKey(rssi: number): string {
-	// 0 dBm means Kismet has no signal data — treat as "no signal"
 	if (rssi === 0) return 'none';
-	if (rssi > -50) return 'critical';
-	if (rssi > -60) return 'strong';
-	if (rssi > -70) return 'good';
-	if (rssi > -80) return 'fair';
-	return 'weak';
+	return SIGNAL_THRESHOLDS.find(([min]) => rssi > min)?.[1] ?? 'weak';
 }
 
 /** Get the Palantir CSS variable name for an RSSI value */
@@ -82,15 +85,27 @@ export function getSignalColor(rssi: number): string {
 	return band?.cssVar ?? '--palantir-signal-weak';
 }
 
+/** Signal hex color thresholds: [minRssi, cssVar, fallbackHex]. First match wins. */
+const SIGNAL_HEX_THRESHOLDS: [number, string, string][] = [
+	[-50, '--signal-critical', '#dc2626'],
+	[-60, '--signal-strong', '#f97316'],
+	[-70, '--signal-good', '#fbbf24'],
+	[-80, '--signal-fair', '#10b981']
+];
+
+const WEAK_SIGNAL: [string, string] = ['--signal-weak', '#4a90e2'];
+
+/** Resolve the CSS var name and fallback hex for an RSSI value. */
+function resolveSignalPair(rssi: number): [string, string] {
+	const match = SIGNAL_HEX_THRESHOLDS.find(([min]) => rssi > min);
+	return match ? [match[1], match[2]] : WEAK_SIGNAL;
+}
+
 /** Get an inline hex color for contexts where CSS vars aren't available (e.g. Leaflet markers) */
 export function getSignalHex(rssi: number): string {
-	// 0 dBm means Kismet has no signal data — render as light grey (visible on dark map)
 	if (rssi === 0) return '#9a9a9a';
-	if (rssi > -50) return resolveThemeColor('--signal-critical', '#dc2626');
-	if (rssi > -60) return resolveThemeColor('--signal-strong', '#f97316');
-	if (rssi > -70) return resolveThemeColor('--signal-good', '#fbbf24');
-	if (rssi > -80) return resolveThemeColor('--signal-fair', '#10b981');
-	return resolveThemeColor('--signal-weak', '#4a90e2');
+	const [cssVar, fallback] = resolveSignalPair(rssi);
+	return resolveThemeColor(cssVar, fallback);
 }
 
 /** Format "last seen" timestamp to human-readable relative time */

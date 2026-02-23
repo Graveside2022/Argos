@@ -59,35 +59,28 @@ function buildGpsResponse(
 	return buildNoDataResponse(error, details);
 }
 
-/**
- * Check the circuit breaker and return a cached or error response if the
- * breaker is still open. Returns null when the caller should proceed
- * with a fresh gpsd query (breaker closed or half-open).
- */
-function checkPositionCircuitBreaker(): GpsPositionResponse | null {
-	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) {
-		return null;
-	}
+/** Whether the position circuit breaker is open and should block queries */
+function isPositionBreakerOpen(): boolean {
+	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) return false;
+	return Date.now() - lastFailureTimestamp < CIRCUIT_BREAKER_COOLDOWN_MS;
+}
 
-	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
+/** Log the breaker-open event exactly once */
+function logPositionBreakerOpen(): void {
+	if (circuitBreakerLogged) return;
+	logger.warn(
+		'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
+		{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+		'gps-circuit-breaker'
+	);
+	circuitBreakerLogged = true;
+}
 
-	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
-		return null;
-	}
-
-	if (!circuitBreakerLogged) {
-		logger.warn(
-			'[GPS] Circuit breaker open: gpsd unreachable, backing off to 30s retries',
-			{ consecutiveFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
-			'gps-circuit-breaker'
-		);
-		circuitBreakerLogged = true;
-	}
-
+/** Return cached position if still fresh, else an error response */
+function serveCachedOrErrorPosition(): GpsPositionResponse {
 	if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
 		return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
 	}
-
 	return buildGpsResponse(
 		false,
 		null,
@@ -96,34 +89,49 @@ function checkPositionCircuitBreaker(): GpsPositionResponse | null {
 }
 
 /**
- * Record a gpsd connection failure and return a cached or error response.
- * Activates the circuit breaker after reaching the failure threshold.
+ * Check the circuit breaker and return a cached or error response if the
+ * breaker is still open. Returns null when the caller should proceed.
  */
-function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
-	consecutiveFailures++;
-	lastFailureTimestamp = Date.now();
+function checkPositionCircuitBreaker(): GpsPositionResponse | null {
+	if (!isPositionBreakerOpen()) return null;
+	logPositionBreakerOpen();
+	return serveCachedOrErrorPosition();
+}
 
-	if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-		logger.warn(
-			'[GPS] gpsd connection failed, circuit breaker activating',
-			{
-				consecutiveFailures,
-				error: error instanceof Error ? error.message : String(error)
-			},
-			'gps-circuit-open'
-		);
-	}
+/** Log circuit breaker activation when the threshold is first reached */
+function logBreakerActivation(error: unknown): void {
+	if (consecutiveFailures !== CIRCUIT_BREAKER_THRESHOLD) return;
+	logger.warn(
+		'[GPS] gpsd connection failed, circuit breaker activating',
+		{
+			consecutiveFailures,
+			error: error instanceof Error ? error.message : String(error)
+		},
+		'gps-circuit-open'
+	);
+}
 
+/** Return cached position or a gpsd-unavailable error */
+function serveCachedOrGpsdError(error: unknown): GpsPositionResponse {
 	if (cachedTPV && Date.now() - cachedTPVTimestamp < 30000) {
 		return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
 	}
-
 	return buildGpsResponse(
 		false,
 		null,
 		'GPS service not available. Make sure gpsd is running.',
 		error instanceof Error ? error.message : 'Unknown error'
 	);
+}
+
+/**
+ * Record a gpsd connection failure and return a cached or error response.
+ */
+function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
+	consecutiveFailures++;
+	lastFailureTimestamp = Date.now();
+	logBreakerActivation(error);
+	return serveCachedOrGpsdError(error);
 }
 
 /**
@@ -136,37 +144,32 @@ function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
  * - Satellite count tracking from SKY messages
  * - Graceful degradation (serves cached data when gpsd unavailable)
  */
+/** Check if cached TPV data is still fresh */
+function hasFreshCache(): boolean {
+	return Boolean(cachedTPV) && Date.now() - cachedTPVTimestamp < TPV_CACHE_TTL_MS;
+}
+
+/** Process a successful gpsd query result, updating cache and circuit breaker */
+function processGpsdResult(tpvData: TPVData, satelliteCount: number | null): GpsPositionResponse {
+	if (satelliteCount !== null) cachedSatelliteCount = satelliteCount;
+	consecutiveFailures = 0;
+	circuitBreakerLogged = false;
+	cachedTPV = tpvData;
+	cachedTPVTimestamp = Date.now();
+	return buildGpsResponse(tpvData.mode >= 2, tpvData);
+}
+
 export async function getGpsPosition(): Promise<GpsPositionResponse> {
 	const circuitBreakerResponse = checkPositionCircuitBreaker();
 	if (circuitBreakerResponse) return circuitBreakerResponse;
 
-	// Serve cached data if it is still fresh (avoids redundant queries)
-	if (cachedTPV && Date.now() - cachedTPVTimestamp < TPV_CACHE_TTL_MS) {
-		return buildGpsResponse(cachedTPV.mode >= 2, cachedTPV);
-	}
+	if (hasFreshCache()) return buildGpsResponse(cachedTPV!.mode >= 2, cachedTPV);
 
 	try {
 		const allLines = await queryGpsd({ timeoutMs: 3000, collectMs: 2000 });
 		const { tpvData, satelliteCount } = parseGpsdLines(allLines);
-
-		// Update satellite count if a SKY message was found
-		if (satelliteCount !== null) {
-			cachedSatelliteCount = satelliteCount;
-		}
-
-		if (!tpvData) {
-			throw new Error('Failed to parse TPV data from gpsd response');
-		}
-
-		// Success -- reset circuit breaker
-		consecutiveFailures = 0;
-		circuitBreakerLogged = false;
-
-		// Update cache
-		cachedTPV = tpvData;
-		cachedTPVTimestamp = Date.now();
-
-		return buildGpsResponse(tpvData.mode >= 2, tpvData);
+		if (!tpvData) throw new Error('Failed to parse TPV data from gpsd response');
+		return processGpsdResult(tpvData, satelliteCount);
 	} catch (error: unknown) {
 		return handlePositionQueryFailure(error);
 	}

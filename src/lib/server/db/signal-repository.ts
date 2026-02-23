@@ -15,6 +15,62 @@ import { ensureDeviceExists, updateDeviceFromSignal } from './device-service';
 import { calculateDistance, convertRadiusToGrid, dbSignalToMarker, generateDeviceId } from './geo';
 import type { DbSignal, SpatialQuery, TimeQuery } from './types';
 
+/** Extract optional bandwidth from a signal's metadata. */
+function extractBandwidth(signal: SignalMarker): number | null {
+	// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing
+	return ('bandwidth' in signal ? signal.bandwidth : null) as number | null;
+}
+
+/** Extract optional modulation from a signal's metadata. */
+function extractModulation(signal: SignalMarker): string | null {
+	// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing
+	return ('modulation' in signal ? signal.modulation : null) as string | null;
+}
+
+/** Convert a SignalMarker to a DbSignal for database insertion. */
+function signalMarkerToDbSignal(signal: SignalMarker): DbSignal {
+	return {
+		signal_id: signal.id,
+		device_id: generateDeviceId(signal),
+		timestamp: signal.timestamp,
+		latitude: signal.lat,
+		longitude: signal.lon,
+		altitude: signal.altitude || 0,
+		power: signal.power,
+		frequency: signal.frequency,
+		bandwidth: extractBandwidth(signal),
+		modulation: extractModulation(signal),
+		source: signal.source,
+		metadata: signal.metadata ? JSON.stringify(signal.metadata) : undefined
+	};
+}
+
+/** Validate a DbSignal or throw. */
+function validateSignalOrThrow(dbSignal: DbSignal): DbSignal {
+	const validated = safeParseWithHandling(DbSignalSchema, dbSignal, 'background');
+	if (!validated) throw new Error(`Invalid signal data for signal_id: ${dbSignal.signal_id}`);
+	return validated;
+}
+
+/** Check if an error is a UNIQUE constraint violation. */
+function isUniqueConstraintError(error: unknown): boolean {
+	return error instanceof Error && error.message.includes('UNIQUE constraint failed');
+}
+
+/** Execute the insert, falling back to update on UNIQUE collision. */
+function executeInsertOrUpdate(
+	db: Database.Database,
+	statements: Map<string, Database.Statement>,
+	validated: DbSignal
+): DbSignal {
+	const stmt = statements.get('insertSignal');
+	if (!stmt) throw new Error('Insert signal statement not found');
+	const info = stmt.run(validated);
+	validated.id = info.lastInsertRowid as number;
+	updateDeviceFromSignal(db, statements, validated);
+	return validated;
+}
+
 /**
  * Insert a single signal into the database.
  * Automatically creates/updates the associated device record.
@@ -25,47 +81,56 @@ export function insertSignal(
 	statements: Map<string, Database.Statement>,
 	signal: SignalMarker
 ): DbSignal {
-	const dbSignal: DbSignal = {
-		signal_id: signal.id,
-		device_id: generateDeviceId(signal),
-		timestamp: signal.timestamp,
-		latitude: signal.lat,
-		longitude: signal.lon,
-		altitude: signal.altitude || 0,
-		power: signal.power,
-		frequency: signal.frequency,
-		// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing — better-sqlite3 returns generic objects
-		bandwidth: ('bandwidth' in signal ? signal.bandwidth : null) as number | null,
-		// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing — better-sqlite3 returns generic objects
-		modulation: ('modulation' in signal ? signal.modulation : null) as string | null,
-		source: signal.source,
-		metadata: signal.metadata ? JSON.stringify(signal.metadata) : undefined
-	};
-
-	// Validate signal data before database insertion (T034)
-	const validatedSignal = safeParseWithHandling(DbSignalSchema, dbSignal, 'background');
-	if (!validatedSignal) {
-		throw new Error(`Invalid signal data for signal_id: ${dbSignal.signal_id}`);
-	}
-
+	const validated = validateSignalOrThrow(signalMarkerToDbSignal(signal));
+	ensureDeviceExists(db, validated);
 	try {
-		// First ensure device exists
-		ensureDeviceExists(db, validatedSignal);
-
-		const stmt = statements.get('insertSignal');
-		if (!stmt) throw new Error('Insert signal statement not found');
-		const info = stmt.run(validatedSignal);
-		validatedSignal.id = info.lastInsertRowid as number;
-
-		// Update device info
-		updateDeviceFromSignal(db, statements, validatedSignal);
-
-		return validatedSignal;
+		return executeInsertOrUpdate(db, statements, validated);
 	} catch (error) {
-		if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-			return updateSignal(db, statements, validatedSignal);
-		}
+		if (isUniqueConstraintError(error)) return updateSignal(db, statements, validated);
 		throw error;
+	}
+}
+
+/** Validate an array of DbSignals, returning only valid ones and logging failures. */
+function validateSignalBatch(dbSignals: DbSignal[]): DbSignal[] {
+	return dbSignals.reduce<DbSignal[]>((acc, dbSignal) => {
+		const validated = safeParseWithHandling(DbSignalSchema, dbSignal, 'background');
+		if (validated) acc.push(validated);
+		else
+			logError(
+				'Invalid signal data in batch, skipping',
+				{ signal_id: dbSignal.signal_id },
+				'signal-validation-failed'
+			);
+		return acc;
+	}, []);
+}
+
+/** Process unique device IDs from signals using a callback. */
+function forEachUniqueDevice(signals: DbSignal[], fn: (signal: DbSignal) => void): void {
+	const seen = new Set<string>();
+	for (const signal of signals) {
+		if (signal.device_id && !seen.has(signal.device_id)) {
+			fn(signal);
+			seen.add(signal.device_id);
+		}
+	}
+}
+
+/** Try inserting a signal, silently skip UNIQUE conflicts, log other errors. */
+function tryInsertSignal(stmt: Database.Statement, signal: DbSignal): boolean {
+	try {
+		stmt.run(signal);
+		return true;
+	} catch (err) {
+		if (!isUniqueConstraintError(err)) {
+			logError(
+				'Failed to insert signal',
+				{ signalId: signal.signal_id, error: (err as Error).message },
+				'signal-insert-failed'
+			);
+		}
+		return false;
 	}
 }
 
@@ -81,99 +146,23 @@ export function insertSignalsBatch(
 	const insertStmt = statements.get('insertSignal');
 	if (!insertStmt) throw new Error('Insert signal statement not found');
 
-	const insertMany = db.transaction((dbSignals: DbSignal[]) => {
-		let successCount = 0;
-		for (const signal of dbSignals) {
-			try {
-				insertStmt.run(signal);
-				successCount++;
-			} catch (err) {
-				// Safe: Catch block error from DB operations is always Error instance
-				const error = err as Error;
-				if (!error.message?.includes('UNIQUE constraint failed')) {
-					logError(
-						'Failed to insert signal',
-						{ signalId: signal.signal_id, error: error.message },
-						'signal-insert-failed'
-					);
-				}
-			}
-		}
-		return successCount;
-	});
-
-	const dbSignals: DbSignal[] = signals.map((signal) => ({
-		signal_id: signal.id,
-		device_id: generateDeviceId(signal),
-		timestamp: signal.timestamp,
-		latitude: signal.lat,
-		longitude: signal.lon,
-		altitude: signal.altitude || 0,
-		power: signal.power,
-		frequency: signal.frequency,
-		bandwidth:
-			signal.metadata && typeof signal.metadata === 'object' && 'bandwidth' in signal.metadata
-				? (signal.metadata.bandwidth as number)
-				: null,
-		modulation:
-			signal.metadata &&
-			typeof signal.metadata === 'object' &&
-			'modulation' in signal.metadata
-				? (signal.metadata.modulation as string)
-				: null,
-		source: signal.source,
-		metadata: signal.metadata ? JSON.stringify(signal.metadata) : undefined
-	}));
-
-	// Validate all signals before batch insertion (T034)
-	const validatedSignals: DbSignal[] = [];
-	for (const dbSignal of dbSignals) {
-		const validated = safeParseWithHandling(DbSignalSchema, dbSignal, 'background');
-		if (validated) {
-			validatedSignals.push(validated);
-		} else {
-			logError(
-				'Invalid signal data in batch, skipping',
-				{ signal_id: dbSignal.signal_id },
-				'signal-validation-failed'
-			);
-		}
-	}
-
+	const validatedSignals = validateSignalBatch(signals.map(signalMarkerToDbSignal));
 	if (validatedSignals.length === 0) {
 		logError('All signals in batch failed validation', {}, 'batch-validation-failed');
 		return 0;
 	}
 
-	// Ensure all devices exist first
-	const ensureDevices = db.transaction(() => {
-		const processedDevices = new Set<string>();
-		for (const dbSignal of validatedSignals) {
-			if (dbSignal.device_id && !processedDevices.has(dbSignal.device_id)) {
-				ensureDeviceExists(db, dbSignal);
-				processedDevices.add(dbSignal.device_id);
-			}
-		}
-	});
+	db.transaction(() => forEachUniqueDevice(validatedSignals, (s) => ensureDeviceExists(db, s)))();
 
-	ensureDevices();
+	const insertMany = db.transaction((sigs: DbSignal[]) => {
+		return sigs.reduce((count, s) => count + (tryInsertSignal(insertStmt, s) ? 1 : 0), 0);
+	});
 
 	try {
 		const successCount = insertMany(validatedSignals);
-
-		// Update devices for successfully inserted signals
-		const updateDevices = db.transaction(() => {
-			const processedDevices = new Set<string>();
-			for (const dbSignal of validatedSignals) {
-				if (dbSignal.device_id && !processedDevices.has(dbSignal.device_id)) {
-					updateDeviceFromSignal(db, statements, dbSignal);
-					processedDevices.add(dbSignal.device_id);
-				}
-			}
-		});
-
-		updateDevices();
-
+		db.transaction(() =>
+			forEachUniqueDevice(validatedSignals, (s) => updateDeviceFromSignal(db, statements, s))
+		)();
 		return successCount;
 	} catch (error) {
 		logError('Batch insert transaction failed', { error }, 'batch-insert-failed');
@@ -213,13 +202,32 @@ export function updateSignal(
  * Uses the spatial grid index for an initial bounding-box filter,
  * then refines with Haversine distance.
  */
+/** Validate raw DB rows as signals, logging invalid ones. */
+function validateSignalRows(rawRows: unknown[]): DbSignal[] {
+	return rawRows.reduce<DbSignal[]>((acc, row) => {
+		const validated = safeParseWithHandling(DbSignalSchema, row, 'background');
+		if (validated) acc.push(validated);
+		else
+			logError(
+				'Invalid signal data returned from database query',
+				{ row },
+				'signal-query-validation-failed'
+			);
+		return acc;
+	}, []);
+}
+
+/** Check if a signal is within the given radius from a center point. */
+function isWithinRadius(signal: SignalMarker, query: SpatialQuery): boolean {
+	return calculateDistance(signal.lat, signal.lon, query.lat, query.lon) <= query.radiusMeters;
+}
+
 export function findSignalsInRadius(
-	db: Database.Database,
+	_db: Database.Database,
 	statements: Map<string, Database.Statement>,
 	query: SpatialQuery & TimeQuery
 ): SignalMarker[] {
 	const grid = convertRadiusToGrid(query.lat, query.lon, query.radiusMeters);
-
 	const stmt = statements.get('findSignalsInRadius');
 	if (!stmt) throw new Error('Find signals in radius statement not found');
 
@@ -232,26 +240,7 @@ export function findSignalsInRadius(
 		limit: query.limit || 1000
 	}) as unknown[];
 
-	// Validate all returned rows (T034)
-	const validatedRows: DbSignal[] = [];
-	for (const row of rawRows) {
-		const validated = safeParseWithHandling(DbSignalSchema, row, 'background');
-		if (validated) {
-			validatedRows.push(validated);
-		} else {
-			logError(
-				'Invalid signal data returned from database query',
-				{ row },
-				'signal-query-validation-failed'
-			);
-		}
-	}
-
-	// Convert to SignalMarker format and filter by exact distance
-	return validatedRows
+	return validateSignalRows(rawRows)
 		.map((row) => dbSignalToMarker(row))
-		.filter((signal) => {
-			const distance = calculateDistance(signal.lat, signal.lon, query.lat, query.lon);
-			return distance <= query.radiusMeters;
-		});
+		.filter((signal) => isWithinRadius(signal, query));
 }

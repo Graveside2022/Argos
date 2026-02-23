@@ -12,210 +12,203 @@ import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
-/**
- * Detect networked USRP devices
- */
-async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
-	const hardware: DetectedHardware[] = [];
+// ── USRP network detection ──
 
+const USRP_NET_CAPABILITIES: SDRCapabilities = {
+	minFrequency: 70_000_000,
+	maxFrequency: 6_000_000_000,
+	sampleRate: 61_440_000,
+	canTransmit: true,
+	canReceive: true,
+	fullDuplex: true
+};
+
+function parseNetworkUSRPLineFields(line: string, device: Partial<DetectedHardware>): void {
+	const addrMatch = line.match(/addr:\s*([0-9.]+)/i);
+	const serialMatch = line.match(/serial:\s*([A-F0-9]+)/i);
+	const typeMatch = line.match(/type:\s*([^\n,]+)/i);
+	const nameMatch = line.match(/name:\s*([^\n,]+)/i);
+
+	if (addrMatch) device.ipAddress = addrMatch[1];
+	if (serialMatch) device.serial = serialMatch[1];
+	if (typeMatch) device.model = typeMatch[1];
+	if (nameMatch) device.name = nameMatch[1];
+}
+
+function finalizeNetworkUSRP(device: Partial<DetectedHardware>): void {
+	const ip = device.ipAddress || 'unknown';
+	device.id = `usrp-net-${ip.replace(/\./g, '-')}`;
+	device.name = device.name || 'Network USRP';
+	device.manufacturer = 'Ettus Research';
+	device.capabilities = USRP_NET_CAPABILITIES;
+	device.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
+}
+
+function validateAndPushDevice(
+	device: Partial<DetectedHardware>,
+	hardware: DetectedHardware[],
+	label: string
+): void {
+	const result = DetectedHardwareSchema.safeParse(device);
+	if (result.success) {
+		hardware.push(result.data);
+		return;
+	}
+	logger.error(`[network-detector] Invalid network USRP data${label}, skipping`, {
+		device,
+		errors: result.error.format()
+	});
+}
+
+function createEmptyNetUSRP(): Partial<DetectedHardware> {
+	return {
+		category: 'sdr',
+		connectionType: 'network',
+		status: 'connected',
+		lastSeen: Date.now(),
+		firstSeen: Date.now()
+	};
+}
+
+function processNetUSRPLine(
+	line: string,
+	current: Partial<DetectedHardware> | null,
+	hardware: DetectedHardware[]
+): Partial<DetectedHardware> | null {
+	if (line.includes('Device Address')) {
+		if (current?.ipAddress) validateAndPushDevice(current, hardware, '');
+		return createEmptyNetUSRP();
+	}
+	if (current) parseNetworkUSRPLineFields(line, current);
+	return current;
+}
+
+function parseNetworkUSRPOutput(stdout: string): DetectedHardware[] {
+	const hardware: DetectedHardware[] = [];
+	let current: Partial<DetectedHardware> | null = null;
+
+	for (const line of stdout.split('\n')) {
+		current = processNetUSRPLine(line, current, hardware);
+	}
+	if (current?.ipAddress) {
+		finalizeNetworkUSRP(current);
+		validateAndPushDevice(current, hardware, ' (last device)');
+	}
+	return hardware;
+}
+
+async function detectNetworkUSRP(): Promise<DetectedHardware[]> {
 	try {
 		const { stdout } = await execFileAsync('/usr/bin/uhd_find_devices', ['--args=type=usrp'], {
 			timeout: 5000
 		});
-
-		// Parse network USRP devices
-		const lines = stdout.split('\n');
-		let currentDevice: Partial<DetectedHardware> | null = null;
-
-		for (const line of lines) {
-			if (line.includes('Device Address')) {
-				if (currentDevice && currentDevice.ipAddress) {
-					// Runtime validation with Zod (replaces unsafe type assertion)
-					const result = DetectedHardwareSchema.safeParse(currentDevice);
-					if (result.success) {
-						hardware.push(result.data);
-					} else {
-						logger.error('[network-detector] Invalid network USRP data, skipping', {
-							device: currentDevice,
-							errors: result.error.format()
-						});
-					}
-				}
-				currentDevice = {
-					category: 'sdr',
-					connectionType: 'network',
-					status: 'connected',
-					lastSeen: Date.now(),
-					firstSeen: Date.now()
-				};
-			} else if (currentDevice) {
-				const addrMatch = line.match(/addr:\s*([0-9.]+)/i);
-				const serialMatch = line.match(/serial:\s*([A-F0-9]+)/i);
-				const typeMatch = line.match(/type:\s*([^\n,]+)/i);
-				const nameMatch = line.match(/name:\s*([^\n,]+)/i);
-
-				if (addrMatch) currentDevice.ipAddress = addrMatch[1];
-				if (serialMatch) currentDevice.serial = serialMatch[1];
-				if (typeMatch) currentDevice.model = typeMatch[1];
-				if (nameMatch) currentDevice.name = nameMatch[1];
-			}
-		}
-
-		// Add last device
-		if (currentDevice && currentDevice.ipAddress) {
-			currentDevice.id = `usrp-net-${currentDevice.ipAddress.replace(/\./g, '-')}`;
-			currentDevice.name = currentDevice.name || 'Network USRP';
-			currentDevice.manufacturer = 'Ettus Research';
-			currentDevice.capabilities = {
-				minFrequency: 70_000_000,
-				maxFrequency: 6_000_000_000,
-				sampleRate: 61_440_000,
-				canTransmit: true,
-				canReceive: true,
-				fullDuplex: true
-				// Safe: Object literal satisfies SDRCapabilities — all required fields provided
-			} as SDRCapabilities;
-			currentDevice.compatibleTools = ['spectrum.analysis.usrp', 'cellular.analysis.usrp'];
-
-			// Runtime validation with Zod (replaces unsafe type assertion)
-			const result = DetectedHardwareSchema.safeParse(currentDevice);
-			if (result.success) {
-				hardware.push(result.data);
-			} else {
-				logger.error(
-					'[network-detector] Invalid network USRP data (last device), skipping',
-					{
-						device: currentDevice,
-						errors: result.error.format()
-					}
-				);
-			}
-		}
-	} catch (_error) {
-		// No network USRPs found
+		return parseNetworkUSRPOutput(stdout);
+	} catch {
+		return [];
 	}
-
-	return hardware;
 }
 
-/**
- * Check if Kismet server is available
- */
-async function detectKismetServer(): Promise<DetectedHardware[]> {
-	const hardware: DetectedHardware[] = [];
+// ── Kismet server detection ──
 
+function buildServiceDevice(
+	id: string,
+	name: string,
+	service: string,
+	version: string,
+	baseUrl: string,
+	defaultPort: number,
+	tools: string[]
+): DetectedHardware {
+	const url = new URL(baseUrl);
+	return {
+		id,
+		name,
+		category: 'network',
+		connectionType: 'network',
+		status: 'connected',
+		capabilities: { service, version },
+		ipAddress: url.hostname,
+		port: parseInt(url.port) || defaultPort,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: tools
+	};
+}
+
+async function detectKismetServer(): Promise<DetectedHardware[]> {
 	try {
-		// Check if Kismet is running on localhost:2501
 		const kismetUrl = process.env.PUBLIC_KISMET_API_URL || 'http://localhost:2501';
 		const url = new URL('/system/status.json', kismetUrl);
-
-		const response = await fetch(url.toString(), {
-			signal: AbortSignal.timeout(2000)
-		});
-
-		if (response.ok) {
-			const data = await response.json();
-
-			hardware.push({
-				id: 'kismet-server',
-				name: 'Kismet Server',
-				category: 'network',
-				connectionType: 'network',
-				status: 'connected',
-				capabilities: {
-					service: 'kismet',
-					version: data.kismet_version || 'unknown'
-				},
-				ipAddress: new URL(kismetUrl).hostname,
-				port: parseInt(new URL(kismetUrl).port) || 2501,
-				lastSeen: Date.now(),
-				firstSeen: Date.now(),
-				compatibleTools: ['wifi.scan.kismet', 'wifi.monitor.kismet']
-			});
-		}
-	} catch (_error) {
-		// Kismet not available
+		const response = await fetch(url.toString(), { signal: AbortSignal.timeout(2000) });
+		if (!response.ok) return [];
+		const data = await response.json();
+		return [
+			buildServiceDevice(
+				'kismet-server',
+				'Kismet Server',
+				'kismet',
+				data.kismet_version || 'unknown',
+				kismetUrl,
+				2501,
+				['wifi.scan.kismet', 'wifi.monitor.kismet']
+			)
+		];
+	} catch {
+		return [];
 	}
-
-	return hardware;
 }
 
-/**
- * Check if HackRF API server is available
- */
-async function detectHackRFServer(): Promise<DetectedHardware[]> {
-	const hardware: DetectedHardware[] = [];
+// ── HackRF API server detection ──
 
+async function detectHackRFServer(): Promise<DetectedHardware[]> {
 	try {
 		const hackrfUrl = process.env.PUBLIC_HACKRF_API_URL || 'http://localhost:8092';
 		const url = new URL('/status', hackrfUrl);
-
-		const response = await fetch(url.toString(), {
-			signal: AbortSignal.timeout(2000)
-		});
-
-		if (response.ok) {
-			const data = await response.json();
-
-			hardware.push({
-				id: 'hackrf-server',
-				name: 'HackRF API Server',
-				category: 'network',
-				connectionType: 'network',
-				status: 'connected',
-				capabilities: {
-					service: 'hackrf-api',
-					version: data.version || 'unknown'
-				},
-				ipAddress: new URL(hackrfUrl).hostname,
-				port: parseInt(new URL(hackrfUrl).port) || 8092,
-				lastSeen: Date.now(),
-				firstSeen: Date.now(),
-				compatibleTools: ['spectrum.analysis.hackrf']
-			});
-		}
-	} catch (_error) {
-		// HackRF API not available
+		const response = await fetch(url.toString(), { signal: AbortSignal.timeout(2000) });
+		if (!response.ok) return [];
+		const data = await response.json();
+		return [
+			buildServiceDevice(
+				'hackrf-server',
+				'HackRF API Server',
+				'hackrf-api',
+				data.version || 'unknown',
+				hackrfUrl,
+				8092,
+				['spectrum.analysis.hackrf']
+			)
+		];
+	} catch {
+		return [];
 	}
-
-	return hardware;
 }
 
-/**
- * Detect OpenWebRX instances
- */
-async function detectOpenWebRX(): Promise<DetectedHardware[]> {
-	const hardware: DetectedHardware[] = [];
+// ── OpenWebRX detection ──
 
+async function detectOpenWebRX(): Promise<DetectedHardware[]> {
 	try {
-		// Check common OpenWebRX port
 		const response = await fetch('http://localhost:8073', {
 			signal: AbortSignal.timeout(2000)
 		});
-
-		if (response.ok) {
-			hardware.push({
+		if (!response.ok) return [];
+		return [
+			{
 				id: 'openwebrx-server',
 				name: 'OpenWebRX Server',
 				category: 'network',
 				connectionType: 'network',
 				status: 'connected',
-				capabilities: {
-					service: 'openwebrx',
-					webInterface: true
-				},
+				capabilities: { service: 'openwebrx', webInterface: true },
 				ipAddress: 'localhost',
 				port: 8073,
 				lastSeen: Date.now(),
 				firstSeen: Date.now(),
 				compatibleTools: ['spectrum.view.openwebrx']
-			});
-		}
-	} catch (_error) {
-		// OpenWebRX not running
+			}
+		];
+	} catch {
+		return [];
 	}
-
-	return hardware;
 }
 
 /**

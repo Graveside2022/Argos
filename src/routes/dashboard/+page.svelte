@@ -64,39 +64,35 @@
 		activeView.set('map');
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		// Terminal keyboard shortcuts
-		if (e.ctrlKey && e.key === '`') {
-			e.preventDefault();
-			toggleTerminalPanel();
-			return;
-		}
-		if (e.ctrlKey && e.shiftKey && e.key === '`') {
-			e.preventDefault();
-			createSession();
-			return;
-		}
-		if (e.ctrlKey && e.shiftKey && e.key === '[') {
-			e.preventDefault();
-			previousTab();
-			return;
-		}
-		if (e.ctrlKey && e.shiftKey && e.key === ']') {
-			e.preventDefault();
-			nextTab();
-			return;
-		}
+	/** Keyboard shortcut key → action. Checked with modifier guards. */
+	type ShortcutEntry = { ctrl: boolean; shift: boolean; key: string; action: () => void };
+	const SHORTCUTS: ShortcutEntry[] = [
+		{ ctrl: true, shift: false, key: '`', action: toggleTerminalPanel },
+		{ ctrl: true, shift: true, key: '`', action: createSession },
+		{ ctrl: true, shift: true, key: '[', action: previousTab },
+		{ ctrl: true, shift: true, key: ']', action: nextTab }
+	];
 
-		// Escape key handling
-		if (e.key === 'Escape') {
-			if ($isBottomPanelOpen) {
-				closeBottomPanel();
-			} else if ($activeView !== 'map') {
-				activeView.set('map');
-			} else if ($activePanel !== null) {
-				activePanel.set(null);
-			}
+	function matchShortcut(e: KeyboardEvent): ShortcutEntry | undefined {
+		return SHORTCUTS.find(
+			(s) => e.ctrlKey === s.ctrl && e.shiftKey === s.shift && e.key === s.key
+		);
+	}
+
+	function handleEscape() {
+		if ($isBottomPanelOpen) closeBottomPanel();
+		else if ($activeView !== 'map') activeView.set('map');
+		else if ($activePanel !== null) activePanel.set(null);
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		const shortcut = matchShortcut(e);
+		if (shortcut) {
+			e.preventDefault();
+			shortcut.action();
+			return;
 		}
+		if (e.key === 'Escape') handleEscape();
 	}
 
 	onMount(() => {

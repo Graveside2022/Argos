@@ -334,6 +334,32 @@ export function getFrontendToolsForAgent(): Array<{
 	}));
 }
 
+/** Check if a required parameter is missing */
+function checkRequired(
+	paramName: string,
+	paramDef: FrontendTool['parameters'][string],
+	parameters: Record<string, unknown>
+): string | null {
+	if (paramDef.required && !(paramName in parameters)) {
+		return `Missing required parameter: ${paramName}`;
+	}
+	return null;
+}
+
+/** Check if a parameter value satisfies its enum constraint */
+function checkEnum(
+	paramName: string,
+	paramDef: FrontendTool['parameters'][string],
+	parameters: Record<string, unknown>
+): string | null {
+	if (!paramDef.enum || !(paramName in parameters)) return null;
+	const value = parameters[paramName];
+	if (!paramDef.enum.includes(String(value))) {
+		return `Invalid value for ${paramName}. Expected one of: ${paramDef.enum.join(', ')}`;
+	}
+	return null;
+}
+
 /**
  * Validate frontend tool call parameters
  */
@@ -342,28 +368,13 @@ export function validateFrontendToolCall(
 	parameters: Record<string, unknown>
 ): { valid: boolean; error?: string } {
 	const tool = frontendTools.find((t) => t.name === toolName);
+	if (!tool) return { valid: false, error: `Unknown frontend tool: ${toolName}` };
 
-	if (!tool) {
-		return { valid: false, error: `Unknown frontend tool: ${toolName}` };
-	}
-
-	// Check required parameters
 	for (const [paramName, paramDef] of Object.entries(tool.parameters)) {
-		if (paramDef.required && !(paramName in parameters)) {
-			return { valid: false, error: `Missing required parameter: ${paramName}` };
-		}
-
-		// Validate enum values
-		if (paramDef.enum && paramName in parameters) {
-			const value = parameters[paramName];
-			if (!paramDef.enum.includes(String(value))) {
-				return {
-					valid: false,
-					error: `Invalid value for ${paramName}. Expected one of: ${paramDef.enum.join(', ')}`
-				};
-			}
-		}
+		const error =
+			checkRequired(paramName, paramDef, parameters) ??
+			checkEnum(paramName, paramDef, parameters);
+		if (error) return { valid: false, error };
 	}
-
 	return { valid: true };
 }

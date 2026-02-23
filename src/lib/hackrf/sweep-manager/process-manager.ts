@@ -34,6 +34,42 @@ export class ProcessManager {
 		onExit?: (code: number | null, signal: string | null) => void;
 	} = {};
 
+	private buildSpawnConfig(config: ProcessConfig): ProcessConfig & { env: NodeJS.ProcessEnv } {
+		return {
+			...config,
+			env: {
+				...process.env,
+				NODE_NO_READLINE: '1',
+				PYTHONUNBUFFERED: '1'
+			}
+		};
+	}
+
+	private resolveScriptPath(): string {
+		const __filename = fileURLToPath(import.meta.url);
+		const __dirname = dirname(__filename);
+		return join(__dirname, 'auto_sweep.sh');
+	}
+
+	private registerProcess(sweepProcess: ChildProcess): ProcessState {
+		const pid = sweepProcess.pid || null;
+		const processStartTime = Date.now();
+
+		if (pid) {
+			this.processRegistry.set(pid, sweepProcess);
+		}
+
+		logInfo(`[OK] Real HackRF process spawned with PID: ${pid}`);
+		this.attachEventHandlers(sweepProcess);
+
+		return {
+			sweepProcess,
+			sweepProcessPgid: pid,
+			actualProcessPid: pid,
+			processStartTime
+		};
+	}
+
 	/**
 	 * Spawn a new HackRF sweep process - REAL HARDWARE ONLY
 	 */
@@ -44,72 +80,29 @@ export class ProcessManager {
 			stdio: ['ignore', 'pipe', 'pipe']
 		}
 	): Promise<ProcessState> {
-		return new Promise((resolve, reject) => {
-			try {
-				logInfo(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
+		logInfo(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
+		const scriptPath = this.resolveScriptPath();
+		logInfo(`[FILE] Script path resolved to: ${scriptPath}`);
 
-				const modifiedConfig = {
-					...config,
-					env: {
-						...process.env,
-						NODE_NO_READLINE: '1',
-						PYTHONUNBUFFERED: '1'
-					}
-				};
-				const __filename = fileURLToPath(import.meta.url);
-				const __dirname = dirname(__filename);
-				const scriptPath = join(__dirname, 'auto_sweep.sh');
+		const sweepProcess = spawn(scriptPath, args, this.buildSpawnConfig(config));
+		return this.registerProcess(sweepProcess);
+	}
 
-				logInfo(`[FILE] Script path resolved to: ${scriptPath}`);
-
-				const sweepProcess = spawn(scriptPath, args, modifiedConfig);
-				const sweepProcessPgid = sweepProcess.pid || null;
-				const actualProcessPid = sweepProcess.pid || null;
-				const processStartTime = Date.now();
-
-				if (actualProcessPid) {
-					this.processRegistry.set(actualProcessPid, sweepProcess);
-				}
-
-				logInfo(
-					`[OK] Real HackRF process spawned with PID: ${actualProcessPid}, PGID: ${sweepProcessPgid}`
-				);
-
-				this.attachEventHandlers(sweepProcess);
-
-				const processState: ProcessState = {
-					sweepProcess,
-					sweepProcessPgid,
-					actualProcessPid,
-					processStartTime
-				};
-
-				resolve(processState);
-			} catch (error) {
-				reject(error instanceof Error ? error : new Error(String(error)));
-			}
-		});
+	private attachStdoutHandler(sweepProcess: ChildProcess): void {
+		if (!sweepProcess.stdout || !this.eventHandlers.onStdout) {
+			logError('Failed to attach stdout handler', {
+				hasStdout: !!sweepProcess.stdout,
+				hasHandler: !!this.eventHandlers.onStdout
+			});
+			return;
+		}
+		sweepProcess.stdout.on('data', this.eventHandlers.onStdout);
+		logInfo('Attached stdout handler to real process');
 	}
 
 	/** Attach stdout/stderr/exit handlers to a spawned process */
 	private attachEventHandlers(sweepProcess: ChildProcess): void {
-		if (sweepProcess.stdout && this.eventHandlers.onStdout) {
-			const stdoutHandler = this.eventHandlers.onStdout;
-			sweepProcess.stdout.on('data', (data: Buffer) => {
-				if (stdoutHandler) {
-					stdoutHandler(data);
-				} else {
-					logError('Stdout handler disappeared unexpectedly');
-				}
-			});
-			logInfo('Attached stdout handler to real process');
-		} else {
-			const error = {
-				hasStdout: !!sweepProcess.stdout,
-				hasHandler: !!this.eventHandlers.onStdout
-			};
-			logError('Failed to attach stdout handler', error);
-		}
+		this.attachStdoutHandler(sweepProcess);
 
 		if (sweepProcess.stderr && this.eventHandlers.onStderr) {
 			sweepProcess.stderr.on('data', this.eventHandlers.onStderr);
@@ -148,27 +141,37 @@ export class ProcessManager {
 		logInfo('Process event handlers set for real hardware');
 	}
 
-	/**
-	 * Get current process state
-	 */
-	getProcessState(): ProcessState & { isRunning: boolean } {
-		for (const [pid, _childProcess] of this.processRegistry) {
+	private pruneDeadProcesses(): void {
+		for (const [pid] of this.processRegistry) {
 			if (!this.isProcessAlive(pid)) {
 				logWarn(`Process ${pid} is dead, removing from registry`);
 				this.processRegistry.delete(pid);
 			}
 		}
+	}
 
-		const isRunning = this.processRegistry.size > 0;
-		const firstProcess = this.processRegistry.values().next().value || null;
-		const processStartTime = firstProcess ? Date.now() : null;
+	private static readonly EMPTY_STATE: ProcessState & { isRunning: boolean } = {
+		sweepProcess: null,
+		sweepProcessPgid: null,
+		actualProcessPid: null,
+		processStartTime: null,
+		isRunning: false
+	};
 
+	/**
+	 * Get current process state
+	 */
+	getProcessState(): ProcessState & { isRunning: boolean } {
+		this.pruneDeadProcesses();
+		const firstProcess: ChildProcess | undefined = this.processRegistry.values().next().value;
+		if (!firstProcess) return { ...ProcessManager.EMPTY_STATE };
+		const pid = firstProcess.pid ?? null;
 		return {
 			sweepProcess: firstProcess,
-			sweepProcessPgid: firstProcess?.pid || null,
-			actualProcessPid: firstProcess?.pid || null,
-			processStartTime,
-			isRunning
+			sweepProcessPgid: pid,
+			actualProcessPid: pid,
+			processStartTime: Date.now(),
+			isRunning: true
 		};
 	}
 
@@ -184,6 +187,35 @@ export class ProcessManager {
 		}
 	}
 
+	private parseHackrfInfoError(error: Error & { code?: string | number | null }): {
+		available: boolean;
+		reason: string;
+	} {
+		const reason =
+			error.code === 124 ? 'Device check timeout' : `Device check failed: ${error.message}`;
+		return { available: false, reason };
+	}
+
+	private parseHackrfInfoOutput(
+		stdout: string,
+		stderr: string
+	): { available: boolean; reason: string; deviceInfo?: string } {
+		if (stderr.includes('Resource busy')) {
+			return { available: false, reason: 'Device busy' };
+		}
+		if (stderr.includes('No HackRF boards found')) {
+			return { available: false, reason: 'No HackRF found' };
+		}
+		if (stdout.includes('Serial number')) {
+			const deviceInfo = stdout
+				.split('\n')
+				.filter((line) => line.trim())
+				.join(', ');
+			return { available: true, reason: 'HackRF detected', deviceInfo };
+		}
+		return { available: false, reason: 'Unknown error' };
+	}
+
 	/**
 	 * Test HackRF device availability
 	 */
@@ -195,26 +227,9 @@ export class ProcessManager {
 		return new Promise((resolve) => {
 			execFile('/usr/bin/timeout', ['3', 'hackrf_info'], (error, stdout, stderr) => {
 				if (error) {
-					if (error.code === 124) {
-						resolve({ available: false, reason: 'Device check timeout' });
-					} else {
-						resolve({
-							available: false,
-							reason: `Device check failed: ${error.message}`
-						});
-					}
-				} else if (stderr.includes('Resource busy')) {
-					resolve({ available: false, reason: 'Device busy' });
-				} else if (stderr.includes('No HackRF boards found')) {
-					resolve({ available: false, reason: 'No HackRF found' });
-				} else if (stdout.includes('Serial number')) {
-					const deviceInfo = stdout
-						.split('\n')
-						.filter((line) => line.trim())
-						.join(', ');
-					resolve({ available: true, reason: 'HackRF detected', deviceInfo });
+					resolve(this.parseHackrfInfoError(error));
 				} else {
-					resolve({ available: false, reason: 'Unknown error' });
+					resolve(this.parseHackrfInfoOutput(stdout, stderr));
 				}
 			});
 		});

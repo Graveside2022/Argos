@@ -8,6 +8,174 @@
 
 import type { ApiFetchFn, ArgosTool, KismetDevice } from './dynamic-server-types';
 
+/** Get device signal strength with fallback chain. */
+function deviceSignal(d: KismetDevice): number | null {
+	return d.signalStrength ?? d.signal?.last_signal ?? null;
+}
+
+/** Get device MAC with fallback. */
+function deviceMac(d: KismetDevice): string {
+	return d.mac || d.macaddr || 'unknown';
+}
+
+/** Get device SSID with fallback. */
+function deviceSsid(d: KismetDevice): string {
+	return d.ssid || d.name || 'Unknown';
+}
+
+/** Get device manufacturer with fallback. */
+function deviceManuf(d: KismetDevice): string {
+	return d.manufacturer || d.manuf || 'Unknown';
+}
+
+/** Get device type with fallback. */
+function deviceType(d: KismetDevice): string {
+	return d.type || d.deviceType || 'wifi';
+}
+
+/** Get device encryption with fallback. */
+function deviceEncryption(d: KismetDevice): string {
+	return d.encryption || d.crypt || 'Unknown';
+}
+
+/** Get device packet count with fallback. */
+function devicePackets(d: KismetDevice): number {
+	return d.packets || d.dataPackets || 0;
+}
+
+/** Get device last seen timestamp with fallback. */
+function deviceLastSeen(d: KismetDevice): string | null {
+	return d.lastSeen || d.last_time || null;
+}
+
+/** Normalize a KismetDevice to a summary object. */
+function normalizeDevice(d: KismetDevice): Record<string, unknown> {
+	return {
+		mac: deviceMac(d),
+		ssid: deviceSsid(d),
+		signal_dbm: deviceSignal(d),
+		manufacturer: deviceManuf(d),
+		type: deviceType(d),
+		encryption: deviceEncryption(d),
+		channel: d.channel ?? null,
+		frequency: d.frequency ?? null,
+		packets: devicePackets(d),
+		last_seen: deviceLastSeen(d),
+		location: d.location ?? null
+	};
+}
+
+/** Filter devices by minimum signal strength. */
+function filterBySignal(devices: KismetDevice[], minSignal: number): KismetDevice[] {
+	return devices.filter((d) => (deviceSignal(d) ?? -100) >= minSignal);
+}
+
+/** Filter devices by type. */
+function filterByType(devices: KismetDevice[], filterType: string): KismetDevice[] {
+	if (filterType === 'all') return devices;
+	return devices.filter((d) =>
+		(d.type || d.deviceType || 'wifi').toLowerCase().includes(filterType)
+	);
+}
+
+/** Find device by MAC or SSID search string. */
+function findDevice(devices: KismetDevice[], searchLower: string): KismetDevice | undefined {
+	return devices.find((d) => {
+		const mac = deviceMac(d).toLowerCase();
+		const ssid = deviceSsid(d).toLowerCase();
+		return mac.includes(searchLower) || ssid.includes(searchLower);
+	});
+}
+
+/** Filter devices matching MAC or SSID search string. */
+function filterDevices(devices: KismetDevice[], searchLower: string): KismetDevice[] {
+	return devices.filter((d) => {
+		const mac = deviceMac(d).toLowerCase();
+		const ssid = deviceSsid(d).toLowerCase();
+		return mac.includes(searchLower) || ssid.includes(searchLower);
+	});
+}
+
+interface RiskAssessment {
+	risk: string;
+	recommendation: string;
+}
+
+/** Check if encryption indicates an open network. */
+function isOpenNetwork(upper: string): boolean {
+	return upper === 'NONE' || upper === 'OPEN';
+}
+
+/** Check if encryption indicates WPA3/SAE. */
+function isWpa3(upper: string): boolean {
+	return upper.includes('WPA3') || upper.includes('SAE');
+}
+
+/** Classify encryption risk level. */
+function classifyEncryptionRisk(encryption: string): RiskAssessment {
+	const upper = encryption.toUpperCase();
+	if (isOpenNetwork(upper)) {
+		return {
+			risk: 'CRITICAL',
+			recommendation:
+				'OPEN NETWORK - No encryption. All traffic visible. Potential evil twin or honeypot.'
+		};
+	}
+	if (upper.includes('WEP')) {
+		return {
+			risk: 'HIGH',
+			recommendation: 'WEP encryption is broken. Can be cracked in minutes. Upgrade to WPA3.'
+		};
+	}
+	if (!isWpa3(upper) && upper.includes('WPA2')) {
+		return {
+			risk: 'MEDIUM',
+			recommendation:
+				'WPA2 is adequate but WPA3 is recommended. Check for KRACK vulnerability.'
+		};
+	}
+	return { risk: 'LOW', recommendation: 'Network uses strong encryption' };
+}
+
+/** Build network security summary for a device. */
+function buildNetworkSecurity(d: KismetDevice): Record<string, unknown> {
+	const encryption = d.encryption || d.crypt || 'None';
+	const { risk, recommendation } = classifyEncryptionRisk(encryption);
+	return {
+		ssid: deviceSsid(d),
+		mac: deviceMac(d),
+		encryption: encryption.toUpperCase(),
+		risk,
+		recommendation,
+		signal_dbm: deviceSignal(d),
+		channel: d.channel || null
+	};
+}
+
+/** Build detailed device info. */
+function buildDeviceDetails(d: KismetDevice): Record<string, unknown> {
+	return {
+		found: true,
+		...normalizeDevice(d),
+		first_seen: d.firstSeen || d.first_time || null
+	};
+}
+
+/** Count towers from API response. */
+function countTowers(data: Record<string, unknown>): number {
+	return (data.count as number) || (data.towers as unknown[] | undefined)?.length || 0;
+}
+
+/** Extract numeric arg with default. */
+function numArg(args: Record<string, unknown>, key: string, def: number): number {
+	return (args[key] as number) ?? def;
+}
+
+/** Check if coordinates are missing (both zero). */
+function isMissingCoords(lat: number, lon: number): boolean {
+	return lat === 0 && lon === 0;
+}
+
 /**
  * Device and signal analysis MCP tools.
  *
@@ -38,40 +206,17 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 			execute: async (args: Record<string, unknown>) => {
 				const resp = await apiFetch('/api/kismet/devices');
 				const data = await resp.json();
-				let devices: KismetDevice[] = data.devices || [];
-
-				// Safe: MCP SDK validates args against inputSchema before execute() is called
 				const minSignal = (args.min_signal_strength as number) ?? -90;
-				devices = devices.filter((d: KismetDevice) => {
-					const sig = d.signalStrength ?? d.signal?.last_signal ?? -100;
-					return sig >= minSignal;
-				});
-
-				// Safe: MCP SDK validates args against inputSchema before execute() is called
 				const filterType = (args.filter_type as string) || 'all';
-				if (filterType !== 'all') {
-					devices = devices.filter((d: KismetDevice) => {
-						const type = (d.type || d.deviceType || 'wifi').toLowerCase();
-						return type.includes(filterType);
-					});
-				}
+				const filtered = filterByType(
+					filterBySignal(data.devices || [], minSignal),
+					filterType
+				);
 
 				return {
-					device_count: devices.length,
+					device_count: filtered.length,
 					source: data.source || 'kismet',
-					devices: devices.slice(0, 50).map((d: KismetDevice) => ({
-						mac: d.mac || d.macaddr || 'unknown',
-						ssid: d.ssid || d.name || 'Unknown',
-						signal_dbm: d.signalStrength ?? d.signal?.last_signal ?? null,
-						manufacturer: d.manufacturer || d.manuf || 'Unknown',
-						type: d.type || d.deviceType || 'wifi',
-						encryption: d.encryption || d.crypt || 'Unknown',
-						channel: d.channel || null,
-						frequency: d.frequency || null,
-						packets: d.packets || d.dataPackets || 0,
-						last_seen: d.lastSeen || d.last_time || null,
-						location: d.location || null
-					}))
+					devices: filtered.slice(0, 50).map(normalizeDevice)
 				};
 			}
 		},
@@ -91,18 +236,11 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				required: ['device_id']
 			},
 			execute: async (args: Record<string, unknown>) => {
-				// Safe: MCP SDK validates args against inputSchema (required: device_id) before execute() is called
 				const deviceId = (args.device_id as string) || '';
 				const resp = await apiFetch('/api/kismet/devices');
 				const data = await resp.json();
 				const devices: KismetDevice[] = data.devices || [];
-
-				const searchLower = deviceId.toLowerCase();
-				const match = devices.find((d: KismetDevice) => {
-					const mac = (d.mac || d.macaddr || '').toLowerCase();
-					const ssid = (d.ssid || d.name || '').toLowerCase();
-					return mac.includes(searchLower) || ssid.includes(searchLower);
-				});
+				const match = findDevice(devices, deviceId.toLowerCase());
 
 				if (!match) {
 					return {
@@ -110,22 +248,7 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 						message: `Device "${deviceId}" not found in ${devices.length} active devices`
 					};
 				}
-
-				return {
-					found: true,
-					mac: match.mac || match.macaddr,
-					ssid: match.ssid || match.name || 'Unknown',
-					signal_dbm: match.signalStrength ?? match.signal?.last_signal ?? null,
-					manufacturer: match.manufacturer || match.manuf || 'Unknown',
-					type: match.type || match.deviceType || 'wifi',
-					encryption: match.encryption || match.crypt || 'Unknown',
-					channel: match.channel || null,
-					frequency: match.frequency || null,
-					packets: match.packets || match.dataPackets || 0,
-					last_seen: match.lastSeen || match.last_time || null,
-					location: match.location || null,
-					first_seen: match.firstSeen || match.first_time || null
-				};
+				return buildDeviceDetails(match);
 			}
 		},
 		{
@@ -172,18 +295,10 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				required: ['network_id']
 			},
 			execute: async (args: Record<string, unknown>) => {
-				// Safe: MCP SDK validates args against inputSchema (required: network_id) before execute() is called
 				const networkId = (args.network_id as string) || '';
 				const resp = await apiFetch('/api/kismet/devices');
 				const data = await resp.json();
-				const devices: KismetDevice[] = data.devices || [];
-
-				const searchLower = networkId.toLowerCase();
-				const matches = devices.filter((d: KismetDevice) => {
-					const mac = (d.mac || d.macaddr || '').toLowerCase();
-					const ssid = (d.ssid || d.name || '').toLowerCase();
-					return mac.includes(searchLower) || ssid.includes(searchLower);
-				});
+				const matches = filterDevices(data.devices || [], networkId.toLowerCase());
 
 				if (matches.length === 0) {
 					return { found: false, message: `Network "${networkId}" not found` };
@@ -192,38 +307,7 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				return {
 					found: true,
 					network_count: matches.length,
-					networks: matches.map((d: KismetDevice) => {
-						const encryption = (d.encryption || d.crypt || 'None').toUpperCase();
-						const isOpen = encryption === 'NONE' || encryption === 'OPEN';
-						const isWEP = encryption.includes('WEP');
-						const isWPA3 = encryption.includes('WPA3') || encryption.includes('SAE');
-
-						let risk = 'LOW';
-						let recommendation = 'Network uses strong encryption';
-						if (isOpen) {
-							risk = 'CRITICAL';
-							recommendation =
-								'OPEN NETWORK - No encryption. All traffic visible. Potential evil twin or honeypot.';
-						} else if (isWEP) {
-							risk = 'HIGH';
-							recommendation =
-								'WEP encryption is broken. Can be cracked in minutes. Upgrade to WPA3.';
-						} else if (!isWPA3 && encryption.includes('WPA2')) {
-							risk = 'MEDIUM';
-							recommendation =
-								'WPA2 is adequate but WPA3 is recommended. Check for KRACK vulnerability.';
-						}
-
-						return {
-							ssid: d.ssid || d.name || 'Hidden',
-							mac: d.mac || d.macaddr,
-							encryption,
-							risk,
-							recommendation,
-							signal_dbm: d.signalStrength ?? d.signal?.last_signal ?? null,
-							channel: d.channel || null
-						};
-					})
+					networks: matches.map(buildNetworkSecurity)
 				};
 			}
 		},
@@ -271,17 +355,14 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				}
 			},
 			execute: async (args: Record<string, unknown>) => {
-				// Safe: MCP SDK validates args against inputSchema before execute() is called
-				const lat = (args.latitude as number) || 0;
-				const lon = (args.longitude as number) || 0;
-				const radius = (args.radius_km as number) || 5;
-
-				if (lat === 0 && lon === 0) {
+				const lat = numArg(args, 'latitude', 0);
+				const lon = numArg(args, 'longitude', 0);
+				if (isMissingCoords(lat, lon)) {
 					return {
 						error: 'No GPS position provided. Pass latitude and longitude parameters.'
 					};
 				}
-
+				const radius = numArg(args, 'radius_km', 5);
 				const resp = await apiFetch(
 					`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=${radius}`
 				);
@@ -289,8 +370,8 @@ export function createDeviceTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				return {
 					success: data.success,
 					source: data.source,
-					tower_count: data.count || data.towers?.length || 0,
-					towers: (data.towers || []).slice(0, 20)
+					tower_count: countTowers(data),
+					towers: ((data.towers as unknown[]) ?? []).slice(0, 20)
 				};
 			}
 		}

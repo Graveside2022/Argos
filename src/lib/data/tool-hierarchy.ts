@@ -125,6 +125,15 @@ export const toolHierarchy: ToolHierarchy = {
 	}
 };
 
+/** Resolve one path segment against a node's children, or null if no match */
+function resolveSegment(
+	node: ToolCategory | ToolDefinition,
+	id: string
+): ToolCategory | ToolDefinition | null {
+	if (!('children' in node)) return null;
+	return node.children.find((child) => child.id === id) ?? null;
+}
+
 /**
  * Navigate the tool hierarchy by a sequence of child IDs.
  * Returns the matching category or tool definition, or null if the path is invalid.
@@ -137,17 +146,17 @@ export function findByPath(
 
 	let current: ToolCategory | ToolDefinition = root;
 	for (const id of path) {
-		if ('children' in current) {
-			const found: ToolCategory | ToolDefinition | undefined = current.children.find(
-				(child) => child.id === id
-			);
-			if (!found) return null;
-			current = found;
-		} else {
-			return null;
-		}
+		const next = resolveSegment(current, id);
+		if (!next) return null;
+		current = next;
 	}
 	return current;
+}
+
+/** Get the installed/total count contribution of a single child node */
+function countChild(child: ToolCategory | ToolDefinition): { installed: number; total: number } {
+	if ('children' in child) return countTools(child);
+	return { installed: child.isInstalled ? 1 : 0, total: 1 };
 }
 
 /**
@@ -159,14 +168,9 @@ export function countTools(category: ToolCategory): { installed: number; total: 
 	let total = 0;
 
 	for (const child of category.children) {
-		if ('children' in child) {
-			const childCount = countTools(child);
-			installed += childCount.installed;
-			total += childCount.total;
-		} else {
-			total++;
-			if (child.isInstalled) installed++;
-		}
+		const counts = countChild(child);
+		installed += counts.installed;
+		total += counts.total;
 	}
 
 	return { installed, total };

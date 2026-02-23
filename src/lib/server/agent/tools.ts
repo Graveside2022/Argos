@@ -54,58 +54,79 @@ interface SystemContext {
 	workflowGoal?: string;
 }
 
+/** Format a device metric with fallback */
+function deviceField(value: string | number | null | undefined, suffix?: string): string {
+	if (value === null || value === undefined || value === '') return 'Unknown';
+	return suffix ? `${value} ${suffix}` : String(value);
+}
+
+/** Format selected device details into prompt lines */
+function formatDeviceDetails(dev: NonNullable<SystemContext['selectedDeviceDetails']>): string {
+	return `  SSID: ${dev.ssid}
+  Type: ${dev.type}
+  Manufacturer: ${dev.manufacturer}
+  Signal: ${deviceField(dev.signalDbm, 'dBm')}
+  Channel: ${deviceField(dev.channel)}
+  Frequency: ${deviceField(dev.frequency, 'MHz')}
+  Encryption: ${deviceField(dev.encryption)}
+  Packets: ${dev.packets}`;
+}
+
+/** Build the device context section for the system prompt */
+function buildDeviceContext(context?: SystemContext): string {
+	const dev = context?.selectedDeviceDetails;
+	if (!context?.selectedDevice || !dev) return '- No device selected';
+	return `\n- SELECTED TARGET: ${context.selectedDevice}
+${formatDeviceDetails(dev)}
+  [OPERATOR CLICKED THIS DEVICE - PROVIDE DETAILED TACTICAL ANALYSIS]`;
+}
+
+/** Build the workflow context section for the system prompt */
+function buildWorkflowContext(context?: SystemContext): string {
+	if (!context?.currentWorkflow) return '';
+	return `\nACTIVE WORKFLOW: ${context.currentWorkflow}
+- Goal: ${context.workflowGoal || 'Not specified'}
+- Step: ${(context.workflowStep ?? 0) + 1}
+- Continue guiding the operator through this workflow`;
+}
+
+/** Format signal count line */
+function signalLine(activeSignals?: number): string {
+	return activeSignals ? `- ${activeSignals} active signals` : '- Signals: standby';
+}
+
+/** Format GPS position line, or empty string if unavailable */
+function positionLine(loc?: { lat: number; lon: number }): string {
+	if (!loc) return '';
+	return `- Position: ${loc.lat.toFixed(4)}°N, ${loc.lon.toFixed(4)}°E`;
+}
+
+/** Format Kismet status line */
+function kismetLine(status?: { connected: boolean; status: string }): string {
+	return status?.connected ? `- Kismet: ${status.status}` : '- Kismet: disconnected';
+}
+
+/** Build status lines (signals, position, Kismet) */
+function buildStatusLines(context?: SystemContext): string {
+	const lines = [signalLine(context?.activeSignals)];
+	const pos = positionLine(context?.userLocation);
+	if (pos) lines.push(pos);
+	lines.push(kismetLine(context?.kismetStatus));
+	return lines.join('\n');
+}
+
 /**
  * System prompt for Argos Agent
  * Provides context about the system and available capabilities
  */
 export function getSystemPrompt(context?: SystemContext): string {
-	const timestamp = new Date().toISOString();
-
-	// Extract context from AG-UI shared state structure
-	const selectedDevice = context?.selectedDevice;
-	const selectedDeviceDetails = context?.selectedDeviceDetails;
-	const userLocation = context?.userLocation;
-	const activeSignals = context?.activeSignals;
-	const kismetStatus = context?.kismetStatus;
-	const currentWorkflow = context?.currentWorkflow;
-	const workflowStep = context?.workflowStep;
-	const workflowGoal = context?.workflowGoal;
-
-	// Build device context string if device is selected
-	let deviceContext = '';
-	if (selectedDevice && selectedDeviceDetails) {
-		deviceContext = `
-- SELECTED TARGET: ${selectedDevice}
-  SSID: ${selectedDeviceDetails.ssid}
-  Type: ${selectedDeviceDetails.type}
-  Manufacturer: ${selectedDeviceDetails.manufacturer}
-  Signal: ${selectedDeviceDetails.signalDbm !== null ? `${selectedDeviceDetails.signalDbm} dBm` : 'Unknown'}
-  Channel: ${selectedDeviceDetails.channel || 'Unknown'}
-  Frequency: ${selectedDeviceDetails.frequency ? `${selectedDeviceDetails.frequency} MHz` : 'Unknown'}
-  Encryption: ${selectedDeviceDetails.encryption || 'Unknown'}
-  Packets: ${selectedDeviceDetails.packets}
-  [OPERATOR CLICKED THIS DEVICE - PROVIDE DETAILED TACTICAL ANALYSIS]`;
-	}
-
-	// Build workflow context if active
-	let workflowContext = '';
-	if (currentWorkflow) {
-		workflowContext = `
-ACTIVE WORKFLOW: ${currentWorkflow}
-- Goal: ${workflowGoal || 'Not specified'}
-- Step: ${(workflowStep ?? 0) + 1}
-- Continue guiding the operator through this workflow`;
-	}
-
 	return `You are Argos Agent, a tactical SIGINT assistant for the Argos SDR & Network Analysis Console.
-Time: ${timestamp}
+Time: ${new Date().toISOString()}
 
 CONTEXT:
-${deviceContext || '- No device selected'}
-${activeSignals ? `- ${activeSignals} active signals` : '- Signals: standby'}
-${userLocation ? `- Position: ${userLocation.lat.toFixed(4)}°N, ${userLocation.lon.toFixed(4)}°E` : ''}
-${kismetStatus?.connected ? `- Kismet: ${kismetStatus.status}` : '- Kismet: disconnected'}
-${workflowContext}
+${buildDeviceContext(context)}
+${buildStatusLines(context)}
+${buildWorkflowContext(context)}
 
 TOOLS: ${getToolListForPrompt()}
 

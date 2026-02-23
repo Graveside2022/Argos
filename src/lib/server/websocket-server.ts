@@ -38,33 +38,46 @@ const messageHandlers = new Map<string, (ws: WebSocket, message: WebSocketMessag
 // Register HackRF and Kismet handlers from extracted module
 registerMessageHandlers(messageHandlers);
 
+/** Parse the upgrade request URL. */
+function parseUpgradeUrl(req: IncomingMessage): URL {
+	return new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+}
+
+/** Extract API key from token query param or header. */
+function extractApiKey(url: URL, req: IncomingMessage): string | undefined {
+	return url.searchParams.get('token') || (req.headers['x-api-key'] as string) || undefined;
+}
+
+/** Build a mock Request from an upgrade handshake for auth validation. */
+function buildUpgradeMockRequest(req: IncomingMessage): Request {
+	const url = parseUpgradeUrl(req);
+	const headers: Record<string, string> = {};
+	const apiKey = extractApiKey(url, req);
+	if (apiKey) headers['X-API-Key'] = apiKey;
+	if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
+	return new Request('http://localhost', { headers });
+}
+
+/** Try API key validation; returns true if authenticated, false otherwise. */
+function tryValidateApiKey(req: IncomingMessage): boolean {
+	try {
+		return validateApiKey(buildUpgradeMockRequest(req));
+	} catch {
+		return false;
+	}
+}
+
 /**
  * Authenticate a WebSocket upgrade request via API key or session cookie.
  */
 function authenticateUpgrade(info: VerifyClientInfo, callback: VerifyClientCallback): boolean {
-	const url = new URL(info.req.url || '', `http://${info.req.headers.host || 'localhost'}`);
-	const apiKey = url.searchParams.get('token') || (info.req.headers['x-api-key'] as string);
+	if (tryValidateApiKey(info.req)) return true;
 
-	const mockHeaders: Record<string, string> = {};
-	if (apiKey) mockHeaders['X-API-Key'] = apiKey;
-	const cookieHeader = info.req.headers.cookie;
-	if (cookieHeader) mockHeaders['cookie'] = cookieHeader;
-	const mockRequest = new Request('http://localhost', { headers: mockHeaders });
-
-	try {
-		if (!validateApiKey(mockRequest)) {
-			logger.warn('WebSocket connection rejected: invalid API key', {
-				ip: info.req.socket.remoteAddress
-			});
-			callback(false, 401, 'Unauthorized');
-			return false;
-		}
-	} catch {
-		logger.error('WebSocket connection rejected: ARGOS_API_KEY not configured');
-		callback(false, 401, 'Unauthorized');
-		return false;
-	}
-	return true;
+	logger.warn('WebSocket connection rejected: invalid API key', {
+		ip: info.req.socket.remoteAddress
+	});
+	callback(false, 401, 'Unauthorized');
+	return false;
 }
 
 /**

@@ -47,6 +47,27 @@ export const SignalMetadataInputSchema = z
 	})
 	.optional();
 
+/** Check if direct lat + lon/lng coordinates are present */
+function hasDirectCoords(data: { lat?: number; lon?: number; lng?: number }): boolean {
+	return data.lat !== undefined && (data.lon !== undefined || data.lng !== undefined);
+}
+
+/** Check if location object lat + lon/lng coordinates are present */
+function hasLocationCoords(location?: { lat?: number; lon?: number; lng?: number }): boolean {
+	if (!location) return false;
+	return hasDirectCoords(location);
+}
+
+/** Validate that at least one coordinate source is provided */
+function hasCoordinates(data: {
+	lat?: number;
+	lon?: number;
+	lng?: number;
+	location?: { lat?: number; lon?: number; lng?: number };
+}): boolean {
+	return hasDirectCoords(data) || hasLocationCoords(data.location);
+}
+
 /**
  * Single Signal Input Schema - Validates individual signal from batch upload
  *
@@ -96,20 +117,9 @@ export const SignalInputSchema = z
 		antennaId: z.string().optional(),
 		scanConfig: z.record(z.unknown()).optional()
 	})
-	.refine(
-		(data) => {
-			// Ensure at least one lat/lon source is provided
-			const hasDirectCoords =
-				data.lat !== undefined && (data.lon !== undefined || data.lng !== undefined);
-			const hasLocationCoords =
-				data.location?.lat !== undefined &&
-				(data.location?.lon !== undefined || data.location?.lng !== undefined);
-			return hasDirectCoords || hasLocationCoords;
-		},
-		{
-			message: 'Signal must have lat/lon coordinates (either direct or in location object)'
-		}
-	);
+	.refine(hasCoordinates, {
+		message: 'Signal must have lat/lon coordinates (either direct or in location object)'
+	});
 
 /**
  * TypeScript type inferred from SignalInputSchema

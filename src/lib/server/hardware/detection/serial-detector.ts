@@ -16,236 +16,225 @@ import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
-/**
- * Detect GPS modules
- */
+// ── GPS detection helpers ──
+
+function isGpsDeviceName(name: string): boolean {
+	return (
+		name.startsWith('ttyUSB') ||
+		name.startsWith('ttyACM') ||
+		name.startsWith('ttyAMA') ||
+		name.includes('gps')
+	);
+}
+
+function isNmeaOutput(stdout: string): boolean {
+	return (
+		stdout.includes('$GPGGA') ||
+		stdout.includes('$GPRMC') ||
+		stdout.includes('$GPGSV') ||
+		stdout.includes('$GNGGA')
+	);
+}
+
+function buildGpsDevice(device: string, devicePath: string): DetectedHardware {
+	const capabilities: GPSCapabilities = {
+		device: devicePath,
+		protocol: 'NMEA',
+		baudRate: 9600,
+		updateRate: 1
+	};
+	return {
+		id: `gps-${device}`,
+		name: `GPS Module (${device})`,
+		category: 'gps',
+		connectionType: 'serial',
+		status: 'connected',
+		capabilities,
+		device: devicePath,
+		baudRate: 9600,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: ['gps.tracking.gpsd', 'gps.logger.generic']
+	};
+}
+
+async function probeGpsDevice(device: string): Promise<DetectedHardware | null> {
+	const devicePath = `/dev/${device}`;
+	try {
+		const { stdout: rawOutput } = await execFileAsync('/usr/bin/cat', [devicePath], {
+			timeout: 3000
+		});
+		const stdout = rawOutput.split('\n').slice(0, 5).join('\n');
+		return isNmeaOutput(stdout) ? buildGpsDevice(device, devicePath) : null;
+	} catch (_error) {
+		logger.warn('[SerialDetector] Could not read device', {
+			devicePath,
+			error: String(_error)
+		});
+		return null;
+	}
+}
+
+function buildGpsdVirtualDevice(): DetectedHardware {
+	return {
+		id: 'gps-gpsd',
+		name: 'GPS (via GPSD)',
+		category: 'gps',
+		connectionType: 'virtual',
+		status: 'connected',
+		capabilities: {
+			device: '/var/run/gpsd.sock',
+			protocol: 'GPSD'
+			// @constitutional-exemption Article-II-2.1 issue:#14
+		} as GPSCapabilities,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: ['gps.tracking.gpsd']
+	};
+}
+
+async function checkGpsdRunning(): Promise<DetectedHardware | null> {
+	try {
+		const { stdout } = await execFileAsync('/usr/bin/systemctl', ['is-active', 'gpsd']);
+		return stdout.trim() === 'active' ? buildGpsdVirtualDevice() : null;
+	} catch {
+		return null;
+	}
+}
+
 async function detectGPSModules(): Promise<DetectedHardware[]> {
 	const hardware: DetectedHardware[] = [];
-
 	try {
-		// Check for GPS devices in /dev
 		const devices = await readdir('/dev');
-		const gpsDevices = devices.filter(
-			(d) =>
-				d.startsWith('ttyUSB') ||
-				d.startsWith('ttyACM') ||
-				d.startsWith('ttyAMA') ||
-				d.includes('gps')
-		);
+		const gpsDevices = devices.filter(isGpsDeviceName);
 
 		for (const device of gpsDevices) {
-			const devicePath = `/dev/${device}`;
-
-			try {
-				// Try to read NMEA data to confirm it's a GPS
-				const { stdout: rawOutput } = await execFileAsync('/usr/bin/cat', [devicePath], {
-					timeout: 3000
-				});
-				const stdout = rawOutput.split('\n').slice(0, 5).join('\n');
-
-				// Check for NMEA sentences
-				const isNMEA =
-					stdout.includes('$GPGGA') ||
-					stdout.includes('$GPRMC') ||
-					stdout.includes('$GPGSV') ||
-					stdout.includes('$GNGGA');
-
-				if (isNMEA) {
-					const capabilities: GPSCapabilities = {
-						device: devicePath,
-						protocol: 'NMEA',
-						baudRate: 9600, // Common default
-						updateRate: 1 // 1 Hz typical
-					};
-
-					hardware.push({
-						id: `gps-${device}`,
-						name: `GPS Module (${device})`,
-						category: 'gps',
-						connectionType: 'serial',
-						status: 'connected',
-						capabilities,
-						device: devicePath,
-						baudRate: 9600,
-						lastSeen: Date.now(),
-						firstSeen: Date.now(),
-						compatibleTools: ['gps.tracking.gpsd', 'gps.logger.generic']
-					});
-				}
-			} catch (_error) {
-				// Device might be in use or not accessible
-				logger.warn('[SerialDetector] Could not read device', {
-					devicePath,
-					error: String(_error)
-				});
-			}
+			const result = await probeGpsDevice(device);
+			if (result) hardware.push(result);
 		}
 
-		// Also check if gpsd is running
-		try {
-			const { stdout } = await execFileAsync('/usr/bin/systemctl', ['is-active', 'gpsd']);
-			if (stdout.trim() === 'active') {
-				// GPSD is running, add virtual GPS device
-				hardware.push({
-					id: 'gps-gpsd',
-					name: 'GPS (via GPSD)',
-					category: 'gps',
-					connectionType: 'virtual',
-					status: 'connected',
-					capabilities: {
-						device: '/var/run/gpsd.sock',
-						protocol: 'GPSD'
-						// @constitutional-exemption Article-II-2.1 issue:#14 — GPS capabilities type narrowing
-						// Safe: Object literal satisfies GPSCapabilities — all required fields provided
-					} as GPSCapabilities,
-					lastSeen: Date.now(),
-					firstSeen: Date.now(),
-					compatibleTools: ['gps.tracking.gpsd']
-				});
-			}
-		} catch {
-			// gpsd not running
-		}
+		const gpsdDevice = await checkGpsdRunning();
+		if (gpsdDevice) hardware.push(gpsdDevice);
 	} catch (_error) {
 		logger.error('[SerialDetector] Error detecting GPS modules', { error: String(_error) });
 	}
-
 	return hardware;
 }
 
-/**
- * Detect cellular modems
- */
+// ── Cellular modem detection helpers ──
+
+function parseCellularBands(detailsOut: string): string[] {
+	const bands: string[] = [];
+	const lower = detailsOut.toLowerCase();
+	if (lower.includes('gsm')) bands.push('GSM');
+	if (lower.includes('lte')) bands.push('LTE');
+	if (lower.includes('5g')) bands.push('5G');
+	return bands;
+}
+
+function buildCellularDevice(modemId: string, detailsOut: string): DetectedHardware {
+	const modelMatch = detailsOut.match(/model:\s*([^\n]+)/i);
+	const imeiMatch = detailsOut.match(/imei:\s*([^\n]+)/i);
+	const stateMatch = detailsOut.match(/state:\s*([^\n]+)/i);
+	const capabilities: CellularCapabilities = {
+		interface: `/dev/cdc-wdm${modemId}`,
+		supportedBands: parseCellularBands(detailsOut),
+		imei: imeiMatch?.[1],
+		simStatus: stateMatch?.[1]
+	};
+	return {
+		id: `cellular-${modemId}`,
+		name: modelMatch?.[1] || `Cellular Modem ${modemId}`,
+		category: 'cellular',
+		connectionType: 'usb',
+		status: 'connected',
+		capabilities,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: ['cellular.scan.modem', 'cellular.imsi.catcher', 'cellular.gsm.evil']
+	};
+}
+
+async function probeModem(modemId: string): Promise<DetectedHardware | null> {
+	try {
+		const { stdout: detailsOut } = await execFileAsync('/usr/bin/mmcli', ['-m', modemId]);
+		return buildCellularDevice(modemId, detailsOut);
+	} catch (_error) {
+		logger.error('[SerialDetector] Error getting modem details', {
+			modemId,
+			error: String(_error)
+		});
+		return null;
+	}
+}
+
 async function detectCellularModems(): Promise<DetectedHardware[]> {
 	const hardware: DetectedHardware[] = [];
-
 	try {
-		// Check for modem manager
 		const { stdout } = await execFileAsync('/usr/bin/mmcli', ['-L']);
+		if (!stdout.includes('/Modem/')) return hardware;
 
-		if (stdout.includes('/Modem/')) {
-			// Parse modem manager output
-			const modemMatches = stdout.matchAll(/\/Modem\/(\d+)/g);
-
-			for (const match of modemMatches) {
-				const modemId = match[1];
-
-				try {
-					// Get modem details
-					const { stdout: detailsOut } = await execFileAsync('/usr/bin/mmcli', [
-						'-m',
-						modemId
-					]);
-
-					const modelMatch = detailsOut.match(/model:\s*([^\n]+)/i);
-					const imeiMatch = detailsOut.match(/imei:\s*([^\n]+)/i);
-					const stateMatch = detailsOut.match(/state:\s*([^\n]+)/i);
-
-					// Parse supported bands
-					const bands: string[] = [];
-					if (detailsOut.includes('gsm') || detailsOut.includes('GSM')) bands.push('GSM');
-					if (detailsOut.includes('lte') || detailsOut.includes('LTE')) bands.push('LTE');
-					if (detailsOut.includes('5g') || detailsOut.includes('5G')) bands.push('5G');
-
-					const capabilities: CellularCapabilities = {
-						interface: `/dev/cdc-wdm${modemId}`,
-						supportedBands: bands,
-						imei: imeiMatch?.[1],
-						simStatus: stateMatch?.[1]
-					};
-
-					hardware.push({
-						id: `cellular-${modemId}`,
-						name: modelMatch?.[1] || `Cellular Modem ${modemId}`,
-						category: 'cellular',
-						connectionType: 'usb',
-						status: 'connected',
-						capabilities,
-						lastSeen: Date.now(),
-						firstSeen: Date.now(),
-						compatibleTools: [
-							'cellular.scan.modem',
-							'cellular.imsi.catcher',
-							'cellular.gsm.evil'
-						]
-					});
-				} catch (_error) {
-					logger.error('[SerialDetector] Error getting modem details', {
-						modemId,
-						error: String(_error)
-					});
-				}
-			}
+		const modemMatches = stdout.matchAll(/\/Modem\/(\d+)/g);
+		for (const match of modemMatches) {
+			const device = await probeModem(match[1]);
+			if (device) hardware.push(device);
 		}
-	} catch (_error) {
-		// ModemManager not installed or no modems
+	} catch {
 		logger.warn('[SerialDetector] No cellular modems detected via ModemManager');
 	}
-
 	return hardware;
 }
 
-/**
- * Detect generic serial devices
- */
+// ── Generic serial device detection helpers ──
+
+async function readUsbInfo(syspath: string): Promise<{ manufacturer: string; product: string }> {
+	const usbPath = `${syspath}/device/../../../`;
+	const manufacturer =
+		(await readFile(`${usbPath}/manufacturer`, 'utf-8').catch(() => '')).trim() || 'Unknown';
+	const product =
+		(await readFile(`${usbPath}/product`, 'utf-8').catch(() => '')).trim() || 'Unknown';
+	return { manufacturer, product };
+}
+
+function isSerialDeviceName(name: string): boolean {
+	return name.startsWith('ttyS') || name.startsWith('ttyUSB') || name.startsWith('ttyACM');
+}
+
+async function probeSerialDevice(device: string): Promise<DetectedHardware | null> {
+	const devicePath = `/dev/${device}`;
+	try {
+		const info = await readUsbInfo(`/sys/class/tty/${device}`);
+		if (info.manufacturer === 'Unknown') return null;
+		return {
+			id: `serial-${device}`,
+			name: `${info.product} (${device})`,
+			category: 'serial',
+			connectionType: 'serial',
+			status: 'connected',
+			capabilities: {},
+			device: devicePath,
+			manufacturer: info.manufacturer,
+			model: info.product,
+			lastSeen: Date.now(),
+			firstSeen: Date.now(),
+			compatibleTools: []
+		};
+	} catch {
+		return null;
+	}
+}
+
 async function detectGenericSerialDevices(): Promise<DetectedHardware[]> {
 	const hardware: DetectedHardware[] = [];
-
 	try {
-		// List all serial devices
 		const devices = await readdir('/dev');
-		const serialDevices = devices.filter(
-			(d) => d.startsWith('ttyS') || d.startsWith('ttyUSB') || d.startsWith('ttyACM')
-		);
-
-		for (const device of serialDevices) {
-			const devicePath = `/dev/${device}`;
-
-			try {
-				// Try to get device info from sysfs
-				const syspath = `/sys/class/tty/${device}`;
-				let manufacturer = 'Unknown';
-				let product = 'Unknown';
-
-				try {
-					const usbPath = `${syspath}/device/../../../`;
-					manufacturer =
-						(
-							await readFile(`${usbPath}/manufacturer`, 'utf-8').catch(() => '')
-						).trim() || 'Unknown';
-					product =
-						(await readFile(`${usbPath}/product`, 'utf-8').catch(() => '')).trim() ||
-						'Unknown';
-				} catch {
-					// Not a USB serial device
-				}
-
-				// Skip if already detected as GPS or cellular
-				const isKnown = hardware.some((h) => h.device === devicePath);
-				if (!isKnown && manufacturer !== 'Unknown') {
-					hardware.push({
-						id: `serial-${device}`,
-						name: `${product} (${device})`,
-						category: 'serial',
-						connectionType: 'serial',
-						status: 'connected',
-						capabilities: {},
-						device: devicePath,
-						manufacturer,
-						model: product,
-						lastSeen: Date.now(),
-						firstSeen: Date.now(),
-						compatibleTools: []
-					});
-				}
-			} catch (_error) {
-				// Skip devices we can't read
-			}
+		for (const device of devices.filter(isSerialDeviceName)) {
+			const result = await probeSerialDevice(device);
+			if (result) hardware.push(result);
 		}
 	} catch (_error) {
 		logger.error('[SerialDetector] Error detecting serial devices', { error: String(_error) });
 	}
-
 	return hardware;
 }
 

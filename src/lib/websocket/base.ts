@@ -23,11 +23,40 @@ export interface BaseWebSocketConfig {
 
 export type WebSocketEventListener = (event: WebSocketEvent) => void;
 
+type ResolvedConfig = Required<Omit<BaseWebSocketConfig, 'protocols'>> & {
+	protocols?: string | string[];
+};
+
+const CONFIG_DEFAULTS: Omit<ResolvedConfig, 'url'> = {
+	reconnectInterval: 1000,
+	maxReconnectAttempts: -1,
+	heartbeatInterval: 30000,
+	reconnectBackoffMultiplier: 1.5,
+	maxReconnectInterval: 30000
+};
+
+/** Apply defaults to WebSocket config. */
+function resolveConfig(config: BaseWebSocketConfig): ResolvedConfig {
+	return { ...CONFIG_DEFAULTS, ...config } as ResolvedConfig;
+}
+
+/** Create a WebSocket instance, handling browser vs Node.js environments. */
+function createWebSocket(url: string, protocols?: string | string[]): WebSocket {
+	if (typeof window !== 'undefined' && window.WebSocket) {
+		return new WebSocket(url, protocols);
+	}
+	if (typeof global !== 'undefined' && global.WebSocket) {
+		const WsCtor = global.WebSocket as unknown as {
+			new (url: string, protocols?: string | string[]): WebSocket;
+		};
+		return new WsCtor(url, protocols);
+	}
+	throw new Error('WebSocket not available in this environment');
+}
+
 export abstract class BaseWebSocket {
 	protected ws: WebSocket | null = null;
-	protected config: Required<Omit<BaseWebSocketConfig, 'protocols'>> & {
-		protocols?: string | string[];
-	};
+	protected config: ResolvedConfig;
 	protected reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	protected heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	protected isIntentionalClose = false;
@@ -39,15 +68,7 @@ export abstract class BaseWebSocket {
 	private messageHandlers = new Map<string, Set<(data: unknown) => void>>();
 
 	constructor(config: BaseWebSocketConfig) {
-		this.config = {
-			url: config.url,
-			reconnectInterval: config.reconnectInterval || 1000,
-			maxReconnectAttempts: config.maxReconnectAttempts || -1, // -1 = infinite
-			heartbeatInterval: config.heartbeatInterval || 30000,
-			reconnectBackoffMultiplier: config.reconnectBackoffMultiplier || 1.5,
-			maxReconnectInterval: config.maxReconnectInterval || 30000,
-			protocols: config.protocols
-		};
+		this.config = resolveConfig(config);
 		this.currentReconnectInterval = this.config.reconnectInterval;
 	}
 
@@ -65,19 +86,7 @@ export abstract class BaseWebSocket {
 		this.emit(WebSocketEventEnum.Reconnecting, { attempt: this.reconnectAttempts });
 
 		try {
-			// Handle both browser and server environments
-			if (typeof window !== 'undefined' && window.WebSocket) {
-				this.ws = new WebSocket(this.config.url, this.config.protocols);
-			} else if (typeof global !== 'undefined' && global.WebSocket) {
-				// Safe: Global WebSocket constructor — cast via unknown for Node.js environment compatibility
-				const WsCtor = global.WebSocket as unknown as {
-					new (url: string, protocols?: string | string[]): WebSocket;
-				};
-				this.ws = new WsCtor(this.config.url, this.config.protocols);
-			} else {
-				// In Node.js environment, we'd need to import ws package
-				throw new Error('WebSocket not available in this environment');
-			}
+			this.ws = createWebSocket(this.config.url, this.config.protocols);
 			this.setupEventHandlers();
 		} catch (error) {
 			logger.error('Failed to create WebSocket', { source: this.constructor.name, error });
@@ -105,20 +114,18 @@ export abstract class BaseWebSocket {
 	 * Send a message through the WebSocket
 	 */
 	send(data: unknown): boolean {
-		if (this.ws?.readyState === 1) {
-			// WebSocket.OPEN
-			try {
-				const message = typeof data === 'string' ? data : JSON.stringify(data);
-				this.ws.send(message);
-				return true;
-			} catch (error) {
-				logger.error('Failed to send message', { source: this.constructor.name, error });
-				return false;
-			}
-		} else {
+		if (this.ws?.readyState !== 1) {
 			logger.warn('Cannot send message, WebSocket is not connected', {
 				source: this.constructor.name
 			});
+			return false;
+		}
+		try {
+			const message = typeof data === 'string' ? data : JSON.stringify(data);
+			this.ws.send(message);
+			return true;
+		} catch (error) {
+			logger.error('Failed to send message', { source: this.constructor.name, error });
 			return false;
 		}
 	}

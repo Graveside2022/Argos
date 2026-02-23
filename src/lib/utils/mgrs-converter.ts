@@ -53,21 +53,15 @@ export function formatMGRS(mgrsString: string): string {
 /**
  * Get precision description for MGRS
  */
+const MGRS_PRECISION: Record<number, string> = {
+	0: '100km',
+	2: '10km',
+	4: '1km',
+	6: '100m',
+	8: '10m',
+	10: '1m'
+};
+
 export function getMGRSPrecision(digits: number): string {
-	switch (digits) {
-		case 0:
-			return '100km';
-		case 2:
-			return '10km';
-		case 4:
-			return '1km';
-		case 6:
-			return '100m';
-		case 8:
-			return '10m';
-		case 10:
-			return '1m';
-		default:
-			return 'Unknown';
-	}
+	return MGRS_PRECISION[digits] || 'Unknown';
 }

@@ -43,6 +43,13 @@ export interface DeviceForVisibility {
 	lastSeen: number; // Unix timestamp (seconds)
 }
 
+/** Check if a device passes the dynamic signal-strength and recency filters */
+function isDynamicallyVisible(d: DeviceForVisibility, nowSecs: number): boolean {
+	if (d.rssi < DYNAMIC_RSSI_THRESHOLD && d.rssi !== 0) return false;
+	if (d.lastSeen > 0 && nowSecs - d.lastSeen > DYNAMIC_RECENCY_SECS) return false;
+	return true;
+}
+
 /**
  * Filters a list of devices based on the current visibility mode.
  * Promoted devices are always visible regardless of mode.
@@ -61,15 +68,7 @@ export function filterByVisibility(
 			return devices.filter((d) => promoted.has(d.mac));
 
 		case 'dynamic':
-			return devices.filter((d) => {
-				// Promoted devices always pass
-				if (promoted.has(d.mac)) return true;
-				// Filter out weak signals
-				if (d.rssi < DYNAMIC_RSSI_THRESHOLD && d.rssi !== 0) return false;
-				// Filter out stale devices
-				if (d.lastSeen > 0 && nowSecs - d.lastSeen > DYNAMIC_RECENCY_SECS) return false;
-				return true;
-			});
+			return devices.filter((d) => promoted.has(d.mac) || isDynamicallyVisible(d, nowSecs));
 
 		default:
 			return devices;

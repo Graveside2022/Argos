@@ -9,21 +9,34 @@ import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
 
+function formatHexDisplay(hex: string): string {
+	const formatted = hex.match(/.{1,2}/g)?.join(' ') || hex;
+	return formatted.length > 40 ? formatted.substring(0, 40) + '...' : formatted;
+}
+
+function formatFrameDisplay(f: { channelType?: string; hex?: string; message?: string }): string {
+	const channel = f.channelType || 'UNKNOWN';
+	const displayHex = formatHexDisplay(f.hex || '') || '<no data>';
+	const message = f.message || 'Unknown Message';
+	return `[GSMTAP] ${channel.padEnd(12)} ${displayHex}\n       → ${message}`;
+}
+
+async function checkGrgsmProcess(): Promise<boolean> {
+	try {
+		const grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']);
+		return grgsm.stdout.trim().length > 0;
+	} catch (error: unknown) {
+		logger.warn('[gsm-evil-live-frames] GRGSM process check failed', {
+			error: String(error)
+		});
+		return false;
+	}
+}
+
 export const GET: RequestHandler = async () => {
 	try {
-		// Check if grgsm_livemon is running (still needed to know if radio is active)
-		let grgsm: { stdout: string };
-		try {
-			grgsm = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless']);
-		} catch (error: unknown) {
-			// pgrep exits 1 when no processes match — not a real error
-			logger.warn('[gsm-evil-live-frames] GRGSM process check failed', {
-				error: String(error)
-			});
-			grgsm = { stdout: '' };
-		}
-
-		if (!grgsm.stdout.trim()) {
+		const isRunning = await checkGrgsmProcess();
+		if (!isRunning) {
 			return json({
 				success: false,
 				frames: [],
@@ -33,18 +46,7 @@ export const GET: RequestHandler = async () => {
 
 		// Get frames from the persistent service buffer
 		const recentFrames = gsmMonitor.getRecentFrames(15);
-
-		const displayFrames = recentFrames.map((f) => {
-			const channel = f.channelType || 'UNKNOWN';
-
-			// Format hex (limit to 40 chars)
-			const hexData = f.hex || '';
-			const formatted = hexData.match(/.{1,2}/g)?.join(' ') || hexData;
-			const displayHex =
-				formatted.length > 40 ? formatted.substring(0, 40) + '...' : formatted;
-
-			return `[GSMTAP] ${channel.padEnd(12)} ${displayHex || '<no data>'}\n       → ${f.message || 'Unknown Message'}`;
-		});
+		const displayFrames = recentFrames.map(formatFrameDisplay);
 
 		if (displayFrames.length === 0) {
 			return json({

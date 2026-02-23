@@ -14,74 +14,132 @@ const EnrollSchema = z.object({
 	id: z.string().uuid().optional()
 });
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const parsed = EnrollSchema.safeParse(await request.json());
-		if (!parsed.success) {
+/** Extract error message from an unknown thrown value. */
+function errMsg(err: unknown): string {
+	return err instanceof Error ? err.message : String(err);
+}
+
+/** Return true if the error is an InputValidationError from the security layer. */
+function isInputValidationError(err: unknown): err is Error {
+	return err instanceof Error && err.name === 'InputValidationError';
+}
+
+/** Enrollment error patterns mapped to user-facing HTTP responses. */
+const ENROLLMENT_ERROR_MAP: Array<{
+	patterns: string[];
+	status: number;
+	message: (hostname: string, port: number) => string;
+}> = [
+	{
+		patterns: ['401', '403', 'auth'],
+		status: 401,
+		message: () => 'Authentication failed — check username and password'
+	},
+	{
+		patterns: ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND'],
+		status: 502,
+		message: (hostname, port) =>
+			`Enrollment server unreachable at ${hostname}:${port} — verify the server address and that port ${port} is accessible`
+	}
+];
+
+/**
+ * Match an enrollment error message against known patterns and return
+ * the appropriate JSON error response, or null if no pattern matches.
+ */
+function matchEnrollmentError(msg: string, hostname: string, port: number): Response | null {
+	for (const entry of ENROLLMENT_ERROR_MAP) {
+		if (entry.patterns.some((p) => msg.includes(p))) {
 			return json(
-				{ success: false, error: parsed.error.issues.map((i) => i.message).join('; ') },
-				{ status: 400 }
+				{ success: false, error: entry.message(hostname, port) },
+				{ status: entry.status }
 			);
 		}
+	}
+	return null;
+}
 
-		const { hostname, port, username, password, id } = parsed.data;
+/**
+ * Temporarily disable Node TLS verification, run the callback,
+ * then restore the original setting. Required for TAK server
+ * self-signed certificate enrollment.
+ */
+async function withTlsDisabled<T>(fn: () => Promise<T>): Promise<T> {
+	const prev = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+	try {
+		return await fn();
+	} finally {
+		if (prev === undefined) {
+			delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+		} else {
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = prev;
+		}
+	}
+}
+
+/** Validate the request body against the enrollment schema. */
+function parseEnrollRequest(body: unknown): z.infer<typeof EnrollSchema> | Response {
+	const parsed = EnrollSchema.safeParse(body);
+	if (!parsed.success) {
+		return json(
+			{ success: false, error: parsed.error.issues.map((i) => i.message).join('; ') },
+			{ status: 400 }
+		);
+	}
+	return parsed.data;
+}
+
+/**
+ * Perform TAK server credential enrollment via the @tak-ps/node-tak SDK.
+ * Returns the generated certificate material or an error Response.
+ */
+async function performEnrollment(
+	hostname: string,
+	port: number,
+	username: string,
+	password: string
+): Promise<{ ca: string[]; cert: string; key: string } | Response> {
+	try {
+		const { TAKAPI, APIAuthPassword } = await import('@tak-ps/node-tak');
+		const result = await withTlsDisabled(async () => {
+			const api = await TAKAPI.init(
+				new URL(`https://${hostname}:${port}`),
+				new APIAuthPassword(username, password)
+			);
+			return api.Credentials.generate();
+		});
+		return result;
+	} catch (err) {
+		const msg = errMsg(err);
+		const matched = matchEnrollmentError(msg, hostname, port);
+		if (matched) return matched;
+
+		logger.error('Enrollment API call failed', { error: msg });
+		return json({ success: false, error: msg }, { status: 502 });
+	}
+}
+
+/** Handle top-level catch errors: InputValidationError or generic 500. */
+function handleCatchError(err: unknown, context: string): Response {
+	if (isInputValidationError(err)) {
+		return json({ success: false, error: err.message }, { status: 400 });
+	}
+	logger.error(context, { error: errMsg(err) });
+	return json({ error: 'Internal Server Error' }, { status: 500 });
+}
+
+export const POST: RequestHandler = async ({ request }) => {
+	try {
+		const data = parseEnrollRequest(await request.json());
+		if (data instanceof Response) return data;
+
+		const { hostname, port, username, password, id } = data;
 		const configId = id || crypto.randomUUID();
 
-		// TAKAPI creates a Credentials instance on construction
-		// Usage: api.Credentials.generate() handles CSR + POST + PEM response
-		const { TAKAPI, APIAuthPassword } = await import('@tak-ps/node-tak');
+		const result = await performEnrollment(hostname, port, username, password);
+		if (result instanceof Response) return result;
 
-		let result: { ca: string[]; cert: string; key: string };
-		try {
-			// TAK servers use self-signed certs — temporarily disable TLS verification
-			// for the enrollment HTTPS calls (OAuth login + config + signClient)
-			const prevTLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-			try {
-				// Use TAKAPI.init() to perform OAuth login first — gets JWT for all API calls
-				const api = await TAKAPI.init(
-					new URL(`https://${hostname}:${port}`),
-					new APIAuthPassword(username, password)
-				);
-				result = await api.Credentials.generate();
-			} finally {
-				// Restore previous setting
-				if (prevTLS === undefined) {
-					delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-				} else {
-					process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevTLS;
-				}
-			}
-		} catch (err) {
-			const msg = err instanceof Error ? err.message : String(err);
-			if (msg.includes('401') || msg.includes('403') || msg.includes('auth')) {
-				return json(
-					{
-						success: false,
-						error: 'Authentication failed — check username and password'
-					},
-					{ status: 401 }
-				);
-			}
-			if (
-				msg.includes('ECONNREFUSED') ||
-				msg.includes('ETIMEDOUT') ||
-				msg.includes('ENOTFOUND')
-			) {
-				return json(
-					{
-						success: false,
-						error: `Enrollment server unreachable at ${hostname}:${port} — verify the server address and that port ${port} is accessible`
-					},
-					{ status: 502 }
-				);
-			}
-			// Forward actual error message instead of generic 500
-			logger.error('Enrollment API call failed', { error: msg });
-			return json({ success: false, error: msg }, { status: 502 });
-		}
-
-		// Save PEM files
 		CertManager.init();
 		const paths = CertManager.savePemCerts(configId, result.cert, result.key, result.ca);
 
@@ -95,12 +153,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		});
 	} catch (err) {
-		if (err instanceof Error && err.name === 'InputValidationError') {
-			return json({ success: false, error: err.message }, { status: 400 });
-		}
-		logger.error('Enrollment failed', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		return handleCatchError(err, 'Enrollment failed');
 	}
 };

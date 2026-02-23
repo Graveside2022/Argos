@@ -68,38 +68,38 @@ export function storeNetworkGraph(
  * When deviceIds is provided, returns relationships where either
  * source or target matches any of the given IDs.
  */
-export function getNetworkRelationships(
-	db: Database.Database,
-	deviceIds?: string[]
-): DbRelationship[] {
-	let query = `SELECT * FROM relationships`;
-	let params: unknown[] = [];
+/** Build query and params for relationship lookup, optionally filtered by device IDs. */
+function buildRelationshipQuery(deviceIds?: string[]): { query: string; params: unknown[] } {
+	const hasFilter = deviceIds && deviceIds.length > 0;
+	const base = `SELECT * FROM relationships`;
+	if (!hasFilter) return { query: `${base} ORDER BY last_seen DESC LIMIT 1000`, params: [] };
+	const placeholders = deviceIds.map(() => '?').join(',');
+	return {
+		query: `${base} WHERE source_device_id IN (${placeholders}) OR target_device_id IN (${placeholders}) ORDER BY last_seen DESC LIMIT 1000`,
+		params: [...deviceIds, ...deviceIds]
+	};
+}
 
-	if (deviceIds && deviceIds.length > 0) {
-		query += ` WHERE source_device_id IN (${deviceIds.map(() => '?').join(',')})
-                    OR target_device_id IN (${deviceIds.map(() => '?').join(',')})`;
-		params = [...deviceIds, ...deviceIds];
-	}
-
-	query += ` ORDER BY last_seen DESC LIMIT 1000`;
-
-	const stmt = db.prepare(query);
-	const rawRows = stmt.all(...params) as unknown[];
-
-	// Validate all returned rows (T035)
-	const validatedRows: DbRelationship[] = [];
-	for (const row of rawRows) {
+/** Validate raw DB rows against the relationship schema, logging failures. */
+function validateRelationshipRows(rawRows: unknown[]): DbRelationship[] {
+	return rawRows.reduce<DbRelationship[]>((acc, row) => {
 		const validated = safeParseWithHandling(DbRelationshipSchema, row, 'background');
-		if (validated) {
-			validatedRows.push(validated);
-		} else {
+		if (validated) acc.push(validated);
+		else
 			logError(
 				'Invalid relationship data returned from database query',
 				{ row },
 				'relationship-query-validation-failed'
 			);
-		}
-	}
+		return acc;
+	}, []);
+}
 
-	return validatedRows;
+export function getNetworkRelationships(
+	db: Database.Database,
+	deviceIds?: string[]
+): DbRelationship[] {
+	const { query, params } = buildRelationshipQuery(deviceIds);
+	const rawRows = db.prepare(query).all(...params) as unknown[];
+	return validateRelationshipRows(rawRows);
 }

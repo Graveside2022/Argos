@@ -36,153 +36,180 @@ export type { ScanEvent, ScanEventType } from './gsm-scan-types';
  *
  * @yields ScanEvent objects containing progress updates and results
  */
+/** Build Phase 2 header events describing the scan plan */
+function buildPhase2Header(freqCount: number): import('./gsm-scan-types').ScanEvent[] {
+	const estimatedTime = freqCount * 20;
+	const estimatedMinutes = Math.ceil(estimatedTime / 60);
+	return [
+		createUpdateEvent(`[SCAN] Scanning ${freqCount} target frequencies`),
+		createUpdateEvent('[SCAN] '),
+		createUpdateEvent('[SCAN] Phase 2: GSM Frame Detection & BCCH Channel Discovery'),
+		createUpdateEvent(`[SCAN] Testing ${freqCount} frequencies for 15 seconds each...`),
+		createUpdateEvent(
+			`[SCAN] Estimated time: ~${estimatedMinutes} minutes (${estimatedTime} seconds)`
+		),
+		createUpdateEvent(
+			'[SCAN] This comprehensive scan will identify BCCH channels with complete cell tower data'
+		),
+		createUpdateEvent('[SCAN] ')
+	];
+}
+
+/** Safely release HackRF resource (best-effort) */
+async function releaseHackrf(): Promise<void> {
+	try {
+		await resourceManager.release('gsm-scan', HardwareDevice.HACKRF);
+	} catch (releaseError) {
+		logger.error('[gsm-scan] Failed to release HackRF', {
+			error: releaseError instanceof Error ? releaseError.message : String(releaseError)
+		});
+	}
+}
+
+/** Yield all events from an array */
+async function* yieldEvents(
+	events: import('./gsm-scan-types').ScanEvent[]
+): AsyncGenerator<import('./gsm-scan-types').ScanEvent> {
+	for (const ev of events) yield ev;
+}
+
+/** Build error events for a scan failure */
+function buildScanErrorEvents(error: unknown): import('./gsm-scan-types').ScanEvent[] {
+	const msg = (error as Error).message;
+	return [
+		createUpdateEvent(`[ERROR] Scan failed: ${msg}`),
+		createResultEvent({ success: false, message: 'Scan failed', error: msg })
+	];
+}
+
+/** Scan all frequencies sequentially, collecting results */
+async function scanFrequencies(
+	freqs: string[]
+): Promise<{ results: FrequencyTestResult[]; events: import('./gsm-scan-types').ScanEvent[] }> {
+	const results: FrequencyTestResult[] = [];
+	const events: import('./gsm-scan-types').ScanEvent[] = [];
+	for (let i = 0; i < freqs.length; i++) {
+		const outcome = await testFrequency(freqs[i], i, freqs.length);
+		events.push(...outcome.events);
+		results.push(outcome.result);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	}
+	return { results, events };
+}
+
 export async function* performIntelligentScan(): AsyncGenerator<
 	import('./gsm-scan-types').ScanEvent
 > {
 	let hackrfAcquired = false;
 
 	try {
-		// ============================================
-		// PHASE 0: Prerequisite Checks
-		// ============================================
 		const prereqs = await checkPrerequisites();
-		for (const ev of prereqs.events) yield ev;
+		yield* yieldEvents(prereqs.events);
 		if (!prereqs.success) return;
 
-		// ============================================
-		// PHASE 1: Acquire HackRF Resource
-		// ============================================
 		const hackrf = await acquireHackrf();
-		for (const ev of hackrf.events) yield ev;
+		yield* yieldEvents(hackrf.events);
 		if (!hackrf.success) return;
 		hackrfAcquired = true;
 
-		// ============================================
-		// PHASE 2: Scan GSM-900 downlink frequencies
-		// ============================================
 		const checkFreqs: string[] = ['947.2', '950.0'];
-		yield createUpdateEvent(`[SCAN] Scanning ${checkFreqs.length} target frequencies`);
+		yield* yieldEvents(buildPhase2Header(checkFreqs.length));
 
-		yield createUpdateEvent('[SCAN] ');
-		yield createUpdateEvent('[SCAN] Phase 2: GSM Frame Detection & BCCH Channel Discovery');
-		yield createUpdateEvent(
-			`[SCAN] Testing ${checkFreqs.length} frequencies for 15 seconds each...`
-		);
-		const estimatedTime = checkFreqs.length * 20;
-		const estimatedMinutes = Math.ceil(estimatedTime / 60);
-		yield createUpdateEvent(
-			`[SCAN] Estimated time: ~${estimatedMinutes} minutes (${estimatedTime} seconds)`
-		);
-		yield createUpdateEvent(
-			'[SCAN] This comprehensive scan will identify BCCH channels with complete cell tower data'
-		);
-		yield createUpdateEvent('[SCAN] ');
-
-		const results: FrequencyTestResult[] = [];
-
-		for (let i = 0; i < checkFreqs.length; i++) {
-			const outcome = await testFrequency(checkFreqs[i], i, checkFreqs.length);
-			for (const ev of outcome.events) yield ev;
-			results.push(outcome.result);
-
-			// Brief pause between frequencies
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		}
-
-		// ============================================
-		// PHASE 3: Summarise results
-		// ============================================
-		yield* emitSummary(results);
+		const scan = await scanFrequencies(checkFreqs);
+		yield* yieldEvents(scan.events);
+		yield* emitSummary(scan.results);
 	} catch (error: unknown) {
-		yield createUpdateEvent(`[ERROR] Scan failed: ${(error as Error).message}`);
-		yield createResultEvent({
-			success: false,
-			message: 'Scan failed',
-			error: (error as Error).message
-		});
+		yield* yieldEvents(buildScanErrorEvents(error));
 	} finally {
-		if (hackrfAcquired) {
-			try {
-				await resourceManager.release('gsm-scan', HardwareDevice.HACKRF);
-			} catch (releaseError) {
-				logger.error('[gsm-scan] Failed to release HackRF', {
-					error:
-						releaseError instanceof Error ? releaseError.message : String(releaseError)
-				});
-			}
-		}
+		if (hackrfAcquired) await releaseHackrf();
 	}
 }
 
-/**
- * Yield the scan-complete summary events.
- *
- * @param results - Collected frequency test results, sorted in place
- * @yields ScanEvent update and result events
- */
+/** Default frequency result when no results exist */
+const DEFAULT_FREQ_RESULT: FrequencyTestResult = {
+	frequency: '947.2',
+	frameCount: 0,
+	power: -100,
+	strength: 'No Signal',
+	hasGsmActivity: false,
+	channelType: '',
+	controlChannel: false
+};
+
+/** Select the best frequency result — first active, or first overall, or default */
+function selectBestFrequency(sorted: FrequencyTestResult[]): FrequencyTestResult {
+	return sorted.find((r) => r.hasGsmActivity) || sorted[0] || DEFAULT_FREQ_RESULT;
+}
+
+/** Format a single active frequency line */
+function formatActiveFreq(result: FrequencyTestResult, index: number): string {
+	const cellInfo = result.mcc
+		? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
+		: '';
+	return `[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`;
+}
+
+/** Build the best-frequency detail lines */
+function buildBestFreqLines(best: FrequencyTestResult): string[] {
+	const signalDisplay =
+		best.power > -100 ? `${best.power.toFixed(1)} dBm` : `${best.frameCount} frames`;
+	const lines = [
+		`[SCAN] BEST FREQUENCY: ${best.frequency} MHz`,
+		`[SCAN] GSM frames detected: ${best.frameCount}`,
+		`[SCAN] Signal: ${signalDisplay} (${best.strength})`
+	];
+	if (best.channelType) {
+		lines.push(
+			`[SCAN] Channel type: ${best.channelType}${best.controlChannel ? ' (Control Channel)' : ''}`
+		);
+	}
+	return lines;
+}
+
+/** Build the complete summary event list */
+function buildSummaryEvents(
+	results: FrequencyTestResult[]
+): import('./gsm-scan-types').ScanEvent[] {
+	results.sort((a, b) => b.frameCount - a.frameCount);
+	const bestFreq = selectBestFrequency(results);
+	const activeResults = results.filter((r) => r.frameCount > 0);
+
+	const events: import('./gsm-scan-types').ScanEvent[] = [
+		createUpdateEvent('[SCAN] '),
+		createUpdateEvent('[SCAN] ========== SCAN COMPLETE =========='),
+		createUpdateEvent(`[SCAN] Tested ${results.length} frequencies`),
+		createUpdateEvent('[SCAN] '),
+		createUpdateEvent(
+			`[SCAN] ACTIVE FREQUENCIES (${activeResults.length} of ${results.length} tested):`
+		),
+		...activeResults.map((r, i) => createUpdateEvent(formatActiveFreq(r, i)))
+	];
+
+	if (activeResults.length === 0) {
+		events.push(createUpdateEvent('[SCAN] No active GSM frequencies found'));
+	}
+
+	events.push(createUpdateEvent('[SCAN] '));
+	for (const line of buildBestFreqLines(bestFreq)) {
+		events.push(createUpdateEvent(line));
+	}
+	events.push(createUpdateEvent('[SCAN] =================================='));
+	events.push(
+		createResultEvent({
+			type: 'scan_complete',
+			success: true,
+			bestFrequency: bestFreq.frequency,
+			bestFrequencyFrames: bestFreq.frameCount,
+			scanResults: results,
+			totalTested: results.length
+		})
+	);
+
+	return events;
+}
+
 async function* emitSummary(
 	results: FrequencyTestResult[]
 ): AsyncGenerator<import('./gsm-scan-types').ScanEvent> {
-	results.sort((a, b) => b.frameCount - a.frameCount);
-
-	const bestFreq = results.find((r) => r.hasGsmActivity) ||
-		results[0] || {
-			frequency: '947.2',
-			frameCount: 0,
-			power: -100,
-			strength: 'No Signal',
-			hasGsmActivity: false,
-			channelType: '',
-			controlChannel: false
-		};
-
-	yield createUpdateEvent('[SCAN] ');
-	yield createUpdateEvent('[SCAN] ========== SCAN COMPLETE ==========');
-	yield createUpdateEvent(`[SCAN] Tested ${results.length} frequencies`);
-
-	const activeResults = results.filter((r) => r.frameCount > 0);
-	yield createUpdateEvent('[SCAN] ');
-	yield createUpdateEvent(
-		`[SCAN] ACTIVE FREQUENCIES (${activeResults.length} of ${results.length} tested):`
-	);
-
-	for (let index = 0; index < activeResults.length; index++) {
-		const result = activeResults[index];
-		const cellInfo = result.mcc
-			? ` [MCC=${result.mcc} MNC=${result.mnc} LAC=${result.lac} CI=${result.ci}]`
-			: '';
-		yield createUpdateEvent(
-			`[SCAN] ${index + 1}. ${result.frequency} MHz: ${result.frameCount} frames (${result.strength}) ${result.channelType || ''}${cellInfo}`
-		);
-	}
-
-	if (activeResults.length === 0) {
-		yield createUpdateEvent('[SCAN] No active GSM frequencies found');
-	}
-
-	yield createUpdateEvent('[SCAN] ');
-	yield createUpdateEvent(`[SCAN] BEST FREQUENCY: ${bestFreq.frequency} MHz`);
-	yield createUpdateEvent(`[SCAN] GSM frames detected: ${bestFreq.frameCount}`);
-
-	const signalDisplay =
-		bestFreq.power > -100
-			? `${bestFreq.power.toFixed(1)} dBm`
-			: `${bestFreq.frameCount} frames`;
-	yield createUpdateEvent(`[SCAN] Signal: ${signalDisplay} (${bestFreq.strength})`);
-
-	if (bestFreq.channelType) {
-		yield createUpdateEvent(
-			`[SCAN] Channel type: ${bestFreq.channelType}${bestFreq.controlChannel ? ' (Control Channel)' : ''}`
-		);
-	}
-	yield createUpdateEvent('[SCAN] ==================================');
-
-	yield createResultEvent({
-		type: 'scan_complete',
-		success: true,
-		bestFrequency: bestFreq.frequency,
-		bestFrequencyFrames: bestFreq.frameCount,
-		scanResults: results,
-		totalTested: results.length
-	});
+	yield* yieldEvents(buildSummaryEvents(results));
 }

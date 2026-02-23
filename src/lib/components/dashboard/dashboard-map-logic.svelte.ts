@@ -46,6 +46,21 @@ import { setupMap } from './map/map-setup';
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
 
+/** Whether a heading value is a valid finite number */
+function isValidHeading(h: number | null | undefined): h is number {
+	return h !== null && h !== undefined && !isNaN(h);
+}
+
+/** Whether the speed indicates the device is moving */
+function isMoving(spd: number | null | undefined): boolean {
+	return spd !== null && spd !== undefined && spd > 0.5;
+}
+
+/** Whether a GPS position represents a real fix (non-zero coords with fix flag) */
+function hasRealGPSFix(lat: number, lon: number, hasFix: boolean): boolean {
+	return hasFix && lat !== 0 && lon !== 0;
+}
+
 /** Create all reactive map state and effects. Call once from the component. */
 export function createMapState() {
 	const gps$ = fromStore(gpsStore);
@@ -99,9 +114,7 @@ export function createMapState() {
 	const headingDeg: number | null = $derived.by(() => {
 		const h = gps$.current.status.heading;
 		const spd = gps$.current.status.speed;
-		const hasH = h !== null && h !== undefined && !isNaN(h);
-		const moving = spd !== null && spd !== undefined && spd > 0.5;
-		return hasH && moving ? h : null;
+		return isValidHeading(h) && isMoving(spd) ? h : null;
 	});
 	const showCone = $derived(headingDeg !== null);
 	const accuracyGeoJSON: FeatureCollection = $derived.by(() => {
@@ -190,10 +203,10 @@ export function createMapState() {
 	});
 	$effect(() => {
 		const { lat, lon } = gps$.current.position;
-		if (!initialViewSet && gps$.current.status.hasGPSFix && map && lat !== 0 && lon !== 0) {
-			map.flyTo({ center: [lon, lat], zoom: 15 });
-			initialViewSet = true;
-		}
+		if (initialViewSet || !map) return;
+		if (!hasRealGPSFix(lat, lon, gps$.current.status.hasGPSFix)) return;
+		map.flyTo({ center: [lon, lat], zoom: 15 });
+		initialViewSet = true;
 	});
 	$effect(() => {
 		const { lat, lon } = gps$.current.position;

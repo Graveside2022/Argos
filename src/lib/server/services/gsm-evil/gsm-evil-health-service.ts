@@ -258,61 +258,81 @@ function determineDataFlowStatus(health: GsmEvilHealth): void {
 	}
 }
 
+/** Health check rule: condition → issue + recommendation */
+interface HealthRule {
+	check: (h: GsmEvilHealth) => boolean;
+	issue: string;
+	recommendation: string;
+}
+
+/** Rules evaluated to collect issues and recommendations */
+const HEALTH_RULES: HealthRule[] = [
+	{
+		check: (h) => !h.grgsm.isRunning,
+		issue: 'GRGSM monitor not running',
+		recommendation: 'Start GRGSM process to capture RF signals'
+	},
+	{
+		check: (h) => !h.gsmevil.isRunning,
+		issue: 'GSM Evil service not running',
+		recommendation: 'Start GSM Evil web service'
+	},
+	{
+		check: (h) => h.gsmevil.isRunning && !h.gsmevil.hasWebInterface,
+		issue: 'GSM Evil web interface not responding',
+		recommendation: 'Check GSM Evil service configuration'
+	},
+	{
+		check: (h) => !h.dataFlow.isGsmtapActive,
+		issue: 'GSMTAP data flow inactive',
+		recommendation: 'Verify GRGSM is sending data to port 4729'
+	},
+	{
+		check: (h) => !h.dataFlow.isDatabaseAccessible,
+		issue: 'Database not accessible',
+		recommendation: 'Check database path and permissions'
+	}
+];
+
 /** Collect issues and recommendations based on individual component statuses. */
 function collectIssuesAndRecommendations(health: GsmEvilHealth): {
 	issues: string[];
 	recommendations: string[];
 } {
-	const issues: string[] = [];
-	const recommendations: string[] = [];
+	const matched = HEALTH_RULES.filter((rule) => rule.check(health));
+	return {
+		issues: matched.map((r) => r.issue),
+		recommendations: matched.map((r) => r.recommendation)
+	};
+}
 
-	if (!health.grgsm.isRunning) {
-		issues.push('GRGSM monitor not running');
-		recommendations.push('Start GRGSM process to capture RF signals');
-	}
+/** Check if all pipeline components are running and accessible */
+function isPipelineHealthy(health: GsmEvilHealth): boolean {
+	return (
+		health.grgsm.isRunning &&
+		health.gsmevil.isRunning &&
+		health.gsmevil.hasWebInterface &&
+		health.dataFlow.isGsmtapActive &&
+		health.dataFlow.isDatabaseAccessible
+	);
+}
 
-	if (!health.gsmevil.isRunning) {
-		issues.push('GSM Evil service not running');
-		recommendations.push('Start GSM Evil web service');
-	} else if (!health.gsmevil.hasWebInterface) {
-		issues.push('GSM Evil web interface not responding');
-		recommendations.push('Check GSM Evil service configuration');
-	}
-
-	if (!health.dataFlow.isGsmtapActive) {
-		issues.push('GSMTAP data flow inactive');
-		recommendations.push('Verify GRGSM is sending data to port 4729');
-	}
-
-	if (!health.dataFlow.isDatabaseAccessible) {
-		issues.push('Database not accessible');
-		recommendations.push('Check database path and permissions');
-	}
-
-	return { issues, recommendations };
+/** Determine the overall status string from pipeline state */
+function resolveOverallStatus(health: GsmEvilHealth, pipelineOk: boolean): string {
+	if (pipelineOk) return health.dataFlow.hasRecentData ? 'healthy' : 'healthy-idle';
+	if (health.grgsm.isRunning || health.gsmevil.isRunning) return 'partial';
+	return 'stopped';
 }
 
 /** Compute overall pipeline health status from component statuses and collected issues. */
 function aggregateOverallHealth(health: GsmEvilHealth): void {
 	const { issues, recommendations } = collectIssuesAndRecommendations(health);
+	const pipelineOk = isPipelineHealthy(health);
 
-	health.overall.isPipelineHealthy =
-		health.grgsm.isRunning &&
-		health.gsmevil.isRunning &&
-		health.gsmevil.hasWebInterface &&
-		health.dataFlow.isGsmtapActive &&
-		health.dataFlow.isDatabaseAccessible;
-
+	health.overall.isPipelineHealthy = pipelineOk;
 	health.overall.issues = issues;
 	health.overall.recommendations = recommendations;
-
-	if (health.overall.isPipelineHealthy) {
-		health.overall.status = health.dataFlow.hasRecentData ? 'healthy' : 'healthy-idle';
-	} else if (health.grgsm.isRunning || health.gsmevil.isRunning) {
-		health.overall.status = 'partial';
-	} else {
-		health.overall.status = 'stopped';
-	}
+	health.overall.status = resolveOverallStatus(health, pipelineOk);
 }
 
 /** Performs a comprehensive health check of the GSM Evil pipeline (GRGSM, web service, GSMTAP data flow, and database). */

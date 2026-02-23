@@ -29,6 +29,40 @@ export interface PollerState {
 	statsThrottle: number;
 }
 
+/** Parse and validate raw device data from Kismet API */
+function validateRawDevices(rawDevices: unknown): KismetRawDevice[] {
+	if (!Array.isArray(rawDevices)) return [];
+	return rawDevices
+		.map((d: unknown) => {
+			const result = KismetRawDeviceSchema.safeParse(d);
+			return result.success ? result.data : null;
+		})
+		.filter((d): d is NonNullable<typeof d> => d !== null);
+}
+
+/** Fetch devices from Kismet last-time API */
+async function fetchDevices(
+	apiUrl: string,
+	apiKey: string,
+	lastPollTime: number
+): Promise<KismetRawDevice[]> {
+	const response = await fetch(`${apiUrl}/devices/last-time/${lastPollTime}/devices.json`, {
+		headers: { KISMET: apiKey }
+	});
+	if (!response.ok) throw new Error(`Kismet API error: ${response.status}`);
+	return validateRawDevices(await response.json());
+}
+
+/** Emit an error broadcast when polling fails */
+function broadcastPollError(broadcast: BroadcastFn, error: unknown): void {
+	logError('Error polling Kismet:', { error });
+	broadcast({
+		type: 'error',
+		data: { error: 'Failed to poll Kismet data', timestamp: new Date().toISOString() },
+		timestamp: new Date().toISOString()
+	});
+}
+
 /**
  * Poll Kismet for device updates. Mutates the pollerState in place.
  */
@@ -46,44 +80,40 @@ export async function pollKismetDevices(
 	const startTime = Date.now();
 
 	try {
-		const response = await fetch(
-			`${apiUrl}/devices/last-time/${state.lastPollTime}/devices.json`,
-			{ headers: { KISMET: apiKey } }
-		);
-
-		if (!response.ok) throw new Error(`Kismet API error: ${response.status}`);
-
-		// Defensive validation: External Kismet API may return unexpected data
-		const rawDevices = await response.json();
-		const devices = Array.isArray(rawDevices)
-			? rawDevices
-					.map((d: unknown) => {
-						const result = KismetRawDeviceSchema.safeParse(d);
-						return result.success ? result.data : null;
-					})
-					.filter((d): d is NonNullable<typeof d> => d !== null)
-			: [];
-
+		const devices = await fetchDevices(apiUrl, apiKey, state.lastPollTime);
 		for (const raw of devices) {
 			processDeviceUpdate(raw, state, throttleInterval, broadcast);
 		}
-
 		state.lastPollTime = Math.floor(startTime / 1000);
-
-		if (Date.now() - state.statsThrottle > throttleInterval) {
-			void fetchAndEmitSystemStatus(state, apiUrl, apiKey, broadcast);
-			state.statsThrottle = Date.now();
-		}
+		maybeEmitStatus(state, apiUrl, apiKey, throttleInterval, broadcast);
 	} catch (error) {
-		logError('Error polling Kismet:', { error });
-		broadcast({
-			type: 'error',
-			data: { error: 'Failed to poll Kismet data', timestamp: new Date().toISOString() },
-			timestamp: new Date().toISOString()
-		});
+		broadcastPollError(broadcast, error);
 	} finally {
 		state.isPolling = false;
 	}
+}
+
+/** Emit system status if enough time has passed since the last emission */
+function maybeEmitStatus(
+	state: PollerState,
+	apiUrl: string,
+	apiKey: string,
+	throttleInterval: number,
+	broadcast: BroadcastFn
+): void {
+	if (Date.now() - state.statsThrottle <= throttleInterval) return;
+	void fetchAndEmitSystemStatus(state, apiUrl, apiKey, broadcast);
+	state.statsThrottle = Date.now();
+}
+
+/** Check if a device update should be emitted based on throttle */
+function shouldEmitUpdate(
+	state: PollerState,
+	deviceKey: string,
+	throttleInterval: number
+): boolean {
+	const lastEmit = state.updateThrottles.get(deviceKey) || 0;
+	return Date.now() - lastEmit > throttleInterval;
 }
 
 /** Process a single device update from Kismet */
@@ -98,16 +128,12 @@ function processDeviceUpdate(
 
 	const deviceKey = kismetDevice['kismet.device.base.key'];
 	const cached = state.deviceCache.get(deviceKey);
-	const changed = !cached || hasDeviceChanged(cached.device, device);
+	if (cached && !hasDeviceChanged(cached.device, device)) return;
 
-	if (changed) {
-		state.deviceCache.set(deviceKey, { device, lastUpdate: Date.now() });
-
-		const lastEmit = state.updateThrottles.get(deviceKey) || 0;
-		if (Date.now() - lastEmit > throttleInterval) {
-			emitDeviceUpdate(device, broadcast);
-			state.updateThrottles.set(deviceKey, Date.now());
-		}
+	state.deviceCache.set(deviceKey, { device, lastUpdate: Date.now() });
+	if (shouldEmitUpdate(state, deviceKey, throttleInterval)) {
+		emitDeviceUpdate(device, broadcast);
+		state.updateThrottles.set(deviceKey, Date.now());
 	}
 }
 
@@ -126,6 +152,42 @@ function emitDeviceUpdate(device: KismetDevice, broadcast: BroadcastFn): void {
 	});
 }
 
+/** Compute uptime from Kismet start timestamp */
+function computeUptime(status: Record<string, unknown>): number {
+	const startSec = status['kismet.system.timestamp.start_sec'];
+	return typeof startSec === 'number' ? Date.now() - startSec * 1000 : 0;
+}
+
+/** Read a status field with a fallback default */
+function statusField(status: Record<string, unknown>, key: string, fallback: unknown): unknown {
+	return status[key] || fallback;
+}
+
+/** Extract system resource metrics from status */
+function extractStatusMetrics(
+	status: Record<string, unknown>
+): Pick<Record<string, unknown>, string> {
+	return {
+		packets_rate: statusField(status, 'kismet.system.packets.rate', 0),
+		memory_usage: statusField(status, 'kismet.system.memory.rss', 0),
+		cpu_usage: statusField(status, 'kismet.system.cpu.system', 0),
+		channels: statusField(status, 'kismet.system.channels.channels', []),
+		interfaces: statusField(status, 'kismet.system.interfaces', [])
+	};
+}
+
+/** Build status message data from validated Kismet system status */
+function buildStatusData(
+	status: Record<string, unknown>,
+	deviceCount: number
+): Record<string, unknown> {
+	return {
+		devices_count: deviceCount,
+		...extractStatusMetrics(status),
+		uptime: computeUptime(status)
+	};
+}
+
 /** Fetch and emit Kismet system status */
 async function fetchAndEmitSystemStatus(
 	state: PollerState,
@@ -137,32 +199,19 @@ async function fetchAndEmitSystemStatus(
 		const response = await fetch(`${apiUrl}/system/status.json`, {
 			headers: { KISMET: apiKey }
 		});
-
 		if (!response.ok) throw new Error(`Failed to get system status: ${response.status}`);
 
-		const rawStatus = await response.json();
-		const statusResult = KismetSystemStatusSchema.safeParse(rawStatus);
+		const statusResult = KismetSystemStatusSchema.safeParse(await response.json());
 		if (!statusResult.success) {
 			logError('Invalid Kismet system status response', { error: statusResult.error });
 			return;
 		}
-		const status = statusResult.data;
+
 		const message: WebSocketMessage = {
 			type: 'status_change',
-			data: {
-				devices_count: state.deviceCache.size,
-				packets_rate: status['kismet.system.packets.rate'] || 0,
-				memory_usage: status['kismet.system.memory.rss'] || 0,
-				cpu_usage: status['kismet.system.cpu.system'] || 0,
-				uptime: status['kismet.system.timestamp.start_sec']
-					? Date.now() - status['kismet.system.timestamp.start_sec'] * 1000
-					: 0,
-				channels: status['kismet.system.channels.channels'] || [],
-				interfaces: status['kismet.system.interfaces'] || []
-			},
+			data: buildStatusData(statusResult.data, state.deviceCache.size),
 			timestamp: new Date().toISOString()
 		};
-
 		broadcast(message, (sub) => sub.types.has('status_change') || sub.types.has('*'));
 	} catch (error) {
 		logError('Error emitting system status:', { error });

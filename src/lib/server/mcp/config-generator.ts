@@ -54,60 +54,42 @@ const MCP_SERVERS = [
 	}
 ] as const;
 
-/**
- * Get path to MCP server executable
- */
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
+/** Standard env vars passed to all MCP servers. */
+function mcpEnv(): Record<string, string> {
+	return {
+		NODE_ENV: process.env.NODE_ENV || 'development',
+		ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173',
+		ARGOS_API_KEY: process.env.ARGOS_API_KEY || ''
+	};
+}
+
+/** Build command + args for a server file path. */
+function mcpCommand(serverPath: string): { command: string; args: string[] } {
+	return IS_DEV
+		? { command: 'npx', args: ['tsx', serverPath] }
+		: { command: 'node', args: [serverPath] };
+}
+
+/** Get path to MCP server executable */
 function getMCPServerPath(serverFile: string): string {
-	const isDev = process.env.NODE_ENV !== 'production';
-
-	if (isDev) {
-		return join(process.cwd(), 'src/lib/server/mcp/servers', serverFile);
-	} else {
-		return join(process.cwd(), 'build/server/mcp/servers', serverFile.replace('.ts', '.js'));
-	}
+	const dir = IS_DEV ? 'src/lib/server/mcp/servers' : 'build/server/mcp/servers';
+	const file = IS_DEV ? serverFile : serverFile.replace('.ts', '.js');
+	return join(process.cwd(), dir, file);
 }
 
-/**
- * Generate MCP server definition
- */
+/** Generate MCP server definition */
 export function generateMCPServer(serverId: string, serverFile: string): MCPServerDefinition {
-	const serverPath = getMCPServerPath(serverFile);
-	const isDev = process.env.NODE_ENV !== 'production';
-
-	return {
-		id: serverId,
-		command: isDev ? 'npx' : 'node',
-		args: isDev ? ['tsx', serverPath] : [serverPath],
-		env: {
-			NODE_ENV: process.env.NODE_ENV || 'development',
-			ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173',
-			ARGOS_API_KEY: process.env.ARGOS_API_KEY || ''
-		}
-	};
+	return { id: serverId, ...mcpCommand(getMCPServerPath(serverFile)), env: mcpEnv() };
 }
 
-/**
- * Generate MCP server definition for legacy monolithic server (backward compat)
- */
+/** Generate MCP server definition for legacy monolithic server (backward compat) */
 export function generateArgosMCPServer(): MCPServerDefinition {
-	const serverPath = join(
-		process.cwd(),
-		process.env.NODE_ENV !== 'production'
-			? 'src/lib/server/mcp/dynamic-server.ts'
-			: 'build/server/mcp/dynamic-server.js'
-	);
-	const isDev = process.env.NODE_ENV !== 'production';
-
-	return {
-		id: 'argos-tools',
-		command: isDev ? 'npx' : 'node',
-		args: isDev ? ['tsx', serverPath] : [serverPath],
-		env: {
-			NODE_ENV: process.env.NODE_ENV || 'development',
-			ARGOS_API_URL: process.env.PUBLIC_ARGOS_API_URL || 'http://localhost:5173',
-			ARGOS_API_KEY: process.env.ARGOS_API_KEY || ''
-		}
-	};
+	const file = IS_DEV
+		? 'src/lib/server/mcp/dynamic-server.ts'
+		: 'build/server/mcp/dynamic-server.js';
+	return { id: 'argos-tools', ...mcpCommand(join(process.cwd(), file)), env: mcpEnv() };
 }
 
 /**

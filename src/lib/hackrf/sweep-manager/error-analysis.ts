@@ -25,6 +25,69 @@ export interface ErrorAnalysis {
 	requiresRestart: boolean;
 }
 
+type ErrorTypeMatch = {
+	patterns: string[];
+	errorType: ErrorAnalysis['errorType'];
+};
+
+const ERROR_TYPE_MATCHERS: ErrorTypeMatch[] = [
+	{ patterns: ['resource busy', 'device busy'], errorType: 'device_busy' },
+	{ patterns: ['permission denied', 'access denied'], errorType: 'permission_denied' },
+	{
+		patterns: ['no hackrf boards found', 'hackrf_open() failed', 'device not found'],
+		errorType: 'device_not_found'
+	},
+	{ patterns: ['libusb', 'usb error', 'usb_open() failed'], errorType: 'usb_error' }
+];
+
+function classifyErrorType(lowerError: string): ErrorAnalysis['errorType'] {
+	const match = ERROR_TYPE_MATCHERS.find((m) => m.patterns.some((p) => lowerError.includes(p)));
+	return match?.errorType ?? 'unknown';
+}
+
+type AnalysisBuilder = Record<
+	ErrorAnalysis['errorType'],
+	(busyCount: number, errCount: number, maxErr: number) => ErrorAnalysis
+>;
+
+const ANALYSIS_BUILDERS: AnalysisBuilder = {
+	device_busy: (busyCount) => ({
+		errorType: 'device_busy',
+		severity: busyCount > 3 ? 'high' : 'medium',
+		isRecoverable: true,
+		recommendedAction: 'Wait and retry with process cleanup',
+		requiresRestart: busyCount > 5
+	}),
+	permission_denied: () => ({
+		errorType: 'permission_denied',
+		severity: 'high',
+		isRecoverable: false,
+		recommendedAction: 'Check user permissions and udev rules',
+		requiresRestart: false
+	}),
+	device_not_found: () => ({
+		errorType: 'device_not_found',
+		severity: 'critical',
+		isRecoverable: true,
+		recommendedAction: 'Check USB connection and device power',
+		requiresRestart: true
+	}),
+	usb_error: () => ({
+		errorType: 'usb_error',
+		severity: 'high',
+		isRecoverable: true,
+		recommendedAction: 'Reset USB connection or restart device',
+		requiresRestart: true
+	}),
+	unknown: (_busyCount, errCount, maxErr) => ({
+		errorType: 'unknown',
+		severity: errCount > 5 ? 'high' : 'medium',
+		isRecoverable: true,
+		recommendedAction: 'Generic retry with exponential backoff',
+		requiresRestart: errCount > maxErr
+	})
+};
+
 /**
  * Analyze an error message and determine its type, severity, and recovery options.
  */
@@ -34,69 +97,24 @@ export function analyzeError(
 	consecutiveErrors: number,
 	maxConsecutiveErrors: number
 ): ErrorAnalysis {
-	const lowerError = errorMessage.toLowerCase();
-
-	// Device busy errors
-	if (lowerError.includes('resource busy') || lowerError.includes('device busy')) {
-		return {
-			errorType: 'device_busy',
-			severity: consecutiveBusyErrors > 3 ? 'high' : 'medium',
-			isRecoverable: true,
-			recommendedAction: 'Wait and retry with process cleanup',
-			requiresRestart: consecutiveBusyErrors > 5
-		};
-	}
-
-	// Permission errors
-	if (lowerError.includes('permission denied') || lowerError.includes('access denied')) {
-		return {
-			errorType: 'permission_denied',
-			severity: 'high',
-			isRecoverable: false,
-			recommendedAction: 'Check user permissions and udev rules',
-			requiresRestart: false
-		};
-	}
-
-	// Device not found
-	if (
-		lowerError.includes('no hackrf boards found') ||
-		lowerError.includes('hackrf_open() failed') ||
-		lowerError.includes('device not found')
-	) {
-		return {
-			errorType: 'device_not_found',
-			severity: 'critical',
-			isRecoverable: true,
-			recommendedAction: 'Check USB connection and device power',
-			requiresRestart: true
-		};
-	}
-
-	// USB errors
-	if (
-		lowerError.includes('libusb') ||
-		lowerError.includes('usb error') ||
-		lowerError.includes('usb_open() failed')
-	) {
-		return {
-			errorType: 'usb_error',
-			severity: 'high',
-			isRecoverable: true,
-			recommendedAction: 'Reset USB connection or restart device',
-			requiresRestart: true
-		};
-	}
-
-	// Unknown error
-	return {
-		errorType: 'unknown',
-		severity: consecutiveErrors > 5 ? 'high' : 'medium',
-		isRecoverable: true,
-		recommendedAction: 'Generic retry with exponential backoff',
-		requiresRestart: consecutiveErrors > maxConsecutiveErrors
-	};
+	const errorType = classifyErrorType(errorMessage.toLowerCase());
+	return ANALYSIS_BUILDERS[errorType](
+		consecutiveBusyErrors,
+		consecutiveErrors,
+		maxConsecutiveErrors
+	);
 }
+
+const DEVICE_STATUS_MAP: Record<
+	ErrorAnalysis['errorType'],
+	'busy' | 'disconnected' | 'stuck' | null
+> = {
+	device_busy: 'busy',
+	device_not_found: 'disconnected',
+	permission_denied: 'disconnected',
+	usb_error: 'stuck',
+	unknown: null
+};
 
 /**
  * Determine device status from an error analysis result.
@@ -105,21 +123,16 @@ export function deriveDeviceStatus(
 	analysis: ErrorAnalysis,
 	consecutiveErrors: number
 ): 'busy' | 'disconnected' | 'stuck' | null {
-	switch (analysis.errorType) {
-		case 'device_busy':
-			return 'busy';
-		case 'device_not_found':
-		case 'permission_denied':
-			return 'disconnected';
-		case 'usb_error':
-			return 'stuck';
-		default:
-			if (consecutiveErrors > 3) {
-				return 'stuck';
-			}
-			return null;
-	}
+	const mapped = DEVICE_STATUS_MAP[analysis.errorType];
+	if (mapped !== null) return mapped;
+	return consecutiveErrors > 3 ? 'stuck' : null;
 }
+
+const DEVICE_STATUS_PENALTY: Record<string, number> = {
+	available: 0,
+	busy: 20,
+	stuck: 30
+};
 
 /**
  * Calculate an overall health score (0-100, higher is better) from error state.
@@ -133,14 +146,7 @@ export function calculateHealthScore(
 ): number {
 	const consecutiveErrorPenalty = (consecutiveErrors / maxConsecutiveErrors) * 40;
 	const recentFailurePenalty = (recentFailureCount / maxFailuresPerMinute) * 30;
-	const deviceStatusPenalty =
-		deviceStatus === 'available'
-			? 0
-			: deviceStatus === 'busy'
-				? 20
-				: deviceStatus === 'stuck'
-					? 30
-					: 40;
+	const deviceStatusPenalty = DEVICE_STATUS_PENALTY[deviceStatus] ?? 40;
 
 	return Math.max(
 		0,

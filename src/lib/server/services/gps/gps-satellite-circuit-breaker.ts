@@ -39,32 +39,35 @@ export function resetCircuitBreaker(): void {
  * if the breaker is still open. Returns null when the caller should proceed
  * with a fresh gpsd query (breaker closed or half-open).
  */
-export function checkSatelliteCircuitBreaker(): SatellitesApiResponse | null {
-	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) {
-		return null;
-	}
+/** Whether the circuit breaker is open and should block queries */
+function isBreakerOpen(): boolean {
+	if (consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD) return false;
+	return Date.now() - lastFailureTimestamp < CIRCUIT_BREAKER_COOLDOWN_MS;
+}
 
-	const timeSinceLastFailure = Date.now() - lastFailureTimestamp;
+/** Log the breaker-open event exactly once */
+function logBreakerOpen(): void {
+	if (circuitBreakerLogged) return;
+	logWarn(
+		'[GPS Satellites] Circuit breaker open: gpsd unreachable',
+		{ consecutiveFailures },
+		'gps-satellites-circuit-breaker'
+	);
+	circuitBreakerLogged = true;
+}
 
-	if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN_MS) {
-		// Cooldown elapsed -- allow a retry (half-open state)
-		return null;
-	}
-
-	if (!circuitBreakerLogged) {
-		logWarn(
-			'[GPS Satellites] Circuit breaker open: gpsd unreachable',
-			{ consecutiveFailures },
-			'gps-satellites-circuit-breaker'
-		);
-		circuitBreakerLogged = true;
-	}
-
+/** Return cached satellites if still fresh, else an error response */
+function serveCachedOrError(): SatellitesApiResponse {
 	if (cachedSatellites.length > 0 && Date.now() - cachedTimestamp < 30000) {
 		return { success: true, satellites: cachedSatellites };
 	}
-
 	return { success: false, satellites: [], error: 'GPS service temporarily unavailable' };
+}
+
+export function checkSatelliteCircuitBreaker(): SatellitesApiResponse | null {
+	if (!isBreakerOpen()) return null;
+	logBreakerOpen();
+	return serveCachedOrError();
 }
 
 /**

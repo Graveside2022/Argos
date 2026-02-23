@@ -14,8 +14,15 @@ import { SymbolFactory } from '$lib/map/symbols/symbol-factory';
 import type { Affiliation } from '$lib/stores/tactical-map/kismet-store';
 import { parseCotToFeature } from '$lib/utils/cot-parser';
 
-import { MAP_UI_COLORS, resolveMapColor, SIGNAL_COLORS } from './map-colors';
-import type { RangeBand } from './map-geojson';
+import { MAP_UI_COLORS, resolveMapColor } from './map-colors';
+import {
+	buildDevicePopupContent,
+	buildTowerPopupContent,
+	queryClickFeature,
+	resolveClusterZoom,
+	setLayerPaint,
+	setLayerVisibility
+} from './map-handlers-helpers';
 import { fetchCellTowers, haversineKm, LAYER_MAP } from './map-helpers';
 
 // ── Device click handler ──
@@ -40,29 +47,11 @@ export function handleDeviceClick(
 	ev: maplibregl.MapMouseEvent,
 	affiliations: Map<string, Affiliation>
 ): { lngLat: LngLatLike; content: PopupState } | null {
-	const features = map.queryRenderedFeatures(ev.point, {
-		layers: ['device-circles', 'mil-sym-layer'].filter((l) => map.getLayer(l))
-	});
-	if (!features?.length) return null;
-	const props = features[0].properties,
-		geom = features[0].geometry;
-	if (geom.type !== 'Point') return null;
+	const result = queryClickFeature(map, ev, ['device-circles', 'mil-sym-layer']);
+	if (!result) return null;
 	return {
-		lngLat: geom.coordinates as [number, number],
-		content: {
-			ssid: props?.ssid ?? 'Unknown',
-			mac: props?.mac ?? '',
-			rssi: props?.rssi ?? -80,
-			type: props?.type ?? 'unknown',
-			manufacturer: props?.manufacturer ?? 'Unknown',
-			channel: props?.channel ?? 0,
-			frequency: props?.frequency ?? 0,
-			packets: props?.packets ?? 0,
-			last_seen: props?.last_seen ?? 0,
-			clientCount: props?.clientCount ?? 0,
-			parentAP: props?.parentAP ?? '',
-			affiliation: affiliations.get((props?.mac ?? '').toUpperCase()) || 'unknown'
-		}
+		lngLat: result.coordinates,
+		content: buildDevicePopupContent(result.props, affiliations)
 	};
 }
 
@@ -72,22 +61,13 @@ export async function handleClusterClick(
 	map: maplibregl.Map,
 	ev: maplibregl.MapMouseEvent
 ): Promise<void> {
-	const features = map.queryRenderedFeatures(ev.point, { layers: ['device-clusters'] });
-	if (!features?.length) return;
-	const clusterId = features[0].properties?.cluster_id;
+	const result = queryClickFeature(map, ev, ['device-clusters']);
+	if (!result) return;
+	const clusterId = result.props?.cluster_id;
 	if (clusterId === undefined) return;
-	const source = map.getSource('devices-src') as maplibregl.GeoJSONSource;
-	if (!source) return;
-	try {
-		const zoom = await source.getClusterExpansionZoom(clusterId);
-		const geom = features[0].geometry;
-		if (geom.type === 'Point')
-			map.easeTo({
-				center: geom.coordinates as [number, number],
-				zoom: Math.min(zoom, 18)
-			});
-	} catch {
-		/* cluster removed */
+	const zoom = await resolveClusterZoom(map, clusterId);
+	if (zoom !== null) {
+		map.easeTo({ center: result.coordinates, zoom: Math.min(zoom, 18) });
 	}
 }
 
@@ -108,27 +88,24 @@ export function handleTowerClick(
 	map: maplibregl.Map,
 	ev: maplibregl.MapMouseEvent
 ): { lngLat: LngLatLike; content: TowerPopupState } | null {
-	const features = map.queryRenderedFeatures(ev.point, { layers: ['cell-tower-circles'] });
-	if (!features?.length) return null;
-	const props = features[0].properties,
-		geom = features[0].geometry;
-	if (geom.type !== 'Point') return null;
+	const result = queryClickFeature(map, ev, ['cell-tower-circles']);
+	if (!result) return null;
 	return {
-		lngLat: geom.coordinates as [number, number],
-		content: {
-			radio: props?.radio ?? 'Unknown',
-			mcc: props?.mcc ?? 0,
-			mnc: props?.mnc ?? 0,
-			lac: props?.lac ?? 0,
-			ci: props?.ci ?? 0,
-			range: props?.range ?? 0,
-			samples: props?.samples ?? 0,
-			avgSignal: props?.avgSignal ?? 0
-		}
+		lngLat: result.coordinates,
+		content: buildTowerPopupContent(result.props)
 	};
 }
 
 // ── Layer visibility sync ──
+
+function resolveLayerVis(
+	key: string,
+	vis: Record<string, boolean>,
+	isoMac: string | null
+): boolean {
+	if (key === 'connectionLines') return vis[key] !== false || isoMac !== null;
+	return vis[key] !== false;
+}
 
 export function syncLayerVisibility(
 	map: maplibregl.Map,
@@ -138,12 +115,8 @@ export function syncLayerVisibility(
 ): void {
 	if (symbolLayer) symbolLayer.setVisible(vis.milSyms !== false);
 	for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
-		const visible =
-			key === 'connectionLines' ? vis[key] !== false || isoMac !== null : vis[key] !== false;
-		for (const id of layerIds) {
-			if (map.getLayer(id))
-				map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
-		}
+		const visible = resolveLayerVis(key, vis, isoMac);
+		for (const id of layerIds) setLayerVisibility(map, id, visible);
 	}
 }
 
@@ -154,41 +127,43 @@ export function syncClusterVisibility(
 	isoMac: string | null,
 	dotsVisible: boolean
 ): void {
-	const clusterVis = isoMac ? 'none' : dotsVisible ? 'visible' : 'none';
-	if (map.getLayer('device-clusters'))
-		map.setLayoutProperty('device-clusters', 'visibility', clusterVis);
-	if (map.getLayer('device-cluster-count'))
-		map.setLayoutProperty('device-cluster-count', 'visibility', clusterVis);
+	const vis = !isoMac && dotsVisible ? 'visible' : 'none';
+	setLayerVisibility(map, 'device-clusters', vis === 'visible');
+	setLayerVisibility(map, 'device-cluster-count', vis === 'visible');
 }
 
 // ── Theme paint sync ──
 
+function applyClusterPaint(map: maplibregl.Map): void {
+	const secondary = resolveMapColor(MAP_UI_COLORS.secondary);
+	const border = resolveMapColor(MAP_UI_COLORS.border);
+	const fg = resolveMapColor(MAP_UI_COLORS.foreground);
+	setLayerPaint(map, 'device-clusters', 'circle-color', secondary);
+	setLayerPaint(map, 'device-clusters', 'circle-stroke-color', border);
+	setLayerPaint(map, 'device-cluster-count', 'text-color', fg);
+}
+
+function applyLabelPaint(map: maplibregl.Map): void {
+	const mutedFg = resolveMapColor(MAP_UI_COLORS.mutedForeground);
+	const bg = resolveMapColor(MAP_UI_COLORS.background);
+	const fg = resolveMapColor(MAP_UI_COLORS.foreground);
+	setLayerPaint(map, 'cell-tower-labels', 'text-color', mutedFg);
+	setLayerPaint(map, 'cell-tower-labels', 'text-halo-color', bg);
+	setLayerPaint(map, 'housenumber-labels', 'text-color', mutedFg);
+	setLayerPaint(map, 'housenumber-labels', 'text-halo-color', bg);
+	setLayerPaint(map, 'poi-labels-all', 'text-color', fg);
+	setLayerPaint(map, 'poi-labels-all', 'text-halo-color', bg);
+}
+
+function applyBuildingPaint(map: maplibregl.Map): void {
+	const border = resolveMapColor(MAP_UI_COLORS.border);
+	setLayerPaint(map, 'building-outline-enhanced', 'line-color', `${border}4D`);
+}
+
 export function syncThemePaint(map: maplibregl.Map): void {
-	const fg = resolveMapColor(MAP_UI_COLORS.foreground),
-		mutedFg = resolveMapColor(MAP_UI_COLORS.mutedForeground),
-		bg = resolveMapColor(MAP_UI_COLORS.background),
-		secondary = resolveMapColor(MAP_UI_COLORS.secondary),
-		border = resolveMapColor(MAP_UI_COLORS.border);
-	if (map.getLayer('device-clusters')) {
-		map.setPaintProperty('device-clusters', 'circle-color', secondary);
-		map.setPaintProperty('device-clusters', 'circle-stroke-color', border);
-	}
-	if (map.getLayer('device-cluster-count'))
-		map.setPaintProperty('device-cluster-count', 'text-color', fg);
-	if (map.getLayer('cell-tower-labels')) {
-		map.setPaintProperty('cell-tower-labels', 'text-color', mutedFg);
-		map.setPaintProperty('cell-tower-labels', 'text-halo-color', bg);
-	}
-	if (map.getLayer('housenumber-labels')) {
-		map.setPaintProperty('housenumber-labels', 'text-color', mutedFg);
-		map.setPaintProperty('housenumber-labels', 'text-halo-color', bg);
-	}
-	if (map.getLayer('poi-labels-all')) {
-		map.setPaintProperty('poi-labels-all', 'text-color', fg);
-		map.setPaintProperty('poi-labels-all', 'text-halo-color', bg);
-	}
-	if (map.getLayer('building-outline-enhanced'))
-		map.setPaintProperty('building-outline-enhanced', 'line-color', `${border}4D`);
+	applyClusterPaint(map);
+	applyLabelPaint(map);
+	applyBuildingPaint(map);
 }
 
 // ── Symbol layer update ──
@@ -198,53 +173,72 @@ let _prevAffiliationSize = -1;
 let _prevCotCount = -1;
 let _prevDeviceFeatures: FeatureCollection | null = null;
 
-export function updateSymbolLayer(
-	symbolLayer: SymbolLayer,
-	deviceGeoJSON: FeatureCollection,
-	affiliations: Map<string, Affiliation>,
-	cotMessages: string[]
-): void {
-	// Skip full rebuild if inputs unchanged (feature count + affiliation size + CoT count)
-	const devCount = deviceGeoJSON?.features.length ?? 0;
-	const affSize = affiliations.size;
-	const cotCount = cotMessages.length;
+function hasSymbolInputChanged(
+	devCount: number,
+	affSize: number,
+	cotCount: number,
+	deviceGeoJSON: FeatureCollection
+): boolean {
 	if (
 		devCount === _prevDeviceCount &&
 		affSize === _prevAffiliationSize &&
 		cotCount === _prevCotCount &&
 		deviceGeoJSON === _prevDeviceFeatures
 	) {
-		return;
+		return false;
 	}
 	_prevDeviceCount = devCount;
 	_prevAffiliationSize = affSize;
 	_prevCotCount = cotCount;
 	_prevDeviceFeatures = deviceGeoJSON;
+	return true;
+}
 
-	let features: Feature[] = [];
-	if (deviceGeoJSON) {
-		features = deviceGeoJSON.features.map((f) => {
-			const props = f.properties || {};
-			const mac = (props.mac || '').toUpperCase();
-			const affiliation = affiliations.get(mac) || 'unknown';
-			return {
-				...f,
-				properties: {
-					...props,
-					sidc: SymbolFactory.getSidcForDevice(props.type || 'unknown', affiliation),
-					label: props.ssid || props.mac || 'Unknown'
-				}
-			};
-		});
+function resolveAffiliation(
+	props: Record<string, unknown>,
+	affiliations: Map<string, Affiliation>
+): Affiliation {
+	const mac = ((props.mac as string) || '').toUpperCase();
+	return affiliations.get(mac) || 'unknown';
+}
+
+function buildSymbolLabel(props: Record<string, unknown>): string {
+	return (props.ssid as string) || (props.mac as string) || 'Unknown';
+}
+
+function mapDeviceToSymbol(f: Feature, affiliations: Map<string, Affiliation>): Feature {
+	const props = f.properties || {};
+	const affiliation = resolveAffiliation(props, affiliations);
+	return {
+		...f,
+		properties: {
+			...props,
+			sidc: SymbolFactory.getSidcForDevice((props.type as string) || 'unknown', affiliation),
+			label: buildSymbolLabel(props)
+		}
+	};
+}
+
+function parseCotFeatures(cotMessages: string[]): Feature[] {
+	if (!cotMessages.length) return [];
+	return cotMessages.map((xml) => parseCotToFeature(xml)).filter((f): f is Feature => f !== null);
+}
+
+export function updateSymbolLayer(
+	symbolLayer: SymbolLayer,
+	deviceGeoJSON: FeatureCollection,
+	affiliations: Map<string, Affiliation>,
+	cotMessages: string[]
+): void {
+	const devCount = deviceGeoJSON?.features.length ?? 0;
+	if (!hasSymbolInputChanged(devCount, affiliations.size, cotMessages.length, deviceGeoJSON)) {
+		return;
 	}
-	if (cotCount > 0)
-		features = [
-			...features,
-			...(cotMessages
-				.map((xml) => parseCotToFeature(xml))
-				.filter((f) => f !== null) as Feature[])
-		];
-	symbolLayer.update(features);
+	const deviceFeatures = deviceGeoJSON
+		? deviceGeoJSON.features.map((f) => mapDeviceToSymbol(f, affiliations))
+		: [];
+	const cotFeatures = parseCotFeatures(cotMessages);
+	symbolLayer.update([...deviceFeatures, ...cotFeatures]);
 }
 
 // ── Cell tower fetch ──
@@ -254,16 +248,18 @@ export interface CellTowerFetchState {
 	lastLon: number;
 }
 
+function shouldFetchTowers(lat: number, lon: number, state: CellTowerFetchState): boolean {
+	if (lat === 0 && lon === 0) return false;
+	if (state.lastLat === 0 && state.lastLon === 0) return true;
+	return haversineKm(lat, lon, state.lastLat, state.lastLon) > 1;
+}
+
 export async function maybeFetchCellTowers(
 	lat: number,
 	lon: number,
 	state: CellTowerFetchState
 ): Promise<FeatureCollection | null> {
-	if (lat === 0 && lon === 0) return null;
-	const shouldFetch =
-		(state.lastLat === 0 && state.lastLon === 0) ||
-		haversineKm(lat, lon, state.lastLat, state.lastLon) > 1;
-	if (!shouldFetch) return null;
+	if (!shouldFetchTowers(lat, lon, state)) return null;
 	const result = await fetchCellTowers(lat, lon);
 	if (result) {
 		state.lastLat = lat;
@@ -272,49 +268,5 @@ export async function maybeFetchCellTowers(
 	return result;
 }
 
-// ── Range bands builder ──
-
-export function buildRangeBands(): RangeBand[] {
-	return [
-		{
-			outerR: 25,
-			innerR: 0,
-			band: 'vstrong',
-			color: resolveMapColor(SIGNAL_COLORS.critical),
-			rssi: '> -50',
-			label: '25m'
-		},
-		{
-			outerR: 60,
-			innerR: 25,
-			band: 'strong',
-			color: resolveMapColor(SIGNAL_COLORS.strong),
-			rssi: '-50 to -60',
-			label: '60m'
-		},
-		{
-			outerR: 100,
-			innerR: 60,
-			band: 'good',
-			color: resolveMapColor(SIGNAL_COLORS.good),
-			rssi: '-60 to -70',
-			label: '100m'
-		},
-		{
-			outerR: 175,
-			innerR: 100,
-			band: 'fair',
-			color: resolveMapColor(SIGNAL_COLORS.fair),
-			rssi: '-70 to -80',
-			label: '175m'
-		},
-		{
-			outerR: 300,
-			innerR: 175,
-			band: 'weak',
-			color: resolveMapColor(SIGNAL_COLORS.weak),
-			rssi: '< -80',
-			label: '300m'
-		}
-	];
-}
+// ── Range bands builder (re-export from helpers) ──
+export { buildRangeBands } from './map-handlers-helpers';

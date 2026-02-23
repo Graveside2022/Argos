@@ -40,90 +40,103 @@ export class CertManager {
 	 * @param password The password for the P12 file.
 	 * @returns Paths to the extracted cert, key, and optional CA.
 	 */
+	/** Prepare a clean config directory and write the P12 file */
+	private static prepareConfigDir(configDir: string, p12Buffer: Buffer): string {
+		if (fs.existsSync(configDir)) fs.rmSync(configDir, { recursive: true, force: true });
+		fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+		const p12Path = path.join(configDir, 'client.p12');
+		fs.writeFileSync(p12Path, p12Buffer, { mode: 0o600 });
+		return p12Path;
+	}
+
+	/** Extract cert and key from P12, set permissions, validate non-empty */
+	private static async extractCertAndKey(
+		p12Path: string,
+		configDir: string,
+		password: string
+	): Promise<{ certPath: string; keyPath: string; caPath?: string }> {
+		const certPath = path.join(configDir, 'client.crt');
+		const keyPath = path.join(configDir, 'client.key');
+
+		await execFileAsync('openssl', [
+			'pkcs12',
+			'-in',
+			p12Path,
+			'-clcerts',
+			'-nokeys',
+			'-out',
+			certPath,
+			'-passin',
+			`pass:${password}`
+		]);
+		await execFileAsync('openssl', [
+			'pkcs12',
+			'-in',
+			p12Path,
+			'-nocerts',
+			'-out',
+			keyPath,
+			'-passin',
+			`pass:${password}`,
+			'-nodes'
+		]);
+
+		const caPath = await this.tryExtractCA(p12Path, configDir, password);
+
+		fs.chmodSync(certPath, 0o600);
+		fs.chmodSync(keyPath, 0o600);
+
+		this.validateExtractedFiles(certPath, keyPath);
+		return { certPath, keyPath, caPath };
+	}
+
+	/** Attempt to extract CA certificate; returns path if successful, undefined otherwise */
+	private static async tryExtractCA(
+		p12Path: string,
+		configDir: string,
+		password: string
+	): Promise<string | undefined> {
+		const caPath = path.join(configDir, 'ca.crt');
+		try {
+			await execFileAsync('openssl', [
+				'pkcs12',
+				'-in',
+				p12Path,
+				'-cacerts',
+				'-nokeys',
+				'-out',
+				caPath,
+				'-passin',
+				`pass:${password}`
+			]);
+			fs.chmodSync(caPath, 0o600);
+			return fs.existsSync(caPath) ? caPath : undefined;
+		} catch {
+			return undefined;
+		}
+	}
+
+	/** Validate that cert and key files are non-empty */
+	private static validateExtractedFiles(certPath: string, keyPath: string): void {
+		if (fs.statSync(certPath).size === 0 || fs.statSync(keyPath).size === 0) {
+			throw new InputValidationError(
+				'This .p12 file does not contain a client certificate and private key. ' +
+					'It may be a CA truststore — upload it in the Trust Store section instead.'
+			);
+		}
+	}
+
 	static async saveAndExtract(
 		configId: string,
 		p12Buffer: Buffer,
 		password: string
 	): Promise<{ certPath: string; keyPath: string; caPath?: string }> {
 		const configDir = this.validateConfigId(configId);
-
-		// Ensure config directory exists with strict permissions
-		if (fs.existsSync(configDir)) {
-			fs.rmSync(configDir, { recursive: true, force: true });
-		}
-		fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
-
-		const p12Path = path.join(configDir, 'client.p12');
-		const certPath = path.join(configDir, 'client.crt');
-		const keyPath = path.join(configDir, 'client.key');
-
-		// Write P12 file securely
-		fs.writeFileSync(p12Path, p12Buffer, { mode: 0o600 });
+		const p12Path = this.prepareConfigDir(configDir, p12Buffer);
 
 		try {
-			// Extract Certificate — execFile prevents shell injection via password
-			await execFileAsync('openssl', [
-				'pkcs12',
-				'-in',
-				p12Path,
-				'-clcerts',
-				'-nokeys',
-				'-out',
-				certPath,
-				'-passin',
-				`pass:${password}`
-			]);
-
-			// Extract Private Key
-			await execFileAsync('openssl', [
-				'pkcs12',
-				'-in',
-				p12Path,
-				'-nocerts',
-				'-out',
-				keyPath,
-				'-passin',
-				`pass:${password}`,
-				'-nodes'
-			]);
-
-			// Extract CA Certificate (if present)
-			const caPath = path.join(configDir, 'ca.crt');
-			try {
-				await execFileAsync('openssl', [
-					'pkcs12',
-					'-in',
-					p12Path,
-					'-cacerts',
-					'-nokeys',
-					'-out',
-					caPath,
-					'-passin',
-					`pass:${password}`
-				]);
-				fs.chmodSync(caPath, 0o600);
-			} catch (_e) {
-				// CA might not be present in the p12 bundle
-			}
-
-			// Set strict permissions on extracted files
-			fs.chmodSync(certPath, 0o600);
-			fs.chmodSync(keyPath, 0o600);
-
-			// Validate extracted cert/key are non-empty — a CA-only truststore P12
-			// produces 0-byte client.crt and client.key
-			const certSize = fs.statSync(certPath).size;
-			const keySize = fs.statSync(keyPath).size;
-			if (certSize === 0 || keySize === 0) {
-				throw new InputValidationError(
-					'This .p12 file does not contain a client certificate and private key. ' +
-						'It may be a CA truststore — upload it in the Trust Store section instead.'
-				);
-			}
-
-			return { certPath, keyPath, caPath: fs.existsSync(caPath) ? caPath : undefined };
+			return await this.extractCertAndKey(p12Path, configDir, password);
 		} catch (error) {
-			// Cleanup on failure
 			fs.rmSync(configDir, { recursive: true, force: true });
 			throw new Error(
 				`Failed to extract certificates: ${error instanceof Error ? error.message : String(error)}`

@@ -60,66 +60,71 @@ export function registerMessageHandlers(
 	messageHandlers.set('/kismet', handleKismetMessage);
 }
 
+/** Send a JSON message over a WebSocket. */
+function wsSend(ws: WebSocket, payload: unknown): void {
+	ws.send(JSON.stringify(payload));
+}
+
+/** Send a validation error response for malformed messages. */
+function sendValidationError(ws: WebSocket, error: z.ZodError): void {
+	wsSend(ws, { type: 'error', message: 'Invalid message format', errors: error.format() });
+}
+
+/** Static responses for HackRF message types. */
+const HACKRF_STATIC_HANDLERS: Record<string, (ws: WebSocket) => void> = {
+	request_status: (ws) =>
+		wsSend(ws, {
+			type: 'status',
+			data: {
+				connected: true,
+				sweeping: false,
+				frequency: 100000000,
+				sampleRate: 20000000,
+				gain: 40
+			}
+		}),
+	request_sweep_status: (ws) =>
+		wsSend(ws, {
+			type: 'sweep_status',
+			data: {
+				isActive: false,
+				startFreq: 88000000,
+				endFreq: 108000000,
+				currentFreq: 0,
+				progress: 0
+			}
+		}),
+	stop_sweep: (ws) => wsSend(ws, { type: 'sweep_status', data: { isActive: false } })
+};
+
 /** HackRF WebSocket message handler */
 function handleHackRFMessage(ws: WebSocket, rawMessage: WebSocketMessage): void {
 	const validationResult = HackRFMessageSchema.safeParse(rawMessage);
-
-	if (!validationResult.success) {
-		ws.send(
-			JSON.stringify({
-				type: 'error',
-				message: 'Invalid message format',
-				errors: validationResult.error.format()
-			})
-		);
-		return;
-	}
+	if (!validationResult.success) return sendValidationError(ws, validationResult.error);
 
 	const message = validationResult.data;
+	const staticHandler = HACKRF_STATIC_HANDLERS[message.type];
+	if (staticHandler) return staticHandler(ws);
 
-	switch (message.type) {
-		case 'request_status':
-			ws.send(
-				JSON.stringify({
-					type: 'status',
-					data: {
-						connected: true,
-						sweeping: false,
-						frequency: 100000000,
-						sampleRate: 20000000,
-						gain: 40
-					}
-				})
-			);
-			break;
+	if (message.type === 'start_sweep') return handleStartSweep(ws, message);
+	if (message.type === 'subscribe') wsSend(ws, { type: 'subscribed', streams: message.streams });
+}
 
-		case 'request_sweep_status':
-			ws.send(
-				JSON.stringify({
-					type: 'sweep_status',
-					data: {
-						isActive: false,
-						startFreq: 88000000,
-						endFreq: 108000000,
-						currentFreq: 0,
-						progress: 0
-					}
-				})
-			);
-			break;
+/** Resolve sweep config with defaults. */
+function resolveSweepConfig(config?: { startFreq: number; endFreq: number }) {
+	return { startFreq: config?.startFreq ?? 88000000, endFreq: config?.endFreq ?? 108000000 };
+}
 
-		case 'start_sweep':
-			handleStartSweep(ws, message);
-			break;
-
-		case 'stop_sweep':
-			ws.send(JSON.stringify({ type: 'sweep_status', data: { isActive: false } }));
-			break;
-
-		case 'subscribe':
-			ws.send(JSON.stringify({ type: 'subscribed', streams: message.streams }));
-			break;
-	}
+/** Send a single simulated spectrum data frame. */
+function sendSpectrumFrame(ws: WebSocket): void {
+	wsSend(ws, {
+		type: 'spectrum_data',
+		data: {
+			frequencies: Array.from({ length: 100 }, (_, i) => 88000000 + i * 200000),
+			power: Array.from({ length: 100 }, () => -80 + Math.random() * 40),
+			timestamp: Date.now()
+		}
+	});
 }
 
 /** Handle HackRF sweep start (with simulated progress) */
@@ -127,18 +132,11 @@ function handleStartSweep(
 	ws: WebSocket,
 	message: { type: 'start_sweep'; config?: { startFreq: number; endFreq: number } }
 ): void {
-	ws.send(
-		JSON.stringify({
-			type: 'sweep_status',
-			data: {
-				isActive: true,
-				startFreq: message.config?.startFreq || 88000000,
-				endFreq: message.config?.endFreq || 108000000,
-				currentFreq: message.config?.startFreq || 88000000,
-				progress: 0
-			}
-		})
-	);
+	const cfg = resolveSweepConfig(message.config);
+	wsSend(ws, {
+		type: 'sweep_status',
+		data: { isActive: true, ...cfg, currentFreq: cfg.startFreq, progress: 0 }
+	});
 
 	let progress = 0;
 	const interval = setInterval(() => {
@@ -146,20 +144,9 @@ function handleStartSweep(
 		if (progress > 100) {
 			clearInterval(interval);
 			activeIntervals.delete(ws);
-			ws.send(
-				JSON.stringify({ type: 'sweep_status', data: { isActive: false, progress: 100 } })
-			);
+			wsSend(ws, { type: 'sweep_status', data: { isActive: false, progress: 100 } });
 		} else {
-			ws.send(
-				JSON.stringify({
-					type: 'spectrum_data',
-					data: {
-						frequencies: Array.from({ length: 100 }, (_, i) => 88000000 + i * 200000),
-						power: Array.from({ length: 100 }, () => -80 + Math.random() * 40),
-						timestamp: Date.now()
-					}
-				})
-			);
+			sendSpectrumFrame(ws);
 		}
 	}, 1000);
 

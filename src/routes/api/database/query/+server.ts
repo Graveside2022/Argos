@@ -4,99 +4,84 @@ import { getRFDatabase } from '$lib/server/db/database';
 
 import type { RequestHandler } from './$types';
 
+const DANGEROUS_KEYWORDS = [
+	'drop ', 'delete ', 'update ', 'insert ',
+	'alter ', 'create ', 'pragma ', 'attach ', 'detach '
+];
+
+/** Check if query contains dangerous SQL keywords. Returns the keyword or null. */
+function findDangerousKeyword(queryLower: string): string | null {
+	for (const keyword of DANGEROUS_KEYWORDS) {
+		if (queryLower.includes(keyword)) return keyword.trim();
+	}
+	return null;
+}
+
+/** Validate the query is a safe SELECT. Returns error message or null. */
+function validateQuery(query: unknown): string | null {
+	if (!query || typeof query !== 'string') return 'Query is required and must be a string';
+	const lower = (query as string).toLowerCase().trim();
+	const dangerous = findDangerousKeyword(lower);
+	if (dangerous) return `Query contains disallowed keyword: ${dangerous}. Use read-only SELECT queries only.`;
+	if (!lower.startsWith('select ')) return 'Only SELECT queries are allowed';
+	return null;
+}
+
+/** Enforce LIMIT clause, capping at 1000. Returns final query or error. */
+function enforceLimit(query: string): { query?: string; error?: string } {
+	const lower = query.toLowerCase().trim();
+	if (!lower.includes('limit ')) {
+		return { query: `${query.trim().replace(/;$/, '')} LIMIT 1000` };
+	}
+	const limitMatch = lower.match(/limit\s+(\d+)/);
+	if (limitMatch && parseInt(limitMatch[1]) > 1000) {
+		return { error: 'LIMIT cannot exceed 1000 rows' };
+	}
+	return { query };
+}
+
+/** Safe error message extraction. */
+function errMsg(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+/** Execute a prepared SELECT query with optional params. */
+function executeQuery(finalQuery: string, params: unknown[]): { results: unknown[]; duration: number } {
+	const db = getRFDatabase().rawDb;
+	const startTime = Date.now();
+	const results = params.length > 0
+		? db.prepare(finalQuery).all(...params)
+		: db.prepare(finalQuery).all();
+	return { results, duration: Date.now() - startTime };
+}
+
+/** Validate and prepare the query, returning error response or final query. */
+function prepareQuery(query: unknown): { finalQuery?: string; errorMsg?: string } {
+	const valErr = validateQuery(query);
+	if (valErr) return { errorMsg: valErr };
+	const limitResult = enforceLimit(query as string);
+	if (limitResult.error) return { errorMsg: limitResult.error };
+	return { finalQuery: limitResult.query };
+}
+
 // Safe query execution with limits and validation
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const { query, params = [] } = body;
 
-		if (!query || typeof query !== 'string') {
-			return json({
-				success: false,
-				error: 'Query is required and must be a string'
-			});
-		}
+		const prepared = prepareQuery(query);
+		if (prepared.errorMsg) return json({ success: false, error: prepared.errorMsg });
 
-		// Safety checks
-		const queryLower = query.toLowerCase().trim();
-
-		// Block dangerous operations
-		const dangerousKeywords = [
-			'drop ',
-			'delete ',
-			'update ',
-			'insert ',
-			'alter ',
-			'create ',
-			'pragma ',
-			'attach ',
-			'detach '
-		];
-
-		for (const keyword of dangerousKeywords) {
-			if (queryLower.includes(keyword)) {
-				return json({
-					success: false,
-					error: `Query contains disallowed keyword: ${keyword.trim()}. Use read-only SELECT queries only.`
-				});
-			}
-		}
-
-		// Enforce SELECT only
-		if (!queryLower.startsWith('select ')) {
-			return json({
-				success: false,
-				error: 'Only SELECT queries are allowed'
-			});
-		}
-
-		// Enforce LIMIT clause (max 1000 rows)
-		const hasLimit = queryLower.includes('limit ');
-		let finalQuery = query;
-
-		if (!hasLimit) {
-			finalQuery = `${query.trim().replace(/;$/, '')} LIMIT 1000`;
-		} else {
-			// Extract limit value and cap at 1000
-			const limitMatch = queryLower.match(/limit\s+(\d+)/);
-			if (limitMatch) {
-				const limitValue = parseInt(limitMatch[1]);
-				if (limitValue > 1000) {
-					return json({
-						success: false,
-						error: 'LIMIT cannot exceed 1000 rows'
-					});
-				}
-			}
-		}
-
-		const db = getRFDatabase();
-		const dbInternal = db.rawDb;
-
-		const startTime = Date.now();
-		const stmt = dbInternal.prepare(finalQuery);
-
-		let results;
-		if (params.length > 0) {
-			results = stmt.all(...params);
-		} else {
-			results = stmt.all();
-		}
-
-		const executionTime = Date.now() - startTime;
-
+		const { results, duration } = executeQuery(prepared.finalQuery as string, params);
 		return json({
 			success: true,
-			query: finalQuery,
+			query: prepared.finalQuery,
 			row_count: results.length,
-			execution_time_ms: executionTime,
+			execution_time_ms: duration,
 			results
 		});
 	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		return json({
-			success: false,
-			error: msg
-		});
+		return json({ success: false, error: errMsg(error) });
 	}
 };

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import HardwareDeviceRow from './HardwareDeviceRow.svelte';
-	import type { HardwareDetailRow, HardwareDetails, HardwareStatus } from './types';
+	import type { DeviceState, HardwareDetailRow, HardwareDetails, HardwareStatus } from './types';
 
 	interface Props {
 		hardwareStatus: HardwareStatus | null;
@@ -11,43 +11,77 @@
 
 	let { hardwareStatus, hardwareDetails, expandedRow, onToggleExpand }: Props = $props();
 
-	let hackrfDetails = $derived.by((): HardwareDetailRow[] => {
-		const rows: HardwareDetailRow[] = [];
-		const sdr = hardwareDetails?.sdr;
-		if (sdr?.manufacturer) rows.push({ key: 'Make', value: sdr.manufacturer });
-		if (sdr?.product) rows.push({ key: 'Model', value: sdr.product });
-		if (sdr?.serial) rows.push({ key: 'Serial', value: sdr.serial });
-		if (sdr?.firmwareApi) rows.push({ key: 'FW API', value: sdr.firmwareApi });
-		if (sdr?.usbSpeed) rows.push({ key: 'USB', value: sdr.usbSpeed });
-		if (hardwareStatus?.hackrf.owner) {
-			rows.push({ key: 'Used by', value: hardwareStatus.hackrf.owner, className: 'accent' });
-		}
-		if (!sdr?.manufacturer && !hardwareStatus?.hackrf.isDetected) {
+	type FieldMapping = [string, string | undefined, HardwareDetailRow['className']?];
+
+	/** Collect truthy field mappings into detail rows. */
+	function collectRows(fields: FieldMapping[]): HardwareDetailRow[] {
+		return fields
+			.filter((f): f is [string, string, HardwareDetailRow['className']?] => !!f[1])
+			.map(([key, value, className]) =>
+				className ? { key, value, className } : { key, value }
+			);
+	}
+
+	/** SDR field mappings from a resolved sdr info object. */
+	function sdrFields(sdr: NonNullable<HardwareDetails['sdr']>): FieldMapping[] {
+		return [
+			['Make', sdr.manufacturer],
+			['Model', sdr.product],
+			['Serial', sdr.serial],
+			['FW API', sdr.firmwareApi],
+			['USB', sdr.usbSpeed]
+		];
+	}
+
+	/** WiFi field mappings from a resolved wifi info object. */
+	function wifiFields(wifi: NonNullable<HardwareDetails['wifi']>): FieldMapping[] {
+		return [
+			['Chipset', wifi.chipset],
+			['MAC', wifi.mac],
+			['Driver', wifi.driver],
+			['Interface', wifi.monitorInterface || wifi.interface],
+			['Mode', wifi.mode],
+			['Bands', wifi.bands?.length ? wifi.bands.join(', ') : undefined]
+		];
+	}
+
+	/** Build detail rows for a device given its field mappings, owner, and detection state. */
+	function buildDetails(
+		fields: FieldMapping[],
+		owner: string | undefined,
+		hasInfo: boolean,
+		isDetected: boolean
+	): HardwareDetailRow[] {
+		fields.push(['Used by', owner, 'accent']);
+		const rows = collectRows(fields);
+		if (!hasInfo && !isDetected)
 			rows.push({ key: 'Status', value: 'Not detected', className: 'dim' });
-		}
 		return rows;
+	}
+
+	/** Map a nullable info object to field mappings, returning [] if null. */
+	function mapFields<T>(
+		info: T | undefined | null,
+		mapper: (v: T) => FieldMapping[]
+	): FieldMapping[] {
+		return info ? mapper(info) : [];
+	}
+
+	/** Get owner and detection from a nullable device status entry. */
+	function deviceStatus(device: DeviceState | undefined): [string | undefined, boolean] {
+		return [device?.owner ?? undefined, !!device?.isDetected];
+	}
+
+	let hackrfDetails = $derived.by(() => {
+		const fields = mapFields(hardwareDetails?.sdr, sdrFields);
+		const [owner, detected] = deviceStatus(hardwareStatus?.hackrf);
+		return buildDetails(fields, owner, !!hardwareDetails?.sdr?.manufacturer, detected);
 	});
 
-	let alfaDetails = $derived.by((): HardwareDetailRow[] => {
-		const rows: HardwareDetailRow[] = [];
-		const wifi = hardwareDetails?.wifi;
-		if (wifi?.chipset) rows.push({ key: 'Chipset', value: wifi.chipset });
-		if (wifi?.mac) rows.push({ key: 'MAC', value: wifi.mac });
-		if (wifi?.driver) rows.push({ key: 'Driver', value: wifi.driver });
-		if (wifi?.interface || wifi?.monitorInterface) {
-			rows.push({ key: 'Interface', value: wifi.monitorInterface || wifi.interface || '' });
-		}
-		if (wifi?.mode) rows.push({ key: 'Mode', value: wifi.mode });
-		if (wifi?.bands && wifi.bands.length > 0) {
-			rows.push({ key: 'Bands', value: wifi.bands.join(', ') });
-		}
-		if (hardwareStatus?.alfa.owner) {
-			rows.push({ key: 'Used by', value: hardwareStatus.alfa.owner, className: 'accent' });
-		}
-		if (!wifi?.chipset && !hardwareStatus?.alfa.isDetected) {
-			rows.push({ key: 'Status', value: 'Not detected', className: 'dim' });
-		}
-		return rows;
+	let alfaDetails = $derived.by(() => {
+		const fields = mapFields(hardwareDetails?.wifi, wifiFields);
+		const [owner, detected] = deviceStatus(hardwareStatus?.alfa);
+		return buildDetails(fields, owner, !!hardwareDetails?.wifi?.chipset, detected);
 	});
 
 	let bluetoothDetails = $derived.by((): HardwareDetailRow[] => {

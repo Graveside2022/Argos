@@ -14,6 +14,11 @@ interface ValidationIssue {
 	count: number;
 }
 
+/** Check if a frequency is outside HackRF range (800-6000 MHz). */
+function isFreqOutOfRange(freq: number | undefined): boolean {
+	return !!freq && (freq < 800 || freq > 6000);
+}
+
 /**
  * Validate HackRF sweep_data events for required fields and frequency ranges.
  */
@@ -47,11 +52,7 @@ export function validateSweepData(events: CapturedEvent[]): ValidationIssue[] {
 
 	const outOfRange = sweepEvents.filter((e) => {
 		const data = e.data as { start_freq?: number; stop_freq?: number };
-		const { start_freq, stop_freq } = data;
-		return (
-			(start_freq && (start_freq < 800 || start_freq > 6000)) ||
-			(stop_freq && (stop_freq < 800 || stop_freq > 6000))
-		);
+		return isFreqOutOfRange(data.start_freq) || isFreqOutOfRange(data.stop_freq);
 	});
 	if (outOfRange.length > 0) {
 		issues.push({
@@ -86,6 +87,50 @@ export function validateHeartbeats(
 /**
  * Generate recommendations from stream monitoring results.
  */
+interface StreamMetrics {
+	eventCount: number;
+	eventsPerSec: number;
+	streamUrl: string;
+	errorCount: number;
+	validationIssueCount: number;
+	maxLatency: number;
+}
+
+/** Check for throughput issues. */
+function checkThroughput(m: StreamMetrics): string[] {
+	if (m.eventCount === 0)
+		return [
+			'CRITICAL: No events received - stream may be broken',
+			'Check: Is the service running? Is hardware connected?'
+		];
+	if (m.eventsPerSec < 1 && m.streamUrl === '/api/hackrf/data-stream')
+		return [
+			'LOW throughput - expected 20 events/sec for HackRF stream',
+			'Check: Is HackRF sweep running? Check throttle settings'
+		];
+	return [];
+}
+
+/** Declarative recommendation rules. */
+const STREAM_RULES: Array<(m: StreamMetrics) => string[]> = [
+	checkThroughput,
+	(m) =>
+		m.errorCount > 0
+			? [`${m.errorCount} errors during monitoring`, 'Review error details below']
+			: [],
+	(m) =>
+		m.validationIssueCount > 0
+			? ['Data validation issues detected', 'Review validation_issues below for details']
+			: [],
+	(m) =>
+		m.maxLatency > 1000
+			? [
+					'HIGH latency detected (>1s between events)',
+					'Possible backpressure or network issues'
+				]
+			: []
+];
+
 export function generateStreamRecommendations(
 	eventCount: number,
 	eventsPerSec: number,
@@ -94,36 +139,16 @@ export function generateStreamRecommendations(
 	validationIssueCount: number,
 	maxLatency: number
 ): string[] {
-	const recommendations: string[] = [];
-
-	if (eventCount === 0) {
-		recommendations.push('CRITICAL: No events received - stream may be broken');
-		recommendations.push('Check: Is the service running? Is hardware connected?');
-	} else if (eventsPerSec < 1 && streamUrl === '/api/hackrf/data-stream') {
-		recommendations.push('LOW throughput - expected 20 events/sec for HackRF stream');
-		recommendations.push('Check: Is HackRF sweep running? Check throttle settings');
-	}
-
-	if (errorCount > 0) {
-		recommendations.push(`${errorCount} errors during monitoring`);
-		recommendations.push('Review error details below');
-	}
-
-	if (validationIssueCount > 0) {
-		recommendations.push('Data validation issues detected');
-		recommendations.push('Review validation_issues below for details');
-	}
-
-	if (maxLatency > 1000) {
-		recommendations.push('HIGH latency detected (>1s between events)');
-		recommendations.push('Possible backpressure or network issues');
-	}
-
-	if (recommendations.length === 0) {
-		recommendations.push('Stream health looks good');
-	}
-
-	return recommendations;
+	const metrics: StreamMetrics = {
+		eventCount,
+		eventsPerSec,
+		streamUrl,
+		errorCount,
+		validationIssueCount,
+		maxLatency
+	};
+	const results = STREAM_RULES.flatMap((rule) => rule(metrics));
+	return results.length > 0 ? results : ['Stream health looks good'];
 }
 
 /**

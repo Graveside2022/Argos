@@ -18,65 +18,45 @@ interface DeviceInfo {
 	error?: string;
 }
 
-async function detectConnectedDevices(): Promise<{
-	hackrf: boolean;
-	deviceInfo: Record<string, DeviceInfo>;
-}> {
-	const deviceInfo: Record<string, DeviceInfo> = {};
-	let hackrfConnected = false;
+/** Parse hackrf_info output into a DeviceInfo record. */
+function parseHackrfInfo(stdout: string): DeviceInfo {
+	const serialMatch = stdout.match(/Serial number:\s*(\S+)/);
+	return { connected: true, serial: serialMatch?.[1] ?? 'unknown', info: stdout.trim() };
+}
 
-	// Check for HackRF
+/** Probe for HackRF device via hackrf_info. */
+async function detectHackrf(): Promise<DeviceInfo> {
 	try {
 		const { stdout } = await execFileAsync('/usr/bin/hackrf_info', [], { timeout: 2000 });
-		if (stdout.includes('Serial number')) {
-			hackrfConnected = true;
-			const serialMatch = stdout.match(/Serial number:\s*(\S+)/);
-			deviceInfo.hackrf = {
-				connected: true,
-				serial: serialMatch ? serialMatch[1] : 'unknown',
-				info: stdout.trim()
-			};
-		}
-	} catch (_error) {
-		deviceInfo.hackrf = { connected: false, error: 'Not detected' };
+		if (stdout.includes('Serial number')) return parseHackrfInfo(stdout);
+		return { connected: false, error: 'Not detected' };
+	} catch {
+		return { connected: false, error: 'Not detected' };
 	}
+}
 
-	return { hackrf: hackrfConnected, deviceInfo };
+/** Build the full status response payload. */
+function buildStatusPayload(hackrfInfo: DeviceInfo) {
+	const hackrf = hackrfInfo.connected;
+	return {
+		connectedDevices: { hackrf },
+		deviceInfo: { hackrf: hackrfInfo },
+		activeDevice: hackrf ? 'hackrf' : 'none',
+		device: hackrf ? 'hackrf' : 'none',
+		...sweepManager.getStatus(),
+		bufferStats: null,
+		bufferHealth: null
+	};
 }
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Detect connected devices (HackRF only)
-		const { hackrf, deviceInfo } = await detectConnectedDevices();
-
-		const hackrfStatus = sweepManager.getStatus();
-		const status: Record<string, unknown> = {
-			connectedDevices: {
-				hackrf
-			},
-			deviceInfo,
-			activeDevice: hackrf ? 'hackrf' : 'none',
-			device: hackrf ? 'hackrf' : 'none',
-			...hackrfStatus,
-			bufferStats: null,
-			bufferHealth: null
-		};
-
-		return json({
-			status: 'success',
-			data: status
-		});
+		const hackrfInfo = await detectHackrf();
+		return json({ status: 'success', data: buildStatusPayload(hackrfInfo) });
 	} catch (error: unknown) {
-		logger.error('Error in rf/status endpoint', {
-			error: error instanceof Error ? error.message : String(error)
-		});
-		return json(
-			{
-				status: 'error',
-				message: error instanceof Error ? error.message : 'Internal server error'
-			},
-			{ status: 500 }
-		);
+		const msg = error instanceof Error ? error.message : String(error);
+		logger.error('Error in rf/status endpoint', { error: msg });
+		return json({ status: 'error', message: msg }, { status: 500 });
 	}
 };
 

@@ -82,24 +82,24 @@
 		}
 	}
 
+	/** Check if GSM Evil is currently running from status response. */
+	function isGsmRunning(data: Record<string, unknown>): boolean {
+		const details = data.details as Record<string, Record<string, unknown>> | undefined;
+		return !!(details?.grgsm?.isRunning || data.status === 'running');
+	}
+
+	/** Start IMSI polling when capture is active. */
+	function startImsiPolling() {
+		imsiCaptureActive = true;
+		if (imsiPollInterval) clearInterval(imsiPollInterval);
+		imsiPollInterval = setInterval(() => fetchIMSIs(), 2000);
+		fetchIMSIs();
+	}
+
 	onMount(async () => {
-		// Check if GSM Evil is already running
 		try {
 			const res = await fetch('/api/gsm-evil/status');
-			const data = await res.json();
-			const grgsmRunning = data.details?.grgsm?.isRunning;
-			const bothRunning = data.status === 'running';
-
-			if (grgsmRunning || bothRunning) {
-				imsiCaptureActive = true;
-				// Start polling
-				if (imsiPollInterval) clearInterval(imsiPollInterval);
-				imsiPollInterval = setInterval(() => {
-					fetchIMSIs();
-				}, 2000);
-				// Immediate fetch
-				fetchIMSIs();
-			}
+			if (isGsmRunning(await res.json())) startImsiPolling();
 		} catch (error) {
 			logger.error('[GSM] Status check failed', { error });
 		}

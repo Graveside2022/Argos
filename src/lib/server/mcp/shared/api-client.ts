@@ -12,25 +12,24 @@ export interface ApiFetchOptions extends globalThis.RequestInit {
 /**
  * Fetch helper with authentication, timeout, and error handling
  */
+/** Build auth headers (API key if present). */
+function buildAuthHeaders(): Record<string, string> {
+	const apiKey = process.env.ARGOS_API_KEY || '';
+	return apiKey ? { 'X-API-Key': apiKey } : {};
+}
+
 export async function apiFetch(path: string, options: ApiFetchOptions = {}): Promise<Response> {
 	const { timeout = 15000, ...fetchOptions } = options;
-	const url = `${ARGOS_API}${path}`;
-	const apiKey = process.env.ARGOS_API_KEY || '';
-
-	const resp = await fetch(url, {
+	const resp = await fetch(`${ARGOS_API}${path}`, {
 		...fetchOptions,
 		signal: AbortSignal.timeout(timeout),
 		headers: {
 			'Content-Type': 'application/json',
-			...(apiKey ? { 'X-API-Key': apiKey } : {}),
+			...buildAuthHeaders(),
 			...fetchOptions.headers
 		}
 	});
-
-	if (!resp.ok) {
-		throw new Error(`Argos API error: ${resp.status} ${resp.statusText} for ${path}`);
-	}
-
+	if (!resp.ok) throw new Error(`Argos API error: ${resp.status} ${resp.statusText} for ${path}`);
 	return resp;
 }
 

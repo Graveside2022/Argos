@@ -59,14 +59,93 @@ export interface CountryLookup {
 	};
 }
 
+/** Fake/test MCCs that indicate a spoofed tower. */
+const FAKE_MCCS = new Set(['000', '001', '999']);
+
+/** Classify tower status based on MCC and carrier. */
+function classifyTowerStatus(
+	mcc: string,
+	carrier: string,
+	mccToCountry: CountryLookup
+): { status: TowerGroup['status']; statusSymbol: string } {
+	if (FAKE_MCCS.has(mcc)) return { status: 'fake', statusSymbol: '❌' };
+	if (!mccToCountry[mcc]) return { status: 'suspicious', statusSymbol: '🚨' };
+	if (carrier === 'Unknown') return { status: 'unknown', statusSymbol: '⚠️' };
+	return { status: 'ok', statusSymbol: '✓' };
+}
+
+/** Resolve tower location from lookup or IMSI fallback. */
+function resolveTowerLocation(
+	towerId: string,
+	imsi: CapturedIMSI,
+	towerLocations: { [id: string]: { lat: number; lon: number } | null }
+): { lat: number; lon: number } | null {
+	return (
+		towerLocations[towerId] || (imsi.lat && imsi.lon ? { lat: imsi.lat, lon: imsi.lon } : null)
+	);
+}
+
+/** Coerce an optional number field to string. */
+function fieldStr(value: string | number | undefined): string {
+	return value?.toString() || '';
+}
+
+/** Tower identifier fields. */
+interface TowerFields {
+	mcc: string;
+	mnc: string;
+	lac: string;
+	ci: string;
+	mccMnc: string;
+	towerId: string;
+}
+
+/** Extract IMSI tower fields, returning null if insufficient data. */
+function extractTowerFields(imsi: CapturedIMSI): TowerFields | null {
+	const mcc = fieldStr(imsi.mcc);
+	const mnc = fieldStr(imsi.mnc);
+	const lac = fieldStr(imsi.lac);
+	const ci = fieldStr(imsi.ci);
+	if (!mcc || !lac || !ci) return null;
+	const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
+	return { mcc, mnc, lac, ci, mccMnc, towerId: `${mccMnc}-${lac}-${ci}` };
+}
+
+/** Create a new TowerGroup entry. */
+function createTowerGroup(
+	fields: { mcc: string; mnc: string; lac: string; ci: string; mccMnc: string; towerId: string },
+	imsi: CapturedIMSI,
+	mncToCarrier: { [key: string]: string },
+	mccToCountry: CountryLookup,
+	towerLocations: { [id: string]: { lat: number; lon: number } | null }
+): TowerGroup {
+	const carrier = mncToCarrier[fields.mccMnc] || 'Unknown';
+	const { status, statusSymbol } = classifyTowerStatus(fields.mcc, carrier, mccToCountry);
+	return {
+		...fields,
+		country: mccToCountry[fields.mcc] || { name: 'Unknown', flag: '🏳️', code: '??' },
+		carrier,
+		devices: [],
+		count: 0,
+		firstSeen: new Date('9999-12-31T23:59:59Z'),
+		lastSeen: new Date(0),
+		isNew: false,
+		status,
+		statusSymbol,
+		location: resolveTowerLocation(fields.towerId, imsi, towerLocations)
+	};
+}
+
+/** Add a device to an existing tower group. */
+function addDeviceToGroup(group: TowerGroup, imsi: CapturedIMSI): void {
+	group.devices.push({ imsi: imsi.imsi, tmsi: imsi.tmsi, timestamp: imsi.timestamp });
+	group.count++;
+	const deviceTime = new Date(imsi.timestamp);
+	if (deviceTime > group.lastSeen) group.lastSeen = deviceTime;
+}
+
 /**
  * Groups captured IMSIs by tower (MCC-MNC-LAC-CI combination)
- *
- * @param capturedIMSIs - Array of captured IMSI records
- * @param mncToCarrier - Carrier lookup map (MCC-MNC -> carrier name)
- * @param mccToCountry - Country lookup map (MCC -> country data)
- * @param towerLocations - Tower location data (towerId -> {lat, lon})
- * @returns Array of tower groups with device counts and metadata
  */
 export function groupIMSIsByTower(
 	capturedIMSIs: CapturedIMSI[],
@@ -74,144 +153,51 @@ export function groupIMSIsByTower(
 	mccToCountry: CountryLookup,
 	towerLocations: { [towerId: string]: { lat: number; lon: number } | null }
 ): TowerGroup[] {
-	const towerGroups: { [key: string]: TowerGroup } = {};
+	const groups: { [key: string]: TowerGroup } = {};
 
-	capturedIMSIs.forEach((imsi) => {
-		const mcc = imsi.mcc?.toString() || '';
-		const mnc = imsi.mnc?.toString() || '';
-		const lac = imsi.lac?.toString() || '';
-		const ci = imsi.ci?.toString() || '';
+	for (const imsi of capturedIMSIs) {
+		const fields = extractTowerFields(imsi);
+		if (!fields) continue;
+		groups[fields.towerId] ??= createTowerGroup(
+			fields,
+			imsi,
+			mncToCarrier,
+			mccToCountry,
+			towerLocations
+		);
+		addDeviceToGroup(groups[fields.towerId], imsi);
+	}
 
-		if (mcc && lac && ci) {
-			const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
-			const towerId = `${mccMnc}-${lac}-${ci}`;
+	return Object.values(groups);
+}
 
-			if (!towerGroups[towerId]) {
-				const country = mccToCountry[mcc] || {
-					name: 'Unknown',
-					flag: '🏳️',
-					code: '??'
-				};
-				const carrier = mncToCarrier[mccMnc] || 'Unknown';
+/** Value extractors for each sort column. */
+const SORT_EXTRACTORS: Record<SortColumn, (t: TowerGroup) => string | number> = {
+	carrier: (t) => t.carrier.toLowerCase(),
+	country: (t) => t.country.name.toLowerCase(),
+	location: (t) => (t.location ? 1 : 0),
+	lac: (t) => parseInt(t.lac) || 0,
+	mccMnc: (t) => t.mccMnc,
+	devices: (t) => t.count,
+	lastSeen: (t) => t.lastSeen.getTime()
+};
 
-				// Determine status based on carrier and MCC
-				let status: TowerGroup['status'] = 'ok';
-				let statusSymbol = '✓';
-
-				if (mcc === '000' || mcc === '001' || mcc === '999') {
-					// Fake/Test MCCs
-					status = 'fake';
-					statusSymbol = '❌';
-				} else if (!mccToCountry[mcc]) {
-					// Unknown country
-					status = 'suspicious';
-					statusSymbol = '🚨';
-				} else if (carrier === 'Unknown') {
-					// Unknown carrier
-					status = 'unknown';
-					statusSymbol = '⚠️';
-				}
-
-				// Check towerLocations for the latest location data
-				const location =
-					towerLocations[towerId] ||
-					(imsi.lat && imsi.lon ? { lat: imsi.lat, lon: imsi.lon } : null);
-
-				towerGroups[towerId] = {
-					mcc: mcc,
-					mnc: mnc,
-					mccMnc: mccMnc,
-					lac: lac,
-					ci: ci,
-					country: country,
-					carrier: carrier,
-					devices: [],
-					count: 0,
-					firstSeen: new Date('9999-12-31T23:59:59Z'),
-					lastSeen: new Date(0), // Epoch so any real timestamp will be greater
-					isNew: false,
-					status: status,
-					statusSymbol: statusSymbol,
-					location: location
-				};
-			}
-
-			// Store full device object with timestamp
-			towerGroups[towerId].devices.push({
-				imsi: imsi.imsi,
-				tmsi: imsi.tmsi,
-				timestamp: imsi.timestamp
-			});
-			towerGroups[towerId].count++;
-
-			// Update lastSeen to most recent device timestamp
-			const deviceTime = new Date(imsi.timestamp);
-			if (!towerGroups[towerId].lastSeen || deviceTime > towerGroups[towerId].lastSeen) {
-				towerGroups[towerId].lastSeen = deviceTime;
-			}
-		}
-	});
-
-	// Return unsorted - sorting will be handled by sortTowers()
-	return Object.values(towerGroups);
+/** Compare two values ascending. */
+function compareAsc(a: string | number, b: string | number): number {
+	if (a < b) return -1;
+	if (a > b) return 1;
+	return 0;
 }
 
 /**
  * Sorts tower groups by specified column and direction
- *
- * @param towers - Array of tower groups to sort
- * @param column - Column to sort by
- * @param direction - Sort direction ('asc' or 'desc')
- * @returns Sorted array of tower groups
  */
 export function sortTowers(
 	towers: TowerGroup[],
 	column: SortColumn,
 	direction: 'asc' | 'desc'
 ): TowerGroup[] {
-	const sorted = [...towers].sort((a, b) => {
-		let aVal: string | number | Date;
-		let bVal: string | number | Date;
-
-		switch (column) {
-			case 'carrier':
-				aVal = a.carrier.toLowerCase();
-				bVal = b.carrier.toLowerCase();
-				break;
-			case 'country':
-				aVal = a.country.name.toLowerCase();
-				bVal = b.country.name.toLowerCase();
-				break;
-			case 'location':
-				// Sort by whether location exists, then by distance if both have locations
-				aVal = a.location ? 1 : 0;
-				bVal = b.location ? 1 : 0;
-				break;
-			case 'lac':
-				aVal = parseInt(a.lac) || 0;
-				bVal = parseInt(b.lac) || 0;
-				break;
-			case 'mccMnc':
-				aVal = a.mccMnc;
-				bVal = b.mccMnc;
-				break;
-			case 'devices':
-				aVal = a.count;
-				bVal = b.count;
-				break;
-			case 'lastSeen':
-				aVal = a.lastSeen.getTime();
-				bVal = b.lastSeen.getTime();
-				break;
-			default:
-				return 0;
-		}
-
-		// Compare values
-		if (aVal < bVal) return direction === 'asc' ? -1 : 1;
-		if (aVal > bVal) return direction === 'asc' ? 1 : -1;
-		return 0;
-	});
-
-	return sorted;
+	const extract = SORT_EXTRACTORS[column];
+	const mult = direction === 'asc' ? 1 : -1;
+	return [...towers].sort((a, b) => compareAsc(extract(a), extract(b)) * mult);
 }

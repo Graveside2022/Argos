@@ -32,52 +32,51 @@ class ResourceManager extends EventEmitter {
 		}
 	}
 
+	private applyOwnership(state: ResourceState, ownerName: string | null): void {
+		if (ownerName) {
+			state.owner = ownerName;
+			state.isAvailable = false;
+			if (!state.connectedSince) state.connectedSince = Date.now();
+		} else if (state.owner) {
+			state.owner = null;
+			state.isAvailable = true;
+			state.connectedSince = null;
+		}
+	}
+
+	private resolveHackrfOwner(
+		processes: { name: string }[],
+		containers: { isRunning: boolean; name: string }[]
+	): string | null {
+		if (processes.length > 0) return processes[0].name;
+		const running = containers.find((c) => c.isRunning);
+		return running ? running.name : null;
+	}
+
+	private async refreshHackrf(): Promise<void> {
+		const current = this.state.get(HardwareDevice.HACKRF);
+		if (!current) return;
+		current.isDetected = await hackrfMgr.detectHackRF();
+		const processes = await hackrfMgr.getBlockingProcesses();
+		const containers = await hackrfMgr.getContainerStatus(true);
+		this.applyOwnership(current, this.resolveHackrfOwner(processes, containers));
+		this.state.set(HardwareDevice.HACKRF, current);
+	}
+
+	private async refreshAlfa(): Promise<void> {
+		const current = this.state.get(HardwareDevice.ALFA);
+		if (!current) return;
+		current.isDetected = !!(await alfaMgr.detectAdapter());
+		const processes = await alfaMgr.getBlockingProcesses();
+		const owner = processes.length > 0 ? processes[0].name : null;
+		this.applyOwnership(current, owner);
+		this.state.set(HardwareDevice.ALFA, current);
+	}
+
 	private async refreshDetection(): Promise<void> {
 		try {
-			// --- HackRF: detection + ownership ---
-			const hackrfDetected = await hackrfMgr.detectHackRF();
-			const hackrfCurrent = this.state.get(HardwareDevice.HACKRF);
-			if (!hackrfCurrent) return;
-			hackrfCurrent.isDetected = hackrfDetected;
-
-			const hackrfProcesses = await hackrfMgr.getBlockingProcesses();
-			const hackrfContainers = await hackrfMgr.getContainerStatus(true);
-			const runningContainer = hackrfContainers.find((c) => c.isRunning);
-
-			if (hackrfProcesses.length > 0) {
-				hackrfCurrent.owner = hackrfProcesses[0].name;
-				hackrfCurrent.isAvailable = false;
-				if (!hackrfCurrent.connectedSince) hackrfCurrent.connectedSince = Date.now();
-			} else if (runningContainer) {
-				hackrfCurrent.owner = runningContainer.name;
-				hackrfCurrent.isAvailable = false;
-				if (!hackrfCurrent.connectedSince) hackrfCurrent.connectedSince = Date.now();
-			} else if (hackrfCurrent.owner) {
-				// Owner process/container no longer running — release
-				hackrfCurrent.owner = null;
-				hackrfCurrent.isAvailable = true;
-				hackrfCurrent.connectedSince = null;
-			}
-			this.state.set(HardwareDevice.HACKRF, hackrfCurrent);
-
-			// --- ALFA: detection + ownership ---
-			const alfaIface = await alfaMgr.detectAdapter();
-			const alfaCurrent = this.state.get(HardwareDevice.ALFA);
-			if (!alfaCurrent) return;
-			alfaCurrent.isDetected = !!alfaIface;
-
-			const alfaProcesses = await alfaMgr.getBlockingProcesses();
-			if (alfaProcesses.length > 0) {
-				alfaCurrent.owner = alfaProcesses[0].name;
-				alfaCurrent.isAvailable = false;
-				if (!alfaCurrent.connectedSince) alfaCurrent.connectedSince = Date.now();
-			} else if (alfaCurrent.owner) {
-				// Owner process no longer running — release
-				alfaCurrent.owner = null;
-				alfaCurrent.isAvailable = true;
-				alfaCurrent.connectedSince = null;
-			}
-			this.state.set(HardwareDevice.ALFA, alfaCurrent);
+			await this.refreshHackrf();
+			await this.refreshAlfa();
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
 			logger.warn(

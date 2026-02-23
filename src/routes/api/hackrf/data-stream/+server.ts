@@ -41,6 +41,79 @@ const startCleanupInterval = () => {
 	}, 30000); // Check every 30 seconds
 };
 
+/** Log non-normal close errors. */
+function logCloseError(connId: string, error: unknown): void {
+	if (error instanceof Error && !error.message.includes('Controller is already closed')) {
+		logDebug(`SSE connection ${connId} closed with error`, {
+			message: error.message,
+			name: error.name
+		});
+	}
+}
+
+/** Build an SSE send function that handles closed connections. */
+function buildSendEvent(
+	isClosed: () => boolean,
+	setClosed: (v: boolean) => void,
+	encoder: TextEncoder,
+	controller: ReadableStreamDefaultController,
+	connId: string
+) {
+	return (event: string, data: unknown) => {
+		if (isClosed()) return;
+		try {
+			controller.enqueue(
+				encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+			);
+			const conn = activeConnections.get(connId);
+			if (conn) conn.lastActivity = new Date();
+		} catch (error: unknown) {
+			setClosed(true);
+			activeConnections.delete(connId);
+			logCloseError(connId, error);
+		}
+	};
+}
+
+/** Generate frequency array from power values. */
+function buildFrequencyArray(data: SpectrumData): number[] {
+	if (!data.powerValues || data.startFreq === undefined || data.endFreq === undefined) return [];
+	const start = data.startFreq;
+	const step = (data.endFreq - start) / (data.powerValues.length - 1);
+	return data.powerValues.map((_, i) => start + i * step);
+}
+
+/** Transform SpectrumData to frontend format. */
+function transformSpectrumData(data: SpectrumData) {
+	return {
+		frequencies: buildFrequencyArray(data),
+		power: data.powerValues || [],
+		power_levels: data.powerValues || [],
+		start_freq: data.startFreq,
+		stop_freq: data.endFreq,
+		center_freq: data.frequency,
+		peak_freq: data.frequency,
+		peak_power: data.power,
+		timestamp: data.timestamp
+	};
+}
+
+/** Extract SpectrumData from possibly-nested event data. */
+function extractSpectrumData(data: unknown): SpectrumData {
+	if (data && typeof data === 'object' && 'data' in data) {
+		return (data as { data: SpectrumData }).data;
+	}
+	return data as SpectrumData;
+}
+
+/** Unsubscribe all event listeners from sweep manager. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic listener pairs
+function unsubscribeAll(pairs: [string, ((...args: any[]) => void) | null][]) {
+	for (const [event, fn] of pairs) {
+		if (fn) sweepManager.off(event, fn);
+	}
+}
+
 export const GET: RequestHandler = () => {
 	// Shared state between start() and cancel() — hoisted so cancel() can
 	// properly clean up EventEmitter listeners and intervals on disconnect.
@@ -63,35 +136,15 @@ export const GET: RequestHandler = () => {
 			connectionId = getConnectionId();
 
 			// Helper function to send SSE messages
-			const sendEvent = (event: string, data: unknown) => {
-				if (isConnectionClosed) return;
-
-				try {
-					const sseMessage = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-					controller.enqueue(encoder.encode(sseMessage));
-
-					// Update last activity
-					const conn = activeConnections.get(connectionId);
-					if (conn) {
-						conn.lastActivity = new Date();
-					}
-				} catch (error: unknown) {
-					// Connection is closed, mark it and clean up
-					isConnectionClosed = true;
-					activeConnections.delete(connectionId);
-
-					// Only log if it's not a normal close
-					if (
-						error instanceof Error &&
-						!error.message.includes('Controller is already closed')
-					) {
-						logDebug(`SSE connection ${connectionId} closed with error`, {
-							message: error.message,
-							name: error.name
-						});
-					}
-				}
-			};
+			const sendEvent = buildSendEvent(
+				() => isConnectionClosed,
+				(v) => {
+					isConnectionClosed = v;
+				},
+				encoder,
+				controller,
+				connectionId
+			);
 
 			// Add to active connections
 			const connectionInfo: ConnectionInfo = {
@@ -136,34 +189,7 @@ export const GET: RequestHandler = () => {
 			onSpectrum = (data: SpectrumData) => {
 				const now = Date.now();
 				if (now - lastSpectrumTime >= SPECTRUM_THROTTLE) {
-					// Transform data to frontend format
-					const transformedData = {
-						frequencies:
-							data.powerValues &&
-							data.startFreq !== undefined &&
-							data.endFreq !== undefined &&
-							data.powerValues !== undefined
-								? (() => {
-										const startFreq = data.startFreq;
-										const endFreq = data.endFreq;
-										const powerValues = data.powerValues;
-										return powerValues.map((_, index) => {
-											const freqStep =
-												(endFreq - startFreq) / (powerValues.length - 1);
-											return startFreq + index * freqStep;
-										});
-									})()
-								: [],
-						power: data.powerValues || [],
-						power_levels: data.powerValues || [],
-						start_freq: data.startFreq,
-						stop_freq: data.endFreq,
-						center_freq: data.frequency,
-						peak_freq: data.frequency,
-						peak_power: data.power,
-						timestamp: data.timestamp
-					};
-					sendEvent('sweep_data', transformedData);
+					sendEvent('sweep_data', transformSpectrumData(data));
 					lastSpectrumTime = now;
 				}
 			};
@@ -171,19 +197,8 @@ export const GET: RequestHandler = () => {
 			onError = (e: unknown) => sendEvent('error', e);
 			onCycleConfig = (config: unknown) => sendEvent('cycle_config', config);
 			onStatusChange = (change: unknown) => sendEvent('status_change', change);
-
-			// Wrapper for spectrum_data events that extracts nested data.
-			// Assigned to a named reference so it can be properly unregistered
-			// on connection close in cancel().
 			onSpectrumData = (data: unknown) => {
-				if (!onSpectrum) return;
-				if (data && typeof data === 'object' && 'data' in data) {
-					// Safe: Runtime check confirms object with 'data' property, narrowing to nested structure
-					onSpectrum((data as { data: SpectrumData }).data);
-				} else {
-					// Safe: Event emitter contract guarantees SpectrumData type for spectrum_data events
-					onSpectrum(data as SpectrumData);
-				}
+				if (onSpectrum) onSpectrum(extractSpectrumData(data));
 			};
 
 			// Listen for both event names for compatibility
@@ -222,15 +237,15 @@ export const GET: RequestHandler = () => {
 				logDebug('All SSE connections closed, clearing emitter');
 			}
 
-			// Unsubscribe from events (must use the exact same function references)
-			if (onSpectrum) sweepManager.off('spectrum', onSpectrum);
-			if (onSpectrumData) sweepManager.off('spectrum_data', onSpectrumData);
-			if (onStatus) sweepManager.off('status', onStatus);
-			if (onError) sweepManager.off('error', onError);
-			if (onCycleConfig) sweepManager.off('cycle_config', onCycleConfig);
-			if (onStatusChange) sweepManager.off('status_change', onStatusChange);
+			unsubscribeAll([
+				['spectrum', onSpectrum],
+				['spectrum_data', onSpectrumData],
+				['status', onStatus],
+				['error', onError],
+				['cycle_config', onCycleConfig],
+				['status_change', onStatusChange]
+			]);
 
-			// Clear heartbeat
 			if (heartbeatTimer) {
 				clearInterval(heartbeatTimer);
 				heartbeatTimer = null;

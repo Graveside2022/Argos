@@ -28,105 +28,110 @@ export class AlfaDetector {
 		'0bda:c812': 'Realtek RTL8812CU (Generic)'
 	};
 
+	/** Detect adapters via lsusb output */
+	private static detectViaLsusb(): Promise<{ usbId: string; description: string }[]> {
+		return execFileAsync('/usr/bin/lsusb', []).then(({ stdout }) => {
+			const found: { usbId: string; description: string }[] = [];
+			for (const [usbId, description] of Object.entries(this.ALFA_USB_IDS)) {
+				if (stdout.includes(usbId)) {
+					logInfo(`Detected Alfa adapter: ${description} (${usbId})`);
+					found.push({ usbId, description });
+				}
+			}
+			return found;
+		});
+	}
+
+	/** Probe a single sysfs USB device for Alfa adapter match */
+	private static async probeSysfsDevice(
+		device: string
+	): Promise<{ usbId: string; description: string } | null> {
+		try {
+			const vendor = (
+				await readFile(join('/sys/bus/usb/devices/', device, 'idVendor'), 'utf-8')
+			).trim();
+			const product = (
+				await readFile(join('/sys/bus/usb/devices/', device, 'idProduct'), 'utf-8')
+			).trim();
+			const usbId = `${vendor}:${product}`;
+			// @constitutional-exemption Article-II-2.1 issue:#14 — USB ID dictionary lookup type narrowing
+			const alfaDevice = this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
+			if (!alfaDevice) return null;
+			logInfo(`Detected Alfa adapter via sysfs: ${alfaDevice} (${usbId})`);
+			return { usbId, description: alfaDevice };
+		} catch {
+			return null;
+		}
+	}
+
+	/** Detect adapters via sysfs fallback */
+	private static async detectViaSysfs(): Promise<{ usbId: string; description: string }[]> {
+		const usbDevices = await readdir('/sys/bus/usb/devices/');
+		const results = await Promise.all(usbDevices.map((d) => this.probeSysfsDevice(d)));
+		return results.filter((r): r is NonNullable<typeof r> => r !== null);
+	}
+
 	/**
 	 * Detect connected Alfa WiFi adapters
 	 */
 	static async detectAlfaAdapters(): Promise<
 		{ usbId: string; description: string; interface?: string }[]
 	> {
-		const detectedAdapters: { usbId: string; description: string; interface?: string }[] = [];
-
 		try {
-			// Try using lsusb first
+			let adapters: { usbId: string; description: string; interface?: string }[];
 			try {
-				const { stdout } = await execFileAsync('/usr/bin/lsusb', []);
-				for (const [usbId, description] of Object.entries(this.ALFA_USB_IDS)) {
-					if (stdout.includes(usbId)) {
-						logInfo(`Detected Alfa adapter: ${description} (${usbId})`);
-						detectedAdapters.push({ usbId, description });
-					}
-				}
-			} catch (_error: unknown) {
+				adapters = await this.detectViaLsusb();
+			} catch {
 				logWarn('lsusb not available, trying sysfs method');
-
-				// Fallback to reading from sysfs
-				const usbDevices = await readdir('/sys/bus/usb/devices/');
-				for (const device of usbDevices) {
-					try {
-						const vendorPath = join('/sys/bus/usb/devices/', device, 'idVendor');
-						const productPath = join('/sys/bus/usb/devices/', device, 'idProduct');
-
-						const vendor = (await readFile(vendorPath, 'utf-8')).trim();
-						const product = (await readFile(productPath, 'utf-8')).trim();
-						const usbId = `${vendor}:${product}`;
-
-						// @constitutional-exemption Article-II-2.1 issue:#14 — USB ID dictionary lookup type narrowing
-						const alfaDevice =
-							this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
-						if (alfaDevice) {
-							logInfo(`Detected Alfa adapter via sysfs: ${alfaDevice} (${usbId})`);
-							detectedAdapters.push({
-								usbId,
-								description: alfaDevice
-							});
-						}
-					} catch (_error: unknown) {
-						// Skip devices we can't read
-					}
-				}
+				adapters = await this.detectViaSysfs();
 			}
 
-			// Now find corresponding network interfaces
-			for (const adapter of detectedAdapters) {
+			for (const adapter of adapters) {
 				const iface = await this.findInterfaceForAdapter(adapter.usbId);
-				if (iface) {
-					adapter.interface = iface;
-				}
+				if (iface) adapter.interface = iface;
 			}
+			return adapters;
 		} catch (error) {
-			// Safe: Type cast for dynamic data access
 			logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
+			return [];
 		}
+	}
 
-		return detectedAdapters;
+	/** Interfaces to skip when searching for external WiFi adapters */
+	private static readonly SKIP_INTERFACES = new Set(['lo', 'eth0', 'wlan0']);
+
+	/** Check if a network interface is wireless */
+	private static async isWirelessInterface(iface: string): Promise<boolean> {
+		const wirelessPath = join('/sys/class/net/', iface, 'wireless');
+		const phy80211Path = join('/sys/class/net/', iface, 'phy80211');
+		return Promise.any([
+			readdir(wirelessPath).then(() => true),
+			readdir(phy80211Path).then(() => true)
+		]).catch(() => false);
+	}
+
+	/** List non-skipped network interfaces */
+	private static async listCandidateInterfaces(): Promise<string[]> {
+		try {
+			const all = await readdir('/sys/class/net/');
+			return all.filter((iface) => !this.SKIP_INTERFACES.has(iface));
+		} catch (error) {
+			logError('Error finding network interfaces:', error as Record<string, unknown>);
+			return [];
+		}
 	}
 
 	/**
 	 * Find network interface for a USB adapter
 	 */
 	private static async findInterfaceForAdapter(_usbId: string): Promise<string | null> {
-		try {
-			const interfaces = await readdir('/sys/class/net/');
-
-			for (const iface of interfaces) {
-				// Skip non-wireless interfaces and wlan0
-				if (['lo', 'eth0', 'wlan0'].includes(iface)) {
-					continue;
-				}
-
-				try {
-					// Check if it's a wireless interface
-					const wirelessPath = join('/sys/class/net/', iface, 'wireless');
-					const phy80211Path = join('/sys/class/net/', iface, 'phy80211');
-
-					const isWireless = await Promise.any([
-						readdir(wirelessPath).then(() => true),
-						readdir(phy80211Path).then(() => true)
-					]).catch(() => false);
-
-					if (isWireless) {
-						logInfo(`Found wireless interface: ${iface}`);
-						return iface;
-					}
-				} catch (_error: unknown) {
-					// Not a wireless interface
-				}
+		const candidates = await this.listCandidateInterfaces();
+		for (const iface of candidates) {
+			if (await this.isWirelessInterface(iface)) {
+				logInfo(`Found wireless interface: ${iface}`);
+				return iface;
 			}
-		} catch (error) {
-			// Safe: Type cast for dynamic data access
-			logError('Error finding network interfaces:', error as Record<string, unknown>);
 		}
-
 		return null;
 	}
 

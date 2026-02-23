@@ -73,6 +73,50 @@ function _parseLsusb(output: string): USBDevice[] {
 	return devices;
 }
 
+// ── WiFi adapter detection ──
+
+function parseWifiBands(phyOut: string): string[] {
+	const bands: string[] = [];
+	if (phyOut.includes('2.4 GHz') || phyOut.includes('2400 MHz')) bands.push('2.4GHz');
+	if (phyOut.includes('5 GHz') || phyOut.includes('5000 MHz')) bands.push('5GHz');
+	return bands;
+}
+
+function buildWifiDevice(iface: string, phyOut: string): DetectedHardware {
+	const monitorMode = phyOut.includes('monitor');
+	const capabilities: WiFiCapabilities = {
+		interface: iface,
+		hasMonitorMode: monitorMode,
+		canInject: phyOut.includes('TX frame'),
+		frequencyBands: parseWifiBands(phyOut),
+		channels: []
+	};
+	return {
+		id: `wifi-${iface}`,
+		name: `WiFi Adapter ${iface}`,
+		category: 'wifi',
+		connectionType: 'usb',
+		status: 'connected',
+		capabilities,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: monitorMode
+			? ['wifi.scan.kismet', 'wifi.attack.wifite', 'wifi.recon.airodump']
+			: []
+	};
+}
+
+async function probeWifiInterface(iface: string): Promise<DetectedHardware | null> {
+	try {
+		await execFileAsync('/usr/sbin/iw', [iface, 'info']);
+		const { stdout: rawPhyOut } = await execFileAsync('/usr/sbin/iw', [`phy${iface}`, 'info']);
+		const phyOut = rawPhyOut.split('\n').slice(0, 50).join('\n');
+		return buildWifiDevice(iface, phyOut);
+	} catch {
+		return null;
+	}
+}
+
 /**
  * Detect WiFi adapters with monitor mode capability
  */
@@ -80,56 +124,55 @@ async function detectWiFiAdapters(): Promise<DetectedHardware[]> {
 	try {
 		const { stdout } = await execFileAsync('/usr/sbin/iw', ['dev']);
 		const hardware: DetectedHardware[] = [];
-
 		const interfaceMatches = stdout.matchAll(/Interface\s+(\w+)/g);
 
 		for (const match of interfaceMatches) {
-			const iface = match[1];
-
-			try {
-				const { stdout: _infoOut } = await execFileAsync('/usr/sbin/iw', [iface, 'info']);
-				const { stdout: rawPhyOut } = await execFileAsync('/usr/sbin/iw', [
-					`phy${iface}`,
-					'info'
-				]);
-				const phyOut = rawPhyOut.split('\n').slice(0, 50).join('\n');
-
-				const monitorMode = phyOut.includes('monitor');
-				const injection = phyOut.includes('TX frame');
-
-				const bands: string[] = [];
-				if (phyOut.includes('2.4 GHz') || phyOut.includes('2400 MHz')) bands.push('2.4GHz');
-				if (phyOut.includes('5 GHz') || phyOut.includes('5000 MHz')) bands.push('5GHz');
-
-				const capabilities: WiFiCapabilities = {
-					interface: iface,
-					hasMonitorMode: monitorMode,
-					canInject: injection,
-					frequencyBands: bands,
-					channels: []
-				};
-
-				hardware.push({
-					id: `wifi-${iface}`,
-					name: `WiFi Adapter ${iface}`,
-					category: 'wifi',
-					connectionType: 'usb',
-					status: 'connected',
-					capabilities,
-					lastSeen: Date.now(),
-					firstSeen: Date.now(),
-					compatibleTools: monitorMode
-						? ['wifi.scan.kismet', 'wifi.attack.wifite', 'wifi.recon.airodump']
-						: []
-				});
-			} catch {
-				// Interface info failed, skip
-			}
+			const device = await probeWifiInterface(match[1]);
+			if (device) hardware.push(device);
 		}
-
 		return hardware;
-	} catch (_error) {
+	} catch {
 		return [];
+	}
+}
+
+// ── Bluetooth adapter detection ──
+
+function buildBluetoothCapabilities(btOut: string, iface: string): BluetoothCapabilities {
+	return {
+		interface: iface,
+		hasBleSupport: btOut.includes('LE') || btOut.includes('Low Energy'),
+		hasClassicSupport: btOut.includes('BR/EDR')
+	};
+}
+
+function buildDefaultBluetoothCaps(iface: string): BluetoothCapabilities {
+	return { interface: iface, hasBleSupport: true, hasClassicSupport: true };
+}
+
+function buildBluetoothDevice(
+	iface: string,
+	capabilities: BluetoothCapabilities
+): DetectedHardware {
+	return {
+		id: `bluetooth-${iface}`,
+		name: `Bluetooth Adapter ${iface}`,
+		category: 'bluetooth',
+		connectionType: 'usb',
+		status: 'connected',
+		capabilities,
+		lastSeen: Date.now(),
+		firstSeen: Date.now(),
+		compatibleTools: ['bluetooth.scan.bluing', 'bluetooth.recon.bluez']
+	};
+}
+
+async function probeBluetoothInterface(iface: string): Promise<DetectedHardware> {
+	try {
+		const { stdout: btOut } = await execFileAsync('/usr/bin/bluetoothctl', ['show']);
+		return buildBluetoothDevice(iface, buildBluetoothCapabilities(btOut, iface));
+	} catch {
+		return buildBluetoothDevice(iface, buildDefaultBluetoothCaps(iface));
 	}
 }
 
@@ -140,55 +183,13 @@ async function detectBluetoothAdapters(): Promise<DetectedHardware[]> {
 	try {
 		const { stdout } = await execFileAsync('/usr/bin/hciconfig', []);
 		const hardware: DetectedHardware[] = [];
-
 		const deviceMatches = stdout.matchAll(/(hci\d+):\s+Type: ([^\n]+)/g);
 
 		for (const match of deviceMatches) {
-			const iface = match[1];
-
-			try {
-				const { stdout: btOut } = await execFileAsync('/usr/bin/bluetoothctl', ['show']);
-
-				const bleSupport = btOut.includes('LE') || btOut.includes('Low Energy');
-				const classicSupport = btOut.includes('BR/EDR');
-
-				const capabilities: BluetoothCapabilities = {
-					interface: iface,
-					hasBleSupport: bleSupport,
-					hasClassicSupport: classicSupport
-				};
-
-				hardware.push({
-					id: `bluetooth-${iface}`,
-					name: `Bluetooth Adapter ${iface}`,
-					category: 'bluetooth',
-					connectionType: 'usb',
-					status: 'connected',
-					capabilities,
-					lastSeen: Date.now(),
-					firstSeen: Date.now(),
-					compatibleTools: ['bluetooth.scan.bluing', 'bluetooth.recon.bluez']
-				});
-			} catch {
-				hardware.push({
-					id: `bluetooth-${iface}`,
-					name: `Bluetooth Adapter ${iface}`,
-					category: 'bluetooth',
-					connectionType: 'usb',
-					status: 'connected',
-					capabilities: {
-						interface: iface,
-						hasBleSupport: true,
-						hasClassicSupport: true
-					} as BluetoothCapabilities,
-					lastSeen: Date.now(),
-					firstSeen: Date.now()
-				});
-			}
+			hardware.push(await probeBluetoothInterface(match[1]));
 		}
-
 		return hardware;
-	} catch (_error) {
+	} catch {
 		return [];
 	}
 }

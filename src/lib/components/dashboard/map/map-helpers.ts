@@ -226,47 +226,54 @@ export const LAYER_MAP: Record<string, string[]> = {
 	accuracyCircle: ['accuracy-fill']
 };
 
+interface CellTowerData {
+	radio: string;
+	mcc: number;
+	mnc: number;
+	lac: number;
+	ci: number;
+	lat: number;
+	lon: number;
+	range: number;
+	samples: number;
+	avgSignal: number;
+}
+
+function towerToFeature(t: CellTowerData): Feature {
+	return {
+		type: 'Feature',
+		geometry: { type: 'Point', coordinates: [t.lon, t.lat] },
+		properties: {
+			radio: t.radio,
+			mcc: t.mcc,
+			mnc: t.mnc,
+			lac: t.lac,
+			ci: t.ci,
+			range: t.range,
+			samples: t.samples,
+			avgSignal: t.avgSignal,
+			color: getRadioColor(t.radio)
+		}
+	};
+}
+
+async function fetchTowerData(lat: number, lon: number): Promise<CellTowerData[] | null> {
+	const res = await fetch(`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=5`);
+	if (!res.ok) return null;
+	const data = await res.json();
+	if (!data.success) return null;
+	return data.towers?.length ? data.towers : null;
+}
+
 /**
  * Fetch nearby cell towers from API.
  */
 export async function fetchCellTowers(lat: number, lon: number): Promise<FeatureCollection | null> {
 	try {
-		const res = await fetch(`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=5`);
-		if (!res.ok) return null;
-		const data = await res.json();
-		if (!data.success || !data.towers?.length) return null;
-
-		const features: Feature[] = data.towers.map(
-			(t: {
-				radio: string;
-				mcc: number;
-				mnc: number;
-				lac: number;
-				ci: number;
-				lat: number;
-				lon: number;
-				range: number;
-				samples: number;
-				avgSignal: number;
-			}) => ({
-				type: 'Feature' as const,
-				geometry: { type: 'Point' as const, coordinates: [t.lon, t.lat] },
-				properties: {
-					radio: t.radio,
-					mcc: t.mcc,
-					mnc: t.mnc,
-					lac: t.lac,
-					ci: t.ci,
-					range: t.range,
-					samples: t.samples,
-					avgSignal: t.avgSignal,
-					color: getRadioColor(t.radio)
-				}
-			})
-		);
-
-		return { type: 'FeatureCollection', features };
-	} catch (_error: unknown) {
+		const towers = await fetchTowerData(lat, lon);
+		if (!towers) return null;
+		return { type: 'FeatureCollection', features: towers.map(towerToFeature) };
+	} catch {
 		return null;
 	}
 }

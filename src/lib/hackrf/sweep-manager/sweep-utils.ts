@@ -3,14 +3,17 @@
  * Frequency conversion functions live in frequency-utils.ts (canonical home).
  */
 
+const SIGNAL_THRESHOLDS: [number, string][] = [
+	[-90, 'No Signal'],
+	[-70, 'Very Weak'],
+	[-50, 'Weak'],
+	[-30, 'Moderate'],
+	[-10, 'Strong']
+];
+
 /** Categorize dB power level into human-readable signal strength */
 export function getSignalStrength(dB: number): string {
-	if (dB < -90) return 'No Signal';
-	if (dB >= -90 && dB < -70) return 'Very Weak';
-	if (dB >= -70 && dB < -50) return 'Weak';
-	if (dB >= -50 && dB < -30) return 'Moderate';
-	if (dB >= -30 && dB < -10) return 'Strong';
-	return 'Very Strong';
+	return SIGNAL_THRESHOLDS.find(([threshold]) => dB < threshold)?.[1] ?? 'Very Strong';
 }
 
 /** Check if an error message indicates a critical HackRF startup failure */

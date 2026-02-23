@@ -13,6 +13,21 @@
 	let truststoreFile: FileList | undefined = $state();
 	let truststoreStatus = $state('');
 
+	/** Handle the truststore upload API response. */
+	function handleTruststoreResponse(data: Record<string, unknown>): void {
+		if (!data.success) {
+			truststoreStatus = (data.error as string) ?? 'Invalid truststore file';
+			return;
+		}
+		const paths = data.paths as { truststorePath: string; caPath?: string };
+		onUploaded({
+			truststorePath: paths.truststorePath,
+			caPath: paths.caPath,
+			id: data.id as string | undefined
+		});
+		truststoreStatus = 'Truststore validated';
+	}
+
 	async function uploadTruststore() {
 		if (!truststoreFile || truststoreFile.length === 0) {
 			truststoreStatus = 'Select a .p12 file';
@@ -26,17 +41,7 @@
 		truststoreStatus = 'Validating...';
 		try {
 			const res = await fetch('/api/tak/truststore', { method: 'POST', body: formData });
-			const data = await res.json();
-			if (data.success) {
-				onUploaded({
-					truststorePath: data.paths.truststorePath,
-					caPath: data.paths.caPath,
-					id: data.id
-				});
-				truststoreStatus = 'Truststore validated';
-			} else {
-				truststoreStatus = data.error ?? 'Invalid truststore file';
-			}
+			handleTruststoreResponse(await res.json());
 		} catch {
 			truststoreStatus = 'Upload error';
 		}

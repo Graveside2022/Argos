@@ -2,6 +2,16 @@ import type Database from 'better-sqlite3';
 
 import type { TakServerConfig } from '../../types/tak';
 
+/** Coalesce a row field to undefined if nullish */
+function strOrUndef(val: unknown): string | undefined {
+	return (val as string) ?? undefined;
+}
+
+/** Coalesce a row field to a string default */
+function strOrDefault(val: unknown, fallback: string): string {
+	return (val as string) ?? fallback;
+}
+
 /** Maps snake_case DB rows to camelCase TakServerConfig */
 export function rowToConfig(row: Record<string, unknown>): TakServerConfig {
 	return {
@@ -10,18 +20,23 @@ export function rowToConfig(row: Record<string, unknown>): TakServerConfig {
 		hostname: row.hostname as string,
 		port: row.port as number,
 		protocol: 'tls',
-		certPath: (row.cert_path as string) ?? undefined,
-		keyPath: (row.key_path as string) ?? undefined,
-		caPath: (row.ca_path as string) ?? undefined,
+		certPath: strOrUndef(row.cert_path),
+		keyPath: strOrUndef(row.key_path),
+		caPath: strOrUndef(row.ca_path),
 		shouldConnectOnStartup: Boolean(row.connect_on_startup),
-		authMethod: (row.auth_method as 'enroll' | 'import') ?? undefined,
-		truststorePath: (row.truststore_path as string) ?? undefined,
-		truststorePass: (row.truststore_pass as string) ?? 'atakatak',
-		certPass: (row.cert_pass as string) ?? 'atakatak',
-		enrollmentUser: (row.enrollment_user as string) ?? undefined,
-		enrollmentPass: (row.enrollment_pass as string) ?? undefined,
+		authMethod: strOrUndef(row.auth_method) as 'enroll' | 'import' | undefined,
+		truststorePath: strOrUndef(row.truststore_path),
+		truststorePass: strOrDefault(row.truststore_pass, 'atakatak'),
+		certPass: strOrDefault(row.cert_pass, 'atakatak'),
+		enrollmentUser: strOrUndef(row.enrollment_user),
+		enrollmentPass: strOrUndef(row.enrollment_pass),
 		enrollmentPort: (row.enrollment_port as number) ?? 8446
 	};
+}
+
+/** Coalesce an optional field to null for SQL */
+function orNull<T>(val: T | undefined): T | null {
+	return val ?? null;
 }
 
 /** Converts camelCase config to positional args for SQL statements */
@@ -31,16 +46,16 @@ function configToParams(config: TakServerConfig): unknown[] {
 		config.hostname,
 		config.port,
 		config.protocol,
-		config.certPath ?? null,
-		config.keyPath ?? null,
-		config.caPath ?? null,
+		orNull(config.certPath),
+		orNull(config.keyPath),
+		orNull(config.caPath),
 		config.shouldConnectOnStartup ? 1 : 0,
-		config.authMethod ?? null,
-		config.truststorePath ?? null,
+		orNull(config.authMethod),
+		orNull(config.truststorePath),
 		config.truststorePass,
 		config.certPass,
-		config.enrollmentUser ?? null,
-		config.enrollmentPass ?? null,
+		orNull(config.enrollmentUser),
+		orNull(config.enrollmentPass),
 		config.enrollmentPort
 	];
 }

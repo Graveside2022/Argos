@@ -29,53 +29,46 @@ export interface FormattedValidationError {
 	path: string;
 }
 
+/** Format a too_small issue by type. */
+function formatTooSmall(issue: Extract<ZodIssue, { code: 'too_small' }>): string {
+	if (issue.type === 'string') return `Must be at least ${issue.minimum} characters`;
+	if (issue.type === 'number') return `Must be ${issue.inclusive ? '>=' : '>'} ${issue.minimum}`;
+	return 'Too small';
+}
+
+/** Format a too_big issue by type. */
+function formatTooBig(issue: Extract<ZodIssue, { code: 'too_big' }>): string {
+	if (issue.type === 'string') return `Must be at most ${issue.maximum} characters`;
+	if (issue.type === 'number') return `Must be ${issue.inclusive ? '<=' : '<'} ${issue.maximum}`;
+	return 'Too large';
+}
+
+/** Formatter lookup for Zod issue codes. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod issue union requires any for generic dispatch
+const ISSUE_FORMATTERS: Record<string, (issue: any) => string> = {
+	invalid_type: (i) => `Expected ${i.expected}, received ${i.received}`,
+	too_small: formatTooSmall,
+	too_big: formatTooBig,
+	invalid_string: (i) => `Invalid format: ${i.validation}`,
+	unrecognized_keys: (i) => `Unexpected keys: ${i.keys.join(', ')}`
+};
+
+/** Generate a user-friendly message for a Zod issue. */
+function issueMessage(issue: ZodIssue): string {
+	const formatter = ISSUE_FORMATTERS[issue.code];
+	return formatter ? formatter(issue) : issue.message;
+}
+
 /**
  * Format a single Zod issue into a readable error message
  */
 function formatZodIssue(issue: ZodIssue): FormattedValidationError {
 	const field = issue.path.join('.');
-	const constraint = issue.message;
-	const receivedValue = 'received' in issue ? issue.received : undefined;
-
-	// Generate user-friendly message based on issue type
-	let message: string;
-	switch (issue.code) {
-		case 'invalid_type':
-			message = `Expected ${issue.expected}, received ${issue.received}`;
-			break;
-		case 'too_small':
-			if (issue.type === 'string') {
-				message = `Must be at least ${issue.minimum} characters`;
-			} else if (issue.type === 'number') {
-				message = `Must be ${issue.inclusive ? '>=' : '>'} ${issue.minimum}`;
-			} else {
-				message = `Too small`;
-			}
-			break;
-		case 'too_big':
-			if (issue.type === 'string') {
-				message = `Must be at most ${issue.maximum} characters`;
-			} else if (issue.type === 'number') {
-				message = `Must be ${issue.inclusive ? '<=' : '<'} ${issue.maximum}`;
-			} else {
-				message = `Too large`;
-			}
-			break;
-		case 'invalid_string':
-			message = `Invalid format: ${issue.validation}`;
-			break;
-		case 'unrecognized_keys':
-			message = `Unexpected keys: ${issue.keys.join(', ')}`;
-			break;
-		default:
-			message = issue.message;
-	}
-
 	return {
 		field: field || 'root',
-		message,
-		constraint,
-		receivedValue,
+		message: issueMessage(issue),
+		constraint: issue.message,
+		receivedValue: 'received' in issue ? issue.received : undefined,
 		path: issue.path.join(' → ')
 	};
 }

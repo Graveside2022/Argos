@@ -72,6 +72,22 @@ export class ErrorTracker {
 		logInfo('[OK] Operation successful - error counters reset');
 	}
 
+	private trackFrequencyError(frequency: number | undefined): void {
+		if (!frequency) return;
+		const currentCount = this.errorState.frequencyErrors.get(frequency) || 0;
+		this.errorState.frequencyErrors.set(frequency, currentCount + 1);
+	}
+
+	private applyAnalysisToState(analysis: ErrorAnalysis): void {
+		if (analysis.errorType === 'device_busy') {
+			this.deviceState.consecutiveBusyErrors++;
+		}
+		const newStatus = deriveDeviceStatus(analysis, this.errorState.consecutiveErrors);
+		if (newStatus) {
+			this.deviceState.status = newStatus;
+		}
+	}
+
 	/** Record an error and analyze it */
 	recordError(
 		error: Error | string,
@@ -82,11 +98,7 @@ export class ErrorTracker {
 		this.errorState.consecutiveErrors++;
 		this.errorState.recentFailures.push(Date.now());
 		this.cleanupOldFailures();
-
-		if (context.frequency) {
-			const currentCount = this.errorState.frequencyErrors.get(context.frequency) || 0;
-			this.errorState.frequencyErrors.set(context.frequency, currentCount + 1);
-		}
+		this.trackFrequencyError(context.frequency);
 
 		const analysis = analyzeError(
 			errorMessage,
@@ -95,16 +107,7 @@ export class ErrorTracker {
 			this.errorState.maxConsecutiveErrors
 		);
 
-		// Track busy errors separately
-		if (analysis.errorType === 'device_busy') {
-			this.deviceState.consecutiveBusyErrors++;
-		}
-
-		// Update device state
-		const newStatus = deriveDeviceStatus(analysis, this.errorState.consecutiveErrors);
-		if (newStatus) {
-			this.deviceState.status = newStatus;
-		}
+		this.applyAnalysisToState(analysis);
 
 		logError('[ERROR] Error recorded and analyzed', {
 			error: errorMessage,
@@ -144,21 +147,26 @@ export class ErrorTracker {
 		return toBlacklist;
 	}
 
-	/** Check if recovery should be attempted */
-	shouldAttemptRecovery(): boolean {
-		if (this.isRecovering) return false;
-		if (this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3)) return false;
+	private isRecoveryCooldownActive(): boolean {
+		if (!this.lastRecoveryAttempt) return false;
+		const elapsed = Date.now() - this.lastRecoveryAttempt.getTime();
+		return elapsed < (this.recoveryConfig.recoveryDelayMs || 2000);
+	}
 
-		if (this.lastRecoveryAttempt) {
-			const timeSinceLastAttempt = Date.now() - this.lastRecoveryAttempt.getTime();
-			if (timeSinceLastAttempt < (this.recoveryConfig.recoveryDelayMs || 2000)) return false;
-		}
-
+	private hasRecoverableCondition(): boolean {
 		return (
 			this.errorState.consecutiveErrors >= 2 ||
 			this.deviceState.status === 'busy' ||
 			this.deviceState.status === 'stuck'
 		);
+	}
+
+	/** Check if recovery should be attempted */
+	shouldAttemptRecovery(): boolean {
+		if (this.isRecovering) return false;
+		if (this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3)) return false;
+		if (this.isRecoveryCooldownActive()) return false;
+		return this.hasRecoverableCondition();
 	}
 
 	/** Start recovery process */

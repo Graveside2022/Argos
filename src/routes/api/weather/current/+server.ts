@@ -1,17 +1,15 @@
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url }) => {
-	const lat = url.searchParams.get('lat');
-	const lon = url.searchParams.get('lon');
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-	if (!lat || !lon) {
-		return new Response(JSON.stringify({ error: 'Missing lat/lon parameters' }), {
-			status: 400,
-			headers: { 'Content-Type': 'application/json' }
-		});
-	}
+/** Build a JSON error response. */
+function jsonError(message: string, status: number): Response {
+	return new Response(JSON.stringify({ error: message }), { status, headers: JSON_HEADERS });
+}
 
-	const params = new URLSearchParams({
+/** Build Open-Meteo query params for the given coordinates. */
+function buildWeatherParams(lat: string, lon: string): URLSearchParams {
+	return new URLSearchParams({
 		latitude: lat,
 		longitude: lon,
 		current: [
@@ -28,28 +26,28 @@ export const GET: RequestHandler = async ({ url }) => {
 		temperature_unit: 'celsius',
 		wind_speed_unit: 'kmh'
 	});
+}
+
+/** Fetch weather data from Open-Meteo API. */
+async function fetchWeather(lat: string, lon: string): Promise<Response> {
+	const response = await fetch(
+		`https://api.open-meteo.com/v1/forecast?${buildWeatherParams(lat, lon)}`
+	);
+	if (!response.ok) return jsonError(`Open-Meteo returned ${response.status}`, 502);
+	const data = await response.json();
+	return new Response(JSON.stringify(data.current), {
+		headers: { ...JSON_HEADERS, 'Cache-Control': 'max-age=300' }
+	});
+}
+
+export const GET: RequestHandler = async ({ url }) => {
+	const lat = url.searchParams.get('lat');
+	const lon = url.searchParams.get('lon');
+	if (!lat || !lon) return jsonError('Missing lat/lon parameters', 400);
 
 	try {
-		const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-		if (!response.ok) {
-			return new Response(
-				JSON.stringify({ error: `Open-Meteo returned ${response.status}` }),
-				{ status: 502, headers: { 'Content-Type': 'application/json' } }
-			);
-		}
-
-		const data = await response.json();
-		return new Response(JSON.stringify(data.current), {
-			headers: {
-				'Content-Type': 'application/json',
-				'Cache-Control': 'max-age=300'
-			}
-		});
+		return await fetchWeather(lat, lon);
 	} catch (error: unknown) {
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		return new Response(JSON.stringify({ error: message }), {
-			status: 502,
-			headers: { 'Content-Type': 'application/json' }
-		});
+		return jsonError(error instanceof Error ? error.message : 'Unknown error', 502);
 	}
 };

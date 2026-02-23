@@ -55,99 +55,92 @@
 		}
 	}
 
+	/** Unified status setter that delegates to Kismet or local status. */
+	function setToolStatus(toolId: string, status: ToolStatus) {
+		if (toolId === 'kismet-wifi') setKismetStatus(status);
+		else setLocalStatus(toolId, status);
+	}
+
+	/** Send a control action (start/stop/status) to a control URL. */
+	function postControl(controlUrl: string, action: string): Promise<Response> {
+		return fetch(controlUrl, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action }),
+			credentials: 'same-origin'
+		});
+	}
+
+	/** Determine the fetch call for a start action. */
+	function fetchStartAction(ep: (typeof toolEndpoints)[string]): Promise<Response> {
+		if (ep.controlUrl) return postControl(ep.controlUrl, 'start');
+		if (ep.startUrl) return fetch(ep.startUrl, { method: 'POST', credentials: 'same-origin' });
+		throw new Error('No start URL configured for tool');
+	}
+
+	/** Determine the fetch call for a stop action. */
+	function fetchStopAction(ep: (typeof toolEndpoints)[string]): Promise<Response> {
+		if (ep.controlUrl) return postControl(ep.controlUrl, 'stop');
+		if (ep.stopUrl) return fetch(ep.stopUrl, { method: 'POST', credentials: 'same-origin' });
+		throw new Error('No stop URL configured for tool');
+	}
+
+	/** Handle a failed start by checking actual status via controlUrl. */
+	async function checkStatusFallback(toolId: string, ep: (typeof toolEndpoints)[string]) {
+		if (!ep.controlUrl) {
+			setLocalStatus(toolId, 'stopped');
+			return;
+		}
+		const statusRes = await postControl(ep.controlUrl, 'status');
+		const statusData = await statusRes.json();
+		setLocalStatus(toolId, statusData.isRunning ? 'running' : 'stopped');
+	}
+
+	/** Handle start result for a non-Kismet tool. */
+	async function applyStartResult(
+		toolId: string,
+		data: Record<string, unknown>,
+		ep: (typeof toolEndpoints)[string]
+	) {
+		if (data.success) {
+			setLocalStatus(toolId, 'running');
+			return;
+		}
+		await checkStatusFallback(toolId, ep);
+	}
+
+	/** Resolve the catch-block fallback status for a tool. Kismet assumes running on error. */
+	function catchFallbackStatus(toolId: string): ToolStatus {
+		return toolId === 'kismet-wifi' ? 'running' : 'stopped';
+	}
+
+	/** Apply Kismet-specific start result. */
+	function applyKismetStartResult(data: Record<string, unknown>) {
+		setKismetStatus(data.success ? 'running' : 'stopped');
+	}
+
 	async function handleStart(tool: ToolDefinition) {
 		const ep = toolEndpoints[tool.id];
 		if (!ep) return;
-
-		// Set starting state
-		if (tool.id === 'kismet-wifi') {
-			setKismetStatus('starting');
-		} else {
-			setLocalStatus(tool.id, 'starting');
-		}
-
+		setToolStatus(tool.id, 'starting');
 		try {
-			let res: Response;
-			if (ep.controlUrl) {
-				res = await fetch(ep.controlUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'start' }),
-					credentials: 'same-origin'
-				});
-			} else if (ep.startUrl) {
-				res = await fetch(ep.startUrl, { method: 'POST', credentials: 'same-origin' });
-			} else {
-				throw new Error('No start URL configured for tool');
-			}
-
-			const data = await res.json();
-
-			if (tool.id === 'kismet-wifi') {
-				setKismetStatus(data.success ? 'running' : 'stopped');
-			} else {
-				// If start was rejected (409) because the tool is already running, check status
-				if (!data.success && ep.controlUrl) {
-					const statusRes = await fetch(ep.controlUrl, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ action: 'status' }),
-						credentials: 'same-origin'
-					});
-					const statusData = await statusRes.json();
-					setLocalStatus(tool.id, statusData.isRunning ? 'running' : 'stopped');
-				} else {
-					setLocalStatus(tool.id, data.success ? 'running' : 'stopped');
-				}
-			}
+			const data = await (await fetchStartAction(ep)).json();
+			if (tool.id === 'kismet-wifi') applyKismetStartResult(data);
+			else await applyStartResult(tool.id, data, ep);
 		} catch {
-			if (tool.id === 'kismet-wifi') {
-				setKismetStatus('running');
-			} else {
-				setLocalStatus(tool.id, 'stopped');
-			}
+			setToolStatus(tool.id, catchFallbackStatus(tool.id));
 		}
 	}
 
 	async function handleStop(tool: ToolDefinition) {
 		const ep = toolEndpoints[tool.id];
 		if (!ep) return;
-
-		// Set stopping state
-		if (tool.id === 'kismet-wifi') {
-			setKismetStatus('stopping');
-		} else {
-			setLocalStatus(tool.id, 'stopping');
-		}
-
+		setToolStatus(tool.id, 'stopping');
 		try {
-			let res: Response;
-			if (ep.controlUrl) {
-				res = await fetch(ep.controlUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ action: 'stop' }),
-					credentials: 'same-origin'
-				});
-			} else if (ep.stopUrl) {
-				res = await fetch(ep.stopUrl, { method: 'POST', credentials: 'same-origin' });
-			} else {
-				throw new Error('No stop URL configured for tool');
-			}
-
-			const data = await res.json();
-
-			if (tool.id === 'kismet-wifi') {
-				setKismetStatus(data.success ? 'stopped' : 'running');
-			} else {
-				setLocalStatus(tool.id, data.success ? 'stopped' : 'running');
-			}
+			const data = await (await fetchStopAction(ep)).json();
+			setToolStatus(tool.id, data.success ? 'stopped' : 'running');
 		} catch {
-			if (tool.id === 'kismet-wifi') {
-				setKismetStatus('running');
-			} else {
-				setLocalStatus(tool.id, 'stopped');
-			}
+			setToolStatus(tool.id, catchFallbackStatus(tool.id));
 		}
 	}
 
