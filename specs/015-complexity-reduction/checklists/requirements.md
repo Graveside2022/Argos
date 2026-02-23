@@ -33,4 +33,4 @@
 
 - All items pass. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
 - The spec intentionally avoids naming specific refactoring patterns (those are implementation details for planning phase).
-- The 68-violation count and 46-file count are current as of spec-014 completion; the actual count at implementation time may differ if other branches merge first.
+- The 536-violation count and 185-file count are current at threshold 5; the actual count at implementation time may differ if other branches merge first.
