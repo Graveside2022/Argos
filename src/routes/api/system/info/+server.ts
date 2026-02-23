@@ -1,20 +1,11 @@
-import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
-import { promisify } from 'util';
 
+import { createHandler } from '$lib/server/api/create-handler';
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import type { SystemInfo } from '$lib/types/system';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
-
-/** Safe error message extraction. */
-function errMsg(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
 
 /** Get all IPs and find primary + Tailscale. */
 async function getNetworkIps(): Promise<{ primaryIp: string; tailscaleIp: string | null }> {
@@ -134,53 +125,43 @@ async function getBatteryInfo(): Promise<{ level: number; charging: boolean } | 
 }
 
 async function getSystemInfo(): Promise<SystemInfo> {
-	try {
-		const hostname = os.hostname();
-		const { primaryIp, tailscaleIp } = await getNetworkIps();
-		const wifiInterfaces = await getWifiInterfaces();
+	const hostname = os.hostname();
+	const { primaryIp, tailscaleIp } = await getNetworkIps();
+	const wifiInterfaces = await getWifiInterfaces();
 
-		const cpuInfo = os.cpus();
-		const cpuCores = cpuInfo.length;
-		const cpuUsage = Math.min(100, (os.loadavg()[0] / cpuCores) * 100);
+	const cpuInfo = os.cpus();
+	const cpuCores = cpuInfo.length;
+	const cpuUsage = Math.min(100, (os.loadavg()[0] / cpuCores) * 100);
 
-		const totalMem = os.totalmem();
-		const freeMem = os.freemem();
-		const usedMem = totalMem - freeMem;
+	const totalMem = os.totalmem();
+	const freeMem = os.freemem();
+	const usedMem = totalMem - freeMem;
 
-		const [storageInfo, temperature, battery] = await Promise.all([
-			getStorageInfo(),
-			getTemperature(),
-			getBatteryInfo()
-		]);
+	const [storageInfo, temperature, battery] = await Promise.all([
+		getStorageInfo(),
+		getTemperature(),
+		getBatteryInfo()
+	]);
 
-		return {
-			hostname,
-			ip: primaryIp,
-			tailscaleIp,
-			wifiInterfaces,
-			cpu: { usage: cpuUsage, model: cpuInfo[0].model, cores: cpuCores },
-			memory: {
-				total: totalMem,
-				used: usedMem,
-				free: freeMem,
-				percentage: (usedMem / totalMem) * 100
-			},
-			storage: storageInfo,
-			temperature,
-			uptime: os.uptime(),
-			battery
-		};
-	} catch (error: unknown) {
-		logger.error('Error getting system info', { error: errMsg(error) });
-		throw error;
-	}
+	return {
+		hostname,
+		ip: primaryIp,
+		tailscaleIp,
+		wifiInterfaces,
+		cpu: { usage: cpuUsage, model: cpuInfo[0].model, cores: cpuCores },
+		memory: {
+			total: totalMem,
+			used: usedMem,
+			free: freeMem,
+			percentage: (usedMem / totalMem) * 100
+		},
+		storage: storageInfo,
+		temperature,
+		uptime: os.uptime(),
+		battery
+	};
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		const info = await getSystemInfo();
-		return json(info);
-	} catch (_error: unknown) {
-		return json({ error: 'Failed to get system info' }, { status: 500 });
-	}
-};
+export const GET = createHandler(async () => {
+	return await getSystemInfo();
+});

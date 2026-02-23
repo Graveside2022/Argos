@@ -1,12 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { DatabaseCleanupService } from '$lib/server/db/cleanup-service';
 import { getRFDatabase } from '$lib/server/db/database';
 import { DatabaseOptimizer } from '$lib/server/db/db-optimizer';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const CleanupPostSchema = z.discriminatedUnion('action', [
 	z.object({
@@ -25,35 +23,26 @@ const CleanupPostSchema = z.discriminatedUnion('action', [
 
 let optimizer: DatabaseOptimizer | null = null;
 
-// Get cleanup service from database instance
 function getCleanupService(): DatabaseCleanupService {
 	const db = getRFDatabase();
-	let cleanupService = db.getCleanupService();
-
+	const cleanupService = db.getCleanupService();
 	if (!cleanupService) {
 		throw new Error('Cleanup service not initialized');
 	}
-
 	return cleanupService;
 }
 
-// Initialize optimizer
 function initializeOptimizer() {
 	if (!optimizer) {
 		const db = getRFDatabase();
 		optimizer = new DatabaseOptimizer(db['db'], {
-			cacheSize: -2000, // 2MB cache for Pi
+			cacheSize: -2000,
 			isWalMode: true,
 			synchronous: 'NORMAL',
-			mmapSize: 30000000, // 30MB memory map
-			memoryLimit: 50 * 1024 * 1024 // 50MB memory limit
+			mmapSize: 30000000,
+			memoryLimit: 50 * 1024 * 1024
 		});
 	}
-}
-
-/** Safe error message extraction. */
-function errMsg(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
 
 /** Timestamped success response helper. */
@@ -61,12 +50,9 @@ function okJson(data: Record<string, unknown>) {
 	return json({ success: true, ...data, timestamp: Date.now() });
 }
 
-type CleanupAction = (
-	cleanupService: DatabaseCleanupService,
-	url: URL
-) => ReturnType<RequestHandler>;
+type CleanupAction = (cleanupService: DatabaseCleanupService, url: URL) => Response;
 
-function handleStatus(cleanupService: DatabaseCleanupService): ReturnType<RequestHandler> {
+function handleStatus(cleanupService: DatabaseCleanupService): Response {
 	return okJson({
 		stats: cleanupService.getStats(),
 		growth: cleanupService.getGrowthTrends(24),
@@ -74,10 +60,7 @@ function handleStatus(cleanupService: DatabaseCleanupService): ReturnType<Reques
 	});
 }
 
-function handleExport(
-	cleanupService: DatabaseCleanupService,
-	url: URL
-): ReturnType<RequestHandler> {
+function handleExport(cleanupService: DatabaseCleanupService, url: URL): Response {
 	const days = parseInt(url.searchParams.get('days') || '7');
 	const endTime = Date.now();
 	const startTime = endTime - days * 24 * 60 * 60 * 1000;
@@ -109,22 +92,14 @@ const GET_ACTIONS: Record<string, CleanupAction> = {
 	export: handleExport
 };
 
-export const GET: RequestHandler = ({ url }) => {
-	try {
-		initializeOptimizer();
-		const cleanupService = getCleanupService();
-		const action = url.searchParams.get('action') || 'status';
-		const handler = GET_ACTIONS[action];
-		if (!handler) return json({ success: false, error: 'Invalid action' }, { status: 400 });
-		return handler(cleanupService, url);
-	} catch (error: unknown) {
-		logger.error('Database cleanup error', { error: errMsg(error) });
-		return json(
-			{ success: false, error: errMsg(error) || 'Database cleanup failed' },
-			{ status: 500 }
-		);
-	}
-};
+export const GET = createHandler(({ url }) => {
+	initializeOptimizer();
+	const cleanupService = getCleanupService();
+	const action = url.searchParams.get('action') || 'status';
+	const handler = GET_ACTIONS[action];
+	if (!handler) return json({ success: false, error: 'Invalid action' }, { status: 400 });
+	return handler(cleanupService, url);
+});
 
 /** Validate and parse POST body. Returns parsed body or error response. */
 function parsePostBody(rawBody: unknown) {
@@ -157,20 +132,10 @@ function executePostAction(body: PostAction, cleanupService: DatabaseCleanupServ
 	return okJson({ message: `Cleaned up aggregated data older than ${body.daysToKeep} days` });
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		initializeOptimizer();
-		const cleanupService = getCleanupService();
-		const parsed = parsePostBody(await request.json());
-		if (parsed.error) return parsed.error;
-		return executePostAction(parsed.body as PostAction, cleanupService);
-	} catch (error: unknown) {
-		logger.error('Database cleanup error', { error: errMsg(error) });
-		return json(
-			{ success: false, error: errMsg(error) || 'Database cleanup failed' },
-			{ status: 500 }
-		);
-	}
-};
-
-// Note: Cleanup service lifecycle is managed by the database instance
+export const POST = createHandler(async ({ request }) => {
+	initializeOptimizer();
+	const cleanupService = getCleanupService();
+	const parsed = parsePostBody(await request.json());
+	if (parsed.error) return parsed.error;
+	return executePostAction(parsed.body as PostAction, cleanupService);
+});

@@ -35,7 +35,7 @@
 
 ## R2: execFileAsync Duplication — Verified
 
-**Decision**: Extract to shared `src/lib/server/utils/exec-utils.ts`
+**Decision**: Extract to shared `src/lib/server/exec.ts`
 **Rationale**: All 36 files use `promisify(execFile)` with the same pattern. Some additionally configure `maxBuffer` or `timeout` options — the shared utility should accept optional overrides.
 **Files**: 36 files (see plan.md for full list — 15 in routes/api, 21 in lib/server)
 
@@ -67,7 +67,7 @@
 **Decision**: `createHandler()` factory wrapping SvelteKit `RequestHandler`
 
 ```typescript
-// Pattern: src/lib/server/api/route-handler.ts
+// Pattern: src/lib/server/api/create-handler.ts
 type HandlerFn = (event: RequestEvent) => Promise<unknown> | unknown;
 
 interface HandlerOptions {
@@ -137,4 +137,21 @@ Factory should standardize on shape 1 as default. Shape 3 can be opt-in.
 
 **Current state**: One store at `src/lib/stores/tactical-map/kismet-store.ts` using Svelte writable. Additionally, `src/lib/stores/connection.ts` and `src/lib/stores/dashboard/dashboard-store.ts` reference Kismet data.
 
-**Key finding**: The "dual store" issue is more nuanced than originally assessed. The main `kismetStore` receives data via WebSocket. Dashboard stores derive from it. The REST API is used for control actions (start/stop), not as a parallel data source. The unification task (T025) should focus on ensuring all Kismet data flows through the single `kismetStore` as source of truth, with clear separation between data stores (WebSocket-fed) and action functions (REST-triggered).
+**Key finding**: Two distinct Kismet stores exist:
+
+1. `src/lib/kismet/stores.ts` — WebSocket-fed, array-based devices, alerts, status, GPS. Used by `websocket.ts` and `websocket-handlers.ts`.
+2. `src/lib/stores/tactical-map/kismet-store.ts` — Map-based devices, markers, affiliations, distributions. Used by tactical map components (DevicesPanel, OverviewPanel, DeviceTable, DeviceOverlay, ToolsNavigationView).
+
+The "dual store" is confirmed: two independently managed stores for the same domain (Kismet devices). Unification should keep the tactical-map store as primary (richer state, more consumers) and feed it from WebSocket data. The `kismet/stores.ts` becomes a thin adapter or is absorbed.
+
+## R10: Existing UI Component Inventory
+
+**shadcn-svelte components** in `src/lib/components/ui/`:
+
+- alert-dialog, badge, button, input, select, separator, switch, table
+
+**Table component exists** but is basic — no sorting, filtering, or pagination. TanStack Table would add headless state management on top.
+
+**svelte-sonner**: Installed (`1.0.7`) but zero imports anywhere in `src/`. Needs explicit `<Toaster />` component mount + `toast()` calls.
+
+**No existing retry/timeout wrappers**: `withRetry`, `withTimeout` patterns are absent from the codebase. These are genuinely new abstractions.
