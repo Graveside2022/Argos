@@ -1,12 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 /** Find running Kismet PIDs. Returns empty array if none found. */
 async function findKismetPids(): Promise<string[]> {

@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
 import { SignalBatchRequestSchema, type SignalInput } from '$lib/schemas/api';
+import { errMsg } from '$lib/server/api/error-utils';
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
 import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
@@ -8,11 +9,6 @@ import { logger } from '$lib/utils/logger';
 import { handleValidationError } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
-
-/** Extract error message from unknown error values. */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Map of lowercase source strings to SignalSource enum values. */
 const SOURCE_MAP: Record<string, SignalSource> = {

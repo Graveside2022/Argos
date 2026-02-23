@@ -49,7 +49,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 - [x] T006 [US1] Create `createHandler()` factory in `src/lib/server/api/create-handler.ts` — wraps `HandlerFn` (business logic function) returning `HandlerResult` (data object or Response) with try-catch, `errMsg()`, `logger.error()`, `json()` response. Uses types from T004. Ensure return type satisfies SvelteKit `RequestHandler` (FR-004/FR-005). Add JSDoc. Add unit tests in `src/lib/server/api/create-handler.test.ts`
 - [x] T007 [US1] Migrate 3 pilot routes to factory: `src/routes/api/signals/+server.ts`, `src/routes/api/system/info/+server.ts`, `src/routes/api/db/cleanup/+server.ts` — verify identical behavior with existing tests
 - [x] T008 [US1] Migrate remaining routes (batch 1 — system, hackrf, rf domains): `src/routes/api/system/**`, `src/routes/api/hackrf/**`, `src/routes/api/rf/**` to use `createHandler()`. Verify with `npm run build` + targeted vitest
-- [ ] T009 [US1] Migrate remaining routes (batch 2 — gsm-evil, kismet, tak, signals, openwebrx domains): `src/routes/api/gsm-evil/**`, `src/routes/api/kismet/**`, `src/routes/api/tak/**`, `src/routes/api/signals/**`, `src/routes/api/openwebrx/**` to use `createHandler()`. Verify with `npm run build` + `npm run test:unit`
+- [x] T009 [US1] Migrate remaining routes (batch 2 — gsm-evil, kismet, tak, signals, openwebrx domains): `src/routes/api/gsm-evil/**`, `src/routes/api/kismet/**`, `src/routes/api/tak/**`, `src/routes/api/signals/**`, `src/routes/api/openwebrx/**` to use `createHandler()`. Verify with `npm run build` + `npm run test:unit`
 
 ---
 

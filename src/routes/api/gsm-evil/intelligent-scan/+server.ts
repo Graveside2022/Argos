@@ -1,14 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { execFile, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 
+import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 const CHECK_FREQS = ['947.2', '950.0'];
 

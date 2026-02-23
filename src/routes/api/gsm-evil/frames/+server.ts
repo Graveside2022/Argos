@@ -1,13 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
 import { readFile } from 'fs/promises';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 /** Lookup table for GSM L3 RR Management message types (protocol discriminator 0x06) */
 const GSM_RR_MESSAGE_TYPES: Record<number, string> = {
