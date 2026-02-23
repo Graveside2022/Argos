@@ -1,3 +1,4 @@
+import { errMsg } from '$lib/server/api/error-utils';
 import { performIntelligentScan } from '$lib/server/services/gsm-evil/gsm-intelligent-scan-service';
 
 import type { RequestHandler } from './$types';
@@ -45,8 +46,7 @@ async function consumeScanStream(controller: ReadableStreamDefaultController): P
 			encodeScanEvent(event as ScanEvent, controller);
 		}
 	} catch (error: unknown) {
-		// Safe: Catch block error cast to Error for scan failure message
-		const errorMsg = `[ERROR] Scan service failed: ${(error as Error).message}`;
+		const errorMsg = `[ERROR] Scan service failed: ${errMsg(error)}`;
 		controller.enqueue(encodeSseData({ message: errorMsg }));
 	} finally {
 		controller.close();

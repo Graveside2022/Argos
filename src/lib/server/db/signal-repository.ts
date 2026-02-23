@@ -7,6 +7,7 @@
 import type Database from 'better-sqlite3';
 
 import { DbSignalSchema } from '$lib/schemas/database';
+import { errMsg } from '$lib/server/api/error-utils';
 import type { SignalMarker } from '$lib/types/signals';
 import { logError } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
@@ -128,7 +129,7 @@ function tryInsertSignal(stmt: Database.Statement, signal: DbSignal): boolean {
 		if (!isUniqueConstraintError(err)) {
 			logError(
 				'Failed to insert signal',
-				{ signalId: signal.signal_id, error: (err as Error).message },
+				{ signalId: signal.signal_id, error: errMsg(err) },
 				'signal-insert-failed'
 			);
 		}

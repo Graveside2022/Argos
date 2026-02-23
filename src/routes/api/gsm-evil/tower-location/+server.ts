@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import path from 'path';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
@@ -221,7 +222,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		return json({ success: true, ...result });
 	} catch (error: unknown) {
-		logger.error('Tower location lookup error', { error: (error as Error).message });
+		logger.error('Tower location lookup error', { error: errMsg(error) });
 		return json(
 			{ success: false, message: 'Failed to lookup tower location' },
 			{ status: 500 }

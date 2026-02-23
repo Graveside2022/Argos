@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
@@ -36,7 +37,7 @@ async function terminateKismet(): Promise<void> {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 		}
 	} catch (error) {
-		logger.error('Error during Kismet termination', { error: (error as Error).message });
+		logger.error('Error during Kismet termination', { error: errMsg(error) });
 	}
 }
 
@@ -77,9 +78,9 @@ export const POST: RequestHandler = async () => {
 			message: 'Kismet WiFi discovery stopped successfully'
 		});
 	} catch (error) {
-		logger.error('Kismet stop error', { error: (error as Error).message });
+		logger.error('Kismet stop error', { error: errMsg(error) });
 		return json(
-			{ success: false, error: (error as Error).message, message: 'Failed to stop Kismet' },
+			{ success: false, error: errMsg(error), message: 'Failed to stop Kismet' },
 			{ status: 500 }
 		);
 	}

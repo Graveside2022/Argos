@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 import { logger } from '$lib/utils/logger';
@@ -60,12 +61,12 @@ export const GET: RequestHandler = async () => {
 			timestamp: new Date().toISOString()
 		});
 	} catch (error: unknown) {
-		logger.error('Live frame capture error', { error: (error as Error).message });
+		logger.error('Live frame capture error', { error: errMsg(error) });
 		return json({
 			success: false,
 			frames: [],
 			message: 'Failed to capture live frames',
-			error: (error as Error).message
+			error: errMsg(error)
 		});
 	}
 };

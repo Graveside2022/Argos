@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import { z } from 'zod';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { logger } from '$lib/utils/logger';
 
@@ -136,14 +137,13 @@ export const GET: RequestHandler = async () => {
 
 		return json(result.data);
 	} catch (error: unknown) {
-		logger.error('IMSI fetch error', { error: (error as Error).message });
+		logger.error('IMSI fetch error', { error: errMsg(error) });
 		return json({
 			success: false,
 			imsis: [],
 			total: 0,
 			message: 'Failed to fetch IMSI data',
-			// Safe: Catch block error cast to Error for message extraction
-			error: (error as Error).message
+			error: errMsg(error)
 		});
 	}
 };

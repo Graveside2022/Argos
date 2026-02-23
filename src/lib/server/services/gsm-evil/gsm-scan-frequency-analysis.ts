@@ -10,6 +10,7 @@ import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { readFile, unlink } from 'fs/promises';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { logger } from '$lib/utils/logger';
@@ -187,9 +188,7 @@ function handleTestError(
 	index: number,
 	total: number
 ): FrequencyTestOutcome {
-	events.push(
-		createUpdateEvent(`${label} Error testing ${freq} MHz: ${(error as Error).message}`)
-	);
+	events.push(createUpdateEvent(`${label} Error testing ${freq} MHz: ${errMsg(error)}`));
 	events.push(createUpdateEvent(`${label} Skipping to next frequency...`));
 	events.push(createUpdateEvent('[SCAN] '));
 	const failedResult = buildFailedResult(freq);

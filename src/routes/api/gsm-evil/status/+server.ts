@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -136,12 +137,12 @@ export const GET: RequestHandler = async () => {
 					: 'GSM Evil is stopped'
 		});
 	} catch (error: unknown) {
-		logger.error('Status check error', { error: (error as Error).message });
+		logger.error('Status check error', { error: errMsg(error) });
 		return json(
 			{
 				status: 'error',
 				message: 'Failed to check GSM Evil status',
-				error: (error as Error).message
+				error: errMsg(error)
 			},
 			{ status: 500 }
 		);

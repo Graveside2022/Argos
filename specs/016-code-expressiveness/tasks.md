@@ -72,7 +72,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: `grep -rn "(error as Error)\|(err as Error)" src/` returns zero results.
 
-- [ ] T014 [US7] Eliminate all 39 `(error as Error)` / `(err as Error)` casts across 23 files — replace with `errMsg()` calls or route through factory. Files listed in `specs/016-code-expressiveness/research.md` R3
+- [x] T014 [US7] Eliminate all 39 `(error as Error)` / `(err as Error)` casts across 23 files — replace with `errMsg()` calls or route through factory. Files listed in `specs/016-code-expressiveness/research.md` R3
 
 ---
 

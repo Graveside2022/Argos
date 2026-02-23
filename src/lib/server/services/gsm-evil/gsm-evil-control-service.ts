@@ -1,3 +1,4 @@
+import { errMsg } from '$lib/server/api/error-utils';
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -63,12 +64,11 @@ export async function startGsmEvil(frequency?: string): Promise<GsmEvilStartResu
 
 		return { success: true, message: 'GSM Evil started successfully' };
 	} catch (error: unknown) {
-		logger.error('[gsm-evil] Start error', { error: (error as Error).message });
+		logger.error('[gsm-evil] Start error', { error: errMsg(error) });
 		return {
 			success: false,
 			message: 'Failed to start GSM Evil',
-			// Safe: Catch block error from spawn/exec failures cast to Error for message extraction
-			error: (error as Error).message
+			error: errMsg(error)
 		};
 	}
 }
@@ -94,7 +94,7 @@ export async function stopGsmEvil(): Promise<GsmEvilStopResult> {
 		logger.info('[gsm-evil] Processes stopped');
 		stopResult = { success: true, message: 'GSM Evil stopped successfully' };
 	} catch (error: unknown) {
-		logger.error('[gsm-evil] Stop error', { error: (error as Error).message });
+		logger.error('[gsm-evil] Stop error', { error: errMsg(error) });
 		stopResult = buildStopErrorResult(error);
 	} finally {
 		await releaseHackRfResource();
