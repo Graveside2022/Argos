@@ -96,10 +96,6 @@ export function buildDeviceGeoJSON(
 	});
 
 	const visible = filterByVisibility(candidates, visibilityMode, promotedDevices);
-	const visibleMacSet = new Set<string>(
-		visible.length < 50 ? undefined : visible.map((d) => d.mac)
-	);
-	if (visible.length < 50) for (const d of visible) visibleMacSet.add(d.mac);
 
 	// Build features from visible set — iterate devices Map only once total
 	for (const { mac } of visible) {
