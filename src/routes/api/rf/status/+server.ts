@@ -1,14 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
 
 interface DeviceInfo {
 	connected: boolean;
@@ -54,7 +52,7 @@ export const GET: RequestHandler = async () => {
 		const hackrfInfo = await detectHackrf();
 		return json({ status: 'success', data: buildStatusPayload(hackrfInfo) });
 	} catch (error: unknown) {
-		const msg = error instanceof Error ? error.message : String(error);
+		const msg = errMsg(error);
 		logger.error('Error in rf/status endpoint', { error: msg });
 		return json({ status: 'error', message: msg }, { status: 500 });
 	}

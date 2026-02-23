@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
 import { StartSweepRequestSchema } from '$lib/schemas/rf';
+import { errMsg } from '$lib/server/api/error-utils';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 import { logger } from '$lib/utils/logger';
@@ -55,10 +56,6 @@ async function startSweepCycle(frequencies: FreqResult[], cycleTimeMs: number): 
 		},
 		{ status: 500 }
 	);
-}
-
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
 }
 
 export const POST: RequestHandler = async ({ request }) => {
