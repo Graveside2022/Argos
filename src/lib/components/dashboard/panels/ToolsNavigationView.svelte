@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
+	import { toast } from 'svelte-sonner';
 
 	import ToolCard from '$lib/components/dashboard/shared/ToolCard.svelte';
 	import ToolCategoryCard from '$lib/components/dashboard/shared/ToolCategoryCard.svelte';
@@ -127,8 +128,10 @@
 			const data = await (await fetchStartAction(ep)).json();
 			if (tool.id === 'kismet-wifi') applyKismetStartResult(data);
 			else await applyStartResult(tool.id, data, ep);
+			toast.success(`${tool.name} started`);
 		} catch {
 			setToolStatus(tool.id, catchFallbackStatus(tool.id));
+			toast.error(`Failed to start ${tool.name}`);
 		}
 	}
 
@@ -139,8 +142,10 @@
 		try {
 			const data = await (await fetchStopAction(ep)).json();
 			setToolStatus(tool.id, data.success ? 'stopped' : 'running');
+			toast.success(`${tool.name} stopped`);
 		} catch {
 			setToolStatus(tool.id, catchFallbackStatus(tool.id));
+			toast.error(`Failed to stop ${tool.name}`);
 		}
 	}
 

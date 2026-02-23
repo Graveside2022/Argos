@@ -104,7 +104,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 ### Sub-phase 8a: Activate svelte-sonner (lowest risk)
 
-- [ ] T017 [US8] Add `<Toaster />` component to `src/routes/+layout.svelte`. Add `toast()` calls to 2–3 existing API success/error handlers as proof of pattern. Verify Lunaris dark theme compatibility.
+- [x] T017 [US8] Add `<Toaster />` component to `src/routes/+layout.svelte`. Add `toast()` calls to 2–3 existing API success/error handlers as proof of pattern. Verify Lunaris dark theme compatibility.
 
 ### Sub-phase 8b: Data Tables
 

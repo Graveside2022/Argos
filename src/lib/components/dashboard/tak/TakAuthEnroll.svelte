@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import Input from '$lib/components/ui/input/input.svelte';
 	import type { TakServerConfig } from '$lib/types/tak';
 
@@ -28,8 +30,10 @@
 				paths: data.paths as { certPath: string; keyPath: string; caPath?: string }
 			});
 			enrollStatus = 'Enrollment successful';
+			toast.success('TAK certificate enrolled');
 		} else {
 			enrollStatus = (data.error as string) ?? 'Enrollment failed';
+			toast.error(`Enrollment failed: ${enrollStatus}`);
 		}
 	}
 
@@ -55,6 +59,7 @@
 			handleEnrollResponse(await res.json());
 		} catch {
 			enrollStatus = 'Enrollment error';
+			toast.error('Enrollment failed: server communication error');
 		} finally {
 			isEnrolling = false;
 		}
