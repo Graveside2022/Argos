@@ -32,10 +32,10 @@ _GATE: All gates pass._
 | 2.3 Naming             | Conventions followed                | PASS — Extracted helpers will follow camelCase             |
 | 2.4 Error Handling     | Explicit, no swallowed errors       | PASS — FR-009 requires error handling preservation         |
 | 2.6 Forbidden Patterns | No barrel files, no catch-all utils | PASS — No new barrel files; helpers are domain-scoped      |
-| 3.1 Test-First         | Tests before implementation         | N/A — Pure refactoring; existing tests verify behavior     |
+| 3.1 Test-First         | Tests before implementation         | PASS — Existing tests serve as behavioral verification     |
 | 3.3 Quality            | Tests independent, deterministic    | PASS — No test changes unless refactored file splits       |
 | 5.1-5.3 Performance    | Budgets respected                   | PASS — Performance benchmarks validate no regression       |
-| 9.2 Task Granularity   | 1 task ≤ 2 hours, ≤ 5 files         | PASS — Each task targets 1-3 functions in 1-2 files        |
+| 9.2 Task Granularity   | 1 task ≤ 2 hours, ≤ 5 files         | PASS — Each task targets all violations in 1-2 files       |
 | 9.3 Git Workflow       | 1 commit per task                   | PASS — Each function/group gets its own commit             |
 
 ## Project Structure
@@ -108,22 +108,24 @@ Each violation will be addressed using one or more of these patterns:
 
 Functions are grouped by **file proximity** (not just severity) to minimize context switching:
 
-1. **Dashboard map cluster** (map-geojson, map-handlers) — highest cyclomatic scores (35, 29)
-2. **Server services cluster** (hardware-details, kismet.service, gsm-evil services) — cognitive hotspots
-3. **API route handlers** (gsm-evil/_, system/_, tak/_, gps/_) — moderate complexity, similar patterns
+1. **Setup** — baseline audit and test verification
+2. **Dashboard map cluster** (map-geojson, map-handlers) — highest cyclomatic scores (35, 29)
+3. **Server services cluster** (hardware, kismet, agent, gsm-evil, GPS/TAK, db, middleware) — 8 sub-phases
 4. **MCP servers** (system-inspector, hardware-debugger, dynamic-server-tools) — isolated modules
-5. **Agent cluster** (runtime, tools) — highest cognitive in AI subsystem
-6. **Hooks + remaining** (hooks.server.ts, page components, stores) — mixed severity
-7. **Final verification** — full lint, build, test suite
+5. **API route handlers** (gsm-evil/_, system/_, tak/_, gps/_) — moderate complexity, similar patterns
+6. **UI components and stores** (dashboard, TAK, GSM Evil, stores, kismet handlers) — 7 sub-phases
+7. **Utilities, HackRF, and remaining** (utils, sweep-manager, map, tactical-map) — 4 sub-phases
+8. **Final verification** — full lint, build, test suite, file size audit, function growth check
 
 ### File Size Management
 
 When extracting helpers causes a file to exceed 300 lines:
 
-- Create `<filename>-helpers.ts` in the same directory
+- Create `<filename>-helpers.ts` in the same directory (domain-scoped companion, NOT a catch-all — Constitution 2.6 forbids generic `helpers.ts` files; these are always prefixed with the parent filename)
 - Move pure helper functions to the helpers file
 - Keep the main orchestrator in the original file
 - Import helpers explicitly (no barrel files)
+- If 3+ distinct concerns emerge, prefer splitting by concern (e.g., `-parsing.ts`, `-detection.ts`) over a single `-helpers.ts`
 
 ## Verification Protocol
 

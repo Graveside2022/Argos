@@ -306,7 +306,7 @@
 
 ### 7D: Test File (2 violations, 1 file)
 
-- [ ] T161 [P] [US3] Refactor src/lib/components/components.test.ts — arrow@L199 (cyc=7, cog=12). Simplify test helper logic
+- [ ] T161 [P] [US2] Refactor src/lib/components/components.test.ts — arrow@L199 (cyc=7, cog=12). Simplify test helper logic
 
 - [ ] T162 Verify utilities/HackRF/remaining: lint + build
 
@@ -322,9 +322,12 @@
 - [ ] T164 Run `npm run build` — must pass clean
 - [ ] T165 Run `npx vitest run --no-coverage` — all tests pass
 - [ ] T166 Run `git diff --stat main...HEAD` to document total scope of changes
-- [ ] T167 Verify no file exceeds 300 lines with `find src/ -name "*.ts" -o -name "*.svelte" | xargs wc -l | sort -rn | head -20`
+- [ ] T167 Verify no file exceeds 300 lines: `find src/ -name "*.ts" -o -name "*.svelte" | xargs wc -l | sort -rn | awk '$1 > 300'` — must output 0 files (SC-005)
+- [ ] T168 Verify function proliferation within budget: count total exported/declared functions before and after refactoring — growth must not exceed 150% of refactored function count (SC-006)
+- [ ] T169 Verify all extracted helper functions have descriptive verb-noun names per research.md Decision 3 (FR-004)
+- [ ] T170 Spot-check that no new `-helpers.ts` file duplicates logic already present elsewhere in the codebase (FR-006)
 
-**Checkpoint**: SC-001 through SC-006 verified — zero complexity violations at threshold 5, all tests pass
+**Checkpoint**: SC-001 through SC-006 verified — zero complexity violations at threshold 5, all tests pass, no oversized files, function growth within budget
 
 ---
 
@@ -340,7 +343,7 @@
 
 - **US1 (Critical, 25+)**: Functions in Phases 2, 3, 4, 5, 6, 7 — no inter-story dependencies
 - **US2 (Moderate, 6-24)**: Functions in all phases — no inter-story dependencies
-- **US3 (Borderline, 6)**: Functions in Phases 3, 5, 6, 7 — no inter-story dependencies
+- **US3 (Borderline, 6-9)**: Functions in Phases 3, 5, 6, 7 — no inter-story dependencies
 
 ### Parallel Opportunities
 
@@ -378,7 +381,7 @@ Within each phase, tasks marked [P] can run in parallel since they target differ
 
 - Pure structural refactoring — NO behavioral changes
 - If a refactored function's tests break, the refactoring has a bug — do not modify the test
-- Use `--no-verify` on commits only during active refactoring; final commits must pass all hooks
+- Every commit must pass pre-commit hooks — structure refactoring so each file is fully compliant before committing
 - Files exceeding 300 lines after helper extraction must be split per research.md Decision 4
 - The 536-violation count is at threshold 5; Phase 1 establishes the actual baseline
 - At threshold 5, even functions with 3+ if-else branches need lookup tables or helper extraction

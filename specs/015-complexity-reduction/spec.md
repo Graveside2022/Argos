@@ -41,7 +41,7 @@ Functions scoring 6-24 are refactored to achieve complexity scores of 5 or below
 
 ### User Story 3 - Borderline Functions (Priority: P3)
 
-Functions scoring exactly 6 (one point over the threshold of 5) need minor simplification. These functions need only 1-2 structural changes such as an early return or guard clause extraction.
+Functions scoring 6-9 (slightly over the threshold of 5) need minor simplification. These functions need only 1-2 structural changes such as an early return, guard clause extraction, or a small lookup table.
 
 **Why this priority**: These are the easiest to fix and carry the lowest risk.
 
@@ -49,7 +49,7 @@ Functions scoring exactly 6 (one point over the threshold of 5) need minor simpl
 
 **Acceptance Scenarios**:
 
-1. **Given** a function with a complexity score of 6, **When** a minor refactoring is applied, **Then** the score drops to 5 or below.
+1. **Given** a function with a complexity score between 6 and 9, **When** a minor refactoring is applied, **Then** the score drops to 5 or below.
 2. **Given** the entire codebase after all refactoring, **When** the lint tool runs with error-level enforcement at 5, **Then** zero complexity violations are reported.
 
 ---
