@@ -93,15 +93,6 @@ export const HackRFStatusResponseSchema = z.object({
 });
 
 /**
- * Export inferred types for TypeScript
- */
-export type KismetStatusResponse = z.infer<typeof KismetStatusResponseSchema>;
-export type KismetDevice = z.infer<typeof KismetDeviceSchema>;
-export type ServiceHealthResponse = z.infer<typeof ServiceHealthResponseSchema>;
-export type GPSStateResponse = z.infer<typeof GPSStateResponseSchema>;
-export type HackRFStatusResponse = z.infer<typeof HackRFStatusResponseSchema>;
-
-/**
  * GPS API Response Schema (from /api/gps/position)
  * Used by kismet.service.ts getGPSPosition()
  */
@@ -197,57 +188,5 @@ export const RawKismetDeviceSchema = z.object({
 /**
  * Export inferred types for TypeScript
  */
-export type GPSAPIResponse = z.infer<typeof GPSAPIResponseSchema>;
 export type SimplifiedKismetDevice = z.infer<typeof SimplifiedKismetDeviceSchema>;
 export type RawKismetDevice = z.infer<typeof RawKismetDeviceSchema>;
-export type KismetDot11Data = z.infer<typeof KismetDot11Schema>;
-export type KismetLocation = z.infer<typeof KismetLocationSchema>;
-export type KismetSignalData = z.infer<typeof KismetSignalSchema>;
-
-/**
- * Helper function: Validate Kismet status response with detailed error reporting
- */
-export function validateKismetStatus(data: unknown): {
-	success: boolean;
-	data?: KismetStatusResponse;
-	error?: string;
-	details?: z.ZodIssue[];
-} {
-	const result = KismetStatusResponseSchema.safeParse(data);
-
-	if (result.success) {
-		return {
-			success: true,
-			data: result.data
-		};
-	}
-
-	return {
-		success: false,
-		error: result.error.message,
-		details: result.error.issues
-	};
-}
-
-/**
- * Helper function: Validate Kismet device with detailed error reporting
- */
-export function validateKismetDevice(data: unknown): {
-	success: boolean;
-	data?: KismetDevice;
-	error?: string;
-} {
-	const result = KismetDeviceSchema.safeParse(data);
-
-	if (result.success) {
-		return {
-			success: true,
-			data: result.data
-		};
-	}
-
-	return {
-		success: false,
-		error: result.error.message
-	};
-}

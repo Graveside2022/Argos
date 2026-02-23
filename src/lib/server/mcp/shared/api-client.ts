@@ -34,18 +34,6 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}): Pro
 }
 
 /**
- * Check if Argos app is reachable
- */
-export async function checkArgosConnection(): Promise<boolean> {
-	try {
-		const resp = await apiFetch('/api/health', { timeout: 3000 });
-		return resp.ok;
-	} catch {
-		return false;
-	}
-}
-
-/**
  * Get error message for connection failures
  */
 export function getConnectionErrorMessage(): string {

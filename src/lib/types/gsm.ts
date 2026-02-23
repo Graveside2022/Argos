@@ -38,17 +38,3 @@ export interface ScanProgress {
 	total: number;
 	completed: number;
 }
-
-export interface ScanResult {
-	type: 'scan_complete' | 'frequency_result';
-	success?: boolean;
-	bestFrequency?: string;
-	bestFrequencyFrames?: number;
-	scanResults?: FrequencyTestResult[];
-	totalTested?: number;
-	frequency?: string;
-	result?: FrequencyTestResult;
-	progress?: ScanProgress;
-	message?: string;
-	error?: string;
-}

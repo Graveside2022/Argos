@@ -23,15 +23,7 @@ const ONE_DAY = 24 * ONE_HOUR;
 const SEVEN_DAYS = 7 * ONE_DAY;
 const TEN_MINUTES = 10 * 60 * 1000;
 
-// Re-export types for backward compatibility
-export type {
-	DbDevice,
-	DbNetwork,
-	DbRelationship,
-	DbSignal,
-	SpatialQuery,
-	TimeQuery
-} from './types';
+// NOTE: type re-exports removed — consumers import directly from './types'
 
 import type { DbDevice, DbRelationship, DbSignal, SpatialQuery, TimeQuery } from './types';
 

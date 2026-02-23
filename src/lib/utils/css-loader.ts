@@ -54,15 +54,6 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
 }
 
 /**
- * Preloads multiple CSS files in parallel
- * @param cssFiles - Array of CSS file paths
- * @returns Promise that resolves when all CSS is loaded
- */
-export function preloadCSS(cssFiles: string[]): Promise<void[]> {
-	return Promise.all(cssFiles.map((href) => loadCSS(href, { preload: true, priority: 'high' })));
-}
-
-/**
  * Checks if critical CSS has been applied by testing a CSS custom property
  * @returns boolean indicating if critical CSS is active
  */

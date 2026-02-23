@@ -114,20 +114,6 @@ export interface KismetDevice {
 	parentAP?: string;
 }
 
-/**
- * Validate Kismet device data at runtime
- */
-export function validateKismetDevice(data: unknown): KismetDeviceValidated {
-	return KismetDeviceSchema.parse(data);
-}
-
-/**
- * Safe Kismet device validation
- */
-export function safeValidateKismetDevice(data: unknown) {
-	return KismetDeviceSchema.safeParse(data);
-}
-
 export interface KismetNetwork {
 	ssid: string;
 	bssid: string;

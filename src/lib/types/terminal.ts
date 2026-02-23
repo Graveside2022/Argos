@@ -81,12 +81,3 @@ export interface TerminalResizeMessage {
 	cols: number;
 	rows: number;
 }
-
-/** All terminal WebSocket message types */
-export type TerminalMessage =
-	| TerminalInitMessage
-	| TerminalReadyMessage
-	| TerminalReattachedMessage
-	| TerminalSessionsMessage
-	| TerminalInputMessage
-	| TerminalResizeMessage;

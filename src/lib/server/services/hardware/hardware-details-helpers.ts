@@ -164,12 +164,6 @@ export function formatUsbSpeed(speed: string): string {
 
 // ── GPS helpers ──
 
-export interface GpsdParsedLine {
-	class: string;
-	release?: string;
-	devices?: Record<string, unknown>[];
-}
-
 /** Extract fields from a DEVICES-class gpsd response */
 export function extractGpsdDevice(dev: Record<string, unknown>): {
 	device: string;

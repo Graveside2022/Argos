@@ -12,19 +12,6 @@ export interface ResourceState {
 	isDetected: boolean;
 }
 
-export interface ResourceRequest {
-	toolName: string;
-	device: HardwareDevice;
-	priority?: number;
-}
-
-export interface ToolRegistration {
-	name: string;
-	processPatterns: string[];
-	containerName?: string;
-	device: HardwareDevice;
-}
-
 export interface HardwareStatus {
 	hackrf: ResourceState;
 	alfa: ResourceState;

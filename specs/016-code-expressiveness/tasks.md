@@ -92,7 +92,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Run dead export analysis tool, confirm zero unused exports.
 
-- [ ] T016 [P] [US4] Run dead export analysis on codebase (ts-prune or grep-based), identify all exported-but-unused symbols, remove `export` keyword or delete unused functions. Verify with `npm run build`. Document removed exports in `specs/016-code-expressiveness/removed-exports.md`
+- [x] T016 [P] [US4] Run dead export analysis on codebase (ts-prune or grep-based), identify all exported-but-unused symbols, remove `export` keyword or delete unused functions. Verify with `npm run build`. Document removed exports in `specs/016-code-expressiveness/removed-exports.md`
 
 ---
 

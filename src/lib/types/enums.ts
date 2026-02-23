@@ -28,23 +28,10 @@ export const enum SignalSource {
 	Other = 'other'
 }
 
-export const enum WebSocketState {
-	Connecting = 'connecting',
-	Open = 'open',
-	Closing = 'closing',
-	Closed = 'closed'
-}
-
 export const enum WebSocketEvent {
 	Open = 'open',
 	Close = 'close',
 	Error = 'error',
 	Message = 'message',
 	Reconnecting = 'reconnecting'
-}
-
-export const enum CircuitBreakerState {
-	Closed = 'closed',
-	Open = 'open',
-	HalfOpen = 'half-open'
 }

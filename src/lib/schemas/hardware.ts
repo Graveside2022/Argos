@@ -149,18 +149,10 @@ export const DetectedHardwareSchema = z.object({
 });
 
 /**
- * Export inferred types for TypeScript
+ * Inferred types for TypeScript (internal — used by validation helpers below)
  */
-export type DetectedHardware = z.infer<typeof DetectedHardwareSchema>;
-export type SDRCapabilities = z.infer<typeof SDRCapabilitiesSchema>;
-export type WiFiCapabilities = z.infer<typeof WiFiCapabilitiesSchema>;
-export type BluetoothCapabilities = z.infer<typeof BluetoothCapabilitiesSchema>;
-export type GPSCapabilities = z.infer<typeof GPSCapabilitiesSchema>;
-export type CellularCapabilities = z.infer<typeof CellularCapabilitiesSchema>;
-export type HardwareCapabilities = z.infer<typeof HardwareCapabilitiesSchema>;
-export type HardwareCategory = z.infer<typeof HardwareCategorySchema>;
-export type ConnectionType = z.infer<typeof ConnectionTypeSchema>;
-export type HardwareStatus = z.infer<typeof HardwareStatusSchema>;
+type DetectedHardware = z.infer<typeof DetectedHardwareSchema>;
+type SDRCapabilities = z.infer<typeof SDRCapabilitiesSchema>;
 
 /**
  * Helper function: Validate hardware with detailed error reporting

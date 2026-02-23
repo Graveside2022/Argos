@@ -13,28 +13,6 @@ export class ValidationError extends Error {
 }
 
 /**
- * Validate GSM frequency parameter
- * @param freq - Frequency value (string or number)
- * @returns Validated frequency as number in MHz
- * @throws ValidationError if invalid
- */
-export function validateFrequency(freq: string | number): number {
-	const freqNum = typeof freq === 'string' ? parseFloat(freq) : freq;
-
-	if (isNaN(freqNum)) {
-		throw new ValidationError('Frequency must be a valid number');
-	}
-
-	if (freqNum < GSM_LIMITS.FREQ_MIN_MHZ || freqNum > GSM_LIMITS.FREQ_MAX_MHZ) {
-		throw new ValidationError(
-			`Frequency must be between ${GSM_LIMITS.FREQ_MIN_MHZ} and ${GSM_LIMITS.FREQ_MAX_MHZ} MHz`
-		);
-	}
-
-	return freqNum;
-}
-
-/**
  * Validate GSM gain parameter
  * @param gain - Gain value (string or number)
  * @returns Validated gain as number in dB

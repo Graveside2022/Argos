@@ -20,8 +20,7 @@ import { testFrequency } from './gsm-scan-frequency-analysis';
 import { acquireHackrf, checkPrerequisites } from './gsm-scan-prerequisites';
 import { createResultEvent, createUpdateEvent } from './gsm-scan-types';
 
-// Re-export types so existing import paths remain valid
-export type { ScanEvent, ScanEventType } from './gsm-scan-types';
+// NOTE: ScanEvent/ScanEventType re-exports removed — no external consumers
 
 /**
  * Perform intelligent GSM frequency scan with live progress streaming.

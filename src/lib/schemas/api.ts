@@ -22,31 +22,6 @@ export const GPSCoordinatesSchema = z.object({
 	lon: z.number().min(-180).max(180)
 });
 
-/**
- * TypeScript type inferred from GPSCoordinatesSchema
- */
-export type GPSCoordinates = z.infer<typeof GPSCoordinatesSchema>;
-
-/**
- * Signal Metadata Schema - Validates optional signal metadata fields
- */
-export const SignalMetadataInputSchema = z
-	.object({
-		bandwidth: z.number().positive().optional(),
-		modulation: z.string().min(1).optional(),
-		confidence: z.number().min(0).max(1).optional(),
-		noiseFloor: z.number().optional(),
-		snr: z.number().optional(),
-		peakPower: z.number().optional(),
-		averagePower: z.number().optional(),
-		standardDeviation: z.number().optional(),
-		skewness: z.number().optional(),
-		kurtosis: z.number().optional(),
-		antennaId: z.string().optional(),
-		scanConfig: z.record(z.unknown()).optional()
-	})
-	.optional();
-
 /** Check if direct lat + lon/lng coordinates are present */
 function hasDirectCoords(data: { lat?: number; lon?: number; lng?: number }): boolean {
 	return data.lat !== undefined && (data.lon !== undefined || data.lng !== undefined);
@@ -139,8 +114,3 @@ export const SignalBatchRequestSchema = z.union([
 		signals: z.array(SignalInputSchema)
 	})
 ]);
-
-/**
- * TypeScript type inferred from SignalBatchRequestSchema
- */
-export type SignalBatchRequest = z.infer<typeof SignalBatchRequestSchema>;

@@ -1,5 +1,3 @@
-import { get } from 'svelte/store';
-
 import { persistedWritable } from '$lib/stores/persisted-writable';
 
 export type VisibilityMode = 'dynamic' | 'all' | 'manual';
@@ -23,19 +21,6 @@ export const promotedDevices = persistedWritable<Set<string>>('argos-promoted-de
 	serialize: (macs) => JSON.stringify([...macs]),
 	deserialize: (raw) => new Set(JSON.parse(raw))
 });
-
-/** Toggle a device's promoted status */
-export function togglePromoted(mac: string) {
-	promotedDevices.update((set) => {
-		const next = new Set(set);
-		if (next.has(mac)) {
-			next.delete(mac);
-		} else {
-			next.add(mac);
-		}
-		return next;
-	});
-}
 
 export interface DeviceForVisibility {
 	mac: string;
@@ -73,11 +58,4 @@ export function filterByVisibility(
 		default:
 			return devices;
 	}
-}
-
-/** Reactive helper: get current filter function bound to store values */
-export function getVisibilityFilter() {
-	const mode = get(visibilityMode);
-	const promoted = get(promotedDevices);
-	return (devices: DeviceForVisibility[]) => filterByVisibility(devices, mode, promoted);
 }

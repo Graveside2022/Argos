@@ -234,8 +234,3 @@ class ResourceManager extends EventEmitter {
 
 // Singleton
 export const resourceManager = new ResourceManager();
-
-/** Returns the singleton ResourceManager for tracking hardware device ownership and contention. */
-export function getResourceManager(): ResourceManager {
-	return resourceManager;
-}
