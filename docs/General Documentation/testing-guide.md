@@ -63,7 +63,6 @@ npm run test:unit   # Fast unit tests
 
 ```bash
 npm run test:all               # Full test suite
-npm run framework:validate-all # Framework integrity
 ```
 
 **Visual regression:**

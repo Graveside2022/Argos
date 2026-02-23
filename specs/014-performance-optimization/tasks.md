@@ -29,14 +29,14 @@
 
 ### Batch 1 — Confirmed Dead Files (zero imports, zero risk)
 
-- [ ] T001 [US1] Verify zero imports and delete `src/lib/hackrf/sweep-manager/error-recovery.ts` (266 lines — orphaned duplicate of error-analysis.ts)
-- [ ] T002 [P] [US1] Verify zero imports and delete `src/lib/types/errors.ts` (195 lines — pre-Zod dead code)
-- [ ] T003 [P] [US1] Verify zero imports and delete `src/lib/types/validation.ts` (173 lines — pre-Zod dead code)
-- [ ] T004 [P] [US1] Verify zero imports and delete `src/lib/tactical-map/utils/map-utils.ts` (283 lines — Leaflet-era remnant)
-- [ ] T005 [P] [US1] Verify zero imports and delete `src/lib/kismet/api.ts` (281 lines — zero external consumers)
-- [ ] T006 [P] [US1] Verify zero imports and delete `src/lib/tactical-map/hackrf-service.ts` (107 lines — never instantiated, references nonexistent `/viewspectrum`)
-- [ ] T007 [P] [US1] Delete empty file `src/lib/hackrf/websocket.ts` (0 lines)
-- [ ] T008 [US1] Run `npm run build` — MUST pass. If failure, revert last deletion and investigate.
+- [x] T001 [US1] Verify zero imports and delete `src/lib/hackrf/sweep-manager/error-recovery.ts` (266 lines — orphaned duplicate of error-analysis.ts)
+- [x] T002 [P] [US1] Verify zero imports and delete `src/lib/types/errors.ts` (195 lines — pre-Zod dead code)
+- [x] T003 [P] [US1] Verify zero imports and delete `src/lib/types/validation.ts` (173 lines — pre-Zod dead code)
+- [x] T004 [P] [US1] Verify zero imports and delete `src/lib/tactical-map/utils/map-utils.ts` (283 lines — Leaflet-era remnant)
+- [x] T005 [P] [US1] Verify zero imports and delete `src/lib/kismet/api.ts` (281 lines — zero external consumers)
+- [x] T006 [P] [US1] Verify zero imports and delete `src/lib/tactical-map/hackrf-service.ts` (107 lines — never instantiated, references nonexistent `/viewspectrum`)
+- [x] T007 [P] [US1] Delete empty file `src/lib/hackrf/websocket.ts` (0 lines)
+- [x] T008 [US1] Run `npm run build` — MUST pass. If failure, revert last deletion and investigate.
 
 **Commit**: `refactor(cleanup): T001 — delete verified dead code files`
 
@@ -44,26 +44,26 @@
 
 **CRITICAL**: `src/lib/hackrf/sweep-manager/` MUST NOT be deleted — it powers live `/api/hackrf/` and `/api/rf/` routes.
 
-- [ ] T009 [US1] Delete `src/lib/hackrf/types.ts` (83 lines) — verified zero imports from `src/lib/server/hackrf/` (server uses its own `src/lib/server/hackrf/types.ts`). No type extraction needed — all 4 consumers of `SignalDetection`/`HackRFStatus` from `api/hackrf.ts` are being deleted in this batch.
-- [ ] T010 [US1] Delete orphaned HackRF client files: `src/lib/hackrf/stores.ts` (286 lines), `src/lib/hackrf/api-legacy.ts` (225 lines), `src/lib/hackrf/api-legacy-stream.ts` (266 lines), `src/lib/hackrf/spectrum-time-filter.ts` (270 lines), `src/lib/hackrf/spectrum-time-helpers.ts` (86 lines), `src/lib/hackrf/spectrum.ts` (74 lines), `src/lib/hackrf/format-utils.ts` (29 lines), `src/lib/hackrf/sweep.ts` (9 lines)
-- [ ] T011 [US1] Run `npm run build` — MUST pass. Verify `src/lib/hackrf/sweep-manager/` is untouched.
+- [x] T009 [US1] Delete `src/lib/hackrf/types.ts` (83 lines) — verified zero imports from `src/lib/server/hackrf/` (server uses its own `src/lib/server/hackrf/types.ts`). No type extraction needed — all 4 consumers of `SignalDetection`/`HackRFStatus` from `api/hackrf.ts` are being deleted in this batch.
+- [x] T010 [US1] Delete orphaned HackRF client files: `src/lib/hackrf/stores.ts` (286 lines), `src/lib/hackrf/api-legacy.ts` (225 lines), `src/lib/hackrf/api-legacy-stream.ts` (266 lines), `src/lib/hackrf/spectrum-time-filter.ts` (270 lines), `src/lib/hackrf/spectrum-time-helpers.ts` (86 lines), `src/lib/hackrf/spectrum.ts` (74 lines), `src/lib/hackrf/format-utils.ts` (29 lines), `src/lib/hackrf/sweep.ts` (9 lines)
+- [x] T011 [US1] Run `npm run build` — MUST pass. Verify `src/lib/hackrf/sweep-manager/` is untouched.
 
 **Commit**: `refactor(cleanup): T002 — remove orphaned HackRF UI code`
 
 ### Batch 3 — Transitively Dead Files
 
-- [ ] T012 [US1] Delete `src/lib/api/hackrf.ts` (286 lines — all consumers removed in Batch 2) and `src/lib/api/config.ts` (164 lines — only consumers were hackrf.ts + kismet/api.ts, both now deleted)
-- [ ] T013 [US1] Run `npm run build` — MUST pass.
+- [x] T012 [US1] Delete `src/lib/api/hackrf.ts` (286 lines — all consumers removed in Batch 2) and `src/lib/api/config.ts` (164 lines — only consumers were hackrf.ts + kismet/api.ts, both now deleted)
+- [x] T013 [US1] Run `npm run build` — MUST pass.
 
 **Commit**: `refactor(cleanup): T003 — remove transitively dead API files`
 
 ### Batch 4 — Dead Scripts and npm Entries
 
-- [ ] T014 [P] [US1] Delete `scripts/dev/start-all-services.sh` (274 lines — references nonexistent `hackrf_emitter/` directory)
-- [ ] T015 [P] [US1] Delete `scripts/build/` directory (5 files, ~1,339 lines — stale Feature Creep Framework monitoring CSS/components/ports that don't exist)
-- [ ] T016 [P] [US1] Delete `build-tools/` directory (3 files — stale duplicate package.json + css-integrity-baselines.json from deleted framework)
-- [ ] T017 [US1] Remove dead npm scripts from `package.json`: `dev:full`, `kill-all`, `framework:check-css`, `framework:check-html`, `framework:check-visual`, `framework:generate-baselines`, `framework:generate-visual-baselines`, `framework:validate-all`, `framework:full-check`, `framework:install`
-- [ ] T018 [US1] Run `npm run build` and `npm run lint` — both MUST pass. Verify remaining npm scripts execute correctly.
+- [x] T014 [P] [US1] Delete `scripts/dev/start-all-services.sh` (274 lines — references nonexistent `hackrf_emitter/` directory)
+- [x] T015 [P] [US1] Delete `scripts/build/` directory (5 files, ~1,339 lines — stale Feature Creep Framework monitoring CSS/components/ports that don't exist)
+- [x] T016 [P] [US1] Delete `build-tools/` directory (3 files — stale duplicate package.json + css-integrity-baselines.json from deleted framework). NOTE: root package.json was a symlink to build-tools/package.json — replaced with real file.
+- [x] T017 [US1] Remove dead npm scripts from `package.json`: `dev:full`, `kill-all`, `framework:check-css`, `framework:check-html`, `framework:check-visual`, `framework:generate-baselines`, `framework:generate-visual-baselines`, `framework:validate-all`, `framework:full-check`, `framework:install`
+- [x] T018 [US1] Run `npm run build` and `npm run lint` — both MUST pass. Verify remaining npm scripts execute correctly.
 
 **Commit**: `refactor(cleanup): T004 — remove dead scripts and npm targets`
 
@@ -71,11 +71,11 @@
 
 **Context**: The constitution auditor (`src/lib/constitution/`) was a one-time audit tool used early in the project to measure codebase compliance against `.specify/memory/constitution.md`. It has zero runtime consumers and zero imports from any live code. The governance document itself (`.specify/memory/constitution.md`) MUST be preserved — only the tooling that measured against it is deleted.
 
-- [ ] T019 [US1] Verify zero imports from live code: `grep -rn "from.*constitution" src/ --include="*.ts" --include="*.svelte" | grep -v "src/lib/constitution/" | grep -v "// "` — must return only JSDoc/comment references, not actual imports
-- [ ] T020 [US1] Delete `src/lib/constitution/` directory (24 files, ~5,028 lines — auditor, parsers, validators, report generators, types)
-- [ ] T021 [P] [US1] Delete `tests/constitution/` directory (54 files including fixtures, ~2,155 lines — test suite for deleted auditor)
-- [ ] T022 [P] [US1] Delete `docs/constitutional-audit-tool/` directory (3 files: README.md, usage-guide.md, how-it-works.md — ~1,384 lines of orphaned documentation)
-- [ ] T023 [US1] Run `npm run build` — MUST pass. Verify `.specify/memory/constitution.md` is untouched.
+- [x] T019 [US1] Verify zero imports from live code: `grep -rn "from.*constitution" src/ --include="*.ts" --include="*.svelte" | grep -v "src/lib/constitution/" | grep -v "// "` — must return only JSDoc/comment references, not actual imports
+- [x] T020 [US1] Delete `src/lib/constitution/` directory (24 files, ~5,028 lines — auditor, parsers, validators, report generators, types)
+- [x] T021 [P] [US1] Delete `tests/constitution/` directory (54 files including fixtures, ~2,155 lines — test suite for deleted auditor)
+- [x] T022 [P] [US1] Delete `docs/constitutional-audit-tool/` directory (3 files: README.md, usage-guide.md, how-it-works.md — ~1,384 lines of orphaned documentation)
+- [x] T023 [US1] Run `npm run build` — MUST pass. Verify `.specify/memory/constitution.md` is untouched.
 
 **Commit**: `refactor(cleanup): T005 — remove constitution audit tooling`
 
