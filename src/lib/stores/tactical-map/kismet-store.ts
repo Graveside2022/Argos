@@ -122,21 +122,63 @@ export const removeKismetDeviceMarker = (mac: string) => {
 	});
 };
 
+/**
+ * Batch-update all devices in a single store mutation.
+ * Replaces per-device addKismetDevice() forEach loops that fire N individual updates.
+ * Distributions are recomputed inline — no separate updateDistributions() call needed.
+ */
+export const batchUpdateDevices = (
+	incomingDevices: KismetDevice[],
+	existingDevices: Map<string, KismetDevice>
+) => {
+	const incomingMACs = new Set(incomingDevices.map((d) => d.mac));
+	const newDevices = new Map(existingDevices);
+
+	// Remove stale devices
+	for (const mac of existingDevices.keys()) {
+		if (!incomingMACs.has(mac)) {
+			newDevices.delete(mac);
+		}
+	}
+
+	// Add/update incoming devices and build distributions in one pass
+	const byType = new Map<string, number>();
+	const byManufacturer = new Map<string, number>();
+	const byChannel = new Map<string, number>();
+
+	for (const device of incomingDevices) {
+		newDevices.set(device.mac, device);
+
+		const type = device.type || 'Unknown';
+		byType.set(type, (byType.get(type) || 0) + 1);
+
+		const manufacturer = device.manufacturer || 'Unknown';
+		byManufacturer.set(manufacturer, (byManufacturer.get(manufacturer) || 0) + 1);
+
+		const channel = device.channel?.toString() || 'Unknown';
+		byChannel.set(channel, (byChannel.get(channel) || 0) + 1);
+	}
+
+	kismetStore.update((state) => ({
+		...state,
+		devices: newDevices,
+		deviceCount: newDevices.size,
+		distributions: { byType, byManufacturer, byChannel }
+	}));
+};
+
 export const updateDistributions = (devices: Map<string, KismetDevice>) => {
 	const byType = new Map<string, number>();
 	const byManufacturer = new Map<string, number>();
 	const byChannel = new Map<string, number>();
 
 	devices.forEach((device) => {
-		// Update type distribution
 		const type = device.type || 'Unknown';
 		byType.set(type, (byType.get(type) || 0) + 1);
 
-		// Update manufacturer distribution
 		const manufacturer = device.manufacturer || 'Unknown';
 		byManufacturer.set(manufacturer, (byManufacturer.get(manufacturer) || 0) + 1);
 
-		// Update channel distribution
 		const channel = device.channel?.toString() || 'Unknown';
 		byChannel.set(channel, (byChannel.get(channel) || 0) + 1);
 	});

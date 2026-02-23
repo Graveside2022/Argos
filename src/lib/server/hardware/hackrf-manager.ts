@@ -1,31 +1,26 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
+import type { ProcessConfig } from './process-utils';
+import { findBlockingProcesses, killMatchingProcesses } from './process-utils';
+
 const execFileAsync = promisify(execFile);
 
-/** Native binaries — their /proc/PID/comm matches the binary name, so -x (exact) is safe */
-const HACKRF_NATIVE_PROCESSES = [
-	'hackrf_sweep',
-	'hackrf_transfer',
-	'hackrf_info',
-	'soapy_connector',
-	'btle_rx',
-	'urh',
-	'TempestSDR',
-	'multimon-ng'
+/** HackRF process configs for shared process detection/kill utilities */
+const HACKRF_PROCESS_CONFIGS: ProcessConfig[] = [
+	// Native binaries: -x (exact comm match)
+	{ name: 'hackrf_sweep', displayName: 'Spectrum Sweep' },
+	{ name: 'hackrf_transfer' },
+	{ name: 'hackrf_info' },
+	{ name: 'soapy_connector', displayName: 'OpenWebRX' },
+	{ name: 'btle_rx', displayName: 'BLE Scanner' },
+	{ name: 'urh' },
+	{ name: 'TempestSDR' },
+	{ name: 'multimon-ng' },
+	// Python-wrapped tools: -f (full cmdline match) because their comm is "python3"
+	{ name: 'grgsm_livemon', displayName: 'GSM Evil', useCmdlineMatch: true },
+	{ name: 'grgsm_livemon_headless', displayName: 'GSM Evil', useCmdlineMatch: true }
 ];
-
-/** Python-wrapped tools — their /proc/PID/comm is "python3", so we need -f (cmdline match) */
-const HACKRF_PYTHON_PROCESSES = ['grgsm_livemon', 'grgsm_livemon_headless'];
-
-/** Map raw process names to user-friendly tool names for the status bar */
-const PROCESS_DISPLAY_NAMES: Record<string, string> = {
-	grgsm_livemon: 'GSM Evil',
-	grgsm_livemon_headless: 'GSM Evil',
-	hackrf_sweep: 'Spectrum Sweep',
-	soapy_connector: 'OpenWebRX',
-	btle_rx: 'BLE Scanner'
-};
 
 // Tool containers that actively use HackRF (ownership candidates)
 const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
@@ -52,57 +47,12 @@ export async function detectHackRF(): Promise<boolean> {
 
 /** Returns running native and Python processes (hackrf_sweep, grgsm_livemon, etc.) that hold the HackRF device. */
 export async function getBlockingProcesses(): Promise<{ pid: string; name: string }[]> {
-	const blocking: { pid: string; name: string }[] = [];
-
-	// Native binaries: use -x (exact comm match) — safe, no false positives
-	for (const proc of HACKRF_NATIVE_PROCESSES) {
-		try {
-			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-x', proc]);
-			const pids = stdout.trim().split('\n').filter(Boolean);
-			for (const pid of pids) {
-				blocking.push({ pid, name: PROCESS_DISPLAY_NAMES[proc] ?? proc });
-			}
-		} catch (_error: unknown) {
-			// Process not found
-		}
-	}
-
-	// Python-wrapped tools: use -f (full cmdline match) because their comm is "python3"
-	for (const proc of HACKRF_PYTHON_PROCESSES) {
-		try {
-			const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-f', proc]);
-			const pids = stdout.trim().split('\n').filter(Boolean);
-			for (const pid of pids) {
-				blocking.push({ pid, name: PROCESS_DISPLAY_NAMES[proc] ?? proc });
-			}
-		} catch (_error: unknown) {
-			// Process not found
-		}
-	}
-
-	return blocking;
+	return findBlockingProcesses(HACKRF_PROCESS_CONFIGS);
 }
 
 /** SIGKILL-s all native and Python processes holding the HackRF, then waits for USB device release. */
 export async function killBlockingProcesses(): Promise<void> {
-	// Native binaries: exact comm match
-	for (const proc of HACKRF_NATIVE_PROCESSES) {
-		try {
-			await execFileAsync('/usr/bin/pkill', ['-9', '-x', proc]);
-		} catch (_error: unknown) {
-			// Process not found or already dead
-		}
-	}
-	// Python-wrapped tools: full cmdline match
-	for (const proc of HACKRF_PYTHON_PROCESSES) {
-		try {
-			await execFileAsync('/usr/bin/pkill', ['-9', '-f', proc]);
-		} catch (_error: unknown) {
-			// Process not found or already dead
-		}
-	}
-	// Wait for USB device release
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	return killMatchingProcesses(HACKRF_PROCESS_CONFIGS);
 }
 
 /**

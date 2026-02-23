@@ -8,15 +8,11 @@
  *            NIST SP 800-53 SI-10 (Input Validation)
  */
 
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+import { setupSecurityTest } from '../helpers/server-check';
 
-restoreRealFetch();
-
-const BASE_URL = 'http://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
-const canRun = API_KEY.length >= 32 && (await isServerAvailable());
+const { BASE_URL, API_KEY, canRun } = await setupSecurityTest();
 
 // Shell metacharacters that should be rejected
 const SHELL_METACHARACTERS = [

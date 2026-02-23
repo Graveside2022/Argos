@@ -1,22 +1,11 @@
 import { performance } from 'perf_hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createMockResponse } from '../helpers/api-test-utils';
 import { testUtils } from '../helpers/setup';
 
 const API_BASE_URL = process.env.TEST_URL || 'http://localhost:5173';
 const WS_URL = process.env.WS_URL || 'ws://localhost:8092';
-
-// Helper to create mock fetch response
-const createMockResponse = (data: unknown, status = 200) => ({
-	ok: status >= 200 && status < 300,
-	status,
-	statusText: status === 200 ? 'OK' : 'Error',
-	json: async () => data,
-	text: async () => JSON.stringify(data),
-	headers: new Headers({
-		'content-type': 'application/json'
-	})
-});
 
 describe('Performance Benchmarks', () => {
 	beforeEach(() => {

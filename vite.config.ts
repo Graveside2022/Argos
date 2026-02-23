@@ -13,6 +13,17 @@ export default defineConfig({
 			ignored: ['**/*.db', '**/*.db-wal', '**/*.db-shm', '**/*.sqlite']
 		}
 	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (id.includes('maplibre-gl')) return 'vendor-maplibre';
+					if (id.includes('mil-sym-ts')) return 'vendor-milsym';
+					if (id.includes('xterm')) return 'vendor-xterm';
+				}
+			}
+		}
+	},
 	optimizeDeps: {
 		include: ['leaflet', 'cytoscape', 'mgrs']
 	},
@@ -20,7 +31,6 @@ export default defineConfig({
 		noExternal: ['mgrs', 'mode-watcher']
 	},
 	define: {
-		// Helps with Node.js compatibility issues
 		global: 'globalThis'
 	}
 });

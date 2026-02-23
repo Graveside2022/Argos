@@ -8,15 +8,11 @@
  *            CWE-770 (Allocation of Resources Without Limits)
  */
 
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+import { setupSecurityTest } from '../helpers/server-check';
 
-restoreRealFetch();
-
-const BASE_URL = 'http://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
-const canRun = API_KEY.length >= 32 && (await isServerAvailable());
+const { BASE_URL, API_KEY, canRun } = await setupSecurityTest();
 
 describe.runIf(canRun)('Rate Limiting Security', () => {
 	describe('Hardware Endpoint Rate Limiting', () => {

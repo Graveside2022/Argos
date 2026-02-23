@@ -8,6 +8,7 @@
 
 import type { ToolCategory } from '$lib/types/tools';
 
+import { createTool } from './tool-factory';
 import { toolIcons } from './tool-icons';
 
 /** Drone Defeat & GPS Spoofing subcategory */
@@ -19,26 +20,20 @@ export const droneDefeatGps: ToolCategory = {
 	collapsible: true,
 	defaultExpanded: false,
 	children: [
-		{
+		createTool({
 			id: 'dronesploit',
 			name: 'DroneSploit',
 			description: 'Modular drone exploitation framework with MAVLink/DJI protocol attacks',
 			icon: toolIcons.drone,
-			isInstalled: false,
-			deployment: 'docker',
-			canOpen: false,
-			shouldShowControls: false
-		},
-		{
+			deployment: 'docker'
+		}),
+		createTool({
 			id: 'gps-sdr-sim',
 			name: 'GPS-SDR-SIM',
 			description: 'GPS L1 C/A signal simulator for generating spoofed GPS signals via SDR',
 			icon: toolIcons.drone,
-			isInstalled: false,
-			deployment: 'docker',
-			canOpen: false,
-			shouldShowControls: false
-		}
+			deployment: 'docker'
+		})
 	]
 };
 
@@ -51,28 +46,22 @@ export const rfJamming: ToolCategory = {
 	collapsible: true,
 	defaultExpanded: false,
 	children: [
-		{
+		createTool({
 			id: 'cleverjam-rfid',
 			name: 'CleverJam',
 			description:
 				'Smart RF jammer with adaptive frequency targeting and power control for wireless disruption',
 			icon: toolIcons.rfSpectrum,
-			isInstalled: false,
-			deployment: 'native',
-			canOpen: false,
-			shouldShowControls: false
-		},
-		{
+			deployment: 'native'
+		}),
+		createTool({
 			id: 'jamrf-rfid',
 			name: 'JamRF',
 			description:
 				'Broadband RF jamming with proactive/reactive modes, swept-sine, and Gaussian noise',
 			icon: toolIcons.rfSpectrum,
-			isInstalled: false,
-			deployment: 'native',
-			canOpen: false,
-			shouldShowControls: false
-		}
+			deployment: 'native'
+		})
 	]
 };
 
@@ -85,28 +74,22 @@ export const iotSubghzExploit: ToolCategory = {
 	collapsible: true,
 	defaultExpanded: false,
 	children: [
-		{
+		createTool({
 			id: 'rfcrack-rfid',
 			name: 'RFCrack',
 			description:
 				'Sub-GHz replay, brute force, and jamming for garage doors, key fobs, and IoT (300-928 MHz)',
 			icon: toolIcons.iot,
-			isInstalled: false,
-			deployment: 'native',
-			canOpen: false,
-			shouldShowControls: false
-		},
-		{
+			deployment: 'native'
+		}),
+		createTool({
 			id: 'laf-lora',
 			name: 'LoRa Attack Toolkit (LAF)',
 			description:
 				'LoRaWAN security auditing with packet injection, replay, and gateway impersonation',
 			icon: toolIcons.iot,
-			isInstalled: false,
-			deployment: 'docker',
-			canOpen: false,
-			shouldShowControls: false
-		}
+			deployment: 'docker'
+		})
 	]
 };
 
@@ -125,28 +108,22 @@ export const takExploit: ToolCategory = {
 			collapsible: true,
 			defaultExpanded: false,
 			children: [
-				{
+				createTool({
 					id: 'cotproxy',
 					name: 'CoTProxy',
 					description:
 						'In-line CoT transformation proxy for intercepting, modifying, and re-routing TAK messages',
 					icon: toolIcons.counterAttack,
-					isInstalled: false,
-					deployment: 'native',
-					canOpen: false,
-					shouldShowControls: false
-				},
-				{
+					deployment: 'native'
+				}),
+				createTool({
 					id: 'push-cursor-on-target',
 					name: 'Push Cursor on Target',
 					description:
 						'CLI tool for injecting fabricated CoT position and event data into TAK networks',
 					icon: toolIcons.counterAttack,
-					isInstalled: false,
-					deployment: 'native',
-					canOpen: false,
-					shouldShowControls: false
-				}
+					deployment: 'native'
+				})
 			]
 		},
 		{
@@ -157,17 +134,14 @@ export const takExploit: ToolCategory = {
 			collapsible: true,
 			defaultExpanded: false,
 			children: [
-				{
+				createTool({
 					id: 'meshtastic-freq-calc',
 					name: 'Meshtastic Frequency Calculator',
 					description:
 						'Computes exact LoRa frequency slots from Meshtastic channel names for precision RF targeting',
 					icon: toolIcons.counterAttack,
-					isInstalled: false,
-					deployment: 'native',
-					canOpen: false,
-					shouldShowControls: false
-				}
+					deployment: 'native'
+				})
 			]
 		}
 	]

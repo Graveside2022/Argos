@@ -1,14 +1,6 @@
 /**
- * SQLite Database Service for RF Signal Storage
- * Provides efficient spatial queries and relationship tracking.
- *
- * This module is a thin facade that delegates to focused repositories:
- *   - signalRepository  : Signal CRUD (insert, batch, update, spatial search)
- *   - spatialRepository : Area statistics, nearby device queries
- *   - networkRepository : Network graph storage and retrieval
- *   - deviceService     : Device record creation and update
- *   - geo               : Pure geographic utility functions
- *   - types             : Shared TypeScript interfaces
+ * SQLite Database Service for RF Signal Storage — thin facade that
+ * delegates to signalRepository, spatialRepository, and networkRepository.
  */
 
 import Database from 'better-sqlite3';
@@ -22,9 +14,14 @@ import { logError, logInfo, logWarn } from '$lib/utils/logger';
 import { DatabaseCleanupService } from './cleanup-service';
 import { runMigrations } from './migrations/run-migrations';
 import * as networkRepo from './network-repository';
-// Repository / service imports
 import * as signalRepo from './signal-repository';
 import * as spatialRepo from './spatial-repository';
+
+// ── Time duration constants (ms) ────────────────────────────────────
+const ONE_HOUR = 60 * 60 * 1000;
+const ONE_DAY = 24 * ONE_HOUR;
+const SEVEN_DAYS = 7 * ONE_DAY;
+const TEN_MINUTES = 10 * 60 * 1000;
 
 // Re-export types for backward compatibility
 export type {
@@ -44,43 +41,29 @@ export class RFDatabase {
 	private cleanupService: DatabaseCleanupService | null = null;
 
 	constructor(dbPath: string = './rf_signals.db') {
-		// Initialize database
 		this.db = new Database(dbPath);
-		this.db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-		this.db.pragma('synchronous = NORMAL'); // Balance between safety and speed
+		this.db.pragma('journal_mode = WAL');
+		this.db.pragma('synchronous = NORMAL');
+		this.db.pragma('cache_size = -64000'); // 64MB (negative = KB)
+		this.db.pragma('mmap_size = 134217728'); // 128MB
+		this.db.pragma('temp_store = memory');
+		this.db.pragma('page_size = 4096');
 
-		// Memory management for Raspberry Pi - prevent unbounded memory growth
-		this.db.pragma('cache_size = -64000'); // 64MB cache max (negative = KB)
-		this.db.pragma('mmap_size = 134217728'); // 128MB memory-mapped I/O max
-		this.db.pragma('temp_store = memory'); // Use memory for temporary tables
-		this.db.pragma('page_size = 4096'); // Optimize page size for ARM
-
-		// Load and execute schema
 		try {
 			const schemaPath = join(process.cwd(), 'src/lib/server/db/schema.sql');
-			const schema = readFileSync(schemaPath, 'utf-8');
-			this.db.exec(schema);
+			this.db.exec(readFileSync(schemaPath, 'utf-8'));
 		} catch (error) {
-			logError(
-				'Failed to load schema, using embedded version',
-				{ error },
-				'schema-load-failed'
-			);
+			logError('Failed to load schema, using embedded', { error }, 'schema-load-failed');
 			this.initializeSchema();
 		}
 
-		// Run migrations to update schema
 		try {
-			const migrationsPath = join(process.cwd(), 'src/lib/server/db/migrations');
-			runMigrations(this.db, migrationsPath);
+			runMigrations(this.db, join(process.cwd(), 'src/lib/server/db/migrations'));
 		} catch (error) {
 			logWarn('Could not run migrations', { error }, 'migrations-failed');
 		}
 
-		// Prepare frequently used statements
 		this.prepareStatements();
-
-		// Initialize cleanup service (defer starting until after migrations)
 		this.initializeCleanupService();
 	}
 
@@ -134,153 +117,111 @@ export class RFDatabase {
 	}
 
 	private prepareStatements() {
-		// Insert statements
-		this.statements.set(
+		const p = (name: string, sql: string) => this.statements.set(name, this.db.prepare(sql));
+
+		p(
 			'insertSignal',
-			this.db.prepare(`
-      INSERT INTO signals (
-        signal_id, device_id, timestamp, latitude, longitude, altitude,
-        power, frequency, bandwidth, modulation, source, metadata
-      ) VALUES (
-        @signal_id, @device_id, @timestamp, @latitude, @longitude, @altitude,
-        @power, @frequency, @bandwidth, @modulation, @source, @metadata
-      )
-    `)
+			`INSERT INTO signals (
+			signal_id, device_id, timestamp, latitude, longitude, altitude,
+			power, frequency, bandwidth, modulation, source, metadata
+		) VALUES (
+			@signal_id, @device_id, @timestamp, @latitude, @longitude, @altitude,
+			@power, @frequency, @bandwidth, @modulation, @source, @metadata)`
 		);
 
-		this.statements.set(
+		p(
 			'insertDevice',
-			this.db.prepare(`
-      INSERT OR REPLACE INTO devices (
-        device_id, type, manufacturer, first_seen, last_seen,
-        avg_power, freq_min, freq_max, metadata
-      ) VALUES (
-        @device_id, @type, @manufacturer, @first_seen, @last_seen,
-        @avg_power, @freq_min, @freq_max, @metadata
-      )
-    `)
+			`INSERT OR REPLACE INTO devices (
+			device_id, type, manufacturer, first_seen, last_seen,
+			avg_power, freq_min, freq_max, metadata
+		) VALUES (
+			@device_id, @type, @manufacturer, @first_seen, @last_seen,
+			@avg_power, @freq_min, @freq_max, @metadata)`
 		);
 
-		// Spatial queries
-		this.statements.set(
+		p(
 			'findSignalsInRadius',
-			this.db.prepare(`
-      SELECT * FROM signals
-      WHERE CAST(latitude * 10000 AS INTEGER) BETWEEN @lat_min AND @lat_max
-        AND CAST(longitude * 10000 AS INTEGER) BETWEEN @lon_min AND @lon_max
-        AND timestamp > @since
-      ORDER BY timestamp DESC
-      LIMIT @limit
-    `)
+			`SELECT * FROM signals
+			WHERE CAST(latitude * 10000 AS INTEGER) BETWEEN @lat_min AND @lat_max
+			AND CAST(longitude * 10000 AS INTEGER) BETWEEN @lon_min AND @lon_max
+			AND timestamp > @since ORDER BY timestamp DESC LIMIT @limit`
 		);
 
-		this.statements.set(
+		p(
 			'findNearbyDevices',
-			this.db.prepare(`
-      SELECT DISTINCT d.*,
-        AVG(s.latitude) as avg_lat,
-        AVG(s.longitude) as avg_lon,
-        COUNT(s.id) as signal_count
-      FROM devices d
-      JOIN signals s ON d.device_id = s.device_id
-      WHERE CAST(s.latitude * 10000 AS INTEGER) BETWEEN @lat_min AND @lat_max
-        AND CAST(s.longitude * 10000 AS INTEGER) BETWEEN @lon_min AND @lon_max
-        AND s.timestamp > @since
-      GROUP BY d.device_id
-    `)
+			`SELECT DISTINCT d.*, AVG(s.latitude) as avg_lat,
+			AVG(s.longitude) as avg_lon, COUNT(s.id) as signal_count
+			FROM devices d JOIN signals s ON d.device_id = s.device_id
+			WHERE CAST(s.latitude * 10000 AS INTEGER) BETWEEN @lat_min AND @lat_max
+			AND CAST(s.longitude * 10000 AS INTEGER) BETWEEN @lon_min AND @lon_max
+			AND s.timestamp > @since GROUP BY d.device_id`
+		);
+
+		p(
+			'updateSignal',
+			`UPDATE signals SET timestamp = @timestamp,
+			latitude = @latitude, longitude = @longitude, power = @power
+			WHERE signal_id = @signal_id`
 		);
 	}
 
 	// ── Signal operations (delegated to signalRepository) ──────────────
 
-	/**
-	 * Insert or update a signal
-	 */
 	insertSignal(signal: SignalMarker): DbSignal {
 		return signalRepo.insertSignal(this.db, this.statements, signal);
 	}
 
-	/**
-	 * Batch insert signals
-	 */
 	insertSignalsBatch(signals: SignalMarker[]): number {
 		return signalRepo.insertSignalsBatch(this.db, this.statements, signals);
 	}
 
-	/**
-	 * Find signals within radius of a point
-	 */
 	findSignalsInRadius(query: SpatialQuery & TimeQuery): SignalMarker[] {
 		return signalRepo.findSignalsInRadius(this.db, this.statements, query);
 	}
 
 	// ── Spatial operations (delegated to spatialRepository) ────────────
 
-	/**
-	 * Find devices near a location
-	 */
 	findDevicesNearby(
 		query: SpatialQuery & TimeQuery
 	): Array<DbDevice & { avg_lat: number; avg_lon: number; signal_count: number }> {
 		return spatialRepo.findDevicesNearby(this.db, this.statements, query);
 	}
 
-	/**
-	 * Get signal statistics for an area
-	 */
 	getAreaStatistics(
 		bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number },
-		timeWindow: number = 3600000
+		timeWindow: number = ONE_HOUR
 	) {
 		return spatialRepo.getAreaStatistics(this.db, bounds, timeWindow);
 	}
 
 	// ── Network operations (delegated to networkRepository) ────────────
 
-	/**
-	 * Store network relationships
-	 */
 	storeNetworkGraph(nodes: Map<string, NetworkNode>, edges: Map<string, NetworkEdge>) {
 		return networkRepo.storeNetworkGraph(this.db, nodes, edges);
 	}
 
-	/**
-	 * Get network relationships for visualization
-	 */
 	getNetworkRelationships(deviceIds?: string[]): DbRelationship[] {
 		return networkRepo.getNetworkRelationships(this.db, deviceIds);
 	}
 
 	// ── Lifecycle & utilities ──────────────────────────────────────────
 
-	/**
-	 * Initialize cleanup service
-	 */
 	private initializeCleanupService() {
 		try {
 			this.cleanupService = new DatabaseCleanupService(this.db, {
-				// Configure for 1-hour retention for signal data
-				hackrfRetention: 60 * 60 * 1000, // 1 hour
-				wifiRetention: 7 * 24 * 60 * 60 * 1000, // 7 days
-				defaultRetention: 60 * 60 * 1000, // 1 hour
-				deviceRetention: 7 * 24 * 60 * 60 * 1000, // 7 days
-				patternRetention: 24 * 60 * 60 * 1000, // 24 hours
-				cleanupInterval: 60 * 60 * 1000, // Run every hour
-				aggregateInterval: 10 * 60 * 1000, // Aggregate every 10 minutes
-				batchSize: 500, // Smaller batches for Pi
-				maxRuntime: 20000 // 20 second max runtime
+				hackrfRetention: ONE_HOUR,
+				wifiRetention: SEVEN_DAYS,
+				defaultRetention: ONE_HOUR,
+				deviceRetention: SEVEN_DAYS,
+				patternRetention: ONE_DAY,
+				cleanupInterval: ONE_HOUR,
+				aggregateInterval: TEN_MINUTES,
+				batchSize: 500,
+				maxRuntime: 20000
 			});
-
-			// Initialize the cleanup service (this will run migrations and prepare statements)
 			this.cleanupService.initialize();
-
-			// Start automatic cleanup
 			this.cleanupService.start();
-			logInfo(
-				'Database cleanup service initialized and started',
-				{},
-				'cleanup-service-started'
-			);
+			logInfo('Database cleanup service started', {}, 'cleanup-service-started');
 		} catch (error) {
 			logError(
 				'Failed to initialize cleanup service',
@@ -290,34 +231,20 @@ export class RFDatabase {
 		}
 	}
 
-	/**
-	 * Get cleanup service for manual operations
-	 */
 	getCleanupService(): DatabaseCleanupService | null {
 		return this.cleanupService;
 	}
 
-	/**
-	 * Get raw database instance for advanced operations
-	 */
 	get rawDb(): Database.Database {
 		return this.db;
 	}
 
-	/**
-	 * Cleanup and optimization
-	 */
 	vacuum() {
 		this.db.exec('VACUUM');
 	}
 
 	close() {
-		// Stop cleanup service
-		if (this.cleanupService) {
-			this.cleanupService.stop();
-		}
-
-		// better-sqlite3 statements don't need finalization
+		if (this.cleanupService) this.cleanupService.stop();
 		this.statements.clear();
 		this.db.close();
 	}
@@ -334,27 +261,20 @@ export function getRFDatabase(): RFDatabase {
 	return dbInstance;
 }
 
-// Cleanup on process termination — guarded via globalThis to prevent listener
-// accumulation on Vite HMR reloads. Each re-evaluation of this module would
-// otherwise add duplicate SIGTERM/SIGINT handlers to process.
+// Guarded via globalThis to prevent listener accumulation on Vite HMR reloads.
 const DB_SHUTDOWN_KEY = '__argos_db_shutdown_registered';
-// Safe: globalThis typed as Record for HMR singleton guard check
 if (!(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY]) {
-	// Safe: globalThis typed as Record for HMR singleton guard assignment
 	(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY] = true;
-	process.on('SIGTERM', () => {
-		logInfo('SIGTERM received, closing database', {}, 'sigterm-database-close');
-		if (dbInstance) {
-			dbInstance.close();
-			dbInstance = null;
-		}
-	});
 
-	process.on('SIGINT', () => {
-		logInfo('SIGINT received, closing database', {}, 'sigint-database-close');
+	const shutdownDb = (signal: string) => {
+		logInfo(`${signal} received, closing database`, {}, 'database-shutdown');
 		if (dbInstance) {
 			dbInstance.close();
 			dbInstance = null;
 		}
-	});
+	};
+
+	for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+		process.on(sig, () => shutdownDb(sig));
+	}
 }

@@ -77,11 +77,11 @@ export class SymbolLayer {
 		}
 	}
 
-	private addSymbolImage(sidc: string) {
+	private async addSymbolImage(sidc: string) {
 		if (this.map.hasImage(sidc)) return;
 
 		try {
-			const dataUrl = SymbolFactory.createSymbolDataUrl(sidc, { size: 32 });
+			const dataUrl = await SymbolFactory.createSymbolDataUrl(sidc, { size: 32 });
 			if (!dataUrl) {
 				logger.warn('SymbolLayer empty render for SIDC', { sidc });
 				return;

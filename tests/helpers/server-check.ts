@@ -49,3 +49,12 @@ export function restoreRealFetch(): void {
 		globalThis.fetch = realFetch;
 	}
 }
+
+/** Common security/integration test setup: restores real fetch, provides BASE_URL, API_KEY, and canRun flag. */
+export async function setupSecurityTest() {
+	restoreRealFetch();
+	const baseUrl = 'http://localhost:5173';
+	const apiKey = process.env.ARGOS_API_KEY || '';
+	const canRun = apiKey.length >= 32 && (await isServerAvailable());
+	return { BASE_URL: baseUrl, API_KEY: apiKey, canRun };
+}

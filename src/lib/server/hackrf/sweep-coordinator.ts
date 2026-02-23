@@ -3,8 +3,9 @@ import { execFile } from 'child_process';
 import type { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
 import type { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
 import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
+import { convertToMHz } from '$lib/hackrf/sweep-manager/frequency-utils';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
-import { convertToMHz, isCriticalError } from '$lib/hackrf/sweep-manager/sweep-utils';
+import { isCriticalError } from '$lib/hackrf/sweep-manager/sweep-utils';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import type { SpectrumData } from './types';

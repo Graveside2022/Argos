@@ -188,7 +188,6 @@ export class SweepManager extends EventEmitter {
 		this._emitEvent('status', this.mutableState.status);
 		this.frequencyCycler.stopCycling();
 		this.mutableState.isRunning = false;
-		this.frequencyCycler.clearAllTimers();
 		const processState = this.processManager.getProcessState();
 		await this.processManager.stopProcess(processState);
 		this.bufferManager.clearBuffer();

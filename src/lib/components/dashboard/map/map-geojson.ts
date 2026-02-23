@@ -81,30 +81,36 @@ export function buildDeviceGeoJSON(
 		if (ap?.clients?.length) for (const c of ap.clients) visibleMACs.add(c);
 	}
 
-	const devicesForVisibility: (DeviceForVisibility & { mac: string })[] = [];
+	// Single-pass: collect visibility candidates while retaining device references
+	const candidates: (DeviceForVisibility & { mac: string })[] = [];
 	state.devices.forEach((device: KismetDevice, mac: string) => {
 		if (visibleMACs && !visibleMACs.has(mac)) return;
 		const lat = device.location?.lat;
 		const lon = device.location?.lon;
 		if (!lat || !lon || (lat === 0 && lon === 0)) return;
-		devicesForVisibility.push({
+		candidates.push({
 			mac,
 			rssi: device.signal?.last_signal ?? 0,
 			lastSeen: device.last_seen || 0
 		});
 	});
 
-	const visible = filterByVisibility(devicesForVisibility, visibilityMode, promotedDevices);
-	const visibleMacSet = new Set(visible.map((d) => d.mac));
+	const visible = filterByVisibility(candidates, visibilityMode, promotedDevices);
+	const visibleMacSet = new Set<string>(
+		visible.length < 50 ? undefined : visible.map((d) => d.mac)
+	);
+	if (visible.length < 50) for (const d of visible) visibleMacSet.add(d.mac);
 
-	state.devices.forEach((device: KismetDevice, mac: string) => {
-		if (!visibleMacSet.has(mac)) return;
+	// Build features from visible set — iterate devices Map only once total
+	for (const { mac } of visible) {
+		const device = state.devices.get(mac);
+		if (!device) continue;
 		let lat = device.location?.lat;
 		let lon = device.location?.lon;
-		if (!lat || !lon || (lat === 0 && lon === 0)) return;
+		if (!lat || !lon || (lat === 0 && lon === 0)) continue;
 		const rssi = device.signal?.last_signal ?? 0;
 		const band = getSignalBandKey(rssi);
-		if (!activeBands.has(band)) return;
+		if (!activeBands.has(band)) continue;
 
 		if (device.parentAP) {
 			const ap = state.devices.get(device.parentAP);
@@ -141,7 +147,7 @@ export function buildDeviceGeoJSON(
 				parentAP: device.parentAP ?? ''
 			}
 		});
-	});
+	}
 	return { type: 'FeatureCollection', features };
 }
 

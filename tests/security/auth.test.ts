@@ -8,18 +8,11 @@
  * Standards: OWASP A01:2021 (Broken Access Control), NIST SP 800-53 AC-3
  */
 
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+import { setupSecurityTest } from '../helpers/server-check';
 
-// Restore real fetch — these are integration tests that need real HTTP calls
-restoreRealFetch();
-
-const BASE_URL = 'http://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
-
-// Skip entire suite if server not running or API key not configured
-const canRun = API_KEY.length >= 32 && (await isServerAvailable());
+const { BASE_URL, API_KEY, canRun } = await setupSecurityTest();
 
 describe.runIf(canRun)('API Authentication Security', () => {
 	describe('Protected Endpoints - Require Authentication', () => {

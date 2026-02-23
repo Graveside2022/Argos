@@ -63,8 +63,7 @@ export function insertSignal(
 		return validatedSignal;
 	} catch (error) {
 		if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-			// Signal already exists, update it
-			return updateSignal(db, validatedSignal);
+			return updateSignal(db, statements, validatedSignal);
 		}
 		throw error;
 	}
@@ -185,23 +184,26 @@ export function insertSignalsBatch(
 /**
  * Update an existing signal row (used when a UNIQUE constraint collision occurs).
  */
-export function updateSignal(db: Database.Database, signal: DbSignal): DbSignal {
-	// Validate signal data before update (T034)
+export function updateSignal(
+	db: Database.Database,
+	statements: Map<string, Database.Statement>,
+	signal: DbSignal
+): DbSignal {
 	const validatedSignal = safeParseWithHandling(DbSignalSchema, signal, 'background');
 	if (!validatedSignal) {
 		throw new Error(`Invalid signal data for update: ${signal.signal_id}`);
 	}
 
-	db.prepare(
-		`
-      UPDATE signals SET
-        timestamp = @timestamp,
-        latitude = @latitude,
-        longitude = @longitude,
-        power = @power
-      WHERE signal_id = @signal_id
-    `
-	).run(validatedSignal);
+	const stmt = statements.get('updateSignal');
+	if (stmt) {
+		stmt.run(validatedSignal);
+	} else {
+		// Fallback for callers without cached statements
+		db.prepare(
+			`UPDATE signals SET timestamp = @timestamp, latitude = @latitude,
+			 longitude = @longitude, power = @power WHERE signal_id = @signal_id`
+		).run(validatedSignal);
+	}
 
 	return validatedSignal;
 }

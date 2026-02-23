@@ -193,12 +193,34 @@ export function syncThemePaint(map: maplibregl.Map): void {
 
 // ── Symbol layer update ──
 
+let _prevDeviceCount = -1;
+let _prevAffiliationSize = -1;
+let _prevCotCount = -1;
+let _prevDeviceFeatures: FeatureCollection | null = null;
+
 export function updateSymbolLayer(
 	symbolLayer: SymbolLayer,
 	deviceGeoJSON: FeatureCollection,
 	affiliations: Map<string, Affiliation>,
 	cotMessages: string[]
 ): void {
+	// Skip full rebuild if inputs unchanged (feature count + affiliation size + CoT count)
+	const devCount = deviceGeoJSON?.features.length ?? 0;
+	const affSize = affiliations.size;
+	const cotCount = cotMessages.length;
+	if (
+		devCount === _prevDeviceCount &&
+		affSize === _prevAffiliationSize &&
+		cotCount === _prevCotCount &&
+		deviceGeoJSON === _prevDeviceFeatures
+	) {
+		return;
+	}
+	_prevDeviceCount = devCount;
+	_prevAffiliationSize = affSize;
+	_prevCotCount = cotCount;
+	_prevDeviceFeatures = deviceGeoJSON;
+
 	let features: Feature[] = [];
 	if (deviceGeoJSON) {
 		features = deviceGeoJSON.features.map((f) => {
@@ -215,7 +237,7 @@ export function updateSymbolLayer(
 			};
 		});
 	}
-	if (cotMessages.length > 0)
+	if (cotCount > 0)
 		features = [
 			...features,
 			...(cotMessages

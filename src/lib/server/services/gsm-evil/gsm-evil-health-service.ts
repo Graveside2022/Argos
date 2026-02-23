@@ -320,10 +320,28 @@ export async function checkGsmEvilHealth(): Promise<GsmEvilHealth> {
 	const health = buildDefaultHealth();
 
 	try {
-		await checkGrgsmProcess(health);
-		await checkGsmEvilProcess(health);
-		await checkGsmtapPort(health);
-		await checkDatabaseHealth(health);
+		await Promise.all([
+			checkGrgsmProcess(health).catch((e) => {
+				health.overall.issues.push(
+					`GRGSM check failed: ${e instanceof Error ? e.message : String(e)}`
+				);
+			}),
+			checkGsmEvilProcess(health).catch((e) => {
+				health.overall.issues.push(
+					`GSM Evil check failed: ${e instanceof Error ? e.message : String(e)}`
+				);
+			}),
+			checkGsmtapPort(health).catch((e) => {
+				health.overall.issues.push(
+					`GSMTAP check failed: ${e instanceof Error ? e.message : String(e)}`
+				);
+			}),
+			checkDatabaseHealth(health).catch((e) => {
+				health.overall.issues.push(
+					`Database check failed: ${e instanceof Error ? e.message : String(e)}`
+				);
+			})
+		]);
 		determineDataFlowStatus(health);
 		aggregateOverallHealth(health);
 	} catch (error) {

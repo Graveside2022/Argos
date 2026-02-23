@@ -8,15 +8,11 @@
  *            CWE-400 (Uncontrolled Resource Consumption)
  */
 
-import { describe, expect,test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { isServerAvailable, restoreRealFetch } from '../helpers/server-check';
+import { setupSecurityTest } from '../helpers/server-check';
 
-restoreRealFetch();
-
-const BASE_URL = 'http://localhost:5173';
-const API_KEY = process.env.ARGOS_API_KEY || '';
-const canRun = API_KEY.length >= 32 && (await isServerAvailable());
+const { BASE_URL, API_KEY, canRun } = await setupSecurityTest();
 
 // Body size limits per Phase 2.1.7
 const _MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB general limit
