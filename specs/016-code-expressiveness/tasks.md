@@ -133,17 +133,17 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Run `npx madge --circular src/` and confirm zero output.
 
-- [ ] T025a [P] [US5] Resolve circular dependency cycles 1-3 (dashboard + hackrf + gsm-server):
+- [x] T025a [P] [US5] Resolve circular dependency cycles 1-3 (dashboard + hackrf + gsm-server):
   - `map-handlers.ts ↔ map-handlers-helpers.ts` → shared `map-handler-types.ts`
   - `process-lifecycle.ts ↔ process-manager.ts` → invert dependency direction
   - `l3-decoder.ts ↔ l3-message-decoders.ts` → shared `l3-types.ts`
   Verify with `npx madge --circular src/` (expect 5 remaining)
-- [ ] T025b [P] [US5] Resolve circular dependency cycles 4-6 (gps + gsm-evil services):
+- [x] T025b [P] [US5] Resolve circular dependency cycles 4-6 (gps + gsm-evil services):
   - `gps-position-service.ts ↔ gps-response-builder.ts` → shared `gps-types.ts`
   - `gsm-evil-control-helpers.ts ↔ gsm-evil-control-service.ts` → shared `gsm-evil-types.ts`
   - `gsm-evil-control-service.ts ↔ gsm-evil-stop-helpers.ts` → same `gsm-evil-types.ts`
   Verify with `npx madge --circular src/` (expect 2 remaining)
-- [ ] T025c [P] [US5] Resolve circular dependency cycles 7-8 (kismet + gsm-evil page):
+- [x] T025c [P] [US5] Resolve circular dependency cycles 7-8 (kismet + gsm-evil page):
   - `kismet-service-transform.ts ↔ kismet.service.ts` → shared kismet types file
   - `gsm-evil-page-logic.ts ↔ gsm-evil-scan-stream.ts` → extract shared interface
   Verify with `npx madge --circular src/` (expect 0 remaining)
@@ -156,8 +156,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Unit tests for wrappers pass. 2–3 existing patterns converted.
 
-- [ ] T026 [P] [US6] Create `withRetry()` in `src/lib/server/retry.ts` — configurable `attempts`, `delayMs`, `backoff` (linear/exponential). Add JSDoc. Add unit tests in `src/lib/server/retry.test.ts`
-- [ ] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/timeout.ts` — configurable `timeoutMs`. Add JSDoc. Add unit tests in `src/lib/server/timeout.test.ts`
+- [x] T026 [P] [US6] Create `withRetry()` in `src/lib/server/retry.ts` — configurable `attempts`, `delayMs`, `backoff` (linear/exponential). Add JSDoc. Add unit tests in `src/lib/server/retry.test.ts`
+- [x] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/timeout.ts` — configurable `timeoutMs`. Add JSDoc. Add unit tests in `src/lib/server/timeout.test.ts`
 - [ ] T028 [US6] Identify and migrate 2–3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
 
 ---
