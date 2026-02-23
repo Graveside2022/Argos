@@ -7,7 +7,7 @@
 
 **Organization**: Tasks are grouped by file proximity clusters per plan.md execution order. Each task addresses ALL violations in a single file. Each cluster can be independently verified.
 
-## Format: `[ID] [P?] [Story] Description`
+## Format: `[ID] [P?] [Story] Description`i
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US1=critical 25+, US2=moderate 6-24, US3=borderline 6)
