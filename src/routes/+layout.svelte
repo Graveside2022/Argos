@@ -3,6 +3,7 @@
 
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
+	import { Toaster } from 'svelte-sonner';
 
 	import { markCSSLoaded } from '$lib/utils/css-loader';
 
@@ -17,6 +18,14 @@
 		markCSSLoaded();
 	});
 </script>
+
+<Toaster
+	theme="dark"
+	position="bottom-right"
+	toastOptions={{
+		style: 'background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); font-family: "Fira Code", monospace; font-size: 11px;'
+	}}
+/>
 
 <div class="page-loading">
 	{@render children()}
