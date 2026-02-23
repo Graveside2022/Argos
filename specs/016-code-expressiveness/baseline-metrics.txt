@@ -1,0 +1,46 @@
+Baseline Metrics: Code Expressiveness Improvement
+==================================================
+Date: 2026-02-23
+Branch: 016-code-expressiveness
+Commit: 4947310
+
+BUILD STATUS: PASS (built in 1m 27s)
+
+LINES OF CODE (cloc src/)
+--------------------------
+Files:        422
+Code:         47,902
+Comments:     5,547 (11.6% ratio)
+Blank:        6,412
+Total:        59,861
+
+Breakdown by language:
+  TypeScript:   302 files, 35,701 code lines
+  Svelte:       100 files, 10,165 code lines
+  CSS:           10 files,  1,161 code lines
+  Markdown:       2 files,    457 code lines
+  SQL:            5 files,    291 code lines
+  Shell:          2 files,     89 code lines
+  HTML:           1 file,      38 code lines
+
+CIRCULAR DEPENDENCIES (madge --circular --extensions ts,js,svelte src/)
+------------------------------------------------------------------------
+Total: 8 cycles
+
+1) map-handlers.ts <-> map-handlers-helpers.ts
+2) process-lifecycle.ts <-> process-manager.ts
+3) l3-decoder.ts <-> l3-message-decoders.ts
+4) gps-position-service.ts <-> gps-response-builder.ts
+5) gsm-evil-control-helpers.ts <-> gsm-evil-control-service.ts
+6) gsm-evil-control-service.ts <-> gsm-evil-stop-helpers.ts
+7) kismet-service-transform.ts <-> kismet.service.ts
+8) gsm-evil-page-logic.ts <-> gsm-evil-scan-stream.ts
+
+DRY VIOLATIONS (key duplications)
+-----------------------------------
+errMsg() local copies:           19 files
+promisify(execFile) copies:      36 files
+(error as Error) unsafe casts:   38 occurrences across 22 files
+Dead exports (estimated):        25+
+
+NOTE: jscpd and full dead export analysis will be run during T016/T030.

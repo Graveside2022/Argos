@@ -16,16 +16,16 @@
 | 6 | US3 — Result Types (P2) | 1 | Yes |
 | 7 | US4 — Dead Export Cleanup (P2) | 1 | Yes |
 | 8 | US8 — Client-Side Libraries (P2) | 8 | Partial |
-| 9 | US5 — Circular Dependency Resolution (P3) | 1 | Yes |
+| 9 | US5 — Circular Dependency Resolution (P3) | 3 | Yes |
 | 10 | US6 — Higher-Order Wrappers (P3) | 3 | Partial |
 | 11 | Polish & Cross-Cutting | 2 | No |
-| **Total** | | **30** | |
+| **Total** | | **32** | |
 
 ---
 
 ## Phase 1: Setup
 
-- [ ] T001 Verify project builds cleanly and record baseline metrics (`npm run build`, `cloc`, `npx madge --circular src/`) in `specs/016-code-expressiveness/baseline-metrics.txt`
+- [x] T001 Verify project builds cleanly and record baseline metrics (`npm run build`, `cloc`, `npx madge --circular src/`) in `specs/016-code-expressiveness/baseline-metrics.txt`
 
 ---
 
@@ -33,10 +33,10 @@
 
 These utilities are consumed by multiple user stories and MUST be completed before any story phase begins.
 
-- [ ] T002 [P] Create shared `errMsg()` utility in `src/lib/server/api/error-utils.ts` — handles Error instances, strings, objects with message property, and unknown types. Add unit tests in `src/lib/server/api/error-utils.test.ts`
-- [ ] T003 [P] Create shared `execFileAsync()` utility in `src/lib/server/utils/exec-utils.ts` — wraps `promisify(execFile)` with optional `maxBuffer`, `timeout`, `cwd`, `env` overrides. Add unit tests in `src/lib/server/utils/exec-utils.test.ts`
-- [ ] T004 [P] Create unified API response types in `src/lib/server/api/api-response.ts` — `ApiErrorResponse` (`{ error: string }`) and `ApiSuccessResponse<T>` types. Type-only file, no runtime code.
-- [ ] T005 [P] Create `safe()` result tuple utility in `src/lib/server/utils/result.ts` — returns `[T, null] | [null, Error]`, normalizes non-Error thrown values. Add unit tests in `src/lib/server/utils/result.test.ts`
+- [x] T002 [P] Create shared `errMsg()` utility in `src/lib/server/api/error-utils.ts` — handles Error instances, strings, objects with message property, and unknown types. Add JSDoc. Add unit tests in `src/lib/server/api/error-utils.test.ts`
+- [x] T003 [P] Create shared `execFileAsync()` utility in `src/lib/server/exec.ts` — wraps `promisify(execFile)` with optional `maxBuffer`, `timeout`, `cwd`, `env` overrides. Add JSDoc. Add unit tests in `src/lib/server/exec.test.ts`
+- [x] T004 [P] Create unified API response types in `src/lib/server/api/api-response.ts` — `ApiErrorResponse` (`{ success: false, error: string }`) and `ApiSuccessResponse<T>` (`{ success: true, ... }`) types per spec FR-014. Add JSDoc. Type-only file, no runtime code.
+- [x] T005 [P] Create `safe()` result tuple utility in `src/lib/server/result.ts` — returns `[T, null] | [null, Error]`, normalizes non-Error thrown values. Add JSDoc. Add unit tests in `src/lib/server/result.test.ts`
 
 ---
 
@@ -46,8 +46,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Create one new route using factory, verify success/error/validation paths. Migrate 3 existing routes and confirm identical behavior.
 
-- [ ] T006 [US1] Create `createHandler()` factory in `src/lib/server/api/route-handler.ts` — wraps `HandlerFn` with try-catch, `errMsg()`, `logger.error()`, `json()` response. Uses types from T004. Add unit tests in `src/lib/server/api/route-handler.test.ts`
-- [ ] T007 [US1] Migrate 3 pilot routes to factory: `src/routes/api/signals/+server.ts`, `src/routes/api/system/info/+server.ts`, `src/routes/api/db/cleanup/+server.ts` — verify identical behavior with existing tests
+- [x] T006 [US1] Create `createHandler()` factory in `src/lib/server/api/create-handler.ts` — wraps `HandlerFn` (business logic function) returning `HandlerResult` (data object or Response) with try-catch, `errMsg()`, `logger.error()`, `json()` response. Uses types from T004. Ensure return type satisfies SvelteKit `RequestHandler` (FR-004/FR-005). Add JSDoc. Add unit tests in `src/lib/server/api/create-handler.test.ts`
+- [x] T007 [US1] Migrate 3 pilot routes to factory: `src/routes/api/signals/+server.ts`, `src/routes/api/system/info/+server.ts`, `src/routes/api/db/cleanup/+server.ts` — verify identical behavior with existing tests
 - [ ] T008 [US1] Migrate remaining routes (batch 1 — system, hackrf, rf domains): `src/routes/api/system/**`, `src/routes/api/hackrf/**`, `src/routes/api/rf/**` to use `createHandler()`. Verify with `npm run build` + targeted vitest
 - [ ] T009 [US1] Migrate remaining routes (batch 2 — gsm-evil, kismet, tak, signals, openwebrx domains): `src/routes/api/gsm-evil/**`, `src/routes/api/kismet/**`, `src/routes/api/tak/**`, `src/routes/api/signals/**`, `src/routes/api/openwebrx/**` to use `createHandler()`. Verify with `npm run build` + `npm run test:unit`
 
@@ -60,7 +60,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 **Independent test**: `grep -r "function errMsg" src/` returns only the shared module. `grep -r "promisify(execFile)" src/` returns only the shared module.
 
 - [ ] T010 [P] [US2] Replace all 19 local `errMsg()` definitions with import from `src/lib/server/api/error-utils.ts` — files listed in `specs/016-code-expressiveness/research.md` R1
-- [ ] T011 [P] [US2] Replace all 36 local `execFileAsync`/`promisify(execFile)` declarations with import from `src/lib/server/utils/exec-utils.ts` — files listed in `specs/016-code-expressiveness/research.md` R2
+- [ ] T011 [P] [US2] Replace all 36 local `execFileAsync`/`promisify(execFile)` declarations with import from `src/lib/server/exec.ts` — files listed in `specs/016-code-expressiveness/research.md` R2
 - [ ] T012 [US2] Absorb `safeErrorResponse()` and `logAndRespond()` into factory pattern. Remove `src/lib/server/security/error-response.ts` if fully superseded (0 external consumers confirmed)
 - [ ] T013 [US2] Evaluate `safeJsonParse()` in `src/lib/server/security/safe-json.ts` (3 consumers) — absorb into factory or keep as niche utility. Document decision in research.md
 
@@ -82,7 +82,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Write `safe()` utility with unit tests, convert 3 existing try-catch sites.
 
-- [ ] T015 [P] [US3] Convert 3 existing try-catch sites to use `safe()` from `src/lib/server/utils/result.ts` — choose sites within services (not route handlers) where conditional error handling adds value
+- [ ] T015 [P] [US3] Convert 3 existing try-catch sites to use `safe()` from `src/lib/server/result.ts` — choose sites within services (not route handlers) where conditional error handling adds value
 
 ---
 
@@ -133,15 +133,20 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Run `npx madge --circular src/` and confirm zero output.
 
-- [ ] T025 [P] [US5] Resolve all 8 circular dependency cycles per strategy in `specs/016-code-expressiveness/research.md` R7:
+- [ ] T025a [P] [US5] Resolve circular dependency cycles 1-3 (dashboard + hackrf + gsm-server):
   - `map-handlers.ts ↔ map-handlers-helpers.ts` → shared `map-handler-types.ts`
   - `process-lifecycle.ts ↔ process-manager.ts` → invert dependency direction
   - `l3-decoder.ts ↔ l3-message-decoders.ts` → shared `l3-types.ts`
+  Verify with `npx madge --circular src/` (expect 5 remaining)
+- [ ] T025b [P] [US5] Resolve circular dependency cycles 4-6 (gps + gsm-evil services):
   - `gps-position-service.ts ↔ gps-response-builder.ts` → shared `gps-types.ts`
   - `gsm-evil-control-helpers.ts ↔ gsm-evil-control-service.ts` → shared `gsm-evil-types.ts`
   - `gsm-evil-control-service.ts ↔ gsm-evil-stop-helpers.ts` → same `gsm-evil-types.ts`
+  Verify with `npx madge --circular src/` (expect 2 remaining)
+- [ ] T025c [P] [US5] Resolve circular dependency cycles 7-8 (kismet + gsm-evil page):
   - `kismet-service-transform.ts ↔ kismet.service.ts` → shared kismet types file
   - `gsm-evil-page-logic.ts ↔ gsm-evil-scan-stream.ts` → extract shared interface
+  Verify with `npx madge --circular src/` (expect 0 remaining)
 
 ---
 
@@ -151,15 +156,15 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Unit tests for wrappers pass. 2–3 existing patterns converted.
 
-- [ ] T026 [P] [US6] Create `withRetry()` in `src/lib/server/utils/retry.ts` — configurable `maxAttempts`, `delayMs`, `backoff` (linear/exponential). Add unit tests in `src/lib/server/utils/retry.test.ts`
-- [ ] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/utils/timeout.ts` — configurable `ms` and `message`. Add unit tests in `src/lib/server/utils/timeout.test.ts`
+- [ ] T026 [P] [US6] Create `withRetry()` in `src/lib/server/retry.ts` — configurable `attempts`, `delayMs`, `backoff` (linear/exponential). Add JSDoc. Add unit tests in `src/lib/server/retry.test.ts`
+- [ ] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/timeout.ts` — configurable `timeoutMs`. Add JSDoc. Add unit tests in `src/lib/server/timeout.test.ts`
 - [ ] T028 [US6] Identify and migrate 2–3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
 
 ---
 
 ## Phase 11: Polish & Cross-Cutting Concerns
 
-- [ ] T029 Run full verification suite: `npm run build` + `npm run test:unit` + `npx madge --circular src/`. Verify all success criteria from spec.md (SC-001 through SC-018)
+- [ ] T029 Run full verification suite: `npm run build` + `npm run test:unit` + `npx madge --circular src/`. Verify backward compatibility (FR-012) by calling key API endpoints and asserting response shapes match pre-migration format. Verify all success criteria from spec.md (SC-001 through SC-018)
 - [ ] T030 Record final metrics (cloc, madge, jscpd) and compare against baseline from T001. Document results in `specs/016-code-expressiveness/final-metrics.md`
 
 ---
@@ -195,7 +200,7 @@ Phase 1 (Setup)
 Agent 1: T006 (factory) → T007 (pilot) → T008 (batch 1) → T009 (batch 2)
 Agent 2: T010 (errMsg DRY) + T011 (exec DRY) → T012 (absorb safeErrorResponse)
 Agent 3: T017 (sonner) → T018 (data-table setup) → T019 (data-table production)
-Agent 4: T025 (circular deps) — independent, can run anytime
+Agent 4: T025a-c (circular deps) — independent, can run anytime
 ```
 
 ### After US1 factory is complete (T006-T009 done):
@@ -217,7 +222,7 @@ This MVP alone delivers ~1,000 net lines saved (gross elimination ~1,400-2,100, 
 
 ### Incremental delivery after MVP:
 - **Wave 2**: US7 error casts (T014) + US8 sonner activation (T017) — quick wins
-- **Wave 3**: US4 dead exports (T016) + US5 circular deps (T025) — cleanup
+- **Wave 3**: US4 dead exports (T016) + US5 circular deps (T025a-c) — cleanup
 - **Wave 4**: US8 remaining (T018-T024) — client-side tooling
 - **Wave 5**: US6 wrappers (T026-T028) + US3 result types (T015) — refinements
 - **Final**: Polish (T029-T030) — verification and metrics

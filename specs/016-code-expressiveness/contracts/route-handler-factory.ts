@@ -2,7 +2,7 @@
  * Contract: Route Handler Factory API
  *
  * This contract defines the public interface for the route handler factory.
- * Implementation lives at: src/lib/server/api/route-handler.ts
+ * Implementation lives at: src/lib/server/api/create-handler.ts
  *
  * NOTE: This is a TYPE-ONLY contract file for planning purposes.
  * It is NOT executable code — it will be deleted after implementation.

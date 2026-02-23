@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ url }) => {
 **After** (with factory — 5 lines):
 
 ```typescript
-import { createHandler } from '$lib/server/api/route-handler';
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
 
 export const GET = createHandler(async ({ url }) => {
@@ -67,9 +67,9 @@ try {
 **After**:
 
 ```typescript
-import { safe } from '$lib/server/utils/result';
+import { safe } from '$lib/server/result';
 
-const [data, err] = await safe(riskyOperation());
+const [data, err] = await safe(() => riskyOperation());
 if (err) {
 	logger.error('Failed', { error: err.message });
 	return json({ error: 'Operation failed' }, { status: 500 });
@@ -84,14 +84,17 @@ if (err) {
 import { errMsg } from '$lib/server/api/error-utils';
 
 // Async exec (replaces 36 local declarations)
-import { execFileAsync } from '$lib/server/utils/exec-utils';
+import { execFileAsync } from '$lib/server/exec';
 
 // Higher-order wrappers
-import { withRetry } from '$lib/server/utils/retry';
-import { withTimeout } from '$lib/server/utils/timeout';
+import { withRetry } from '$lib/server/retry';
+import { withTimeout } from '$lib/server/timeout';
 
-const result = await withRetry(() => fetchExternalData(), { maxAttempts: 3 });
-const data = await withTimeout(() => slowOperation(), { ms: 5000 });
+const fetchWithRetry = withRetry(() => fetchExternalData(), { attempts: 3, delayMs: 1000 });
+const result = await fetchWithRetry();
+
+const slowOpWithTimeout = withTimeout(() => slowOperation(), 5000);
+const data = await slowOpWithTimeout();
 ```
 
 ## Part B: Using Client-Side Libraries

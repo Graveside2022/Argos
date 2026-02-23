@@ -9,7 +9,7 @@ This feature primarily introduces **utility types and functions**, not persisten
 ### 1. Result Tuple
 
 ```typescript
-// src/lib/server/utils/result.ts
+// src/lib/server/result.ts
 type Result<T> = [T, null] | [null, Error];
 ```
 
@@ -21,23 +21,26 @@ type Result<T> = [T, null] | [null, Error];
 
 ```typescript
 // src/lib/server/api/api-response.ts
-interface ApiErrorResponse {
-	error: string;
+interface ApiSuccessResponse {
+	success: true;
+	[key: string]: unknown; // Domain-specific data fields
 }
 
-interface ApiSuccessResponse<T = unknown> {
-	[key: string]: T; // Allows { signals: [...] }, { devices: [...] }, etc.
+interface ApiErrorResponse {
+	success: false;
+	error: string;
+	details?: unknown; // Optional: Zod validation issues
 }
 ```
 
-**Purpose**: Standardize all route handler error responses.
+**Purpose**: Standardize all API responses per spec FR-014 — every response includes `success: boolean`.
 **Relationships**: Enforced by `createHandler()` factory. Consumed by frontend fetch calls and MCP servers.
-**Note**: Intentionally does NOT add `{ success: boolean }` wrapper to avoid breaking existing consumers. Routes that return `{ success: true, ... }` do so in their business logic, not in the factory.
+**Note**: The factory adds `success: true/false` automatically. Routes that already return `{ success: true, ... }` are compatible. Routes that omit `success` will gain it via factory wrapping.
 
 ### 3. Handler Options
 
 ```typescript
-// src/lib/server/api/route-handler.ts
+// src/lib/server/api/create-handler.ts
 interface HandlerOptions {
 	/** Logging context (defaults to URL pathname) */
 	method?: string;
@@ -55,7 +58,7 @@ interface HandlerOptions {
 
 These entities already exist and are NOT modified by this feature:
 
-- **KismetState** (`src/lib/stores/tactical-map/kismet-store.ts`) — T025 may restructure how data flows in, but the type stays
+- **KismetState** (`src/lib/stores/tactical-map/kismet-store.ts`) — primary store; `src/lib/kismet/stores.ts` (secondary) to be absorbed
 - **SignalMarker** (`src/lib/types/signals.ts`) — untouched
 - **Zod Schemas** (`src/lib/schemas/*.ts`) — untouched, may be referenced by Superforms
 
@@ -73,7 +76,7 @@ Request → createHandler() →
 ### Result Tuple Flow (New)
 
 ```
-safe(riskyFn()) →
+safe(() => riskyFn()) →
   ├─ Success: [data, null] → use data
   └─ Failure: [null, Error] → handle error (no try-catch needed)
 ```
