@@ -36,68 +36,78 @@ export class KismetProxy {
 		return pass;
 	}
 
+	/** Build request headers including auth and API key */
+	private static buildHeaders(extraHeaders?: Record<string, string>): Record<string, string> {
+		const auth = Buffer.from(`${this.KISMET_USER}:${this.getPassword()}`).toString('base64');
+		const headers: Record<string, string> = {
+			Authorization: `Basic ${auth}`,
+			'Content-Type': 'application/json',
+			...(extraHeaders || {})
+		};
+		if (this.API_KEY) headers['KISMET'] = this.API_KEY;
+		return headers;
+	}
+
+	/** Wrap connection refused errors with a user-friendly message */
+	private static wrapConnectionError(error: unknown): never {
+		if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+			throw new Error('Cannot connect to Kismet. Is it running?');
+		}
+		throw error;
+	}
+
 	/** Make a request to the Kismet API */
 	private static async request<T = unknown>(
 		endpoint: string,
 		options: globalThis.RequestInit = {}
 	): Promise<T> {
 		const url = `${this.BASE_URL}${endpoint}`;
-		const auth = Buffer.from(`${this.KISMET_USER}:${this.getPassword()}`).toString('base64');
-
-		const headers: Record<string, string> = {
-			Authorization: `Basic ${auth}`,
-			'Content-Type': 'application/json',
-			// Safe: options.headers may be Headers or Record; cast to Record for spread
-			...((options.headers as Record<string, string>) || {})
-		};
-
-		if (this.API_KEY) {
-			headers['KISMET'] = this.API_KEY;
-		}
+		// Safe: options.headers may be Headers or Record; cast to Record for spread
+		const headers = this.buildHeaders((options.headers as Record<string, string>) || undefined);
 
 		try {
 			const response = await fetch(url, { ...options, headers });
-
 			if (!response.ok) {
 				throw new Error(`Kismet API error: ${response.status} ${response.statusText}`);
 			}
-
 			// Safe: Caller provides T matching the expected Kismet API response shape
 			return (await response.json()) as T;
 		} catch (error) {
-			// Safe: error narrowed by instanceof
-			if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-				throw new Error('Cannot connect to Kismet. Is it running?');
-			}
-			throw error;
+			this.wrapConnectionError(error);
 		}
+	}
+
+	/** Kismet device query fields */
+	private static readonly DEVICE_FIELDS = [
+		'kismet.device.base.macaddr',
+		'kismet.device.base.name',
+		'kismet.device.base.type',
+		'kismet.device.base.channel',
+		'kismet.device.base.frequency',
+		'kismet.device.base.signal',
+		'kismet.device.base.first_time',
+		'kismet.device.base.last_time',
+		'kismet.device.base.packets.total',
+		'kismet.device.base.packets.data',
+		'kismet.device.base.crypt',
+		'kismet.device.base.location',
+		'kismet.device.base.manuf',
+		'dot11.device'
+	];
+
+	/** Build regex filters from DeviceFilter */
+	private static buildQueryRegex(filter?: DeviceFilter): Array<[string, string]> {
+		const regex: Array<[string, string]> = [];
+		if (filter?.ssid) regex.push(['kismet.device.base.name', filter.ssid]);
+		if (filter?.manufacturer) regex.push(['kismet.device.base.manuf', filter.manufacturer]);
+		return regex;
 	}
 
 	/** Get all devices from Kismet */
 	static async getDevices(filter?: DeviceFilter): Promise<KismetDevice[]> {
 		try {
-			const fields = [
-				'kismet.device.base.macaddr',
-				'kismet.device.base.name',
-				'kismet.device.base.type',
-				'kismet.device.base.channel',
-				'kismet.device.base.frequency',
-				'kismet.device.base.signal',
-				'kismet.device.base.first_time',
-				'kismet.device.base.last_time',
-				'kismet.device.base.packets.total',
-				'kismet.device.base.packets.data',
-				'kismet.device.base.crypt',
-				'kismet.device.base.location',
-				'kismet.device.base.manuf',
-				'dot11.device'
-			];
-
-			const query: KismetQueryRequest = { fields };
-			const regex: Array<[string, string]> = [];
-
-			if (filter?.ssid) regex.push(['kismet.device.base.name', filter.ssid]);
-			if (filter?.manufacturer) regex.push(['kismet.device.base.manuf', filter.manufacturer]);
+			const query: KismetQueryRequest = { fields: this.DEVICE_FIELDS };
+			const regex = this.buildQueryRegex(filter);
 			if (regex.length > 0) query.regex = regex;
 
 			const devices = await this.request<KismetDeviceResponse[]>(
@@ -105,43 +115,75 @@ export class KismetProxy {
 				{ method: 'POST', body: JSON.stringify(query) }
 			);
 
-			let transformedDevices = devices.map((device) => transformDevice(device));
-			if (filter) {
-				transformedDevices = this.applyFilters(transformedDevices, filter);
-			}
-
-			return transformedDevices;
+			const transformed = devices.map((device) => transformDevice(device));
+			return filter ? this.applyFilters(transformed, filter) : transformed;
 		} catch (error) {
 			logger.error('[kismet-proxy] Error fetching devices', { error: String(error) });
 			throw error;
 		}
 	}
 
+	/** Check if a value is within optional bounds */
+	private static isInRange(
+		value: number | undefined,
+		min: number | undefined,
+		max: number | undefined
+	): boolean {
+		if (value === undefined) return true;
+		if (min !== undefined && value < min) return false;
+		return !(max !== undefined && value > max);
+	}
+
+	/** Check if device signal is within filter bounds */
+	private static matchesSignal(device: KismetDevice, filter: DeviceFilter): boolean {
+		return this.isInRange(device.signalStrength, filter.minSignal, filter.maxSignal);
+	}
+
+	/** Check if device was seen within the time window */
+	private static matchesRecency(device: KismetDevice, seenWithin: number): boolean {
+		const lastSeenTime = new Date(device.lastSeen).getTime();
+		return lastSeenTime >= Date.now() - seenWithin * 60 * 1000;
+	}
+
+	/** Check if a single device passes all filter criteria */
+	private static matchesFilter(device: KismetDevice, filter: DeviceFilter): boolean {
+		if (filter.type && device.type !== filter.type) return false;
+		if (!this.matchesSignal(device, filter)) return false;
+		return !(
+			filter.seenWithin !== undefined && !this.matchesRecency(device, filter.seenWithin)
+		);
+	}
+
 	/** Apply filters that can't be done via Kismet query */
 	private static applyFilters(devices: KismetDevice[], filter: DeviceFilter): KismetDevice[] {
-		return devices.filter((device) => {
-			if (filter.type && device.type !== filter.type) return false;
-			if (
-				filter.minSignal !== undefined &&
-				device.signalStrength !== undefined &&
-				device.signalStrength < filter.minSignal
-			)
-				return false;
-			if (
-				filter.maxSignal !== undefined &&
-				device.signalStrength !== undefined &&
-				device.signalStrength > filter.maxSignal
-			)
-				return false;
+		return devices.filter((device) => this.matchesFilter(device, filter));
+	}
 
-			if (filter.seenWithin !== undefined) {
-				const lastSeenTime = new Date(device.lastSeen).getTime();
-				const cutoffTime = Date.now() - filter.seenWithin * 60 * 1000;
-				if (lastSeenTime < cutoffTime) return false;
-			}
+	/** Tally encryption and manufacturer breakdowns for a single device */
+	private static tallyBreakdowns(device: KismetDevice, stats: DeviceStats): void {
+		if (device.encryptionType) {
+			device.encryptionType.forEach((enc) => {
+				stats.byEncryption[enc] = (stats.byEncryption[enc] || 0) + 1;
+			});
+		}
+		if (device.manufacturer) {
+			stats.byManufacturer[device.manufacturer] =
+				(stats.byManufacturer[device.manufacturer] || 0) + 1;
+		}
+	}
 
-			return true;
-		});
+	/** Accumulate a single device into the stats counters */
+	private static accumulateDeviceStats(
+		device: KismetDevice,
+		stats: DeviceStats,
+		fiveMinAgo: number,
+		fifteenMinAgo: number
+	): void {
+		stats.byType[device.type]++;
+		this.tallyBreakdowns(device, stats);
+		const lastSeenTime = new Date(device.lastSeen).getTime();
+		if (lastSeenTime > fiveMinAgo) stats.activeInLast5Min++;
+		if (lastSeenTime > fifteenMinAgo) stats.activeInLast15Min++;
 	}
 
 	/** Get device statistics */
@@ -174,21 +216,9 @@ export class KismetProxy {
 				lastUpdate: new Date()
 			};
 
-			devices.forEach((device) => {
-				stats.byType[device.type]++;
-				if (device.encryptionType) {
-					device.encryptionType.forEach((enc) => {
-						stats.byEncryption[enc] = (stats.byEncryption[enc] || 0) + 1;
-					});
-				}
-				if (device.manufacturer) {
-					stats.byManufacturer[device.manufacturer] =
-						(stats.byManufacturer[device.manufacturer] || 0) + 1;
-				}
-				const lastSeenTime = new Date(device.lastSeen).getTime();
-				if (lastSeenTime > fiveMinAgo) stats.activeInLast5Min++;
-				if (lastSeenTime > fifteenMinAgo) stats.activeInLast15Min++;
-			});
+			devices.forEach((device) =>
+				this.accumulateDeviceStats(device, stats, fiveMinAgo, fifteenMinAgo)
+			);
 
 			return stats;
 		} catch (error) {
@@ -210,6 +240,9 @@ export class KismetProxy {
 		});
 	}
 
+	/** Methods that accept a request body */
+	private static readonly BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
+
 	/** Generic proxy method that handles any HTTP method */
 	static async proxy(
 		path: string,
@@ -218,7 +251,7 @@ export class KismetProxy {
 		headers?: Record<string, string>
 	): Promise<unknown> {
 		const options: globalThis.RequestInit = { method, headers };
-		if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+		if (body && this.BODY_METHODS.has(method)) {
 			options.body = typeof body === 'string' ? body : JSON.stringify(body);
 		}
 		return this.request(path, options);

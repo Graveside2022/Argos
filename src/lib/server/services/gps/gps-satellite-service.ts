@@ -34,65 +34,52 @@ const GpsdSkySchema = z
 	})
 	.passthrough();
 
-/**
- * Map gpsd gnssid to constellation name.
- */
+/** gnssid → constellation lookup (0=GPS, 1=SBAS→GPS, 2=Galileo, 3=BeiDou, 6=GLONASS) */
+const CONSTELLATION_MAP: Record<number, Satellite['constellation']> = {
+	0: 'GPS',
+	1: 'GPS',
+	2: 'Galileo',
+	3: 'BeiDou',
+	6: 'GLONASS'
+};
+
+/** Map gpsd gnssid to constellation name. */
 function mapConstellation(gnssid: number): Satellite['constellation'] {
-	switch (gnssid) {
-		case 0:
-		case 1: // SBAS (show as GPS)
-			return 'GPS';
-		case 2:
-			return 'Galileo';
-		case 3:
-			return 'BeiDou';
-		case 6:
-			return 'GLONASS';
-		default:
-			return 'GPS'; // Fallback
-	}
+	return CONSTELLATION_MAP[gnssid] ?? 'GPS';
 }
 
-/**
- * Parse SKY message and extract satellite data.
- */
-function parseSatellites(data: unknown): Satellite[] {
-	if (typeof data !== 'object' || data === null) {
-		return [];
-	}
-
-	// Safe: Type cast for dynamic data access
-	// Safe: gpsd JSON response cast to Record for dynamic field access
+/** Validate that data is a SKY-class gpsd object with a satellites array */
+function asSkyWithSatellites(data: unknown): Record<string, unknown>[] | null {
+	if (typeof data !== 'object' || data === null) return null;
 	const obj = data as Record<string, unknown>;
+	if (obj.class !== 'SKY' || !Array.isArray(obj.satellites)) return null;
+	return obj.satellites as Record<string, unknown>[];
+}
 
-	if (typeof obj.class !== 'string' || obj.class !== 'SKY') {
-		return [];
-	}
+/** Type guard: satellite entry has required numeric PRN and gnssid fields */
+function isValidSatEntry(sat: unknown): sat is Record<string, unknown> {
+	if (typeof sat !== 'object' || sat === null) return false;
+	const rec = sat as Record<string, unknown>;
+	return typeof rec.PRN === 'number' && typeof rec.gnssid === 'number';
+}
 
-	if (!Array.isArray(obj.satellites)) {
-		return [];
-	}
+/** Map a raw satellite record to a typed Satellite object */
+function toSatellite(sat: Record<string, unknown>): Satellite {
+	return {
+		prn: sat.PRN as number,
+		constellation: mapConstellation(sat.gnssid as number),
+		snr: (sat.ss as number) || 0,
+		elevation: (sat.el as number) || 0,
+		azimuth: (sat.az as number) || 0,
+		used: (sat.used as boolean) || false
+	};
+}
 
-	return obj.satellites
-		.filter((sat: unknown) => {
-			return (
-				typeof sat === 'object' &&
-				sat !== null &&
-				// Safe: Type cast for dynamic data access
-				// Safe: satellite array elements cast to Record for PRN/gnssid field validation
-				typeof (sat as Record<string, unknown>).PRN === 'number' &&
-				// Safe: Type cast for dynamic data access
-				typeof (sat as Record<string, unknown>).gnssid === 'number'
-			);
-		})
-		.map((sat: Record<string, unknown>) => ({
-			prn: sat.PRN as number,
-			constellation: mapConstellation(sat.gnssid as number),
-			snr: (sat.ss as number) || 0,
-			elevation: (sat.el as number) || 0,
-			azimuth: (sat.az as number) || 0,
-			used: (sat.used as boolean) || false
-		}));
+/** Parse SKY message and extract satellite data. */
+function parseSatellites(data: unknown): Satellite[] {
+	const satellites = asSkyWithSatellites(data);
+	if (!satellites) return [];
+	return satellites.filter(isValidSatEntry).map(toSatellite);
 }
 
 interface ParsedSkyResult {
@@ -100,35 +87,38 @@ interface ParsedSkyResult {
 	usedSatCount: number;
 }
 
+/** Parse a single gpsd sky line, returning validated data or null */
+function parseSkyLine(line: string): z.infer<typeof GpsdSkySchema> | null {
+	if (line.trim() === '') return null;
+	const result = safeJsonParse(line, GpsdSkySchema, 'gps-satellites');
+	return result.success ? result.data : null;
+}
+
+/** Extract uSat from a parsed gpsd message, or 0 */
+function extractUSat(data: z.infer<typeof GpsdSkySchema>): number {
+	const obj = data as Record<string, unknown>;
+	return typeof obj.uSat === 'number' ? obj.uSat : 0;
+}
+
+/** Accumulate satellites and uSat from a single parsed line */
+function processSkyLine(state: ParsedSkyResult, data: z.infer<typeof GpsdSkySchema>): void {
+	const parsed = parseSatellites(data);
+	if (parsed.length > state.satellites.length) state.satellites = parsed;
+	const uSat = extractUSat(data);
+	if (uSat > state.usedSatCount) state.usedSatCount = uSat;
+}
+
 /**
  * Parse all gpsd output lines, collecting satellite arrays from SKY messages
  * and tracking the maximum uSat (used satellite count) seen.
  */
 function parseGpsdSkyLines(rawOutput: string): ParsedSkyResult {
-	let satellites: Satellite[] = [];
-	let usedSatCount = 0;
-	const lines = rawOutput.trim().split('\n');
-
-	for (const line of lines) {
-		if (line.trim() === '') continue;
-
-		const result = safeJsonParse(line, GpsdSkySchema, 'gps-satellites');
-		if (!result.success) continue;
-
-		const parsed = parseSatellites(result.data);
-		if (parsed.length > satellites.length) {
-			satellites = parsed;
-		}
-
-		// Capture uSat (used satellite count) if present
-		// Safe: gpsd response data cast to Record for SKY/TPV field access
-		const obj = result.data as Record<string, unknown>;
-		if (typeof obj.uSat === 'number' && obj.uSat > usedSatCount) {
-			usedSatCount = obj.uSat;
-		}
+	const state: ParsedSkyResult = { satellites: [], usedSatCount: 0 };
+	for (const line of rawOutput.trim().split('\n')) {
+		const data = parseSkyLine(line);
+		if (data) processSkyLine(state, data);
 	}
-
-	return { satellites, usedSatCount };
+	return state;
 }
 
 /**

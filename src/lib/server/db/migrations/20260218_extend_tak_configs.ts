@@ -1,5 +1,19 @@
 import type { Database } from 'better-sqlite3';
 
+/** Check if an error is a harmless duplicate-column error. */
+function isDuplicateColumn(err: unknown): boolean {
+	return err instanceof Error && err.message.includes('duplicate column name');
+}
+
+/** Execute a single ALTER TABLE statement, ignoring duplicate column errors. */
+function addColumnIdempotent(db: Database, sql: string): void {
+	try {
+		db.exec(sql);
+	} catch (err) {
+		if (!isDuplicateColumn(err)) throw err;
+	}
+}
+
 /** Adds truststore, cert password, and enrollment columns to tak_configs (idempotent). */
 export function migrate(db: Database) {
 	const columns = [
@@ -11,16 +25,5 @@ export function migrate(db: Database) {
 		'ALTER TABLE tak_configs ADD COLUMN enrollment_pass TEXT',
 		'ALTER TABLE tak_configs ADD COLUMN enrollment_port INTEGER DEFAULT 8446'
 	];
-
-	for (const sql of columns) {
-		try {
-			db.exec(sql);
-		} catch (err) {
-			// Skip if column already exists (idempotent migration)
-			if (err instanceof Error && err.message.includes('duplicate column name')) {
-				continue;
-			}
-			throw err;
-		}
-	}
+	columns.forEach((sql) => addColumnIdempotent(db, sql));
 }

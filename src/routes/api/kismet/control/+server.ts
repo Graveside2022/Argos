@@ -20,64 +20,51 @@ const KismetControlSchema = z.object({
  * Body: { action: "start" | "stop" | "status" }
  * Query: ?mock=true for mock responses (testing)
  */
+const MOCK_RESPONSES: Record<string, Record<string, unknown>> = {
+	start: {
+		success: true,
+		message: 'Kismet service started (mock mode)',
+		details: 'Mock Kismet process started successfully'
+	},
+	stop: { success: true, message: 'Kismet stopped gracefully (mock mode)' },
+	status: { success: true, isRunning: false, status: 'inactive' }
+};
+
+type KismetResult = { success: boolean; error?: string };
+
+function resultStatus(result: KismetResult): number {
+	if (result.success) return 200;
+	return result.error ? 400 : 500;
+}
+
+const ACTION_HANDLERS: Record<string, () => Promise<KismetResult>> = {
+	start: startKismetExtended,
+	stop: stopKismetExtended,
+	status: getKismetStatus
+};
+
+async function executeKismetAction(action: string) {
+	const handler = ACTION_HANDLERS[action];
+	const result = await handler();
+	return action === 'status' ? json(result) : json(result, { status: resultStatus(result) });
+}
+
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
 		const rawBody = await request.json();
 		const validated = safeParseWithHandling(KismetControlSchema, rawBody, 'user-action');
-		if (!validated) {
-			return error(400, 'Invalid Kismet control request');
-		}
+		if (!validated) return error(400, 'Invalid Kismet control request');
+
 		const { action } = validated;
+		if (url.searchParams.get('mock') === 'true') return json(MOCK_RESPONSES[action]);
 
-		// Only use mock responses if explicitly requested via ?mock=true
-		const useMock = url.searchParams.get('mock') === 'true';
-
-		if (useMock) {
-			if (action === 'start') {
-				return json({
-					success: true,
-					message: 'Kismet service started (mock mode)',
-					details: 'Mock Kismet process started successfully'
-				});
-			} else if (action === 'stop') {
-				return json({
-					success: true,
-					message: 'Kismet stopped gracefully (mock mode)'
-				});
-			} else if (action === 'status') {
-				return json({
-					success: true,
-					isRunning: false,
-					status: 'inactive'
-				});
-			}
-		}
-
-		if (action === 'start') {
-			const result = await startKismetExtended();
-			return json(result, { status: result.success ? 200 : result.error ? 400 : 500 });
-		} else if (action === 'stop') {
-			const result = await stopKismetExtended();
-			return json(result, { status: result.success ? 200 : 500 });
-		} else if (action === 'status') {
-			const result = await getKismetStatus();
-			return json(result);
-		} else {
-			return json(
-				{
-					success: false,
-					message: 'Invalid action'
-				},
-				{ status: 400 }
-			);
-		}
-	} catch (error: unknown) {
+		return await executeKismetAction(action);
+	} catch (err: unknown) {
 		return json(
 			{
 				success: false,
 				message: 'Server error',
-				// Safe: Error object cast to extract optional message property for user-friendly error response
-				error: (error as { message?: string }).message
+				error: (err as { message?: string }).message
 			},
 			{ status: 500 }
 		);

@@ -102,36 +102,28 @@ export class WebSocketManager extends EventEmitter {
 		);
 	}
 
-	/** Add a client WebSocket with subscription preferences */
-	addClient(ws: WebSocket, subscription?: Partial<Subscription>) {
-		const sub: Subscription = {
-			types: new Set(subscription?.types || ['device_update', 'status_change', 'alert']),
-			filters: subscription?.filters
-		};
-
-		this.clients.set(ws, sub);
-
+	/** Wire up close/error/message handlers on a client WebSocket */
+	private attachClientHandlers(ws: WebSocket): void {
 		ws.on('close', () => {
 			this.clients.delete(ws);
 			logInfo(`Client disconnected. Total clients: ${this.clients.size}`);
 		});
-
 		ws.on('error', (error) => {
 			logError('Client WebSocket error:', { error });
 			this.clients.delete(ws);
 		});
-
 		ws.on('message', (data: Buffer) => {
 			try {
-				// Safe: WebSocket message parsed as ClientMessage — validated by handler below
 				const message = JSON.parse(data.toString()) as ClientMessage;
 				this.handleClientMessage(ws, message);
 			} catch (error) {
 				logError('Error parsing client message:', { error });
 			}
 		});
+	}
 
-		// Send initial status
+	/** Send initial connection status to a new client */
+	private sendInitialStatus(ws: WebSocket): void {
 		const statusMessage: WebSocketMessage = {
 			type: 'status_change',
 			data: {
@@ -142,16 +134,52 @@ export class WebSocketManager extends EventEmitter {
 			},
 			timestamp: new Date().toISOString()
 		};
-
 		if (ws.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify(statusMessage));
 		}
+	}
 
-		if (sub.types.has('device_update') || sub.types.has('*')) {
-			this.sendCachedDevices(ws, sub);
-		}
+	/** Default event types for new subscriptions */
+	private static readonly DEFAULT_TYPES = ['device_update', 'status_change', 'alert'];
 
+	/** Build a Subscription from partial input */
+	private buildSubscription(partial?: Partial<Subscription>): Subscription {
+		return {
+			types: new Set(partial?.types || WebSocketManager.DEFAULT_TYPES),
+			filters: partial?.filters
+		};
+	}
+
+	/** Check if subscription wants device updates */
+	private wantsDeviceUpdates(sub: Subscription): boolean {
+		return sub.types.has('device_update') || sub.types.has('*');
+	}
+
+	/** Add a client WebSocket with subscription preferences */
+	addClient(ws: WebSocket, subscription?: Partial<Subscription>) {
+		const sub = this.buildSubscription(subscription);
+		this.clients.set(ws, sub);
+		this.attachClientHandlers(ws);
+		this.sendInitialStatus(ws);
+		if (this.wantsDeviceUpdates(sub)) this.sendCachedDevices(ws, sub);
 		logInfo(`Client connected. Total clients: ${this.clients.size}`);
+	}
+
+	/** Handle subscribe/unsubscribe events */
+	private handleSubscription(
+		sub: Subscription,
+		events: string[] | undefined,
+		add: boolean
+	): void {
+		if (!events) return;
+		events.forEach((e) => (add ? sub.types.add(e) : sub.types.delete(e)));
+	}
+
+	/** Send a pong response to client */
+	private sendPong(ws: WebSocket): void {
+		if (ws.readyState === WebSocket.OPEN) {
+			ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
+		}
 	}
 
 	/** Handle messages from clients */
@@ -159,25 +187,16 @@ export class WebSocketManager extends EventEmitter {
 		const sub = this.clients.get(ws);
 		if (!sub) return;
 
-		switch (message.type) {
-			case 'subscribe':
-				if (message.events) message.events.forEach((e) => sub.types.add(e));
-				break;
-			case 'unsubscribe':
-				if (message.events) message.events.forEach((e) => sub.types.delete(e));
-				break;
-			case 'set_filters':
+		const handlers: Record<string, () => void> = {
+			subscribe: () => this.handleSubscription(sub, message.events, true),
+			unsubscribe: () => this.handleSubscription(sub, message.events, false),
+			set_filters: () => {
 				sub.filters = message.filters;
-				break;
-			case 'get_devices':
-				this.sendCachedDevices(ws, sub);
-				break;
-			case 'ping':
-				if (ws.readyState === WebSocket.OPEN) {
-					ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
-				}
-				break;
-		}
+			},
+			get_devices: () => this.sendCachedDevices(ws, sub),
+			ping: () => this.sendPong(ws)
+		};
+		handlers[message.type]?.();
 	}
 
 	/** Send cached devices to a client */
@@ -194,23 +213,24 @@ export class WebSocketManager extends EventEmitter {
 		}
 	}
 
+	/** Check if device signal passes the minimum threshold */
+	private passesSignalFilter(device: KismetDevice, minSignal: number | undefined): boolean {
+		if (!minSignal) return true;
+		return !device.signalStrength || device.signalStrength >= minSignal;
+	}
+
+	/** Check if a device matches subscription filters */
+	private matchesFilters(device: KismetDevice, filters: Subscription['filters']): boolean {
+		if (!filters) return true;
+		if (!this.passesSignalFilter(device, filters.minSignal)) return false;
+		return !(filters.deviceTypes && !filters.deviceTypes.includes(device.type));
+	}
+
 	/** Filter cached devices based on subscription filters */
 	private getFilteredDevices(sub: Subscription): KismetDevice[] {
 		return Array.from(this.pollerState.deviceCache.values())
 			.map((cached) => cached.device)
-			.filter((device) => {
-				if (sub.filters) {
-					if (
-						sub.filters.minSignal &&
-						device.signalStrength &&
-						device.signalStrength < sub.filters.minSignal
-					)
-						return false;
-					if (sub.filters.deviceTypes && !sub.filters.deviceTypes.includes(device.type))
-						return false;
-				}
-				return true;
-			});
+			.filter((device) => this.matchesFilters(device, sub.filters));
 	}
 
 	/** Broadcast message to clients with optional filter */

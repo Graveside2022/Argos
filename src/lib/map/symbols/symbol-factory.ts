@@ -64,12 +64,15 @@ export class SymbolFactory {
 		return { renderer: this.renderer, mod };
 	}
 
-	static async createSymbolSVG(sidc: string, options: SymbolOptions = {}): Promise<string> {
-		const { renderer, mod } = await this.getRenderer();
+	/** Build modifiers and attributes maps from SymbolOptions */
+	private static buildRenderMaps(
+		mod: Awaited<ReturnType<typeof getMilSymModule>>,
+		options: SymbolOptions
+	): { modifiers: Map<string, string>; attributes: Map<string, string> } {
 		const modifiers = new Map<string, string>();
 		const attributes = new Map<string, string>();
 
-		attributes.set(mod.MilStdAttributes.PixelSize, String(options.size || this.DEFAULT_SIZE));
+		attributes.set(mod.MilStdAttributes.PixelSize, String(options.size ?? this.DEFAULT_SIZE));
 
 		if (options.uniqueDesignation) {
 			modifiers.set(mod.Modifiers.T_UNIQUE_DESIGNATION_1, options.uniqueDesignation);
@@ -78,24 +81,19 @@ export class SymbolFactory {
 			modifiers.set(mod.Modifiers.H_ADDITIONAL_INFO_1, options.additionalInformation);
 		}
 
+		return { modifiers, attributes };
+	}
+
+	static async createSymbolSVG(sidc: string, options: SymbolOptions = {}): Promise<string> {
+		const { renderer, mod } = await this.getRenderer();
+		const { modifiers, attributes } = this.buildRenderMaps(mod, options);
 		const result = renderer.RenderSVG(sidc, modifiers, attributes);
 		return result?.getSVG() ?? '';
 	}
 
 	static async createSymbolDataUrl(sidc: string, options: SymbolOptions = {}): Promise<string> {
 		const { renderer, mod } = await this.getRenderer();
-		const modifiers = new Map<string, string>();
-		const attributes = new Map<string, string>();
-
-		attributes.set(mod.MilStdAttributes.PixelSize, String(options.size || this.DEFAULT_SIZE));
-
-		if (options.uniqueDesignation) {
-			modifiers.set(mod.Modifiers.T_UNIQUE_DESIGNATION_1, options.uniqueDesignation);
-		}
-		if (options.additionalInformation) {
-			modifiers.set(mod.Modifiers.H_ADDITIONAL_INFO_1, options.additionalInformation);
-		}
-
+		const { modifiers, attributes } = this.buildRenderMaps(mod, options);
 		const result = renderer.RenderSVG(sidc, modifiers, attributes);
 		return result?.getSVGDataURI() ?? '';
 	}

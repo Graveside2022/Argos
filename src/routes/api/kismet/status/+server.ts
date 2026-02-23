@@ -6,120 +6,98 @@ import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
+const INACTIVE_DATA = {
+	isRunning: false,
+	interface: null,
+	channels: [],
+	deviceCount: 0,
+	uptime: 0,
+	startTime: null,
+	monitorInterfaces: [],
+	metrics: {}
+};
+
+const MOCK_DATA = { ...INACTIVE_DATA, interface: 'wlan0', channels: [1, 6, 11] };
+
+/** Read a numeric field from Kismet system status, defaulting to 0. */
+function ssNum(ss: Record<string, unknown>, key: string): number {
+	return (ss[key] as number) || 0;
+}
+
+/** Read a string field from Kismet system status. */
+function ssStr(ss: Record<string, unknown>, key: string, fallback: string): string {
+	return (ss[key] as string) || fallback;
+}
+
+/** Build the data payload for a running Kismet proxy. */
+function buildProxyData(ss: Record<string, unknown>) {
+	const config = KismetProxy.getConfig();
+	const startSec = ssNum(ss, 'kismet.system.timestamp.start_sec');
+	const nowSec = ssNum(ss, 'kismet.system.timestamp.sec');
+	return {
+		isRunning: true,
+		host: config.host,
+		port: config.port,
+		version: ssStr(ss, 'kismet.system.version', 'unknown'),
+		deviceCount: ssNum(ss, 'kismet.system.devices.count'),
+		uptime: nowSec - startSec,
+		startTime: startSec ? new Date(startSec * 1000).toISOString() : null,
+		memoryKB: ssNum(ss, 'kismet.system.memory.rss'),
+		monitorInterfaces: [],
+		metrics: {
+			sensors: ss['kismet.system.sensors.temp'] || {},
+			fan: ss['kismet.system.sensors.fan'] || {}
+		}
+	};
+}
+
+/** Parse Kismet proxy system status into response format. */
+function buildProxyResponse(ss: Record<string, unknown>) {
+	return { success: true, isRunning: true, status: 'running', data: buildProxyData(ss) };
+}
+
+/** Try Kismet proxy API. Returns response or null. */
+async function tryKismetProxy(): Promise<Record<string, unknown> | null> {
+	try {
+		const ss = (await KismetProxy.getSystemStatus()) as Record<string, unknown>;
+		return buildProxyResponse(ss);
+	} catch {
+		return null;
+	}
+}
+
+/** Try fusion controller. Returns response or null. */
+async function tryFusionController(): Promise<Record<string, unknown> | null> {
+	if (!fusionKismetController.isReady()) return null;
+	const status = await fusionKismetController.getStatus();
+	return {
+		success: true,
+		isRunning: status.isRunning,
+		status: status.isRunning ? 'running' : 'stopped',
+		data: status
+	};
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		const useMock = url.searchParams.get('mock') === 'true';
-
-		if (useMock) {
-			return json({
-				success: true,
-				isRunning: false,
-				status: 'inactive',
-				data: {
-					isRunning: false,
-					interface: 'wlan0',
-					channels: [1, 6, 11],
-					deviceCount: 0,
-					uptime: 0,
-					startTime: null,
-					monitorInterfaces: [],
-					metrics: {}
-				}
-			});
+		if (url.searchParams.get('mock') === 'true') {
+			return json({ success: true, isRunning: false, status: 'inactive', data: MOCK_DATA });
 		}
 
-		// Try real Kismet API first (uses proper Basic Auth)
-		try {
-			const systemStatus = await KismetProxy.getSystemStatus();
-			const config = KismetProxy.getConfig();
-			// Safe: Kismet API response cast to Record for dynamic property access by dot-notation keys
-			// Safe: Runtime type validated Record cast for dynamic property access
-			const ss = systemStatus as Record<string, unknown>;
+		const proxyResult = await tryKismetProxy();
+		if (proxyResult) return json(proxyResult);
 
-			// Safe: Kismet system.status API contract guarantees these properties exist with known types
-			const startSec = (ss['kismet.system.timestamp.start_sec'] as number) || 0;
-			const nowSec = (ss['kismet.system.timestamp.sec'] as number) || 0;
-			const deviceCount = (ss['kismet.system.devices.count'] as number) || 0;
-			const version = (ss['kismet.system.version'] as string) || 'unknown';
-			const memoryRss = (ss['kismet.system.memory.rss'] as number) || 0;
+		const fusionResult = await tryFusionController();
+		if (fusionResult) return json(fusionResult);
 
-			return json({
-				success: true,
-				isRunning: true,
-				status: 'running',
-				data: {
-					isRunning: true,
-					host: config.host,
-					port: config.port,
-					version,
-					deviceCount,
-					uptime: nowSec - startSec,
-					startTime: startSec ? new Date(startSec * 1000).toISOString() : null,
-					memoryKB: memoryRss,
-					monitorInterfaces: [],
-					metrics: {
-						sensors: ss['kismet.system.sensors.temp'] || {},
-						fan: ss['kismet.system.sensors.fan'] || {}
-					}
-				}
-			});
-		} catch (_proxyError) {
-			// Kismet API not reachable, try fusion controller
-		}
-
-		// Fall back to fusion controller
-		if (fusionKismetController.isReady()) {
-			const status = await fusionKismetController.getStatus();
-
-			return json({
-				success: true,
-				isRunning: status.isRunning,
-				status: status.isRunning ? 'running' : 'stopped',
-				data: {
-					isRunning: status.isRunning,
-					interface: status.interface,
-					channels: status.channels,
-					deviceCount: status.deviceCount,
-					uptime: status.uptime,
-					startTime: status.startTime,
-					monitorInterfaces: status.monitorInterfaces,
-					metrics: status.metrics
-				}
-			});
-		}
-
-		// Neither source available
-		return json({
-			success: true,
-			isRunning: false,
-			status: 'inactive',
-			data: {
-				isRunning: false,
-				interface: null,
-				channels: [],
-				deviceCount: 0,
-				uptime: 0,
-				startTime: null,
-				monitorInterfaces: [],
-				metrics: {}
-			}
-		});
+		return json({ success: true, isRunning: false, status: 'inactive', data: INACTIVE_DATA });
 	} catch (error) {
 		logger.error('Error getting Kismet status', { error: (error as Error).message });
-
 		return json({
 			success: false,
 			status: 'error',
-			// Safe: Catch block error from KismetProxy.getSystemStatus() throws Error instances
-			// Safe: Catch block error cast to Error for message extraction
 			error: (error as Error).message,
-			data: {
-				isRunning: false,
-				interface: null,
-				channels: [],
-				deviceCount: 0,
-				uptime: 0
-			}
+			data: { isRunning: false, interface: null, channels: [], deviceCount: 0, uptime: 0 }
 		});
 	}
 };

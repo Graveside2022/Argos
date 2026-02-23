@@ -13,6 +13,19 @@ import type {
 	HardwareStatus
 } from './detection-types';
 
+function fieldIncludes(value: string | undefined, search: string): boolean {
+	return value !== undefined && value.toLowerCase().includes(search);
+}
+
+function matchesSearch(hw: DetectedHardware, lower: string): boolean {
+	return (
+		fieldIncludes(hw.name, lower) ||
+		fieldIncludes(hw.id, lower) ||
+		fieldIncludes(hw.manufacturer, lower) ||
+		fieldIncludes(hw.model, lower)
+	);
+}
+
 export class HardwareRegistry {
 	private hardware: Map<string, DetectedHardware> = new Map();
 
@@ -69,46 +82,47 @@ export class HardwareRegistry {
 		return Array.from(this.hardware.values());
 	}
 
+	private applyPropertyFilters(
+		results: DetectedHardware[],
+		options: HardwareQueryOptions
+	): DetectedHardware[] {
+		let filtered = results;
+		if (options.category) {
+			filtered = filtered.filter((hw) => hw.category === options.category);
+		}
+		if (options.connectionType) {
+			filtered = filtered.filter((hw) => hw.connectionType === options.connectionType);
+		}
+		if (options.status) {
+			filtered = filtered.filter((hw) => hw.status === options.status);
+		}
+		return filtered;
+	}
+
+	private applyToolFilter(
+		results: DetectedHardware[],
+		tool: string | undefined
+	): DetectedHardware[] {
+		if (!tool) return results;
+		return results.filter((hw) => hw.compatibleTools?.includes(tool));
+	}
+
+	private applySearchFilter(
+		results: DetectedHardware[],
+		search: string | undefined
+	): DetectedHardware[] {
+		if (!search) return results;
+		const lower = search.toLowerCase();
+		return results.filter((hw) => matchesSearch(hw, lower));
+	}
+
 	/**
 	 * Query hardware with filters
 	 */
 	query(options: HardwareQueryOptions = {}): DetectedHardware[] {
-		let results = this.getAll();
-
-		// Filter by category
-		if (options.category) {
-			results = results.filter((hw) => hw.category === options.category);
-		}
-
-		// Filter by connection type
-		if (options.connectionType) {
-			results = results.filter((hw) => hw.connectionType === options.connectionType);
-		}
-
-		// Filter by status
-		if (options.status) {
-			results = results.filter((hw) => hw.status === options.status);
-		}
-
-		// Filter by compatible tool
-		if (options.compatibleWithTool) {
-			const targetTool = options.compatibleWithTool;
-			results = results.filter((hw) => hw.compatibleTools?.includes(targetTool));
-		}
-
-		// Search by name, manufacturer, or model
-		if (options.search) {
-			const searchLower = options.search.toLowerCase();
-			results = results.filter(
-				(hw) =>
-					hw.name.toLowerCase().includes(searchLower) ||
-					hw.manufacturer?.toLowerCase().includes(searchLower) ||
-					hw.model?.toLowerCase().includes(searchLower) ||
-					hw.id.toLowerCase().includes(searchLower)
-			);
-		}
-
-		return results;
+		let results = this.applyPropertyFilters(this.getAll(), options);
+		results = this.applyToolFilter(results, options.compatibleWithTool);
+		return this.applySearchFilter(results, options.search);
 	}
 
 	/**

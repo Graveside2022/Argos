@@ -1,4 +1,4 @@
-import type { LayerSpecification, Map, RasterSourceSpecification } from 'maplibre-gl';
+import type { Map } from 'maplibre-gl';
 
 export class SatelliteLayer {
 	private map: Map;
@@ -9,52 +9,47 @@ export class SatelliteLayer {
 		this.map = map;
 	}
 
+	/** IDs of overlay layers the satellite raster should be inserted below */
+	private static readonly OVERLAY_LAYER_IDS = new Set([
+		'mil-sym-layer',
+		'device-circles',
+		'device-clusters',
+		'connection-lines'
+	]);
+
+	/** Find the first overlay or label layer to insert before */
+	private findInsertionPoint(): string | undefined {
+		const layers = this.map.getStyle()?.layers ?? [];
+		return layers.find(
+			(l) => SatelliteLayer.OVERLAY_LAYER_IDS.has(l.id) || l.id.includes('label')
+		)?.id;
+	}
+
 	/**
 	 * Adds the Google Hybrid Satellite layer to the map.
 	 * @param urlTemplate The XYZ URL template (e.g., Google Maps or custom).
 	 * @param attribution Attribution text for the source.
 	 */
 	add(urlTemplate: string, attribution: string = '© Google') {
-		if (this.map.getSource(this.SOURCE_ID)) {
-			return;
-		}
+		if (this.map.getSource(this.SOURCE_ID)) return;
 
-		const source: RasterSourceSpecification = {
+		this.map.addSource(this.SOURCE_ID, {
 			type: 'raster',
 			tiles: [urlTemplate],
 			tileSize: 256,
-			attribution: attribution
-		};
+			attribution
+		});
 
-		this.map.addSource(this.SOURCE_ID, source);
-
-		const layer: LayerSpecification = {
-			id: this.LAYER_ID,
-			type: 'raster',
-			source: this.SOURCE_ID,
-			paint: {
-				'raster-opacity': 0 // Start hidden, toggle via visibility
+		this.map.addLayer(
+			{
+				id: this.LAYER_ID,
+				type: 'raster',
+				source: this.SOURCE_ID,
+				paint: { 'raster-opacity': 0 },
+				layout: { visibility: 'none' }
 			},
-			layout: {
-				visibility: 'none'
-			}
-		};
-
-		// Add before symbols/circles so they remain visible on top
-		const layers = this.map.getStyle()?.layers || [];
-
-		// Find the first layer that is one of our known overlays
-		// Prioritize specific layers to insert before
-		const beforeId = layers.find(
-			(l) =>
-				l.id === 'mil-sym-layer' ||
-				l.id === 'device-circles' ||
-				l.id === 'device-clusters' ||
-				l.id === 'connection-lines' ||
-				l.id.includes('label') // Try to put satellite below labels if possible
-		)?.id;
-
-		this.map.addLayer(layer, beforeId);
+			this.findInsertionPoint()
+		);
 	}
 
 	/**

@@ -5,36 +5,72 @@ import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
+/** Extract error message from unknown error values. */
+function errMsg(err: unknown): string {
+	return err instanceof Error ? err.message : String(err);
+}
+
+/** Read a float search param with a fallback default. */
+function floatParam(sp: URLSearchParams, key: string, fallback: string): number {
+	return parseFloat(sp.get(key) || fallback);
+}
+
+/** Read an integer search param with a fallback default. */
+function intParam(sp: URLSearchParams, key: string, fallback: string): number {
+	return parseInt(sp.get(key) || fallback);
+}
+
+/** Shape of raw database statistics rows. */
+interface RawAreaStatistics {
+	total_signals?: number;
+	unique_devices?: number;
+	avg_power?: number;
+	min_power?: number;
+	max_power?: number;
+	freq_bands?: number;
+}
+
+/** Parse geographic bounds from URL search params. */
+function parseBoundsParams(searchParams: URLSearchParams) {
+	return {
+		minLat: floatParam(searchParams, 'minLat', '-90'),
+		maxLat: floatParam(searchParams, 'maxLat', '90'),
+		minLon: floatParam(searchParams, 'minLon', '-180'),
+		maxLon: floatParam(searchParams, 'maxLon', '180')
+	};
+}
+
+/** Return a numeric value or 0 if undefined/null. */
+function numOrZero(value: number | undefined): number {
+	return value || 0;
+}
+
+/** Format raw database statistics into the API response shape. */
+function formatStatisticsResponse(stats: RawAreaStatistics, timeWindow: number) {
+	return {
+		totalSignals: numOrZero(stats.total_signals),
+		uniqueDevices: numOrZero(stats.unique_devices),
+		avgPower: numOrZero(stats.avg_power),
+		minPower: numOrZero(stats.min_power),
+		maxPower: numOrZero(stats.max_power),
+		freqBands: numOrZero(stats.freq_bands),
+		timeRange: {
+			start: Date.now() - timeWindow,
+			end: Date.now()
+		}
+	};
+}
+
 export const GET: RequestHandler = ({ url }) => {
 	try {
 		const db = getRFDatabase();
-		const timeWindow = parseInt(url.searchParams.get('timeWindow') || '3600000'); // Default 1 hour
+		const timeWindow = intParam(url.searchParams, 'timeWindow', '3600000');
+		const bounds = parseBoundsParams(url.searchParams);
 
-		// Get current map bounds if provided
-		const minLat = parseFloat(url.searchParams.get('minLat') || '-90');
-		const maxLat = parseFloat(url.searchParams.get('maxLat') || '90');
-		const minLon = parseFloat(url.searchParams.get('minLon') || '-180');
-		const maxLon = parseFloat(url.searchParams.get('maxLon') || '180');
-
-		const stats = db.getAreaStatistics({ minLat, maxLat, minLon, maxLon }, timeWindow);
-
-		return json({
-			// Safe: Database statistics result cast to access optional numeric properties with defaults
-			totalSignals: (stats as { total_signals?: number }).total_signals || 0,
-			uniqueDevices: (stats as { unique_devices?: number }).unique_devices || 0,
-			avgPower: (stats as { avg_power?: number }).avg_power || 0,
-			minPower: (stats as { min_power?: number }).min_power || 0,
-			maxPower: (stats as { max_power?: number }).max_power || 0,
-			freqBands: (stats as { freq_bands?: number }).freq_bands || 0,
-			timeRange: {
-				start: Date.now() - timeWindow,
-				end: Date.now()
-			}
-		});
+		const stats = db.getAreaStatistics(bounds, timeWindow);
+		return json(formatStatisticsResponse(stats as RawAreaStatistics, timeWindow));
 	} catch (err: unknown) {
-		logger.error('Error getting statistics', {
-			error: err instanceof Error ? err.message : String(err)
-		});
+		logger.error('Error getting statistics', { error: errMsg(err) });
 		return error(500, 'Failed to get statistics');
 	}
 };

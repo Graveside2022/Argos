@@ -27,22 +27,20 @@
 		onselect: (frequency: string) => void;
 	} = $props();
 
+	const QUALITY_CLASSES: Record<string, string> = {
+		excellent: 'bg-green-500/20 text-green-400 border-green-500/30',
+		'very strong': 'bg-green-500/20 text-green-400 border-green-500/30',
+		strong: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+		good: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+		moderate: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+		weak: 'bg-red-500/20 text-red-400 border-red-500/30'
+	};
+
 	function getQualityClass(strength: string): string {
-		switch (strength.toLowerCase()) {
-			case 'excellent':
-			case 'very strong':
-				return 'bg-green-500/20 text-green-400 border-green-500/30';
-			case 'strong':
-				return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-			case 'good':
-				return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-			case 'moderate':
-				return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-			case 'weak':
-				return 'bg-red-500/20 text-red-400 border-red-500/30';
-			default:
-				return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-		}
+		return (
+			QUALITY_CLASSES[strength.toLowerCase()] ??
+			'bg-gray-500/20 text-gray-400 border-gray-500/30'
+		);
 	}
 </script>
 

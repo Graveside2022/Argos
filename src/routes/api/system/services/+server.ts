@@ -6,77 +6,94 @@ import type { RequestHandler } from './$types';
 
 const execFileAsync = promisify(execFile);
 
+/** Extract error message from an unknown error value */
+function errMsg(err: unknown): string {
+	return err instanceof Error ? err.message : String(err);
+}
+
+interface ServiceDef {
+	name: string;
+	port: number;
+	process: string;
+}
+
+/** Service definitions for health monitoring */
+const MONITORED_SERVICES: ServiceDef[] = [
+	{ name: 'kismet', port: 2501, process: 'kismet' },
+	{ name: 'argos-dev', port: 5173, process: 'vite' }
+];
+
+/** Lookup table: [processRunning][portListening] → health status */
+const HEALTH_STATUS_MAP: Record<string, string> = {
+	'true:true': 'healthy',
+	'true:false': 'degraded',
+	'false:true': 'zombie',
+	'false:false': 'stopped'
+};
+
+/** Determine health status from process and port state */
+function deriveHealthStatus(processRunning: boolean, portListening: boolean): string {
+	return HEALTH_STATUS_MAP[`${processRunning}:${portListening}`] ?? 'stopped';
+}
+
+/** Check whether a process matching the given pattern is running, return its PID */
+async function checkProcess(pattern: string): Promise<{ running: boolean; pid: number | null }> {
+	try {
+		const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-f', pattern]);
+		if (stdout.trim()) {
+			return { running: true, pid: parseInt(stdout.trim().split('\n')[0]) };
+		}
+	} catch {
+		// pgrep exits non-zero when no match found
+	}
+	return { running: false, pid: null };
+}
+
+/** Check whether a TCP port has an active listener */
+async function checkPort(port: number): Promise<boolean> {
+	try {
+		await execFileAsync('/usr/bin/lsof', [`-i:${port}`, '-sTCP:LISTEN']);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** Probe a single service and return its status record */
+async function probeService(service: ServiceDef) {
+	const [proc, portListening] = await Promise.all([
+		checkProcess(service.process),
+		checkPort(service.port)
+	]);
+
+	return {
+		name: service.name,
+		status: deriveHealthStatus(proc.running, portListening),
+		process_running: proc.running,
+		port_listening: portListening,
+		port: service.port,
+		pid: proc.pid
+	};
+}
+
 export const GET: RequestHandler = async () => {
 	try {
-		const services = [
-			{ name: 'kismet', port: 2501, process: 'kismet' },
-			{ name: 'argos-dev', port: 5173, process: 'vite' }
-		];
-
-		const results = await Promise.all(
-			services.map(async (service) => {
-				let processRunning = false;
-				let portListening = false;
-				let pid = null;
-
-				// Check if process is running
-				try {
-					const { stdout } = await execFileAsync('/usr/bin/pgrep', [
-						'-f',
-						service.process
-					]);
-					if (stdout.trim()) {
-						processRunning = true;
-						pid = parseInt(stdout.trim().split('\n')[0]);
-					}
-				} catch {
-					processRunning = false;
-				}
-
-				// Check if port is listening
-				try {
-					await execFileAsync('/usr/bin/lsof', [`-i:${service.port}`, '-sTCP:LISTEN']);
-					portListening = true;
-				} catch {
-					portListening = false;
-				}
-
-				// Determine health status
-				let status = 'stopped';
-				if (processRunning && portListening) {
-					status = 'healthy';
-				} else if (processRunning && !portListening) {
-					status = 'degraded';
-				} else if (!processRunning && portListening) {
-					status = 'zombie'; // Port held but process dead
-				}
-
-				return {
-					name: service.name,
-					status,
-					process_running: processRunning,
-					port_listening: portListening,
-					port: service.port,
-					pid
-				};
-			})
-		);
+		const results = await Promise.all(MONITORED_SERVICES.map(probeService));
 
 		const healthyCount = results.filter((r) => r.status === 'healthy').length;
-		const overallHealth = healthyCount === services.length ? 'healthy' : 'degraded';
+		const overallHealth = healthyCount === MONITORED_SERVICES.length ? 'healthy' : 'degraded';
 
 		return json({
 			success: true,
 			overall_health: overallHealth,
 			services: results,
 			healthy_count: healthyCount,
-			total_count: services.length
+			total_count: MONITORED_SERVICES.length
 		});
 	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
 		return json({
 			success: false,
-			error: msg
+			error: errMsg(error)
 		});
 	}
 };

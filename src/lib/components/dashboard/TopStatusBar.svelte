@@ -57,63 +57,72 @@
 		openDropdown = openDropdown === which ? null : which;
 	}
 
+	/** Map fixType string to numeric value. */
+	const FIX_TYPE_MAP: Record<string, number> = { '3D': 3, '2D': 2 };
+
+	/** Reset GPS display state to a given mode. */
+	function resetGpsState(state: 'offline' | 'standby') {
+		gpsState = state;
+		gpsSats = 0;
+		gpsCoords = { lat: '', lon: '', mgrs: '' };
+		gpsSpeed = null;
+		gpsAccuracy = null;
+		gpsFix = 0;
+	}
+
+	/** Apply GPS fix data to display state and trigger location lookups. */
+	function applyGpsFix(gps: typeof $gpsStore) {
+		const s = gps.status;
+		gpsState = 'active';
+		gpsSats = s.satellites;
+		gpsCoords = { lat: s.formattedCoords.lat, lon: s.formattedCoords.lon, mgrs: s.mgrsCoord };
+		gpsSpeed = s.speed;
+		gpsAccuracy = s.accuracy || null;
+		gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
+		currentGpsLat = gps.position.lat;
+		currentGpsLon = gps.position.lon;
+		void reverseGeocode(
+			gps.position.lat,
+			gps.position.lon,
+			lastGeocodeLat,
+			lastGeocodeLon,
+			!!locationName
+		).then((name) => {
+			if (name) {
+				locationName = name;
+				lastGeocodeLat = gps.position.lat;
+				lastGeocodeLon = gps.position.lon;
+			}
+		});
+		void fetchWeather(
+			gps.position.lat,
+			gps.position.lon,
+			lastWeatherLat,
+			lastWeatherLon,
+			!!weather
+		).then((w) => {
+			if (w) {
+				weather = w;
+				lastWeatherLat = gps.position.lat;
+				lastWeatherLon = gps.position.lon;
+			}
+		});
+	}
+
+	/** Apply fetched hardware details to component state. */
+	function applyHardwareDetails(
+		d: import('./status/status-bar-data').HardwareDetailsResult | null
+	) {
+		if (!d) return;
+		if (d.wifi) wifiInfo = { ...wifiInfo, ...d.wifi };
+		if (d.sdr) sdrInfo = { ...sdrInfo, ...d.sdr };
+		if (d.gps) gpsInfo = { ...d.gps };
+	}
+
 	$effect(() => {
 		const gps = $gpsStore;
-		const s = gps.status;
-		if (s.hasGPSFix) {
-			gpsState = 'active';
-			gpsSats = s.satellites;
-			gpsCoords = {
-				lat: s.formattedCoords.lat,
-				lon: s.formattedCoords.lon,
-				mgrs: s.mgrsCoord
-			};
-			gpsSpeed = s.speed;
-			gpsAccuracy = s.accuracy || null;
-			gpsFix = s.fixType === '3D' ? 3 : s.fixType === '2D' ? 2 : 0;
-			currentGpsLat = gps.position.lat;
-			currentGpsLon = gps.position.lon;
-			void reverseGeocode(
-				gps.position.lat,
-				gps.position.lon,
-				lastGeocodeLat,
-				lastGeocodeLon,
-				!!locationName
-			).then((name) => {
-				if (name) {
-					locationName = name;
-					lastGeocodeLat = gps.position.lat;
-					lastGeocodeLon = gps.position.lon;
-				}
-			});
-			void fetchWeather(
-				gps.position.lat,
-				gps.position.lon,
-				lastWeatherLat,
-				lastWeatherLon,
-				!!weather
-			).then((w) => {
-				if (w) {
-					weather = w;
-					lastWeatherLat = gps.position.lat;
-					lastWeatherLon = gps.position.lon;
-				}
-			});
-		} else if (s.gpsStatus.includes('Error')) {
-			gpsState = 'offline';
-			gpsSats = 0;
-			gpsCoords = { lat: '', lon: '', mgrs: '' };
-			gpsSpeed = null;
-			gpsAccuracy = null;
-			gpsFix = 0;
-		} else {
-			gpsState = 'standby';
-			gpsSats = 0;
-			gpsCoords = { lat: '', lon: '', mgrs: '' };
-			gpsSpeed = null;
-			gpsAccuracy = null;
-			gpsFix = 0;
-		}
+		if (gps.status.hasGPSFix) return applyGpsFix(gps);
+		resetGpsState(gps.status.gpsStatus.includes('Error') ? 'offline' : 'standby');
 	});
 
 	onMount(() => {
@@ -125,11 +134,7 @@
 				sdrInfo = { ...sdrInfo, owner: r.sdrOwner };
 			}
 		});
-		void fetchHardwareDetails().then((d) => {
-			if (d?.wifi) wifiInfo = { ...wifiInfo, ...d.wifi };
-			if (d?.sdr) sdrInfo = { ...sdrInfo, ...d.sdr };
-			if (d?.gps) gpsInfo = { ...d.gps };
-		});
+		void fetchHardwareDetails().then((d) => applyHardwareDetails(d));
 		const statusInterval = setInterval(
 			() =>
 				void fetchHardwareStatus().then((r) => {

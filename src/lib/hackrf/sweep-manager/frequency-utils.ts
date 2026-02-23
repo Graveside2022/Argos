@@ -42,22 +42,28 @@ export function convertToMHz(value: number, unit: string): number {
 	}
 }
 
+function extractFreqValue(freq: { frequency?: number; value?: number }): number | undefined {
+	return freq.frequency ?? freq.value;
+}
+
+function normalizeOneFrequency(
+	freq: number | { frequency?: number; value?: number; unit?: string }
+): FrequencyConfig {
+	if (typeof freq === 'number') {
+		return { value: freq, unit: 'MHz' };
+	}
+	const extracted = extractFreqValue(freq);
+	if (extracted !== undefined) {
+		return { value: extracted, unit: freq.unit || 'MHz' };
+	}
+	throw new Error('Invalid frequency format');
+}
+
 /** Normalize frequencies to standard FrequencyConfig format */
 export function normalizeFrequencies(
 	frequencies: (number | { frequency?: number; value?: number; unit?: string })[]
 ): FrequencyConfig[] {
-	return frequencies
-		.map((freq) => {
-			if (typeof freq === 'number') {
-				return { value: freq, unit: 'MHz' };
-			} else if (freq.frequency !== undefined) {
-				return { value: freq.frequency, unit: freq.unit || 'MHz' };
-			} else if (freq.value !== undefined) {
-				return { value: freq.value, unit: freq.unit || 'MHz' };
-			}
-			throw new Error('Invalid frequency format');
-		})
-		.filter((f) => f.value > 0);
+	return frequencies.map(normalizeOneFrequency).filter((f) => f.value > 0);
 }
 
 /**

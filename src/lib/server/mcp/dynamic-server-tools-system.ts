@@ -8,6 +8,46 @@
 
 import type { ApiFetchFn, ArgosTool, ToolScanEntry } from './dynamic-server-types';
 
+/** Parse time arg to epoch ms, defaulting to fallback. */
+function parseTimeArg(arg: unknown, fallback: number): number {
+	return arg ? new Date(arg as string).getTime() : fallback;
+}
+
+/** Get tool binary path or null. */
+function toolBinaryPath(t: ToolScanEntry): string | null {
+	return t.binary?.path ?? null;
+}
+
+/** Get tool container name or null. */
+function toolContainerName(t: ToolScanEntry): string | null {
+	return t.container?.name ?? null;
+}
+
+/** Get tool service name or null. */
+function toolServiceName(t: ToolScanEntry): string | null {
+	return t.service?.name ?? null;
+}
+
+/** Summarize a tool scan entry for output. */
+function summarizeToolEntry([id, t]: [string, ToolScanEntry]): Record<string, unknown> {
+	return {
+		id,
+		deployment: t.deployment,
+		binary: toolBinaryPath(t),
+		container: toolContainerName(t),
+		service: toolServiceName(t)
+	};
+}
+
+/** Filter hardware by category. */
+function filterHardware(
+	hardware: Record<string, unknown>,
+	category: string
+): Record<string, unknown> {
+	if (category === 'all') return hardware;
+	return { [category]: (hardware[category] as unknown[]) ?? [] };
+}
+
 /**
  * System status and hardware scanning MCP tools.
  *
@@ -33,20 +73,15 @@ export function createSystemTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				}
 			},
 			execute: async (args: Record<string, unknown>) => {
-				// Safe: MCP SDK validates args against inputSchema before execute() is called
-				const limit = (args.limit as number) || 100;
-				const startTime = args.start_time
-					? new Date(args.start_time as string).getTime()
-					: Date.now() - 3600000;
-				const endTime = args.end_time
-					? new Date(args.end_time as string).getTime()
-					: Date.now();
-
+				const limit = (args.limit as number) ?? 100;
+				const startTime = parseTimeArg(args.start_time, Date.now() - 3600000);
+				const endTime = parseTimeArg(args.end_time, Date.now());
 				const resp = await apiFetch(
 					`/api/signals?lat=0&lon=0&radiusMeters=999999&startTime=${startTime}&endTime=${endTime}&limit=${limit}`
 				);
 				const data = await resp.json();
-				return { signal_count: data.signals?.length || 0, signals: data.signals || [] };
+				const signals = (data.signals as unknown[]) ?? [];
+				return { signal_count: signals.length, signals };
 			}
 		},
 		{
@@ -117,24 +152,13 @@ export function createSystemTools(apiFetch: ApiFetchFn): ArgosTool[] {
 			execute: async (args: Record<string, unknown>) => {
 				const resp = await apiFetch('/api/tools/scan');
 				const data = await resp.json();
-
 				if (!data.success) {
-					return { error: data.error || 'Tool scan failed' };
+					return { error: data.error ?? 'Tool scan failed' };
 				}
 
 				const installedOnly = args.installed_only !== false;
-				const tools: Record<string, ToolScanEntry> = data.tools || {};
-				const entries = Object.entries(tools);
-
-				const installed = entries
-					.filter(([_, t]: [string, ToolScanEntry]) => t.installed)
-					.map(([id, t]: [string, ToolScanEntry]) => ({
-						id,
-						deployment: t.deployment,
-						binary: t.binary?.path || null,
-						container: t.container?.name || null,
-						service: t.service?.name || null
-					}));
+				const entries = Object.entries((data.tools ?? {}) as Record<string, ToolScanEntry>);
+				const installed = entries.filter(([, t]) => t.installed).map(summarizeToolEntry);
 
 				const result: Record<string, unknown> = {
 					stats: data.stats,
@@ -143,9 +167,7 @@ export function createSystemTools(apiFetch: ApiFetchFn): ArgosTool[] {
 				};
 
 				if (!installedOnly) {
-					const notInstalled = entries
-						.filter(([_, t]: [string, ToolScanEntry]) => !t.installed)
-						.map(([id]: [string, ToolScanEntry]) => id);
+					const notInstalled = entries.filter(([, t]) => !t.installed).map(([id]) => id);
 					result.not_installed_count = notInstalled.length;
 					result.not_installed = notInstalled;
 				}
@@ -180,22 +202,13 @@ export function createSystemTools(apiFetch: ApiFetchFn): ArgosTool[] {
 			execute: async (args: Record<string, unknown>) => {
 				const resp = await apiFetch('/api/hardware/scan');
 				const data = await resp.json();
-
 				if (!data.success) {
-					return { error: data.error || 'Hardware scan failed' };
+					return { error: data.error ?? 'Hardware scan failed' };
 				}
-
-				// Safe: MCP SDK validates args against inputSchema before execute() is called
-				const filterCategory = (args.category as string) || 'all';
-				let hardware = data.hardware || {};
-
-				if (filterCategory !== 'all') {
-					hardware = { [filterCategory]: hardware[filterCategory] || [] };
-				}
-
+				const category = (args.category as string) ?? 'all';
 				return {
 					stats: data.stats,
-					hardware
+					hardware: filterHardware(data.hardware ?? {}, category)
 				};
 			}
 		}

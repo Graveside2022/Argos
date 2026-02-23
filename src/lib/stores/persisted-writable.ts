@@ -26,47 +26,63 @@ interface PersistedWritableOptions<T> {
  * @param defaultValue - fallback when nothing is stored or parse fails
  * @param options - custom serialize/deserialize/validate
  */
+/** Apply optional validation, returning defaultValue on null. */
+function applyValidation<T>(
+	parsed: T,
+	validate: ((v: T) => T | null) | undefined,
+	defaultValue: T
+): T {
+	if (!validate) return parsed;
+	const validated = validate(parsed);
+	return validated !== null ? validated : defaultValue;
+}
+
+/** Load a value from localStorage with deserialization and validation. */
+function loadFromStorage<T>(
+	key: string,
+	defaultValue: T,
+	deserialize: (raw: string) => T,
+	validate?: (v: T) => T | null
+): T {
+	if (!browser) return defaultValue;
+	try {
+		const raw = localStorage.getItem(key);
+		if (raw === null) return defaultValue;
+		return applyValidation(deserialize(raw) as T, validate, defaultValue);
+	} catch {
+		return defaultValue;
+	}
+}
+
+/** Persist a serialized value to localStorage. */
+function saveToStorage<T>(key: string, value: T, serialize: (v: T) => string): void {
+	try {
+		const serialized = serialize(value);
+		if (serialized === 'null') localStorage.removeItem(key);
+		else localStorage.setItem(key, serialized);
+	} catch {
+		// localStorage full or unavailable — silently ignore
+	}
+}
+
+/** Resolve serializer from options, defaulting to JSON.stringify. */
+function resolveSerializer<T>(options?: PersistedWritableOptions<T>): (value: T) => string {
+	return options?.serialize ?? JSON.stringify;
+}
+
+/** Resolve deserializer from options, defaulting to JSON.parse. */
+function resolveDeserializer<T>(options?: PersistedWritableOptions<T>): (raw: string) => T {
+	return options?.deserialize ?? JSON.parse;
+}
+
 export function persistedWritable<T>(
 	key: string,
 	defaultValue: T,
 	options?: PersistedWritableOptions<T>
 ): Writable<T> {
-	const serialize = options?.serialize ?? JSON.stringify;
-	const deserialize = options?.deserialize ?? JSON.parse;
-	const validate = options?.validate;
-
-	function load(): T {
-		if (!browser) return defaultValue;
-		try {
-			const raw = localStorage.getItem(key);
-			if (raw === null) return defaultValue;
-			const parsed = deserialize(raw) as T;
-			if (validate) {
-				const validated = validate(parsed);
-				return validated !== null ? validated : defaultValue;
-			}
-			return parsed;
-		} catch {
-			// Corrupted data — use default
-			return defaultValue;
-		}
-	}
-
-	const store = writable<T>(load());
-
-	if (browser) {
-		store.subscribe((value) => {
-			try {
-				if (serialize(value) === 'null') {
-					localStorage.removeItem(key);
-				} else {
-					localStorage.setItem(key, serialize(value));
-				}
-			} catch {
-				// localStorage full or unavailable — silently ignore
-			}
-		});
-	}
-
+	const serialize = resolveSerializer(options);
+	const deserialize = resolveDeserializer(options);
+	const store = writable<T>(loadFromStorage(key, defaultValue, deserialize, options?.validate));
+	if (browser) store.subscribe((value) => saveToStorage(key, value, serialize));
 	return store;
 }

@@ -118,76 +118,83 @@ export async function initializeChat(): Promise<void> {
 	});
 }
 
+/** Build recent conversation history for the agent */
+function buildConversationHistory(): { role: string; content: string }[] {
+	return messages
+		.filter((m) => m.role !== 'system')
+		.slice(-10)
+		.map((m) => ({ role: m.role, content: m.content }));
+}
+
+/** Post a message to the agent stream endpoint */
+async function postToAgentStream(content: string): Promise<Response> {
+	const currentContext = get(agentContext);
+	const response = await fetch('/api/agent/stream', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			message: content,
+			messages: buildConversationHistory(),
+			runId: currentRunId,
+			context: currentContext
+		})
+	});
+	if (!response.ok) throw new Error('Agent stream failed');
+	return response;
+}
+
+/** Process a single SSE data line and update the assistant message */
+function processSSELine(line: string, messageIndex: number): void {
+	if (!line.startsWith('data: ')) return;
+	try {
+		const event = JSON.parse(line.slice(6));
+		if (event.type === 'TextMessageContent') {
+			messages[messageIndex].content += event.delta;
+			scrollToBottom();
+		} else if (event.type === 'RunError') {
+			messages[messageIndex].content += `\n\n[Error: ${event.message}]`;
+		}
+	} catch {
+		// Skip invalid JSON
+	}
+}
+
+/** Get a ReadableStreamDefaultReader from a Response, throwing on null body */
+function getResponseReader(response: Response): ReadableStreamDefaultReader<Uint8Array> {
+	const reader = response.body?.getReader();
+	if (!reader) throw new Error('No response body');
+	return reader;
+}
+
+/** Read an SSE response stream and update the assistant message */
+async function consumeStream(response: Response, messageIndex: number): Promise<void> {
+	const reader = getResponseReader(response);
+	const decoder = new TextDecoder();
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		const lines = decoder.decode(value).split('\n');
+		for (const line of lines) processSSELine(line, messageIndex);
+	}
+}
+
 /** Send message with specific content (used by auto-query and manual input) */
 export async function sendMessageWithContent(content: string): Promise<void> {
 	if (isStreaming) return;
 
-	messages.push({
-		role: 'user',
-		content,
-		timestamp: new Date().toISOString()
-	});
-
+	messages.push({ role: 'user', content, timestamp: new Date().toISOString() });
 	isStreaming = true;
 	currentRunId = generateUUID();
 
-	const assistantMessageIndex = messages.length;
-	messages.push({
-		role: 'assistant',
-		content: '',
-		timestamp: new Date().toISOString()
-	});
+	const assistantIdx = messages.length;
+	messages.push({ role: 'assistant', content: '', timestamp: new Date().toISOString() });
 
 	try {
-		const currentContext = get(agentContext);
-		const conversationHistory = messages
-			.filter((m) => m.role !== 'system')
-			.slice(-10)
-			.map((m) => ({ role: m.role, content: m.content }));
-
-		const response = await fetch('/api/agent/stream', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				message: content,
-				messages: conversationHistory,
-				runId: currentRunId,
-				context: currentContext
-			})
-		});
-
-		if (!response.ok) throw new Error('Agent stream failed');
-
-		const reader = response.body?.getReader();
-		const decoder = new TextDecoder();
-		if (!reader) throw new Error('No response body');
-
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-
-			const chunk = decoder.decode(value);
-			const lines = chunk.split('\n');
-
-			for (const line of lines) {
-				if (line.startsWith('data: ')) {
-					try {
-						const event = JSON.parse(line.slice(6));
-						if (event.type === 'TextMessageContent') {
-							messages[assistantMessageIndex].content += event.delta;
-							scrollToBottom();
-						} else if (event.type === 'RunError') {
-							messages[assistantMessageIndex].content +=
-								`\n\n[Error: ${event.message}]`;
-						}
-					} catch {
-						// Skip invalid JSON
-					}
-				}
-			}
-		}
+		const response = await postToAgentStream(content);
+		await consumeStream(response, assistantIdx);
 	} catch (error) {
-		messages[assistantMessageIndex].content =
+		messages[assistantIdx].content =
 			`Error: ${error instanceof Error ? error.message : String(error)}`;
 	} finally {
 		isStreaming = false;
@@ -225,27 +232,29 @@ export function clearChat(): void {
 	];
 }
 
+/** Format a device-selected event into a tactical analysis prompt */
+function formatDeviceQuery(d: Record<string, unknown>): string {
+	return (
+		`[OPERATOR SELECTED DEVICE]\n` +
+		`SSID: ${d.ssid}\nMAC: ${d.mac}\nRSSI: ${d.rssi} dBm\n` +
+		`Type: ${d.type}\nManufacturer: ${d.manufacturer}\n` +
+		`Channel: ${d.channel}\nFrequency: ${d.frequency} MHz\n` +
+		`Packets: ${d.packets}\n\nProvide tactical analysis of this device.`
+	);
+}
+
+/** Whether the chat can accept a new auto-query */
+function canAcceptAutoQuery(): boolean {
+	return !isStreaming && llmProvider !== 'unavailable';
+}
+
 /** Handle device-selected interaction events (called from $effect) */
 export function handleInteractionEvent(
 	event: { type: string; data: Record<string, unknown> } | null
 ): void {
-	if (!event || isStreaming || llmProvider === 'unavailable') return;
+	if (!event || !canAcceptAutoQuery()) return;
+	if (event.type !== 'device_selected' || !event.data.mac) return;
 
-	if (event.type === 'device_selected' && event.data.mac) {
-		const d = event.data;
-		const contextMessage =
-			`[OPERATOR SELECTED DEVICE]\n` +
-			`SSID: ${d.ssid}\n` +
-			`MAC: ${d.mac}\n` +
-			`RSSI: ${d.rssi} dBm\n` +
-			`Type: ${d.type}\n` +
-			`Manufacturer: ${d.manufacturer}\n` +
-			`Channel: ${d.channel}\n` +
-			`Frequency: ${d.frequency} MHz\n` +
-			`Packets: ${d.packets}\n\n` +
-			`Provide tactical analysis of this device.`;
-
-		sendMessageWithContent(contextMessage);
-		lastInteractionEvent.set(null);
-	}
+	sendMessageWithContent(formatDeviceQuery(event.data));
+	lastInteractionEvent.set(null);
 }

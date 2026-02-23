@@ -12,6 +12,68 @@ export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;
 	private readonly UPDATE_INTERVAL = 2000; // 2 seconds
 
+	/** Convert fix code to human-readable fix type */
+	private static resolveFixType(fix: number): string {
+		const FIX_TYPES: Record<number, string> = { 3: '3D', 2: '2D' };
+		return FIX_TYPES[fix] ?? 'No';
+	}
+
+	/** Set the GPS status to a no-data state */
+	private static setNoDataStatus(gpsStatus: string): void {
+		updateGPSStatus({ hasGPSFix: false, gpsStatus, satellites: 0, fixType: 'No' });
+	}
+
+	/** Returns true if the parsed result contains valid coordinates */
+	private static hasValidCoords(result: {
+		success: boolean;
+		data?: { latitude?: number | null; longitude?: number | null };
+	}): boolean {
+		return Boolean(
+			result.success &&
+				result.data &&
+				result.data.latitude != null &&
+				result.data.longitude != null
+		);
+	}
+
+	/** Default values for optional GPS fields */
+	private static readonly GPS_FIELD_DEFAULTS = {
+		accuracy: 0,
+		satellites: 0,
+		fix: 0,
+		heading: null as number | null,
+		speed: null as number | null
+	};
+
+	/** Process a valid GPS fix into store updates */
+	private applyGPSFix(data: {
+		latitude: number;
+		longitude: number;
+		accuracy?: number;
+		satellites?: number;
+		fix?: number;
+		heading?: number | null;
+		speed?: number | null;
+	}): void {
+		const position = { lat: data.latitude, lon: data.longitude };
+		const d = { ...GPSService.GPS_FIELD_DEFAULTS, ...data };
+		const fixType = GPSService.resolveFixType(d.fix);
+
+		updateGPSPosition(position);
+		updateGPSStatus({
+			hasGPSFix: d.fix >= 2,
+			gpsStatus: `GPS: ${fixType} Fix (${d.satellites} sats)`,
+			accuracy: d.accuracy,
+			satellites: d.satellites,
+			fixType,
+			heading: d.heading,
+			speed: d.speed,
+			currentCountry: detectCountry(position.lat, position.lon),
+			formattedCoords: formatCoordinates(position.lat, position.lon),
+			mgrsCoord: latLonToMGRS(position.lat, position.lon)
+		});
+	}
+
 	async updateGPSPosition(): Promise<void> {
 		try {
 			const response = await fetch('/api/gps/position');
@@ -20,69 +82,19 @@ export class GPSService {
 
 			if (!result) {
 				logger.error('Invalid GPS API response');
-				updateGPSStatus({
-					hasGPSFix: false,
-					gpsStatus: 'GPS: Invalid Response',
-					satellites: 0,
-					fixType: 'No'
-				});
+				GPSService.setNoDataStatus('GPS: Invalid Response');
 				return;
 			}
 
-			if (
-				result.success &&
-				result.data &&
-				result.data.latitude != null &&
-				result.data.longitude != null
-			) {
-				const position = {
-					lat: result.data.latitude,
-					lon: result.data.longitude
-				};
-
-				const accuracy = result.data.accuracy || 0;
-				const satellites = result.data.satellites || 0;
-				const fix = result.data.fix || 0;
-				const fixType = fix === 3 ? '3D' : fix === 2 ? '2D' : 'No';
-				const gpsStatus = `GPS: ${fixType} Fix (${satellites} sats)`;
-				const heading = result.data.heading ?? null;
-				const speed = result.data.speed ?? null;
-
-				// Update country and formatted coordinates
-				const currentCountry = detectCountry(position.lat, position.lon);
-				const formattedCoords = formatCoordinates(position.lat, position.lon);
-				const mgrsCoord = latLonToMGRS(position.lat, position.lon);
-
-				// Update stores
-				updateGPSPosition(position);
-				updateGPSStatus({
-					hasGPSFix: fix >= 2,
-					gpsStatus,
-					accuracy,
-					satellites,
-					fixType,
-					heading,
-					speed,
-					currentCountry,
-					formattedCoords,
-					mgrsCoord
-				});
-			} else {
-				updateGPSStatus({
-					hasGPSFix: false,
-					gpsStatus: 'GPS: No Fix',
-					satellites: 0,
-					fixType: 'No'
-				});
+			if (!GPSService.hasValidCoords(result)) {
+				GPSService.setNoDataStatus('GPS: No Fix');
+				return;
 			}
+
+			this.applyGPSFix(result.data as { latitude: number; longitude: number });
 		} catch (error) {
 			logger.error('GPS fetch error', { error });
-			updateGPSStatus({
-				hasGPSFix: false,
-				gpsStatus: 'GPS: Error',
-				satellites: 0,
-				fixType: 'No'
-			});
+			GPSService.setNoDataStatus('GPS: Error');
 		}
 	}
 

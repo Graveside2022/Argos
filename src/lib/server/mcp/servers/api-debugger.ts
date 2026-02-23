@@ -13,6 +13,131 @@ import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 
 config();
 
+/** Status code to recommendation mapping. */
+const STATUS_CODE_RECS: Record<number, string> = {
+	401: '🔴 AUTH FAILED - check ARGOS_API_KEY',
+	404: '🔴 NOT FOUND - endpoint may not exist'
+};
+
+/** Generate endpoint test recommendations from response. */
+function generateEndpointRecs(statusCode: number, latency: number, status: string): string[] {
+	const recs: string[] = [];
+	if (latency > 1000) recs.push('⚠️ High latency (>1s) - endpoint may be slow');
+	const codeRec = STATUS_CODE_RECS[statusCode];
+	if (codeRec) recs.push(codeRec);
+	if (status === 'SUCCESS') recs.push('✅ Endpoint healthy');
+	return recs;
+}
+
+interface ApiIssue {
+	type: string;
+	severity: string;
+	message: string;
+}
+
+interface DiagResult {
+	issues: ApiIssue[];
+	recs: string[];
+}
+
+/** Check health endpoint connectivity. */
+async function checkHealthEndpoint(): Promise<DiagResult> {
+	try {
+		const resp = await fetch('http://localhost:5173/api/health');
+		if (resp.status !== 200) {
+			return {
+				issues: [
+					{
+						type: 'health_check_failed',
+						severity: 'CRITICAL',
+						message: 'Health endpoint not responding'
+					}
+				],
+				recs: ['🔴 CRITICAL: Dev server may not be running', '💡 Start server: npm run dev']
+			};
+		}
+		return { issues: [], recs: [] };
+	} catch {
+		return {
+			issues: [
+				{
+					type: 'server_unreachable',
+					severity: 'CRITICAL',
+					message: 'Cannot connect to localhost:5173'
+				}
+			],
+			recs: [
+				'🔴 CRITICAL: Server not reachable',
+				'💡 Check: Is dev server running? Port 5173 listening?'
+			]
+		};
+	}
+}
+
+/** Check auth endpoint. */
+async function checkAuthEndpoint(): Promise<DiagResult> {
+	try {
+		const resp = await apiFetch('/api/system/stats');
+		if (resp.status === 401) {
+			return {
+				issues: [
+					{ type: 'auth_failed', severity: 'HIGH', message: 'Authentication failed' }
+				],
+				recs: [
+					'⚠️ AUTH: ARGOS_API_KEY not set or invalid',
+					'💡 Check: .env file has valid API key (min 32 chars)'
+				]
+			};
+		}
+		return { issues: [], recs: [] };
+	} catch (err) {
+		return checkAuthError(err);
+	}
+}
+
+/** Check if auth error matches known patterns. */
+function checkAuthError(err: unknown): DiagResult {
+	const isAuthErr =
+		err instanceof Error &&
+		(err.message.includes('401') || err.message.includes('Unauthorized'));
+	if (!isAuthErr) return { issues: [], recs: [] };
+	return {
+		issues: [{ type: 'auth_failed', severity: 'HIGH', message: 'Authentication rejected' }],
+		recs: ['⚠️ API key authentication failing']
+	};
+}
+
+/** Check streaming endpoint content-type. */
+async function checkStreamingEndpoint(): Promise<DiagResult> {
+	try {
+		const resp = await fetch('http://localhost:5173/api/hackrf/data-stream', {
+			headers: { 'X-API-Key': process.env.ARGOS_API_KEY || '' }
+		});
+		if (resp.headers.get('content-type') !== 'text/event-stream') {
+			return {
+				issues: [
+					{
+						type: 'streaming_broken',
+						severity: 'MEDIUM',
+						message: 'SSE streaming not returning correct content-type'
+					}
+				],
+				recs: []
+			};
+		}
+		return { issues: [], recs: [] };
+	} catch {
+		return { issues: [], recs: [] };
+	}
+}
+
+/** Resolve overall API status from issue severities. */
+function resolveApiStatus(issues: ApiIssue[]): string {
+	if (issues.some((i) => i.severity === 'CRITICAL')) return 'CRITICAL';
+	if (issues.some((i) => i.severity === 'HIGH')) return 'DEGRADED';
+	return 'HEALTHY';
+}
+
 class APIDebugger extends BaseMCPServer {
 	protected tools: ToolDefinition[] = [
 		{
@@ -37,48 +162,27 @@ class APIDebugger extends BaseMCPServer {
 			execute: async (args: Record<string, unknown>) => {
 				const endpoint = args.endpoint as string;
 				const method = (args.method as string) || 'GET';
-
 				const startTime = Date.now();
-				let status = 'UNKNOWN';
-				let statusCode = 0;
-				let error = null;
 
 				try {
 					const resp = await apiFetch(endpoint, { method });
-					statusCode = resp.status;
-					status = resp.status < 400 ? 'SUCCESS' : 'ERROR';
-
+					const status = resp.status < 400 ? 'SUCCESS' : 'ERROR';
 					const latency = Date.now() - startTime;
-
-					const recommendations = [];
-					if (latency > 1000) {
-						recommendations.push('⚠️ High latency (>1s) - endpoint may be slow');
-					}
-					if (statusCode === 401) {
-						recommendations.push('🔴 AUTH FAILED - check ARGOS_API_KEY');
-					}
-					if (statusCode === 404) {
-						recommendations.push('🔴 NOT FOUND - endpoint may not exist');
-					}
-					if (status === 'SUCCESS') {
-						recommendations.push('✅ Endpoint healthy');
-					}
 
 					return {
 						status,
 						endpoint,
 						method,
-						status_code: statusCode,
+						status_code: resp.status,
 						latency_ms: latency,
-						recommendations
+						recommendations: generateEndpointRecs(resp.status, latency, status)
 					};
 				} catch (err) {
-					error = err instanceof Error ? err.message : String(err);
 					return {
 						status: 'ERROR',
 						endpoint,
 						method,
-						error,
+						error: err instanceof Error ? err.message : String(err),
 						recommendations: [
 							'🔴 Connection failed',
 							'💡 Check: Is dev server running on port 5173?'
@@ -234,93 +338,21 @@ class APIDebugger extends BaseMCPServer {
 				properties: {}
 			},
 			execute: async () => {
-				const issues = [];
-				const recommendations = [];
+				const results = await Promise.all([
+					checkHealthEndpoint(),
+					checkAuthEndpoint(),
+					checkStreamingEndpoint()
+				]);
 
-				// Test health endpoint (no auth required)
-				try {
-					const healthResp = await fetch('http://localhost:5173/api/health');
-					if (healthResp.status !== 200) {
-						issues.push({
-							type: 'health_check_failed',
-							severity: 'CRITICAL',
-							message: 'Health endpoint not responding'
-						});
-						recommendations.push('🔴 CRITICAL: Dev server may not be running');
-						recommendations.push('💡 Start server: npm run dev');
-					}
-				} catch {
-					issues.push({
-						type: 'server_unreachable',
-						severity: 'CRITICAL',
-						message: 'Cannot connect to localhost:5173'
-					});
-					recommendations.push('🔴 CRITICAL: Server not reachable');
-					recommendations.push('💡 Check: Is dev server running? Port 5173 listening?');
-				}
-
-				// Test auth endpoint
-				try {
-					const authResp = await apiFetch('/api/system/stats');
-					if (authResp.status === 401) {
-						issues.push({
-							type: 'auth_failed',
-							severity: 'HIGH',
-							message: 'Authentication failed'
-						});
-						recommendations.push('⚠️ AUTH: ARGOS_API_KEY not set or invalid');
-						recommendations.push(
-							'💡 Check: .env file has valid API key (min 32 chars)'
-						);
-					}
-				} catch (err) {
-					if (
-						err instanceof Error &&
-						(err.message.includes('401') || err.message.includes('Unauthorized'))
-					) {
-						issues.push({
-							type: 'auth_failed',
-							severity: 'HIGH',
-							message: 'Authentication rejected'
-						});
-						recommendations.push('⚠️ API key authentication failing');
-					}
-				}
-
-				// Test streaming endpoint
-				try {
-					const streamResp = await fetch('http://localhost:5173/api/hackrf/data-stream', {
-						headers: {
-							'X-API-Key': process.env.ARGOS_API_KEY || ''
-						}
-					});
-
-					if (streamResp.headers.get('content-type') !== 'text/event-stream') {
-						issues.push({
-							type: 'streaming_broken',
-							severity: 'MEDIUM',
-							message: 'SSE streaming not returning correct content-type'
-						});
-					}
-				} catch {
-					// Streaming endpoint may not be running, not critical
-				}
-
-				const overallStatus = issues.some((i) => i.severity === 'CRITICAL')
-					? 'CRITICAL'
-					: issues.some((i) => i.severity === 'HIGH')
-						? 'DEGRADED'
-						: 'HEALTHY';
-
-				if (issues.length === 0) {
-					recommendations.push('✅ API layer healthy');
-				}
+				const issues = results.flatMap((r) => r.issues);
+				const recs = results.flatMap((r) => r.recs);
+				if (issues.length === 0) recs.push('✅ API layer healthy');
 
 				return {
-					overall_status: overallStatus,
+					overall_status: resolveApiStatus(issues),
 					total_issues: issues.length,
 					issues,
-					recommendations
+					recommendations: recs
 				};
 			}
 		}

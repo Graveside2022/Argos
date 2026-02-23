@@ -18,6 +18,19 @@ export class SignalAggregator {
 	private readonly frequencyTolerance = 1.0; // ±1 MHz
 	private readonly minPower = -80; // dBm threshold
 
+	/** Extract frequency and power from various spectrum data shapes */
+	private static extractSignalValues(data: {
+		peak_freq?: number;
+		peak_power?: number;
+		centerFreq?: number;
+		avg_power?: number;
+	}): { freq: number; power: number } | null {
+		const freq = data.peak_freq ?? data.centerFreq;
+		const power = data.peak_power ?? data.avg_power;
+		if (!freq || !power) return null;
+		return { freq, power };
+	}
+
 	/**
 	 * Add spectrum data to aggregator
 	 */
@@ -27,27 +40,20 @@ export class SignalAggregator {
 		centerFreq?: number;
 		avg_power?: number;
 	}): void {
-		const freq = data.peak_freq || data.centerFreq;
-		const power = data.peak_power || data.avg_power;
+		const signal = SignalAggregator.extractSignalValues(data);
+		if (!signal || signal.power < this.minPower) return;
 
-		if (!freq || !power || power < this.minPower) {
-			return;
-		}
-
-		// Round frequency to nearest MHz for grouping
-		const binFreq = Math.round(freq);
-
+		const binFreq = Math.round(signal.freq);
 		const existing = this.signalBuffer.get(binFreq);
 		if (existing) {
-			// Update existing signal
-			existing.power = (existing.power * existing.count + power) / (existing.count + 1);
+			existing.power =
+				(existing.power * existing.count + signal.power) / (existing.count + 1);
 			existing.count++;
 			existing.lastSeen = Date.now();
 		} else {
-			// Create new signal
 			this.signalBuffer.set(binFreq, {
-				frequency: freq,
-				power: power,
+				frequency: signal.freq,
+				power: signal.power,
 				count: 1,
 				firstSeen: Date.now(),
 				lastSeen: Date.now()

@@ -66,38 +66,49 @@ const PAGING_MSG_TYPES = new Set([
  * @param frameCount - Total number of GSMTAP frames observed on the frequency.
  * @returns Channel type classification. Empty channelType if no frames.
  */
+/** Extract the L3 RR message type from a hex line, or null if not an RR message */
+function extractRrMessageType(line: string): number | null {
+	const bytes = line.trim().split(/\s+/);
+	if (bytes.length < 3 || bytes[1] !== '06') return null;
+	return parseInt(bytes[2], 16);
+}
+
+/** Classify a single message type as SI, paging, or neither */
+function classifyMsgType(msgType: number): 'si' | 'paging' | null {
+	if (SYSTEM_INFO_MSG_TYPES.has(msgType)) return 'si';
+	if (PAGING_MSG_TYPES.has(msgType)) return 'paging';
+	return null;
+}
+
+/** Extract classified message kinds from hex lines, filtering nulls */
+function extractMessageKinds(hexLines: string[]): Array<'si' | 'paging'> {
+	return hexLines
+		.map(extractRrMessageType)
+		.filter((t): t is number => t !== null)
+		.map(classifyMsgType)
+		.filter((k): k is 'si' | 'paging' => k !== null);
+}
+
+/** Scan hex lines for SI and paging message presence */
+function detectMessageTypes(hexLines: string[]): { hasSI: boolean; hasPaging: boolean } {
+	const kinds = extractMessageKinds(hexLines);
+	return { hasSI: kinds.includes('si'), hasPaging: kinds.includes('paging') };
+}
+
+/** Classify channel from detected message types and frame count */
+function classifyChannel(hasSI: boolean, hasPaging: boolean, frameCount: number): ChannelAnalysis {
+	if (hasSI) return { channelType: 'BCCH/CCCH', isControlChannel: true };
+	if (hasPaging) return { channelType: 'CCCH', isControlChannel: true };
+	if (frameCount > 100) return { channelType: 'TCH', isControlChannel: false };
+	return { channelType: 'SDCCH', isControlChannel: false };
+}
+
 export function analyzeGsmFrames(hexLines: string[], frameCount: number): ChannelAnalysis {
 	if (hexLines.length === 0 || frameCount === 0) {
 		return { channelType: '', isControlChannel: false };
 	}
-
-	let hasSI = false;
-	let hasPaging = false;
-
-	for (const line of hexLines) {
-		const bytes = line.trim().split(/\s+/);
-		// L3 message: byte[1] is protocol discriminator, byte[2] is message type
-		if (bytes.length >= 3 && bytes[1] === '06') {
-			const msgType = parseInt(bytes[2], 16);
-			if (SYSTEM_INFO_MSG_TYPES.has(msgType)) {
-				hasSI = true;
-			}
-			if (PAGING_MSG_TYPES.has(msgType)) {
-				hasPaging = true;
-			}
-		}
-	}
-
-	if (hasSI) {
-		return { channelType: 'BCCH/CCCH', isControlChannel: true };
-	}
-	if (hasPaging) {
-		return { channelType: 'CCCH', isControlChannel: true };
-	}
-	if (frameCount > 100) {
-		return { channelType: 'TCH', isControlChannel: false };
-	}
-	return { channelType: 'SDCCH', isControlChannel: false };
+	const { hasSI, hasPaging } = detectMessageTypes(hexLines);
+	return classifyChannel(hasSI, hasPaging, frameCount);
 }
 
 /**
@@ -114,32 +125,43 @@ export function analyzeGsmFrames(hexLines: string[], frameCount: number): Channe
  * @param tsharkOutput - Raw stdout from the tshark cell identity command.
  * @returns Parsed cell identity. Fields are empty strings if not captured.
  */
+/** Convert a possibly-hex tshark field to a decimal string */
+function parseHexField(raw: string): string {
+	const trimmed = raw.trim();
+	if (!trimmed) return '';
+	return trimmed.startsWith('0x') ? String(parseInt(trimmed, 16)) : trimmed;
+}
+
+/** Extract a non-empty trimmed string from a CSV part, or empty string */
+function extractField(part: string | undefined): string {
+	const trimmed = part?.trim();
+	return trimmed || '';
+}
+
+/** Assign a value to a CellIdentity field if non-empty */
+function assignIfPresent(result: CellIdentity, field: keyof CellIdentity, value: string): void {
+	if (value) result[field] = value;
+}
+
+/** Apply one line of tshark CSV output to a CellIdentity (last non-empty wins) */
+function applyCellLine(result: CellIdentity, line: string): void {
+	const parts = line.split(',');
+	assignIfPresent(result, 'mcc', extractField(parts[0]));
+	assignIfPresent(result, 'mnc', extractField(parts[1]));
+	assignIfPresent(result, 'lac', parseHexField(parts[2] ?? ''));
+	assignIfPresent(result, 'ci', parseHexField(parts[3] ?? ''));
+}
+
 export function parseCellIdentity(tsharkOutput: string): CellIdentity {
 	const result: CellIdentity = { mcc: '', mnc: '', lac: '', ci: '' };
-
-	if (!tsharkOutput || !tsharkOutput.trim()) {
-		return result;
-	}
+	if (!tsharkOutput?.trim()) return result;
 
 	const cellLines = tsharkOutput
 		.trim()
 		.split('\n')
 		.filter((l: string) => l.trim() && !/^,*$/.test(l));
 
-	for (const line of cellLines) {
-		const parts = line.split(',');
-		if (parts[0] && parts[0].trim()) result.mcc = parts[0].trim();
-		if (parts[1] && parts[1].trim()) result.mnc = parts[1].trim();
-		if (parts[2] && parts[2].trim()) {
-			const raw = parts[2].trim();
-			result.lac = raw.startsWith('0x') ? String(parseInt(raw, 16)) : raw;
-		}
-		if (parts[3] && parts[3].trim()) {
-			const raw = parts[3].trim();
-			result.ci = raw.startsWith('0x') ? String(parseInt(raw, 16)) : raw;
-		}
-	}
-
+	for (const line of cellLines) applyCellLine(result, line);
 	return result;
 }
 
@@ -155,29 +177,44 @@ export function parseCellIdentity(tsharkOutput: string): CellIdentity {
  * @param frameCount - Number of GSMTAP frames captured.
  * @returns Human-readable strength label.
  */
+/** Power (dBm) thresholds — sorted descending */
+const POWER_THRESHOLDS: [number, string][] = [
+	[-40, 'Excellent'],
+	[-50, 'Very Strong'],
+	[-60, 'Strong'],
+	[-70, 'Good'],
+	[-80, 'Moderate'],
+	[-90, 'Weak']
+];
+
+/** Frame-count thresholds — sorted descending */
+const FRAME_THRESHOLDS: [number, string][] = [
+	[200, 'Excellent'],
+	[150, 'Very Strong'],
+	[100, 'Strong'],
+	[50, 'Good'],
+	[10, 'Moderate']
+];
+
+/** Walk a threshold table and return the first matching label */
+function classifyByThreshold(value: number, table: [number, string][], fallback: string): string {
+	return table.find(([min]) => value > min)?.[1] ?? fallback;
+}
+
+/** Classify power in dBm to a strength label */
+function classifyByPower(power: number): string {
+	return classifyByThreshold(power, POWER_THRESHOLDS, 'No Signal');
+}
+
+/** Classify frame count to a strength label */
+function classifyByFrameCount(frameCount: number): string {
+	if (frameCount <= 0) return 'No Signal';
+	return classifyByThreshold(frameCount, FRAME_THRESHOLDS, 'Weak');
+}
+
 export function classifySignalStrength(power: number, frameCount: number): string {
-	// Power-based classification (when real measurement available)
-	if (power > -100) {
-		if (power > -40) return 'Excellent';
-		if (power > -50) return 'Very Strong';
-		if (power > -60) return 'Strong';
-		if (power > -70) return 'Good';
-		if (power > -80) return 'Moderate';
-		if (power > -90) return 'Weak';
-		return 'No Signal';
-	}
-
-	// Frame-count-based fallback (HackRF provides no power measurement)
-	if (frameCount > 0) {
-		if (frameCount > 200) return 'Excellent';
-		if (frameCount > 150) return 'Very Strong';
-		if (frameCount > 100) return 'Strong';
-		if (frameCount > 50) return 'Good';
-		if (frameCount > 10) return 'Moderate';
-		return 'Weak';
-	}
-
-	return 'No Signal';
+	if (power > -100) return classifyByPower(power);
+	return classifyByFrameCount(frameCount);
 }
 
 /**
@@ -197,28 +234,24 @@ export function classifySignalStrength(power: number, frameCount: number): strin
  * @param frameCount - Total GSMTAP frames observed.
  * @returns Channel type classification.
  */
+/** Check if cell identity has enough fields to be definitive */
+function hasDefinitiveCellId(cellIdentity: CellIdentity): boolean {
+	return Boolean(cellIdentity.mcc && cellIdentity.lac && cellIdentity.ci);
+}
+
+/** Fallback channel classification when no frame analysis or cell identity is available */
+function fallbackChannelType(frameCount: number): ChannelAnalysis {
+	if (frameCount > 10) return { channelType: 'BCCH/CCCH', isControlChannel: true };
+	return { channelType: 'SDCCH', isControlChannel: false };
+}
+
 export function determineChannelType(
 	cellIdentity: CellIdentity,
 	frameAnalysis: ChannelAnalysis | null,
 	frameCount: number
 ): ChannelAnalysis {
-	if (frameCount === 0) {
-		return { channelType: '', isControlChannel: false };
-	}
-
-	// Definitive: tshark decoded cell identity from SI3/SI4 = BCCH
-	if (cellIdentity.mcc && cellIdentity.lac && cellIdentity.ci) {
+	if (frameCount === 0) return { channelType: '', isControlChannel: false };
+	if (hasDefinitiveCellId(cellIdentity))
 		return { channelType: 'BCCH/CCCH', isControlChannel: true };
-	}
-
-	// Use hex frame analysis if available
-	if (frameAnalysis) {
-		return frameAnalysis;
-	}
-
-	// Fallback heuristic when hex log was unreadable
-	if (frameCount > 10) {
-		return { channelType: 'BCCH/CCCH', isControlChannel: true };
-	}
-	return { channelType: 'SDCCH', isControlChannel: false };
+	return frameAnalysis ?? fallbackChannelType(frameCount);
 }

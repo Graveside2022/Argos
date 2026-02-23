@@ -124,46 +124,46 @@ export class DatabaseCleanupService {
 		logInfo('Database cleanup service stopped', {}, 'cleanup-service-stopped');
 	}
 
+	/** Get a required prepared statement or throw. */
+	private getStmt(name: string): Database.Statement {
+		const stmt = this.statements.get(name);
+		if (!stmt) throw new Error(`${name} statement not found`);
+		return stmt;
+	}
+
+	/** Delete old signals in batches until no more or max runtime exceeded. */
+	private deleteSignalsBatched(startTime: number): number {
+		const stmt = this.getStmt('deleteOldSignals');
+		let total = 0;
+		let result = stmt.run(this.config.batchSize);
+		total += result.changes;
+		while (result.changes > 0 && Date.now() - startTime < this.config.maxRuntime) {
+			result = stmt.run(this.config.batchSize);
+			total += result.changes;
+		}
+		return total;
+	}
+
 	/** Run cleanup tasks */
 	runCleanup() {
 		const startTime = Date.now();
 		const stats = { signals: 0, devices: 0, relationships: 0, patterns: 0, duration: 0 };
 
 		try {
-			const cleanup = this.db.transaction(() => {
-				const signalStmt = this.statements.get('deleteOldSignals');
-				if (!signalStmt) throw new Error('deleteOldSignals statement not found');
-				let result = signalStmt.run(this.config.batchSize);
-				stats.signals = result.changes;
+			this.db.transaction(() => {
+				stats.signals = this.deleteSignalsBatched(startTime);
+				stats.devices = this.getStmt('deleteInactiveDevices').run(
+					this.config.batchSize
+				).changes;
+				stats.relationships = this.getStmt('deleteOrphanedRelationships').run(
+					this.config.batchSize
+				).changes;
+				stats.patterns = this.getStmt('deleteExpiredPatterns').run(
+					this.config.batchSize
+				).changes;
+			})();
 
-				while (result.changes > 0 && Date.now() - startTime < this.config.maxRuntime) {
-					result = signalStmt.run(this.config.batchSize);
-					stats.signals += result.changes;
-				}
-
-				const deviceStmt = this.statements.get('deleteInactiveDevices');
-				if (!deviceStmt) throw new Error('deleteInactiveDevices statement not found');
-				result = deviceStmt.run(this.config.batchSize);
-				stats.devices = result.changes;
-
-				const relStmt = this.statements.get('deleteOrphanedRelationships');
-				if (!relStmt) throw new Error('deleteOrphanedRelationships statement not found');
-				result = relStmt.run(this.config.batchSize);
-				stats.relationships = result.changes;
-
-				const patternStmt = this.statements.get('deleteExpiredPatterns');
-				if (!patternStmt) throw new Error('deleteExpiredPatterns statement not found');
-				result = patternStmt.run(this.config.batchSize);
-				stats.patterns = result.changes;
-			});
-
-			cleanup();
-
-			// Run VACUUM if significant data was deleted
-			if (stats.signals + stats.devices > 10000) {
-				this.db.exec('VACUUM');
-			}
-
+			if (stats.signals + stats.devices > 10000) this.db.exec('VACUUM');
 			stats.duration = Date.now() - startTime;
 			logInfo('Cleanup completed', { stats }, 'cleanup-completed');
 			return stats;

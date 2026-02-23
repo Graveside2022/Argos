@@ -52,6 +52,85 @@
 		terminal.options.theme = buildTerminalTheme();
 	});
 
+	/** Derive display name from shell path. */
+	function resolveShellName(shellPath: string): string {
+		if (shellPath.includes('docker-claude-terminal.sh')) return '🐋 Claude';
+		return shellPath.split('/').pop() || 'terminal';
+	}
+
+	/** Send a resize message to the terminal WebSocket. */
+	function sendResize(sock: WebSocket) {
+		if (!terminal) return;
+		sock.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+	}
+
+	/** Handle a session-ready or reattached message. */
+	function handleSessionReady(msg: { shell: string }, sock: WebSocket, isReattach: boolean) {
+		_actualShell = msg.shell;
+		updateSessionConnection(sessionId, true);
+		onTitleChange?.(resolveShellName(msg.shell));
+		if (isReattach)
+			terminal?.write('\r\n\x1b[90m[terminal reconnected - session restored]\x1b[0m\r\n');
+		sendResize(sock);
+	}
+
+	/** Handle the 'exit' control message. */
+	function handleSessionExit() {
+		terminal?.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n');
+		updateSessionConnection(sessionId, false);
+	}
+
+	/** Dispatch a parsed control message. Returns true if recognized. */
+	function dispatchControlMsg(msg: { type: string; shell?: string }, sock: WebSocket): boolean {
+		if (msg.type === 'ready') {
+			handleSessionReady(msg as { shell: string }, sock, false);
+			return true;
+		}
+		if (msg.type === 'reattached') {
+			handleSessionReady(msg as { shell: string }, sock, true);
+			return true;
+		}
+		if (msg.type === 'exit') {
+			handleSessionExit();
+			return true;
+		}
+		return false;
+	}
+
+	/** Try to parse and handle a control message. Returns true if handled. */
+	function handleControlMessage(data: string, sock: WebSocket): boolean {
+		try {
+			return dispatchControlMsg(JSON.parse(data), sock);
+		} catch {
+			return false;
+		}
+	}
+
+	/** Whether a reconnection attempt should be made. */
+	function shouldRetry(attempt: number): boolean {
+		return !destroyed && attempt < WS_MAX_RETRIES && !connectionError;
+	}
+
+	/** Handle WebSocket close with retry logic. */
+	function handleWebSocketClose(attempt: number) {
+		if (shouldRetry(attempt)) {
+			const delay = WS_BASE_DELAY_MS * Math.pow(2, attempt);
+			logger.warn('Terminal connection failed, retrying', {
+				sessionId,
+				attempt: attempt + 1,
+				maxRetries: WS_MAX_RETRIES,
+				delayMs: delay
+			});
+			wsRetryTimer = setTimeout(() => connectWebSocket(attempt + 1), delay);
+		} else if (!destroyed && attempt >= WS_MAX_RETRIES) {
+			logger.warn('Terminal retries exhausted, showing error', {
+				sessionId,
+				maxRetries: WS_MAX_RETRIES
+			});
+			connectionError = true;
+		}
+	}
+
 	function connectWebSocket(attempt: number) {
 		if (destroyed) return;
 
@@ -66,62 +145,9 @@
 		};
 
 		sock.onmessage = (e) => {
-			if (typeof e.data === 'string') {
-				try {
-					const msg = JSON.parse(e.data);
-					if (msg.type === 'ready') {
-						logger.info('New PTY session spawned', { sessionId });
-						_actualShell = msg.shell;
-						updateSessionConnection(sessionId, true);
-						let shellName = msg.shell.split('/').pop() || 'terminal';
-						if (msg.shell.includes('docker-claude-terminal.sh')) {
-							shellName = '🐋 Claude';
-						}
-						onTitleChange?.(shellName);
-						if (terminal) {
-							sock.send(
-								JSON.stringify({
-									type: 'resize',
-									cols: terminal.cols,
-									rows: terminal.rows
-								})
-							);
-						}
-						return;
-					}
-					if (msg.type === 'reattached') {
-						logger.info('PTY session reattached successfully', { sessionId });
-						_actualShell = msg.shell;
-						updateSessionConnection(sessionId, true);
-						let shellName = msg.shell.split('/').pop() || 'terminal';
-						if (msg.shell.includes('docker-claude-terminal.sh')) {
-							shellName = '🐋 Claude';
-						}
-						onTitleChange?.(shellName);
-						terminal?.write(
-							'\r\n\x1b[90m[terminal reconnected - session restored]\x1b[0m\r\n'
-						);
-						if (terminal) {
-							sock.send(
-								JSON.stringify({
-									type: 'resize',
-									cols: terminal.cols,
-									rows: terminal.rows
-								})
-							);
-						}
-						return;
-					}
-					if (msg.type === 'exit') {
-						terminal?.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n');
-						updateSessionConnection(sessionId, false);
-						return;
-					}
-				} catch {
-					// Not JSON, treat as terminal output
-				}
-				terminal?.write(e.data);
-			}
+			if (typeof e.data !== 'string') return;
+			if (handleControlMessage(e.data, sock)) return;
+			terminal?.write(e.data);
 		};
 
 		sock.onerror = () => {
@@ -130,23 +156,7 @@
 
 		sock.onclose = () => {
 			updateSessionConnection(sessionId, false);
-			// Retry with exponential backoff if we never connected successfully
-			if (!destroyed && attempt < WS_MAX_RETRIES && !connectionError) {
-				const delay = WS_BASE_DELAY_MS * Math.pow(2, attempt);
-				logger.warn('Terminal connection failed, retrying', {
-					sessionId,
-					attempt: attempt + 1,
-					maxRetries: WS_MAX_RETRIES,
-					delayMs: delay
-				});
-				wsRetryTimer = setTimeout(() => connectWebSocket(attempt + 1), delay);
-			} else if (!destroyed && attempt >= WS_MAX_RETRIES) {
-				logger.warn('Terminal retries exhausted, showing error', {
-					sessionId,
-					maxRetries: WS_MAX_RETRIES
-				});
-				connectionError = true;
-			}
+			handleWebSocketClose(attempt);
 		};
 	}
 

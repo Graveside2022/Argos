@@ -19,6 +19,31 @@ const GsmEvilControlRequestSchema = z.object({
 		.describe('GSM frequency in MHz (e.g., "947.2")')
 });
 
+function selectStartStatus(result: { success: boolean; conflictingService?: string }): number {
+	if (!result.success && result.conflictingService) return 409;
+	return result.success ? 200 : 500;
+}
+
+function selectStopStatus(result: { success: boolean; error?: string }): number {
+	if (!result.success && result.error?.includes('timeout')) return 408;
+	return result.success ? 200 : 500;
+}
+
+async function handleStart(frequency?: string) {
+	const result = await startGsmEvil(frequency);
+	return json(result, { status: selectStartStatus(result) });
+}
+
+async function handleStop() {
+	const result = await stopGsmEvil();
+	return json(result, { status: selectStopStatus(result) });
+}
+
+const actionHandlers: Record<string, (frequency?: string) => Promise<Response>> = {
+	start: handleStart,
+	stop: handleStop
+};
+
 /**
  * POST /api/gsm-evil/control
  * Start or stop GSM Evil monitoring (grgsm_livemon_headless + GsmEvil2)
@@ -43,36 +68,19 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const { action, frequency } = validationResult.data;
+		const handler = actionHandlers[action];
 
-		if (action === 'start') {
-			const result = await startGsmEvil(frequency);
-			if (!result.success && result.conflictingService) {
-				return json(result, { status: 409 });
-			}
-			return json(result, { status: result.success ? 200 : 500 });
-		} else if (action === 'stop') {
-			const result = await stopGsmEvil();
-			// Check for timeout status (suggestion contains "nuclear")
-			if (!result.success && result.error?.includes('timeout')) {
-				return json(result, { status: 408 });
-			}
-			return json(result, { status: result.success ? 200 : 500 });
-		} else {
-			return json(
-				{
-					success: false,
-					message: 'Invalid action'
-				},
-				{ status: 400 }
-			);
+		if (!handler) {
+			return json({ success: false, message: 'Invalid action' }, { status: 400 });
 		}
+
+		return await handler(frequency);
 	} catch (error: unknown) {
 		logger.error('Control API error', { error: (error as Error).message });
 		return json(
 			{
 				success: false,
 				message: 'Invalid request',
-				// Safe: Catch block error cast to Error for message extraction
 				// Safe: Catch block error cast to Error for message extraction
 				error: (error as Error).message
 			},

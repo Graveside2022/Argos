@@ -67,13 +67,16 @@
 		{ col: 'lastSeen', label: 'Last Seen' }
 	];
 
+	/** Columns that default to descending sort order. */
+	const DESC_DEFAULT_COLS = new Set<SortColumn>(['devices', 'lastSeen']);
+
 	function handleSort(column: SortColumn) {
 		if (sortColumn === column) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-		} else {
-			sortColumn = column;
-			sortDirection = ['devices', 'lastSeen'].includes(column) ? 'desc' : 'asc';
+			return;
 		}
+		sortColumn = column;
+		sortDirection = DESC_DEFAULT_COLS.has(column) ? 'desc' : 'asc';
 	}
 
 	function toggleTowerExpansion(towerId: string) {
@@ -85,31 +88,44 @@
 		expandedTowers = new Set(expandedTowers);
 	}
 
-	function formatTimestamp(timestamp: string): string {
-		void timestampTicker;
-		let date: Date;
+	/** Parse a timestamp string that may be in "HH:MM:SS YYYY-MM-DD" or ISO format. */
+	function parseTimestamp(timestamp: string): Date {
 		if (timestamp.includes(' ') && timestamp.split(' ').length === 2) {
 			const [time, dateStr] = timestamp.split(' ');
-			date = new Date(`${dateStr}T${time}`);
-		} else {
-			date = new Date(timestamp);
+			return new Date(`${dateStr}T${time}`);
 		}
+		return new Date(timestamp);
+	}
+
+	/** Format seconds elapsed as a relative time string. */
+	const TIMESTAMP_THRESHOLDS: [number, (s: number) => string][] = [
+		[
+			86400,
+			(s) => {
+				const d = new Date(Date.now() - s * 1000);
+				const timeStr = d.toLocaleTimeString('en-US', {
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit'
+				});
+				const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+				return `${dateStr} ${timeStr}`;
+			}
+		],
+		[3600, (s) => `${Math.floor(s / 3600)}h ago`],
+		[60, (s) => `${Math.floor(s / 60)}m ago`]
+	];
+
+	function formatElapsedTime(secs: number): string {
+		const match = TIMESTAMP_THRESHOLDS.find(([min]) => secs >= min);
+		return match ? match[1](secs) : `${secs}s ago`;
+	}
+
+	function formatTimestamp(timestamp: string): string {
+		void timestampTicker;
+		const date = parseTimestamp(timestamp);
 		if (isNaN(date.getTime())) return timestamp;
-		const now = new Date();
-		const diffMs = now.getTime() - date.getTime();
-		const diffSecs = Math.floor(diffMs / 1000);
-		const diffMins = Math.floor(diffSecs / 60);
-		const diffHours = Math.floor(diffMins / 60);
-		if (diffSecs < 60) return `${diffSecs}s ago`;
-		if (diffMins < 60) return `${diffMins}m ago`;
-		if (diffHours < 24) return `${diffHours}h ago`;
-		const timeStr = date.toLocaleTimeString('en-US', {
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit'
-		});
-		const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-		return `${dateStr} ${timeStr}`;
+		return formatElapsedTime(Math.floor((Date.now() - date.getTime()) / 1000));
 	}
 </script>
 

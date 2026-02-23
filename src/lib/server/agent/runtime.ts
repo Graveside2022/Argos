@@ -98,6 +98,122 @@ async function isAnthropicAvailable(): Promise<boolean> {
 	}
 }
 
+/** Build request body for Anthropic Messages API */
+function buildAnthropicRequest(
+	messages: AgentMessage[],
+	tools: ReturnType<typeof getAllTools>,
+	systemPrompt: string
+): string {
+	return JSON.stringify({
+		model: 'claude-sonnet-4-20250514',
+		max_tokens: 4096,
+		system: systemPrompt,
+		messages: messages.map((m) => ({ role: m.role, content: m.content })),
+		tools,
+		stream: true
+	});
+}
+
+/** Map a text delta event */
+function mapTextDelta(event: Record<string, unknown>): AgentEvent | null {
+	const delta = event.delta as Record<string, unknown> | undefined;
+	if (!delta?.text) return null;
+	return { type: 'TextMessageContent', messageId: 'assistant-1', delta: delta.text as string };
+}
+
+/** Map a tool-use start event */
+function mapToolUseStart(event: Record<string, unknown>): AgentEvent | null {
+	const block = event.content_block as Record<string, unknown> | undefined;
+	if (block?.type !== 'tool_use') return null;
+	return { type: 'ToolUseStart', toolName: block.name as string, toolCallId: block.id as string };
+}
+
+/** Map a tool parameter (input_json_delta) event */
+function mapInputJsonDelta(event: Record<string, unknown>): AgentEvent | null {
+	const delta = event.delta as Record<string, unknown> | undefined;
+	if (delta?.type !== 'input_json_delta') return null;
+	return { type: 'ToolParameterDelta', delta: delta.partial_json as string };
+}
+
+/** Map a content block stop event */
+function mapBlockStop(event: Record<string, unknown>): AgentEvent | null {
+	if (event.index === undefined) return null;
+	return { type: 'ToolUseComplete' };
+}
+
+/** SSE event type → mapper lookup */
+const streamEventMappers: Record<string, (event: Record<string, unknown>) => AgentEvent | null> = {
+	content_block_delta: (e) => mapTextDelta(e) ?? mapInputJsonDelta(e),
+	content_block_start: mapToolUseStart,
+	content_block_stop: mapBlockStop
+};
+
+/** Map an Anthropic SSE event to an AgentEvent, or null if not relevant */
+function mapStreamEvent(event: Record<string, unknown>): AgentEvent | null {
+	const mapper = streamEventMappers[event.type as string];
+	return mapper ? mapper(event) : null;
+}
+
+/** Try to parse a single SSE data payload into an AgentEvent */
+function parseSsePayload(data: string): AgentEvent | null {
+	try {
+		return mapStreamEvent(JSON.parse(data) as Record<string, unknown>);
+	} catch {
+		return null;
+	}
+}
+
+/** Extract the SSE data payload from a line, or null if not a data line */
+function extractSseData(line: string): string | null {
+	if (!line.startsWith('data: ')) return null;
+	const data = line.slice(6);
+	return data === '[DONE]' ? null : data;
+}
+
+/** Parse SSE data lines from a chunk of text, returning parsed events and remaining buffer */
+function parseSseLines(buffer: string): { events: AgentEvent[]; remaining: string } {
+	const lines = buffer.split('\n');
+	const remaining = lines.pop() || '';
+	const events: AgentEvent[] = [];
+	for (const line of lines) {
+		const data = extractSseData(line);
+		if (!data) continue;
+		const mapped = parseSsePayload(data);
+		if (mapped) events.push(mapped);
+	}
+	return { events, remaining };
+}
+
+/**
+ * Process message with Anthropic Claude (with tool support)
+ */
+/** Build Anthropic API request headers */
+function buildAnthropicHeaders(): Record<string, string> {
+	return {
+		'Content-Type': 'application/json',
+		'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+		'anthropic-version': '2023-06-01'
+	};
+}
+
+/** Open a streaming reader to the Anthropic Messages API */
+async function openAnthropicStream(
+	messages: AgentMessage[],
+	tools: ReturnType<typeof getAllTools>,
+	context?: AgentContext
+): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+	const response = await fetch('https://api.anthropic.com/v1/messages', {
+		method: 'POST',
+		headers: buildAnthropicHeaders(),
+		body: buildAnthropicRequest(messages, tools, getSystemPrompt(context))
+	});
+
+	if (!response.ok) throw new Error(`Anthropic API error: ${response.statusText}`);
+	const reader = response.body?.getReader();
+	if (!reader) throw new Error('No response body');
+	return reader;
+}
+
 /**
  * Process message with Anthropic Claude (with tool support)
  */
@@ -106,108 +222,40 @@ async function* processWithAnthropic(
 	tools: ReturnType<typeof getAllTools>,
 	context?: AgentContext
 ): AsyncGenerator<AgentEvent> {
-	const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-
-	// Inject system prompt with context
-	const systemPrompt = getSystemPrompt(context);
-	const response = await fetch('https://api.anthropic.com/v1/messages', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'x-api-key': ANTHROPIC_API_KEY || '',
-			'anthropic-version': '2023-06-01'
-		},
-		body: JSON.stringify({
-			model: 'claude-sonnet-4-20250514',
-			max_tokens: 4096,
-			system: systemPrompt, // Anthropic wants system prompt separate
-			messages: messages.map((m) => ({ role: m.role, content: m.content })),
-			tools,
-			stream: true
-		})
-	});
-
-	if (!response.ok) {
-		throw new Error(`Anthropic API error: ${response.statusText}`);
-	}
-
-	const reader = response.body?.getReader();
-	if (!reader) throw new Error('No response body');
-
+	const reader = await openAnthropicStream(messages, tools, context);
 	const decoder = new TextDecoder();
 	let buffer = '';
 
 	while (true) {
 		const { done, value } = await reader.read();
 		if (done) break;
-
 		buffer += decoder.decode(value, { stream: true });
-		const lines = buffer.split('\n');
-		buffer = lines.pop() || '';
-
-		for (const line of lines) {
-			if (line.startsWith('data: ')) {
-				const data = line.slice(6);
-				if (data === '[DONE]') continue;
-
-				try {
-					const event = JSON.parse(data);
-
-					// Handle text content
-					if (event.type === 'content_block_delta' && event.delta?.text) {
-						yield {
-							type: 'TextMessageContent',
-							messageId: 'assistant-1',
-							delta: event.delta.text
-						};
-					}
-
-					// Handle tool use requests
-					if (
-						event.type === 'content_block_start' &&
-						event.content_block?.type === 'tool_use'
-					) {
-						yield {
-							type: 'ToolUseStart',
-							toolName: event.content_block.name,
-							toolCallId: event.content_block.id
-						};
-					}
-
-					if (
-						event.type === 'content_block_delta' &&
-						event.delta?.type === 'input_json_delta'
-					) {
-						// Tool parameters being streamed
-						yield {
-							type: 'ToolParameterDelta',
-							delta: event.delta.partial_json
-						};
-					}
-
-					if (event.type === 'content_block_stop' && event.index !== undefined) {
-						// Tool use complete - execute it
-						// Note: In a real implementation, we'd need to accumulate the tool parameters
-						// and execute the tool here, then continue the conversation with the result
-						yield {
-							type: 'ToolUseComplete'
-						};
-					}
-				} catch {
-					// Skip invalid JSON
-				}
-			}
-		}
+		const { events, remaining } = parseSseLines(buffer);
+		buffer = remaining;
+		for (const event of events) yield event;
 	}
+}
+
+/** Create a run lifecycle event */
+function makeRunEvent(type: string, threadId: string): AgentEvent {
+	return { type, threadId, runId: crypto.randomUUID(), timestamp: new Date().toISOString() };
+}
+
+/** Create an error event from an unknown error */
+function makeErrorEvent(error: unknown): AgentEvent {
+	return {
+		type: 'RunError',
+		message: error instanceof Error ? error.message : String(error),
+		code: 'PROCESSING_ERROR',
+		timestamp: new Date().toISOString()
+	};
 }
 
 /**
  * Create Agent instance with MCP tools and Anthropic Claude
  */
 export async function createAgent() {
-	// Check Anthropic availability
 	const hasAnthropic = await isAnthropicAvailable();
-
 	if (!hasAnthropic) {
 		throw new Error(
 			'Anthropic Claude API not available. Set ANTHROPIC_API_KEY environment variable.'
@@ -216,17 +264,10 @@ export async function createAgent() {
 
 	return {
 		async *run(input: AgentRunInput): AsyncGenerator<AgentEvent> {
-			const { messages, threadId, runId, context } = input;
+			const { messages, context } = input;
+			const thread = input.threadId || 'default';
 
-			// Emit start event
-			yield {
-				type: 'RunStarted',
-				threadId: threadId || 'default',
-				runId: runId || crypto.randomUUID(),
-				timestamp: new Date().toISOString()
-			};
-
-			// Emit message start
+			yield makeRunEvent('RunStarted', thread);
 			yield {
 				type: 'TextMessageStart',
 				messageId: 'assistant-1',
@@ -235,39 +276,20 @@ export async function createAgent() {
 			};
 
 			try {
-				// Get dynamic tool list from framework
-				const availableTools = getAllTools();
-
-				// Stream Anthropic Claude responses
-				for await (const event of processWithAnthropic(messages, availableTools, context)) {
+				for await (const event of processWithAnthropic(messages, getAllTools(), context)) {
 					yield event;
 				}
-
-				// Emit message end
 				yield {
 					type: 'TextMessageEnd',
 					messageId: 'assistant-1',
 					timestamp: new Date().toISOString()
 				};
-
-				// Emit run finished
-				yield {
-					type: 'RunFinished',
-					threadId: threadId || 'default',
-					runId: runId || crypto.randomUUID(),
-					timestamp: new Date().toISOString()
-				};
+				yield makeRunEvent('RunFinished', thread);
 			} catch (error) {
-				yield {
-					type: 'RunError',
-					message: error instanceof Error ? error.message : String(error),
-					code: 'PROCESSING_ERROR',
-					timestamp: new Date().toISOString()
-				};
+				yield makeErrorEvent(error);
 			}
 		},
 
-		// Expose provider information
 		// Safe: Provider literal narrowed to const for Anthropic SDK provider type
 		provider: 'anthropic' as const
 	};

@@ -33,6 +33,40 @@ function getDefaultState(): TerminalPanelState {
 	};
 }
 
+/** Restore sessions as disconnected and rebuild state from parsed localStorage data. */
+function restoreSessions(parsed: Record<string, unknown>): TerminalSession[] {
+	return ((parsed.sessions as TerminalSession[]) ?? []).map((s) => ({
+		...s,
+		isConnected: false
+	}));
+}
+
+/** Build restored terminal state from parsed data and sessions. */
+function buildRestoredState(
+	parsed: Record<string, unknown>,
+	sessions: TerminalSession[]
+): TerminalPanelState {
+	return {
+		...getDefaultState(),
+		height: (parsed.height as number) ?? DEFAULT_HEIGHT,
+		preferredShell: (parsed.preferredShell as string) ?? '',
+		sessions,
+		activeTabId: sessions[0]?.id ?? null,
+		isMaximized: false
+	};
+}
+
+/** Deserialize terminal state from localStorage JSON. */
+function deserializeTerminalState(raw: string): TerminalPanelState {
+	const parsed = JSON.parse(raw);
+	const sessions = restoreSessions(parsed);
+	if (sessions.length > 0) {
+		logger.info('Restoring terminal sessions', { sessionCount: sessions.length });
+		setTimeout(() => activeBottomTab.set('terminal'), 0);
+	}
+	return buildRestoredState(parsed, sessions);
+}
+
 /** Main terminal panel state store — persists height, preferredShell, sessions to localStorage */
 export const terminalPanelState = persistedWritable<TerminalPanelState>(
 	STORAGE_KEY,
@@ -44,32 +78,7 @@ export const terminalPanelState = persistedWritable<TerminalPanelState>(
 				preferredShell: state.preferredShell,
 				sessions: state.sessions
 			}),
-		deserialize: (raw) => {
-			const parsed = JSON.parse(raw);
-			// Restore sessions marked as disconnected — they may reattach to server PTYs
-			const restoredSessions: TerminalSession[] = (parsed.sessions ?? []).map(
-				(s: TerminalSession) => ({
-					...s,
-					isConnected: false
-				})
-			);
-
-			if (restoredSessions.length > 0) {
-				logger.info('Restoring terminal sessions, auto-opening panel', {
-					sessionCount: restoredSessions.length
-				});
-				setTimeout(() => activeBottomTab.set('terminal'), 0);
-			}
-
-			return {
-				...getDefaultState(),
-				height: parsed.height ?? DEFAULT_HEIGHT,
-				preferredShell: parsed.preferredShell ?? '',
-				sessions: restoredSessions,
-				activeTabId: restoredSessions.length > 0 ? restoredSessions[0].id : null,
-				isMaximized: false
-			};
-		}
+		deserialize: deserializeTerminalState
 	}
 );
 
@@ -120,26 +129,26 @@ export function toggleTerminalPanel(): void {
 	}
 }
 
+/** Friendly names for known tmux profiles. */
+const TMUX_NAMES: [string, string][] = [
+	['tmux-0.sh', 'Tmux 0'],
+	['tmux-1.sh', 'Tmux 1'],
+	['tmux-2.sh', 'Tmux 2'],
+	['tmux-3.sh', 'Tmux 3'],
+	['tmux-logs.sh', 'System Logs']
+];
+
+/** Resolve a friendly shell name from the path. */
+function resolveShellName(shell: string): string {
+	const match = TMUX_NAMES.find(([key]) => shell.includes(key));
+	return match ? match[1] : shell.split('/').pop() || 'terminal';
+}
+
 // Session management
 function createNewSession(shell: string): TerminalSession {
-	let shellName = shell.split('/').pop() || 'terminal';
-
-	// Friendly names for tmux profiles
-	if (shell.includes('tmux-0.sh')) {
-		shellName = 'Tmux 0';
-	} else if (shell.includes('tmux-1.sh')) {
-		shellName = 'Tmux 1';
-	} else if (shell.includes('tmux-2.sh')) {
-		shellName = 'Tmux 2';
-	} else if (shell.includes('tmux-3.sh')) {
-		shellName = 'Tmux 3';
-	} else if (shell.includes('tmux-logs.sh')) {
-		shellName = 'System Logs';
-	}
-
 	return {
 		id: generateId(),
-		title: shellName,
+		title: resolveShellName(shell),
 		shell,
 		isConnected: false,
 		createdAt: Date.now()
@@ -179,48 +188,40 @@ export function createSession(shell?: string): string {
 	return newSession.id;
 }
 
+/** Resolve which tab becomes active after closing a session. */
+function resolveActiveTab(
+	state: TerminalPanelState,
+	sessionId: string,
+	remaining: TerminalSession[]
+): string | null {
+	if (state.activeTabId !== sessionId) return state.activeTabId;
+	if (remaining.length === 0) return null;
+	const closedIndex = state.sessions.findIndex((s) => s.id === sessionId);
+	return remaining[Math.max(0, closedIndex - 1)]?.id ?? null;
+}
+
+/** Remove a session from splits, returning null if split is dissolved. */
+function removeSplitSession(
+	splits: TerminalPanelState['splits'],
+	sessionId: string
+): TerminalPanelState['splits'] {
+	if (!splits || !splits.sessionIds.includes(sessionId)) return splits;
+	const idx = splits.sessionIds.indexOf(sessionId);
+	const ids = splits.sessionIds.filter((id) => id !== sessionId);
+	const widths = splits.widths.filter((_, i) => i !== idx);
+	if (ids.length <= 1) return null;
+	const total = widths.reduce((a, b) => a + b, 0);
+	return { ...splits, sessionIds: ids, widths: widths.map((w) => (w / total) * 100) };
+}
+
 export function closeSession(sessionId: string): void {
 	terminalPanelState.update((state) => {
 		const newSessions = state.sessions.filter((s) => s.id !== sessionId);
-		let newActiveTabId = state.activeTabId;
-
-		// If we closed the active tab, select another
-		if (state.activeTabId === sessionId) {
-			const closedIndex = state.sessions.findIndex((s) => s.id === sessionId);
-			if (newSessions.length > 0) {
-				// Prefer the tab to the left, or the first tab
-				const newIndex = Math.max(0, closedIndex - 1);
-				newActiveTabId = newSessions[newIndex]?.id ?? null;
-			} else {
-				newActiveTabId = null;
-			}
-		}
-
-		// Also remove from splits if present
-		let newSplits = state.splits;
-		if (newSplits && newSplits.sessionIds.includes(sessionId)) {
-			const idx = newSplits.sessionIds.indexOf(sessionId);
-			const newSessionIds = newSplits.sessionIds.filter((id) => id !== sessionId);
-			const newWidths = newSplits.widths.filter((_, i) => i !== idx);
-
-			if (newSessionIds.length <= 1) {
-				newSplits = null; // No longer a split
-			} else {
-				// Redistribute widths
-				const totalWidth = newWidths.reduce((a, b) => a + b, 0);
-				newSplits = {
-					...newSplits,
-					sessionIds: newSessionIds,
-					widths: newWidths.map((w) => (w / totalWidth) * 100)
-				};
-			}
-		}
-
 		return {
 			...state,
 			sessions: newSessions,
-			activeTabId: newActiveTabId,
-			splits: newSplits
+			activeTabId: resolveActiveTab(state, sessionId, newSessions),
+			splits: removeSplitSession(state.splits, sessionId)
 		};
 	});
 }

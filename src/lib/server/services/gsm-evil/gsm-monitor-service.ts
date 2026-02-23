@@ -109,37 +109,47 @@ class GsmMonitorService extends EventEmitter {
 		}
 	}
 
-	private processFrame(line: string): void {
+	/** Parse pipe-delimited tshark output into frame fields */
+	private parseFrameFields(line: string): {
+		fullDecode: string;
+		hexData: string;
+		channelType: string;
+	} {
 		const parts = line.split('|');
-		if (parts.length < 1) return;
+		return {
+			fullDecode: parts[0] || '',
+			hexData: parts[1] || '',
+			channelType: parts[2] || 'UNKNOWN'
+		};
+	}
 
-		const fullDecode = parts[0] || '';
-		const hexData = parts[1] || '';
-		const channelType = parts[2] || 'UNKNOWN';
-
-		// Update stats
-		this.channelStats.set(channelType, (this.channelStats.get(channelType) || 0) + 1);
-
-		// Extract useful message from decode
-		// Format usually: "GSMTAP 81 (CCCH) (RR) System Information Type 13"
+	/** Extract human-readable message from GSMTAP decode string */
+	private extractMessage(fullDecode: string): string {
 		const msgMatch = fullDecode.match(/GSMTAP\s+\d+\s+\(([^)]+)\)\s+(.+)/);
-		const message = msgMatch ? msgMatch[2] : fullDecode;
+		return msgMatch ? msgMatch[2] : fullDecode;
+	}
+
+	/** Append frame to buffer, evicting oldest if over capacity */
+	private appendToBuffer(frame: GsmFrame): void {
+		this.frameBuffer.push(frame);
+		if (this.frameBuffer.length > this.MAX_BUFFER_SIZE) {
+			this.frameBuffer.shift();
+		}
+	}
+
+	private processFrame(line: string): void {
+		const { fullDecode, hexData, channelType } = this.parseFrameFields(line);
+		this.channelStats.set(channelType, (this.channelStats.get(channelType) || 0) + 1);
 
 		const frame: GsmFrame = {
 			timestamp: Date.now(),
 			raw: line,
 			channelType,
-			message,
+			message: this.extractMessage(fullDecode),
 			hex: hexData
 		};
 
-		this.frameBuffer.push(frame);
-
-		// Keep buffer size constant
-		if (this.frameBuffer.length > this.MAX_BUFFER_SIZE) {
-			this.frameBuffer.shift();
-		}
-
+		this.appendToBuffer(frame);
 		this.lastActivity = Date.now();
 		this.emit('frame', frame);
 	}

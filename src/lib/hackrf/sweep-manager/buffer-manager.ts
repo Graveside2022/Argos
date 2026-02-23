@@ -61,26 +61,27 @@ export class BufferManager {
 		this.processCompleteLines(onLineProcessed);
 	}
 
+	private logPeriodicStats(): void {
+		if (this.bufferState.lineCount % 1000 !== 0) return;
+		logDebug('[STATUS] Buffer processing stats', {
+			linesProcessed: this.bufferState.lineCount,
+			bytesProcessed: this.bufferState.totalBytesProcessed,
+			bufferSize: this.bufferState.stdoutBuffer.length,
+			overflows: this.bufferState.bufferOverflowCount
+		});
+	}
+
 	/** Process complete lines from buffer */
 	private processCompleteLines(onLineProcessed: (parsedLine: ParsedLine) => void): void {
 		const lines = this.bufferState.stdoutBuffer.split('\n');
 		this.bufferState.stdoutBuffer = lines.pop() || '';
 
 		for (const line of lines) {
-			if (line.trim()) {
-				this.bufferState.lineCount++;
-				const parsed = parseLine(line, this.maxLineLength);
-				onLineProcessed(parsed);
-
-				if (this.bufferState.lineCount % 1000 === 0) {
-					logDebug('[STATUS] Buffer processing stats', {
-						linesProcessed: this.bufferState.lineCount,
-						bytesProcessed: this.bufferState.totalBytesProcessed,
-						bufferSize: this.bufferState.stdoutBuffer.length,
-						overflows: this.bufferState.bufferOverflowCount
-					});
-				}
-			}
+			if (!line.trim()) continue;
+			this.bufferState.lineCount++;
+			const parsed = parseLine(line, this.maxLineLength);
+			onLineProcessed(parsed);
+			this.logPeriodicStats();
 		}
 	}
 
@@ -158,12 +159,7 @@ export class BufferManager {
 		return validateSpectrumData(data);
 	}
 
-	/** Get buffer health status */
-	getHealthStatus(): {
-		status: 'healthy' | 'warning' | 'critical';
-		issues: string[];
-		recommendations: string[];
-	} {
+	private collectHealthIssues(): { issues: string[]; recommendations: string[] } {
 		const stats = this.getBufferStats();
 		const issues: string[] = [];
 		const recommendations: string[] = [];
@@ -172,26 +168,32 @@ export class BufferManager {
 			issues.push('High buffer utilization');
 			recommendations.push('Increase buffer size or reduce data rate');
 		}
-
 		if (stats.bufferOverflowCount > this.overflowThreshold) {
 			issues.push('Excessive buffer overflows');
 			recommendations.push('Increase buffer size');
 		}
-
 		if (stats.lineCount > 0 && stats.averageLineLength > 1000) {
 			issues.push('Very long average line length');
 			recommendations.push('Check data format');
 		}
+		return { issues, recommendations };
+	}
 
-		let status: 'healthy' | 'warning' | 'critical' = 'healthy';
-		if (issues.length > 0) {
-			status =
-				stats.bufferUtilization > 95 ||
-				stats.bufferOverflowCount > this.overflowThreshold * 2
-					? 'critical'
-					: 'warning';
-		}
+	private deriveHealthStatus(): 'healthy' | 'warning' | 'critical' {
+		const stats = this.getBufferStats();
+		const isCritical =
+			stats.bufferUtilization > 95 || stats.bufferOverflowCount > this.overflowThreshold * 2;
+		return isCritical ? 'critical' : 'warning';
+	}
 
+	/** Get buffer health status */
+	getHealthStatus(): {
+		status: 'healthy' | 'warning' | 'critical';
+		issues: string[];
+		recommendations: string[];
+	} {
+		const { issues, recommendations } = this.collectHealthIssues();
+		const status = issues.length === 0 ? 'healthy' : this.deriveHealthStatus();
 		return { status, issues, recommendations };
 	}
 

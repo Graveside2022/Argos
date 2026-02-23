@@ -122,69 +122,64 @@ export const removeKismetDeviceMarker = (mac: string) => {
 	});
 };
 
+/** Increment a counter in a Map. */
+function incr(map: Map<string, number>, key: string): void {
+	map.set(key, (map.get(key) || 0) + 1);
+}
+
+/** Tally device counts per a named field. */
+function tallyField(
+	devices: KismetDevice[],
+	extract: (d: KismetDevice) => string
+): Map<string, number> {
+	const map = new Map<string, number>();
+	for (const d of devices) incr(map, extract(d));
+	return map;
+}
+
+/** Build distribution maps from a device collection. */
+function buildDistributions(devices: KismetDevice[]) {
+	return {
+		byType: tallyField(devices, (d) => d.type || 'Unknown'),
+		byManufacturer: tallyField(devices, (d) => d.manufacturer || 'Unknown'),
+		byChannel: tallyField(devices, (d) => d.channel?.toString() || 'Unknown')
+	};
+}
+
+/** Remove stale MACs from a device map. */
+function pruneStale(
+	existing: Map<string, KismetDevice>,
+	incomingMACs: Set<string>
+): Map<string, KismetDevice> {
+	const result = new Map(existing);
+	for (const mac of existing.keys()) {
+		if (!incomingMACs.has(mac)) result.delete(mac);
+	}
+	return result;
+}
+
 /**
  * Batch-update all devices in a single store mutation.
  * Replaces per-device addKismetDevice() forEach loops that fire N individual updates.
- * Distributions are recomputed inline — no separate updateDistributions() call needed.
  */
 export const batchUpdateDevices = (
 	incomingDevices: KismetDevice[],
 	existingDevices: Map<string, KismetDevice>
 ) => {
-	const incomingMACs = new Set(incomingDevices.map((d) => d.mac));
-	const newDevices = new Map(existingDevices);
-
-	// Remove stale devices
-	for (const mac of existingDevices.keys()) {
-		if (!incomingMACs.has(mac)) {
-			newDevices.delete(mac);
-		}
-	}
-
-	// Add/update incoming devices and build distributions in one pass
-	const byType = new Map<string, number>();
-	const byManufacturer = new Map<string, number>();
-	const byChannel = new Map<string, number>();
-
-	for (const device of incomingDevices) {
-		newDevices.set(device.mac, device);
-
-		const type = device.type || 'Unknown';
-		byType.set(type, (byType.get(type) || 0) + 1);
-
-		const manufacturer = device.manufacturer || 'Unknown';
-		byManufacturer.set(manufacturer, (byManufacturer.get(manufacturer) || 0) + 1);
-
-		const channel = device.channel?.toString() || 'Unknown';
-		byChannel.set(channel, (byChannel.get(channel) || 0) + 1);
-	}
+	const newDevices = pruneStale(existingDevices, new Set(incomingDevices.map((d) => d.mac)));
+	for (const device of incomingDevices) newDevices.set(device.mac, device);
 
 	kismetStore.update((state) => ({
 		...state,
 		devices: newDevices,
 		deviceCount: newDevices.size,
-		distributions: { byType, byManufacturer, byChannel }
+		distributions: buildDistributions(incomingDevices)
 	}));
 };
 
 export const updateDistributions = (devices: Map<string, KismetDevice>) => {
-	const byType = new Map<string, number>();
-	const byManufacturer = new Map<string, number>();
-	const byChannel = new Map<string, number>();
-
-	devices.forEach((device) => {
-		const type = device.type || 'Unknown';
-		byType.set(type, (byType.get(type) || 0) + 1);
-
-		const manufacturer = device.manufacturer || 'Unknown';
-		byManufacturer.set(manufacturer, (byManufacturer.get(manufacturer) || 0) + 1);
-
-		const channel = device.channel?.toString() || 'Unknown';
-		byChannel.set(channel, (byChannel.get(channel) || 0) + 1);
-	});
-
 	kismetStore.update((state) => ({
 		...state,
-		distributions: { byType, byManufacturer, byChannel }
+		distributions: buildDistributions([...devices.values()])
 	}));
 };

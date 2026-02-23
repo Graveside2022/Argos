@@ -25,36 +25,30 @@ export class KismetService {
 	private statusCheckInterval: ReturnType<typeof setInterval> | null = null;
 	private deviceFetchInterval: ReturnType<typeof setInterval> | null = null;
 
+	/** Reconcile Kismet running state with the store */
+	private reconcileStatus(isRunning: boolean): void {
+		const currentStatus = get(kismetStore).status;
+		if (isRunning && currentStatus === 'stopped') setKismetStatus('running');
+		else if (!isRunning && currentStatus === 'running') setKismetStatus('stopped');
+	}
+
 	async checkKismetStatus(): Promise<void> {
 		try {
 			const response = await fetch('/api/kismet/control', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ action: 'status' })
 			});
 
-			if (response.ok) {
-				const rawData = await response.json();
-				const data = safeParseWithHandling(
-					KismetControlResponseSchema,
-					rawData,
-					'background'
-				);
-				if (!data) {
-					logger.error('Invalid Kismet status response');
-					return;
-				}
+			if (!response.ok) return;
 
-				const currentStatus = get(kismetStore).status;
-
-				if (data.isRunning && currentStatus === 'stopped') {
-					setKismetStatus('running');
-				} else if (!data.isRunning && currentStatus === 'running') {
-					setKismetStatus('stopped');
-				}
+			const rawData = await response.json();
+			const data = safeParseWithHandling(KismetControlResponseSchema, rawData, 'background');
+			if (!data) {
+				logger.error('Invalid Kismet status response');
+				return;
 			}
+			this.reconcileStatus(data.isRunning ?? false);
 		} catch (error) {
 			logger.error('Error checking Kismet status', { error });
 		}
@@ -94,9 +88,15 @@ export class KismetService {
 		}
 	}
 
+	/** Parse an error response from Kismet control API */
+	private async parseControlError(response: Response): Promise<string> {
+		const rawData = await response.json();
+		const data = safeParseWithHandling(KismetControlResponseSchema, rawData, 'background');
+		return data?.message || 'Failed to stop Kismet';
+	}
+
 	async stopKismet(): Promise<void> {
 		const currentStatus = get(kismetStore).status;
-
 		if (currentStatus === 'starting' || currentStatus === 'stopping') return;
 
 		setKismetStatus('stopping');
@@ -104,26 +104,16 @@ export class KismetService {
 		try {
 			const response = await fetch('/api/kismet/control', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ action: 'stop' })
 			});
 
-			if (response.ok) {
-				setTimeout(() => {
-					setKismetStatus('stopped');
-					clearAllKismetDevices(); // Clear all devices and signals from the map
-				}, 2000);
-			} else {
-				const rawData = await response.json();
-				const data = safeParseWithHandling(
-					KismetControlResponseSchema,
-					rawData,
-					'background'
-				);
-				throw new Error(data?.message || 'Failed to stop Kismet');
-			}
+			if (!response.ok) throw new Error(await this.parseControlError(response));
+
+			setTimeout(() => {
+				setKismetStatus('stopped');
+				clearAllKismetDevices();
+			}, 2000);
 		} catch (error: unknown) {
 			logger.error('Error stopping Kismet', { error });
 			setKismetStatus('running');
@@ -140,36 +130,32 @@ export class KismetService {
 		}
 	}
 
+	/** Parse and validate a devices API response, returning null on failure */
+	private async parseDevicesResponse(response: Response): Promise<KismetDevice[] | null> {
+		if (!response.ok) return null;
+		const rawData = await response.json();
+		const data = safeParseWithHandling(KismetDevicesResponseSchema, rawData, 'background');
+		if (!data?.devices) {
+			logger.error('Invalid Kismet devices response');
+			return null;
+		}
+		return data.devices as unknown as KismetDevice[];
+	}
+
 	async fetchKismetDevices(): Promise<KismetDevice[]> {
 		const currentState = get(kismetStore);
-
 		if (currentState?.status !== 'running') return [];
 
 		try {
 			const response = await fetch('/api/kismet/devices');
-			if (response.ok) {
-				const rawData = await response.json();
-				const data = safeParseWithHandling(
-					KismetDevicesResponseSchema,
-					rawData,
-					'background'
-				);
-				if (!data || !data.devices) {
-					logger.error('Invalid Kismet devices response');
-					return [];
-				}
-				const devices = data.devices as unknown as KismetDevice[];
-
-				// Single atomic batch: remove stale, add/update all, rebuild distributions
-				batchUpdateDevices(devices, currentState.devices);
-
-				return devices;
-			}
+			const devices = await this.parseDevicesResponse(response);
+			if (!devices) return [];
+			batchUpdateDevices(devices, currentState.devices);
+			return devices;
 		} catch (error) {
 			logger.error('Error fetching Kismet devices', { error });
+			return [];
 		}
-
-		return [];
 	}
 
 	startPeriodicStatusCheck(): void {

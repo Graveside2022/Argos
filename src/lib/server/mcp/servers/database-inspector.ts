@@ -15,6 +15,52 @@ import { debugSpatialIndex, queryRecentActivity } from './database-inspector-too
 // Load .env for ARGOS_API_KEY
 config();
 
+/** Simplify schema to names and counts only. */
+function simplifySchema(schema: Record<string, unknown[]>) {
+	return {
+		tables: (schema.tables as Array<{ name: string; row_count: number }>).map((t) => ({
+			name: t.name,
+			row_count: t.row_count
+		})),
+		indexes: (schema.indexes as Array<{ name: string; table: string }>).map((i) => ({
+			name: i.name,
+			table: i.table
+		})),
+		views: (schema.views as Array<{ name: string }>).map((v) => ({ name: v.name }))
+	};
+}
+
+/** Generate schema health recommendations. */
+function generateSchemaRecs(schema: Record<string, unknown[]>): string[] {
+	const recs: string[] = [];
+	const signalsTable = (schema.tables as Array<{ name: string; row_count: number }>).find(
+		(t) => t.name === 'signals'
+	);
+	if (signalsTable && signalsTable.row_count > 500000) {
+		recs.push('Large signals table - consider cleanup policy');
+	}
+	const spatialIndex = (schema.indexes as Array<{ name: string }>).find(
+		(i) => i.name === 'idx_signals_spatial_grid'
+	);
+	if (!spatialIndex) {
+		recs.push('CRITICAL: Missing spatial index - queries will be slow');
+	}
+	return recs.length > 0 ? recs : ['Schema looks healthy'];
+}
+
+/** Generate query performance recommendations. */
+function generateQueryRecs(executionTimeMs: number, rowCount: number): string[] {
+	const recs: string[] = [];
+	if (executionTimeMs > 1000) recs.push('Slow query (>1s) - consider adding indexes');
+	if (rowCount === 1000) recs.push('Result set truncated at 1000 rows - add WHERE clause');
+	return recs;
+}
+
+/** Generate truncation note if applicable. */
+function truncationNote(rowCount: number): string | undefined {
+	return rowCount > 100 ? `Showing first 100 of ${rowCount} rows` : undefined;
+}
+
 class DatabaseInspector extends BaseMCPServer {
 	protected tools: ToolDefinition[] = [
 		{
@@ -39,46 +85,13 @@ class DatabaseInspector extends BaseMCPServer {
 					return { status: 'ERROR', error: data.error };
 				}
 
-				const schema = detailed
-					? data.schema
-					: {
-							tables: data.schema.tables.map(
-								(t: { name: string; row_count: number }) => ({
-									name: t.name,
-									row_count: t.row_count
-								})
-							),
-							indexes: data.schema.indexes.map(
-								(i: { name: string; table: string }) => ({
-									name: i.name,
-									table: i.table
-								})
-							),
-							views: data.schema.views.map((v: { name: string }) => ({
-								name: v.name
-							}))
-						};
-
-				const recommendations: string[] = [];
-				const signalsTable = data.schema.tables.find(
-					(t: { name: string }) => t.name === 'signals'
-				);
-				if (signalsTable && signalsTable.row_count > 500000) {
-					recommendations.push('Large signals table - consider cleanup policy');
-				}
-
-				const spatialIndex = data.schema.indexes.find(
-					(i: { name: string }) => i.name === 'idx_signals_spatial_grid'
-				);
-				if (!spatialIndex) {
-					recommendations.push('CRITICAL: Missing spatial index - queries will be slow');
-				}
-
-				if (recommendations.length === 0) {
-					recommendations.push('Schema looks healthy');
-				}
-
-				return { status: 'SUCCESS', schema, stats: data.stats, recommendations };
+				const schema = detailed ? data.schema : simplifySchema(data.schema);
+				return {
+					status: 'SUCCESS',
+					schema,
+					stats: data.stats,
+					recommendations: generateSchemaRecs(data.schema)
+				};
 			}
 		},
 		{
@@ -116,25 +129,14 @@ class DatabaseInspector extends BaseMCPServer {
 					return { status: 'ERROR', error: data.error };
 				}
 
-				const recommendations: string[] = [];
-				if (data.execution_time_ms > 1000) {
-					recommendations.push('Slow query (>1s) - consider adding indexes');
-				}
-				if (data.row_count === 1000) {
-					recommendations.push('Result set truncated at 1000 rows - add WHERE clause');
-				}
-
 				return {
 					status: 'SUCCESS',
 					query: data.query,
 					row_count: data.row_count,
 					execution_time_ms: data.execution_time_ms,
 					results: data.results.slice(0, 100),
-					note:
-						data.row_count > 100
-							? `Showing first 100 of ${data.row_count} rows`
-							: undefined,
-					recommendations
+					note: truncationNote(data.row_count),
+					recommendations: generateQueryRecs(data.execution_time_ms, data.row_count)
 				};
 			}
 		},

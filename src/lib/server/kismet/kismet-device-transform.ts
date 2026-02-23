@@ -39,20 +39,14 @@ export function getDeviceType(device: KismetRawDevice): 'AP' | 'Client' | 'Bridg
 	return 'Unknown';
 }
 
+/** Encryption keys to check in Kismet device crypt data */
+const CRYPT_KEYS = ['Open', 'WEP', 'WPA', 'WPA2', 'WPA3'] as const;
+
 /** Extract encryption types from Kismet device data */
 export function getEncryptionTypes(device: KismetRawDevice): string[] {
 	const crypt = device['kismet.device.base.crypt'];
-	const types: string[] = [];
-
-	if (!crypt) return types;
-
-	if (crypt['Open']) types.push('Open');
-	if (crypt['WEP']) types.push('WEP');
-	if (crypt['WPA']) types.push('WPA');
-	if (crypt['WPA2']) types.push('WPA2');
-	if (crypt['WPA3']) types.push('WPA3');
-
-	return types;
+	if (!crypt) return [];
+	return CRYPT_KEYS.filter((key) => crypt[key]);
 }
 
 /** Extract device location from Kismet data */
@@ -85,37 +79,81 @@ export function hasDeviceChanged(oldDevice: KismetDevice, newDevice: KismetDevic
 	);
 }
 
-/** Transform a raw Kismet device into a KismetDevice */
-export function transformRawDevice(kismetDevice: KismetRawDevice): KismetDevice | null {
-	const deviceKey = kismetDevice['kismet.device.base.key'];
-	const macAddr = kismetDevice['kismet.device.base.macaddr'];
+/** Extract signal strength from raw device */
+function getRawSignalStrength(device: KismetRawDevice): number {
+	return device['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] || 0;
+}
 
-	if (!deviceKey || !macAddr) return null;
-
-	const signalStrength =
-		kismetDevice['kismet.device.base.signal']?.['kismet.common.signal.last_signal'] || 0;
-
+/** Extract identity fields from raw Kismet device */
+function buildDeviceIdentity(
+	macAddr: string,
+	kismetDevice: KismetRawDevice
+): Pick<KismetDevice, 'mac' | 'macaddr' | 'ssid' | 'manufacturer' | 'type'> {
 	return {
 		mac: macAddr,
+		macaddr: macAddr,
 		ssid: kismetDevice['kismet.device.base.name'] || '',
 		manufacturer: kismetDevice['kismet.device.base.manuf'] || 'Unknown',
-		type: getDeviceType(kismetDevice),
+		type: getDeviceType(kismetDevice)
+	};
+}
+
+/** Extract radio metrics from raw Kismet device */
+function buildRadioMetrics(
+	kismetDevice: KismetRawDevice
+): Pick<KismetDevice, 'channel' | 'frequency'> {
+	return {
 		channel: kismetDevice['kismet.device.base.channel'] || 0,
-		frequency: kismetDevice['kismet.device.base.frequency'] || 0,
+		frequency: kismetDevice['kismet.device.base.frequency'] || 0
+	};
+}
+
+/** Extract traffic metrics from raw Kismet device */
+function buildDeviceMetrics(
+	kismetDevice: KismetRawDevice
+): Pick<KismetDevice, 'channel' | 'frequency' | 'packets' | 'dataSize' | 'dataPackets'> {
+	return {
+		...buildRadioMetrics(kismetDevice),
+		packets: kismetDevice['kismet.device.base.packets.total'] || 0,
+		dataSize: kismetDevice['kismet.device.base.datasize'] || 0,
+		dataPackets: kismetDevice['kismet.device.base.packets.data'] || 0
+	};
+}
+
+/** Extract time fields from raw Kismet device */
+function buildDeviceTiming(
+	kismetDevice: KismetRawDevice
+): Pick<KismetDevice, 'lastSeen' | 'firstSeen'> {
+	const now = Date.now() / 1000;
+	return {
+		lastSeen: kismetDevice['kismet.device.base.last_time'] || now,
+		firstSeen: kismetDevice['kismet.device.base.first_time'] || now
+	};
+}
+
+/** Build a KismetDevice from validated raw data */
+function buildDevice(macAddr: string, kismetDevice: KismetRawDevice): KismetDevice {
+	const signalStrength = getRawSignalStrength(kismetDevice);
+	const encryption = getEncryptionTypes(kismetDevice);
+	return {
+		...buildDeviceIdentity(macAddr, kismetDevice),
+		...buildDeviceMetrics(kismetDevice),
+		...buildDeviceTiming(kismetDevice),
 		signal: {
 			last_signal: signalStrength,
 			max_signal: signalStrength,
 			min_signal: signalStrength
 		},
-		signalStrength: signalStrength,
-		lastSeen: kismetDevice['kismet.device.base.last_time'] || Date.now() / 1000,
-		firstSeen: kismetDevice['kismet.device.base.first_time'] || Date.now() / 1000,
-		packets: kismetDevice['kismet.device.base.packets.total'] || 0,
-		dataSize: kismetDevice['kismet.device.base.datasize'] || 0,
-		dataPackets: kismetDevice['kismet.device.base.packets.data'] || 0,
-		encryptionType: getEncryptionTypes(kismetDevice),
-		encryption: getEncryptionTypes(kismetDevice),
-		location: getDeviceLocation(kismetDevice),
-		macaddr: macAddr // Alias for mac
+		signalStrength,
+		encryptionType: encryption,
+		encryption,
+		location: getDeviceLocation(kismetDevice)
 	};
+}
+
+/** Transform a raw Kismet device into a KismetDevice */
+export function transformRawDevice(kismetDevice: KismetRawDevice): KismetDevice | null {
+	const macAddr = kismetDevice['kismet.device.base.macaddr'];
+	if (!kismetDevice['kismet.device.base.key'] || !macAddr) return null;
+	return buildDevice(macAddr, kismetDevice);
 }

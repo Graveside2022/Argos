@@ -38,100 +38,73 @@ const StartSweepRequestSchema = z.object({
 	cycleTime: z.number().positive().default(10).describe('Cycle time in seconds')
 });
 
+type FreqRange = z.infer<typeof StartSweepRequestSchema>['frequencies'][number];
+
+/** Convert a validated frequency range to center frequency. */
+function toFrequency(range: FreqRange): { value: number; unit: string } {
+	if (typeof range === 'number') return { value: range, unit: 'MHz' };
+	const end = 'stop' in range ? range.stop : range.end;
+	return { value: (range.start + end) / 2, unit: 'MHz' };
+}
+
+/** Validate request body. Returns parsed data or error response. */
+function parseStartSweepBody(rawBody: unknown) {
+	const result = StartSweepRequestSchema.safeParse(rawBody);
+	if (!result.success) {
+		logger.error('[start-sweep] Validation failed', { errors: result.error.format() });
+		return {
+			error: json(
+				{ status: 'error', message: 'Invalid request body', errors: result.error.format() },
+				{ status: 400 }
+			)
+		};
+	}
+	return { data: result.data };
+}
+
+/** Start sweep cycle and return response. */
+async function startSweepCycle(
+	frequencies: { value: number; unit: string }[],
+	cycleTimeMs: number
+) {
+	const success = await sweepManager.startCycle(frequencies, cycleTimeMs);
+	if (success) {
+		logger.info('[start-sweep] Sweep started successfully');
+		return json({
+			status: 'success',
+			message: 'Sweep started successfully',
+			frequencies,
+			cycleTime: cycleTimeMs
+		});
+	}
+	logger.error('[start-sweep] startCycle returned false');
+	return json(
+		{
+			status: 'error',
+			message: 'Failed to start sweep - check server logs for details',
+			currentStatus: sweepManager.getStatus()
+		},
+		{ status: 500 }
+	);
+}
+
+/** Safe error message extraction. */
+function errMsg(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const rawBody = await request.json();
+		const parsed = parseStartSweepBody(await request.json());
+		if (parsed.error) return parsed.error;
 
-		// Validate request body with Zod (T024)
-		const validationResult = StartSweepRequestSchema.safeParse(rawBody);
-
-		if (!validationResult.success) {
-			logger.error('[start-sweep] Validation failed', {
-				errors: validationResult.error.format()
-			});
-			return json(
-				{
-					status: 'error',
-					message: 'Invalid request body',
-					errors: validationResult.error.format()
-				},
-				{ status: 400 }
-			);
-		}
-
-		const body = validationResult.data;
-		logger.debug('[start-sweep] Request body', { body });
-
-		// Extract validated frequencies from request
-		const frequencyRanges = body.frequencies;
-		const cycleTime = body.cycleTime;
-
-		// Convert validated frequency ranges to center frequencies
-		// Zod validation ensures all types are correct - no assertions needed
-		const frequencies = frequencyRanges.map((range) => {
-			if (typeof range === 'number') {
-				return { value: range, unit: 'MHz' };
-			} else if ('stop' in range && range.stop !== undefined) {
-				const centerFreq = (range.start + range.stop) / 2;
-				return { value: centerFreq, unit: 'MHz' };
-			} else if ('end' in range && range.end !== undefined) {
-				// 'end' variant (validated by Zod)
-				const centerFreq = (range.start + range.end) / 2;
-				return { value: centerFreq, unit: 'MHz' };
-			} else {
-				// Unreachable after Zod validation, but satisfies exhaustive check
-				return { value: 0, unit: 'MHz' };
-			}
-		});
-
-		// Convert cycleTime from seconds to milliseconds
-		const cycleTimeMs = cycleTime * 1000;
-
-		// Start the sweep using sweepManager
+		const frequencies = parsed.data.frequencies.map(toFrequency);
+		const cycleTimeMs = parsed.data.cycleTime * 1000;
 		logger.info('[start-sweep] Attempting to start sweep', { frequencies, cycleTimeMs });
-
-		try {
-			const success = await sweepManager.startCycle(frequencies, cycleTimeMs);
-
-			if (success) {
-				logger.info('[start-sweep] Sweep started successfully');
-				return json({
-					status: 'success',
-					message: 'Sweep started successfully',
-					frequencies: frequencies,
-					cycleTime: cycleTimeMs
-				});
-			} else {
-				logger.error('[start-sweep] startCycle returned false');
-				const status = sweepManager.getStatus();
-				logger.error('[start-sweep] Current sweep manager status', { status });
-
-				return json(
-					{
-						status: 'error',
-						message: 'Failed to start sweep - check server logs for details',
-						currentStatus: status
-					},
-					{ status: 500 }
-				);
-			}
-		} catch (cycleError: unknown) {
-			logger.error('[start-sweep] Error in startCycle', {
-				error: cycleError instanceof Error ? cycleError.message : String(cycleError)
-			});
-			throw cycleError;
-		}
+		return await startSweepCycle(frequencies, cycleTimeMs);
 	} catch (error: unknown) {
-		logger.error('Error in start-sweep endpoint', {
-			error: error instanceof Error ? error.message : String(error)
-		});
-		return json(
-			{
-				status: 'error',
-				message: error instanceof Error ? error.message : 'Internal server error'
-			},
-			{ status: 500 }
-		);
+		logger.error('Error in start-sweep endpoint', { error: errMsg(error) });
+		return json({ status: 'error', message: errMsg(error) }, { status: 500 });
 	}
 };
 

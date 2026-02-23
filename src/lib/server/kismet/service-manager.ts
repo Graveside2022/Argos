@@ -68,25 +68,102 @@ export class KismetServiceManager {
 				return { success: false, message: 'Kismet is already running' };
 			}
 
-			// Execute the start script
 			await execFileAsync(this.START_SCRIPT, []);
-
-			// Wait a moment for the service to start
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
-			// Verify it started
 			const newStatus = await this.getStatus();
-			if (newStatus.isRunning) {
-				return { success: true, message: 'Kismet started successfully' };
-			} else {
-				return { success: false, message: 'Failed to start Kismet' };
-			}
+			return newStatus.isRunning
+				? { success: true, message: 'Kismet started successfully' }
+				: { success: false, message: 'Failed to start Kismet' };
 		} catch (error) {
-			return {
-				success: false,
-				// Safe: Error handling
-				message: `Failed to start Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
-			};
+			const msg = error instanceof Error ? error.message : 'Unknown error';
+			return { success: false, message: `Failed to start Kismet: ${msg}` };
+		}
+	}
+
+	/** Kill Kismet processes (TERM then KILL) and clean up monitor interface */
+	private static async killKismetProcesses(): Promise<void> {
+		await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
+		await new Promise((resolve) => setTimeout(resolve, 3000));
+		await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']).catch((error: unknown) => {
+			logger.warn('[kismet] Cleanup: pkill -KILL kismet failed', { error: String(error) });
+		});
+		await execFileAsync('/usr/sbin/iw', ['dev', 'kismon0', 'del']).catch((error: unknown) => {
+			logger.warn('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
+				error: String(error)
+			});
+		});
+	}
+
+	/** Find USB wireless interface names (wlx...) from ip link output */
+	private static parseWifiInterfaces(linkOutput: string): string[] {
+		return linkOutput
+			.split('\n')
+			.filter((line) => /wlx[0-9a-f]{12}/.test(line))
+			.map((line) => line.match(/:\s+(wlx[0-9a-f]{12})/)?.[1] ?? '')
+			.filter(Boolean);
+	}
+
+	/** Reset a single USB device by unbinding and rebinding */
+	private static async resetUsbDevice(usbLine: string): Promise<void> {
+		const busMatch = usbLine.match(/Bus (\d+) Device (\d+)/);
+		if (!busMatch) return;
+		const [, rawBus, rawDevice] = busMatch;
+		const bus = String(validateNumericParam(rawBus, 'USB bus', 1, 999));
+		const device = String(validateNumericParam(rawDevice, 'USB device', 1, 999));
+		try {
+			writeFileSync('/sys/bus/usb/drivers/usb/unbind', `${bus}-${device}`);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			writeFileSync('/sys/bus/usb/drivers/usb/bind', `${bus}-${device}`);
+			logger.info('[kismet] Reset USB device', { bus, device });
+		} catch (usbResetError) {
+			logger.warn('[kismet] Failed to reset USB device', {
+				bus,
+				device,
+				error: String(usbResetError)
+			});
+		}
+	}
+
+	/** Reset a single WiFi interface: down → USB reset → up */
+	private static async resetWifiInterface(rawName: string): Promise<void> {
+		const interfaceName = validateInterfaceName(rawName);
+		logger.info('[kismet] Resetting USB WiFi interface', { interfaceName });
+
+		await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'down']);
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+
+		const { stdout: lsusbOut } = await execFileAsync('/usr/bin/lsusb', []);
+		const usbLines = lsusbOut
+			.split('\n')
+			.filter((l) => /wireless|wifi|802\.11|network|ethernet/i.test(l));
+
+		for (const usbLine of usbLines) {
+			await this.resetUsbDevice(usbLine);
+		}
+
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'up']);
+		logger.info('[kismet] Interface reset complete', { interfaceName });
+	}
+
+	/** Reset ALL USB WiFi adapters to fix "stuck in monitor mode" issue */
+	private static async resetUsbAdapters(): Promise<void> {
+		try {
+			const { stdout: linkOutput } = await execFileAsync('/usr/sbin/ip', ['link', 'show']);
+			const wifiInterfaces = this.parseWifiInterfaces(linkOutput);
+			for (const rawName of wifiInterfaces) {
+				try {
+					await this.resetWifiInterface(rawName);
+				} catch (interfaceError) {
+					logger.warn('[kismet] Failed to reset interface', {
+						interface: rawName,
+						error: String(interfaceError)
+					});
+				}
+			}
+		} catch (resetError) {
+			logger.warn('[kismet] USB adapter reset failed', { error: String(resetError) });
 		}
 	}
 
@@ -100,137 +177,16 @@ export class KismetServiceManager {
 				return { success: false, message: 'Kismet is not running' };
 			}
 
-			// Kill the Kismet process cleanly
-			await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
-			await new Promise((resolve) => setTimeout(resolve, 3000));
-			await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']).catch((error: unknown) => {
-				logger.warn('[kismet] Cleanup: pkill -KILL kismet failed', {
-					error: String(error)
-				});
-			}); // Force kill if needed
+			await this.killKismetProcesses();
+			await this.resetUsbAdapters();
 
-			// Remove monitor interface if it exists
-			await execFileAsync('/usr/sbin/iw', ['dev', 'kismon0', 'del']).catch(
-				(error: unknown) => {
-					logger.warn('[kismet] Cleanup: iw dev kismon0 del failed (non-critical)', {
-						error: String(error)
-					});
-				}
-			); // Ignore errors if interface doesn't exist
-
-			// Reset ALL USB WiFi adapters to fix "stuck in monitor mode" issue
-			try {
-				// Find all USB wireless interfaces (typically start with wlx)
-				const { stdout: linkOutput } = await execFileAsync('/usr/sbin/ip', [
-					'link',
-					'show'
-				]);
-				const wifiInterfaces = linkOutput
-					.split('\n')
-					.filter((line) => /wlx[0-9a-f]{12}/.test(line))
-					.map((line) => {
-						const match = line.match(/:\s+(wlx[0-9a-f]{12})/);
-						return match ? match[1] : '';
-					})
-					.filter(Boolean);
-
-				for (const rawName of wifiInterfaces) {
-					try {
-						const interfaceName = validateInterfaceName(rawName);
-						logger.info('[kismet] Resetting USB WiFi interface', { interfaceName });
-
-						// Bring interface down
-						await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'down']);
-						await new Promise((resolve) => setTimeout(resolve, 1000));
-
-						// Get interface MAC to find corresponding USB device
-						const { stdout: linkInfo } = await execFileAsync('/usr/sbin/ip', [
-							'link',
-							'show',
-							interfaceName
-						]);
-						const macMatch = linkInfo.match(/([0-9a-f]{2}:){5}[0-9a-f]{2}/i);
-						const macAddr = macMatch ? macMatch[0] : '';
-
-						if (macAddr) {
-							// Find USB device by searching for wireless interfaces
-							const { stdout: lsusbOut } = await execFileAsync('/usr/bin/lsusb', []);
-							const usbLines = lsusbOut
-								.split('\n')
-								.filter((l) => /wireless|wifi|802\.11|network|ethernet/i.test(l));
-
-							if (usbLines.length > 0) {
-								// Try to find and reset each potential wireless USB device
-								for (const usbLine of usbLines) {
-									const busMatch = usbLine.match(/Bus (\d+) Device (\d+)/);
-									if (busMatch) {
-										const [, rawBus, rawDevice] = busMatch;
-										const bus = String(
-											validateNumericParam(rawBus, 'USB bus', 1, 999)
-										);
-										const device = String(
-											validateNumericParam(rawDevice, 'USB device', 1, 999)
-										);
-										try {
-											// Unbind and rebind USB device to reset its state
-											writeFileSync(
-												'/sys/bus/usb/drivers/usb/unbind',
-												`${bus}-${device}`
-											);
-											await new Promise((resolve) =>
-												setTimeout(resolve, 1000)
-											);
-											writeFileSync(
-												'/sys/bus/usb/drivers/usb/bind',
-												`${bus}-${device}`
-											);
-											logger.info('[kismet] Reset USB device', {
-												bus,
-												device
-											});
-										} catch (usbResetError) {
-											logger.warn('[kismet] Failed to reset USB device', {
-												bus,
-												device,
-												error: String(usbResetError)
-											});
-										}
-									}
-								}
-							}
-						}
-
-						// Wait for device to reinitialize
-						await new Promise((resolve) => setTimeout(resolve, 2000));
-
-						// Bring interface back up
-						await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'up']);
-						logger.info('[kismet] Interface reset complete', { interfaceName });
-					} catch (interfaceError) {
-						logger.warn('[kismet] Failed to reset interface', {
-							interface: rawName,
-							error: String(interfaceError)
-						});
-					}
-				}
-			} catch (resetError) {
-				logger.warn('[kismet] USB adapter reset failed', { error: String(resetError) });
-				// Continue anyway - basic stop still worked
-			}
-
-			// Verify it stopped
 			const newStatus = await this.getStatus();
-			if (!newStatus.isRunning) {
-				return { success: true, message: 'Kismet stopped successfully with adapter reset' };
-			} else {
-				return { success: false, message: 'Failed to stop Kismet' };
-			}
+			return newStatus.isRunning
+				? { success: false, message: 'Failed to stop Kismet' }
+				: { success: true, message: 'Kismet stopped successfully with adapter reset' };
 		} catch (error) {
-			return {
-				success: false,
-				// Safe: Error handling
-				message: `Failed to stop Kismet: ${error instanceof Error ? error.message : 'Unknown error'}`
-			};
+			const msg = error instanceof Error ? error.message : 'Unknown error';
+			return { success: false, message: `Failed to stop Kismet: ${msg}` };
 		}
 	}
 

@@ -28,6 +28,54 @@ import { createDeviceTools } from './dynamic-server-tools';
 import { createSystemTools } from './dynamic-server-tools-system';
 import type { ArgosTool } from './dynamic-server-types';
 
+/** Build connection-refused error response. */
+function buildConnectionError(apiUrl: string) {
+	return {
+		content: [
+			{
+				type: 'text',
+				text: `Error: Cannot reach Argos at ${apiUrl}. Is the Argos dev server running? (npm run dev)`
+			}
+		],
+		isError: true
+	};
+}
+
+/** Check if error message indicates connection failure. */
+function isConnectionError(msg: string): boolean {
+	return msg.includes('ECONNREFUSED') || msg.includes('fetch failed');
+}
+
+/** Extract error message string from unknown error. */
+function errorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+/** Build MCP error response for a tool execution failure. */
+function buildToolError(name: string, error: unknown) {
+	const msg = errorMessage(error);
+	if (isConnectionError(msg)) return buildConnectionError(ARGOS_API);
+	return {
+		content: [{ type: 'text', text: `Error executing ${name}: ${msg}` }],
+		isError: true
+	};
+}
+
+/** Resource URI to API endpoint mapping. */
+const RESOURCE_ENDPOINTS: Record<string, string> = {
+	'argos://system/status': '/api/system/stats',
+	'argos://kismet/status': '/api/kismet/status',
+	'argos://devices/active': '/api/kismet/devices'
+};
+
+/** Fetch resource data by URI, returning null if URI is unknown. */
+async function fetchResourceData(uri: string, fetcher: typeof apiFetch): Promise<unknown | null> {
+	const endpoint = RESOURCE_ENDPOINTS[uri];
+	if (!endpoint) return null;
+	const resp = await fetcher(endpoint);
+	return resp.json();
+}
+
 // Load .env for ARGOS_API_KEY (standalone process, not SvelteKit)
 config();
 
@@ -99,30 +147,10 @@ export class ArgosMCPServer {
 			}
 
 			try {
-				const result = await tool.execute(args || {});
-				return {
-					content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
-				};
+				const result = await tool.execute(args ?? {});
+				return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
 			} catch (error) {
-				const msg = error instanceof Error ? error.message : String(error);
-
-				// Check if Argos app is running
-				if (msg.includes('ECONNREFUSED') || msg.includes('fetch failed')) {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `Error: Cannot reach Argos at ${ARGOS_API}. Is the Argos dev server running? (npm run dev)`
-							}
-						],
-						isError: true
-					};
-				}
-
-				return {
-					content: [{ type: 'text', text: `Error executing ${name}: ${msg}` }],
-					isError: true
-				};
+				return buildToolError(name, error);
 			}
 		});
 
@@ -157,24 +185,14 @@ export class ArgosMCPServer {
 			const { uri } = request.params;
 
 			try {
-				let data: unknown;
-				if (uri === 'argos://system/status') {
-					const resp = await apiFetch('/api/system/stats');
-					data = await resp.json();
-				} else if (uri === 'argos://kismet/status') {
-					const resp = await apiFetch('/api/kismet/status');
-					data = await resp.json();
-				} else if (uri === 'argos://devices/active') {
-					const resp = await apiFetch('/api/kismet/devices');
-					data = await resp.json();
-				} else {
+				const data = await fetchResourceData(uri, apiFetch);
+				if (data === null) {
 					return {
 						contents: [
 							{ uri, mimeType: 'text/plain', text: `Unknown resource: ${uri}` }
 						]
 					};
 				}
-
 				return {
 					contents: [
 						{ uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) }

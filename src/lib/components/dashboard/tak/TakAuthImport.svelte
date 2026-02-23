@@ -17,26 +17,39 @@
 	let p12Password = $state('');
 	let uploadStatus = $state('');
 
-	async function uploadCert() {
-		if (!p12File || p12File.length === 0 || !p12Password) {
-			uploadStatus = 'Select file and enter password';
-			return;
+	/** Handle the cert upload API response. */
+	function handleCertResponse(data: Record<string, unknown>): void {
+		if (data.success) {
+			onCertUploaded({
+				id: data.id as string,
+				paths: data.paths as { certPath: string; keyPath: string; caPath?: string }
+			});
+			uploadStatus = 'Certificate uploaded';
+		} else {
+			uploadStatus = 'Failed: ' + ((data.error as string) ?? 'Unknown error');
 		}
+	}
+
+	/** Build FormData for cert upload, returning null if inputs are missing. */
+	function buildCertFormData(): FormData | null {
+		if (!p12File || p12File.length === 0 || !p12Password) return null;
 		const formData = new FormData();
 		formData.append('p12File', p12File[0]);
 		formData.append('password', p12Password);
 		if (config.id) formData.append('id', config.id);
+		return formData;
+	}
 
+	async function uploadCert() {
+		const formData = buildCertFormData();
+		if (!formData) {
+			uploadStatus = 'Select file and enter password';
+			return;
+		}
 		uploadStatus = 'Uploading...';
 		try {
 			const res = await fetch('/api/tak/certs', { method: 'POST', body: formData });
-			const data = await res.json();
-			if (data.success) {
-				onCertUploaded({ id: data.id, paths: data.paths });
-				uploadStatus = 'Certificate uploaded';
-			} else {
-				uploadStatus = 'Failed: ' + (data.error ?? 'Unknown error');
-			}
+			handleCertResponse(await res.json());
 		} catch {
 			uploadStatus = 'Upload error';
 		}

@@ -28,6 +28,30 @@ interface StatusEvent {
 	[key: string]: unknown;
 }
 
+/** Build frequency array from spectrum data power values. */
+function buildFrequencies(data: SpectrumData): number[] {
+	if (!data.powerValues || data.startFreq === undefined || data.endFreq === undefined) return [];
+	const start = data.startFreq;
+	const step = (data.endFreq - start) / (data.powerValues.length - 1);
+	return data.powerValues.map((_: number, i: number) => start + i * step);
+}
+
+/** Transform raw spectrum data into the frontend-expected format. */
+function transformSpectrum(data: SpectrumData): Record<string, unknown> {
+	return {
+		frequencies: buildFrequencies(data),
+		power: data.powerValues || [],
+		power_levels: data.powerValues || [],
+		start_freq: data.startFreq,
+		stop_freq: data.endFreq,
+		center_freq: data.frequency,
+		peak_freq: data.frequency,
+		peak_power: data.power,
+		timestamp: data.timestamp,
+		device: 'hackrf'
+	};
+}
+
 export const GET: RequestHandler = async ({ request }) => {
 	const origin = request.headers.get('origin');
 	const corsHeaders = getCorsHeaders(origin);
@@ -54,36 +78,7 @@ export const GET: RequestHandler = async ({ request }) => {
 			// HackRF data handler
 			dataHandler = (data: SpectrumData) => {
 				try {
-					// Transform the data if needed
-					const transformedData = {
-						frequencies:
-							data.powerValues &&
-							data.startFreq !== undefined &&
-							data.endFreq !== undefined &&
-							data.powerValues !== undefined
-								? (() => {
-										const startFreq = data.startFreq;
-										const endFreq = data.endFreq;
-										const powerValues = data.powerValues;
-										return powerValues.map((_: number, index: number) => {
-											const freqStep =
-												(endFreq - startFreq) / (powerValues.length - 1);
-											return startFreq + index * freqStep;
-										});
-									})()
-								: [],
-						power: data.powerValues || [],
-						power_levels: data.powerValues || [],
-						start_freq: data.startFreq,
-						stop_freq: data.endFreq,
-						center_freq: data.frequency,
-						peak_freq: data.frequency,
-						peak_power: data.power,
-						timestamp: data.timestamp,
-						device: 'hackrf'
-					};
-
-					const message = `event: spectrumData\ndata: ${JSON.stringify(transformedData)}\n\n`;
+					const message = `event: spectrumData\ndata: ${JSON.stringify(transformSpectrum(data))}\n\n`;
 					controller.enqueue(encoder.encode(message));
 				} catch (error) {
 					logger.error('Error processing HackRF spectrum data', {

@@ -56,22 +56,26 @@ export async function testGrgsm(gsmArgs: string[]): Promise<string> {
 	return gsmTestOutput;
 }
 
+/** Hardware error patterns — if any matches, the device is unreachable */
+const HARDWARE_FAILURE_PATTERNS = [
+	(o: string) => o.includes('No supported devices found'),
+	(o: string) => o.includes('RuntimeError: No supported devices found'),
+	(o: string) =>
+		o.includes('[ERROR] sdrplay_api_Open() Error: sdrplay_api_Fail') &&
+		!o.includes('Detected Device:'),
+	(o: string) => o.includes('SoapySDR::Device::enumerate') && !o.includes('Detected Device:')
+];
+
+/** Check if output contains actual GSM frame hex data */
+function hasGsmFrameData(output: string): boolean {
+	return /^\s*[0-9a-f]{2}\s+[0-9a-f]{2}\s/m.test(output);
+}
+
 /** Check GRGSM test output for known hardware failure patterns. */
 export function checkHardwareErrors(output: string): void {
-	const hasGsmFrameData = /^\s*[0-9a-f]{2}\s+[0-9a-f]{2}\s/m.test(output);
-	if (hasGsmFrameData) {
-		return;
-	}
-
-	const noDevices = output.includes('No supported devices found');
-	const runtimeNoDevices = output.includes('RuntimeError: No supported devices found');
-	const sdrplayFail =
-		output.includes('[ERROR] sdrplay_api_Open() Error: sdrplay_api_Fail') &&
-		!output.includes('Detected Device:');
-	const soapyNoDevice =
-		output.includes('SoapySDR::Device::enumerate') && !output.includes('Detected Device:');
-
-	if (noDevices || runtimeNoDevices || sdrplayFail || soapyNoDevice) {
+	if (hasGsmFrameData(output)) return;
+	const hasFailure = HARDWARE_FAILURE_PATTERNS.some((check) => check(output));
+	if (hasFailure) {
 		throw new Error(
 			'Hardware not available: SDR device connection failed. ' +
 				'GRGSM cannot connect to HackRF. Check device connection, drivers, and permissions.'
@@ -177,23 +181,36 @@ export async function captureFrameCount(logPath: string, captureTime: number): P
 	}
 }
 
+const SI_TYPES = new Set([0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x02, 0x03, 0x07]);
+const PAGING_TYPES = new Set([0x21, 0x22, 0x24, 0x3e, 0x3f]);
+
+/** Extract L3 RR message type from a hex line, or null */
+function extractL3MsgType(line: string): number | null {
+	const bytes = line.trim().split(/\s+/);
+	if (bytes.length < 3 || bytes[1] !== '06') return null;
+	return parseInt(bytes[2], 16);
+}
+
+/** Classify a single L3 message type as SI, paging, or neither */
+function classifyL3MsgType(msgType: number): 'si' | 'paging' | null {
+	if (SI_TYPES.has(msgType)) return 'si';
+	if (PAGING_TYPES.has(msgType)) return 'paging';
+	return null;
+}
+
+/** Extract classified L3 message kinds from log lines, filtering nulls */
+function extractL3Kinds(lines: string[]): Array<'si' | 'paging'> {
+	return lines
+		.map(extractL3MsgType)
+		.filter((t): t is number => t !== null)
+		.map(classifyL3MsgType)
+		.filter((k): k is 'si' | 'paging' => k !== null);
+}
+
 /** Parse GSM L3 message types from log lines to detect SI and paging messages. */
 function parseL3MessageTypes(lines: string[]): { hasSI: boolean; hasPaging: boolean } {
-	let hasSI = false;
-	let hasPaging = false;
-
-	const siTypes = [0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x02, 0x03, 0x07];
-	const pagingTypes = [0x21, 0x22, 0x24, 0x3e, 0x3f];
-
-	for (const line of lines) {
-		const bytes = line.trim().split(/\s+/);
-		if (bytes.length >= 3 && bytes[1] === '06') {
-			const msgType = parseInt(bytes[2], 16);
-			if (siTypes.includes(msgType)) hasSI = true;
-			if (pagingTypes.includes(msgType)) hasPaging = true;
-		}
-	}
-	return { hasSI, hasPaging };
+	const kinds = extractL3Kinds(lines);
+	return { hasSI: kinds.includes('si'), hasPaging: kinds.includes('paging') };
 }
 
 /** Determine channel type from L3 message analysis results and frame count. */
@@ -238,15 +255,19 @@ export async function classifyChannelType(
 	}
 }
 
+/** Frame-count signal thresholds — sorted descending */
+const FRAME_SIGNAL_THRESHOLDS: [number, string][] = [
+	[200, 'Excellent'],
+	[150, 'Very Strong'],
+	[100, 'Strong'],
+	[50, 'Good'],
+	[10, 'Moderate']
+];
+
 /** Map a GSM frame count to a human-readable signal strength label. */
 export function classifySignalStrength(frameCount: number): string {
 	if (frameCount <= 0) return 'No Signal';
-	if (frameCount > 200) return 'Excellent';
-	if (frameCount > 150) return 'Very Strong';
-	if (frameCount > 100) return 'Strong';
-	if (frameCount > 50) return 'Good';
-	if (frameCount > 10) return 'Moderate';
-	return 'Weak';
+	return FRAME_SIGNAL_THRESHOLDS.find(([min]) => frameCount > min)?.[1] ?? 'Weak';
 }
 
 /** Kill a background GRGSM process by PID, with force-kill fallback. */

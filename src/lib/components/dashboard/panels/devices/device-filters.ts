@@ -18,6 +18,70 @@ export interface FilterOptions {
 	sortDirection: 'asc' | 'desc';
 }
 
+/** Collect an AP and its clients from the device map. */
+function collectIsolatedDevices(
+	allDevices: Map<string, KismetDevice>,
+	isolatedMAC: string
+): KismetDevice[] {
+	const ap = allDevices.get(isolatedMAC);
+	if (!ap) return [];
+	const result: KismetDevice[] = [ap];
+	for (const clientMac of ap.clients ?? []) {
+		const client = allDevices.get(clientMac);
+		if (client) result.push(client);
+	}
+	return result;
+}
+
+/** Build a searchable text blob from a device's key fields. */
+function searchableText(d: KismetDevice): string {
+	return [d.mac, d.ssid, d.manufacturer || d.manuf].join('\0').toLowerCase();
+}
+
+/** Check if a device matches the text search query. */
+function matchesSearch(d: KismetDevice, q: string): boolean {
+	return !q || searchableText(d).includes(q);
+}
+
+/** Check if a device passes signal and band filters. */
+function passesSignalFilters(d: KismetDevice, options: FilterOptions): boolean {
+	const rssi = getRSSI(d);
+	if (options.shouldHideNoSignal && rssi === 0) return false;
+	return options.activeBands.has(getSignalBandKey(rssi));
+}
+
+/** Check if a device passes all filter criteria. */
+function passesFilters(d: KismetDevice, options: FilterOptions, q: string): boolean {
+	if (!passesSignalFilters(d, options)) return false;
+	if (options.shouldShowOnlyWithClients && !d.clients?.length) return false;
+	return matchesSearch(d, q);
+}
+
+/** RSSI sort value — treat 0 (no signal) as extremely weak. */
+function rssiSortVal(d: KismetDevice): number {
+	const r = getRSSI(d);
+	return r === 0 ? -999 : r;
+}
+
+/** Type ordering for AP > Client > Bridged > Ad-Hoc > Other. */
+const TYPE_ORDER: Record<string, number> = { AP: 0, Client: 1, Bridged: 2, 'Ad-Hoc': 3 };
+
+/** Sort value extractors by column. */
+const SORT_EXTRACTORS: Record<SortColumn, (d: KismetDevice) => string | number> = {
+	mac: (d) => d.mac || '',
+	rssi: rssiSortVal,
+	type: (d) => TYPE_ORDER[d.type] ?? 4,
+	channel: (d) => d.channel || 0,
+	packets: (d) => d.packets || 0,
+	data: (d) => d.datasize || d.dataSize || 0
+};
+
+/** Compare two sort values (ascending). */
+function compareAsc(a: string | number, b: string | number): number {
+	if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b);
+	return (a as number) - (b as number);
+}
+
 /**
  * Filters and sorts device list. When isolatedMAC is set,
  * returns only that AP and its clients (unfiltered).
@@ -27,55 +91,13 @@ export function filterAndSortDevices(
 	isolatedMAC: string | null,
 	options: FilterOptions
 ): KismetDevice[] {
-	// Isolation mode: show only the AP and its clients
-	if (isolatedMAC) {
-		const ap = allDevices.get(isolatedMAC);
-		if (!ap) return [];
-		const result: KismetDevice[] = [ap];
-		if (ap.clients?.length) {
-			for (const clientMac of ap.clients) {
-				const client = allDevices.get(clientMac);
-				if (client) result.push(client);
-			}
-		}
-		return result;
-	}
+	if (isolatedMAC) return collectIsolatedDevices(allDevices, isolatedMAC);
 
 	const q = options.searchQuery.toLowerCase().trim();
-	const all = Array.from(allDevices.values());
+	const extract = SORT_EXTRACTORS[options.sortColumn];
+	const mult = options.sortDirection === 'asc' ? 1 : -1;
 
-	return all
-		.filter((d) => {
-			const rssi = getRSSI(d);
-			if (options.shouldHideNoSignal && rssi === 0) return false;
-			const band = getSignalBandKey(rssi);
-			if (!options.activeBands.has(band)) return false;
-			if (options.shouldShowOnlyWithClients && !(d.clients && d.clients.length > 0))
-				return false;
-			if (!q) return true;
-			const mac = (d.mac || '').toLowerCase();
-			const ssid = (d.ssid || '').toLowerCase();
-			const mfr = (d.manufacturer || d.manuf || '').toLowerCase();
-			return mac.includes(q) || ssid.includes(q) || mfr.includes(q);
-		})
-		.sort((a, b) => {
-			let cmp = 0;
-			if (options.sortColumn === 'mac') {
-				cmp = (a.mac || '').localeCompare(b.mac || '');
-			} else if (options.sortColumn === 'rssi') {
-				const aVal = getRSSI(a) === 0 ? -999 : getRSSI(a);
-				const bVal = getRSSI(b) === 0 ? -999 : getRSSI(b);
-				cmp = aVal - bVal;
-			} else if (options.sortColumn === 'type') {
-				const order: Record<string, number> = { AP: 0, Client: 1, Bridged: 2, 'Ad-Hoc': 3 };
-				cmp = (order[a.type] ?? 4) - (order[b.type] ?? 4);
-			} else if (options.sortColumn === 'channel') {
-				cmp = (a.channel || 0) - (b.channel || 0);
-			} else if (options.sortColumn === 'packets') {
-				cmp = (a.packets || 0) - (b.packets || 0);
-			} else if (options.sortColumn === 'data') {
-				cmp = (a.datasize || a.dataSize || 0) - (b.datasize || b.dataSize || 0);
-			}
-			return options.sortDirection === 'asc' ? cmp : -cmp;
-		});
+	return Array.from(allDevices.values())
+		.filter((d) => passesFilters(d, options, q))
+		.sort((a, b) => compareAsc(extract(a), extract(b)) * mult);
 }

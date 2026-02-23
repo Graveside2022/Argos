@@ -15,6 +15,123 @@ import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
 const execFileAsync = promisify(execFile);
 config();
 
+/** Map suite name to npm script. */
+const SUITE_SCRIPTS: Record<string, string> = {
+	unit: 'test:unit',
+	integration: 'test:integration',
+	e2e: 'test:e2e',
+	all: 'test:all'
+};
+
+interface VitestResult {
+	passed: number;
+	failed: number;
+	total: number;
+}
+
+/** Parse Vitest output for pass/fail/total counts. */
+function parseVitestOutput(stdout: string): VitestResult {
+	const passMatch = stdout.match(/(\d+) passed/);
+	const failMatch = stdout.match(/(\d+) failed/);
+	const totalMatch = stdout.match(/Test Files\s+(\d+)/);
+	const passed = passMatch ? parseInt(passMatch[1]) : 0;
+	const failed = failMatch ? parseInt(failMatch[1]) : 0;
+	const total = totalMatch ? parseInt(totalMatch[1]) : passed + failed;
+	return { passed, failed, total };
+}
+
+/** Generate test result recommendations. */
+function buildTestRecs(allPassed: boolean): string[] {
+	if (allPassed) return ['✅ All tests passing'];
+	return [
+		'⚠️ Tests failing',
+		'💡 Review failed test output',
+		'💡 Run specific test: npm test -- <test-file>'
+	];
+}
+
+/** Extract error count from typecheck/lint output. */
+function extractErrorCount(output: string): number {
+	const match = output.match(/(\d+) errors?/i);
+	return match ? parseInt(match[1]) : 0;
+}
+
+/** Extract warning count from lint output. */
+function extractWarningCount(output: string): number {
+	const match = output.match(/(\d+) warnings?/);
+	return match ? parseInt(match[1]) : 0;
+}
+
+/** Generate typecheck recommendations. */
+function buildTypecheckRecs(errorCount: number): string[] {
+	if (errorCount === 0) return ['✅ No type errors'];
+	return [
+		`⚠️ ${errorCount} type errors found`,
+		'💡 Review output for file locations',
+		'💡 Fix errors before committing'
+	];
+}
+
+/** Generate lint recommendations. */
+function buildLintRecs(errors: number, warnings: number, fix: boolean): string[] {
+	if (errors === 0 && warnings === 0) return ['✅ No lint issues'];
+	const fixTip = fix ? '💡 Some issues auto-fixed' : '💡 Run with fix: true to auto-fix';
+	return [
+		`${errors} errors, ${warnings} warnings`,
+		fixTip,
+		'💡 Review output for remaining issues'
+	];
+}
+
+/** Truncate output to first N lines. */
+function truncateOutput(output: string, lines: number): string {
+	return output.split('\n').slice(0, lines).join('\n');
+}
+
+/** Get combined stdout/stderr from exec error. */
+function getErrorOutput(err: { stdout?: string; stderr?: string }): string {
+	return err.stdout || err.stderr || '';
+}
+
+/** Format pass rate percentage. */
+function formatPassRate(passed: number, total: number): string {
+	return total > 0 ? ((passed / total) * 100).toFixed(1) + '%' : 'N/A';
+}
+
+/** Resolve timeout with default and max cap. */
+function resolveTimeout(raw: unknown): number {
+	return Math.min((raw as number) || 300, 600);
+}
+
+/** Build lint error result from catch block output. */
+function buildLintErrorResult(err: {
+	stdout?: string;
+	stderr?: string;
+	message?: string;
+}): Record<string, unknown> {
+	const output = getErrorOutput(err);
+	const errors = extractErrorCount(output);
+	if (errors > 0) {
+		return {
+			status: 'FAIL',
+			errors,
+			warnings: 0,
+			output: truncateOutput(output, 100),
+			recommendations: [`⚠️ ${errors} lint errors`, '💡 Fix errors before committing']
+		};
+	}
+	return {
+		status: 'ERROR',
+		error: err.message ?? 'Lint failed',
+		output: truncateOutput(output, 50)
+	};
+}
+
+/** Resolve lint script name from fix flag. */
+function lintScript(fix: boolean): string {
+	return fix ? 'lint:fix' : 'lint';
+}
+
 class TestRunner extends BaseMCPServer {
 	protected tools: ToolDefinition[] = [
 		{
@@ -38,21 +155,10 @@ class TestRunner extends BaseMCPServer {
 			},
 			execute: async (args: Record<string, unknown>) => {
 				const suite = args.suite as string;
-				const timeout = Math.min((args.timeout_seconds as number) || 300, 600);
-
-				const scripts: Record<string, string> = {
-					unit: 'test:unit',
-					integration: 'test:integration',
-					e2e: 'test:e2e',
-					all: 'test:all'
-				};
-
-				const script = scripts[suite];
+				const timeout = resolveTimeout(args.timeout_seconds);
+				const script = SUITE_SCRIPTS[suite];
 				if (!script) {
-					return {
-						status: 'ERROR',
-						error: `Unknown test suite: ${suite}`
-					};
+					return { status: 'ERROR', error: `Unknown test suite: ${suite}` };
 				}
 
 				try {
@@ -61,49 +167,28 @@ class TestRunner extends BaseMCPServer {
 						timeout: timeout * 1000,
 						cwd: process.cwd()
 					});
-
-					const duration = Date.now() - startTime;
-
-					// Parse test output (Vitest format)
-					const passMatch = stdout.match(/(\d+) passed/);
-					const failMatch = stdout.match(/(\d+) failed/);
-					const totalMatch = stdout.match(/Test Files\s+(\d+)/);
-
-					const passed = passMatch ? parseInt(passMatch[1]) : 0;
-					const failed = failMatch ? parseInt(failMatch[1]) : 0;
-					const total = totalMatch ? parseInt(totalMatch[1]) : passed + failed;
-
-					const allPassed = failed === 0;
+					const { passed, failed, total } = parseVitestOutput(stdout);
 
 					return {
-						status: allPassed ? 'PASS' : 'FAIL',
+						status: failed === 0 ? 'PASS' : 'FAIL',
 						suite,
-						duration_ms: duration,
+						duration_ms: Date.now() - startTime,
 						summary: {
 							total_tests: total,
 							passed,
 							failed,
-							pass_rate: total > 0 ? ((passed / total) * 100).toFixed(1) + '%' : 'N/A'
+							pass_rate: formatPassRate(passed, total)
 						},
-						output_sample: stdout.split('\n').slice(0, 50).join('\n'),
-						recommendations: allPassed
-							? ['✅ All tests passing']
-							: [
-									'⚠️ Tests failing',
-									'💡 Review failed test output',
-									'💡 Run specific test: npm test -- <test-file>'
-								]
+						output_sample: truncateOutput(stdout, 50),
+						recommendations: buildTestRecs(failed === 0)
 					};
 				} catch (error) {
 					const err = error as { stdout?: string; stderr?: string; message?: string };
 					return {
 						status: 'ERROR',
 						suite,
-						error: err.message || 'Test execution failed',
-						output_sample: (err.stdout || err.stderr || '')
-							.split('\n')
-							.slice(0, 30)
-							.join('\n'),
+						error: err.message ?? 'Test execution failed',
+						output_sample: truncateOutput(getErrorOutput(err), 30),
 						recommendations: [
 							'🔴 Test execution error',
 							'💡 Check test syntax and imports',
@@ -127,30 +212,20 @@ class TestRunner extends BaseMCPServer {
 						cwd: process.cwd(),
 						timeout: 120000
 					});
-
-					// Parse output for error count
-					const errorMatch = stdout.match(/(\d+) errors?/i);
-					const errorCount = errorMatch ? parseInt(errorMatch[1]) : 0;
+					const errorCount = extractErrorCount(stdout);
 
 					return {
 						status: errorCount === 0 ? 'PASS' : 'FAIL',
 						error_count: errorCount,
-						output: stdout.split('\n').slice(0, 100).join('\n'),
-						recommendations:
-							errorCount === 0
-								? ['✅ No type errors']
-								: [
-										`⚠️ ${errorCount} type errors found`,
-										'💡 Review output for file locations',
-										'💡 Fix errors before committing'
-									]
+						output: truncateOutput(stdout, 100),
+						recommendations: buildTypecheckRecs(errorCount)
 					};
 				} catch (error) {
 					const err = error as { stdout?: string; message?: string };
 					return {
 						status: 'ERROR',
 						error: err.message || 'Typecheck failed',
-						output: (err.stdout || '').split('\n').slice(0, 50).join('\n')
+						output: truncateOutput(err.stdout || '', 50)
 					};
 				}
 			}
@@ -170,66 +245,32 @@ class TestRunner extends BaseMCPServer {
 			},
 			execute: async (args: Record<string, unknown>) => {
 				const fix = args.fix === true;
-				const script = fix ? 'lint:fix' : 'lint';
 
 				try {
 					const { stdout, stderr } = await execFileAsync(
 						'/usr/bin/npm',
-						['run', script],
+						['run', lintScript(fix)],
 						{
 							cwd: process.cwd(),
 							timeout: 60000
 						}
 					);
-
 					const output = stdout || stderr;
-					const errorMatch = output.match(/(\d+) errors?/);
-					const warningMatch = output.match(/(\d+) warnings?/);
-
-					const errors = errorMatch ? parseInt(errorMatch[1]) : 0;
-					const warnings = warningMatch ? parseInt(warningMatch[1]) : 0;
+					const errors = extractErrorCount(output);
+					const warnings = extractWarningCount(output);
 
 					return {
 						status: errors === 0 ? 'PASS' : 'FAIL',
 						errors,
 						warnings,
 						fixed: fix,
-						output: output.split('\n').slice(0, 100).join('\n'),
-						recommendations:
-							errors === 0 && warnings === 0
-								? ['✅ No lint issues']
-								: [
-										`${errors} errors, ${warnings} warnings`,
-										fix
-											? '💡 Some issues auto-fixed'
-											: '💡 Run with fix: true to auto-fix',
-										'💡 Review output for remaining issues'
-									]
+						output: truncateOutput(output, 100),
+						recommendations: buildLintRecs(errors, warnings, fix)
 					};
 				} catch (error) {
-					const err = error as { stdout?: string; stderr?: string; message?: string };
-					const output = err.stdout || err.stderr || '';
-					const errorMatch = output.match(/(\d+) errors?/);
-					const errors = errorMatch ? parseInt(errorMatch[1]) : 0;
-
-					if (errors > 0) {
-						return {
-							status: 'FAIL',
-							errors,
-							warnings: 0,
-							output: output.split('\n').slice(0, 100).join('\n'),
-							recommendations: [
-								`⚠️ ${errors} lint errors`,
-								'💡 Fix errors before committing'
-							]
-						};
-					}
-
-					return {
-						status: 'ERROR',
-						error: err.message || 'Lint failed',
-						output: output.split('\n').slice(0, 50).join('\n')
-					};
+					return buildLintErrorResult(
+						error as { stdout?: string; stderr?: string; message?: string }
+					);
 				}
 			}
 		}

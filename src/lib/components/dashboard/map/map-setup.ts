@@ -7,6 +7,7 @@ import type maplibregl from 'maplibre-gl';
 import { SatelliteLayer } from '$lib/map/layers/satellite-layer';
 import { SymbolLayer } from '$lib/map/layers/symbol-layer';
 
+import { setLayerVisibility } from './map-handlers-helpers';
 import { LAYER_MAP } from './map-helpers';
 
 export interface MapSetupResult {
@@ -141,18 +142,17 @@ function registerCursorHandlers(map: maplibregl.Map): void {
  * Once the map reaches idle state, apply the caller-provided layer
  * visibility map so toggled-off layers start hidden.
  */
+function applyLayerGroup(map: maplibregl.Map, layerIds: string[], visible: boolean): void {
+	for (const id of layerIds) setLayerVisibility(map, id, visible);
+}
+
 function applyInitialLayerVisibility(
 	map: maplibregl.Map,
 	layerVisibility: Record<string, boolean>
 ): void {
 	map.once('idle', () => {
 		for (const [key, layerIds] of Object.entries(LAYER_MAP)) {
-			const visible = layerVisibility[key] !== false;
-			for (const id of layerIds) {
-				if (map.getLayer(id)) {
-					map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
-				}
-			}
+			applyLayerGroup(map, layerIds, layerVisibility[key] !== false);
 		}
 	});
 }

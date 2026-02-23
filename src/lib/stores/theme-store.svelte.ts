@@ -43,22 +43,23 @@ const VALID_PALETTES: ThemePalette[] = [
 
 const VALID_RAIL_POSITIONS: RailPosition[] = ['left', 'right', 'top', 'bottom'];
 
+/** Validate a parsed theme state against allowed values. */
+function validateParsed(parsed: Record<string, unknown>): ThemeState {
+	const palette = parsed.palette as ThemePalette;
+	const railPosition = parsed.railPosition as RailPosition;
+	return {
+		palette: VALID_PALETTES.includes(palette) ? palette : DEFAULT_STATE.palette,
+		railPosition: VALID_RAIL_POSITIONS.includes(railPosition)
+			? railPosition
+			: DEFAULT_STATE.railPosition
+	};
+}
+
 function loadState(): ThemeState {
 	if (!browser) return { ...DEFAULT_STATE };
-
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return { ...DEFAULT_STATE };
-
-		const parsed = JSON.parse(raw);
-		return {
-			palette: VALID_PALETTES.includes(parsed.palette)
-				? parsed.palette
-				: DEFAULT_STATE.palette,
-			railPosition: VALID_RAIL_POSITIONS.includes(parsed.railPosition)
-				? parsed.railPosition
-				: DEFAULT_STATE.railPosition
-		};
+		return raw ? validateParsed(JSON.parse(raw)) : { ...DEFAULT_STATE };
 	} catch {
 		return { ...DEFAULT_STATE };
 	}

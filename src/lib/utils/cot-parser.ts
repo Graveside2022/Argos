@@ -4,54 +4,61 @@ import { logger } from '$lib/utils/logger';
 
 import { SymbolFactory } from '../map/symbols/symbol-factory';
 
+/** Read an attribute from an element, returning fallback if absent. */
+function attr(el: Element, name: string, fallback: string): string {
+	return el.getAttribute(name) || fallback;
+}
+
+/** Extract lat/lon from a <point> element. Returns null if invalid (0,0). */
+function parsePoint(point: Element): { lat: number; lon: number } | null {
+	const lat = parseFloat(attr(point, 'lat', '0'));
+	const lon = parseFloat(attr(point, 'lon', '0'));
+	return lat === 0 && lon === 0 ? null : { lat, lon };
+}
+
+/** Extract event metadata and build properties. */
+function buildFeatureProps(
+	event: Element,
+	uid: string,
+	coords: { lat: number; lon: number }
+): Feature {
+	const type = attr(event, 'type', 'a-u-G');
+	const callsign =
+		event.querySelector('detail')?.querySelector('contact')?.getAttribute('callsign') || uid;
+	return {
+		type: 'Feature',
+		geometry: { type: 'Point', coordinates: [coords.lon, coords.lat] },
+		properties: {
+			uid,
+			type,
+			sidc: SymbolFactory.cotTypeToSidc(type),
+			label: callsign,
+			how: attr(event, 'how', 'm-g'),
+			stale: event.getAttribute('stale'),
+			time: event.getAttribute('time')
+		}
+	};
+}
+
+/** Parse the XML and extract the event+point pair. Returns null on failure. */
+function extractEventAndPoint(xml: string): { event: Element; point: Element } | null {
+	const event = new DOMParser().parseFromString(xml, 'text/xml').querySelector('event');
+	const point = event?.querySelector('point');
+	return event && point ? { event, point } : null;
+}
+
 /**
  * Parses a CoT XML string into a GeoJSON Feature with SIDC and properties.
  * Browser-only (uses DOMParser).
  */
 export function parseCotToFeature(xml: string): Feature | null {
 	if (typeof DOMParser === 'undefined') return null;
-
 	try {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(xml, 'text/xml');
-		const event = doc.querySelector('event');
-		if (!event) return null;
-
-		const point = event.querySelector('point');
-		if (!point) return null;
-
-		const lat = parseFloat(point.getAttribute('lat') || '0');
-		const lon = parseFloat(point.getAttribute('lon') || '0');
-		if (lat === 0 && lon === 0) return null;
-
-		const uid = event.getAttribute('uid') || 'unknown';
-		const type = event.getAttribute('type') || 'a-u-G';
-		const how = event.getAttribute('how') || 'm-g';
-		const stale = event.getAttribute('stale');
-
-		const detail = event.querySelector('detail');
-		const contact = detail?.querySelector('contact');
-		const callsign = contact?.getAttribute('callsign') || uid;
-
-		// Convert CoT atom type to MIL-STD-2525C SIDC
-		const sidc = SymbolFactory.cotTypeToSidc(type);
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates: [lon, lat]
-			},
-			properties: {
-				uid,
-				type,
-				sidc,
-				label: callsign,
-				how,
-				stale,
-				time: event.getAttribute('time')
-			}
-		};
+		const els = extractEventAndPoint(xml);
+		if (!els) return null;
+		const coords = parsePoint(els.point);
+		if (!coords) return null;
+		return buildFeatureProps(els.event, attr(els.event, 'uid', 'unknown'), coords);
 	} catch (e) {
 		logger.error('Failed to parse CoT', { error: e });
 		return null;

@@ -20,6 +20,117 @@ import {
 	diagnoseKismet
 } from './hardware-debugger-tools';
 
+/** Fetch API JSON with unreachable fallback. */
+async function fetchOrFallback(
+	url: string,
+	fallback: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+	try {
+		const resp = await apiFetch(url);
+		return await resp.json();
+	} catch {
+		return fallback;
+	}
+}
+
+/** Classify overall health from device health strings. */
+function classifyOverallHealth(healthValues: string[]): string {
+	const healthyCount = healthValues.filter((h) => h === 'HEALTHY' || h === 'ACTIVE').length;
+	if (healthyCount === healthValues.length) return 'HEALTHY';
+	return healthyCount > 0 ? 'DEGRADED' : 'CRITICAL';
+}
+
+interface CapabilityResult {
+	can_perform: boolean;
+	reasons: string[];
+}
+
+/** Check HackRF sweep capability. */
+async function checkHackrfSweep(): Promise<CapabilityResult> {
+	try {
+		const resp = await apiFetch('/api/hackrf/status');
+		const status = await resp.json();
+		if (status.connected)
+			return {
+				can_perform: true,
+				reasons: ['HackRF connected', 'Ready for sweep operations']
+			};
+		return { can_perform: false, reasons: ['HackRF not connected', 'Check USB: hackrf_info'] };
+	} catch {
+		return { can_perform: false, reasons: ['Cannot reach HackRF API', 'Check dev server'] };
+	}
+}
+
+/** Check Kismet scan capability. */
+async function checkKismetScan(): Promise<CapabilityResult> {
+	try {
+		const resp = await apiFetch('/api/kismet/status');
+		const status = await resp.json();
+		if (status.isRunning && status.device_count > 0)
+			return {
+				can_perform: true,
+				reasons: ['Kismet running', `${status.device_count} device(s) active`]
+			};
+		if (!status.isRunning)
+			return {
+				can_perform: false,
+				reasons: ['Kismet not running', 'Start: /api/kismet/control']
+			};
+		return {
+			can_perform: false,
+			reasons: ['Kismet running but no devices', 'Check ALFA adapter']
+		};
+	} catch {
+		return { can_perform: false, reasons: ['Cannot reach Kismet API'] };
+	}
+}
+
+/** Check GPS positioning capability. */
+async function checkGpsPositioning(): Promise<CapabilityResult> {
+	try {
+		const resp = await apiFetch('/api/gps/position');
+		const gps = await resp.json();
+		if (gps.fix >= 2) {
+			const fixType = gps.fix === 3 ? '3D' : '2D';
+			return {
+				can_perform: true,
+				reasons: [`GPS fix: ${fixType}`, `${gps.satellites || 0} satellites`]
+			};
+		}
+		return {
+			can_perform: false,
+			reasons: ['No GPS fix', 'Move to clear sky', 'Fix may take 2-5 min']
+		};
+	} catch {
+		return { can_perform: false, reasons: ['Cannot reach GPS API'] };
+	}
+}
+
+/** Dispatch map for device:capability pairs. */
+const CAPABILITY_CHECKERS: Record<string, () => Promise<CapabilityResult>> = {
+	'hackrf:sweep': checkHackrfSweep,
+	'kismet:scan': checkKismetScan,
+	'gps:positioning': checkGpsPositioning
+};
+
+/** One-line HackRF status. */
+function summarizeHackrf(hackrf: Record<string, unknown>): string {
+	return hackrf.connected ? 'Connected' : 'Disconnected';
+}
+
+/** One-line Kismet status. */
+function summarizeKismet(kismet: Record<string, unknown>): string {
+	if (!kismet.isRunning) return 'Stopped';
+	return `Running (${kismet.device_count || 0} devices)`;
+}
+
+/** One-line GPS status. */
+function summarizeGps(gps: Record<string, unknown>): string {
+	if ((gps.fix as number) < 2) return 'No Fix';
+	const fixType = gps.fix === 3 ? '3D' : '2D';
+	return `${fixType} Fix`;
+}
+
 // Load .env for ARGOS_API_KEY
 config();
 
@@ -41,17 +152,12 @@ class HardwareDebugger extends BaseMCPServer {
 			execute: async (args: Record<string, unknown>) => {
 				const detailed = args.detailed !== false;
 
-				const [hackrfResp, kismetResp, gpsResp, hwScanResp] = await Promise.all([
-					apiFetch('/api/hackrf/status').catch(() => null),
-					apiFetch('/api/kismet/status').catch(() => null),
-					apiFetch('/api/gps/position').catch(() => null),
-					apiFetch('/api/hardware/scan').catch(() => null)
+				const [hackrf, kismet, gps, hwScan] = await Promise.all([
+					fetchOrFallback('/api/hackrf/status', { status: 'unreachable' }),
+					fetchOrFallback('/api/kismet/status', { status: 'unreachable' }),
+					fetchOrFallback('/api/gps/position', { fix: 0 }),
+					fetchOrFallback('/api/hardware/scan', { hardware: {} })
 				]);
-
-				const hackrf = hackrfResp ? await hackrfResp.json() : { status: 'unreachable' };
-				const kismet = kismetResp ? await kismetResp.json() : { status: 'unreachable' };
-				const gps = gpsResp ? await gpsResp.json() : { fix: 0 };
-				const hwScan = hwScanResp ? await hwScanResp.json() : { hardware: {} };
 
 				const issues: string[] = [];
 				const recommendations: string[] = [];
@@ -63,32 +169,21 @@ class HardwareDebugger extends BaseMCPServer {
 
 				checkHardwareScan(
 					hwScan,
-					hackrfDevice.health,
-					kismetDevice.health,
-					gpsDevice.health,
+					{ sdr: hackrfDevice.health, wifi: kismetDevice.health, gps: gpsDevice.health },
 					recommendations
 				);
 
-				const healthyCount = devices.filter(
-					(d) => d.health === 'HEALTHY' || d.health === 'ACTIVE'
-				).length;
-				const overallHealth =
-					healthyCount === devices.length
-						? 'HEALTHY'
-						: healthyCount > 0
-							? 'DEGRADED'
-							: 'CRITICAL';
-
-				if (recommendations.length === 0) {
-					recommendations.push('All hardware operational');
-				}
+				const overallHealth = classifyOverallHealth(devices.map((d) => d.health));
+				if (recommendations.length === 0) recommendations.push('All hardware operational');
 
 				return {
 					overall_health: overallHealth,
 					timestamp: new Date().toISOString(),
 					summary: {
 						total_devices: devices.length,
-						healthy: healthyCount,
+						healthy: devices.filter(
+							(d) => d.health === 'HEALTHY' || d.health === 'ACTIVE'
+						).length,
 						issues: issues.length
 					},
 					devices,
@@ -148,72 +243,17 @@ class HardwareDebugger extends BaseMCPServer {
 			execute: async (args: Record<string, unknown>) => {
 				const device = args.device as string;
 				const capability = args.capability as string;
-				const result: Record<string, unknown> = {
-					device,
-					capability,
-					can_perform: false,
-					reasons: []
-				};
-
-				if (device === 'hackrf' && capability === 'sweep') {
-					try {
-						const resp = await apiFetch('/api/hackrf/status');
-						const status = await resp.json();
-						if (status.connected) {
-							result.can_perform = true;
-							result.reasons = ['HackRF connected', 'Ready for sweep operations'];
-						} else {
-							result.reasons = ['HackRF not connected', 'Check USB: hackrf_info'];
-						}
-					} catch {
-						result.reasons = ['Cannot reach HackRF API', 'Check dev server'];
-					}
-				} else if (device === 'kismet' && capability === 'scan') {
-					try {
-						const resp = await apiFetch('/api/kismet/status');
-						const status = await resp.json();
-						if (status.isRunning && status.device_count > 0) {
-							result.can_perform = true;
-							result.reasons = [
-								'Kismet running',
-								`${status.device_count} device(s) active`
-							];
-						} else if (!status.isRunning) {
-							result.reasons = ['Kismet not running', 'Start: /api/kismet/control'];
-						} else {
-							result.reasons = [
-								'Kismet running but no devices',
-								'Check ALFA adapter'
-							];
-						}
-					} catch {
-						result.reasons = ['Cannot reach Kismet API'];
-					}
-				} else if (device === 'gps' && capability === 'positioning') {
-					try {
-						const resp = await apiFetch('/api/gps/position');
-						const gps = await resp.json();
-						if (gps.fix >= 2) {
-							result.can_perform = true;
-							result.reasons = [
-								`GPS fix: ${gps.fix === 3 ? '3D' : '2D'}`,
-								`${gps.satellites || 0} satellites`
-							];
-						} else {
-							result.reasons = [
-								'No GPS fix',
-								'Move to clear sky',
-								'Fix may take 2-5 min'
-							];
-						}
-					} catch {
-						result.reasons = ['Cannot reach GPS API'];
-					}
-				} else {
-					result.reasons = [`Unknown capability "${capability}" for device "${device}"`];
+				const checker = CAPABILITY_CHECKERS[`${device}:${capability}`];
+				if (!checker) {
+					return {
+						device,
+						capability,
+						can_perform: false,
+						reasons: [`Unknown capability "${capability}" for device "${device}"`]
+					};
 				}
-
-				return result;
+				const { can_perform, reasons } = await checker();
+				return { device, capability, can_perform, reasons };
 			}
 		},
 		{
@@ -225,22 +265,15 @@ class HardwareDebugger extends BaseMCPServer {
 				properties: {}
 			},
 			execute: async () => {
-				const [hackrfResp, kismetResp, gpsResp] = await Promise.all([
-					apiFetch('/api/hackrf/status').catch(() => null),
-					apiFetch('/api/kismet/status').catch(() => null),
-					apiFetch('/api/gps/position').catch(() => null)
+				const [hackrf, kismet, gps] = await Promise.all([
+					fetchOrFallback('/api/hackrf/status', {}),
+					fetchOrFallback('/api/kismet/status', {}),
+					fetchOrFallback('/api/gps/position', {})
 				]);
-
-				const hackrf = hackrfResp ? await hackrfResp.json() : null;
-				const kismet = kismetResp ? await kismetResp.json() : null;
-				const gps = gpsResp ? await gpsResp.json() : null;
-
 				return {
-					hackrf: hackrf?.connected ? 'Connected' : 'Disconnected',
-					kismet: kismet?.isRunning
-						? `Running (${kismet.device_count || 0} devices)`
-						: 'Stopped',
-					gps: gps?.fix >= 2 ? `${gps.fix === 3 ? '3D' : '2D'} Fix` : 'No Fix',
+					hackrf: summarizeHackrf(hackrf),
+					kismet: summarizeKismet(kismet),
+					gps: summarizeGps(gps),
 					timestamp: new Date().toISOString()
 				};
 			}

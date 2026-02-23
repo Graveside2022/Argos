@@ -46,15 +46,15 @@ export const serviceStatuses: Writable<Map<string, ServiceStatus>> = writable(
 
 export const webSocketStates: Writable<Map<string, number>> = writable(new Map<string, number>());
 
-export const systemHealthy: Readable<boolean> = derived(systemHealth, ($health) => {
-	if (!$health) return false;
-	return (
-		$health.cpu < 80 &&
-		$health.memory < 80 &&
-		$health.disk < 90 &&
-		(!$health.temperature || $health.temperature < 70)
-	);
-});
+/** Check whether all system metrics are within healthy thresholds. */
+function isHealthy(h: SystemHealth): boolean {
+	return h.cpu < 80 && h.memory < 80 && h.disk < 90 && (!h.temperature || h.temperature < 70);
+}
+
+export const systemHealthy: Readable<boolean> = derived(
+	systemHealth,
+	($health) => !!$health && isHealthy($health)
+);
 
 export const runningServices: Readable<ServiceStatus[]> = derived(serviceStatuses, ($statuses) =>
 	Array.from($statuses.values()).filter((s) => s.isRunning)

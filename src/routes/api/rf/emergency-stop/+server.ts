@@ -8,35 +8,26 @@ import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
 
+function errMsg(err: unknown): string {
+	return err instanceof Error ? err.message : String(err);
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const rawBody = await request.json();
 		const validated = safeParseWithHandling(EmergencyStopRequestSchema, rawBody, 'user-action');
+		if (!validated) return error(400, 'Invalid emergency stop request');
 
-		if (!validated) {
-			return error(400, 'Invalid emergency stop request');
-		}
-
-		// Emergency stop HackRF (USRP support removed - duplicate code)
 		await sweepManager.emergencyStop();
-
 		return json({
 			status: 'success',
 			message: 'HackRF emergency stop executed',
 			device: 'hackrf',
 			stopped: true
 		});
-	} catch (error: unknown) {
-		logger.error('Error in rf/emergency-stop endpoint', {
-			error: error instanceof Error ? error.message : String(error)
-		});
-		return json(
-			{
-				status: 'error',
-				message: error instanceof Error ? error.message : 'Internal server error'
-			},
-			{ status: 500 }
-		);
+	} catch (err: unknown) {
+		logger.error('Error in rf/emergency-stop endpoint', { error: errMsg(err) });
+		return json({ status: 'error', message: errMsg(err) }, { status: 500 });
 	}
 };
 

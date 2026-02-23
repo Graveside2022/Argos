@@ -9,6 +9,135 @@ import { logger } from '$lib/utils/logger';
 const TILE_SIZE_DEG = 0.014; // ~1.5 km at mid-latitudes
 const OPENCELLID_API_KEY = process.env.OPENCELLID_API_KEY;
 
+interface TowerRow {
+	radio: string;
+	mcc: number;
+	net: number;
+	area: number;
+	cell: number;
+	lat: number;
+	lon: number;
+	range: number;
+	samples: number;
+	created: number;
+	updated: number;
+	averageSignal: number;
+}
+
+/** Coerce a falsy number to 0 */
+function n(val: number): number {
+	return val || 0;
+}
+
+/** Convert a SQLite TowerRow to a CellTower */
+function rowToTower(r: TowerRow): CellTower {
+	return {
+		radio: r.radio || 'Unknown',
+		mcc: r.mcc,
+		mnc: r.net,
+		lac: r.area,
+		ci: r.cell,
+		lat: r.lat,
+		lon: r.lon,
+		range: n(r.range),
+		samples: n(r.samples),
+		updated: n(r.updated),
+		avgSignal: n(r.averageSignal)
+	};
+}
+
+interface Tile {
+	s: number;
+	w: number;
+	n: number;
+	e: number;
+}
+
+/** Build tile bounding boxes from outer bbox, capped at maxTiles */
+function buildTiles(
+	south: number,
+	north: number,
+	west: number,
+	east: number,
+	maxTiles: number
+): Tile[] {
+	const tiles: Tile[] = [];
+	for (let tLat = south; tLat < north; tLat += TILE_SIZE_DEG) {
+		for (let tLon = west; tLon < east; tLon += TILE_SIZE_DEG) {
+			tiles.push({
+				s: tLat,
+				w: tLon,
+				n: Math.min(tLat + TILE_SIZE_DEG, north),
+				e: Math.min(tLon + TILE_SIZE_DEG, east)
+			});
+		}
+	}
+	return tiles.slice(0, maxTiles);
+}
+
+/** Fetch a single OpenCellID tile, returning cell objects or empty array */
+async function fetchTile(tile: Tile): Promise<Record<string, unknown>[]> {
+	const apiUrl = `https://opencellid.org/cell/getInArea?key=${OPENCELLID_API_KEY}&BBOX=${tile.s},${tile.w},${tile.n},${tile.e}&format=json&limit=200`;
+	const res = await fetch(apiUrl, { signal: AbortSignal.timeout(10000) });
+	if (!res.ok) return [];
+	const data = await res.json();
+	return Array.isArray(data.cells) ? data.cells : [];
+}
+
+/** Extract cell ID from a raw API cell object */
+function extractCellId(c: Record<string, unknown>): number {
+	return (c.cellid as number) || (c.cid as number) || (c.cell as number) || 0;
+}
+
+/** Convert a raw OpenCellID API cell to a CellTower */
+function apiCellToTower(c: Record<string, unknown>, ci: number): CellTower {
+	return {
+		radio: (c.radio as string) || 'Unknown',
+		mcc: c.mcc as number,
+		mnc: c.mnc as number,
+		lac: c.lac as number,
+		ci,
+		lat: c.lat as number,
+		lon: c.lon as number,
+		range: n(c.range as number),
+		samples: n(c.samples as number),
+		updated: n(c.updated as number),
+		avgSignal: n(c.averageSignalStrength as number)
+	};
+}
+
+/** Extract fulfilled cell arrays, flattening into a single list */
+function flattenFulfilledCells(
+	tileResults: PromiseSettledResult<Record<string, unknown>[]>[]
+): Record<string, unknown>[] {
+	return tileResults
+		.filter(
+			(r): r is PromiseFulfilledResult<Record<string, unknown>[]> => r.status === 'fulfilled'
+		)
+		.flatMap((r) => r.value);
+}
+
+/** Deduplicate cell records by MCC+MNC+LAC+CI */
+function deduplicateCells(cells: Record<string, unknown>[]): CellTower[] {
+	const seen = new Set<string>();
+	const towers: CellTower[] = [];
+	for (const c of cells) {
+		const ci = extractCellId(c);
+		const key = `${c.mcc}-${c.mnc}-${c.lac}-${ci}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		towers.push(apiCellToTower(c, ci));
+	}
+	return towers;
+}
+
+/** Merge and deduplicate tile results by MCC+MNC+LAC+CI */
+function mergeTileResults(
+	tileResults: PromiseSettledResult<Record<string, unknown>[]>[]
+): CellTower[] {
+	return deduplicateCells(flattenFulfilledCells(tileResults));
+}
+
 export interface CellTower {
 	radio: string;
 	mcc: number;
@@ -69,38 +198,10 @@ async function queryLocalDatabase(
 
 			db.close();
 
-			interface TowerRow {
-				radio: string;
-				mcc: number;
-				net: number;
-				area: number;
-				cell: number;
-				lat: number;
-				lon: number;
-				range: number;
-				samples: number;
-				created: number;
-				updated: number;
-				averageSignal: number;
-			}
-
 			return {
 				success: true,
 				source: 'database',
-				// Safe: SQLite query returns rows matching TowerRow schema
-				towers: (rows as TowerRow[]).map((r) => ({
-					radio: r.radio || 'Unknown',
-					mcc: r.mcc,
-					mnc: r.net,
-					lac: r.area,
-					ci: r.cell,
-					lat: r.lat,
-					lon: r.lon,
-					range: r.range || 0,
-					samples: r.samples || 0,
-					updated: r.updated || 0,
-					avgSignal: r.averageSignal || 0
-				})),
+				towers: (rows as TowerRow[]).map(rowToTower),
 				count: rows.length
 			};
 		} catch (dbErr) {
@@ -129,80 +230,15 @@ async function queryOpenCellID(
 	}
 
 	try {
-		const south = lat - latDelta;
-		const north = lat + latDelta;
-		const west = lon - lonDelta;
-		const east = lon + lonDelta;
+		const tiles = buildTiles(lat - latDelta, lat + latDelta, lon - lonDelta, lon + lonDelta, 9);
+		const tileResults = await Promise.allSettled(tiles.map(fetchTile));
+		const allTowers = mergeTileResults(tileResults);
 
-		// Build tile bounding boxes
-		const tiles: { s: number; w: number; n: number; e: number }[] = [];
-		for (let tLat = south; tLat < north; tLat += TILE_SIZE_DEG) {
-			for (let tLon = west; tLon < east; tLon += TILE_SIZE_DEG) {
-				tiles.push({
-					s: tLat,
-					w: tLon,
-					n: Math.min(tLat + TILE_SIZE_DEG, north),
-					e: Math.min(tLon + TILE_SIZE_DEG, east)
-				});
-			}
-		}
+		if (allTowers.length === 0) return null;
 
-		// Cap tile count to stay within API rate limits (5000/day).
-		// 9 tiles covers ~2km radius adequately.
-		const maxTiles = 9;
-		const tileBatch = tiles.slice(0, maxTiles);
-
-		// Fetch all tiles in parallel
-		const tileResults = await Promise.allSettled(
-			tileBatch.map(async (t) => {
-				const apiUrl = `https://opencellid.org/cell/getInArea?key=${OPENCELLID_API_KEY}&BBOX=${t.s},${t.w},${t.n},${t.e}&format=json&limit=200`;
-				const res = await fetch(apiUrl, { signal: AbortSignal.timeout(10000) });
-				if (!res.ok) return [];
-				const data = await res.json();
-				if (data.cells && Array.isArray(data.cells)) return data.cells;
-				return [];
-			})
-		);
-
-		// Merge and deduplicate by MCC+MNC+LAC+CI
-		const seen = new Set<string>();
-		const allTowers: CellTower[] = [];
-
-		for (const result of tileResults) {
-			if (result.status !== 'fulfilled') continue;
-			for (const c of result.value) {
-				const ci = c.cellid || c.cid || c.cell || 0;
-				const key = `${c.mcc}-${c.mnc}-${c.lac}-${ci}`;
-				if (seen.has(key)) continue;
-				seen.add(key);
-				allTowers.push({
-					radio: c.radio || 'Unknown',
-					mcc: c.mcc,
-					mnc: c.mnc,
-					lac: c.lac,
-					ci,
-					lat: c.lat,
-					lon: c.lon,
-					range: c.range || 0,
-					samples: c.samples || 0,
-					updated: c.updated || 0,
-					avgSignal: c.averageSignalStrength || 0
-				});
-			}
-		}
-
-		if (allTowers.length > 0) {
-			// Sort by samples descending, cap at 500
-			allTowers.sort((a, b) => b.samples - a.samples);
-			const capped = allTowers.slice(0, 500);
-
-			return {
-				success: true,
-				source: 'opencellid-api',
-				towers: capped,
-				count: capped.length
-			};
-		}
+		allTowers.sort((a, b) => b.samples - a.samples);
+		const capped = allTowers.slice(0, 500);
+		return { success: true, source: 'opencellid-api', towers: capped, count: capped.length };
 	} catch (err) {
 		logger.error('[cell-tower] OpenCellID tiled fetch error', {
 			error: err instanceof Error ? err.message : String(err)

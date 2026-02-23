@@ -32,44 +32,59 @@
 	function handleSort(col: SortColumn) {
 		if (sortColumn === col) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+			return;
+		}
+		sortColumn = col;
+		sortDirection = col === 'mac' ? 'asc' : 'desc';
+	}
+
+	/** Handle click on an AP (has clients) row. */
+	function handleApClick(device: KismetDevice) {
+		if ($isolatedDeviceMAC === device.mac) {
+			isolateDevice(null);
+			selectedMAC = null;
+			expandedMAC = null;
 		} else {
-			sortColumn = col;
-			sortDirection = col === 'mac' ? 'asc' : 'desc';
+			isolateDevice(device.mac);
+			selectedMAC = device.mac;
+			expandedMAC = device.mac;
 		}
 	}
 
-	function handleRowClick(device: KismetDevice) {
-		if (device.clients?.length) {
-			if ($isolatedDeviceMAC === device.mac) {
-				isolateDevice(null);
-				selectedMAC = null;
-				expandedMAC = null;
-			} else {
-				isolateDevice(device.mac);
-				selectedMAC = device.mac;
-				expandedMAC = device.mac;
-			}
-		} else if (device.parentAP) {
-			if ($isolatedDeviceMAC === device.parentAP) {
-				isolateDevice(null);
-				selectedMAC = null;
-				expandedMAC = null;
-			} else {
-				isolateDevice(device.parentAP);
-				selectedMAC = device.mac;
-			}
+	/** Handle click on a client (has parentAP) row. */
+	function handleClientClick(device: KismetDevice) {
+		if ($isolatedDeviceMAC === device.parentAP) {
+			isolateDevice(null);
+			selectedMAC = null;
+			expandedMAC = null;
 		} else {
-			if (selectedMAC === device.mac) {
-				selectedMAC = null;
-				expandedMAC = null;
-			} else {
-				selectedMAC = device.mac;
-				expandedMAC = expandedMAC === device.mac ? null : device.mac;
-			}
+			isolateDevice(device.parentAP!);
+			selectedMAC = device.mac;
 		}
-		const lat = device.location?.lat;
-		const lon = device.location?.lon;
-		if (lat && lon && dashboardMap) dashboardMap.flyTo(lat, lon, 17);
+	}
+
+	/** Handle click on a standalone device row. */
+	function handleStandaloneClick(device: KismetDevice) {
+		if (selectedMAC === device.mac) {
+			selectedMAC = null;
+			expandedMAC = null;
+		} else {
+			selectedMAC = device.mac;
+			expandedMAC = expandedMAC === device.mac ? null : device.mac;
+		}
+	}
+
+	/** Fly the map to a device's location if available. */
+	function flyToDevice(device: KismetDevice) {
+		const loc = device.location;
+		if (loc?.lat && loc.lon && dashboardMap) dashboardMap.flyTo(loc.lat, loc.lon, 17);
+	}
+
+	function handleRowClick(device: KismetDevice) {
+		if (device.clients?.length) handleApClick(device);
+		else if (device.parentAP) handleClientClick(device);
+		else handleStandaloneClick(device);
+		flyToDevice(device);
 	}
 
 	function clearIsolation() {

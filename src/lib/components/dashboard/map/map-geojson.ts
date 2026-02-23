@@ -17,11 +17,17 @@ import type { KismetState } from '$lib/stores/tactical-map/kismet-store';
 import { getSignalBandKey, getSignalHex } from '$lib/utils/signal-utils';
 
 import {
-	bezierArc,
-	createCirclePolygon,
-	createRingPolygon,
-	spreadClientPosition
-} from './map-helpers';
+	buildConnectionFeature,
+	buildDeviceProperties,
+	getCoords,
+	getDeviceRSSI,
+	isOrigin,
+	isVisibleCandidate,
+	resolveClientCoords,
+	resolveSpreadCoords,
+	toCandidate
+} from './map-geojson-helpers';
+import { createCirclePolygon, createRingPolygon } from './map-helpers';
 
 export interface RangeBand {
 	outerR: number;
@@ -32,15 +38,15 @@ export interface RangeBand {
 	label: string;
 }
 
+const EMPTY_COLLECTION: FeatureCollection = { type: 'FeatureCollection', features: [] };
+
 /** Build the GPS accuracy circle as a GeoJSON polygon. */
 export function buildAccuracyGeoJSON(
 	lat: number,
 	lon: number,
 	accuracy: number
 ): FeatureCollection {
-	if ((lat === 0 && lon === 0) || accuracy <= 0) {
-		return { type: 'FeatureCollection', features: [] };
-	}
+	if (isOrigin(lat, lon) || accuracy <= 0) return EMPTY_COLLECTION;
 	return {
 		type: 'FeatureCollection',
 		features: [createCirclePolygon(lon, lat, accuracy)]
@@ -53,7 +59,7 @@ export function buildDetectionRangeGeoJSON(
 	lon: number,
 	rangeBands: RangeBand[]
 ): FeatureCollection {
-	if (lat === 0 && lon === 0) return { type: 'FeatureCollection', features: [] };
+	if (isOrigin(lat, lon)) return EMPTY_COLLECTION;
 	const features: Feature[] = [];
 	for (const b of rangeBands) {
 		features.push({
@@ -64,6 +70,47 @@ export function buildDetectionRangeGeoJSON(
 	return { type: 'FeatureCollection', features };
 }
 
+function buildIsolatedMACSet(state: KismetState, isolatedMAC: string): Set<string> {
+	const macs = new Set([isolatedMAC]);
+	const ap = state.devices.get(isolatedMAC);
+	if (ap?.clients?.length) {
+		for (const c of ap.clients) macs.add(c);
+	}
+	return macs;
+}
+
+function collectVisibilityCandidates(
+	state: KismetState,
+	visibleMACs: Set<string> | null
+): (DeviceForVisibility & { mac: string })[] {
+	const candidates: (DeviceForVisibility & { mac: string })[] = [];
+	state.devices.forEach((device: KismetDevice, mac: string) => {
+		if (isVisibleCandidate(mac, device, visibleMACs)) {
+			candidates.push(toCandidate(mac, device));
+		}
+	});
+	return candidates;
+}
+
+function buildDeviceFeature(
+	device: KismetDevice,
+	mac: string,
+	activeBands: Set<string>,
+	state: KismetState
+): Feature | null {
+	const coords = getCoords(device);
+	if (!coords) return null;
+	const rssi = getDeviceRSSI(device);
+	const band = getSignalBandKey(rssi);
+	if (!activeBands.has(band)) return null;
+	const [lon, lat] = resolveSpreadCoords(device, coords.lon, coords.lat, mac, rssi, state);
+	return {
+		type: 'Feature',
+		geometry: { type: 'Point', coordinates: [lon, lat] },
+		properties: buildDeviceProperties(device, mac, rssi, band)
+	};
+}
+
 /** Build point features for all visible devices with signal-band filtering. */
 export function buildDeviceGeoJSON(
 	state: KismetState,
@@ -72,79 +119,68 @@ export function buildDeviceGeoJSON(
 	visibilityMode: VisibilityMode,
 	promotedDevices: Set<string>
 ): FeatureCollection {
-	const features: Feature[] = [];
-
-	let visibleMACs: Set<string> | null = null;
-	if (isolatedMAC) {
-		const ap = state.devices.get(isolatedMAC);
-		visibleMACs = new Set([isolatedMAC]);
-		if (ap?.clients?.length) for (const c of ap.clients) visibleMACs.add(c);
-	}
-
-	// Single-pass: collect visibility candidates while retaining device references
-	const candidates: (DeviceForVisibility & { mac: string })[] = [];
-	state.devices.forEach((device: KismetDevice, mac: string) => {
-		if (visibleMACs && !visibleMACs.has(mac)) return;
-		const lat = device.location?.lat;
-		const lon = device.location?.lon;
-		if (!lat || !lon || (lat === 0 && lon === 0)) return;
-		candidates.push({
-			mac,
-			rssi: device.signal?.last_signal ?? 0,
-			lastSeen: device.last_seen || 0
-		});
-	});
-
+	const visibleMACs = isolatedMAC ? buildIsolatedMACSet(state, isolatedMAC) : null;
+	const candidates = collectVisibilityCandidates(state, visibleMACs);
 	const visible = filterByVisibility(candidates, visibilityMode, promotedDevices);
+	return buildVisibleFeatures(visible, activeBands, state);
+}
 
-	// Build features from visible set — iterate devices Map only once total
+function buildVisibleFeatures(
+	visible: (DeviceForVisibility & { mac: string })[],
+	activeBands: Set<string>,
+	state: KismetState
+): FeatureCollection {
+	const features: Feature[] = [];
 	for (const { mac } of visible) {
 		const device = state.devices.get(mac);
 		if (!device) continue;
-		let lat = device.location?.lat;
-		let lon = device.location?.lon;
-		if (!lat || !lon || (lat === 0 && lon === 0)) continue;
-		const rssi = device.signal?.last_signal ?? 0;
-		const band = getSignalBandKey(rssi);
-		if (!activeBands.has(band)) continue;
-
-		if (device.parentAP) {
-			const ap = state.devices.get(device.parentAP);
-			if (ap?.location?.lat && ap?.location?.lon) {
-				const [sLon, sLat] = spreadClientPosition(
-					lon,
-					lat,
-					ap.location.lon,
-					ap.location.lat,
-					mac,
-					rssi
-				);
-				lon = sLon;
-				lat = sLat;
-			}
-		}
-
-		features.push({
-			type: 'Feature',
-			geometry: { type: 'Point', coordinates: [lon, lat] },
-			properties: {
-				mac,
-				ssid: device.ssid || 'Unknown',
-				rssi,
-				band,
-				type: device.type || 'unknown',
-				color: getSignalHex(rssi),
-				manufacturer: device.manufacturer || device.manuf || 'Unknown',
-				channel: device.channel || 0,
-				frequency: device.frequency || 0,
-				packets: device.packets || 0,
-				last_seen: device.last_seen || 0,
-				clientCount: device.clients?.length ?? 0,
-				parentAP: device.parentAP ?? ''
-			}
-		});
+		const feature = buildDeviceFeature(device, mac, activeBands, state);
+		if (feature) features.push(feature);
 	}
 	return { type: 'FeatureCollection', features };
+}
+
+function buildClientArc(
+	apMac: string,
+	clientMac: string,
+	apCoords: { lat: number; lon: number },
+	apColor: string,
+	state: KismetState
+): Feature | null {
+	const client = state.devices.get(clientMac);
+	if (!client) return null;
+	const cCoords = resolveClientCoords(client, clientMac, apCoords.lon, apCoords.lat);
+	if (!cCoords) return null;
+	return buildConnectionFeature(apMac, clientMac, apCoords.lon, apCoords.lat, apColor, cCoords);
+}
+
+function buildClientArcs(
+	apMac: string,
+	clients: string[],
+	apCoords: { lat: number; lon: number },
+	apColor: string,
+	visibleDeviceMACs: Set<string>,
+	state: KismetState
+): Feature[] {
+	const features: Feature[] = [];
+	for (const clientMac of clients) {
+		if (!visibleDeviceMACs.has(clientMac)) continue;
+		const feature = buildClientArc(apMac, clientMac, apCoords, apColor, state);
+		if (feature) features.push(feature);
+	}
+	return features;
+}
+
+function collectAPConnections(
+	device: KismetDevice,
+	visibleDeviceMACs: Set<string>,
+	state: KismetState
+): Feature[] {
+	const coords = getCoords(device);
+	if (!coords) return [];
+	if (!device.clients?.length) return [];
+	const apColor = getSignalHex(getDeviceRSSI(device));
+	return buildClientArcs(device.mac, device.clients, coords, apColor, visibleDeviceMACs, state);
 }
 
 /** Build bezier arcs connecting APs to their clients. */
@@ -154,37 +190,12 @@ export function buildConnectionLinesGeoJSON(
 	layerOn: boolean,
 	visibleDeviceMACs: Set<string>
 ): FeatureCollection {
-	if (!isolatedMAC && !layerOn) return { type: 'FeatureCollection', features: [] };
+	if (!isolatedMAC && !layerOn) return EMPTY_COLLECTION;
 
 	const features: Feature[] = [];
 	state.devices.forEach((device: KismetDevice) => {
-		if (!device.clients?.length) return;
 		if (isolatedMAC && device.mac !== isolatedMAC) return;
-		const apLat = device.location?.lat;
-		const apLon = device.location?.lon;
-		if (!apLat || !apLon) return;
-		const apColor = getSignalHex(device.signal?.last_signal ?? 0);
-		for (const clientMac of device.clients) {
-			if (!visibleDeviceMACs.has(clientMac)) continue;
-			const client = state.devices.get(clientMac);
-			if (!client?.location?.lat || !client?.location?.lon) continue;
-			const [cLon, cLat] = spreadClientPosition(
-				client.location.lon,
-				client.location.lat,
-				apLon,
-				apLat,
-				clientMac,
-				client.signal?.last_signal ?? -70
-			);
-			features.push({
-				type: 'Feature',
-				geometry: {
-					type: 'LineString',
-					coordinates: bezierArc([apLon, apLat], [cLon, cLat])
-				},
-				properties: { apMac: device.mac, clientMac, color: apColor }
-			});
-		}
+		features.push(...collectAPConnections(device, visibleDeviceMACs, state));
 	});
 	return { type: 'FeatureCollection', features };
 }

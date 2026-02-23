@@ -38,59 +38,81 @@ export interface CycleRuntimeContext {
 	stopSweep: () => Promise<void>;
 }
 
+/** Wait up to 10s for the service to finish initializing */
+async function waitForInit(ctx: CycleInitContext): Promise<boolean> {
+	if (ctx.state.isInitialized) return true;
+	logWarn('Service not yet initialized, waiting...');
+	let waitTime = 0;
+	while (!ctx.state.isInitialized && waitTime < 10000) {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		waitTime += 500;
+	}
+	if (!ctx.state.isInitialized) {
+		logError('Service failed to initialize within 10 seconds');
+		return false;
+	}
+	return true;
+}
+
+/** If marked as running, check whether the process is truly alive or stale */
+function checkStaleState(ctx: CycleInitContext): boolean {
+	if (!ctx.state.isRunning) return true;
+	const processState = ctx.processManager.getProcessState();
+	const alive =
+		processState.isRunning &&
+		processState.actualProcessPid &&
+		ctx.processManager.isProcessAlive(processState.actualProcessPid);
+	if (alive) {
+		ctx.emitError('Sweep is already running', 'state_check');
+		return false;
+	}
+	logWarn('Detected stale running state, resetting...');
+	ctx.state.isRunning = false;
+	ctx.state.status = { state: SystemStatus.Idle };
+	ctx.emitEvent('status', ctx.state.status);
+	return true;
+}
+
+/** Acquire HackRF hardware resource */
+async function acquireHardware(ctx: CycleInitContext): Promise<boolean> {
+	const result = await resourceManager.acquire('hackrf-sweep', HardwareDevice.HACKRF);
+	if (!result.success) {
+		ctx.emitError(`HackRF is in use by ${result.owner}. Stop it first.`, 'resource_conflict');
+		return false;
+	}
+	return true;
+}
+
+/** Validate that a non-empty frequency list was provided */
+function hasFrequencies(
+	ctx: CycleInitContext,
+	frequencies: Array<{ value: number; unit: string }> | undefined
+): boolean {
+	if (frequencies && frequencies.length > 0) return true;
+	ctx.emitError('No frequencies provided', 'input_validation');
+	return false;
+}
+
+/** Run all pre-flight checks: init, cleanup, stale state, frequencies, hardware */
+async function preflightChecks(
+	ctx: CycleInitContext,
+	frequencies: Array<{ value: number; unit: string }>
+): Promise<boolean> {
+	if (!(await waitForInit(ctx))) return false;
+	await ctx.processManager.cleanup();
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+	if (!checkStaleState(ctx)) return false;
+	if (!hasFrequencies(ctx, frequencies)) return false;
+	return acquireHardware(ctx);
+}
+
 /** Wait for initialization, validate state, acquire hardware, then start. */
 export async function startCycle(
 	ctx: CycleInitContext,
 	frequencies: Array<{ value: number; unit: string }>,
 	cycleTime: number
 ): Promise<boolean> {
-	if (!ctx.state.isInitialized) {
-		logWarn('Service not yet initialized, waiting...');
-		let waitTime = 0;
-		while (!ctx.state.isInitialized && waitTime < 10000) {
-			await new Promise((resolve) => setTimeout(resolve, 500));
-			waitTime += 500;
-		}
-		if (!ctx.state.isInitialized) {
-			logError('Service failed to initialize within 10 seconds');
-			return false;
-		}
-	}
-
-	await ctx.processManager.cleanup();
-	await new Promise((resolve) => setTimeout(resolve, 1000));
-
-	if (ctx.state.isRunning) {
-		const processState = ctx.processManager.getProcessState();
-		if (
-			processState.isRunning &&
-			processState.actualProcessPid &&
-			ctx.processManager.isProcessAlive(processState.actualProcessPid)
-		) {
-			ctx.emitError('Sweep is already running', 'state_check');
-			return false;
-		} else {
-			logWarn('Detected stale running state, resetting...');
-			ctx.state.isRunning = false;
-			ctx.state.status = { state: SystemStatus.Idle };
-			ctx.emitEvent('status', ctx.state.status);
-		}
-	}
-
-	if (!frequencies || frequencies.length === 0) {
-		ctx.emitError('No frequencies provided', 'input_validation');
-		return false;
-	}
-
-	const acquireResult = await resourceManager.acquire('hackrf-sweep', HardwareDevice.HACKRF);
-	if (!acquireResult.success) {
-		ctx.emitError(
-			`HackRF is in use by ${acquireResult.owner}. Stop it first.`,
-			'resource_conflict'
-		);
-		return false;
-	}
-
+	if (!(await preflightChecks(ctx, frequencies))) return false;
 	try {
 		return await initializeCycleAndRun(ctx, frequencies, cycleTime);
 	} catch (error: unknown) {
@@ -157,6 +179,33 @@ async function initializeCycleAndRun(
 	}
 }
 
+/** Whether cycling should start a timer for the next frequency */
+function shouldStartCycleTimer(cycleState: {
+	isCycling: boolean;
+	frequencyCount: number;
+}): boolean {
+	return cycleState.isCycling && cycleState.frequencyCount > 1;
+}
+
+/** Handle a sweep start error: record, log, and delegate to error handler */
+async function handleRunError(
+	ctx: CycleRuntimeContext,
+	error: unknown,
+	currentFrequency: { value: number; unit: string }
+): Promise<void> {
+	const errorAnalysis = ctx.errorTracker.recordError(error as Error, {
+		frequency: currentFrequency.value,
+		operation: 'start_sweep'
+	});
+	logError('[ERROR] Error starting sweep process:', {
+		error: (error as Error).message,
+		analysis: errorAnalysis
+	});
+	await handleSweepError(ctx.getCoordinatorContext(), error as Error, currentFrequency, () =>
+		ctx.stopSweep()
+	);
+}
+
 /** Run the sweep process for the current frequency, set up cycle timer if multi-freq. */
 export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> {
 	if (!ctx.state.isRunning) return;
@@ -165,7 +214,7 @@ export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> 
 	try {
 		await ctx.startSweepProcess(cycleState.currentFrequency);
 		ctx.errorTracker.recordSuccess();
-		if (cycleState.isCycling && cycleState.frequencyCount > 1) {
+		if (shouldStartCycleTimer(cycleState)) {
 			ctx.frequencyCycler.startCycleTimer(() => {
 				cycleToNextFrequency(ctx).catch((error) => {
 					logError('Error cycling to next frequency', {
@@ -175,20 +224,7 @@ export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> 
 			});
 		}
 	} catch (error: unknown) {
-		const errorAnalysis = ctx.errorTracker.recordError(error as Error, {
-			frequency: cycleState.currentFrequency?.value,
-			operation: 'start_sweep'
-		});
-		logError('[ERROR] Error starting sweep process:', {
-			error: (error as Error).message,
-			analysis: errorAnalysis
-		});
-		await handleSweepError(
-			ctx.getCoordinatorContext(),
-			error as Error,
-			cycleState.currentFrequency,
-			() => ctx.stopSweep()
-		);
+		await handleRunError(ctx, error, cycleState.currentFrequency);
 	}
 }
 

@@ -16,6 +16,24 @@
 	let packageFile: FileList | undefined = $state();
 	let packageStatus = $state('');
 
+	/** Handle the package import API response. */
+	function handlePackageResponse(data: Record<string, unknown>): void {
+		if (!data.success) {
+			packageStatus = (data.error as string) ?? 'Import failed';
+			return;
+		}
+		const cfg = data.config as Record<string, unknown>;
+		onImported({
+			hostname: cfg.hostname as string | undefined,
+			port: cfg.port as number | undefined,
+			description: cfg.description as string | undefined,
+			truststorePath: cfg.truststorePath as string | undefined,
+			id: data.id as string | undefined,
+			warning: data.warning as string | undefined
+		});
+		packageStatus = (data.warning as string) ?? 'Package imported';
+	}
+
 	async function importDataPackage() {
 		if (!packageFile || packageFile.length === 0) {
 			packageStatus = 'Select a .zip file';
@@ -28,20 +46,7 @@
 		packageStatus = 'Importing...';
 		try {
 			const res = await fetch('/api/tak/import-package', { method: 'POST', body: formData });
-			const data = await res.json();
-			if (data.success) {
-				onImported({
-					hostname: data.config.hostname,
-					port: data.config.port,
-					description: data.config.description,
-					truststorePath: data.config.truststorePath,
-					id: data.id,
-					warning: data.warning
-				});
-				packageStatus = data.warning ?? 'Package imported';
-			} else {
-				packageStatus = data.error ?? 'Import failed';
-			}
+			handlePackageResponse(await res.json());
 		} catch {
 			packageStatus = 'Import error';
 		}

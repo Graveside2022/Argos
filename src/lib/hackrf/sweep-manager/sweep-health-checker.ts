@@ -37,12 +37,13 @@ export interface HealthCheckContext {
 	stopSweep: () => Promise<void>;
 }
 
-/** Perform periodic health check on the running sweep process */
-export async function performHealthCheck(ctx: HealthCheckContext): Promise<void> {
-	const processState = ctx.processManager.getProcessState();
-	if (!ctx.isRunning || !processState.isRunning) return;
+interface ProcessStateSnapshot {
+	isRunning: boolean;
+	actualProcessPid: number | null;
+	processStartTime: number | null;
+}
 
-	const now = Date.now();
+function logHealthCheckState(ctx: HealthCheckContext, processState: ProcessStateSnapshot): void {
 	const cycleState = ctx.frequencyCycler.getCycleState();
 	const recoveryStatus = ctx.errorTracker.getRecoveryStatus();
 
@@ -59,7 +60,9 @@ export async function performHealthCheck(ctx: HealthCheckContext): Promise<void>
 		recoveryAttempts: recoveryStatus.recoveryAttempts,
 		isRecovering: recoveryStatus.isRecovering
 	});
+}
 
+async function logMemoryStatus(): Promise<void> {
 	try {
 		const memInfo = await checkSystemMemory();
 		logInfo(
@@ -71,39 +74,61 @@ export async function performHealthCheck(ctx: HealthCheckContext): Promise<void>
 	} catch (e) {
 		logError('Failed to check memory:', { error: (e as Error).message });
 	}
+}
 
-	if (ctx.cyclingHealth.recovery.isRecovering) {
-		logInfo('[WAIT] Already in recovery, skipping health check');
-		return;
-	}
-
-	let needsRecovery = false;
-	let reason = '';
-
-	if (ctx.cyclingHealth.lastDataReceived) {
-		const timeSinceData = now - ctx.cyclingHealth.lastDataReceived.getTime();
+function checkDataStaleness(
+	lastDataReceived: Date | null,
+	processStartTime: number | null,
+	now: number
+): { needsRecovery: boolean; reason: string } {
+	if (lastDataReceived) {
+		const timeSinceData = now - lastDataReceived.getTime();
 		logInfo(`[STATUS] Time since last data: ${Math.round(timeSinceData / 1000)}s`);
 		if (timeSinceData > 7200000) {
-			needsRecovery = true;
-			reason = 'No data received for 2 hours';
+			return { needsRecovery: true, reason: 'No data received for 2 hours' };
 		}
-	} else if (processState.processStartTime && now - processState.processStartTime > 60000) {
-		const runTime = Math.round((now - processState.processStartTime) / 1000);
+		return { needsRecovery: false, reason: '' };
+	}
+	if (processStartTime && now - processStartTime > 60000) {
+		const runTime = Math.round((now - processStartTime) / 1000);
 		logWarn(`[TIMER] Process running for ${runTime}s with no data`);
-		needsRecovery = true;
-		reason = 'No initial data received';
+		return { needsRecovery: true, reason: 'No initial data received' };
 	}
+	return { needsRecovery: false, reason: '' };
+}
 
-	if (processState.isRunning && processState.actualProcessPid) {
-		const isAlive = ctx.processManager.isProcessAlive(processState.actualProcessPid);
-		if (isAlive) {
-			logInfo(`[OK] Process ${processState.actualProcessPid} is still alive`);
-		} else {
-			needsRecovery = true;
-			reason = 'Process no longer exists';
-		}
+function checkProcessLiveness(
+	ctx: HealthCheckContext,
+	processState: ProcessStateSnapshot
+): string | null {
+	if (!processState.isRunning || !processState.actualProcessPid) return null;
+	const isAlive = ctx.processManager.isProcessAlive(processState.actualProcessPid);
+	if (isAlive) {
+		logInfo(`[OK] Process ${processState.actualProcessPid} is still alive`);
+		return null;
 	}
+	return 'Process no longer exists';
+}
 
+function determineRecoveryNeed(
+	ctx: HealthCheckContext,
+	processState: ProcessStateSnapshot
+): { needsRecovery: boolean; reason: string } {
+	const deadReason = checkProcessLiveness(ctx, processState);
+	if (deadReason) return { needsRecovery: true, reason: deadReason };
+
+	return checkDataStaleness(
+		ctx.cyclingHealth.lastDataReceived,
+		processState.processStartTime,
+		Date.now()
+	);
+}
+
+async function applyHealthResult(
+	ctx: HealthCheckContext,
+	needsRecovery: boolean,
+	reason: string
+): Promise<void> {
 	if (needsRecovery) {
 		logWarn(`[WARN] Health check failed: ${reason}`);
 		ctx.cyclingHealth.processHealth = 'unhealthy';
@@ -111,6 +136,27 @@ export async function performHealthCheck(ctx: HealthCheckContext): Promise<void>
 	} else if (ctx.cyclingHealth.lastDataReceived) {
 		ctx.cyclingHealth.processHealth = 'healthy';
 	}
+}
+
+function isHealthCheckSkippable(ctx: HealthCheckContext, processRunning: boolean): boolean {
+	return !ctx.isRunning || !processRunning || ctx.cyclingHealth.recovery.isRecovering;
+}
+
+/** Perform periodic health check on the running sweep process */
+export async function performHealthCheck(ctx: HealthCheckContext): Promise<void> {
+	const processState = ctx.processManager.getProcessState();
+	if (isHealthCheckSkippable(ctx, processState.isRunning)) {
+		if (ctx.cyclingHealth.recovery.isRecovering) {
+			logInfo('[WAIT] Already in recovery, skipping health check');
+		}
+		return;
+	}
+
+	logHealthCheckState(ctx, processState);
+	await logMemoryStatus();
+
+	const { needsRecovery, reason } = determineRecoveryNeed(ctx, processState);
+	await applyHealthResult(ctx, needsRecovery, reason);
 }
 
 /** Attempt recovery of a failed sweep process */
@@ -158,6 +204,19 @@ export async function performRecovery(ctx: HealthCheckContext, reason: string): 
 	}
 }
 
+function parseFreeOutput(stdout: string): {
+	availablePercent: number;
+	totalMB: number;
+	availableMB: number;
+} {
+	const lines = stdout.trim().split('\n');
+	const parts = lines[1].split(/\s+/);
+	const totalMB = parseInt(parts[1]);
+	const availableMB = parseInt(parts[6] || parts[3]);
+	const availablePercent = Math.round((availableMB / totalMB) * 100);
+	return { availablePercent, totalMB, availableMB };
+}
+
 /** Check system memory usage via /usr/bin/free */
 export function checkSystemMemory(): Promise<{
 	availablePercent: number;
@@ -167,12 +226,35 @@ export function checkSystemMemory(): Promise<{
 	return new Promise((resolve, reject) => {
 		execFile('/usr/bin/free', ['-m'], (error, stdout) => {
 			if (error) return reject(error);
-			const lines = stdout.trim().split('\n');
-			const parts = lines[1].split(/\s+/);
-			const totalMB = parseInt(parts[1]);
-			const availableMB = parseInt(parts[6] || parts[3]);
-			const availablePercent = Math.round((availableMB / totalMB) * 100);
-			resolve({ availablePercent, totalMB, availableMB });
+			resolve(parseFreeOutput(stdout));
+		});
+	});
+}
+
+function pkillAsync(args: string[]): Promise<void> {
+	return new Promise<void>((resolve) => {
+		execFile('/usr/bin/pkill', args, () => resolve());
+	});
+}
+
+function killPidsExcluding(stdout: string, excludePgid: number): void {
+	for (const pid of stdout.trim().split('\n')) {
+		const pidNum = parseInt(pid, 10);
+		if (pidNum === excludePgid) continue;
+		try {
+			process.kill(pidNum, 'SIGKILL');
+		} catch {
+			/* already dead */
+		}
+	}
+}
+
+function killOrphanSweepProcesses(excludePgid: number): Promise<void> {
+	return new Promise<void>((resolve) => {
+		execFile('/usr/bin/pgrep', ['-x', 'hackrf_sweep'], (err, stdout) => {
+			if (err || !stdout.trim()) return resolve();
+			killPidsExcluding(stdout, excludePgid);
+			resolve();
 		});
 	});
 }
@@ -185,36 +267,13 @@ export async function forceCleanupExistingProcesses(processManager: ProcessManag
 		const processState = processManager.getProcessState();
 
 		if (processState.isRunning && processState.sweepProcessPgid) {
-			await new Promise<void>((resolve) => {
-				execFile('/usr/bin/pgrep', ['-x', 'hackrf_sweep'], (err, stdout) => {
-					if (err || !stdout.trim()) return resolve();
-					const pids = stdout.trim().split('\n');
-					for (const pid of pids) {
-						const pidNum = parseInt(pid, 10);
-						if (pidNum !== processState.sweepProcessPgid) {
-							try {
-								process.kill(pidNum, 'SIGKILL');
-							} catch {
-								/* already dead */
-							}
-						}
-					}
-					resolve();
-				});
-			});
+			await killOrphanSweepProcesses(processState.sweepProcessPgid);
 		} else {
-			await new Promise<void>((resolve) => {
-				execFile('/usr/bin/pkill', ['-9', '-x', 'hackrf_sweep'], () => resolve());
-			});
+			await pkillAsync(['-9', '-x', 'hackrf_sweep']);
 		}
 
-		await new Promise<void>((resolve) => {
-			execFile('/usr/bin/pkill', ['-9', '-f', 'hackrf_info'], () => resolve());
-		});
-
-		await new Promise<void>((resolve) => {
-			execFile('/usr/bin/pkill', ['-9', '-f', 'sweep_bridge.py'], () => resolve());
-		});
+		await pkillAsync(['-9', '-f', 'hackrf_info']);
+		await pkillAsync(['-9', '-f', 'sweep_bridge.py']);
 
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 		logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');

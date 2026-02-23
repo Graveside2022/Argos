@@ -196,30 +196,34 @@ describe('Component Functionality Tests', () => {
 				{ id: '3', lat: 40.758, lng: -73.9855 }
 			];
 
+			type DeviceEntry = (typeof devices)[number];
+
+			const isNearby = (a: DeviceEntry, b: DeviceEntry, threshold: number): boolean => {
+				return Math.abs(a.lat - b.lat) < threshold && Math.abs(a.lng - b.lng) < threshold;
+			};
+
+			const findNeighbors = (
+				device: DeviceEntry,
+				candidates: DeviceEntry[],
+				used: Set<string>,
+				threshold: number
+			): string[] => {
+				return candidates
+					.filter((o) => !used.has(o.id) && isNearby(device, o, threshold))
+					.map((o) => {
+						used.add(o.id);
+						return o.id;
+					});
+			};
+
 			const groupNearbyDevices = (deviceList: typeof devices, threshold: number) => {
 				const groups: string[][] = [];
 				const used = new Set<string>();
 
 				for (const device of deviceList) {
 					if (used.has(device.id)) continue;
-
-					const group = [device.id];
 					used.add(device.id);
-
-					for (const other of deviceList) {
-						if (used.has(other.id)) continue;
-
-						// Simple distance check (simplified for test)
-						const latDiff = Math.abs(device.lat - other.lat);
-						const lngDiff = Math.abs(device.lng - other.lng);
-
-						if (latDiff < threshold && lngDiff < threshold) {
-							group.push(other.id);
-							used.add(other.id);
-						}
-					}
-
-					groups.push(group);
+					groups.push([device.id, ...findNeighbors(device, deviceList, used, threshold)]);
 				}
 
 				return groups;

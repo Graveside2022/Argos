@@ -62,81 +62,79 @@ interface ImsiRow {
 	date_time: string;
 }
 
+function findValidatedImsiDatabase(): { path: string; error?: string } {
+	const gsmDir = getGsmEvilDir();
+	const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
+	const dbPath = searchPaths.find((p) => existsSync(p)) || '';
+	if (!dbPath) return { path: '', error: 'IMSI database not found in any known location' };
+	const allowedPaths = getAllowedImsiDbPaths();
+	if (!allowedPaths.includes(dbPath)) return { path: '', error: 'Invalid database path' };
+	return { path: dbPath };
+}
+
+function queryAndValidateImsis(dbPath: string) {
+	const db = new Database(dbPath, { readonly: true });
+	try {
+		const total = (
+			db.prepare('SELECT COUNT(*) as count FROM imsi_data').get() as { count: number }
+		).count;
+		const rows = db
+			.prepare(
+				'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC'
+			)
+			.all() as ImsiRow[];
+
+		const imsis = rows.map((row) => ({
+			id: row.id,
+			imsi: row.imsi,
+			tmsi: row.tmsi || 'N/A',
+			mcc: row.mcc,
+			mnc: row.mnc,
+			lac: row.lac,
+			ci: row.ci,
+			timestamp: row.date_time,
+			lat: null,
+			lon: null
+		}));
+
+		const rawResult = { success: true, total, imsis, message: `Found ${total} IMSIs` };
+
+		// Validate with Zod schema
+		const parsed = GsmEvilImsiResultSchema.safeParse(rawResult);
+		if (!parsed.success) {
+			logger.error('[gsm-evil-imsi] Schema validation failed', {
+				error: parsed.error.message
+			});
+			return { success: false as const };
+		}
+
+		return { success: true as const, data: parsed.data };
+	} finally {
+		db.close();
+	}
+}
+
 export const GET: RequestHandler = async () => {
 	try {
-		// Find the IMSI database on the host filesystem
-		const gsmDir = getGsmEvilDir();
-		const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
-		const dbPath = searchPaths.find((p) => existsSync(p)) || '';
-
-		if (!dbPath) {
-			return json({
-				success: false,
-				imsis: [],
-				total: 0,
-				message: 'IMSI database not found in any known location'
-			});
+		const dbLookup = findValidatedImsiDatabase();
+		if (!dbLookup.path) {
+			return json({ success: false, imsis: [], total: 0, message: dbLookup.error });
 		}
 
-		// Validate dbPath against known allowlist to prevent path traversal
-		const allowedPaths = getAllowedImsiDbPaths();
-		if (!allowedPaths.includes(dbPath)) {
-			return json({ success: false, message: 'Invalid database path', imsis: [], total: 0 });
+		const result = queryAndValidateImsis(dbLookup.path);
+		if (!result.success) {
+			return json(
+				{
+					success: false,
+					imsis: [],
+					total: 0,
+					message: 'IMSI data failed schema validation'
+				},
+				{ status: 500 }
+			);
 		}
 
-		// Query the IMSI database directly with better-sqlite3
-		const db = new Database(dbPath, { readonly: true });
-		try {
-			const total = (
-				db.prepare('SELECT COUNT(*) as count FROM imsi_data').get() as { count: number }
-			).count;
-			const rows = db
-				.prepare(
-					'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC'
-				)
-				.all() as ImsiRow[];
-
-			const imsis = rows.map((row) => ({
-				id: row.id,
-				imsi: row.imsi,
-				tmsi: row.tmsi || 'N/A',
-				mcc: row.mcc,
-				mnc: row.mnc,
-				lac: row.lac,
-				ci: row.ci,
-				timestamp: row.date_time,
-				lat: null,
-				lon: null
-			}));
-
-			const rawResult = {
-				success: true,
-				total,
-				imsis,
-				message: `Found ${total} IMSIs`
-			};
-
-			// Validate with Zod schema
-			const parsed = GsmEvilImsiResultSchema.safeParse(rawResult);
-			if (!parsed.success) {
-				logger.error('[gsm-evil-imsi] Schema validation failed', {
-					error: parsed.error.message
-				});
-				return json(
-					{
-						success: false,
-						imsis: [],
-						total: 0,
-						message: 'IMSI data failed schema validation'
-					},
-					{ status: 500 }
-				);
-			}
-
-			return json(parsed.data);
-		} finally {
-			db.close();
-		}
+		return json(result.data);
 	} catch (error: unknown) {
 		logger.error('IMSI fetch error', { error: (error as Error).message });
 		return json({

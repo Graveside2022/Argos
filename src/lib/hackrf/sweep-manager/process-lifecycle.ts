@@ -139,6 +139,18 @@ export async function forceCleanupAllProcesses(
 	}
 }
 
+function forceKillSingleProcess(pid: number, childProcess: ChildProcess): void {
+	try {
+		if (childProcess && !childProcess.killed) {
+			childProcess.kill('SIGKILL');
+		}
+		process.kill(pid, 'SIGKILL');
+		logInfo(`Force killed PID: ${pid}`);
+	} catch (_error: unknown) {
+		logInfo('Process already dead or kill failed');
+	}
+}
+
 /**
  * Force kill all registered processes and cleanup
  */
@@ -146,19 +158,7 @@ export async function forceKillAllProcesses(
 	processRegistry: Map<number, ChildProcess>
 ): Promise<void> {
 	for (const [pid, childProcess] of processRegistry) {
-		try {
-			if (childProcess && !childProcess.killed) {
-				childProcess.kill('SIGKILL');
-			}
-			try {
-				process.kill(pid, 'SIGKILL');
-				logInfo(`Force killed PID: ${pid}`);
-			} catch (_error: unknown) {
-				logInfo('Process already dead or kill failed');
-			}
-		} catch (e) {
-			logError('Force kill failed', { error: e, pid }, 'force-kill');
-		}
+		forceKillSingleProcess(pid, childProcess);
 	}
 
 	processRegistry.clear();

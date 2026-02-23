@@ -117,27 +117,26 @@ async function getCPUTemperature(): Promise<number | undefined> {
 	}
 }
 
+/** Default network stats returned when no data is available */
+const EMPTY_NETWORK_STATS = { rx: 0, tx: 0, errors: 0 };
+
+/** Parse a /proc/net/dev line into rx/tx/errors stats */
+function parseNetDevLine(parts: string[]): { rx: number; tx: number; errors: number } {
+	return {
+		rx: parseInt(parts[1]) || 0,
+		tx: parseInt(parts[9]) || 0,
+		errors: (parseInt(parts[2]) || 0) + (parseInt(parts[10]) || 0)
+	};
+}
+
 async function getNetworkStats() {
 	try {
-		// Get network interface stats
 		const content = await fs.readFile('/proc/net/dev', 'utf-8');
-		const stdout = content.split('\n').find((line) => /wlan|eth/.test(line)) || '';
-		const parts = stdout.trim().split(/\s+/);
+		const ifaceLine = content.split('\n').find((line) => /wlan|eth/.test(line)) || '';
+		const parts = ifaceLine.trim().split(/\s+/);
 
-		if (parts.length >= 10) {
-			return {
-				rx: parseInt(parts[1]) || 0, // Received bytes
-				tx: parseInt(parts[9]) || 0, // Transmitted bytes
-				errors: (parseInt(parts[2]) || 0) + (parseInt(parts[10]) || 0)
-			};
-		}
+		return parts.length >= 10 ? parseNetDevLine(parts) : EMPTY_NETWORK_STATS;
 	} catch (_error: unknown) {
-		// Fallback
+		return EMPTY_NETWORK_STATS;
 	}
-
-	return {
-		rx: 0,
-		tx: 0,
-		errors: 0
-	};
 }

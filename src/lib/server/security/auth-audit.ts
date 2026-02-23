@@ -46,6 +46,15 @@ interface AuthAuditRecord {
 	reason?: string;
 }
 
+/** Event types that should be logged at WARN level (failure/denial events). */
+const WARN_EVENT_TYPES: ReadonlySet<AuthEventType> = new Set([
+	'AUTH_FAILURE',
+	'WS_AUTH_FAILURE',
+	'AUTH_MISSING',
+	'RATE_LIMIT_HIT',
+	'RATE_LIMIT_EXCEEDED'
+]);
+
 /**
  * Log an authentication audit event.
  * Structured JSON format for machine parsing per NIST AU-3.
@@ -69,20 +78,7 @@ export function logAuthEvent(event: {
 	};
 
 	// Use appropriate log level based on event type
-	switch (event.eventType) {
-		case 'AUTH_SUCCESS':
-		case 'WS_AUTH_SUCCESS':
-		case 'SESSION_CREATED':
-			logger.info('[AUTH_AUDIT]', record);
-			break;
-		case 'AUTH_FAILURE':
-		case 'WS_AUTH_FAILURE':
-		case 'AUTH_MISSING':
-		case 'RATE_LIMIT_HIT':
-		case 'RATE_LIMIT_EXCEEDED':
-			logger.warn('[AUTH_AUDIT]', record);
-			break;
-		default:
-			logger.info('[AUTH_AUDIT]', record);
-	}
+	const isWarning = WARN_EVENT_TYPES.has(event.eventType);
+	if (isWarning) logger.warn('[AUTH_AUDIT]', record);
+	else logger.info('[AUTH_AUDIT]', record);
 }

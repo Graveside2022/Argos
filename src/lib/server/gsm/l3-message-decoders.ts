@@ -57,38 +57,50 @@ function decodeRRSysInfo3(bytes: number[]): L3DecodedMessage {
 	};
 }
 
+/** Extract Mobile Identity from bytes at a given offset. Returns label + value, or null. */
+function parseMobileIdentity(
+	bytes: number[],
+	offset: number,
+	extractIMSI: (bytes: number[]) => string,
+	extractTMSI: (bytes: number[]) => string
+): { field: 'imsi' | 'tmsi'; value: string } | null {
+	const len = bytes[offset + 1];
+	const idType = bytes[offset + 2] & 0x07;
+	const slice = bytes.slice(offset + 2, offset + 2 + len);
+	if (idType === 0x01 && len >= 8) return { field: 'imsi', value: extractIMSI(slice) };
+	if (idType === 0x04 && len >= 4) return { field: 'tmsi', value: extractTMSI(slice) };
+	return null;
+}
+
+/** Scan byte array for Mobile Identity IEs starting with tag 0x17. */
+function findMobileIdentities(
+	bytes: number[],
+	extractIMSI: (bytes: number[]) => string,
+	extractTMSI: (bytes: number[]) => string
+): Array<{ field: 'imsi' | 'tmsi'; value: string }> {
+	const results: Array<{ field: 'imsi' | 'tmsi'; value: string }> = [];
+	for (let i = 2; i < bytes.length - 1; i++) {
+		if (bytes[i] !== 0x17) continue;
+		const id = parseMobileIdentity(bytes, i, extractIMSI, extractTMSI);
+		if (id) results.push(id);
+	}
+	return results;
+}
+
 /** Decode Paging Request Type 1 — scans for Mobile Identity IE to extract IMSI/TMSI */
 export function decodeRRPagingRequest1(
 	bytes: number[],
 	extractIMSI: (bytes: number[]) => string,
 	extractTMSI: (bytes: number[]) => string
 ): L3DecodedMessage {
-	const details: string[] = ['Paging for mobile stations'];
-	let imsi: string | undefined;
-	let tmsi: string | undefined;
-
-	for (let i = 2; i < bytes.length - 1; i++) {
-		if (bytes[i] === 0x17) {
-			const len = bytes[i + 1];
-			const idType = bytes[i + 2] & 0x07;
-
-			if (idType === 0x01 && len >= 8) {
-				imsi = extractIMSI(bytes.slice(i + 2, i + 2 + len));
-				details.push(`→ IMSI: ${imsi}`);
-			} else if (idType === 0x04 && len >= 4) {
-				tmsi = extractTMSI(bytes.slice(i + 2, i + 2 + len));
-				details.push(`→ TMSI: ${tmsi}`);
-			}
-		}
-	}
-
-	return {
-		messageType: 'Paging Request Type 1',
-		protocol: 'RR',
-		details,
-		imsi,
-		tmsi
-	};
+	const identities = findMobileIdentities(bytes, extractIMSI, extractTMSI);
+	const details = [
+		'Paging for mobile stations',
+		...identities.map((id) => `→ ${id.field.toUpperCase()}: ${id.value}`)
+	];
+	const imsi = identities.find((id) => id.field === 'imsi')?.value;
+	const tmsi = identities.find((id) => id.field === 'tmsi')?.value;
+	return { messageType: 'Paging Request Type 1', protocol: 'RR', details, imsi, tmsi };
 }
 
 /** Decode MM Identity Request — resolves identity type code to human-readable name */

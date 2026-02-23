@@ -16,29 +16,41 @@ interface DeviceInfo {
 /**
  * Diagnose HackRF health from API status response.
  */
+/** Classify HackRF health state. */
+function classifyHackrfHealth(hackrf: Record<string, unknown>): {
+	health: string;
+	issue?: string;
+	rec?: string;
+} {
+	if (hackrf.status === 'unreachable')
+		return {
+			health: 'ERROR',
+			issue: 'HackRF API unreachable',
+			rec: 'Warning: Check: Is dev server running?'
+		};
+	if (hackrf.connected === false || hackrf.status === 'disconnected')
+		return {
+			health: 'DISCONNECTED',
+			issue: 'HackRF not connected',
+			rec: 'Check USB connection and run: hackrf_info'
+		};
+	if (hackrf.sweepActive) return { health: 'ACTIVE' };
+	return { health: 'HEALTHY' };
+}
+
 export function diagnoseHackrf(
 	hackrf: Record<string, unknown>,
 	detailed: boolean,
 	issues: string[],
 	recommendations: string[]
 ): DeviceInfo {
-	let hackrfHealth = 'HEALTHY';
-	if (hackrf.status === 'unreachable') {
-		hackrfHealth = 'ERROR';
-		issues.push('HackRF API unreachable');
-		recommendations.push('Warning: Check: Is dev server running?');
-	} else if (hackrf.connected === false || hackrf.status === 'disconnected') {
-		hackrfHealth = 'DISCONNECTED';
-		issues.push('HackRF not connected');
-		recommendations.push('Check USB connection and run: hackrf_info');
-	} else if (hackrf.sweepActive) {
-		hackrfHealth = 'ACTIVE';
-	}
-
+	const { health, issue, rec } = classifyHackrfHealth(hackrf);
+	if (issue) issues.push(issue);
+	if (rec) recommendations.push(rec);
 	return {
 		name: 'HackRF One',
 		type: 'sdr',
-		health: hackrfHealth,
+		health,
 		status: (hackrf.status as string) || 'unknown',
 		details: detailed
 			? {
@@ -51,6 +63,29 @@ export function diagnoseHackrf(
 	};
 }
 
+/** Classify Kismet health state. */
+function classifyKismetHealth(kismet: Record<string, unknown>): {
+	health: string;
+	issue?: string;
+	rec?: string;
+} {
+	if (kismet.status === 'unreachable')
+		return { health: 'ERROR', issue: 'Kismet API unreachable' };
+	if (kismet.isRunning === false || kismet.status === 'stopped')
+		return {
+			health: 'STOPPED',
+			issue: 'Kismet service not running',
+			rec: 'Start with: /api/kismet/control (action: start)'
+		};
+	if (kismet.device_count === 0)
+		return {
+			health: 'NO_DEVICES',
+			issue: 'Kismet running but no devices detected',
+			rec: 'Check: Is ALFA adapter connected?'
+		};
+	return { health: 'ACTIVE' };
+}
+
 /**
  * Diagnose Kismet health from API status response.
  */
@@ -60,26 +95,13 @@ export function diagnoseKismet(
 	issues: string[],
 	recommendations: string[]
 ): DeviceInfo {
-	let kismetHealth = 'HEALTHY';
-	if (kismet.status === 'unreachable') {
-		kismetHealth = 'ERROR';
-		issues.push('Kismet API unreachable');
-	} else if (kismet.isRunning === false || kismet.status === 'stopped') {
-		kismetHealth = 'STOPPED';
-		issues.push('Kismet service not running');
-		recommendations.push('Start with: /api/kismet/control (action: start)');
-	} else if (kismet.device_count === 0) {
-		kismetHealth = 'NO_DEVICES';
-		issues.push('Kismet running but no devices detected');
-		recommendations.push('Check: Is ALFA adapter connected?');
-	} else {
-		kismetHealth = 'ACTIVE';
-	}
-
+	const { health, issue, rec } = classifyKismetHealth(kismet);
+	if (issue) issues.push(issue);
+	if (rec) recommendations.push(rec);
 	return {
 		name: 'Kismet WiFi Scanner',
 		type: 'wifi',
-		health: kismetHealth,
+		health,
 		status: (kismet.status as string) || 'unknown',
 		details: detailed
 			? {
@@ -92,6 +114,22 @@ export function diagnoseKismet(
 	};
 }
 
+/** Classify GPS health state. */
+function classifyGpsHealth(gps: Record<string, unknown>): {
+	health: string;
+	issue?: string;
+	rec?: string;
+} {
+	if (gps.fix === 0 || gps.mode === 0)
+		return {
+			health: 'NO_FIX',
+			issue: 'GPS has no fix',
+			rec: 'GPS needs clear sky view - may take 2-5 minutes outdoors'
+		};
+	if (gps.fix === 2) return { health: '2D_FIX', issue: 'GPS has 2D fix only (no altitude)' };
+	return { health: 'HEALTHY' };
+}
+
 /**
  * Diagnose GPS health from API position response.
  */
@@ -101,22 +139,13 @@ export function diagnoseGps(
 	issues: string[],
 	recommendations: string[]
 ): DeviceInfo {
-	let gpsHealth = 'HEALTHY';
-	if (gps.fix === 0 || gps.mode === 0) {
-		gpsHealth = 'NO_FIX';
-		issues.push('GPS has no fix');
-		recommendations.push('GPS needs clear sky view - may take 2-5 minutes outdoors');
-	} else if (gps.fix === 2) {
-		gpsHealth = '2D_FIX';
-		issues.push('GPS has 2D fix only (no altitude)');
-	} else if (gps.fix === 3) {
-		gpsHealth = 'HEALTHY';
-	}
-
+	const { health, issue, rec } = classifyGpsHealth(gps);
+	if (issue) issues.push(issue);
+	if (rec) recommendations.push(rec);
 	return {
 		name: 'GPS Module',
 		type: 'gps',
-		health: gpsHealth,
+		health,
 		status: (gps.fix as number) > 0 ? 'fixed' : 'no-fix',
 		details: detailed
 			? {
@@ -130,31 +159,120 @@ export function diagnoseGps(
 	};
 }
 
+/** Missing-device recommendation rules. */
+const MISSING_DEVICE_RULES: Array<{
+	category: string;
+	healthMatch: string;
+	message: string;
+}> = [
+	{
+		category: 'sdr',
+		healthMatch: 'DISCONNECTED',
+		message: 'NO SDR devices detected - check USB connection and permissions'
+	},
+	{
+		category: 'wifi',
+		healthMatch: 'NO_DEVICES',
+		message: 'NO WiFi adapters detected - check ALFA USB connection'
+	},
+	{
+		category: 'gps',
+		healthMatch: 'NO_FIX',
+		message: 'NO GPS devices detected - check USB connection'
+	}
+];
+
 /**
  * Check hardware scan results for missing device recommendations.
  */
+/** Check if a device category is missing and matches its health state. */
+function isMissingDevice(
+	hw: Record<string, unknown[]>,
+	healthMap: Record<string, string>,
+	rule: (typeof MISSING_DEVICE_RULES)[number]
+): boolean {
+	const devices = hw[rule.category] || [];
+	return devices.length === 0 && healthMap[rule.category] === rule.healthMatch;
+}
+
 export function checkHardwareScan(
 	hwScan: Record<string, unknown>,
-	hackrfHealth: string,
-	kismetHealth: string,
-	gpsHealth: string,
+	healthMap: Record<string, string>,
 	recommendations: string[]
 ): void {
-	if (hwScan.hardware) {
-		const hw = hwScan.hardware as Record<string, unknown[]>;
-		const sdrDevices = hw.sdr || [];
-		const wifiDevices = hw.wifi || [];
-		const gpsDevices = hw.gps || [];
+	if (!hwScan.hardware) return;
+	const hw = hwScan.hardware as Record<string, unknown[]>;
+	for (const rule of MISSING_DEVICE_RULES) {
+		if (isMissingDevice(hw, healthMap, rule)) recommendations.push(rule.message);
+	}
+}
 
-		if (sdrDevices.length === 0 && hackrfHealth === 'DISCONNECTED') {
-			recommendations.push('NO SDR devices detected - check USB connection and permissions');
-		}
-		if (wifiDevices.length === 0 && kismetHealth === 'NO_DEVICES') {
-			recommendations.push('NO WiFi adapters detected - check ALFA USB connection');
-		}
-		if (gpsDevices.length === 0 && gpsHealth === 'NO_FIX') {
-			recommendations.push('NO GPS devices detected - check USB connection');
-		}
+interface ConflictEntry {
+	device: string;
+	type: string;
+	message: string;
+	[key: string]: unknown;
+}
+
+/** Check HackRF resource lock conflicts. */
+async function checkHackrfConflicts(): Promise<{ conflicts: ConflictEntry[]; recs: string[] }> {
+	try {
+		const resp = await apiFetch('/api/hackrf/status');
+		const hackrf = await resp.json();
+		if (!hackrf.resourceLocked) return { conflicts: [], recs: [] };
+		return {
+			conflicts: [
+				{
+					device: 'HackRF',
+					type: 'resource_lock',
+					owner: hackrf.lockOwner || 'unknown',
+					message: `HackRF locked by "${hackrf.lockOwner}"`
+				}
+			],
+			recs: [
+				'Release HackRF: Stop the process using it or force-release via resource manager'
+			]
+		};
+	} catch {
+		return { conflicts: [], recs: [] };
+	}
+}
+
+/** Check Kismet port conflicts. */
+async function checkKismetConflicts(): Promise<{ conflicts: ConflictEntry[]; recs: string[] }> {
+	try {
+		const resp = await apiFetch('/api/kismet/status');
+		const kismet = await resp.json();
+		if (!(kismet.status === 'error' && kismet.error?.includes('port')))
+			return { conflicts: [], recs: [] };
+		return {
+			conflicts: [
+				{
+					device: 'Kismet',
+					type: 'port_conflict',
+					port: 2501,
+					message: 'Kismet port 2501 may be in use'
+				}
+			],
+			recs: ['Check port 2501: lsof -i:2501 | Kill conflicting process']
+		};
+	} catch {
+		return { conflicts: [], recs: [] };
+	}
+}
+
+/** Check USB device conflicts from hardware scan. */
+async function checkUsbConflicts(): Promise<{ conflicts: ConflictEntry[]; recs: string[] }> {
+	try {
+		const resp = await apiFetch('/api/hardware/scan');
+		const hwScan = await resp.json();
+		if (!hwScan.stats?.conflicts) return { conflicts: [], recs: [] };
+		const conflicts = (
+			hwScan.stats.conflicts as Array<{ device: string; message: string }>
+		).map((c) => ({ device: c.device, type: 'usb_conflict', message: c.message }));
+		return { conflicts, recs: [] };
+	} catch {
+		return { conflicts: [], recs: [] };
 	}
 }
 
@@ -164,72 +282,17 @@ export function checkHardwareScan(
 export async function detectConflicts(): Promise<{
 	status: string;
 	conflict_count: number;
-	conflicts: Record<string, unknown>[];
+	conflicts: ConflictEntry[];
 	recommendations: string[];
 }> {
-	const conflicts: Record<string, unknown>[] = [];
-	const recommendations: string[] = [];
-
-	// Check HackRF resource manager
-	try {
-		const hackrfResp = await apiFetch('/api/hackrf/status');
-		const hackrf = await hackrfResp.json();
-
-		if (hackrf.resourceLocked) {
-			conflicts.push({
-				device: 'HackRF',
-				type: 'resource_lock',
-				owner: hackrf.lockOwner || 'unknown',
-				message: `HackRF locked by "${hackrf.lockOwner}"`
-			});
-			recommendations.push(
-				'Release HackRF: Stop the process using it or force-release via resource manager'
-			);
-		}
-	} catch {
-		// HackRF API unreachable
-	}
-
-	// Check Kismet port conflicts
-	try {
-		const kismetResp = await apiFetch('/api/kismet/status');
-		const kismet = await kismetResp.json();
-
-		if (kismet.status === 'error' && kismet.error?.includes('port')) {
-			conflicts.push({
-				device: 'Kismet',
-				type: 'port_conflict',
-				port: 2501,
-				message: 'Kismet port 2501 may be in use'
-			});
-			recommendations.push('Check port 2501: lsof -i:2501 | Kill conflicting process');
-		}
-	} catch {
-		// Kismet API unreachable
-	}
-
-	// Check for USB device conflicts via hardware scan
-	try {
-		const hwResp = await apiFetch('/api/hardware/scan');
-		const hwScan = await hwResp.json();
-
-		if (hwScan.stats?.conflicts) {
-			for (const conflict of hwScan.stats.conflicts) {
-				conflicts.push({
-					device: conflict.device,
-					type: 'usb_conflict',
-					message: conflict.message
-				});
-			}
-		}
-	} catch {
-		// Hardware scan failed
-	}
-
-	if (conflicts.length === 0) {
-		recommendations.push('No hardware conflicts detected');
-	}
-
+	const results = await Promise.all([
+		checkHackrfConflicts(),
+		checkKismetConflicts(),
+		checkUsbConflicts()
+	]);
+	const conflicts = results.flatMap((r) => r.conflicts);
+	const recommendations = results.flatMap((r) => r.recs);
+	if (conflicts.length === 0) recommendations.push('No hardware conflicts detected');
 	return {
 		status: conflicts.length > 0 ? 'CONFLICTS_FOUND' : 'CLEAN',
 		conflict_count: conflicts.length,
@@ -237,6 +300,92 @@ export async function detectConflicts(): Promise<{
 		recommendations
 	};
 }
+
+/** Recovery plan definitions keyed by device type. */
+const RECOVERY_PLANS: Record<string, Record<string, unknown>> = {
+	hackrf: {
+		device: 'HackRF',
+		steps: [
+			{
+				action: 'Check connection',
+				command: 'hackrf_info',
+				expected: 'Should show serial number and firmware version'
+			},
+			{
+				action: 'Reset USB',
+				command: 'sudo usbreset $(lsusb | grep "HackRF" | awk \'{print $6}\')',
+				expected: 'Device should reconnect'
+			},
+			{
+				action: 'Kill stale processes',
+				command: 'sudo pkill -f "hackrf_sweep|hackrf_transfer"',
+				expected: 'Releases any locks'
+			},
+			{
+				action: 'Test basic operation',
+				command: 'hackrf_transfer -r /dev/null -f 915 -n 1000000',
+				expected: 'Should receive samples without errors'
+			}
+		]
+	},
+	kismet: {
+		device: 'Kismet',
+		steps: [
+			{
+				action: 'Stop service',
+				command: 'sudo systemctl stop kismet',
+				expected: 'Service should stop'
+			},
+			{
+				action: 'Check ALFA adapter',
+				command: 'lsusb | grep "Realtek"',
+				expected: 'Should show ALFA adapter'
+			},
+			{
+				action: 'Reset monitor mode',
+				command:
+					'sudo airmon-ng check kill && sudo airmon-ng stop wlan1mon && sudo airmon-ng start wlan1',
+				expected: 'Monitor interface created'
+			},
+			{
+				action: 'Restart service',
+				command: 'sudo systemctl start kismet',
+				expected: 'Service starts with monitor interface'
+			}
+		]
+	},
+	gps: {
+		device: 'GPS',
+		steps: [
+			{
+				action: 'Check USB connection',
+				command: 'lsusb | grep "GPS\\|u-blox\\|GlobalSat"',
+				expected: 'Should show GPS device'
+			},
+			{
+				action: 'Check gpsd status',
+				command: 'sudo systemctl status gpsd',
+				expected: 'Service should be running'
+			},
+			{
+				action: 'Restart gpsd',
+				command: 'sudo systemctl restart gpsd',
+				expected: 'Service restarts'
+			},
+			{
+				action: 'Wait for fix',
+				command: 'cgps -s',
+				expected: 'Wait 2-5 minutes outdoors for satellite lock'
+			}
+		]
+	}
+};
+
+const RECOVERY_NOTES = [
+	'Run steps in order - later steps depend on earlier ones',
+	'Some commands require sudo privileges',
+	'GPS fix requires clear sky view and may take several minutes'
+];
 
 /**
  * Build recovery steps for a specific device type.
@@ -247,101 +396,12 @@ export function buildRecoverySteps(device: string): {
 	recovery_steps: Record<string, unknown>[];
 	notes: string[];
 } {
-	const recoverySteps: Record<string, unknown>[] = [];
-
-	if (device === 'hackrf' || device === 'all') {
-		recoverySteps.push({
-			device: 'HackRF',
-			steps: [
-				{
-					action: 'Check connection',
-					command: 'hackrf_info',
-					expected: 'Should show serial number and firmware version'
-				},
-				{
-					action: 'Reset USB',
-					command: 'sudo usbreset $(lsusb | grep "HackRF" | awk \'{print $6}\')',
-					expected: 'Device should reconnect'
-				},
-				{
-					action: 'Kill stale processes',
-					command: 'sudo pkill -f "hackrf_sweep|hackrf_transfer"',
-					expected: 'Releases any locks'
-				},
-				{
-					action: 'Test basic operation',
-					command: 'hackrf_transfer -r /dev/null -f 915 -n 1000000',
-					expected: 'Should receive samples without errors'
-				}
-			]
-		});
-	}
-
-	if (device === 'kismet' || device === 'all') {
-		recoverySteps.push({
-			device: 'Kismet',
-			steps: [
-				{
-					action: 'Stop service',
-					command: 'sudo systemctl stop kismet',
-					expected: 'Service should stop'
-				},
-				{
-					action: 'Check ALFA adapter',
-					command: 'lsusb | grep "Realtek"',
-					expected: 'Should show ALFA adapter'
-				},
-				{
-					action: 'Reset monitor mode',
-					command:
-						'sudo airmon-ng check kill && sudo airmon-ng stop wlan1mon && sudo airmon-ng start wlan1',
-					expected: 'Monitor interface created'
-				},
-				{
-					action: 'Restart service',
-					command: 'sudo systemctl start kismet',
-					expected: 'Service starts with monitor interface'
-				}
-			]
-		});
-	}
-
-	if (device === 'gps' || device === 'all') {
-		recoverySteps.push({
-			device: 'GPS',
-			steps: [
-				{
-					action: 'Check USB connection',
-					command: 'lsusb | grep "GPS\\|u-blox\\|GlobalSat"',
-					expected: 'Should show GPS device'
-				},
-				{
-					action: 'Check gpsd status',
-					command: 'sudo systemctl status gpsd',
-					expected: 'Service should be running'
-				},
-				{
-					action: 'Restart gpsd',
-					command: 'sudo systemctl restart gpsd',
-					expected: 'Service restarts'
-				},
-				{
-					action: 'Wait for fix',
-					command: 'cgps -s',
-					expected: 'Wait 2-5 minutes outdoors for satellite lock'
-				}
-			]
-		});
-	}
-
+	const keys = device === 'all' ? Object.keys(RECOVERY_PLANS) : [device];
+	const recoverySteps = keys.filter((k) => RECOVERY_PLANS[k]).map((k) => RECOVERY_PLANS[k]);
 	return {
 		device_filter: device,
 		total_recovery_plans: recoverySteps.length,
 		recovery_steps: recoverySteps,
-		notes: [
-			'Run steps in order - later steps depend on earlier ones',
-			'Some commands require sudo privileges',
-			'GPS fix requires clear sky view and may take several minutes'
-		]
+		notes: RECOVERY_NOTES
 	};
 }

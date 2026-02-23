@@ -16,36 +16,53 @@ export function formatFreq(freq: number): string {
 	return `${freq}`;
 }
 
-export function formatEncryption(device: KismetDevice): string {
-	const enc = device.encryption || device.encryptionType;
-	if (!enc || enc.length === 0) return '-';
+/** Resolve encryption array to display string. */
+function encLabel(enc: string[]): string {
+	if (enc.length === 0) return '-';
 	if (enc.length === 1 && enc[0] === 'Open') return 'Open';
 	return enc.join('/');
 }
 
-export function formatLastSeen(device: KismetDevice): string {
-	const ts = device.lastSeen || device.last_seen || device.last_time || 0;
-	if (!ts) return '-';
-	const msTs = ts < 1e12 ? ts * 1000 : ts;
-	const secs = Math.floor((Date.now() - msTs) / 1000);
+export function formatEncryption(device: KismetDevice): string {
+	const enc = device.encryption || device.encryptionType;
+	return enc ? encLabel(enc) : '-';
+}
+
+/** Convert a timestamp (seconds or ms) to milliseconds. */
+function toMs(ts: number): number {
+	return ts < 1e12 ? ts * 1000 : ts;
+}
+
+/** Threshold-based time-ago formatting. */
+const TIME_AGO_THRESHOLDS: [number, (s: number) => string][] = [
+	[86400, (s) => `${Math.floor(s / 86400)}d`],
+	[3600, (s) => `${Math.floor(s / 3600)}h`],
+	[60, (s) => `${Math.floor(s / 60)}m`]
+];
+
+/** Format seconds elapsed as a human-readable duration. */
+function formatElapsed(secs: number): string {
 	if (secs < 0 || isNaN(secs)) return '-';
-	if (secs < 5) return 'now';
-	if (secs < 60) return `${secs}s`;
-	if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-	if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-	return `${Math.floor(secs / 86400)}d`;
+	const match = TIME_AGO_THRESHOLDS.find(([min]) => secs >= min);
+	return match ? match[1](secs) : `${secs}s`;
+}
+
+/** Resolve last-seen timestamp from multiple possible device fields. */
+function resolveLastSeenTs(device: KismetDevice): number {
+	return device.lastSeen || device.last_seen || device.last_time || 0;
+}
+
+export function formatLastSeen(device: KismetDevice): string {
+	const ts = resolveLastSeenTs(device);
+	if (!ts) return '-';
+	const secs = Math.floor((Date.now() - toMs(ts)) / 1000);
+	return secs >= 0 && secs < 5 ? 'now' : formatElapsed(secs);
 }
 
 export function formatFirstSeen(device: KismetDevice): string {
 	const ts = device.firstSeen || 0;
 	if (!ts) return '-';
-	const msTs = ts < 1e12 ? ts * 1000 : ts;
-	const secs = Math.floor((Date.now() - msTs) / 1000);
-	if (secs < 0 || isNaN(secs)) return '-';
-	if (secs < 60) return `${secs}s`;
-	if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-	if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-	return `${Math.floor(secs / 86400)}d`;
+	return formatElapsed(Math.floor((Date.now() - toMs(ts)) / 1000));
 }
 
 export function formatPackets(n: number): string {

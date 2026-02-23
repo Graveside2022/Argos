@@ -36,22 +36,25 @@ export async function loadConfig(): Promise<TakServerConfig> {
 	return { ...DEFAULT_CONFIG };
 }
 
+/** Ensure config has an ID, generating one if needed */
+function ensureConfigId(config: TakServerConfig): TakServerConfig {
+	if (config.id) return config;
+	return { ...config, id: crypto.randomUUID() };
+}
+
 /** Save TAK config to the API */
 export async function saveConfig(
 	config: TakServerConfig
 ): Promise<{ success: boolean; config?: TakServerConfig; error?: string }> {
 	try {
-		const configToSave = { ...config };
-		if (!configToSave.id) configToSave.id = crypto.randomUUID();
+		const configToSave = ensureConfigId(config);
 		const res = await fetch('/api/tak/config', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(configToSave)
 		});
 		const data = await res.json();
-		if (data.success && data.config) {
-			return { success: true, config: data.config };
-		}
+		if (data.success && data.config) return { success: true, config: data.config };
 		return { success: false, error: data.error ?? 'Save failed' };
 	} catch {
 		return { success: false, error: 'Failed to save configuration' };
@@ -82,17 +85,23 @@ export async function disconnectFromServer(): Promise<{ success: boolean; error?
 	}
 }
 
+/** Pick only the defined (truthy) properties from an object */
+function pickDefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+	return Object.fromEntries(Object.entries(obj).filter(([, v]) => v)) as Partial<T>;
+}
+
 /** Apply certificate paths to config */
 export function applyCertPaths(
 	config: TakServerConfig,
 	data: { id?: string; paths?: { certPath?: string; keyPath?: string; caPath?: string } }
 ): TakServerConfig {
-	const updated = { ...config };
-	if (data.id) updated.id = data.id;
-	if (data.paths?.certPath) updated.certPath = data.paths.certPath;
-	if (data.paths?.keyPath) updated.keyPath = data.paths.keyPath;
-	if (data.paths?.caPath) updated.caPath = data.paths.caPath;
-	return updated;
+	const certFields = pickDefined({
+		id: data.id,
+		certPath: data.paths?.certPath,
+		keyPath: data.paths?.keyPath,
+		caPath: data.paths?.caPath
+	});
+	return { ...config, ...certFields };
 }
 
 /** Apply truststore upload result to config */
@@ -118,13 +127,14 @@ export function applyPackageImport(
 		id?: string;
 	}
 ): TakServerConfig {
-	const updated = { ...config };
-	if (data.hostname) updated.hostname = data.hostname;
-	if (data.port) updated.port = data.port;
-	if (data.description) updated.name = data.description;
-	if (data.truststorePath) updated.truststorePath = data.truststorePath;
-	if (data.id) updated.id = data.id;
-	return updated;
+	const fields = pickDefined({
+		hostname: data.hostname,
+		port: data.port,
+		name: data.description,
+		truststorePath: data.truststorePath,
+		id: data.id
+	});
+	return { ...config, ...fields };
 }
 
 /** Clear certificate paths from config */

@@ -25,25 +25,37 @@ function buildEmptyPositionData(
 	};
 }
 
+/** Extract accuracy from TPV data (prefer epx, fallback to epy, default 10) */
+function extractAccuracy(tpvData: TPVData): number {
+	return tpvData.epx ?? tpvData.epy ?? 10;
+}
+
+/** Coalesce an optional number/string to null */
+function orNull<T>(val: T | undefined): T | null {
+	return val ?? null;
+}
+
+/** Build position data fields from TPV data */
+function buildPositionData(tpvData: TPVData, satelliteCount: number): GpsPositionResponse['data'] {
+	return {
+		latitude: orNull(tpvData.lat),
+		longitude: orNull(tpvData.lon),
+		altitude: orNull(tpvData.alt),
+		speed: orNull(tpvData.speed),
+		heading: orNull(tpvData.track),
+		accuracy: extractAccuracy(tpvData),
+		satellites: satelliteCount,
+		fix: tpvData.mode,
+		time: orNull(tpvData.time)
+	};
+}
+
 /** Build a successful GPS fix response with position data */
 export function buildFixedPositionResponse(
 	tpvData: TPVData,
 	satelliteCount: number
 ): GpsPositionResponse {
-	return {
-		success: true,
-		data: {
-			latitude: tpvData.lat ?? null,
-			longitude: tpvData.lon ?? null,
-			altitude: tpvData.alt ?? null,
-			speed: tpvData.speed ?? null,
-			heading: tpvData.track ?? null,
-			accuracy: tpvData.epx ?? tpvData.epy ?? 10,
-			satellites: satelliteCount,
-			fix: tpvData.mode,
-			time: tpvData.time ?? null
-		}
-	};
+	return { success: true, data: buildPositionData(tpvData, satelliteCount) };
 }
 
 /** Build a no-fix response (TPV data exists but mode < 2) */

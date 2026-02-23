@@ -35,25 +35,25 @@ export async function isKismetRunning(): Promise<boolean> {
 	}
 }
 
-/**
- * Wait for Kismet web interface to be ready
- * Polls /system/status.json endpoint until responsive
- */
+/** Single probe of the Kismet status endpoint */
+async function probeKismetStatus(): Promise<boolean> {
+	try {
+		const response = await fetch('http://localhost:2501/system/status.json', {
+			method: 'GET',
+			signal: AbortSignal.timeout(1000)
+		});
+		return response.ok;
+	} catch (error: unknown) {
+		const msg = error instanceof Error ? error.message : String(error);
+		logger.warn('[Kismet] Readiness check failed', { error: msg });
+		return false;
+	}
+}
+
+/** Poll Kismet status endpoint until responsive */
 async function waitForKismetReady(maxAttempts = 15): Promise<boolean> {
 	for (let i = 0; i < maxAttempts; i++) {
-		try {
-			const response = await fetch('http://localhost:2501/system/status.json', {
-				method: 'GET',
-				signal: AbortSignal.timeout(1000)
-			});
-			if (response.ok) {
-				return true;
-			}
-		} catch (error: unknown) {
-			const msg = error instanceof Error ? error.message : String(error);
-			logger.warn('[Kismet] Readiness check failed', { error: msg });
-		}
-		// Wait 1 second before next attempt
+		if (await probeKismetStatus()) return true;
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 	}
 	return false;
@@ -121,130 +121,129 @@ async function startDirect(): Promise<boolean> {
 	}
 }
 
-/**
- * Detect the network interface from Kismet startup logs
- */
-async function detectInterface(): Promise<string> {
-	const defaultInterface = 'wlxbee1d69fa811'; // Known Alfa interface
+/** Default WiFi channels (2.4 GHz band) */
+const DEFAULT_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const EXTENDED_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
-	try {
-		const content = fs.readFileSync('/tmp/kismet-start.log', 'utf-8');
-		const lines = content.trim().split('\n').slice(-20);
-		const interfaceLines = lines.filter((l) => l.includes('Primary interface selected:'));
-		const lastLine = interfaceLines[interfaceLines.length - 1];
-		if (lastLine) {
-			const match = lastLine.match(/Primary interface selected:\s+(\S+)/);
-			if (match) {
-				return match[1];
-			}
-		}
-	} catch (_error: unknown) {
-		// Ignore errors, use default
-	}
-
-	return defaultInterface;
+/** Build a standard KismetStartResult with default data */
+function buildResult(
+	success: boolean,
+	status: KismetStartResult['status'],
+	message: string,
+	iface: string,
+	extra?: { channels?: number[]; note?: string; error?: string }
+): KismetStartResult {
+	return {
+		success,
+		status,
+		message,
+		data: {
+			interface: iface,
+			channels: extra?.channels || DEFAULT_CHANNELS,
+			deviceCount: 0,
+			uptime: 0,
+			note: extra?.note
+		},
+		error: extra?.error
+	};
 }
 
-/**
- * Start Kismet WiFi discovery service
- * Tries script-based startup first, falls back to direct startup if needed
- *
- * @returns Result object with status and data
- */
+/** Parse interface name from Kismet startup log */
+function parseInterfaceFromLog(content: string): string | null {
+	const lines = content.trim().split('\n').slice(-20);
+	const interfaceLines = lines.filter((l) => l.includes('Primary interface selected:'));
+	const lastLine = interfaceLines[interfaceLines.length - 1];
+	const match = lastLine?.match(/Primary interface selected:\s+(\S+)/);
+	return match?.[1] ?? null;
+}
+
+/** Detect the network interface from Kismet startup logs */
+async function detectInterface(): Promise<string> {
+	try {
+		const content = fs.readFileSync('/tmp/kismet-start.log', 'utf-8');
+		return parseInterfaceFromLog(content) || 'wlxbee1d69fa811';
+	} catch {
+		return 'wlxbee1d69fa811';
+	}
+}
+
+/** Try direct startup as fallback when script fails */
+async function tryFallbackDirect(): Promise<KismetStartResult> {
+	const directStarted = await startDirect();
+	if (directStarted) {
+		return buildResult(
+			true,
+			'started',
+			'Kismet started (direct mode)',
+			'Configure via Kismet UI'
+		);
+	}
+	return buildResult(
+		false,
+		'failed',
+		'Failed to start Kismet - script not found and direct start failed',
+		'',
+		{
+			error: 'Startup script not found and direct start failed'
+		}
+	);
+}
+
+/** Handle the result after script started and waiting for readiness */
+async function handleScriptStarted(): Promise<KismetStartResult> {
+	logger.info('[Kismet] Waiting for initialization');
+	if (await waitForKismetReady()) {
+		logger.info('[Kismet] Started successfully');
+		const detectedInterface = await detectInterface();
+		return buildResult(
+			true,
+			'started',
+			'Kismet WiFi discovery started successfully',
+			detectedInterface,
+			{
+				channels: EXTENDED_CHANNELS,
+				note: 'Configure data sources via Kismet UI'
+			}
+		);
+	}
+
+	if (await isKismetRunning()) {
+		logger.info('[Kismet] Running but may still be initializing');
+		return buildResult(
+			true,
+			'starting',
+			'Kismet is starting, may take a few more seconds',
+			'Detecting...'
+		);
+	}
+
+	logger.error('[Kismet] Failed to start - check /tmp/kismet-start.log');
+	return buildResult(
+		false,
+		'failed',
+		'Failed to start Kismet - check logs at /tmp/kismet-start.log',
+		'',
+		{
+			error: 'Kismet failed to start'
+		}
+	);
+}
+
+/** Start Kismet WiFi discovery service */
 export async function startKismet(): Promise<KismetStartResult> {
 	logger.info('[Kismet] Starting WiFi discovery');
 
-	// Check if already running
 	if (await isKismetRunning()) {
 		logger.info('[Kismet] Already running');
-		return {
-			success: true,
-			status: 'already_running',
-			message: 'Kismet is already running',
-			data: {
-				interface: 'Use Kismet UI to configure',
-				channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-				deviceCount: 0,
-				uptime: 0
-			}
-		};
+		return buildResult(
+			true,
+			'already_running',
+			'Kismet is already running',
+			'Use Kismet UI to configure'
+		);
 	}
 
-	// Try script-based startup first
 	const scriptResult = await startWithScript();
-
-	if (!scriptResult.success) {
-		// Script not found or failed - try direct startup
-		const directStarted = await startDirect();
-
-		if (directStarted) {
-			return {
-				success: true,
-				status: 'started',
-				message: 'Kismet started (direct mode)',
-				data: {
-					interface: 'Configure via Kismet UI',
-					channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-					deviceCount: 0,
-					uptime: 0
-				}
-			};
-		}
-
-		return {
-			success: false,
-			status: 'failed',
-			message: 'Failed to start Kismet - script not found and direct start failed',
-			error: 'Startup script not found and direct start failed'
-		};
-	}
-
-	// Script executed - wait for Kismet to be ready
-	logger.info('[Kismet] Waiting for initialization');
-	const isReady = await waitForKismetReady();
-
-	if (!isReady) {
-		// Check if Kismet is at least running
-		if (await isKismetRunning()) {
-			logger.info('[Kismet] Running but may still be initializing');
-			return {
-				success: true,
-				status: 'starting',
-				message: 'Kismet is starting, may take a few more seconds',
-				data: {
-					interface: 'Detecting...',
-					channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-					deviceCount: 0,
-					uptime: 0
-				}
-			};
-		}
-
-		// Not running at all
-		logger.error('[Kismet] Failed to start - check /tmp/kismet-start.log');
-		return {
-			success: false,
-			status: 'failed',
-			message: 'Failed to start Kismet - check logs at /tmp/kismet-start.log',
-			error: 'Kismet failed to start'
-		};
-	}
-
-	// Kismet is ready!
-	logger.info('[Kismet] Started successfully');
-
-	const detectedInterface = await detectInterface();
-
-	return {
-		success: true,
-		status: 'started',
-		message: 'Kismet WiFi discovery started successfully',
-		data: {
-			interface: detectedInterface,
-			channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-			deviceCount: 0,
-			uptime: 0,
-			note: 'Configure data sources via Kismet UI'
-		}
-	};
+	if (!scriptResult.success) return tryFallbackDirect();
+	return handleScriptStarted();
 }

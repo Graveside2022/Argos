@@ -84,21 +84,9 @@ export class FrequencyCycler {
 		return this.cycleConfig.frequencies[nextIndex];
 	}
 
-	/** Start automatic cycling */
-	startAutomaticCycling(
-		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>,
-		onCycleStart?: (currentFreq: FrequencyConfig) => void
+	private scheduleCycleTimer(
+		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>
 	): void {
-		if (!this.cycleState.isCycling || this.cycleConfig.frequencies.length <= 1) {
-			logInfo('Single frequency mode - no cycling needed');
-			return;
-		}
-
-		const currentFreq = this.getCurrentFrequency();
-		if (currentFreq && onCycleStart) {
-			onCycleStart(currentFreq);
-		}
-
 		this.cycleState.cycleTimer = setTimeout(() => {
 			this.cycleToNext(onCycleComplete).catch((error) => {
 				logError('Error cycling to next frequency', {
@@ -106,6 +94,26 @@ export class FrequencyCycler {
 				});
 			});
 		}, this.cycleConfig.cycleTime);
+	}
+
+	private shouldCycle(): boolean {
+		return this.cycleState.isCycling && this.cycleConfig.frequencies.length > 1;
+	}
+
+	/** Start automatic cycling */
+	startAutomaticCycling(
+		onCycleComplete: (nextFreq: FrequencyConfig) => Promise<void>,
+		onCycleStart?: (currentFreq: FrequencyConfig) => void
+	): void {
+		if (!this.shouldCycle()) {
+			logInfo('Single frequency mode - no cycling needed');
+			return;
+		}
+
+		const currentFreq = this.getCurrentFrequency();
+		if (currentFreq) onCycleStart?.(currentFreq);
+
+		this.scheduleCycleTimer(onCycleComplete);
 
 		logInfo('[RETRY] Automatic cycling started', {
 			currentFreq: currentFreq?.value,

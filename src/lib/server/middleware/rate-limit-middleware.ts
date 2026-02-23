@@ -35,23 +35,23 @@ export function getSafeClientAddress(event: Parameters<Handle>[0]['event']): str
 	}
 }
 
+/** Extract session identifier from cookie header, or null if unavailable. */
+function extractSessionId(cookieHeader: string | null): string | null {
+	if (!cookieHeader) return null;
+	const sessionMatch = cookieHeader.match(/__argos_session=([^;]+)/);
+	return sessionMatch ? sessionMatch[1].slice(0, 16) : null;
+}
+
 /**
  * Get rate limit identifier - uses session cookie when IP unavailable.
  * This prevents all Tailscale clients from sharing the same rate limit bucket.
  */
 export function getRateLimitKey(event: Parameters<Handle>[0]['event'], prefix: string): string {
 	try {
-		const ip = event.getClientAddress();
-		return `${prefix}:${ip}`;
+		return `${prefix}:${event.getClientAddress()}`;
 	} catch {
-		const cookieHeader = event.request.headers.get('cookie');
-		if (cookieHeader) {
-			const sessionMatch = cookieHeader.match(/__argos_session=([^;]+)/);
-			if (sessionMatch) {
-				return `${prefix}:session:${sessionMatch[1].slice(0, 16)}`;
-			}
-		}
-		return `${prefix}:unknown`;
+		const sessionId = extractSessionId(event.request.headers.get('cookie'));
+		return sessionId ? `${prefix}:session:${sessionId}` : `${prefix}:unknown`;
 	}
 }
 
@@ -71,56 +71,64 @@ export function isHardwareControlPath(path: string): boolean {
 	return hwPatterns.some((p) => path.startsWith(p));
 }
 
+/** Paths exempt from rate limiting (streaming/SSE endpoints and map tiles). */
+const STREAMING_PATTERNS = ['data-stream', '/stream', '/sse', '/api/map-tiles/'];
+
+/** Check if this path should skip rate limiting. */
+function isStreamingPath(path: string): boolean {
+	return STREAMING_PATTERNS.some((p) => path.includes(p));
+}
+
+/** Build a 429 rate-limit response and log the audit event. */
+function buildRateLimitResponse(
+	ip: string,
+	method: string,
+	path: string,
+	reason: string,
+	retryAfter: string
+): Response {
+	logAuthEvent({ eventType: 'RATE_LIMIT_EXCEEDED', ip, method, path, reason });
+	return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+		status: 429,
+		headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter }
+	});
+}
+
+/** Check hardware control rate limit. Returns 429 Response or null. */
+function checkHardwareRateLimit(event: Parameters<Handle>[0]['event']): Response | null {
+	const hwKey = getRateLimitKey(event, 'hw');
+	const hwLimit = hwKey.includes('unknown') ? 60 : 30;
+	if (rateLimiter.check(hwKey, hwLimit, hwLimit / 60)) return null;
+	return buildRateLimitResponse(
+		getSafeClientAddress(event),
+		event.request.method,
+		event.url.pathname,
+		`Hardware control rate limit exceeded (${hwLimit} req/min)`,
+		'60'
+	);
+}
+
+/** Check API rate limit. Returns 429 Response or null. */
+function checkApiRateLimit(event: Parameters<Handle>[0]['event']): Response | null {
+	const apiKey = getRateLimitKey(event, 'api');
+	if (rateLimiter.check(apiKey, 200, 200 / 60)) return null;
+	return buildRateLimitResponse(
+		getSafeClientAddress(event),
+		event.request.method,
+		event.url.pathname,
+		'API rate limit exceeded (200 req/min)',
+		'10'
+	);
+}
+
 /**
  * Apply rate limiting to a request. Returns a 429 Response if rate limit
  * is exceeded, or null if the request should proceed.
  */
 export function checkRateLimit(event: Parameters<Handle>[0]['event']): Response | null {
 	const path = event.url.pathname;
-	const clientIp = getSafeClientAddress(event);
-
-	// Skip rate limiting for streaming/SSE endpoints and map tiles
-	if (
-		path.includes('data-stream') ||
-		path.includes('/stream') ||
-		path.endsWith('/sse') ||
-		path.startsWith('/api/map-tiles/')
-	) {
-		return null;
-	}
-
-	if (isHardwareControlPath(path)) {
-		const hwKey = getRateLimitKey(event, 'hw');
-		const hwLimit = hwKey.includes('unknown') ? 60 : 30;
-		if (!rateLimiter.check(hwKey, hwLimit, hwLimit / 60)) {
-			logAuthEvent({
-				eventType: 'RATE_LIMIT_EXCEEDED',
-				ip: clientIp,
-				method: event.request.method,
-				path,
-				reason: `Hardware control rate limit exceeded (${hwLimit} req/min)`
-			});
-			return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-				status: 429,
-				headers: { 'Content-Type': 'application/json', 'Retry-After': '60' }
-			});
-		}
-	} else if (path.startsWith('/api/')) {
-		const apiKey = getRateLimitKey(event, 'api');
-		if (!rateLimiter.check(apiKey, 200, 200 / 60)) {
-			logAuthEvent({
-				eventType: 'RATE_LIMIT_EXCEEDED',
-				ip: clientIp,
-				method: event.request.method,
-				path,
-				reason: 'API rate limit exceeded (200 req/min)'
-			});
-			return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-				status: 429,
-				headers: { 'Content-Type': 'application/json', 'Retry-After': '10' }
-			});
-		}
-	}
-
+	if (isStreamingPath(path)) return null;
+	if (isHardwareControlPath(path)) return checkHardwareRateLimit(event);
+	if (path.startsWith('/api/')) return checkApiRateLimit(event);
 	return null;
 }

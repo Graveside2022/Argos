@@ -35,66 +35,79 @@ interface ImsiRow {
 	date_time: string | null;
 }
 
+function toStringOrEmpty(value: string | number | null): string {
+	if (value == null) return '';
+	return String(value);
+}
+
+function transformImsiRow(row: ImsiRow) {
+	return {
+		id: row.id,
+		imsi: row.imsi || '',
+		tmsi: row.tmsi || '',
+		mcc: toStringOrEmpty(row.mcc),
+		mnc: toStringOrEmpty(row.mnc),
+		lac: toStringOrEmpty(row.lac),
+		ci: toStringOrEmpty(row.ci),
+		datetime: row.date_time || ''
+	};
+}
+
+function findValidatedImsiDatabase(): { path: string; error?: string } {
+	const gsmDir = getGsmEvilDir();
+	const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
+	const dbPath = searchPaths.find((p) => existsSync(p)) || '';
+	if (!dbPath) return { path: '', error: 'IMSI database not found' };
+	const allowedPaths = getAllowedImsiDbPaths();
+	if (!allowedPaths.includes(dbPath)) return { path: '', error: 'Invalid database path' };
+	return { path: dbPath };
+}
+
+function formatError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+function queryImsiData(dbPath: string) {
+	const db = new Database(dbPath, { readonly: true });
+	try {
+		const rows = db
+			.prepare(
+				'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000'
+			)
+			.all() as ImsiRow[];
+		return { success: true as const, data: rows.map(transformImsiRow) };
+	} catch (dbError) {
+		return {
+			success: false as const,
+			message: 'Failed to read database',
+			error: formatError(dbError)
+		};
+	} finally {
+		db.close();
+	}
+}
+
 export const GET: RequestHandler = async () => {
 	try {
-		// Find the IMSI database using fs.existsSync instead of shell
-		const gsmDir = getGsmEvilDir();
-		const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
-		const dbPath = searchPaths.find((p) => existsSync(p)) || '';
+		const dbLookup = findValidatedImsiDatabase();
+		if (!dbLookup.path) {
+			return json({ success: false, message: dbLookup.error, data: [] });
+		}
 
-		if (!dbPath) {
+		const queryResult = queryImsiData(dbLookup.path);
+		if (!queryResult.success) {
 			return json({
 				success: false,
-				message: 'IMSI database not found',
+				message: queryResult.message,
+				error: queryResult.error,
 				data: []
 			});
 		}
 
-		// Validate dbPath against known allowlist to prevent path traversal
-		const allowedPaths = getAllowedImsiDbPaths();
-		if (!allowedPaths.includes(dbPath)) {
-			return json({ success: false, message: 'Invalid database path', data: [] });
-		}
-
-		// Query IMSI data directly with better-sqlite3 instead of Python subprocess
-		let data;
-		const db = new Database(dbPath, { readonly: true });
-		try {
-			const rows = db
-				.prepare(
-					'SELECT id, imsi, tmsi, mcc, mnc, lac, ci, date_time FROM imsi_data ORDER BY id DESC LIMIT 1000'
-				)
-				.all() as ImsiRow[];
-
-			data = rows.map((row) => ({
-				id: row.id,
-				imsi: row.imsi || '',
-				tmsi: row.tmsi || '',
-				mcc: row.mcc != null ? String(row.mcc) : '',
-				mnc: row.mnc != null ? String(row.mnc) : '',
-				lac: row.lac != null ? String(row.lac) : '',
-				ci: row.ci != null ? String(row.ci) : '',
-				datetime: row.date_time || ''
-			}));
-		} catch (dbError) {
-			return json({
-				success: false,
-				message: 'Failed to read database',
-				error: dbError instanceof Error ? dbError.message : String(dbError),
-				data: []
-			});
-		} finally {
-			db.close();
-		}
-
-		const parseResult = GsmEvilImsiDataSchema.safeParse(data);
+		const parseResult = GsmEvilImsiDataSchema.safeParse(queryResult.data);
 		if (!parseResult.success) {
 			return json(
-				{
-					success: false,
-					message: 'Failed to parse IMSI data from database',
-					data: []
-				},
+				{ success: false, message: 'Failed to parse IMSI data from database', data: [] },
 				{ status: 500 }
 			);
 		}
@@ -105,13 +118,11 @@ export const GET: RequestHandler = async () => {
 			data: parseResult.data
 		});
 	} catch (error) {
-		logger.error('Failed to fetch IMSI data', {
-			error: error instanceof Error ? error.message : String(error)
-		});
+		logger.error('Failed to fetch IMSI data', { error: formatError(error) });
 		return json({
 			success: false,
 			message: 'Failed to fetch IMSI data',
-			error: error instanceof Error ? error.message : String(error),
+			error: formatError(error),
 			data: []
 		});
 	}

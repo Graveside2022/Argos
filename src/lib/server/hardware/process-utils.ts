@@ -23,24 +23,32 @@ export interface ProcessConfig {
 	useCmdlineMatch?: boolean;
 }
 
+function pgrepFlag(config: ProcessConfig): string {
+	return config.useCmdlineMatch ? '-f' : '-x';
+}
+
+function displayName(config: ProcessConfig): string {
+	return config.displayName ?? config.name;
+}
+
+async function findProcessPids(config: ProcessConfig): Promise<ProcessEntry[]> {
+	try {
+		const { stdout } = await execFileAsync('/usr/bin/pgrep', [pgrepFlag(config), config.name]);
+		const label = displayName(config);
+		return stdout
+			.trim()
+			.split('\n')
+			.filter(Boolean)
+			.map((pid) => ({ pid, name: label }));
+	} catch {
+		return [];
+	}
+}
+
 /** Find running processes matching the given configs via pgrep. */
 export async function findBlockingProcesses(configs: ProcessConfig[]): Promise<ProcessEntry[]> {
-	const blocking: ProcessEntry[] = [];
-
-	for (const config of configs) {
-		try {
-			const flag = config.useCmdlineMatch ? '-f' : '-x';
-			const { stdout } = await execFileAsync('/usr/bin/pgrep', [flag, config.name]);
-			const pids = stdout.trim().split('\n').filter(Boolean);
-			for (const pid of pids) {
-				blocking.push({ pid, name: config.displayName ?? config.name });
-			}
-		} catch (_error: unknown) {
-			// Process not found — pgrep exits non-zero when no match
-		}
-	}
-
-	return blocking;
+	const results = await Promise.all(configs.map(findProcessPids));
+	return results.flat();
 }
 
 /** SIGKILL all processes matching the given configs via pkill, then wait for cleanup. */

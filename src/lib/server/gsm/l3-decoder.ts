@@ -22,44 +22,55 @@ export interface L3DecodedMessage {
 	ci?: number;
 }
 
-/**
- * Decode GSM Layer 3 message from hex string
- */
-export function decodeL3Message(hexData: string): L3DecodedMessage | null {
-	if (!hexData || hexData.length < 4) {
-		return null;
-	}
-
+/** Convert hex string to byte array. */
+function hexToBytes(hexData: string): number[] | null {
+	if (!hexData || hexData.length < 4) return null;
 	const hex = hexData.replace(/\s+/g, '');
 	const bytes: number[] = [];
 	for (let i = 0; i < hex.length; i += 2) {
 		bytes.push(parseInt(hex.substr(i, 2), 16));
 	}
+	return bytes.length >= 2 ? bytes : null;
+}
 
-	if (bytes.length < 2) {
-		return null;
-	}
+/** Protocol discriminator → decoder function. */
+type PdDecoder = (bytes: number[], msgType: number) => L3DecodedMessage;
+const PD_DECODERS: Record<number, PdDecoder> = {
+	0x06: decodeRR,
+	0x05: decodeMM,
+	0x03: decodeCC,
+	0x09: decodeSMS
+};
+
+/**
+ * Decode GSM Layer 3 message from hex string
+ */
+export function decodeL3Message(hexData: string): L3DecodedMessage | null {
+	const bytes = hexToBytes(hexData);
+	if (!bytes) return null;
 
 	const pd = (bytes[0] >> 4) & 0x0f;
-	const messageType = bytes[1];
+	const decoder = PD_DECODERS[pd];
+	if (decoder) return decoder(bytes, bytes[1]);
 
-	switch (pd) {
-		case 0x06:
-			return decodeRR(bytes, messageType);
-		case 0x05:
-			return decodeMM(bytes, messageType);
-		case 0x03:
-			return decodeCC(bytes, messageType);
-		case 0x09:
-			return decodeSMS(bytes, messageType);
-		default:
-			return {
-				messageType: 'Unknown',
-				protocol: `PD=${pd.toString(16)}`,
-				details: [`Protocol discriminator: 0x${pd.toString(16).padStart(2, '0')}`]
-			};
-	}
+	return {
+		messageType: 'Unknown',
+		protocol: `PD=${pd.toString(16)}`,
+		details: [`Protocol discriminator: 0x${pd.toString(16).padStart(2, '0')}`]
+	};
 }
+
+/** Static RR message type descriptions. */
+const RR_MESSAGES: Record<number, { messageType: string; details: string[] }> = {
+	0x22: { messageType: 'Paging Request Type 2', details: ['Paging multiple mobile stations'] },
+	0x3e: { messageType: 'Immediate Assignment', details: ['Channel allocation'] },
+	0x3f: {
+		messageType: 'Immediate Assignment Extended',
+		details: ['Extended channel allocation']
+	},
+	0x06: { messageType: 'Paging Response', details: ['Mobile station responding to page'] },
+	0x35: { messageType: 'Channel Release', details: ['Releasing dedicated channel'] }
+};
 
 /**
  * Decode Radio Resource Management (RR) messages
@@ -67,116 +78,69 @@ export function decodeL3Message(hexData: string): L3DecodedMessage | null {
 function decodeRR(bytes: number[], msgType: number): L3DecodedMessage {
 	const sysInfo = decodeRRSystemInfo(bytes, msgType);
 	if (sysInfo) return sysInfo;
+	if (msgType === 0x21) return decodeRRPagingRequest1(bytes, extractIMSI, extractTMSI);
 
-	switch (msgType) {
-		case 0x21:
-			return decodeRRPagingRequest1(bytes, extractIMSI, extractTMSI);
-		case 0x22:
-			return {
-				messageType: 'Paging Request Type 2',
-				protocol: 'RR',
-				details: ['Paging multiple mobile stations']
-			};
-		case 0x3e:
-			return {
-				messageType: 'Immediate Assignment',
-				protocol: 'RR',
-				details: ['Channel allocation']
-			};
-		case 0x3f:
-			return {
-				messageType: 'Immediate Assignment Extended',
-				protocol: 'RR',
-				details: ['Extended channel allocation']
-			};
-		case 0x06:
-			return {
-				messageType: 'Paging Response',
-				protocol: 'RR',
-				details: ['Mobile station responding to page']
-			};
-		case 0x35:
-			return {
-				messageType: 'Channel Release',
-				protocol: 'RR',
-				details: ['Releasing dedicated channel']
-			};
-		default:
-			return {
-				messageType: `RR Message 0x${msgType.toString(16).padStart(2, '0')}`,
-				protocol: 'RR',
-				details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
-			};
-	}
+	const entry = RR_MESSAGES[msgType];
+	if (entry) return { ...entry, protocol: 'RR' };
+
+	return {
+		messageType: `RR Message 0x${msgType.toString(16).padStart(2, '0')}`,
+		protocol: 'RR',
+		details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
+	};
 }
+
+/** Dynamic MM decoders (require byte-level parsing). */
+type MmDynamicDecoder = (bytes: number[]) => L3DecodedMessage;
+const MM_DYNAMIC: Record<number, MmDynamicDecoder> = {
+	0x18: (bytes) => decodeMMIdentityRequest(bytes),
+	0x19: (bytes) => decodeMMIdentityResponse(bytes, extractIMSI, extractTMSI)
+};
+
+/** Static MM message type descriptions. */
+const MM_MESSAGES: Record<number, { messageType: string; details: string[] }> = {
+	0x01: { messageType: 'IMSI Detach Indication', details: ['Mobile station detaching'] },
+	0x04: { messageType: 'TMSI Reallocation Command', details: ['Network assigning new TMSI'] },
+	0x08: { messageType: 'Location Updating Request', details: ['Mobile registering location'] },
+	0x02: { messageType: 'Location Updating Accept', details: ['Location update successful'] },
+	0x11: { messageType: 'Authentication Request', details: ['Network requesting authentication'] },
+	0x14: { messageType: 'Authentication Response', details: ['Mobile providing authentication'] }
+};
 
 /**
  * Decode Mobility Management (MM) messages
  */
 function decodeMM(bytes: number[], msgType: number): L3DecodedMessage {
-	switch (msgType) {
-		case 0x18:
-			return decodeMMIdentityRequest(bytes);
-		case 0x19:
-			return decodeMMIdentityResponse(bytes, extractIMSI, extractTMSI);
-		case 0x01:
-			return {
-				messageType: 'IMSI Detach Indication',
-				protocol: 'MM',
-				details: ['Mobile station detaching']
-			};
-		case 0x04:
-			return {
-				messageType: 'TMSI Reallocation Command',
-				protocol: 'MM',
-				details: ['Network assigning new TMSI']
-			};
-		case 0x08:
-			return {
-				messageType: 'Location Updating Request',
-				protocol: 'MM',
-				details: ['Mobile registering location']
-			};
-		case 0x02:
-			return {
-				messageType: 'Location Updating Accept',
-				protocol: 'MM',
-				details: ['Location update successful']
-			};
-		case 0x11:
-			return {
-				messageType: 'Authentication Request',
-				protocol: 'MM',
-				details: ['Network requesting authentication']
-			};
-		case 0x14:
-			return {
-				messageType: 'Authentication Response',
-				protocol: 'MM',
-				details: ['Mobile providing authentication']
-			};
-		default:
-			return {
-				messageType: `MM Message 0x${msgType.toString(16).padStart(2, '0')}`,
-				protocol: 'MM',
-				details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
-			};
-	}
+	const dynamic = MM_DYNAMIC[msgType];
+	if (dynamic) return dynamic(bytes);
+
+	const entry = MM_MESSAGES[msgType];
+	if (entry) return { ...entry, protocol: 'MM' };
+
+	return {
+		messageType: `MM Message 0x${msgType.toString(16).padStart(2, '0')}`,
+		protocol: 'MM',
+		details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
+	};
 }
 
 /**
  * Extract IMSI from Mobile Identity bytes
  */
-function extractIMSI(bytes: number[]): string {
-	let imsi = '';
-	for (let i = 1; i < bytes.length; i++) {
-		const digit1 = bytes[i] & 0x0f;
-		const digit2 = (bytes[i] >> 4) & 0x0f;
+/** Extract a single BCD digit pair from one byte, filtering 0x0F padding. */
+function decodeBcdPair(byte: number, isLast: boolean): string {
+	const lo = byte & 0x0f;
+	const hi = (byte >> 4) & 0x0f;
+	const d1 = lo !== 0x0f ? lo.toString() : '';
+	const d2 = hi !== 0x0f && !isLast ? hi.toString() : '';
+	return d1 + d2;
+}
 
-		if (digit1 !== 0x0f) imsi += digit1.toString();
-		if (digit2 !== 0x0f && i < bytes.length - 1) imsi += digit2.toString();
-	}
-	return imsi;
+function extractIMSI(bytes: number[]): string {
+	return bytes
+		.slice(1)
+		.map((b, i, arr) => decodeBcdPair(b, i === arr.length - 1))
+		.join('');
 }
 
 /**
