@@ -21,6 +21,7 @@
 		fetchTowerLocationsForScanResults,
 		processScanStream
 	} from './gsm-evil-page-logic';
+	import { hasCellInfo, toDetectedTower } from './gsm-evil-tower-helpers';
 
 	let imsiCaptureActive = $state(false);
 	let imsiPollInterval: ReturnType<typeof setInterval>;
@@ -83,50 +84,6 @@
 			? groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations)
 			: []
 	);
-
-	const UNKNOWN_COUNTRY = { name: 'Unknown', flag: '', code: '??' };
-
-	/** Extract cell ID fields with defaults from a scan result. */
-	function extractCellFields(r: (typeof scanResults)[number]) {
-		const mcc = r.mcc || '';
-		const mnc = r.mnc || '';
-		const lac = r.lac || '';
-		const ci = r.ci || '';
-		const mccMnc = `${mcc}-${mnc.padStart(2, '0')}`;
-		return { mcc, mnc, lac, ci, mccMnc, towerId: `${mccMnc}-${lac}-${ci}` };
-	}
-
-	/** Resolve tower metadata lookups (country, carrier, location). */
-	function resolveTowerMeta(
-		mcc: string,
-		mccMnc: string,
-		towerId: string,
-		locations: typeof towerLocations
-	) {
-		return {
-			country: mccToCountry[mcc] || UNKNOWN_COUNTRY,
-			carrier: mncToCarrier[mccMnc] || 'Unknown',
-			location: locations[towerId] || null
-		};
-	}
-
-	/** Map a scan result with cell info to a detected tower record. */
-	function toDetectedTower(r: (typeof scanResults)[number], locations: typeof towerLocations) {
-		const cell = extractCellFields(r);
-		const meta = resolveTowerMeta(cell.mcc, cell.mccMnc, cell.towerId, locations);
-		return {
-			frequency: r.frequency,
-			...cell,
-			...meta,
-			frameCount: r.frameCount || 0,
-			strength: r.strength
-		};
-	}
-
-	/** Whether a scan result has cell identification fields. */
-	function hasCellInfo(r: (typeof scanResults)[number]): boolean {
-		return !!(r.mcc && r.lac && r.ci);
-	}
 
 	// Derive detected towers from scan results that have cell info (MCC/MNC/LAC/CI)
 	let scanDetectedTowers = $derived(

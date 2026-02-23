@@ -71,12 +71,14 @@ export function isHardwareControlPath(path: string): boolean {
 	return hwPatterns.some((p) => path.startsWith(p));
 }
 
-/** Paths exempt from rate limiting (streaming/SSE endpoints and map tiles). */
-const STREAMING_PATTERNS = ['data-stream', '/stream', '/sse', '/api/map-tiles/'];
-
-/** Check if this path should skip rate limiting. */
+/** Check if this path should skip rate limiting (streaming/SSE endpoints and map tiles). */
 function isStreamingPath(path: string): boolean {
-	return STREAMING_PATTERNS.some((p) => path.includes(p));
+	return (
+		path.includes('data-stream') ||
+		path.endsWith('/stream') ||
+		path.endsWith('/sse') ||
+		path.startsWith('/api/map-tiles/')
+	);
 }
 
 /** Build a 429 rate-limit response and log the audit event. */

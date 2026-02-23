@@ -3,6 +3,8 @@
 // Converts validated Kismet device data (simplified and raw formats)
 // into the unified KismetDevice interface used by the service layer.
 
+import type { RawKismetDevice, SimplifiedKismetDevice } from '$lib/schemas/kismet';
+
 import type { GPSPosition, KismetDevice } from './kismet.service';
 
 const DEFAULT_SIGNAL = -100;
@@ -31,9 +33,8 @@ function channelToFrequency(channel: string | number): number {
 }
 
 /** Extract scalar fields from a simplified Kismet device */
-
 function extractSimplifiedScalars(
-	validated: any
+	validated: SimplifiedKismetDevice
 ): Pick<KismetDevice, 'manufacturer' | 'type' | 'packets' | 'datasize'> {
 	return {
 		manufacturer: validated.manufacturer || 'Unknown',
@@ -49,8 +50,9 @@ function resolveFrequency(freq: number | undefined, channel: number): number {
 }
 
 /** Extract optional fields from a simplified Kismet device */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- validated schema output
-function extractSimplifiedOptionals(validated: any): Pick<KismetDevice, 'ssid' | 'encryption'> {
+function extractSimplifiedOptionals(
+	validated: SimplifiedKismetDevice
+): Pick<KismetDevice, 'ssid' | 'encryption'> {
 	return {
 		ssid: validated.ssid || validated.name || undefined,
 		encryption: validated.encryption || validated.encryptionType || undefined
@@ -58,15 +60,13 @@ function extractSimplifiedOptionals(validated: any): Pick<KismetDevice, 'ssid' |
 }
 
 /** Parse channel number from validated device */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- validated schema output
-function parseChannel(validated: any): number {
+function parseChannel(validated: SimplifiedKismetDevice): number {
 	return parseInt(String(validated.channel)) || 0;
 }
 
 /** Build KismetDevice from validated simplified device data */
 export function buildSimplifiedDevice(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- validated schema output
-	validated: any,
+	validated: SimplifiedKismetDevice,
 	gpsPosition: GPSPosition | null,
 	resolveLocation: LocationResolver
 ): KismetDevice {
@@ -91,7 +91,6 @@ export function buildSimplifiedDevice(
 }
 
 /** Extract signal strength from raw Kismet signal field */
-
 function extractObjectSignal(signal: Record<string, number>): number {
 	return (
 		signal['kismet.common.signal.last_signal'] ||
@@ -101,15 +100,13 @@ function extractObjectSignal(signal: Record<string, number>): number {
 }
 
 /** Extract signal from raw Kismet signal field (object or scalar) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-function extractRawSignal(signal: any): number {
+function extractRawSignal(signal: RawKismetDevice['kismet.device.base.signal']): number {
 	if (typeof signal === 'object' && signal !== null) return extractObjectSignal(signal);
 	return signal || DEFAULT_SIGNAL;
 }
 
 /** Extract SSID from raw Kismet device dot11 fields */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-function extractDot11Ssid(dot11: any): string | undefined {
+function extractDot11Ssid(dot11: RawKismetDevice['dot11.device']): string | undefined {
 	return (
 		dot11?.['dot11.device.last_beaconed_ssid'] ||
 		dot11?.['dot11.device.advertised_ssid_map']?.ssid
@@ -117,8 +114,7 @@ function extractDot11Ssid(dot11: any): string | undefined {
 }
 
 /** Extract SSID from raw Kismet device fields */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-function extractRawSsid(validated: any): string | undefined {
+function extractRawSsid(validated: RawKismetDevice): string | undefined {
 	return (
 		extractDot11Ssid(validated['dot11.device']) ||
 		validated['kismet.device.base.name'] ||
@@ -127,8 +123,9 @@ function extractRawSsid(validated: any): string | undefined {
 }
 
 /** Extract text identity fields from a raw Kismet device */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-function extractRawIdentity(validated: any): Pick<KismetDevice, 'manufacturer' | 'type'> {
+function extractRawIdentity(
+	validated: RawKismetDevice
+): Pick<KismetDevice, 'manufacturer' | 'type'> {
 	return {
 		manufacturer: validated['kismet.device.base.manuf'] || 'Unknown',
 		type: (validated['kismet.device.base.type'] || 'Unknown').toLowerCase()
@@ -136,9 +133,8 @@ function extractRawIdentity(validated: any): Pick<KismetDevice, 'manufacturer' |
 }
 
 /** Extract numeric fields from a raw Kismet device */
-
 function extractRawMetrics(
-	validated: any,
+	validated: RawKismetDevice,
 	channel: number
 ): Pick<KismetDevice, 'frequency' | 'packets' | 'datasize'> {
 	return {
@@ -149,8 +145,11 @@ function extractRawMetrics(
 }
 
 /** Extract base identifiers from a raw Kismet device */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-function extractRawBase(validated: any): { mac: string; channel: number; lastSeen: number } {
+function extractRawBase(validated: RawKismetDevice): {
+	mac: string;
+	channel: number;
+	lastSeen: number;
+} {
 	return {
 		mac: validated['kismet.device.base.macaddr'] || 'Unknown',
 		channel: parseInt(String(validated['kismet.device.base.channel'])) || 0,
@@ -160,8 +159,7 @@ function extractRawBase(validated: any): { mac: string; channel: number; lastSee
 
 /** Build KismetDevice from validated raw Kismet device data */
 export function buildRawDevice(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw Kismet schema
-	validated: any,
+	validated: RawKismetDevice,
 	gpsPosition: GPSPosition | null,
 	resolveLocation: LocationResolver
 ): KismetDevice {
