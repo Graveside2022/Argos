@@ -5,15 +5,15 @@
 
 ## Decision 1: Complexity Threshold Target
 
-**Decision**: Set both cyclomatic and cognitive complexity thresholds to 10 at error level.
+**Decision**: Set both cyclomatic and cognitive complexity thresholds to 5 at error level.
 
-**Rationale**: SonarSource (inventors of cognitive complexity) ship a default of 15. Google and major open-source projects use 10-15. A target of 10 ensures functions fit in working memory and reduces defect introduction rate. The strict error level means zero tolerance — no new complexity debt can be introduced.
+**Rationale**: SonarSource rates complexity ≤5 as "A grade" — the highest quality tier. At threshold 5, every function is trivially readable at a glance with at most 4 decision points. This forces aggressive decomposition into micro-helpers and lookup tables, producing extremely modular code where every function has a single, obvious responsibility. The strict error level means zero tolerance — no new complexity debt can be introduced.
 
 **Alternatives Considered**:
 
 - 15 (SonarSource default) — too lenient, allows functions that are hard to review
-- 5 (SonarSource "A" grade) — too aggressive for a codebase with hardware integration, would require fragmenting functions below useful granularity
-- Warn-only at 10 — does not prevent regression; developers can ignore warnings
+- 10 (Google/industry standard) — still allows moderately complex functions; chosen initially but tightened to 5
+- Warn-only — does not prevent regression; developers can ignore warnings
 
 ## Decision 2: Refactoring Without Behavioral Changes
 
@@ -51,7 +51,7 @@
 
 ## Decision 5: Lookup Table Pattern for Conditional Chains
 
-**Decision**: Replace if-else chains with 5+ branches using `Record<string, T>` or `Map<string, T>` lookup tables. The lookup is defined as a module-level constant. A fallback/default case is handled with nullish coalescing (`??`).
+**Decision**: Replace if-else chains with 3+ branches using `Record<string, T>` or `Map<string, T>` lookup tables. The lookup is defined as a module-level constant. A fallback/default case is handled with nullish coalescing (`??`).
 
 **Rationale**: A lookup table has cyclomatic complexity of 1 regardless of how many entries it contains. It is also more performant (O(1) vs O(n) for if-else chains). The fallback handles unknown/unexpected inputs without throwing.
 

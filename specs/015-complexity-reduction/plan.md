@@ -5,7 +5,7 @@
 
 ## Summary
 
-Systematically refactor 68 functions across 46 files to bring all cyclomatic and cognitive complexity scores to 10 or below. Purely structural refactoring — no feature changes, no API changes, no behavioral modifications. Techniques: extract focused helpers, replace conditional chains with lookup tables, use early returns to flatten nesting, decompose large orchestrators into pipeline stages.
+Systematically refactor all functions across the codebase to bring all cyclomatic and cognitive complexity scores to 5 or below. Approximately 536 violations at this threshold. Purely structural refactoring — no feature changes, no API changes, no behavioral modifications. Techniques: extract focused helpers, replace conditional chains with lookup tables, use early returns to flatten nesting, decompose large orchestrators into pipeline stages.
 
 ## Technical Context
 
@@ -17,7 +17,7 @@ Systematically refactor 68 functions across 46 files to bring all cyclomatic and
 **Project Type**: SvelteKit web application
 **Performance Goals**: No regression — all existing performance benchmarks must continue to pass
 **Constraints**: Max 300 lines/file, max 50 lines/function (Constitution Article 2.2). No new dependencies.
-**Scale/Scope**: 68 functions in 46 files. ESLint enforced at error level, threshold 10.
+**Scale/Scope**: ~536 violations across the codebase. ESLint enforced at error level, threshold 5.
 
 ## Constitution Check
 
@@ -90,14 +90,14 @@ src/
 
 Each violation will be addressed using one or more of these patterns:
 
-| Pattern                      | When to Use                                  | Complexity Reduction                          |
-| ---------------------------- | -------------------------------------------- | --------------------------------------------- |
-| **Early Return**             | Deep nesting from guard checks               | Removes 1-3 nesting levels per guard          |
-| **Lookup Table**             | switch/case or if-else chains mapping values | Replaces N branches with 1 lookup (O(1))      |
-| **Extract Helper**           | Function does multiple distinct things       | Splits into focused functions ≤10 each        |
-| **Strategy Map**             | Conditional behavior dispatch                | Replaces N if-else with keyed dispatch        |
-| **Pipeline Composition**     | Sequential data transformations              | Replaces nested transforms with chained steps |
-| **Error Handler Extraction** | try-catch around multiple operations         | Isolates error handling per operation         |
+| Pattern                      | When to Use                                    | Complexity Reduction                          |
+| ---------------------------- | ---------------------------------------------- | --------------------------------------------- |
+| **Early Return**             | Deep nesting from guard checks                 | Removes 1-3 nesting levels per guard          |
+| **Lookup Table**             | if-else chains with 3+ branches mapping values | Replaces N branches with 1 lookup (O(1))      |
+| **Extract Helper**           | Function does multiple distinct things         | Splits into focused functions ≤5 each         |
+| **Strategy Map**             | Conditional behavior dispatch                  | Replaces N if-else with keyed dispatch        |
+| **Pipeline Composition**     | Sequential data transformations                | Replaces nested transforms with chained steps |
+| **Error Handler Extraction** | try-catch around multiple operations           | Isolates error handling per operation         |
 
 ### Execution Order
 
