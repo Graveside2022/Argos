@@ -2,12 +2,10 @@
  * Pure helpers for hardware-details-service.ts — USB sysfs readers,
  * regex parsers, and device-specific detection logic.
  */
-import { execFile } from 'child_process';
 import { readdir, readFile, readlink } from 'fs/promises';
 import { createConnection } from 'net';
-import { promisify } from 'util';
 
-const execFileAsync = promisify(execFile);
+import { execFileAsync } from '$lib/server/exec';
 
 /** Run a command safely via execFile — no shell interpretation */
 export async function run(binary: string, args: string[]): Promise<string> {

@@ -3,15 +3,13 @@
  * Extracted from gsm-scan-service.ts for constitutional compliance (Article 2.2).
  */
 
-import { execFile, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { readFile } from 'fs/promises';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 export interface ChannelClassification {
 	channelType: string;

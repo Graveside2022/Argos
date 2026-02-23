@@ -1,10 +1,7 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFileAsync } from '$lib/server/exec';
 
 import type { ProcessConfig } from './process-utils';
 import { findBlockingProcesses, killMatchingProcesses } from './process-utils';
-
-const execFileAsync = promisify(execFile);
 
 /** HackRF process configs for shared process detection/kill utilities */
 const HACKRF_PROCESS_CONFIGS: ProcessConfig[] = [

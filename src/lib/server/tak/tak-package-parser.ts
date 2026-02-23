@@ -1,11 +1,9 @@
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 
 import { DOMParser } from '@xmldom/xmldom';
 
-const execFileAsync = promisify(execFile);
+import { execFileAsync } from '$lib/server/exec';
 
 export interface ParsedTakPackage {
 	hostname: string;

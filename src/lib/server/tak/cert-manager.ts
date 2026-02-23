@@ -1,11 +1,9 @@
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
+
+import { execFileAsync } from '$lib/server/exec';
 
 import { InputValidationError, validatePathWithinDir } from '../security/input-sanitizer';
-
-const execFileAsync = promisify(execFile);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

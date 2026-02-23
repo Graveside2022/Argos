@@ -4,15 +4,12 @@
  * Tools for running tests, checking coverage, and build validation
  */
 
-import { execFile } from 'child_process';
 import { config } from 'dotenv';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
 import { BaseMCPServer, type ToolDefinition } from '../shared/base-server';
-
-const execFileAsync = promisify(execFile);
 config();
 
 /** Map suite name to npm script. */

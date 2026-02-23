@@ -3,18 +3,15 @@
  * Detects GPS modules, cellular modems, and other serial devices
  */
 
-import { execFile } from 'child_process';
 import { readdir, readFile } from 'fs/promises';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import type {
 	CellularCapabilities,
 	DetectedHardware,
 	GPSCapabilities
 } from '$lib/server/hardware/detection-types';
 import { logger } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 // ── GPS detection helpers ──
 

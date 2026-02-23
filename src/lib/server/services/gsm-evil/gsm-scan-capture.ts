@@ -6,17 +6,13 @@
  * All functions are consumed exclusively by gsm-scan-frequency-analysis.ts.
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
+import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { logger } from '$lib/utils/logger';
 
 import type { ScanEvent } from './gsm-scan-types';
 import { createUpdateEvent } from './gsm-scan-types';
-
-const execFileAsync = promisify(execFile);
 
 /**
  * Build a default "failed" FrequencyTestResult for a given frequency.

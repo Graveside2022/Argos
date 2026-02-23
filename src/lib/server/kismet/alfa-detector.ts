@@ -1,11 +1,8 @@
-import { execFile } from 'child_process';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 /**
  * Alfa adapter detection utilities

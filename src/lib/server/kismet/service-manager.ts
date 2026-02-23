@@ -1,15 +1,12 @@
 // Kismet service management
-import { execFile } from 'child_process';
 import { writeFileSync } from 'fs';
 import path from 'path';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
 import type { KismetServiceStatus } from './types';
-
-const execFileAsync = promisify(execFile);
 
 export class KismetServiceManager {
 	private static readonly SERVICE_NAME = 'kismet';

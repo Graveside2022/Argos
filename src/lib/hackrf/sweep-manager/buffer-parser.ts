@@ -3,6 +3,7 @@
  * Extracted from buffer-manager.ts for constitutional compliance (Article 2.2).
  */
 
+import { errMsg } from '$lib/server/api/error-utils';
 import type { SpectrumData } from '$lib/server/hackrf/types';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
@@ -42,10 +43,6 @@ const NON_DATA_PATTERNS = [
  */
 export function isNonDataLine(line: string): boolean {
 	return NON_DATA_PATTERNS.some((pattern) => pattern.test(line));
-}
-
-function errMsg(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
 
 function invalidLine(rawLine: string, parseError: string): ParsedLine {

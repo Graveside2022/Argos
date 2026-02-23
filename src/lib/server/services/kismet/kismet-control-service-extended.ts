@@ -1,12 +1,9 @@
-import { execFile } from 'child_process';
 import { readdirSync, statSync } from 'fs';
 import { homedir } from 'os';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 export interface KismetControlResult {
 	success: boolean;
