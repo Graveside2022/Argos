@@ -7,6 +7,10 @@ import {
 	buildNoFixResponse
 } from './gps-response-builder';
 import { queryGpsd } from './gps-socket';
+import type { GpsPositionResponse } from './gps-types';
+
+// Re-export type for backward compatibility
+export type { GpsPositionResponse } from './gps-types';
 
 // Cache last known satellite count from full SKY messages (accurate per-satellite data).
 // Full SKY messages only arrive every ~4-5s, so between them we serve the cached value.
@@ -24,24 +28,6 @@ const CIRCUIT_BREAKER_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 30000; // 30 seconds between retries when circuit is open
 let lastFailureTimestamp = 0;
 let circuitBreakerLogged = false;
-
-export interface GpsPositionResponse {
-	success: boolean;
-	data: {
-		latitude: number | null;
-		longitude: number | null;
-		altitude: number | null;
-		speed: number | null;
-		heading: number | null;
-		accuracy: number | null;
-		satellites: number | null;
-		fix: number;
-		time: string | null;
-	};
-	error?: string;
-	details?: string;
-	mode?: number;
-}
 
 /** Build a GPS response JSON payload, dispatching to the appropriate response builder */
 function buildGpsResponse(

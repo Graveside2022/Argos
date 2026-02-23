@@ -13,7 +13,7 @@ import { HardwareDevice } from '$lib/server/hardware/types';
 import { safe } from '$lib/server/result';
 import { logger } from '$lib/utils/logger';
 
-import type { GsmEvilStartResult } from './gsm-evil-control-service';
+import type { GsmEvilStartResult } from './gsm-evil-types';
 
 /** Check that grgsm_livemon_headless binary and GsmEvil.py script exist */
 export async function checkPrerequisites(gsmDir: string): Promise<GsmEvilStartResult | null> {

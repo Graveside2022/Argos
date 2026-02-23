@@ -15,6 +15,7 @@ import type { Affiliation } from '$lib/stores/tactical-map/kismet-store';
 import { parseCotToFeature } from '$lib/utils/cot-parser';
 
 import { MAP_UI_COLORS, resolveMapColor } from './map-colors';
+import type { PopupState, TowerPopupState } from './map-handler-types';
 import {
 	buildDevicePopupContent,
 	buildTowerPopupContent,
@@ -25,22 +26,8 @@ import {
 } from './map-handlers-helpers';
 import { fetchCellTowers, haversineKm, LAYER_MAP } from './map-helpers';
 
-// ── Device click handler ──
-
-export interface PopupState {
-	ssid: string;
-	mac: string;
-	rssi: number;
-	type: string;
-	manufacturer: string;
-	channel: number;
-	frequency: number;
-	packets: number;
-	last_seen: number;
-	clientCount: number;
-	parentAP: string;
-	affiliation: Affiliation;
-}
+// Re-export types for backward compatibility
+export type { PopupState, TowerPopupState } from './map-handler-types';
 
 export function handleDeviceClick(
 	map: maplibregl.Map,
@@ -72,17 +59,6 @@ export async function handleClusterClick(
 }
 
 // ── Tower click handler ──
-
-export interface TowerPopupState {
-	radio: string;
-	mcc: number;
-	mnc: number;
-	lac: number;
-	ci: number;
-	range: number;
-	samples: number;
-	avgSignal: number;
-}
 
 export function handleTowerClick(
 	map: maplibregl.Map,
