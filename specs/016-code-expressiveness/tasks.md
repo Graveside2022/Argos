@@ -82,7 +82,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Write `safe()` utility with unit tests, convert 3 existing try-catch sites.
 
-- [ ] T015 [P] [US3] Convert 3 existing try-catch sites to use `safe()` from `src/lib/server/result.ts` — choose sites within services (not route handlers) where conditional error handling adds value
+- [x] T015 [P] [US3] Convert 3 existing try-catch sites to use `safe()` from `src/lib/server/result.ts` — choose sites within services (not route handlers) where conditional error handling adds value
 
 ---
 
