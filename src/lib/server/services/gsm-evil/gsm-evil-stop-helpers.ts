@@ -7,6 +7,7 @@ import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
+import { safe } from '$lib/server/result';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStopResult } from './gsm-evil-control-service';
@@ -37,15 +38,10 @@ export async function gracefulStopGsmProcesses(): Promise<void> {
 
 /** Check if any GSM Evil processes remain after graceful stop */
 export async function checkRemainingGsmProcesses(): Promise<string> {
-	try {
-		const { stdout } = await execFileAsync('/usr/bin/pgrep', [
-			'-f',
-			'grgsm_livemon_headless|GsmEvil'
-		]);
-		return stdout;
-	} catch {
-		return '';
-	}
+	const [result] = await safe(() =>
+		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless|GsmEvil'])
+	);
+	return result?.stdout ?? '';
 }
 
 /** Force-kill remaining GSM Evil processes with SIGKILL */

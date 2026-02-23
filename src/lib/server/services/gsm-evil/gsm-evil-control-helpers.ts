@@ -10,6 +10,7 @@ import { access, copyFile, readFile as readFileAsync, writeFile } from 'fs/promi
 import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
+import { safe } from '$lib/server/result';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStartResult } from './gsm-evil-control-service';
@@ -52,12 +53,10 @@ export async function killExistingGsmProcesses(): Promise<void> {
 
 /** Check if GSM processes are actively running via pgrep */
 async function findActiveGsmProcesses(): Promise<string> {
-	try {
-		const { stdout } = await execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon|GsmEvil']);
-		return stdout;
-	} catch {
-		return '';
-	}
+	const [result] = await safe(() =>
+		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon|GsmEvil'])
+	);
+	return result?.stdout ?? '';
 }
 
 /** Release a stale HackRF lock when no GSM processes are running */

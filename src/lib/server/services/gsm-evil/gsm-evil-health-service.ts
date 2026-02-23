@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 
 import { execFileAsync } from '$lib/server/exec';
+import { safe } from '$lib/server/result';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
@@ -120,18 +121,14 @@ async function populateGrgsmRuntime(health: GsmEvilHealth, pid: number): Promise
 
 /** Check whether port 8080 has a LISTEN socket via lsof. */
 async function checkPort8080Listener(): Promise<boolean> {
-	try {
-		const { stdout: portCheck } = await execFileAsync('/usr/bin/sudo', [
-			'/usr/bin/lsof',
-			'-i',
-			':8080'
-		]);
-		return portCheck.split('\n').some((line) => line.includes('LISTEN'));
-	} catch (error: unknown) {
-		const msg = error instanceof Error ? error.message : String(error);
-		logger.warn('[gsm-evil-health] Port 8080 check failed', { error: msg });
+	const [result, err] = await safe(() =>
+		execFileAsync('/usr/bin/sudo', ['/usr/bin/lsof', '-i', ':8080'])
+	);
+	if (err) {
+		logger.warn('[gsm-evil-health] Port 8080 check failed', { error: err.message });
 		return false;
 	}
+	return result.stdout.split('\n').some((line) => line.includes('LISTEN'));
 }
 
 /** Check whether the GSM Evil HTTP interface on port 8080 responds with 200. */
