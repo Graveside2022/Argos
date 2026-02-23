@@ -158,7 +158,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 - [x] T026 [P] [US6] Create `withRetry()` in `src/lib/server/retry.ts` — configurable `attempts`, `delayMs`, `backoff` (linear/exponential). Add JSDoc. Add unit tests in `src/lib/server/retry.test.ts`
 - [x] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/timeout.ts` — configurable `timeoutMs`. Add JSDoc. Add unit tests in `src/lib/server/timeout.test.ts`
-- [ ] T028 [US6] Identify and migrate 2–3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
+- [x] T028 [US6] Identify and migrate 2–3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
 
 ---
 

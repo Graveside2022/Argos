@@ -3,6 +3,7 @@ import { homedir } from 'os';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
+import { withRetry } from '$lib/server/retry';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
@@ -94,12 +95,19 @@ async function spawnKismet(iface: string): Promise<void> {
 /** Wait for Kismet PID to appear, retrying up to 3 times */
 async function waitForKismetPid(): Promise<string> {
 	await new Promise((resolve) => setTimeout(resolve, 5000));
-	for (let attempt = 0; attempt < 3; attempt++) {
-		const pid = await pgrepKismet();
-		if (pid) return pid;
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+	const findPid = withRetry(
+		async () => {
+			const pid = await pgrepKismet();
+			if (!pid) throw new Error('Kismet PID not found');
+			return pid;
+		},
+		{ attempts: 3, delayMs: 2000, backoff: 'linear' }
+	);
+	try {
+		return await findPid();
+	} catch {
+		return '';
 	}
-	return '';
 }
 
 /** Check which OS user owns a process */

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { execFileAsync } from '$lib/server/exec';
+import { withRetry } from '$lib/server/retry';
 import { logger } from '$lib/utils/logger';
 
 export interface KismetStartResult {
@@ -50,11 +51,19 @@ async function probeKismetStatus(): Promise<boolean> {
 
 /** Poll Kismet status endpoint until responsive */
 async function waitForKismetReady(maxAttempts = 15): Promise<boolean> {
-	for (let i = 0; i < maxAttempts; i++) {
-		if (await probeKismetStatus()) return true;
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+	const probe = withRetry(
+		async () => {
+			const ready = await probeKismetStatus();
+			if (!ready) throw new Error('Kismet not ready');
+			return true;
+		},
+		{ attempts: maxAttempts, delayMs: 1000, backoff: 'linear' }
+	);
+	try {
+		return await probe();
+	} catch {
+		return false;
 	}
-	return false;
 }
 
 /**
