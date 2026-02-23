@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { spawn } from 'child_process';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
@@ -216,13 +217,12 @@ export const POST: RequestHandler = async () => {
 
 		return buildScanResponse(results);
 	} catch (error: unknown) {
-		logger.error('Intelligent scan error', { error: (error as Error).message });
+		logger.error('Intelligent scan error', { error: errMsg(error) });
 		return json(
 			{
 				success: false,
 				message: 'Scan failed. Make sure GSM Evil is stopped first.',
-				// Safe: Catch block error cast to Error for scan failure message
-				error: (error as Error).message
+				error: errMsg(error)
 			},
 			{ status: 500 }
 		);

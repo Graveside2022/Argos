@@ -3,6 +3,7 @@
  * Process cleanup, force-kill, error result building, and resource release for stopGsmEvil()
  */
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
@@ -74,8 +75,7 @@ export async function forceKillGsmProcesses(): Promise<void> {
 /** Build a GsmEvilStopResult from a stop error, distinguishing timeouts */
 export function buildStopErrorResult(error: unknown): GsmEvilStopResult {
 	const isTimeout =
-		(error as { signal?: string }).signal === 'SIGTERM' ||
-		(error as Error).message.includes('timeout');
+		(error as { signal?: string }).signal === 'SIGTERM' || errMsg(error).includes('timeout');
 
 	if (isTimeout) {
 		return {
@@ -89,7 +89,7 @@ export function buildStopErrorResult(error: unknown): GsmEvilStopResult {
 	return {
 		success: false,
 		message: 'Failed to stop GSM Evil',
-		error: (error as Error).message,
+		error: errMsg(error),
 		suggestion: 'Check system logs or try nuclear stop option'
 	};
 }

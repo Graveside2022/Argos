@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { KismetService } from '$lib/server/services/kismet.service';
@@ -155,7 +156,7 @@ export const GET: RequestHandler = async () => {
 		if (fusionKismetController.isReady()) return json(await fetchFusionDevices());
 		return json(await KismetService.getDevices());
 	} catch (error: unknown) {
-		logger.error('Error in Kismet devices endpoint', { error: (error as Error).message });
+		logger.error('Error in Kismet devices endpoint', { error: errMsg(error) });
 		return json(await fetchKismetFallback());
 	}
 };

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { startGsmEvil, stopGsmEvil } from '$lib/server/services/gsm-evil/gsm-evil-control-service';
 import { logger } from '$lib/utils/logger';
 
@@ -76,13 +77,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		return await handler(frequency);
 	} catch (error: unknown) {
-		logger.error('Control API error', { error: (error as Error).message });
+		logger.error('Control API error', { error: errMsg(error) });
 		return json(
 			{
 				success: false,
 				message: 'Invalid request',
-				// Safe: Catch block error cast to Error for message extraction
-				error: (error as Error).message
+				error: errMsg(error)
 			},
 			{ status: 400 }
 		);

@@ -8,6 +8,7 @@ import type { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
 import type { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
 import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
+import { errMsg } from '$lib/server/api/error-utils';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 export interface CyclingHealth {
@@ -72,7 +73,7 @@ async function logMemoryStatus(): Promise<void> {
 			logWarn(`[WARN] Low memory: ${memInfo.availablePercent}% available`);
 		}
 	} catch (e) {
-		logError('Failed to check memory:', { error: (e as Error).message });
+		logError('Failed to check memory:', { error: errMsg(e) });
 	}
 }
 

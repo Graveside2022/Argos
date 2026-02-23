@@ -1,6 +1,7 @@
 import { readdirSync, statSync } from 'fs';
 import { homedir } from 'os';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -198,11 +199,11 @@ export async function startKismetExtended(): Promise<KismetControlResult> {
 		logger.info('[kismet] Using interface', { interface: alfaInterface });
 		return await launchAndVerify(alfaInterface);
 	} catch (error: unknown) {
-		logger.error('[kismet] Start error', { error: (error as Error).message });
+		logger.error('[kismet] Start error', { error: errMsg(error) });
 		return {
 			success: false,
 			message: 'Failed to start Kismet',
-			error: (error as Error).message
+			error: errMsg(error)
 		};
 	}
 }

@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { checkGsmEvilHealth } from '$lib/server/services/gsm-evil/gsm-evil-health-service';
 import { logger } from '$lib/utils/logger';
 
@@ -34,14 +35,13 @@ export const GET: RequestHandler = async () => {
 			}
 		});
 	} catch (error: unknown) {
-		logger.error('Health check endpoint error', { error: (error as Error).message });
+		logger.error('Health check endpoint error', { error: errMsg(error) });
 		return json(
 			{
 				timestamp: new Date().toISOString(),
 				health: null,
 				error: 'Health check failed',
-				// Safe: Catch block error cast to Error for health check failure message
-				message: (error as Error).message
+				message: errMsg(error)
 			},
 			{ status: 500 }
 		);

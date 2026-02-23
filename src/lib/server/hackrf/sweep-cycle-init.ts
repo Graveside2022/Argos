@@ -4,6 +4,7 @@ import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler
 import { convertToHz } from '$lib/hackrf/sweep-manager/frequency-utils';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { forceCleanupExistingProcesses } from '$lib/hackrf/sweep-manager/sweep-health-checker';
+import { errMsg } from '$lib/server/api/error-utils';
 import type { SweepMutableState } from '$lib/server/hackrf/types';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
@@ -198,7 +199,7 @@ async function handleRunError(
 		operation: 'start_sweep'
 	});
 	logError('[ERROR] Error starting sweep process:', {
-		error: (error as Error).message,
+		error: errMsg(error),
 		analysis: errorAnalysis
 	});
 	await handleSweepError(ctx.getCoordinatorContext(), error as Error, currentFrequency, () =>

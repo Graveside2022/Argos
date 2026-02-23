@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { readFile } from 'fs/promises';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
@@ -109,13 +110,12 @@ export const GET: RequestHandler = async () => {
 			message: frames.length > 0 ? 'Live frames captured' : 'No frames detected'
 		});
 	} catch (error: unknown) {
-		logger.error('Frame capture error', { error: (error as Error).message });
+		logger.error('Frame capture error', { error: errMsg(error) });
 		return json({
 			success: false,
 			frames: [],
 			message: 'Failed to capture frames',
-			// Safe: Catch block error cast to Error for message extraction
-			error: (error as Error).message
+			error: errMsg(error)
 		});
 	}
 };

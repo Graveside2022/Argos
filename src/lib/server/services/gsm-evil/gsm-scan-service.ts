@@ -1,3 +1,4 @@
+import { errMsg } from '$lib/server/api/error-utils';
 import { logger } from '$lib/utils/logger';
 
 import {
@@ -91,9 +92,9 @@ async function scanSingleFrequency(freq: string): Promise<GsmScanResult | null> 
 	} catch (freqError) {
 		logger.warn('[gsm-scan] Error testing frequency', {
 			freq,
-			error: (freqError as Error).message
+			error: errMsg(freqError)
 		});
-		if ((freqError as Error).message.includes('Hardware not available')) {
+		if (errMsg(freqError).includes('Hardware not available')) {
 			throw freqError;
 		}
 		return null;
@@ -160,11 +161,11 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 
 		return buildScanResponse(results);
 	} catch (error: unknown) {
-		logger.error('[gsm-scan] Scan error', { error: (error as Error).message });
+		logger.error('[gsm-scan] Scan error', { error: errMsg(error) });
 		return {
 			success: false,
 			message: 'Scan failed. Make sure GSM Evil is stopped first.',
-			error: (error as Error).message
+			error: errMsg(error)
 		};
 	}
 }

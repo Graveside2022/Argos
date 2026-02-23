@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { logger } from '$lib/utils/logger';
@@ -92,11 +93,11 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		return json({ success: true, isRunning: false, status: 'inactive', data: INACTIVE_DATA });
 	} catch (error) {
-		logger.error('Error getting Kismet status', { error: (error as Error).message });
+		logger.error('Error getting Kismet status', { error: errMsg(error) });
 		return json({
 			success: false,
 			status: 'error',
-			error: (error as Error).message,
+			error: errMsg(error),
 			data: { isRunning: false, interface: null, channels: [], deviceCount: 0, uptime: 0 }
 		});
 	}

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { stat } from 'fs/promises';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
@@ -118,8 +119,7 @@ export const GET: RequestHandler = async () => {
 			success: false,
 			hasActivity: false,
 			message: 'Failed to check activity',
-			// Safe: Catch block error cast to Error for message extraction
-			error: (error as Error).message
+			error: errMsg(error)
 		});
 	}
 };

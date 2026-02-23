@@ -10,6 +10,7 @@
  * consumers can keep importing from this module.
  */
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import type { FrequencyTestResult } from '$lib/types/gsm';
@@ -75,7 +76,7 @@ async function* yieldEvents(
 
 /** Build error events for a scan failure */
 function buildScanErrorEvents(error: unknown): import('./gsm-scan-types').ScanEvent[] {
-	const msg = (error as Error).message;
+	const msg = errMsg(error);
 	return [
 		createUpdateEvent(`[ERROR] Scan failed: ${msg}`),
 		createResultEvent({ success: false, message: 'Scan failed', error: msg })

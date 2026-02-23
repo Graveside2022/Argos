@@ -5,6 +5,7 @@
 
 import type { Database as DatabaseType } from 'better-sqlite3';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { validateSqlIdentifier } from '$lib/server/security/input-sanitizer';
 
 import { getHealthReport } from './db-health-report';
@@ -173,7 +174,7 @@ export class DatabaseOptimizer {
 				estimatedCost: this.estimateQueryCost(plan)
 			};
 		} catch (error) {
-			return { error: (error as Error).message };
+			return { error: errMsg(error) };
 		}
 	}
 
