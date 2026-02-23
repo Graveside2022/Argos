@@ -17,14 +17,16 @@ import type { DbSignal, SpatialQuery, TimeQuery } from './types';
 
 /** Extract optional bandwidth from a signal's metadata. */
 function extractBandwidth(signal: SignalMarker): number | null {
-	// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing
-	return ('bandwidth' in signal ? signal.bandwidth : null) as number | null;
+	if (!signal.metadata || typeof signal.metadata !== 'object') return null;
+	return 'bandwidth' in signal.metadata ? ((signal.metadata.bandwidth as number) ?? null) : null;
 }
 
 /** Extract optional modulation from a signal's metadata. */
 function extractModulation(signal: SignalMarker): string | null {
-	// @constitutional-exemption Article-II-2.1 issue:#14 — Database query result type narrowing
-	return ('modulation' in signal ? signal.modulation : null) as string | null;
+	if (!signal.metadata || typeof signal.metadata !== 'object') return null;
+	return 'modulation' in signal.metadata
+		? ((signal.metadata.modulation as string) ?? null)
+		: null;
 }
 
 /** Convert a SignalMarker to a DbSignal for database insertion. */
