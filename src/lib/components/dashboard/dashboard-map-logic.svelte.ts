@@ -72,10 +72,14 @@ export function createMapState() {
 	let towerPopupLngLat: LngLatLike | null = $state(null);
 	let towerPopupContent: TowerPopupState | null = $state(null);
 	// GPS memoization: skip expensive GeoJSON rebuilds when position hasn't changed
-	let prevGpsLat = NaN;
-	let prevGpsLon = NaN;
-	let prevGpsAccuracy = NaN;
+	// Infinity ensures first real GPS fix always triggers a build (Infinity - x = Infinity > threshold)
+	let prevGpsLat = Infinity;
+	let prevGpsLon = Infinity;
+	let prevGpsAccuracy = Infinity;
 	let cachedAccuracyGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
+	// Detection range has independent tracking to avoid shared mutable state between $derived blocks
+	let prevDetLat = Infinity;
+	let prevDetLon = Infinity;
 	let cachedDetectionGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 	const accuracyColor = $derived.by(() => {
@@ -117,9 +121,11 @@ export function createMapState() {
 	const detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
 		const lat = gps$.current.position.lat;
 		const lon = gps$.current.position.lon;
-		const latChanged = Math.abs(lat - prevGpsLat) > 0.00001;
-		const lonChanged = Math.abs(lon - prevGpsLon) > 0.00001;
+		const latChanged = Math.abs(lat - prevDetLat) > 0.00001;
+		const lonChanged = Math.abs(lon - prevDetLon) > 0.00001;
 		if (!latChanged && !lonChanged) return cachedDetectionGeoJSON;
+		prevDetLat = lat;
+		prevDetLon = lon;
 		cachedDetectionGeoJSON = buildDetectionRangeGeoJSON(lat, lon, RANGE_BANDS);
 		return cachedDetectionGeoJSON;
 	});
