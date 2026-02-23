@@ -3,16 +3,12 @@
  * Process cleanup, force-kill, error result building, and resource release for stopGsmEvil()
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
+import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStopResult } from './gsm-evil-control-service';
-
-const execFileAsync = promisify(execFile);
 
 /** Gracefully kill GSM Evil processes and free port 8080 */
 export async function gracefulStopGsmProcesses(): Promise<void> {

@@ -6,16 +6,12 @@
  *          stale locks when the owning process has already exited.
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
+import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 
 import type { ScanEvent } from './gsm-scan-types';
 import { createErrorEvent, createUpdateEvent } from './gsm-scan-types';
-
-const execFileAsync = promisify(execFile);
 
 /** Outcome of prerequisite + acquisition phases */
 export interface PrerequisiteResult {

@@ -3,14 +3,10 @@
  * Detects HackRF, USRP, and RTL-SDR devices via native CLI tools
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
 import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
+import { execFileAsync } from '$lib/server/exec';
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 import { logger } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 // ── HackRF detection ──
 

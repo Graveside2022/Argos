@@ -1,11 +1,9 @@
-import { execFile, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
-
-const execFileAsync = promisify(execFile);
 
 export interface KismetStartResult {
 	success: boolean;

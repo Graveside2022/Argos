@@ -3,19 +3,16 @@
  * Process management, prerequisite checks, and resource acquisition for GSM Evil
  */
 
-import { execFile } from 'child_process';
 import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { access, copyFile, readFile as readFileAsync, writeFile } from 'fs/promises';
-import { promisify } from 'util';
 
+import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStartResult } from './gsm-evil-control-service';
-
-const execFileAsync = promisify(execFile);
 
 /** Check that grgsm_livemon_headless binary and GsmEvil.py script exist */
 export async function checkPrerequisites(gsmDir: string): Promise<GsmEvilStartResult | null> {

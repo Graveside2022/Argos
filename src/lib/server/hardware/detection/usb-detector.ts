@@ -3,9 +3,7 @@
  * Detects SDRs, WiFi adapters, Bluetooth adapters, and other USB devices
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
+import { execFileAsync } from '$lib/server/exec';
 import type {
 	BluetoothCapabilities,
 	DetectedHardware,
@@ -15,8 +13,6 @@ import type {
 import { logger } from '$lib/utils/logger';
 
 import { detectHackRF, detectRTLSDR, detectUSRP } from './usb-sdr-detectors';
-
-const execFileAsync = promisify(execFile);
 
 /**
  * Known USB device signatures

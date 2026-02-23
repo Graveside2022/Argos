@@ -3,10 +3,7 @@
  * Used by hackrf-manager.ts and alfa-manager.ts to find/kill blocking processes.
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { execFileAsync } from '$lib/server/exec';
 
 export interface ProcessEntry {
 	pid: string;
