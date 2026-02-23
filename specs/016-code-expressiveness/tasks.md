@@ -164,8 +164,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 ## Phase 11: Polish & Cross-Cutting Concerns
 
-- [ ] T029 Run full verification suite: `npm run build` + `npm run test:unit` + `npx madge --circular src/`. Verify backward compatibility (FR-012) by calling key API endpoints and asserting response shapes match pre-migration format. Verify all success criteria from spec.md (SC-001 through SC-018)
-- [ ] T030 Record final metrics (cloc, madge, jscpd) and compare against baseline from T001. Document results in `specs/016-code-expressiveness/final-metrics.md`
+- [x] T029 Run full verification suite: `npm run build` + `npm run test:unit` + `npx madge --circular src/`. Verify backward compatibility (FR-012) by calling key API endpoints and asserting response shapes match pre-migration format. Verify all success criteria from spec.md (SC-001 through SC-018)
+- [x] T030 Record final metrics (cloc, madge, jscpd) and compare against baseline from T001. Document results in `specs/016-code-expressiveness/final-metrics.md`
 
 ---
 
