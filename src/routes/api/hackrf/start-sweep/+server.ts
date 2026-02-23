@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 import { logger } from '$lib/utils/logger';
@@ -88,11 +89,6 @@ async function startSweepCycle(
 	);
 }
 
-/** Safe error message extraction. */
-function errMsg(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
-
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const parsed = parseStartSweepBody(await request.json());
@@ -103,8 +99,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		logger.info('[start-sweep] Attempting to start sweep', { frequencies, cycleTimeMs });
 		return await startSweepCycle(frequencies, cycleTimeMs);
 	} catch (error: unknown) {
-		logger.error('Error in start-sweep endpoint', { error: errMsg(error) });
-		return json({ status: 'error', message: errMsg(error) }, { status: 500 });
+		const msg = errMsg(error);
+		logger.error('Error in start-sweep endpoint', { error: msg });
+		return json({ status: 'error', message: msg }, { status: 500 });
 	}
 };
 

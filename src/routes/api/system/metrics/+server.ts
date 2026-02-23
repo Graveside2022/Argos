@@ -1,26 +1,12 @@
-import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
 import * as fs from 'fs/promises';
 import * as os from 'os';
-import { promisify } from 'util';
 
-import { logger } from '$lib/utils/logger';
+import { createHandler } from '$lib/server/api/create-handler';
+import { execFileAsync } from '$lib/server/exec';
 
-import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
-
-export const GET: RequestHandler = async () => {
-	try {
-		const metrics = await getSystemMetrics();
-		return json(metrics);
-	} catch (error: unknown) {
-		logger.error('Failed to get system metrics', {
-			error: error instanceof Error ? error.message : String(error)
-		});
-		return json({ error: 'Failed to get system metrics' }, { status: 500 });
-	}
-};
+export const GET = createHandler(async () => {
+	return await getSystemMetrics();
+});
 
 async function getSystemMetrics() {
 	const [cpu, memory, disk, temperature, network] = await Promise.all([

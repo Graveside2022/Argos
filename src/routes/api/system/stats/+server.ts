@@ -1,13 +1,27 @@
 import { json } from '@sveltejs/kit';
 import os from 'os';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
+/** Simulated fallback stats when real data is unavailable */
+function fallbackStats() {
+	return {
+		cpu: Math.floor(Math.random() * 30) + 15,
+		memory: Math.floor(Math.random() * 40) + 30,
+		hostname: 'argos-system',
+		platform: 'linux',
+		uptime: '72h 14m',
+		memoryUsed: '1.2GB',
+		memoryTotal: '4.0GB',
+		timestamp: new Date().toISOString()
+	};
+}
+
+export const GET: RequestHandler = () => {
 	try {
-		// Get CPU usage
 		const cpus = os.cpus();
 		let totalIdle = 0;
 		let totalTick = 0;
@@ -23,46 +37,26 @@ export const GET: RequestHandler = async () => {
 		const total = totalTick / cpus.length;
 		const cpuPercentage = Math.round(100 - ~~((100 * idle) / total));
 
-		// Get memory usage
 		const totalMem = os.totalmem();
 		const freeMem = os.freemem();
 		const usedMem = totalMem - freeMem;
-		const memoryPercentage = Math.round((usedMem / totalMem) * 100);
 
-		// Get system info
-		const hostname = os.hostname();
-		const platform = os.platform();
 		const uptime = os.uptime();
-
-		// Calculate actual uptime for display
 		const hours = Math.floor(uptime / 3600);
 		const minutes = Math.floor((uptime % 3600) / 60);
-		const uptimeString = `${hours}h ${minutes}m`;
 
 		return json({
 			cpu: cpuPercentage,
-			memory: memoryPercentage,
-			hostname,
-			platform,
-			uptime: uptimeString,
+			memory: Math.round((usedMem / totalMem) * 100),
+			hostname: os.hostname(),
+			platform: os.platform(),
+			uptime: `${hours}h ${minutes}m`,
 			memoryUsed: `${(usedMem / (1024 * 1024 * 1024)).toFixed(1)}GB`,
 			memoryTotal: `${(totalMem / (1024 * 1024 * 1024)).toFixed(1)}GB`,
 			timestamp: new Date().toISOString()
 		});
 	} catch (error) {
-		logger.error('Error fetching system stats', {
-			error: error instanceof Error ? error.message : String(error)
-		});
-		// Return simulated values as fallback
-		return json({
-			cpu: Math.floor(Math.random() * 30) + 15,
-			memory: Math.floor(Math.random() * 40) + 30,
-			hostname: 'argos-system',
-			platform: 'linux',
-			uptime: '72h 14m',
-			memoryUsed: '1.2GB',
-			memoryTotal: '4.0GB',
-			timestamp: new Date().toISOString()
-		});
+		logger.error('Error fetching system stats', { error: errMsg(error) });
+		return json(fallbackStats());
 	}
 };

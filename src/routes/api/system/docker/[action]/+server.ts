@@ -1,21 +1,14 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
 import path from 'path';
-import { promisify } from 'util';
 
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
-const execFileAsync = promisify(execFile);
-
 /** Containers that may be managed via this endpoint */
 const VALID_CONTAINERS = ['openwebrx-hackrf', 'bettercap'];
-
-/** Extract error message from an unknown error value */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Derive the compose service name from a container name */
 function toServiceName(container: string): string {

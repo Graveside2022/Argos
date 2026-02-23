@@ -1,15 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+
+import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 
 import type { RequestHandler } from './$types';
-
-const execFileAsync = promisify(execFile);
-
-/** Extract error message from an unknown error value */
-function errMsg(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
 
 /** Names that identify Argos-managed containers */
 const ARGOS_CONTAINER_NAMES = ['argos', 'hackrf', 'openwebrx', 'bettercap'];
