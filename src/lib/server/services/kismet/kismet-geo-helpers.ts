@@ -1,32 +1,13 @@
 /**
  * Kismet Geographic Helpers
- * Shared FNV-1a MAC hashing and GPS offset functions for deterministic device placement.
+ * GPS offset functions for deterministic device placement.
+ * Hash functions re-exported from shared $lib/utils/geo.
  */
 
 import { GEO } from '$lib/constants/limits';
+import { hashMAC, hashMAC2 } from '$lib/utils/geo';
 
-/**
- * FNV-1a 32-bit hash of a MAC address, normalized to [0, 1).
- * Deterministic: same MAC always produces the same value.
- */
-export function hashMAC(mac: string): number {
-	let hash = 0x811c9dc5;
-	for (let i = 0; i < mac.length; i++) {
-		hash ^= mac.charCodeAt(i);
-		hash = (hash * 0x01000193) | 0;
-	}
-	return ((hash >>> 0) % 100000) / 100000;
-}
-
-/** Second independent hash for the same MAC (different seed) → [0, 1). */
-export function hashMAC2(mac: string): number {
-	let hash = 0x01000193;
-	for (let i = 0; i < mac.length; i++) {
-		hash ^= mac.charCodeAt(i);
-		hash = (hash * 0x811c9dc5) | 0;
-	}
-	return ((hash >>> 0) % 100000) / 100000;
-}
+export { hashMAC, hashMAC2 } from '$lib/utils/geo';
 
 /** Compute deterministic distance from signal strength and MAC hash. */
 export function signalToDistance(signalDbm: number, mac: string): number {

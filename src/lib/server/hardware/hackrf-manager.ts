@@ -1,4 +1,5 @@
 import { execFileAsync } from '$lib/server/exec';
+import { delay } from '$lib/utils/delay';
 
 import type { ProcessConfig } from './process-utils';
 import { findBlockingProcesses, killMatchingProcesses } from './process-utils';
@@ -92,5 +93,5 @@ export async function stopContainers(): Promise<void> {
 			// Container not running or doesn't exist
 		}
 	}
-	await new Promise((resolve) => setTimeout(resolve, 3000));
+	await delay(3000);
 }

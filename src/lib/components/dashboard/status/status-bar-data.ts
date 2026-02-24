@@ -3,6 +3,7 @@
  * Extracted from TopStatusBar to separate data concerns from presentation.
  */
 import type { Satellite } from '$lib/gps/types';
+import { haversineMeters } from '$lib/utils/geo';
 
 import type { WeatherData } from './weather-helpers';
 
@@ -88,19 +89,6 @@ export async function fetchHardwareDetails(): Promise<HardwareDetailsResult | nu
 	} catch {
 		return null;
 	}
-}
-
-/** Haversine distance in meters between two lat/lon points. */
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-	const R = 6371000;
-	const dLat = ((lat1 - lat2) * Math.PI) / 180;
-	const dLon = ((lon1 - lon2) * Math.PI) / 180;
-	const a =
-		Math.sin(dLat / 2) ** 2 +
-		Math.cos((lat2 * Math.PI) / 180) *
-			Math.cos((lat1 * Math.PI) / 180) *
-			Math.sin(dLon / 2) ** 2;
-	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Map API weather response to WeatherData, returning null on error responses. */

@@ -9,6 +9,7 @@
 import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
+import { delay } from '$lib/utils/delay';
 
 import type { ScanEvent } from './gsm-scan-types';
 import { createErrorEvent, createUpdateEvent } from './gsm-scan-types';
@@ -125,7 +126,7 @@ async function killGsmProcesses(): Promise<void> {
 	} catch {
 		/* no match is fine */
 	}
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await delay(1000);
 }
 
 /** Force-release HackRF and re-acquire for gsm-scan */

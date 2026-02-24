@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -29,12 +30,12 @@ async function terminateKismet(): Promise<void> {
 	try {
 		await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
 		logger.info('Sent SIGTERM to Kismet processes');
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await delay(2000);
 
 		if (await isKismetRunning()) {
 			logger.warn('Some Kismet processes still running, sending SIGKILL');
 			await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']);
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await delay(1000);
 		}
 	} catch (error) {
 		logger.error('Error during Kismet termination', { error: errMsg(error) });

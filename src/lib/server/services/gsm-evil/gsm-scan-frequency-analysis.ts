@@ -15,6 +15,7 @@ import { errMsg } from '$lib/server/api/error-utils';
 import { env } from '$lib/server/env';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 import { validateGain } from '$lib/validators/gsm';
 
@@ -238,7 +239,7 @@ export async function testFrequency(
 				`${label} Process started (PID ${pid}), waiting for demodulator initialization...`
 			)
 		);
-		await new Promise((resolve) => setTimeout(resolve, 2500));
+		await delay(2500);
 		await verifyProcessAlive(pid, stderrLog);
 
 		const captureTime = 15;

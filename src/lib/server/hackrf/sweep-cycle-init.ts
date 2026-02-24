@@ -9,6 +9,7 @@ import type { SweepMutableState } from '$lib/server/hackrf/types';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { SystemStatus } from '$lib/types/enums';
+import { delay } from '$lib/utils/delay';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import type { SweepCoordinatorContext } from './sweep-coordinator';
@@ -45,7 +46,7 @@ async function waitForInit(ctx: CycleInitContext): Promise<boolean> {
 	logWarn('Service not yet initialized, waiting...');
 	let waitTime = 0;
 	while (!ctx.state.isInitialized && waitTime < 10000) {
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		await delay(500);
 		waitTime += 500;
 	}
 	if (!ctx.state.isInitialized) {
@@ -101,7 +102,7 @@ async function preflightChecks(
 ): Promise<boolean> {
 	if (!(await waitForInit(ctx))) return false;
 	await ctx.processManager.cleanup();
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await delay(1000);
 	if (!checkStaleState(ctx)) return false;
 	if (!hasFrequencies(ctx, frequencies)) return false;
 	return acquireHardware(ctx);
@@ -136,7 +137,7 @@ async function initializeCycleAndRun(
 	}
 
 	await forceCleanupExistingProcesses(ctx.processManager);
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	await delay(2000);
 
 	logInfo(
 		'[SEARCH] Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...'

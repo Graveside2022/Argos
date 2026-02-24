@@ -8,6 +8,7 @@ import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { safe } from '$lib/server/result';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStopResult } from './gsm-evil-types';
@@ -33,7 +34,7 @@ export async function gracefulStopGsmProcesses(): Promise<void> {
 			error: String(error)
 		});
 	}
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await delay(1000);
 }
 
 /** Check if any GSM Evil processes remain after graceful stop */
@@ -65,7 +66,7 @@ export async function forceKillGsmProcesses(): Promise<void> {
 			error: String(error)
 		});
 	}
-	await new Promise((resolve) => setTimeout(resolve, 500));
+	await delay(500);
 }
 
 /** Build a GsmEvilStopResult from a stop error, distinguishing timeouts */

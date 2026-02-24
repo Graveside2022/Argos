@@ -5,6 +5,7 @@ import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -141,7 +142,7 @@ async function testFrequency(freq: string, power: number): Promise<FrequencyTest
 		return null;
 	}
 
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	await delay(2000);
 	const frameCount = await countGsmtapFrames();
 	await killGrgsm(pid);
 
@@ -165,7 +166,7 @@ async function testAllFrequencies(
 		logger.debug('Testing frequency', { freq });
 		const result = await testFrequency(freq, power);
 		if (result) results.push(result);
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		await delay(500);
 	}
 
 	return results;

@@ -9,6 +9,7 @@ import type { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
 import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { errMsg } from '$lib/server/api/error-utils';
+import { delay } from '$lib/utils/delay';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 export interface CyclingHealth {
@@ -185,7 +186,7 @@ export async function performRecovery(ctx: HealthCheckContext, reason: string): 
 	try {
 		await ctx.processManager.forceKillProcess();
 		await ctx.processManager.cleanup();
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await delay(2000);
 
 		const cycleState = ctx.frequencyCycler.getCycleState();
 		if (cycleState.currentFrequency && ctx.isRunning) {
@@ -276,7 +277,7 @@ export async function forceCleanupExistingProcesses(processManager: ProcessManag
 		await pkillAsync(['-9', '-f', 'hackrf_info']);
 		await pkillAsync(['-9', '-f', 'sweep_bridge.py']);
 
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await delay(1000);
 		logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
 	} catch (error) {
 		logError('Cleanup failed', { error }, 'hackrf-cleanup-failed');

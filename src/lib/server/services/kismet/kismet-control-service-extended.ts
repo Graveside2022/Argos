@@ -6,6 +6,7 @@ import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { withRetry } from '$lib/server/retry';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 export interface KismetControlResult {
@@ -95,7 +96,7 @@ async function spawnKismet(iface: string): Promise<void> {
 
 /** Wait for Kismet PID to appear, retrying up to 3 times */
 async function waitForKismetPid(): Promise<string> {
-	await new Promise((resolve) => setTimeout(resolve, 5000));
+	await delay(5000);
 	const findPid = withRetry(
 		async () => {
 			const pid = await pgrepKismet();
@@ -181,7 +182,7 @@ async function launchAndVerify(alfaInterface: string): Promise<KismetControlResu
 	return {
 		success: true,
 		message: 'Kismet started successfully',
-		details: `Running as ${userCheck || 'kali'} (PID: ${validPid}) on ${alfaInterface}`,
+		details: `Running as ${userCheck || userInfo().username} (PID: ${validPid}) on ${alfaInterface}`,
 		pid: validPid
 	};
 }
@@ -234,7 +235,7 @@ async function forceKillKismet(): Promise<void> {
 	} catch {
 		/* no process to kill */
 	}
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await delay(1000);
 }
 
 /** Stop Kismet WiFi discovery service */
@@ -253,7 +254,7 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 		}
 
 		await stopSystemdService();
-		await new Promise((resolve) => setTimeout(resolve, 3000));
+		await delay(3000);
 
 		if (await pgrepKismet()) await forceKillKismet();
 
