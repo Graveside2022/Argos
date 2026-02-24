@@ -1,14 +1,11 @@
-import { json } from '@sveltejs/kit';
 import { spawn } from 'child_process';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const CHECK_FREQS = ['947.2', '950.0'];
 
@@ -181,14 +178,14 @@ function buildScanResponse(results: FrequencyTestResult[]) {
 			`${r.frequency} MHz: ${r.power.toFixed(1)} dB (${r.strength}) - ${r.frameCount} frames${r.hasGsmActivity ? ' [OK]' : ''}`
 	);
 
-	return json({
+	return {
 		success: true,
 		bestFrequency: bestFreq.frequency,
 		bestFrequencyFrames: bestFreq.frameCount,
 		message: `Intelligent scan complete!\n\nBest frequency: ${bestFreq.frequency} MHz with ${bestFreq.frameCount} GSM frames\n\nAll results:\n${summaryLines.join('\n')}`,
 		scanResults: results,
 		totalTested: results.length
-	});
+	};
 }
 
 /** Perform RF sweep and extract candidate frequencies sorted by power. */
@@ -207,25 +204,13 @@ async function findCandidateFrequencies(): Promise<{
 	return { candidates };
 }
 
-export const POST: RequestHandler = async () => {
-	try {
-		logger.info('Starting intelligent GSM frequency scan');
-		const { candidates, error } = await findCandidateFrequencies();
-		if (error) return json({ success: false, message: error });
+export const POST = createHandler(async () => {
+	logger.info('Starting intelligent GSM frequency scan');
+	const { candidates, error } = await findCandidateFrequencies();
+	if (error) return { success: false, message: error };
 
-		logger.info('Testing frequencies for GSM activity', { count: candidates.length });
-		const results = await testAllFrequencies(candidates);
+	logger.info('Testing frequencies for GSM activity', { count: candidates.length });
+	const results = await testAllFrequencies(candidates);
 
-		return buildScanResponse(results);
-	} catch (error: unknown) {
-		logger.error('Intelligent scan error', { error: errMsg(error) });
-		return json(
-			{
-				success: false,
-				message: 'Scan failed. Make sure GSM Evil is stopped first.',
-				error: errMsg(error)
-			},
-			{ status: 500 }
-		);
-	}
-};
+	return buildScanResponse(results);
+});

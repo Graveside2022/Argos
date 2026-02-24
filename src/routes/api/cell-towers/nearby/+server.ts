@@ -1,15 +1,14 @@
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { findNearbyCellTowers } from '$lib/server/services/cell-towers/cell-tower-service';
-
-import type { RequestHandler } from './$types';
 
 /**
  * GET /api/cell-towers/nearby?lat=...&lon=...&radius=5
  * Returns cell towers within radius (km) of the given GPS position.
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET = createHandler(async ({ url }) => {
 	// Validate and extract parameters
 	let lat: number, lon: number, radiusKm: number;
 	try {
@@ -21,7 +20,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			{
 				success: false,
 				towers: [],
-			// Safe: Validation error from parameter checks cast to Error for message extraction
+				// Safe: Validation error from parameter checks cast to Error for message extraction
 				message: `Invalid parameter: ${(validationError as Error).message}`
 			},
 			{ status: 400 }
@@ -31,5 +30,5 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Delegate to service
 	const result = await findNearbyCellTowers(lat, lon, radiusKm);
 
-	return json(result);
-};
+	return result;
+});

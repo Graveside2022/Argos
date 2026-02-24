@@ -3,10 +3,9 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import { z } from 'zod';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { getAllowedImsiDbPaths } from '$lib/server/gsm-database-path';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 // Zod schema for GSM Evil IMSI detailed data from better-sqlite3
 const GsmEvilImsiDataSchema = z.array(
@@ -86,21 +85,21 @@ function queryImsiData(dbPath: string) {
 	}
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const dbLookup = findValidatedImsiDatabase();
 		if (!dbLookup.path) {
-			return json({ success: false, message: dbLookup.error, data: [] });
+			return { success: false, message: dbLookup.error, data: [] };
 		}
 
 		const queryResult = queryImsiData(dbLookup.path);
 		if (!queryResult.success) {
-			return json({
+			return {
 				success: false,
 				message: queryResult.message,
 				error: queryResult.error,
 				data: []
-			});
+			};
 		}
 
 		const parseResult = GsmEvilImsiDataSchema.safeParse(queryResult.data);
@@ -111,18 +110,18 @@ export const GET: RequestHandler = async () => {
 			);
 		}
 
-		return json({
+		return {
 			success: true,
 			count: parseResult.data.length,
 			data: parseResult.data
-		});
+		};
 	} catch (error) {
 		logger.error('Failed to fetch IMSI data', { error: formatError(error) });
-		return json({
+		return {
 			success: false,
 			message: 'Failed to fetch IMSI data',
 			error: formatError(error),
 			data: []
-		});
+		};
 	}
-};
+});

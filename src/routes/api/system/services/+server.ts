@@ -1,9 +1,5 @@
-import { json } from '@sveltejs/kit';
-
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
-
-import type { RequestHandler } from './$types';
 
 interface ServiceDef {
 	name: string;
@@ -70,24 +66,17 @@ async function probeService(service: ServiceDef) {
 	};
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		const results = await Promise.all(MONITORED_SERVICES.map(probeService));
+export const GET = createHandler(async () => {
+	const results = await Promise.all(MONITORED_SERVICES.map(probeService));
 
-		const healthyCount = results.filter((r) => r.status === 'healthy').length;
-		const overallHealth = healthyCount === MONITORED_SERVICES.length ? 'healthy' : 'degraded';
+	const healthyCount = results.filter((r) => r.status === 'healthy').length;
+	const overallHealth = healthyCount === MONITORED_SERVICES.length ? 'healthy' : 'degraded';
 
-		return json({
-			success: true,
-			overall_health: overallHealth,
-			services: results,
-			healthy_count: healthyCount,
-			total_count: MONITORED_SERVICES.length
-		});
-	} catch (error) {
-		return json({
-			success: false,
-			error: errMsg(error)
-		});
-	}
-};
+	return {
+		success: true,
+		overall_health: overallHealth,
+		services: results,
+		healthy_count: healthyCount,
+		total_count: MONITORED_SERVICES.length
+	};
+});

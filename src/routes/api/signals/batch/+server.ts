@@ -1,14 +1,12 @@
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
 import { SignalBatchRequestSchema, type SignalInput } from '$lib/schemas/api';
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
 import { SignalSource } from '$lib/types/enums';
 import type { SignalMarker, SignalMetadata } from '$lib/types/signals';
 import { logger } from '$lib/utils/logger';
 import { handleValidationError } from '$lib/utils/validation-error';
-
-import type { RequestHandler } from './$types';
 
 /** Map of lowercase source strings to SignalSource enum values. */
 const SOURCE_MAP: Record<string, SignalSource> = {
@@ -108,35 +106,30 @@ function extractSignalInputs(
 	return Array.isArray(validatedData) ? validatedData : validatedData.signals;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const db = getRFDatabase();
-		const rawBody = await request.json();
+export const POST = createHandler(async ({ request }) => {
+	const db = getRFDatabase();
+	const rawBody = await request.json();
 
-		const validationResult = SignalBatchRequestSchema.safeParse(rawBody);
-		if (!validationResult.success) {
-			handleValidationError(validationResult.error, 'api', rawBody);
-			return error(400, 'Invalid request: ' + validationResult.error.errors[0].message);
-		}
-
-		const signalInputs = extractSignalInputs(validationResult.data);
-		const signalMarkers = signalInputs.map(toSignalMarker);
-
-		if (signalMarkers.length === 0) {
-			logger.warn('No signals to insert', { endpoint: 'batch' });
-			return json({ success: true, count: 0, message: 'No signals to insert' });
-		}
-
-		const count = db.insertSignalsBatch(signalMarkers);
-
-		return json({
-			success: true,
-			count,
-			total: signalInputs.length,
-			valid: count
-		});
-	} catch (err: unknown) {
-		logger.error('Error storing signals', { endpoint: 'batch', error: errMsg(err) });
-		return error(500, 'Failed to batch store signals');
+	const validationResult = SignalBatchRequestSchema.safeParse(rawBody);
+	if (!validationResult.success) {
+		handleValidationError(validationResult.error, 'api', rawBody);
+		return error(400, 'Invalid request: ' + validationResult.error.errors[0].message);
 	}
-};
+
+	const signalInputs = extractSignalInputs(validationResult.data);
+	const signalMarkers = signalInputs.map(toSignalMarker);
+
+	if (signalMarkers.length === 0) {
+		logger.warn('No signals to insert', { endpoint: 'batch' });
+		return { success: true, count: 0, message: 'No signals to insert' };
+	}
+
+	const count = db.insertSignalsBatch(signalMarkers);
+
+	return {
+		success: true,
+		count,
+		total: signalInputs.length,
+		valid: count
+	};
+});

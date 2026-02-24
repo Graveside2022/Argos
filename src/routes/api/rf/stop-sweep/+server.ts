@@ -1,31 +1,26 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 
 import { StopSweepRequestSchema } from '$lib/schemas/rf';
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
-import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const rawBody = await request.json();
-		const validated = safeParseWithHandling(StopSweepRequestSchema, rawBody, 'user-action');
-		if (!validated) return error(400, 'Invalid stop sweep request');
+export const POST = createHandler(async ({ request }) => {
+	const rawBody = await request.json();
+	const validated = safeParseWithHandling(StopSweepRequestSchema, rawBody, 'user-action');
+	if (!validated)
+		return json({ status: 'error', message: 'Invalid stop sweep request' }, { status: 400 });
 
-		await sweepManager.stopSweep();
-		return json({
-			status: 'success',
-			message: 'Sweep stopped successfully',
-			device: validated.deviceType || 'hackrf'
-		});
-	} catch (err: unknown) {
-		logger.error('Error in rf/stop-sweep endpoint', { error: errMsg(err) });
-		return json({ status: 'error', message: errMsg(err) }, { status: 500 });
-	}
-};
+	await sweepManager.stopSweep();
+	return {
+		status: 'success',
+		message: 'Sweep stopped successfully',
+		device: validated.deviceType || 'hackrf'
+	};
+});
 
 // Add CORS headers
 export const OPTIONS: RequestHandler = ({ request }) => {

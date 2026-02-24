@@ -1,10 +1,5 @@
-import { error, json } from '@sveltejs/kit';
-
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Read a float search param with a fallback default. */
 function floatParam(sp: URLSearchParams, key: string, fallback: string): number {
@@ -57,16 +52,11 @@ function formatStatisticsResponse(stats: RawAreaStatistics, timeWindow: number) 
 	};
 }
 
-export const GET: RequestHandler = ({ url }) => {
-	try {
-		const db = getRFDatabase();
-		const timeWindow = intParam(url.searchParams, 'timeWindow', '3600000');
-		const bounds = parseBoundsParams(url.searchParams);
+export const GET = createHandler(({ url }) => {
+	const db = getRFDatabase();
+	const timeWindow = intParam(url.searchParams, 'timeWindow', '3600000');
+	const bounds = parseBoundsParams(url.searchParams);
 
-		const stats = db.getAreaStatistics(bounds, timeWindow);
-		return json(formatStatisticsResponse(stats as RawAreaStatistics, timeWindow));
-	} catch (err: unknown) {
-		logger.error('Error getting statistics', { error: errMsg(err) });
-		return error(500, 'Failed to get statistics');
-	}
-};
+	const stats = db.getAreaStatistics(bounds, timeWindow);
+	return formatStatisticsResponse(stats as RawAreaStatistics, timeWindow);
+});

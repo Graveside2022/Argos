@@ -1,8 +1,7 @@
 import { error } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Parse and validate coordinate params, throwing on invalid input. */
 function parseCoordinates(url: URL): { latitude: number; longitude: number } {
@@ -82,7 +81,7 @@ const GEO_HEADERS = {
  * Reverse geocoding proxy endpoint
  * Proxies requests to OpenStreetMap Nominatim to avoid CORS issues
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET = createHandler(async ({ url }) => {
 	const { latitude, longitude } = parseCoordinates(url);
 
 	try {
@@ -94,4 +93,4 @@ export const GET: RequestHandler = async ({ url }) => {
 		});
 		throw error(500, 'Failed to fetch location data');
 	}
-};
+});

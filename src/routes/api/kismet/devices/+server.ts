@@ -1,5 +1,4 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { hasValidGpsCoords } from '$lib/server/db/geo';
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
@@ -7,8 +6,6 @@ import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { KismetService } from '$lib/server/services/kismet.service';
 import { computeFallbackLocation } from '$lib/server/services/kismet/kismet-geo-helpers';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Extract valid GPS coordinates from position data, or null. */
 function extractGpsCoords(data: {
@@ -105,12 +102,12 @@ async function fetchKismetFallback(): Promise<unknown> {
 	}
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
-		if (fusionKismetController.isReady()) return json(await fetchFusionDevices());
-		return json(await KismetService.getDevices());
+		if (fusionKismetController.isReady()) return await fetchFusionDevices();
+		return await KismetService.getDevices();
 	} catch (error: unknown) {
 		logger.error('Error in Kismet devices endpoint', { error: errMsg(error) });
-		return json(await fetchKismetFallback());
+		return await fetchKismetFallback();
 	}
-};
+});

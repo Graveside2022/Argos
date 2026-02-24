@@ -1,8 +1,5 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
-
-import type { RequestHandler } from './$types';
 
 const DANGEROUS_KEYWORDS = [
 	'drop ', 'delete ', 'update ', 'insert ',
@@ -65,23 +62,23 @@ function prepareQuery(query: unknown): { finalQuery?: string; errorMsg?: string 
 }
 
 // Safe query execution with limits and validation
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	try {
 		const body = await request.json();
 		const { query, params = [] } = body;
 
 		const prepared = prepareQuery(query);
-		if (prepared.errorMsg) return json({ success: false, error: prepared.errorMsg });
+		if (prepared.errorMsg) return { success: false, error: prepared.errorMsg };
 
 		const { results, duration } = executeQuery(prepared.finalQuery as string, params);
-		return json({
+		return {
 			success: true,
 			query: prepared.finalQuery,
 			row_count: results.length,
 			execution_time_ms: duration,
 			results
-		});
+		};
 	} catch (error) {
-		return json({ success: false, error: errMsg(error) });
+		return { success: false, error: errMsg(error) };
 	}
-};
+});

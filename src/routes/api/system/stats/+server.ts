@@ -1,10 +1,8 @@
-import { json } from '@sveltejs/kit';
 import os from 'os';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Simulated fallback stats when real data is unavailable */
 function fallbackStats() {
@@ -20,7 +18,7 @@ function fallbackStats() {
 	};
 }
 
-export const GET: RequestHandler = () => {
+export const GET = createHandler(() => {
 	try {
 		const cpus = os.cpus();
 		let totalIdle = 0;
@@ -45,7 +43,7 @@ export const GET: RequestHandler = () => {
 		const hours = Math.floor(uptime / 3600);
 		const minutes = Math.floor((uptime % 3600) / 60);
 
-		return json({
+		return {
 			cpu: cpuPercentage,
 			memory: Math.round((usedMem / totalMem) * 100),
 			hostname: os.hostname(),
@@ -54,9 +52,9 @@ export const GET: RequestHandler = () => {
 			memoryUsed: `${(usedMem / (1024 * 1024 * 1024)).toFixed(1)}GB`,
 			memoryTotal: `${(totalMem / (1024 * 1024 * 1024)).toFixed(1)}GB`,
 			timestamp: new Date().toISOString()
-		});
+		};
 	} catch (error) {
 		logger.error('Error fetching system stats', { error: errMsg(error) });
-		return json(fallbackStats());
+		return fallbackStats();
 	}
-};
+});

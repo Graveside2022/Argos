@@ -1,9 +1,7 @@
-import { json } from '@sveltejs/kit';
 import type Database from 'better-sqlite3';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
-
-import type { RequestHandler } from './$types';
 
 interface HealthIssue {
 	type: string;
@@ -107,7 +105,7 @@ function countBySeverity(issues: HealthIssue[], severity: string): number {
 	return issues.filter((i) => i.severity === severity).length;
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const db = getRFDatabase().rawDb;
 
@@ -125,7 +123,7 @@ export const GET: RequestHandler = async () => {
 		issues.push(...integrity.issues);
 		if (recs.length === 0 && issues.length === 0) recs.push('✅ Database health looks good');
 
-		return json({
+		return {
 			success: true,
 			overall_health: classifyHealth(issues),
 			integrity_ok: integrity.ok,
@@ -137,9 +135,9 @@ export const GET: RequestHandler = async () => {
 				warnings: countBySeverity(issues, 'medium'),
 				info: countBySeverity(issues, 'low')
 			}
-		});
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		return json({ success: false, error: msg });
+		};
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		return { success: false, error: msg };
 	}
-};
+});

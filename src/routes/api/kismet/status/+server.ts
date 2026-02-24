@@ -1,11 +1,8 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const INACTIVE_DATA = {
 	isRunning: false,
@@ -79,26 +76,26 @@ async function tryFusionController(): Promise<Record<string, unknown> | null> {
 	};
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET = createHandler(async ({ url }) => {
 	try {
 		if (url.searchParams.get('mock') === 'true') {
-			return json({ success: true, isRunning: false, status: 'inactive', data: MOCK_DATA });
+			return { success: true, isRunning: false, status: 'inactive', data: MOCK_DATA };
 		}
 
 		const proxyResult = await tryKismetProxy();
-		if (proxyResult) return json(proxyResult);
+		if (proxyResult) return proxyResult;
 
 		const fusionResult = await tryFusionController();
-		if (fusionResult) return json(fusionResult);
+		if (fusionResult) return fusionResult;
 
-		return json({ success: true, isRunning: false, status: 'inactive', data: INACTIVE_DATA });
+		return { success: true, isRunning: false, status: 'inactive', data: INACTIVE_DATA };
 	} catch (error) {
 		logger.error('Error getting Kismet status', { error: errMsg(error) });
-		return json({
+		return {
 			success: false,
 			status: 'error',
 			error: errMsg(error),
 			data: { isRunning: false, interface: null, channels: [], deviceCount: 0, uptime: 0 }
-		});
+		};
 	}
-};
+});

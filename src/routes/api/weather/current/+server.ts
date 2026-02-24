@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import { createHandler } from '$lib/server/api/create-handler';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -40,7 +40,7 @@ async function fetchWeather(lat: string, lon: string): Promise<Response> {
 	});
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET = createHandler(async ({ url }) => {
 	const lat = url.searchParams.get('lat');
 	const lon = url.searchParams.get('lon');
 	if (!lat || !lon) return jsonError('Missing lat/lon parameters', 400);
@@ -50,4 +50,4 @@ export const GET: RequestHandler = async ({ url }) => {
 	} catch (error: unknown) {
 		return jsonError(error instanceof Error ? error.message : 'Unknown error', 502);
 	}
-};
+});

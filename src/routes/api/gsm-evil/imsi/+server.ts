@@ -3,11 +3,10 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import { z } from 'zod';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { getAllowedImsiDbPaths } from '$lib/server/gsm-database-path';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 // Zod schema for GSM Evil IMSI query result
 const GsmEvilImsiResultSchema = z
@@ -114,11 +113,11 @@ function queryAndValidateImsis(dbPath: string) {
 	}
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const dbLookup = findValidatedImsiDatabase();
 		if (!dbLookup.path) {
-			return json({ success: false, imsis: [], total: 0, message: dbLookup.error });
+			return { success: false, imsis: [], total: 0, message: dbLookup.error };
 		}
 
 		const result = queryAndValidateImsis(dbLookup.path);
@@ -134,15 +133,15 @@ export const GET: RequestHandler = async () => {
 			);
 		}
 
-		return json(result.data);
+		return result.data;
 	} catch (error: unknown) {
 		logger.error('IMSI fetch error', { error: errMsg(error) });
-		return json({
+		return {
 			success: false,
 			imsis: [],
 			total: 0,
 			message: 'Failed to fetch IMSI data',
 			error: errMsg(error)
-		});
+		};
 	}
-};
+});

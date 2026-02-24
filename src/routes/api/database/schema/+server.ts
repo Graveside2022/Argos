@@ -1,8 +1,5 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
-
-import type { RequestHandler } from './$types';
 
 /** Count rows per table, returning 0 on error. */
 function getTableCounts(
@@ -23,7 +20,7 @@ function getTableCounts(
 	return counts;
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const db = getRFDatabase().rawDb;
 
@@ -50,7 +47,7 @@ export const GET: RequestHandler = async () => {
 			)
 			.get() as { size: number };
 
-		return json({
+		return {
 			success: true,
 			schema: {
 				tables: tables.map((t) => ({ name: t.name, row_count: tableCounts[t.name], sql: t.sql })),
@@ -64,9 +61,9 @@ export const GET: RequestHandler = async () => {
 				total_records: Object.values(tableCounts).reduce((sum, c) => sum + c, 0),
 				database_size_bytes: dbSize.size
 			}
-		});
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		return json({ success: false, error: msg });
+		};
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		return { success: false, error: msg };
 	}
-};
+});
