@@ -19,13 +19,12 @@ import { validateGain } from '$lib/validators/gsm';
 
 import { readFrameHexLines, spawnGrgsm, verifyProcessAlive } from './gsm-grgsm-process';
 import {
-	appendCellIdentityEvents,
-	appendChannelEvents,
 	buildFailedResult,
 	captureTcpdump,
 	captureTshark,
 	cleanupProcess
 } from './gsm-scan-capture';
+import { appendCellIdentityEvents, appendChannelEvents } from './gsm-scan-events';
 import type { ScanEvent } from './gsm-scan-types';
 import { createResultEvent, createUpdateEvent } from './gsm-scan-types';
 import {

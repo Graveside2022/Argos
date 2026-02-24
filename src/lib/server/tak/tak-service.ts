@@ -8,6 +8,7 @@ import { logger } from '$lib/utils/logger';
 
 import type { TakServerConfig, TakStatus } from '../../types/tak';
 import { RFDatabase } from '../db/database';
+import { broadcastTakCot, broadcastTakStatus } from './tak-broadcast';
 import { loadTakConfig, saveTakConfig } from './tak-db';
 
 const COT_THROTTLE_MS = 1000;
@@ -98,7 +99,8 @@ export class TakService extends EventEmitter {
 			return { cert, key, ca };
 		} catch (err) {
 			logger.error('[TakService] Failed to load certificates', { error: String(err) });
-			this.broadcastStatus(
+			broadcastTakStatus(
+				this.broadcastState(),
 				'error',
 				err instanceof Error ? err.message : 'Certificate load failed'
 			);
@@ -130,7 +132,11 @@ export class TakService extends EventEmitter {
 	/** Handle a connection failure: log, broadcast, optionally reconnect */
 	private handleConnectError(err: unknown): void {
 		logger.error('[TakService] Connection failed', { error: String(err) });
-		this.broadcastStatus('error', err instanceof Error ? err.message : 'Connection failed');
+		broadcastTakStatus(
+			this.broadcastState(),
+			'error',
+			err instanceof Error ? err.message : 'Connection failed'
+		);
 		if (this.shouldConnect) this.scheduleReconnect();
 	}
 
@@ -155,20 +161,20 @@ export class TakService extends EventEmitter {
 			logger.info('[TakService] Securely connected');
 			this.connectedAt = Date.now();
 			this.emit('status', 'connected');
-			this.broadcastStatus('connected');
+			broadcastTakStatus(this.broadcastState(), 'connected');
 		});
 
 		this.tak.on('cot', (cot: CoT) => {
 			this.messageCount++;
 			this.emit('cot', cot);
-			this.broadcastCot(CoTParser.to_xml(cot));
+			broadcastTakCot(CoTParser.to_xml(cot));
 		});
 
 		this.tak.on('end', () => {
 			logger.info('[TakService] Connection ended');
 			this.connectedAt = null;
 			this.emit('status', 'disconnected');
-			this.broadcastStatus('disconnected');
+			broadcastTakStatus(this.broadcastState(), 'disconnected');
 			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
@@ -178,7 +184,7 @@ export class TakService extends EventEmitter {
 			logger.error('[TakService] TAK socket error', { error: err.message });
 			// We don't use this.emit('error', err) because Node.js crashes on unhandled 'error' events
 			this.emit('tak-socket-error', err);
-			this.broadcastStatus('error', err.message);
+			broadcastTakStatus(this.broadcastState(), 'error', err.message);
 
 			this.connectedAt = null;
 			if (this.shouldConnect) this.scheduleReconnect();
@@ -225,7 +231,7 @@ export class TakService extends EventEmitter {
 		this.throttleMap.clear();
 		this.connectedAt = null;
 		this.emit('status', 'disconnected');
-		this.broadcastStatus('disconnected');
+		broadcastTakStatus(this.broadcastState(), 'disconnected');
 	}
 
 	/** Whether a throttle entry is ready to send (no entry or cooldown elapsed) */
@@ -281,32 +287,12 @@ export class TakService extends EventEmitter {
 		if (this.shouldConnect) await this.connect();
 	}
 
-	private broadcastStatus(status: TakStatus['status'], lastError?: string) {
-		import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
-			WebSocketManager.getInstance().broadcast({
-				type: 'tak_status',
-				data: {
-					status,
-					serverName: this.config?.name,
-					serverHost: this.config?.hostname,
-					uptime: this.connectedAt
-						? Math.floor((Date.now() - this.connectedAt) / 1000)
-						: undefined,
-					messageCount: this.messageCount,
-					lastError
-				},
-				timestamp: new Date().toISOString()
-			});
-		});
-	}
-
-	private broadcastCot(xml: string) {
-		import('../kismet/web-socket-manager').then(({ WebSocketManager }) => {
-			WebSocketManager.getInstance().broadcast({
-				type: 'tak_cot',
-				data: { xml },
-				timestamp: new Date().toISOString()
-			});
-		});
+	/** Snapshot current state for broadcast functions */
+	private broadcastState() {
+		return {
+			config: this.config,
+			connectedAt: this.connectedAt,
+			messageCount: this.messageCount
+		};
 	}
 }
