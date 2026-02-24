@@ -93,6 +93,8 @@
 		expandedMAC = null;
 	}
 
+	const RENDER_CAP = 200;
+
 	let devices = $derived(
 		filterAndSortDevices($kismetStore.devices, $isolatedDeviceMAC, {
 			searchQuery,
@@ -103,6 +105,8 @@
 			sortDirection
 		})
 	);
+
+	let renderedDevices = $derived(devices.slice(0, RENDER_CAP));
 
 	// Clear isolation if the isolated AP no longer exists
 	$effect(() => {
@@ -122,6 +126,7 @@
 <div class="devices-panel">
 	<DeviceToolbar
 		deviceCount={devices.length}
+		renderedCount={renderedDevices.length}
 		isolatedMAC={$isolatedDeviceMAC}
 		{searchQuery}
 		activeBands={$activeBands}
@@ -136,7 +141,7 @@
 	/>
 
 	<DeviceTable
-		{devices}
+		devices={renderedDevices}
 		{selectedMAC}
 		{expandedMAC}
 		{sortColumn}

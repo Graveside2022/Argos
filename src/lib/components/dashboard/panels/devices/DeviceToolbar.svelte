@@ -5,6 +5,7 @@
 
 	interface Props {
 		deviceCount: number;
+		renderedCount?: number;
 		isolatedMAC: string | null;
 		searchQuery: string;
 		activeBands: Set<string>;
@@ -20,6 +21,7 @@
 
 	let {
 		deviceCount,
+		renderedCount,
 		isolatedMAC,
 		searchQuery,
 		activeBands,
@@ -37,6 +39,9 @@
 <div class="panel-toolbar">
 	<span class="panel-title">DEVICES</span>
 	<span class="device-count">{deviceCount}</span>
+	{#if renderedCount !== undefined && renderedCount < deviceCount}
+		<span class="cap-badge">showing {renderedCount}</span>
+	{/if}
 
 	{#if isolatedMAC}
 		<button class="back-btn" onclick={onClearIsolation} title="Back to all devices">
@@ -140,6 +145,13 @@
 		font-size: var(--text-xs);
 		color: var(--palantir-accent);
 		font-variant-numeric: tabular-nums;
+	}
+
+	.cap-badge {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		color: var(--palantir-text-tertiary);
+		letter-spacing: 0.5px;
 	}
 
 	.back-btn {

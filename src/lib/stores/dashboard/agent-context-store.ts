@@ -1,5 +1,6 @@
 import { derived, writable } from 'svelte/store';
 
+import type { KismetDevice } from '$lib/kismet/types';
 import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 
@@ -63,98 +64,22 @@ export const workflowGoal = writable<string>('');
 // Derived Context - Full Device Details
 // ============================================================================
 
-/**
- * Full device details derived from kismetStore when a device is selected
- * This provides rich context about the selected device for the agent
- */
-/** Read a string field from device or raw Kismet data. */
-function devStr(
-	device: Record<string, unknown>,
-	raw: Record<string, unknown>,
-	deviceKey: string,
-	rawKey: string,
-	fallback: string
-): string {
-	return (device[deviceKey] as string) || (raw[rawKey] as string) || fallback;
-}
-
-/** Read a nullable field from device or raw Kismet data. */
-function devField<T>(
-	device: Record<string, unknown>,
-	raw: Record<string, unknown>,
-	deviceKey: string,
-	rawKey: string
-): T | null {
-	return (device[deviceKey] as T) || (raw[rawKey] as T) || null;
-}
-
-/** Read signal strength from device signal sub-object or raw base signal. */
-function readSignal(
-	device: Record<string, unknown>,
-	baseSignal: Record<string, unknown> | undefined
-): number | null {
-	const sig = device.signal as { last_signal?: number } | undefined;
-	return sig?.last_signal ?? (baseSignal?.['kismet.common.signal.last_signal'] as number) ?? null;
-}
-
-/** Resolve manufacturer from multiple fallback keys. */
-function resolveManuf(device: Record<string, unknown>, raw: Record<string, unknown>): string {
-	return (
-		(device.manufacturer as string) ||
-		(device.manuf as string) ||
-		(raw['kismet.device.base.manuf'] as string) ||
-		'Unknown'
-	);
-}
-
-/** Resolve SSID from dot11 data. */
-function resolveSsid(
-	device: Record<string, unknown>,
-	dot11: Record<string, unknown> | undefined
-): string {
-	return (
-		(device.ssid as string) ||
-		(dot11?.['dot11.device.last_beaconed_ssid'] as string) ||
-		'Unknown'
-	);
-}
-
-/** Resolve encryption from SSID map. */
-function resolveEncryption(
-	device: Record<string, unknown>,
-	ssidMap: Record<string, unknown>[] | undefined
-): string | null {
-	return (
-		(device.encryption as string) ||
-		(ssidMap?.[0]?.['dot11.advertisedssid.crypt_set'] as string) ||
-		null
-	);
-}
-
 /** Build the full device details context for the agent. */
-function buildDeviceDetails(device: Record<string, unknown>, mac: string) {
-	const raw = device;
-	const dot11 = raw['dot11.device'] as Record<string, unknown> | undefined;
-	const baseSignal = raw['kismet.device.base.signal'] as Record<string, unknown> | undefined;
-	const ssidMap = dot11?.['dot11.device.advertised_ssid_map'] as
-		| Record<string, unknown>[]
-		| undefined;
-	const signal = readSignal(device, baseSignal);
-
+function buildDeviceDetails(device: KismetDevice, mac: string) {
+	const signal = device.signal?.last_signal ?? null;
 	return {
-		mac: (device.mac as string) || mac,
-		ssid: resolveSsid(device, dot11),
-		type: devStr(device, raw, 'type', 'kismet.device.base.type', 'unknown'),
-		manufacturer: resolveManuf(device, raw),
+		mac: device.mac || mac,
+		ssid: device.ssid || 'Unknown',
+		type: device.type || 'unknown',
+		manufacturer: device.manufacturer || device.manuf || 'Unknown',
 		signal,
 		signalDbm: signal,
-		channel: devField<string>(device, raw, 'channel', 'kismet.device.base.channel'),
-		frequency: devField<number>(device, raw, 'frequency', 'kismet.device.base.frequency'),
-		packets:
-			(device.packets as number) || (raw['kismet.device.base.packets.total'] as number) || 0,
-		encryption: resolveEncryption(device, ssidMap),
-		lastSeen: devField<number>(device, raw, 'last_seen', 'kismet.device.base.last_time'),
-		firstSeen: devField<number>(device, raw, 'first_seen', 'kismet.device.base.first_time')
+		channel: device.channel ?? null,
+		frequency: device.frequency ?? null,
+		packets: device.packets ?? 0,
+		encryption: device.encryption?.[0] ?? null,
+		lastSeen: device.lastSeen ?? device.last_seen ?? null,
+		firstSeen: device.firstSeen ?? null
 	};
 }
 
@@ -163,7 +88,7 @@ export const selectedDeviceDetails = derived(
 	([$mac, $kismet]) => {
 		if (!$mac) return null;
 		const device = $kismet.devices.get($mac);
-		return device ? buildDeviceDetails(device as Record<string, unknown>, $mac) : null;
+		return device ? buildDeviceDetails(device, $mac) : null;
 	}
 );
 
