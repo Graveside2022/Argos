@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { getRFDatabase } from '$lib/server/db/database';
@@ -57,8 +58,12 @@ function prepareQuery(query: unknown): { finalQuery?: string; errorMsg?: string 
 	return { finalQuery: limitResult.query };
 }
 
-// Safe query execution with limits and validation
+// Safe query execution with limits and validation — dev mode only (security: blocklist is bypassable)
 export const POST = createHandler(async ({ request }) => {
+	if (!dev) {
+		return { success: false, error: 'Query endpoint is only available in development mode' };
+	}
+
 	try {
 		const body = await request.json();
 		const { query, params = [] } = body;

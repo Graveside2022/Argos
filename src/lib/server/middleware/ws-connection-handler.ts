@@ -7,26 +7,31 @@
 import type { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
 
-import { validateApiKey } from '$lib/server/auth/auth-middleware';
+import { validateApiKey, validateSessionToken } from '$lib/server/auth/auth-middleware';
 import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
 
-/** Build a mock Request with API key header and cookies for auth validation. */
-function buildMockRequest(url: URL, request: IncomingMessage): Request {
-	const apiKey = url.searchParams.get('token') || (request.headers['x-api-key'] as string);
-	const mockHeaders: Record<string, string> = {};
-	if (apiKey) mockHeaders['X-API-Key'] = apiKey;
-	const cookieHeader = request.headers.cookie;
-	if (cookieHeader) mockHeaders['cookie'] = cookieHeader;
-	return new Request('http://localhost', { headers: mockHeaders });
-}
-
-/** Try to authenticate a mock request; returns false on failure or thrown errors. */
-function tryAuthenticate(mockRequest: Request): boolean {
+/**
+ * Authenticate a WebSocket connection via session token, header, or cookie.
+ *
+ * The ?token= param accepts the HMAC-derived session token (NOT the raw API key)
+ * to prevent key exposure in URLs/logs per OWASP A07:2021.
+ */
+function tryAuthenticate(url: URL, request: IncomingMessage): boolean {
 	try {
-		return validateApiKey(mockRequest);
+		// 1. Check ?token= as session token (non-browser clients)
+		const wsToken = url.searchParams.get('token');
+		if (wsToken) return validateSessionToken(wsToken);
+
+		// 2. Check X-API-Key header or cookie via standard validateApiKey
+		const mockHeaders: Record<string, string> = {};
+		const apiKey = request.headers['x-api-key'] as string;
+		if (apiKey) mockHeaders['X-API-Key'] = apiKey;
+		const cookieHeader = request.headers.cookie;
+		if (cookieHeader) mockHeaders['cookie'] = cookieHeader;
+		return validateApiKey(new Request('http://localhost', { headers: mockHeaders }));
 	} catch {
-		return false; // validateApiKey throws if ARGOS_API_KEY is not configured -- fail closed
+		return false; // fail closed
 	}
 }
 
@@ -68,7 +73,7 @@ export function handleWsConnection(
 	const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
 	const ip = request.socket.remoteAddress || 'unknown';
 
-	if (!tryAuthenticate(buildMockRequest(url, request))) {
+	if (!tryAuthenticate(url, request)) {
 		logAuthEvent({
 			eventType: 'WS_AUTH_FAILURE',
 			ip,
