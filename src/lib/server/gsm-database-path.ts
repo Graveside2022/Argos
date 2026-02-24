@@ -8,12 +8,14 @@
 import { homedir } from 'os';
 import path from 'path';
 
+import { env } from '$lib/server/env';
+
 /**
  * Resolve the GsmEvil2 installation directory.
  * Uses GSMEVIL_DIR env var, falls back to ~/gsmevil2.
  */
 export function getGsmEvilDir(): string {
-	return process.env.GSMEVIL_DIR || path.join(homedir(), 'gsmevil2');
+	return env.GSMEVIL_DIR || path.join(homedir(), 'gsmevil2');
 }
 
 /**
@@ -31,5 +33,8 @@ export async function resolveGsmDatabasePath(): Promise<string> {
  */
 export function getAllowedImsiDbPaths(): string[] {
 	const gsmDir = getGsmEvilDir();
-	return [path.join(gsmDir, 'database', 'imsi.db'), '/tmp/gsm_db.sqlite'];
+	return [
+		path.join(gsmDir, 'database', 'imsi.db'),
+		path.join(env.ARGOS_TEMP_DIR, 'gsm_db.sqlite')
+	];
 }

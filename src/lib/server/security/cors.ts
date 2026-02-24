@@ -6,6 +6,8 @@
  * with an origin-validated allowlist (fail-closed).
  */
 
+import { env } from '$lib/server/env';
+
 const ALLOWED_ORIGINS: string[] = [
 	'http://localhost:5173',
 	'http://127.0.0.1:5173',
@@ -14,8 +16,8 @@ const ALLOWED_ORIGINS: string[] = [
 ];
 
 // Allow runtime override via environment variable
-if (process.env.ARGOS_CORS_ORIGINS) {
-	ALLOWED_ORIGINS.push(...process.env.ARGOS_CORS_ORIGINS.split(',').map((s) => s.trim()));
+if (env.ARGOS_CORS_ORIGINS) {
+	ALLOWED_ORIGINS.push(...env.ARGOS_CORS_ORIGINS.split(',').map((s) => s.trim()));
 }
 
 /**

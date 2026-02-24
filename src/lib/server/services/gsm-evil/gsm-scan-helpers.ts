@@ -6,7 +6,9 @@
 import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { readFile } from 'fs/promises';
+import path from 'path';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -83,7 +85,7 @@ export function checkHardwareErrors(output: string): void {
 
 /** Spawn grgsm_livemon_headless in the background and return its PID. */
 export function spawnGrgsm(gsmArgs: string[]): string {
-	const logFd = openSync('/tmp/grgsm_scan.log', 'a');
+	const logFd = openSync(path.join(env.ARGOS_TEMP_DIR, 'grgsm_scan.log'), 'a');
 	const child = spawn('/usr/bin/sudo', gsmArgs, {
 		detached: true,
 		stdio: ['ignore', logFd, logFd]

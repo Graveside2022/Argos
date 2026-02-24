@@ -17,6 +17,7 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 
+import { env } from '$lib/server/env';
 import { logger } from '$lib/utils/logger';
 
 const SESSION_COOKIE_NAME = '__argos_session';
@@ -37,13 +38,7 @@ const HMAC_SECRET = 'argos-session-v1';
  *         if validateSecurityConfig() ran at startup)
  */
 export function validateApiKey(request: Request): boolean {
-	const expectedKey = process.env.ARGOS_API_KEY;
-
-	if (!expectedKey) {
-		// FAIL-CLOSED: No API key configured = cannot validate.
-		// This path should be unreachable if validateSecurityConfig() ran at startup.
-		throw new Error('ARGOS_API_KEY not configured. Refusing to validate requests.');
-	}
+	const expectedKey = env.ARGOS_API_KEY;
 
 	// Check X-API-Key header first (primary mechanism for programmatic access)
 	const headerKey = request.headers.get('X-API-Key');
@@ -101,11 +96,7 @@ export function deriveSessionToken(apiKey: string): string {
  *   - Max-Age=86400: 24-hour expiry, re-set on each page load
  */
 export function getSessionCookieHeader(): string {
-	const apiKey = process.env.ARGOS_API_KEY;
-	if (!apiKey) {
-		throw new Error('ARGOS_API_KEY not configured.');
-	}
-	const token = deriveSessionToken(apiKey);
+	const token = deriveSessionToken(env.ARGOS_API_KEY);
 	return `${SESSION_COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=86400`;
 }
 
@@ -120,19 +111,11 @@ export function getSessionCookieHeader(): string {
  * Generate with: openssl rand -hex 32
  */
 export function validateSecurityConfig(): void {
-	const apiKey = process.env.ARGOS_API_KEY;
-
-	if (!apiKey) {
-		logger.error('FATAL: ARGOS_API_KEY environment variable is not set.');
-		logger.error('The system cannot start without an API key configured.');
-		logger.error('Set ARGOS_API_KEY in .env or environment before starting.');
-		logger.error('Generate with: openssl rand -hex 32');
-		process.exit(1);
-	}
-
-	if (apiKey.length < 32) {
+	// env.ts Zod schema already validates ARGOS_API_KEY min length at startup.
+	// This function now serves as a runtime assertion for belt-and-suspenders.
+	if (env.ARGOS_API_KEY.length < 32) {
 		logger.error('FATAL: ARGOS_API_KEY must be at least 32 characters.');
-		logger.error(`Current length: ${apiKey.length}. Minimum required: 32.`);
+		logger.error(`Current length: ${env.ARGOS_API_KEY.length}. Minimum required: 32.`);
 		logger.error('Generate with: openssl rand -hex 32');
 		process.exit(1);
 	}

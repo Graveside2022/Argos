@@ -1,5 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 
+import { env } from '$lib/server/env';
+
 /**
  * Server-side proxy for map tile requests.
  * Forwards requests to Stadia Maps with the API key injected server-side,
@@ -16,7 +18,7 @@ function validateTileRequest(params: { path?: string }): {
 	apiKey?: string;
 	path?: string;
 } {
-	const apiKey = process.env.STADIA_MAPS_API_KEY;
+	const apiKey = env.STADIA_MAPS_API_KEY;
 	if (!apiKey) {
 		return {
 			error: new Response(JSON.stringify({ error: 'Map tile service not configured' }), {

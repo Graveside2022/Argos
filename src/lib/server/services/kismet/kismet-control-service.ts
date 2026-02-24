@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { withRetry } from '$lib/server/retry';
 import { logger } from '$lib/utils/logger';
@@ -37,7 +38,7 @@ export async function isKismetRunning(): Promise<boolean> {
 /** Single probe of the Kismet status endpoint */
 async function probeKismetStatus(): Promise<boolean> {
 	try {
-		const response = await fetch('http://localhost:2501/system/status.json', {
+		const response = await fetch(`${env.KISMET_API_URL}/system/status.json`, {
 			method: 'GET',
 			signal: AbortSignal.timeout(1000)
 		});
@@ -81,7 +82,7 @@ async function startWithScript(): Promise<{ success: boolean; stderr?: string }>
 
 	try {
 		// Spawn detached process — replaces nohup/shell backgrounding
-		const logFd = fs.openSync('/tmp/kismet-start.log', 'w');
+		const logFd = fs.openSync(path.join(env.ARGOS_TEMP_DIR, 'kismet-start.log'), 'w');
 		const child = spawn(scriptPath, [], {
 			cwd: process.cwd(),
 			detached: true,
@@ -107,7 +108,7 @@ async function startDirect(): Promise<boolean> {
 
 	try {
 		// Spawn detached Kismet process — replaces nohup/shell backgrounding
-		const logFd = fs.openSync('/tmp/kismet.log', 'w');
+		const logFd = fs.openSync(path.join(env.ARGOS_TEMP_DIR, 'kismet.log'), 'w');
 		const child = spawn('/usr/bin/kismet', ['--no-ncurses', '--no-line-wrap'], {
 			detached: true,
 			stdio: ['ignore', logFd, logFd]
@@ -167,7 +168,7 @@ function parseInterfaceFromLog(content: string): string | null {
 /** Detect the network interface from Kismet startup logs */
 async function detectInterface(): Promise<string> {
 	try {
-		const content = fs.readFileSync('/tmp/kismet-start.log', 'utf-8');
+		const content = fs.readFileSync(path.join(env.ARGOS_TEMP_DIR, 'kismet-start.log'), 'utf-8');
 		return parseInterfaceFromLog(content) || 'wlxbee1d69fa811';
 	} catch {
 		return 'wlxbee1d69fa811';
@@ -224,11 +225,11 @@ async function handleScriptStarted(): Promise<KismetStartResult> {
 		);
 	}
 
-	logger.error('[Kismet] Failed to start - check /tmp/kismet-start.log');
+	logger.error('[Kismet] Failed to start - check kismet-start.log in ARGOS_TEMP_DIR');
 	return buildResult(
 		false,
 		'failed',
-		'Failed to start Kismet - check logs at /tmp/kismet-start.log',
+		`Failed to start Kismet - check logs at ${path.join(env.ARGOS_TEMP_DIR, 'kismet-start.log')}`,
 		'',
 		{
 			error: 'Kismet failed to start'

@@ -6,7 +6,9 @@
 import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { access, copyFile, readFile as readFileAsync, writeFile } from 'fs/promises';
+import path from 'path';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
@@ -165,7 +167,7 @@ export async function ensureGsmEvilAutoScript(gsmDir: string): Promise<void> {
  * Runs with root for pyshark/tshark capture permissions.
  */
 export function spawnGsmEvil2(gsmDir: string): void {
-	const logFd = openSync('/tmp/gsmevil2.log', 'a');
+	const logFd = openSync(path.join(env.ARGOS_TEMP_DIR, 'gsmevil2.log'), 'a');
 	const evilChild = spawn(
 		'/usr/bin/sudo',
 		[
@@ -227,7 +229,10 @@ async function checkGsmEvil2Running(): Promise<boolean> {
 /** Read the last 5 lines of the GsmEvil2 log for error diagnostics */
 async function readGsmEvil2LogTail(): Promise<string> {
 	try {
-		const logContent = await readFileAsync('/tmp/gsmevil2.log', 'utf-8');
+		const logContent = await readFileAsync(
+			path.join(env.ARGOS_TEMP_DIR, 'gsmevil2.log'),
+			'utf-8'
+		);
 		return logContent.split('\n').slice(-5).join('\n');
 	} catch {
 		return '';

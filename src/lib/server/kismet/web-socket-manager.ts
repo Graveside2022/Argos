@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { WebSocket } from 'ws';
 
+import { env } from '$lib/server/env';
 import { logError, logInfo } from '$lib/utils/logger';
 
 import type { PollerState } from './kismet-poller';
@@ -42,8 +43,8 @@ export class WebSocketManager extends EventEmitter {
 	private readonly POLL_INTERVAL = 2000;
 	private readonly THROTTLE_INTERVAL = 500;
 	private readonly CACHE_EXPIRY = 300000; // 5 minutes
-	private readonly KISMET_API_URL = process.env.KISMET_API_URL || 'http://localhost:2501';
-	private readonly KISMET_API_KEY = process.env.KISMET_API_KEY || '';
+	private readonly KISMET_API_URL = env.KISMET_API_URL;
+	private readonly KISMET_API_KEY = env.KISMET_API_KEY;
 
 	// Polling state — shared with kismet-poller module
 	private pollerState: PollerState = {

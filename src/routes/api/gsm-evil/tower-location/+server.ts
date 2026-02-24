@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
 
@@ -138,7 +139,7 @@ function parseApiResponse(apiData: Record<string, string>): LocationResult | nul
 }
 
 async function lookupViaApi(params: CellParams): Promise<LocationResult | null> {
-	const apiKey = process.env.OPENCELLID_API_KEY;
+	const apiKey = env.OPENCELLID_API_KEY;
 	if (!apiKey) return null;
 
 	const { mcc, mnc, lac, ci } = params;
@@ -184,7 +185,7 @@ async function resolveTowerLocation(params: CellParams): Promise<LocationResult>
 	const dbResult = lookupInDatabase(params);
 	if (dbResult) return formatDbResult(dbResult);
 
-	if (!process.env.OPENCELLID_API_KEY) {
+	if (!env.OPENCELLID_API_KEY) {
 		return { found: false, message: 'OPENCELLID_API_KEY not configured' };
 	}
 

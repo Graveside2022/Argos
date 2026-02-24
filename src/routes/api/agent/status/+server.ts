@@ -5,13 +5,15 @@
 
 import { json } from '@sveltejs/kit';
 
+import { env } from '$lib/server/env';
+
 import type { RequestHandler } from './$types';
 
 /**
  * Check if Anthropic API is available
  */
 async function isAnthropicAvailable(): Promise<boolean> {
-	if (!process.env.ANTHROPIC_API_KEY) {
+	if (!env.ANTHROPIC_API_KEY) {
 		return false;
 	}
 

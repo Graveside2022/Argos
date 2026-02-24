@@ -9,8 +9,10 @@
 import { spawn } from 'child_process';
 import { closeSync, openSync } from 'fs';
 import { readFile, unlink } from 'fs/promises';
+import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { logger } from '$lib/utils/logger';
@@ -222,7 +224,7 @@ export async function testFrequency(
 	const events: ScanEvent[] = [];
 	const label = `[FREQ ${index + 1}/${total}]`;
 	let pid = '';
-	const stderrLog = `/tmp/grgsm_scan_${Date.now()}_${index}.log`;
+	const stderrLog = path.join(env.ARGOS_TEMP_DIR, `grgsm_scan_${Date.now()}_${index}.log`);
 	validatePathWithinDir(stderrLog, '/tmp');
 
 	try {
