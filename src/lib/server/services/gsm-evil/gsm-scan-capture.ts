@@ -1,8 +1,9 @@
 /**
  * GSM Intelligent Scan — packet capture and process lifecycle helpers
  *
- * Low-level functions for running tcpdump / tshark captures, formatting
- * cell-identity event messages, and cleaning up child processes.
+ * Low-level functions for running tcpdump / tshark captures and cleaning
+ * up child processes.  Cell-identity event formatting lives in
+ * gsm-scan-events.ts.
  * All functions are consumed exclusively by gsm-scan-frequency-analysis.ts.
  */
 
@@ -118,151 +119,6 @@ export async function captureTshark(captureTime: number): Promise<string> {
 				.join('\n');
 		}
 		return '';
-	}
-}
-
-/**
- * Append cell-identity status events to the events array.
- *
- * Inspects which identity fields were captured and pushes
- * corresponding PASS / WARN messages.
- *
- * @param events - Mutable array to push events into
- * @param label - Frequency progress label (e.g. "[FREQ 1/2]")
- * @param tsharkOutput - Raw tshark output
- * @param cellMcc - Parsed MCC value
- * @param _cellMnc - Parsed MNC value (unused in messages but kept for signature symmetry)
- * @param cellLac - Parsed LAC value
- * @param cellCi - Parsed CI value
- */
-/** Count valid cell-identity lines in tshark output */
-function countCellLines(tsharkOutput: string): number {
-	return tsharkOutput
-		.trim()
-		.split('\n')
-		.filter((l: string) => l.trim() && !/^,*$/.test(l)).length;
-}
-
-/** Encode cell identity presence as a 3-bit key: mcc|lac|ci */
-function cellPresenceKey(cellMcc: string, cellLac: string, cellCi: string): number {
-	return (cellMcc ? 4 : 0) | (cellLac ? 2 : 0) | (cellCi ? 1 : 0);
-}
-
-/** Map presence bitmask to completeness label */
-const COMPLETENESS_MAP: Record<number, string> = {
-	7: 'complete', // mcc + lac + ci
-	3: 'missing-mcc', // lac + ci
-	4: 'missing-lac-ci', // mcc only
-	6: 'missing-lac-ci', // mcc + lac (no ci)
-	5: 'missing-lac-ci' // mcc + ci (no lac — treat as partial)
-};
-
-/** Classify the completeness of parsed cell identity fields */
-function classifyCellCompleteness(cellMcc: string, cellLac: string, cellCi: string): string {
-	return COMPLETENESS_MAP[cellPresenceKey(cellMcc, cellLac, cellCi)] ?? 'incomplete';
-}
-
-/** Map cell completeness to a user-facing message */
-function cellCompletenessMessage(
-	label: string,
-	completeness: string,
-	cellMcc: string,
-	cellLac: string,
-	cellCi: string
-): string {
-	const messages: Record<string, string> = {
-		complete: `${label} [PASS] Complete cell identity captured!`,
-		'missing-mcc': `${label} [WARN] Partial: LAC/CI captured but no MCC/MNC (need IMSI packet)`,
-		'missing-lac-ci': `${label} [WARN] Partial: MCC/MNC captured but no LAC/CI (need Cell Identity packet)`
-	};
-	return (
-		messages[completeness] ??
-		`${label} [WARN] Cell identity incomplete (MCC=${cellMcc || 'missing'}, LAC=${cellLac || 'missing'}, CI=${cellCi || 'missing'})`
-	);
-}
-
-export function appendCellIdentityEvents(
-	events: ScanEvent[],
-	label: string,
-	tsharkOutput: string,
-	cellMcc: string,
-	_cellMnc: string,
-	cellLac: string,
-	cellCi: string
-): void {
-	if (!tsharkOutput) {
-		events.push(createUpdateEvent(`${label} [WARN] No cell identity data captured`));
-		return;
-	}
-	events.push(
-		createUpdateEvent(
-			`${label} Found ${countCellLines(tsharkOutput)} packets with cell/identity data`
-		)
-	);
-	const completeness = classifyCellCompleteness(cellMcc, cellLac, cellCi);
-	events.push(
-		createUpdateEvent(cellCompletenessMessage(label, completeness, cellMcc, cellLac, cellCi))
-	);
-}
-
-/**
- * Append channel-type status events to the events array.
- *
- * Reports identified cell towers or warns about incomplete captures.
- *
- * @param events - Mutable array to push events into
- * @param label - Frequency progress label
- * @param cellMcc - Parsed MCC value
- * @param cellMnc - Parsed MNC value
- * @param cellLac - Parsed LAC value
- * @param cellCi - Parsed CI value
- * @param frameCount - Number of GSM frames detected
- * @param channelType - Determined channel type string
- */
-/** Emit cell tower identification or channel warning events */
-function emitTowerIdentified(
-	events: ScanEvent[],
-	label: string,
-	cellMcc: string,
-	cellMnc: string | undefined,
-	cellLac: string,
-	cellCi: string
-): void {
-	events.push(
-		createUpdateEvent(
-			`${label} [RF] Cell Tower Identified: MCC=${cellMcc} MNC=${cellMnc || 'N/A'} LAC=${cellLac} CI=${cellCi}`
-		)
-	);
-}
-
-/** Emit channel-detected-without-identity warning events */
-function emitChannelWarning(events: ScanEvent[], label: string, channelType: string): void {
-	events.push(
-		createUpdateEvent(
-			`${label} [WARN] ${channelType || 'Unknown'} channel detected but no cell identity captured`
-		)
-	);
-	events.push(
-		createUpdateEvent(
-			`${label} [TIP] TIP: Cell identity (MCC/LAC/CI) requires BCCH channel with System Information messages`
-		)
-	);
-}
-
-export function appendChannelEvents(
-	events: ScanEvent[],
-	label: string,
-	cellMcc: string,
-	cellMnc: string | undefined,
-	cellLac: string,
-	cellCi: string,
-	frameCount: number,
-	channelType: string
-): void {
-	if (cellMcc && cellLac && cellCi) {
-		emitTowerIdentified(events, label, cellMcc, cellMnc, cellLac, cellCi);
-	} else if (frameCount > 0) {
-		emitChannelWarning(events, label, channelType);
 	}
 }
 

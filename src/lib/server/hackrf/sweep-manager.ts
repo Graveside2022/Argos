@@ -29,6 +29,11 @@ import {
 	runNextFrequency,
 	startCycle
 } from './sweep-cycle-init';
+import {
+	emitSweepError,
+	emitSweepEvent,
+	performStartupValidation
+} from './sweep-manager-lifecycle';
 import type {
 	HackRFHealth,
 	SpectrumData,
@@ -91,27 +96,14 @@ export class SweepManager extends EventEmitter {
 		this.sseEmitter = emitter;
 	}
 	private async _performStartupValidation(): Promise<void> {
-		logger.info('[SEARCH] SweepManager: Performing startup state validation...');
-		this.mutableState.isRunning = false;
-		this.mutableState.status = { state: SystemStatus.Idle };
-		await forceCleanupExistingProcesses(this.processManager);
-		await this.processManager.cleanup();
-		this.frequencyCycler.resetCycling();
-		this.bufferManager.clearBuffer();
-		this.errorTracker.resetErrorTracking();
-		const rs = this.errorTracker.getRecoveryStatus();
-		Object.assign(this.cyclingHealth, {
-			status: SystemStatus.Idle,
-			processHealth: 'stopped',
-			lastDataReceived: null
+		await performStartupValidation({
+			mutableState: this.mutableState,
+			processManager: this.processManager,
+			frequencyCycler: this.frequencyCycler,
+			bufferManager: this.bufferManager,
+			errorTracker: this.errorTracker,
+			cyclingHealth: this.cyclingHealth
 		});
-		Object.assign(this.cyclingHealth.recovery, {
-			recoveryAttempts: rs.recoveryAttempts,
-			lastRecoveryAttempt: rs.lastRecoveryAttempt,
-			isRecovering: rs.isRecovering
-		});
-		this.mutableState.isInitialized = true;
-		logger.info('[OK] SweepManager startup validation complete');
 	}
 
 	private _getCoordinatorContext(): SweepCoordinatorContext {
@@ -274,25 +266,22 @@ export class SweepManager extends EventEmitter {
 	}
 
 	private _emitEvent(event: string, data: unknown): void {
-		if (this.sseEmitter) {
-			try {
-				this.sseEmitter(event, data);
-			} catch (error) {
-				logger.warn('SSE emitter error, clearing reference', { error });
-				this.sseEmitter = null;
-			}
-		}
-		if (this.listenerCount(event) > 0) this.emit(event, data);
+		const result = emitSweepEvent(
+			{ sseEmitter: this.sseEmitter, eventEmitter: this },
+			event,
+			data
+		);
+		this.sseEmitter = result.sseEmitter;
 	}
 
 	private _emitError(message: string, type: string, error?: Error): void {
-		this._emitEvent('error', {
+		const result = emitSweepError(
+			{ sseEmitter: this.sseEmitter, eventEmitter: this },
 			message,
 			type,
-			timestamp: new Date().toISOString(),
-			details: error?.stack
-		});
-		logger.error(`[ERROR] ${type}: ${message}`, { type, details: error?.stack });
+			error
+		);
+		this.sseEmitter = result.sseEmitter;
 	}
 
 	async cleanup(): Promise<void> {
@@ -302,12 +291,10 @@ export class SweepManager extends EventEmitter {
 }
 
 // Singleton — persisted via globalThis to survive Vite HMR reloads.
-const KEY = '__argos_sweepManager';
 const g = globalThis as Record<string, unknown>;
-/** The singleton SweepManager instance for controlling HackRF spectrum sweeps. */
 export const sweepManager: SweepManager =
-	(g[KEY] as SweepManager) ?? ((g[KEY] = new SweepManager()) as SweepManager);
-/** Returns the singleton SweepManager instance. */
+	(g['__argos_sweepManager'] as SweepManager) ??
+	((g['__argos_sweepManager'] = new SweepManager()) as SweepManager);
 export function getSweepManager(): SweepManager {
 	return sweepManager;
 }

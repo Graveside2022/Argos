@@ -297,11 +297,11 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 - [x] T050 [P] [US12] Decompose `src/lib/components/dashboard/tak/TakConfigView.svelte` (329→219 LOC) — extract TakServerForm and TakAuthMethodPicker sub-components.
 - [x] T051 [P] [US12] Decompose `src/lib/hackrf/sweep-manager/error-tracker.ts` (321→221 LOC) — extract error-recovery.ts (RecoveryManager class).
 - [x] T052 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-frequency-analysis.ts` (316→264 LOC) — extract gsm-grgsm-process.ts (spawn/verify/log helpers).
-- [ ] T053 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-capture.ts` (313 LOC) — split into capture management and capture processing modules.
-- [ ] T054 [P] [US12] Decompose `src/lib/server/hackrf/sweep-manager.ts` (313 LOC) — split into sweep coordination and sweep configuration modules.
-- [ ] T055 [P] [US12] Decompose `src/lib/server/tak/tak-service.ts` (312 LOC) — split into connection management and TAK operations modules.
-- [ ] T056 [P] [US12] Decompose `src/lib/server/services/kismet/kismet-control-service-extended.ts` (306 LOC) — split into control commands and status checking modules.
-- [ ] T057 [US12] Evaluate `src/lib/components/dashboard/DashboardMap.svelte` (300 LOC) — borderline. Extract map-controls sub-component only if decomposition yields a cleaner responsibility split.
+- [x] T053 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-capture.ts` (313→169 LOC) — extract gsm-scan-events.ts (cell-identity event formatting).
+- [x] T054 [P] [US12] Decompose `src/lib/server/hackrf/sweep-manager.ts` (313→300 LOC) — extract sweep-manager-lifecycle.ts (startup validation, event emission).
+- [x] T055 [P] [US12] Decompose `src/lib/server/tak/tak-service.ts` (312→298 LOC) — extract tak-broadcast.ts (WebSocket broadcast helpers).
+- [x] T056 [P] [US12] Decompose `src/lib/server/services/kismet/kismet-control-service-extended.ts` (308→241 LOC) — extract kismet-status-checker.ts (process detection, WiFi adapter discovery, API health).
+- [x] T057 [US12] Evaluate `src/lib/components/dashboard/DashboardMap.svelte` (300 LOC) — at exactly 300 (within limit), purely declarative MapLibre markup. No clean split exists. No changes needed.
 
 **Checkpoint**: Zero non-exempt files > 300 LOC. All imports updated across consumers. `npm run build` succeeds. All tests pass.
 
