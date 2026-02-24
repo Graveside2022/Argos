@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import { z } from 'zod';
 
 import { createHandler } from '$lib/server/api/create-handler';
-import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 const CleanupRequestSchema = z.object({
