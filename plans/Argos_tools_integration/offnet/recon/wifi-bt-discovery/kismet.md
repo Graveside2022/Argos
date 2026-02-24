@@ -1,5 +1,9 @@
 # Kismet
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — Native install via `apt install kismet`. Argos integration: `src/lib/server/services/kismet/` (REST API client), `src/lib/server/kismet/web-socket-manager.ts` (WebSocket fan-out), 6 API routes at `/api/kismet/*`, dedicated `kismet-store.ts`, systemd service `argos-kismet.service`. Env vars: `KISMET_API_URL`, `KISMET_USER`, `KISMET_PASSWORD`, `KISMET_API_KEY`. **No additional integration work required.**
+>
+> **Future tool interactions:** `sparrow-wifi` (can use Kismet as data source), `wigle`/`wigletotak` (export Kismet logs), `trackerjacker` (complementary WiFi tracking), `bettercap` (overlapping WiFi recon — use one at a time per adapter).
+
 > **RISK CLASSIFICATION**: LOW RISK
 > This tool is part of a controlled military/defense training toolkit. Kismet is a passive wireless network detector and sniffer. It operates in monitor mode and does not transmit or interact with target networks. Passive monitoring may still be subject to local regulations regarding wireless interception. Use in accordance with applicable laws and authorized training environments.
 
@@ -10,7 +14,7 @@
 | Method               | Supported | Notes                                                                    |
 | -------------------- | --------- | ------------------------------------------------------------------------ |
 | **Docker Container** | YES       | Requires `--privileged`, `--net=host`, USB passthrough for WiFi adapters |
-| **Native Install**   | YES       | Native ARM64 package in Kali repos; already running on Argos RPi 5       |
+| **Native Install**   | YES       | **ACTIVE** — native ARM64 package running on Argos RPi 5                 |
 
 ---
 

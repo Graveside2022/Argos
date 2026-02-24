@@ -55,9 +55,9 @@
 | 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 3 | 0 | Partial |
 | 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 13 | 0 | Yes |
 | 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 5 | 0 | Partial |
-| 17 | Final Verification & Metrics | 7 | 0 | **7** | No |
+| 17 | Final Verification & Metrics | 7 | 7 | 0 | No |
 | 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 10 | 0 | Partial |
-| **Total** | | **86** | **70** | **16** | |
+| **Total** | | **86** | **77** | **9** | |
 
 ---
 
@@ -352,13 +352,13 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Purpose**: Validate all 35 success criteria (SC-001 through SC-035). Record before/after metrics. Depends on ALL other phases.
 
-- [ ] T061 Run full test suite: `npm run test:unit`, `npm run test:integration`, `npm run test:security`. All must pass. (Use targeted tests on RPi if memory-constrained.) **Coverage gate**: Run `npx vitest run --coverage` on new shared utilities (`error-utils.ts`, `exec.ts`, `result.ts`, `retry.ts`, `timeout.ts`, `delay.ts`, `fetch-json.ts`) and verify ≥80% branch coverage per Constitution Article III.2.
-- [ ] T062 Run `npm run build` — verify zero new warnings.
-- [ ] T063 Measure LOC delta (target: -1,000 from Part A+C net). `cloc src/` or `find src/ -name '*.ts' -o -name '*.svelte' | xargs wc -l`.
-- [ ] T064 Verify each SC-001 through SC-035 with targeted grep/search. Document pass/fail for each criterion. **Includes FR-014 validation**: spot-check 10 migrated routes to confirm unified error response shape (`{ success: false, error: string }`) by sending invalid requests and inspecting response bodies.
-- [ ] T065 Run `npx madge --circular src/` — confirm 0 cycles remain.
-- [ ] T066 Run production build, measure bundle size delta. Compare to pre-branch baseline from T001.
-- [ ] T067 Document final metrics in verification report at `specs/016-code-expressiveness/verification.md`.
+- [x] T061 Run full test suite: `npm run test:unit`, `npm run test:integration`, `npm run test:security`. All must pass. (Use targeted tests on RPi if memory-constrained.) **Coverage gate**: Run `npx vitest run --coverage` on new shared utilities (`error-utils.ts`, `exec.ts`, `result.ts`, `retry.ts`, `timeout.ts`, `delay.ts`, `fetch-json.ts`) and verify ≥80% branch coverage per Constitution Article III.2.
+- [x] T062 Run `npm run build` — verify zero new warnings.
+- [x] T063 Measure LOC delta (target: -1,000 from Part A+C net). `cloc src/` or `find src/ -name '*.ts' -o -name '*.svelte' | xargs wc -l`.
+- [x] T064 Verify each SC-001 through SC-035 with targeted grep/search. Document pass/fail for each criterion. **Includes FR-014 validation**: spot-check 10 migrated routes to confirm unified error response shape (`{ success: false, error: string }`) by sending invalid requests and inspecting response bodies.
+- [x] T065 Run `npx madge --circular src/` — confirm 0 cycles remain.
+- [x] T066 Run production build, measure bundle size delta. Compare to pre-branch baseline from T001.
+- [x] T067 Document final metrics in verification report at `specs/016-code-expressiveness/verification.md`.
 
 ---
 

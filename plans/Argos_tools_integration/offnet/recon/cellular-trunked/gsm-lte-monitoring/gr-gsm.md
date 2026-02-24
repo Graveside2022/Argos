@@ -1,5 +1,7 @@
 # gr-gsm
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — `grgsm_livemon` (the core binary from gr-gsm) is managed by the GSM Evil subsystem: 14 server files in `src/lib/server/services/gsm-evil/`, 12 API routes at `/api/gsm-evil/*`, 6 UI components, dedicated `gsm-evil-store.ts`, and SSE streaming via `intelligent-scan-stream`. **No additional integration work required.**
+
 > **RISK CLASSIFICATION**: HIGH RISK - SENSITIVE SOFTWARE
 > GSM signal interception and IMSI collection capability. Military education/training toolkit - Not for public release.
 
@@ -12,7 +14,7 @@
 | Method               | Supported | Notes                                                            |
 | -------------------- | --------- | ---------------------------------------------------------------- |
 | **Docker Container** | YES       | GNU Radio + SDR USB passthrough                                  |
-| **Native Install**   | YES       | `apt install gr-gsm` on Kali ARM64 — recommended for performance |
+| **Native Install**   | YES       | **ACTIVE** — `grgsm_livemon` already spawned by GSM Evil service |
 
 ---
 
