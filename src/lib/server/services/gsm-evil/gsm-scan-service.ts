@@ -1,4 +1,7 @@
+import path from 'path';
+
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { logger } from '$lib/utils/logger';
 
 import {
@@ -32,7 +35,7 @@ export interface GsmScanResponse {
 	error?: string;
 }
 
-const GSM_LOG_PATH = '/tmp/grgsm_scan.log';
+const GSM_LOG_PATH = path.join(env.ARGOS_TEMP_DIR, 'grgsm_scan.log');
 const DEFAULT_GAIN = 40;
 const HACKRF_INIT_DELAY_MS = 2000;
 const CAPTURE_TIME_SECONDS = 3;

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -81,7 +82,7 @@ async function checkGrgsmStatus(): Promise<{
 /** Check if GSMEvil2 web interface is accessible. */
 async function checkWebInterface(): Promise<boolean> {
 	try {
-		const resp = await fetch('http://localhost:8080', { signal: AbortSignal.timeout(1000) });
+		const resp = await fetch(env.GSM_EVIL_URL, { signal: AbortSignal.timeout(1000) });
 		return resp.status === 200;
 	} catch {
 		return false;

@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { readFile } from 'fs/promises';
+import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
@@ -60,7 +62,7 @@ async function checkGrgsmProcess(): Promise<boolean> {
 }
 
 async function readRecentFrames(): Promise<string> {
-	const logPath = '/tmp/grgsm_scan.log';
+	const logPath = path.join(env.ARGOS_TEMP_DIR, 'grgsm_scan.log');
 	const frameRegex = /^\s*[0-9a-f]{2}\s/;
 	try {
 		const fileContent = await readFile(logPath, 'utf-8');

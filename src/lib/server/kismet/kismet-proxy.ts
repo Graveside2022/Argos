@@ -1,4 +1,5 @@
 // Proxy for Kismet REST API
+import { env } from '$lib/server/env';
 import { logger } from '$lib/utils/logger';
 
 import type { KismetDeviceResponse } from './kismet-proxy-transform';
@@ -19,21 +20,20 @@ interface KismetDatasourceResponse {
 }
 
 export class KismetProxy {
-	// Read configuration from environment variables with defaults
-	private static readonly KISMET_HOST = process.env.KISMET_HOST || 'localhost';
-	private static readonly KISMET_PORT = process.env.KISMET_PORT || '2501';
-	private static readonly API_KEY = process.env.KISMET_API_KEY || '';
-	private static readonly KISMET_USER = process.env.KISMET_USER || 'admin';
+	// Read configuration from typed env module
+	private static readonly KISMET_HOST = env.KISMET_HOST;
+	private static readonly KISMET_PORT = String(env.KISMET_PORT);
+	private static readonly API_KEY = env.KISMET_API_KEY;
+	private static readonly KISMET_USER = env.KISMET_USER;
 	private static readonly BASE_URL = `http://${KismetProxy.KISMET_HOST}:${KismetProxy.KISMET_PORT}`;
 
 	private static getPassword(): string {
-		const pass = process.env.KISMET_PASSWORD;
-		if (!pass) {
+		if (!env.KISMET_PASSWORD) {
 			throw new Error(
 				'KISMET_PASSWORD environment variable must be set. See .env.example for configuration.'
 			);
 		}
-		return pass;
+		return env.KISMET_PASSWORD;
 	}
 
 	/** Build request headers including auth and API key */

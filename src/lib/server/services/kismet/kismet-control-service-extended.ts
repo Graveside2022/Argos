@@ -1,7 +1,8 @@
 import { readdirSync, statSync } from 'fs';
-import { homedir } from 'os';
+import { homedir, userInfo } from 'os';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { withRetry } from '$lib/server/retry';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
@@ -73,7 +74,7 @@ async function cleanupMonitorInterface(iface: string): Promise<void> {
 
 /** Spawn Kismet process as non-root user */
 async function spawnKismet(iface: string): Promise<void> {
-	const kismetUser = process.env.USER || 'kali';
+	const kismetUser = userInfo().username;
 	await execFileAsync(
 		'/usr/bin/sudo',
 		[
@@ -122,14 +123,14 @@ async function getProcessUser(pid: number): Promise<string> {
 
 /** Set Kismet auth credentials if KISMET_PASSWORD is configured */
 async function setupKismetAuth(): Promise<void> {
-	const kismetAuthUser = process.env.KISMET_USER || 'admin';
-	const kismetPass = process.env.KISMET_PASSWORD;
+	const kismetAuthUser = env.KISMET_USER;
+	const kismetPass = env.KISMET_PASSWORD;
 	if (!kismetPass) {
 		logger.warn('[kismet] KISMET_PASSWORD not set, skipping initial credential setup');
 		return;
 	}
 	try {
-		const response = await fetch('http://localhost:2501/session/set_password', {
+		const response = await fetch(`${env.KISMET_API_URL}/session/set_password`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: `username=${encodeURIComponent(kismetAuthUser)}&password=${encodeURIComponent(kismetPass)}`,
@@ -283,7 +284,7 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 /** Check if the Kismet HTTP API is responding */
 async function isKismetApiResponding(): Promise<boolean> {
 	try {
-		const response = await fetch('http://localhost:2501/system/timestamp.json', {
+		const response = await fetch(`${env.KISMET_API_URL}/system/timestamp.json`, {
 			signal: AbortSignal.timeout(2000)
 		});
 		const apiOut = await response.text();

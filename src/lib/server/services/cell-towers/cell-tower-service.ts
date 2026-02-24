@@ -2,12 +2,13 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
+import { env } from '$lib/server/env';
 import { logger } from '$lib/utils/logger';
 
 // OpenCellID getInArea limits bbox to 4 km² (~2km x 2km).
 // We tile a larger radius into ~1.5km x 1.5km tiles and fetch in parallel.
 const TILE_SIZE_DEG = 0.014; // ~1.5 km at mid-latitudes
-const OPENCELLID_API_KEY = process.env.OPENCELLID_API_KEY;
+const OPENCELLID_API_KEY = env.OPENCELLID_API_KEY;
 
 interface TowerRow {
 	radio: string;

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import { z } from 'zod';
 
-import { getAllowedImsiDbPaths, getGsmEvilDir } from '$lib/server/gsm-database-path';
+import { getAllowedImsiDbPaths } from '$lib/server/gsm-database-path';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -54,8 +54,7 @@ function transformImsiRow(row: ImsiRow) {
 }
 
 function findValidatedImsiDatabase(): { path: string; error?: string } {
-	const gsmDir = getGsmEvilDir();
-	const searchPaths = [`${gsmDir}/database/imsi.db`, '/tmp/gsm_db.sqlite'];
+	const searchPaths = getAllowedImsiDbPaths();
 	const dbPath = searchPaths.find((p) => existsSync(p)) || '';
 	if (!dbPath) return { path: '', error: 'IMSI database not found' };
 	const allowedPaths = getAllowedImsiDbPaths();

@@ -4,6 +4,7 @@
  * Dynamically loads tools from Tool Execution Framework
  */
 
+import { env } from '$lib/server/env';
 import { logger } from '$lib/utils/logger';
 
 import { getAllTools, getSystemPrompt } from './tools';
@@ -82,7 +83,7 @@ async function _executeTool(
  * Check if Anthropic API is available (internet connectivity + API key)
  */
 async function isAnthropicAvailable(): Promise<boolean> {
-	if (!process.env.ANTHROPIC_API_KEY) {
+	if (!env.ANTHROPIC_API_KEY) {
 		return false;
 	}
 
@@ -191,7 +192,7 @@ function parseSseLines(buffer: string): { events: AgentEvent[]; remaining: strin
 function buildAnthropicHeaders(): Record<string, string> {
 	return {
 		'Content-Type': 'application/json',
-		'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+		'x-api-key': env.ANTHROPIC_API_KEY ?? '',
 		'anthropic-version': '2023-06-01'
 	};
 }

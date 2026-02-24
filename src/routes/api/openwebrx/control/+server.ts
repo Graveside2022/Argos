@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
 
@@ -39,7 +40,7 @@ async function dockerLifecycle(
 const VALID_ACTIONS = new Set(['start', 'stop', 'restart', 'status']);
 
 const LIFECYCLE_EXTRAS: Record<string, Record<string, unknown> | undefined> = {
-	start: { url: 'http://localhost:8073' }
+	start: { url: env.OPENWEBRX_URL }
 };
 
 /** Execute validated OpenWebRX action. */

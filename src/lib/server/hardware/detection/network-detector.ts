@@ -4,6 +4,7 @@
  */
 
 import { DetectedHardwareSchema } from '$lib/schemas/hardware.js';
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import type { DetectedHardware, SDRCapabilities } from '$lib/server/hardware/detection-types';
 import { logger } from '$lib/utils/logger';
@@ -133,7 +134,7 @@ function buildServiceDevice(
 
 async function detectKismetServer(): Promise<DetectedHardware[]> {
 	try {
-		const kismetUrl = process.env.PUBLIC_KISMET_API_URL || 'http://localhost:2501';
+		const kismetUrl = env.PUBLIC_KISMET_API_URL;
 		const url = new URL('/system/status.json', kismetUrl);
 		const response = await fetch(url.toString(), { signal: AbortSignal.timeout(2000) });
 		if (!response.ok) return [];
@@ -158,7 +159,7 @@ async function detectKismetServer(): Promise<DetectedHardware[]> {
 
 async function detectHackRFServer(): Promise<DetectedHardware[]> {
 	try {
-		const hackrfUrl = process.env.PUBLIC_HACKRF_API_URL || 'http://localhost:8092';
+		const hackrfUrl = env.PUBLIC_HACKRF_API_URL;
 		const url = new URL('/status', hackrfUrl);
 		const response = await fetch(url.toString(), { signal: AbortSignal.timeout(2000) });
 		if (!response.ok) return [];
@@ -183,7 +184,7 @@ async function detectHackRFServer(): Promise<DetectedHardware[]> {
 
 async function detectOpenWebRX(): Promise<DetectedHardware[]> {
 	try {
-		const response = await fetch('http://localhost:8073', {
+		const response = await fetch(env.OPENWEBRX_URL, {
 			signal: AbortSignal.timeout(2000)
 		});
 		if (!response.ok) return [];

@@ -2,6 +2,7 @@
 import { writeFileSync } from 'fs';
 import path from 'path';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
@@ -11,8 +12,8 @@ import type { KismetServiceStatus } from './types';
 export class KismetServiceManager {
 	private static readonly SERVICE_NAME = 'kismet';
 	private static readonly START_SCRIPT = path.join(process.cwd(), 'scripts/start_kismet.sh');
-	private static readonly PID_FILE = '/tmp/argos-kismet.pid';
-	private static readonly LOG_FILE = '/tmp/argos-kismet.log';
+	private static readonly PID_FILE = path.join(env.ARGOS_TEMP_DIR, 'argos-kismet.pid');
+	private static readonly LOG_FILE = path.join(env.ARGOS_TEMP_DIR, 'argos-kismet.log');
 
 	/**
 	 * Get the current status of the Kismet service

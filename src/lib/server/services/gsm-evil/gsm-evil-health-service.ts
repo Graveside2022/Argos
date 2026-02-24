@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { safe } from '$lib/server/result';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
@@ -134,7 +135,7 @@ async function checkPort8080Listener(): Promise<boolean> {
 /** Check whether the GSM Evil HTTP interface on port 8080 responds with 200. */
 async function checkWebInterface(): Promise<boolean> {
 	try {
-		const response = await fetch('http://localhost:8080', {
+		const response = await fetch(env.GSM_EVIL_URL, {
 			signal: AbortSignal.timeout(3000)
 		});
 		return response.status === 200;
