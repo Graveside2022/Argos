@@ -8,7 +8,8 @@ import { dev } from '$app/environment';
 import {
 	getSessionCookieHeader,
 	validateApiKey,
-	validateSecurityConfig
+	validateSecurityConfig,
+	validateSessionToken
 } from '$lib/server/auth/auth-middleware';
 import {
 	globalHardwareMonitor,
@@ -70,14 +71,20 @@ wss.on('connection', (ws: WebSocket, request) => {
 	handleWsConnection(ws, request, wsManager);
 });
 
-/** Build a mock request carrying WS auth credentials (token param or cookie). */
-function buildWsMockRequest(event: Parameters<Handle>[0]['event']): Request {
-	const wsApiKey = event.url.searchParams.get('token') || event.request.headers.get('X-API-Key');
-	const headers: Record<string, string> = {};
-	if (wsApiKey) headers['X-API-Key'] = wsApiKey;
-	const wsCookie = event.request.headers.get('cookie');
-	if (wsCookie) headers['cookie'] = wsCookie;
-	return new Request('http://localhost', { headers });
+/**
+ * Authenticate a WebSocket upgrade via session token, header, or cookie.
+ *
+ * The ?token= param accepts the HMAC-derived session token (NOT the raw API key)
+ * to prevent key exposure in URLs/logs per OWASP A07:2021.
+ */
+function authenticateWsRequest(event: Parameters<Handle>[0]['event']): boolean {
+	// 1. Check ?token= query param as session token (non-browser clients)
+	const wsToken = event.url.searchParams.get('token');
+	if (wsToken) return validateSessionToken(wsToken);
+
+	// 2. Check X-API-Key header (programmatic clients that can set headers)
+	// 3. Check session cookie (browser clients)
+	return safeValidateApiKey(event.request);
 }
 
 /** Check if a request is a WebSocket upgrade for the Kismet WS endpoint. */
@@ -109,7 +116,7 @@ function unauthorizedResponse(): Response {
 function handleWsAuth(event: Parameters<Handle>[0]['event']): Response | null {
 	if (!isKismetWsUpgrade(event)) return null;
 
-	if (!safeValidateApiKey(buildWsMockRequest(event))) {
+	if (!authenticateWsRequest(event)) {
 		logAuthEvent({
 			eventType: 'WS_AUTH_FAILURE',
 			ip: getSafeClientAddress(event),

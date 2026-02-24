@@ -2,7 +2,7 @@ import type { IncomingMessage } from 'http';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 
-import { validateApiKey } from '$lib/server/auth/auth-middleware';
+import { validateApiKey, validateSessionToken } from '$lib/server/auth/auth-middleware';
 import { logger } from '$lib/utils/logger';
 
 import type { WebSocketMessage } from './websocket-handlers';
@@ -43,25 +43,26 @@ function parseUpgradeUrl(req: IncomingMessage): URL {
 	return new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
 }
 
-/** Extract API key from token query param or header. */
-function extractApiKey(url: URL, req: IncomingMessage): string | undefined {
-	return url.searchParams.get('token') || (req.headers['x-api-key'] as string) || undefined;
-}
-
-/** Build a mock Request from an upgrade handshake for auth validation. */
-function buildUpgradeMockRequest(req: IncomingMessage): Request {
-	const url = parseUpgradeUrl(req);
-	const headers: Record<string, string> = {};
-	const apiKey = extractApiKey(url, req);
-	if (apiKey) headers['X-API-Key'] = apiKey;
-	if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
-	return new Request('http://localhost', { headers });
-}
-
-/** Try API key validation; returns true if authenticated, false otherwise. */
+/**
+ * Authenticate a WebSocket upgrade via session token, header, or cookie.
+ *
+ * The ?token= param accepts the HMAC-derived session token (NOT the raw API key)
+ * to prevent key exposure in URLs/logs per OWASP A07:2021.
+ */
 function tryValidateApiKey(req: IncomingMessage): boolean {
 	try {
-		return validateApiKey(buildUpgradeMockRequest(req));
+		const url = parseUpgradeUrl(req);
+
+		// 1. Check ?token= as session token (non-browser clients)
+		const wsToken = url.searchParams.get('token');
+		if (wsToken) return validateSessionToken(wsToken);
+
+		// 2. Check X-API-Key header or cookie via standard validateApiKey
+		const headers: Record<string, string> = {};
+		const apiKey = req.headers['x-api-key'] as string;
+		if (apiKey) headers['X-API-Key'] = apiKey;
+		if (req.headers.cookie) headers['cookie'] = req.headers.cookie;
+		return validateApiKey(new Request('http://localhost', { headers }));
 	} catch {
 		return false;
 	}
@@ -203,7 +204,7 @@ function handleConnection(ws: WebSocket, req: IncomingMessage): void {
  * Initialize WebSocket server
  *
  * Security (Phase 2.1.6):
- *   - verifyClient: validates API key via token query param or X-API-Key header
+ *   - verifyClient: validates session token query param, X-API-Key header, or cookie
  *   - Origin checking: rejects cross-origin browser connections
  *   - maxPayload: 1MB limit prevents memory exhaustion
  */

@@ -7,7 +7,8 @@
  * Design rationale:
  *   - API key-based: Appropriate for single-operator tactical device
  *   - Fail-closed (Regrade A3): System refuses to start without ARGOS_API_KEY
- *   - Header-only for programmatic access (Regrade A4): No query string credentials
+ *   - Header-only for programmatic access (Regrade A4): No raw credentials in query strings
+ *   - WebSocket ?token= accepts derived session token only (not the raw API key)
  *   - Session cookie for browser clients: HttpOnly, SameSite=Strict, Path=/api/
  *   - Timing-safe comparison via HMAC normalization prevents side-channel attacks
  *
@@ -84,6 +85,18 @@ function safeCompare(a: string, b: string): boolean {
  */
 export function deriveSessionToken(apiKey: string): string {
 	return createHmac('sha256', HMAC_SECRET).update(apiKey).digest('hex');
+}
+
+/**
+ * Validate a session token (e.g., from a WebSocket ?token= query param).
+ *
+ * Accepts the HMAC-derived session token — NOT the raw API key.
+ * This prevents API key exposure in URLs, logs, and referrer headers.
+ * Per OWASP A07:2021, raw credentials must not appear in query strings.
+ */
+export function validateSessionToken(token: string): boolean {
+	const expectedToken = deriveSessionToken(env.ARGOS_API_KEY);
+	return safeCompare(token, expectedToken);
 }
 
 /**
