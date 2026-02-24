@@ -27,6 +27,27 @@ export function errMsg(err: unknown): string {
 	return String(err);
 }
 
+/**
+ * Normalize any thrown value to an Error instance.
+ *
+ * Unlike `errMsg()` which returns a string, this preserves the Error object
+ * (or wraps non-Error values in one). Used by `safe()` and `withRetry()`.
+ *
+ * @param err - The caught value (may be Error, string, or anything)
+ * @returns An Error instance
+ *
+ * @example
+ * ```ts
+ * try { await riskyOp(); }
+ * catch (err) { throw normalizeError(err); }
+ * ```
+ */
+export function normalizeError(err: unknown): Error {
+	if (err instanceof Error) return err;
+	if (typeof err === 'string') return new Error(err);
+	return new Error(String(err));
+}
+
 /** Type guard for objects with a string `message` property */
 function hasStringMessage(val: unknown): val is { message: string } {
 	return (
