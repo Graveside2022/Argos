@@ -213,9 +213,9 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **FR**: FR-023 | **SC**: SC-019
 
-- [ ] T031 [US9] Expand Zod schema in `src/lib/server/env.ts` from 4 to ~19 env vars per `contracts/env-schema.ts` — add Kismet auth (KISMET_HOST, KISMET_PORT, KISMET_API_KEY, KISMET_USER, KISMET_PASSWORD), API keys (ANTHROPIC_API_KEY, OPENCELLID_API_KEY), public URLs (PUBLIC_KISMET_API_URL, PUBLIC_HACKRF_API_URL), self/CORS (ARGOS_API_URL, ARGOS_CORS_ORIGINS), service URLs (GSM_EVIL_URL, OPENWEBRX_URL, BETTERCAP_URL), temp dir (ARGOS_TEMP_DIR). All new vars MUST have sensible defaults so existing deployments don't break. Update `.env.example` with new vars and comments.
-- [ ] T032 [US9] Migrate 33 `process.env` accesses across non-MCP files to typed `env` import from `$lib/server/env`. Target files (verified via `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/`). MCP server files (`src/lib/server/mcp/`) are exempt — they are standalone processes that cannot import SvelteKit modules.
-- [ ] T033 [P] [US9] Add `ARGOS_TEMP_DIR` runtime resolution in `src/lib/server/env.ts` — default to `path.join(os.tmpdir(), 'argos')`, create directory on startup with `mkdirSync({ recursive: true })`.
+- [x] T031 [US9] Expand Zod schema in `src/lib/server/env.ts` from 4 to ~19 env vars per `contracts/env-schema.ts` — add Kismet auth (KISMET_HOST, KISMET_PORT, KISMET_API_KEY, KISMET_USER, KISMET_PASSWORD), API keys (ANTHROPIC_API_KEY, OPENCELLID_API_KEY), public URLs (PUBLIC_KISMET_API_URL, PUBLIC_HACKRF_API_URL), self/CORS (ARGOS_API_URL, ARGOS_CORS_ORIGINS), service URLs (GSM_EVIL_URL, OPENWEBRX_URL, BETTERCAP_URL), temp dir (ARGOS_TEMP_DIR). All new vars MUST have sensible defaults so existing deployments don't break. Update `.env.example` with new vars and comments.
+- [x] T032 [US9] Migrate 33 `process.env` accesses across non-MCP files to typed `env` import from `$lib/server/env`. Target files (verified via `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/`). MCP server files (`src/lib/server/mcp/`) are exempt — they are standalone processes that cannot import SvelteKit modules.
+- [x] T033 [P] [US9] Add `ARGOS_TEMP_DIR` runtime resolution in `src/lib/server/env.ts` — default to `path.join(os.tmpdir(), 'argos')`, create directory on startup with `mkdirSync({ recursive: true })`.
 
 **Checkpoint**: `npm run build` succeeds. `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/` returns empty.
 
@@ -231,8 +231,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Depends on**: Phase 11 (T031 — env schema expansion must complete first, since URL/path constants source from env vars).
 
-- [ ] T034 [US10] Replace 17 hardcoded `/tmp/` paths across service files with `path.join(env.ARGOS_TEMP_DIR, 'filename')`. Targets found via `grep -rn '/tmp/' src/ --include='*.ts'`.
-- [ ] T035 [US10] Replace 14 hardcoded `localhost:NNNN` service URLs across non-MCP/non-test files with env-backed constants from the expanded `env.ts`. Reference `env.GSM_EVIL_URL`, `env.OPENWEBRX_URL`, `env.BETTERCAP_URL`, `env.KISMET_API_URL`, etc. Targets found via `grep -rn 'localhost:[0-9]' src/ --include='*.ts' | grep -v mcp/ | grep -v test`.
+- [x] T034 [US10] Replace 17 hardcoded `/tmp/` paths across service files with `path.join(env.ARGOS_TEMP_DIR, 'filename')`. Targets found via `grep -rn '/tmp/' src/ --include='*.ts'`.
+- [x] T035 [US10] Replace 14 hardcoded `localhost:NNNN` service URLs across non-MCP/non-test files with env-backed constants from the expanded `env.ts`. Reference `env.GSM_EVIL_URL`, `env.OPENWEBRX_URL`, `env.BETTERCAP_URL`, `env.KISMET_API_URL`, etc. Targets found via `grep -rn 'localhost:[0-9]' src/ --include='*.ts' | grep -v mcp/ | grep -v test`.
 
 **Checkpoint**: Zero `/tmp/` literals. Zero hardcoded `localhost:NNNN` in non-MCP/non-test source. `npm run build` succeeds.
 
