@@ -1,89 +1,68 @@
-// Safe: WebSocket connection type assertion
 import { WebSocketEvent as WebSocketEventEnum } from '$lib/types/enums';
 import { logger } from '$lib/utils/logger';
 
-export type WebSocketEventType = WebSocketEventEnum;
+import type { HeartbeatState } from './websocket-heartbeat';
+import { startHeartbeat, stopHeartbeat } from './websocket-heartbeat';
+import type { ReconnectState } from './websocket-reconnect';
+import { scheduleReconnect, shouldReconnect } from './websocket-reconnect';
+import type { ResolvedConfig } from './websocket-types';
+import { createWebSocket, resolveConfig } from './websocket-types';
 
-export interface WebSocketEvent {
-	type: WebSocketEventType;
-	data?: unknown;
-	error?: Error;
-	timestamp: number;
-}
-
-export interface BaseWebSocketConfig {
-	url: string;
-	reconnectInterval?: number;
-	maxReconnectAttempts?: number;
-	heartbeatInterval?: number;
-	reconnectBackoffMultiplier?: number;
-	maxReconnectInterval?: number;
-	protocols?: string | string[];
-}
-
-export type WebSocketEventListener = (event: WebSocketEvent) => void;
-
-type ResolvedConfig = Required<Omit<BaseWebSocketConfig, 'protocols'>> & {
-	protocols?: string | string[];
-};
-
-const CONFIG_DEFAULTS: Omit<ResolvedConfig, 'url'> = {
-	reconnectInterval: 1000,
-	maxReconnectAttempts: -1,
-	heartbeatInterval: 30000,
-	reconnectBackoffMultiplier: 1.5,
-	maxReconnectInterval: 30000
-};
-
-/** Apply defaults to WebSocket config. */
-function resolveConfig(config: BaseWebSocketConfig): ResolvedConfig {
-	return { ...CONFIG_DEFAULTS, ...config } as ResolvedConfig;
-}
-
-/** Create a WebSocket instance, handling browser vs Node.js environments. */
-function createWebSocket(url: string, protocols?: string | string[]): WebSocket {
-	if (typeof window !== 'undefined' && window.WebSocket) {
-		return new WebSocket(url, protocols);
-	}
-	if (typeof global !== 'undefined' && global.WebSocket) {
-		const WsCtor = global.WebSocket as unknown as {
-			new (url: string, protocols?: string | string[]): WebSocket;
-		};
-		return new WsCtor(url, protocols);
-	}
-	throw new Error('WebSocket not available in this environment');
-}
+// Re-export all public types so existing consumers need only import from base.ts
+export type { HeartbeatState } from './websocket-heartbeat';
+export type { ReconnectState } from './websocket-reconnect';
+export type {
+	BaseWebSocketConfig,
+	WebSocketEvent,
+	WebSocketEventListener,
+	WebSocketEventType
+} from './websocket-types';
+export { CONFIG_DEFAULTS, createWebSocket, resolveConfig } from './websocket-types';
 
 export abstract class BaseWebSocket {
 	protected ws: WebSocket | null = null;
 	protected config: ResolvedConfig;
-	protected reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-	protected heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	protected isIntentionalClose = false;
-	protected reconnectAttempts = 0;
-	protected lastHeartbeat = 0;
-	protected currentReconnectInterval: number;
 
-	private eventListeners = new Map<WebSocketEventType, Set<WebSocketEventListener>>();
+	// Reconnect state (delegated to websocket-reconnect.ts helpers)
+	private reconnectState: ReconnectState;
+
+	// Heartbeat state (delegated to websocket-heartbeat.ts helpers)
+	private heartbeatState: HeartbeatState;
+
+	private eventListeners = new Map<
+		WebSocketEventEnum,
+		Set<
+			(event: {
+				type: WebSocketEventEnum;
+				data?: unknown;
+				error?: Error;
+				timestamp: number;
+			}) => void
+		>
+	>();
 	private messageHandlers = new Map<string, Set<(data: unknown) => void>>();
 
-	constructor(config: BaseWebSocketConfig) {
+	constructor(config: import('./websocket-types').BaseWebSocketConfig) {
 		this.config = resolveConfig(config);
-		this.currentReconnectInterval = this.config.reconnectInterval;
+		this.reconnectState = {
+			reconnectAttempts: 0,
+			currentReconnectInterval: this.config.reconnectInterval,
+			reconnectTimer: null
+		};
+		this.heartbeatState = {
+			heartbeatTimer: null,
+			lastHeartbeat: 0
+		};
 	}
 
-	/**
-	 * Connect to the WebSocket server
-	 */
 	connect(): void {
-		if (this.ws?.readyState === 1) {
-			// WebSocket.OPEN
-			// console.info(`[${this.constructor.name}] Already connected`);
-			return;
-		}
+		if (this.ws?.readyState === WebSocket.OPEN) return;
 
 		this.isIntentionalClose = false;
-		this.emit(WebSocketEventEnum.Reconnecting, { attempt: this.reconnectAttempts });
+		this.emit(WebSocketEventEnum.Reconnecting, {
+			attempt: this.reconnectState.reconnectAttempts
+		});
 
 		try {
 			this.ws = createWebSocket(this.config.url, this.config.protocols);
@@ -94,9 +73,6 @@ export abstract class BaseWebSocket {
 		}
 	}
 
-	/**
-	 * Disconnect from the WebSocket server
-	 */
 	disconnect(): void {
 		this.isIntentionalClose = true;
 		this.cleanup();
@@ -106,15 +82,12 @@ export abstract class BaseWebSocket {
 			this.ws = null;
 		}
 
-		this.reconnectAttempts = 0;
-		this.currentReconnectInterval = this.config.reconnectInterval;
+		this.reconnectState.reconnectAttempts = 0;
+		this.reconnectState.currentReconnectInterval = this.config.reconnectInterval;
 	}
 
-	/**
-	 * Send a message through the WebSocket
-	 */
 	send(data: unknown): boolean {
-		if (this.ws?.readyState !== 1) {
+		if (this.ws?.readyState !== WebSocket.OPEN) {
 			logger.warn('Cannot send message, WebSocket is not connected', {
 				source: this.constructor.name
 			});
@@ -130,26 +103,33 @@ export abstract class BaseWebSocket {
 		}
 	}
 
-	/**
-	 * Add an event listener
-	 */
-	on(event: WebSocketEventType, listener: WebSocketEventListener): void {
+	on(
+		event: WebSocketEventEnum,
+		listener: (evt: {
+			type: WebSocketEventEnum;
+			data?: unknown;
+			error?: Error;
+			timestamp: number;
+		}) => void
+	): void {
 		if (!this.eventListeners.has(event)) {
 			this.eventListeners.set(event, new Set());
 		}
 		this.eventListeners.get(event)?.add(listener);
 	}
 
-	/**
-	 * Remove an event listener
-	 */
-	off(event: WebSocketEventType, listener: WebSocketEventListener): void {
+	off(
+		event: WebSocketEventEnum,
+		listener: (evt: {
+			type: WebSocketEventEnum;
+			data?: unknown;
+			error?: Error;
+			timestamp: number;
+		}) => void
+	): void {
 		this.eventListeners.get(event)?.delete(listener);
 	}
 
-	/**
-	 * Add a message handler for a specific message type
-	 */
 	onMessage(type: string, handler: (data: unknown) => void): void {
 		if (!this.messageHandlers.has(type)) {
 			this.messageHandlers.set(type, new Set());
@@ -157,40 +137,25 @@ export abstract class BaseWebSocket {
 		this.messageHandlers.get(type)?.add(handler);
 	}
 
-	/**
-	 * Remove a message handler
-	 */
 	offMessage(type: string, handler: (data: unknown) => void): void {
 		this.messageHandlers.get(type)?.delete(handler);
 	}
 
-	/**
-	 * Check if connected
-	 */
 	public isConnected(): boolean {
 		return this.ws?.readyState === WebSocket.OPEN;
 	}
 
-	/**
-	 * Get the current WebSocket state
-	 */
 	getState(): number | undefined {
 		return this.ws?.readyState;
 	}
 
-	/**
-	 * Setup WebSocket event handlers
-	 */
 	protected setupEventHandlers(): void {
 		if (!this.ws) return;
 
-		this.ws.onopen = (event) => {
-			// console.info(`[${this.constructor.name}] WebSocket connected`);
-
-			this.reconnectAttempts = 0;
-			this.currentReconnectInterval = this.config.reconnectInterval;
-
-			this.emit(WebSocketEventEnum.Open, { event });
+		this.ws.onopen = () => {
+			this.reconnectState.reconnectAttempts = 0;
+			this.reconnectState.currentReconnectInterval = this.config.reconnectInterval;
+			this.emit(WebSocketEventEnum.Open, {});
 			this.onConnected();
 			this.startHeartbeat();
 		};
@@ -199,37 +164,30 @@ export abstract class BaseWebSocket {
 			try {
 				// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 				const data = this.parseMessage(event.data as string | ArrayBuffer | Blob);
-				this.emit(WebSocketEventEnum.Message, { data, event });
+				this.emit(WebSocketEventEnum.Message, { data });
 				this.handleMessage(data);
 			} catch (error) {
 				logger.error('Failed to parse message', { source: this.constructor.name, error });
 			}
 		};
 
-		this.ws.onerror = (event) => {
-			logger.error('WebSocket error', { source: this.constructor.name, event });
+		this.ws.onerror = () => {
 			const error = new Error('WebSocket error');
-			this.emit(WebSocketEventEnum.Error, { error, event });
+			this.emit(WebSocketEventEnum.Error, { error });
 			this.handleConnectionError(error);
 		};
 
 		this.ws.onclose = (event) => {
-			// console.info(`[${this.constructor.name}] WebSocket closed:`, event.code, event.reason);
-
-			this.emit(WebSocketEventEnum.Close, { code: event.code, reason: event.reason, event });
+			this.emit(WebSocketEventEnum.Close, { code: event.code, reason: event.reason });
 			this.onDisconnected();
 			this.cleanup();
 
-			// Attempt reconnection if not intentional close
-			if (!this.isIntentionalClose && this.shouldReconnect()) {
-				this.scheduleReconnect();
+			if (!this.isIntentionalClose && shouldReconnect(this.reconnectState, this.config)) {
+				scheduleReconnect(this.reconnectState, this.config, () => this.connect());
 			}
 		};
 	}
 
-	/**
-	 * Parse incoming message
-	 */
 	protected parseMessage(data: string | ArrayBuffer | Blob): unknown {
 		try {
 			return typeof data === 'string' ? JSON.parse(data) : data;
@@ -238,11 +196,7 @@ export abstract class BaseWebSocket {
 		}
 	}
 
-	/**
-	 * Handle incoming message
-	 */
 	protected handleMessage(data: unknown): void {
-		// Handle typed messages
 		if (data && typeof data === 'object' && 'type' in data) {
 			// @constitutional-exemption Article-II-2.1 issue:#14 — WebSocket message data type narrowing — browser API returns union type
 			const typedData = data as { type: string; data?: unknown };
@@ -250,7 +204,7 @@ export abstract class BaseWebSocket {
 			if (handlers) {
 				handlers.forEach((handler) => {
 					try {
-						handler(typedData.data || data);
+						handler(typedData.data ?? data);
 					} catch (error) {
 						logger.error('Message handler error', {
 							source: this.constructor.name,
@@ -260,132 +214,65 @@ export abstract class BaseWebSocket {
 				});
 			}
 		}
-
-		// Call abstract method for subclass handling
 		this.handleIncomingMessage(data);
 	}
 
-	/**
-	 * Handle connection error
-	 */
 	protected handleConnectionError(error: unknown): void {
 		const errorObj = error instanceof Error ? error : new Error(String(error));
 		this.emit(WebSocketEventEnum.Error, { error: errorObj });
 		this.onError(errorObj);
 	}
 
-	/**
-	 * Check if should reconnect
-	 */
-	protected shouldReconnect(): boolean {
-		return (
-			this.config.maxReconnectAttempts === -1 ||
-			this.reconnectAttempts < this.config.maxReconnectAttempts
-		);
-	}
-
-	/**
-	 * Schedule reconnection attempt
-	 */
-	protected scheduleReconnect(): void {
-		if (this.reconnectTimer) return;
-
-		this.reconnectAttempts++;
-		// console.info(`[${this.constructor.name}] Scheduling reconnect attempt ${this.reconnectAttempts} in ${this.currentReconnectInterval}ms`);
-
-		this.reconnectTimer = setTimeout(() => {
-			this.reconnectTimer = null;
-			this.connect();
-		}, this.currentReconnectInterval);
-
-		// Apply backoff
-		this.currentReconnectInterval = Math.min(
-			this.currentReconnectInterval * this.config.reconnectBackoffMultiplier,
-			this.config.maxReconnectInterval
-		);
-	}
-
-	/**
-	 * Start heartbeat mechanism
-	 */
 	protected startHeartbeat(): void {
-		this.stopHeartbeat();
-
-		this.heartbeatTimer = setInterval(() => {
-			if (this.ws?.readyState === 1) {
-				// WebSocket.OPEN
-				this.sendHeartbeat();
-
-				// Check if we've received a response recently
-				if (
-					this.lastHeartbeat &&
-					Date.now() - this.lastHeartbeat > this.config.heartbeatInterval * 2
-				) {
-					logger.warn('Heartbeat timeout, closing connection', {
-						source: this.constructor.name
-					});
-					this.ws.close(4000, 'Heartbeat timeout');
-				}
-			}
-		}, this.config.heartbeatInterval);
+		if (!this.ws) return;
+		startHeartbeat(
+			this.heartbeatState,
+			this.config,
+			this.ws,
+			() => this.sendHeartbeat(),
+			this.constructor.name
+		);
 	}
 
-	/**
-	 * Stop heartbeat mechanism
-	 */
 	protected stopHeartbeat(): void {
-		if (this.heartbeatTimer) {
-			clearInterval(this.heartbeatTimer);
-			this.heartbeatTimer = null;
-		}
+		stopHeartbeat(this.heartbeatState);
 	}
 
-	/**
-	 * Cleanup timers and resources
-	 */
 	protected cleanup(): void {
-		this.stopHeartbeat();
+		stopHeartbeat(this.heartbeatState);
 
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
-			this.reconnectTimer = null;
+		if (this.reconnectState.reconnectTimer !== null) {
+			clearTimeout(this.reconnectState.reconnectTimer);
+			this.reconnectState.reconnectTimer = null;
 		}
 	}
 
-	/**
-	 * Emit an event to all listeners
-	 */
-	protected emit(event: WebSocketEventType, data?: Record<string, unknown>): void {
+	protected emit(event: WebSocketEventEnum, data: Record<string, unknown>): void {
 		const listeners = this.eventListeners.get(event);
-		if (listeners) {
-			const eventData: WebSocketEvent = {
-				type: event,
-				timestamp: Date.now(),
-				data: data?.data,
-				// Safe: Error type assertion for error handling
-				error: data?.error as Error | undefined
-			};
+		if (!listeners) return;
 
-			listeners.forEach((listener) => {
-				try {
-					listener(eventData);
-				} catch (error) {
-					logger.error('Event listener error', { source: this.constructor.name, error });
-				}
-			});
-		}
+		const eventData = {
+			type: event,
+			timestamp: Date.now(),
+			data: data.data,
+			error: data.error as Error | undefined
+		};
+
+		listeners.forEach((listener) => {
+			try {
+				listener(eventData);
+			} catch (error) {
+				logger.error('Event listener error', { source: this.constructor.name, error });
+			}
+		});
 	}
 
-	/**
-	 * Destroy the WebSocket connection and clean up
-	 */
 	destroy(): void {
 		this.disconnect();
 		this.eventListeners.clear();
 		this.messageHandlers.clear();
 	}
 
-	// Abstract methods to be implemented by subclasses
 	protected abstract onConnected(): void;
 	protected abstract onDisconnected(): void;
 	protected abstract handleIncomingMessage(data: unknown): void;

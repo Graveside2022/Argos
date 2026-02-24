@@ -4,177 +4,29 @@
  * for GSM Evil scan results and related data.
  */
 
-import { get, type Readable, type Updater, writable } from 'svelte/store';
+import { get, type Readable, writable } from 'svelte/store';
 
 import { browser } from '$app/environment';
-import { logger } from '$lib/utils/logger';
 
-const STORAGE_KEY = 'gsm-evil-state';
-const STORAGE_VERSION = '1.0';
-const DEBOUNCE_MS = 2000;
+import {
+	debounceTimer,
+	loadFromStorage,
+	persistState,
+	updateAndPersist,
+	updateOnly
+} from './gsm-evil-persistence';
+import type {
+	GSMEvilState,
+	IMSICapture,
+	ScanResult,
+	StoreSet,
+	StoreUpdate,
+	TowerLocation
+} from './gsm-evil-types';
+import { defaultState, STORAGE_KEY, STORAGE_VERSION } from './gsm-evil-types';
 
-export interface IMSICapture {
-	imsi: string;
-	tmsi?: string;
-	mcc: string | number;
-	mnc: string | number;
-	lac: number;
-	ci: number;
-	lat?: number;
-	lon?: number;
-	timestamp: string;
-	frequency?: string;
-}
-
-export interface TowerLocation {
-	lat: number;
-	lon: number;
-	range?: number;
-	samples?: number;
-	city?: string;
-	source?: string;
-	lastUpdated?: string;
-}
-
-export interface ScanResult {
-	frequency: string;
-	power: number;
-	strength: string;
-	frameCount?: number;
-	hasGsmActivity?: boolean;
-	channelType?: string;
-	controlChannel?: boolean;
-	mcc?: string;
-	mnc?: string;
-	lac?: string;
-	ci?: string;
-}
-
-export interface GSMEvilState {
-	scanResults: ScanResult[];
-	scanProgress: string[];
-	scanStatus: string;
-	selectedFrequency: string;
-	isScanning: boolean;
-	showScanProgress: boolean;
-	scanAbortController: AbortController | null;
-	canStopScan: boolean;
-	scanButtonText: string;
-	capturedIMSIs: IMSICapture[];
-	totalIMSIs: number;
-	towerLocations: Record<string, TowerLocation>;
-	towerLookupAttempted: Record<string, boolean>;
-	lastScanTime: string | null;
-	storageVersion: string;
-}
-
-const defaultState: GSMEvilState = {
-	scanResults: [],
-	scanProgress: [],
-	scanStatus: '',
-	selectedFrequency: '947.2',
-	isScanning: false,
-	showScanProgress: false,
-	scanAbortController: null,
-	canStopScan: false,
-	scanButtonText: 'Start Scan',
-	capturedIMSIs: [],
-	totalIMSIs: 0,
-	towerLocations: {},
-	towerLookupAttempted: {},
-	lastScanTime: null,
-	storageVersion: STORAGE_VERSION
-};
-
-/** Fields excluded from localStorage — transient runtime state */
-const TRANSIENT_KEYS: (keyof GSMEvilState)[] = ['scanProgress', 'scanAbortController'];
-
-type StoreUpdate = (updater: Updater<GSMEvilState>) => void;
-type StoreSet = (value: GSMEvilState) => void;
-
-function loadFromStorage(set: StoreSet): void {
-	try {
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved) {
-			const parsedState = JSON.parse(saved) as Partial<GSMEvilState>;
-
-			if (parsedState.storageVersion !== STORAGE_VERSION) {
-				logger.warn('GSM Evil state version mismatch, resetting to default');
-				localStorage.removeItem(STORAGE_KEY);
-				return;
-			}
-
-			// CRITICAL: scanAbortController cannot survive JSON serialization
-			const mergedState = { ...defaultState, ...parsedState, scanAbortController: null };
-			set(mergedState);
-		}
-	} catch (error) {
-		logger.error('Failed to load GSM Evil state from localStorage', { error });
-		localStorage.removeItem(STORAGE_KEY);
-	}
-}
-
-/**
- * Persist structural state to localStorage, excluding transient fields.
- * Called by the debounce timer — not directly by store actions.
- */
-/** Build a saveable state object with transient keys removed. */
-function buildSaveableState(state: GSMEvilState): string {
-	const stateToSave: Record<string, unknown> = {
-		...state,
-		lastScanTime: new Date().toISOString(),
-		storageVersion: STORAGE_VERSION
-	};
-	for (const key of TRANSIENT_KEYS) delete stateToSave[key];
-	return JSON.stringify(stateToSave);
-}
-
-/** Handle localStorage write errors. */
-function handlePersistError(error: unknown): void {
-	if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-		logger.warn('localStorage quota exceeded, clearing old data');
-		localStorage.removeItem(STORAGE_KEY);
-	} else {
-		logger.error('Failed to persist GSM Evil state to localStorage', { error });
-	}
-}
-
-function persistState(state: GSMEvilState): void {
-	if (!browser) return;
-	try {
-		localStorage.setItem(STORAGE_KEY, buildSaveableState(state));
-	} catch (error) {
-		handlePersistError(error);
-	}
-}
-
-/** Debounce timer for persistence — 2s trailing edge */
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-function schedulePersist(state: GSMEvilState): void {
-	if (debounceTimer) clearTimeout(debounceTimer);
-	debounceTimer = setTimeout(() => {
-		debounceTimer = null;
-		persistState(state);
-	}, DEBOUNCE_MS);
-}
-
-/** Update store and schedule debounced persistence */
-function updateAndPersist(
-	update: StoreUpdate,
-	updater: (state: GSMEvilState) => GSMEvilState
-): void {
-	update((state) => {
-		const newState = updater(state);
-		schedulePersist(newState);
-		return newState;
-	});
-}
-
-/** Update store without triggering persistence (for transient state) */
-function updateOnly(update: StoreUpdate, updater: (state: GSMEvilState) => GSMEvilState): void {
-	update((state) => updater(state));
-}
+// Re-export all types so existing consumers can continue to import from this module
+export type { GSMEvilState, IMSICapture, ScanResult, StoreSet, StoreUpdate, TowerLocation };
 
 function createScanResultActions(update: StoreUpdate) {
 	return {

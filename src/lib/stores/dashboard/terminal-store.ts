@@ -10,15 +10,17 @@ import type { TerminalPanelState, TerminalSession } from '$lib/types/terminal';
 import { logger } from '$lib/utils/logger';
 
 import { activeBottomTab, closeBottomPanel, setBottomPanelHeight } from './dashboard-store';
+import {
+	createNewSession,
+	generateId,
+	removeSplitSession,
+	resolveActiveTab,
+	TMUX_SHELLS
+} from './terminal-session-helpers';
 
 // Constants
 const STORAGE_KEY = 'terminalPanelState';
 const DEFAULT_HEIGHT = 300;
-
-/** Generate unique session ID */
-function generateId(): string {
-	return Math.random().toString(36).substring(2, 9);
-}
 
 /** Default terminal panel state */
 function getDefaultState(): TerminalPanelState {
@@ -129,39 +131,6 @@ export function toggleTerminalPanel(): void {
 	}
 }
 
-/** Friendly names for known tmux profiles. */
-const TMUX_NAMES: [string, string][] = [
-	['tmux-0.sh', 'Tmux 0'],
-	['tmux-1.sh', 'Tmux 1'],
-	['tmux-2.sh', 'Tmux 2'],
-	['tmux-3.sh', 'Tmux 3'],
-	['tmux-logs.sh', 'System Logs']
-];
-
-/** Resolve a friendly shell name from the path. */
-function resolveShellName(shell: string): string {
-	const match = TMUX_NAMES.find(([key]) => shell.includes(key));
-	return match ? match[1] : shell.split('/').pop() || 'terminal';
-}
-
-// Session management
-function createNewSession(shell: string): TerminalSession {
-	return {
-		id: generateId(),
-		title: resolveShellName(shell),
-		shell,
-		isConnected: false,
-		createdAt: Date.now()
-	};
-}
-
-const TMUX_SHELLS = [
-	'scripts/tmux/tmux-0.sh',
-	'scripts/tmux/tmux-1.sh',
-	'scripts/tmux/tmux-2.sh',
-	'scripts/tmux/tmux-3.sh'
-];
-
 export function createSession(shell?: string): string {
 	const state = get(terminalPanelState);
 
@@ -186,32 +155,6 @@ export function createSession(shell?: string): string {
 	}));
 
 	return newSession.id;
-}
-
-/** Resolve which tab becomes active after closing a session. */
-function resolveActiveTab(
-	state: TerminalPanelState,
-	sessionId: string,
-	remaining: TerminalSession[]
-): string | null {
-	if (state.activeTabId !== sessionId) return state.activeTabId;
-	if (remaining.length === 0) return null;
-	const closedIndex = state.sessions.findIndex((s) => s.id === sessionId);
-	return remaining[Math.max(0, closedIndex - 1)]?.id ?? null;
-}
-
-/** Remove a session from splits, returning null if split is dissolved. */
-function removeSplitSession(
-	splits: TerminalPanelState['splits'],
-	sessionId: string
-): TerminalPanelState['splits'] {
-	if (!splits || !splits.sessionIds.includes(sessionId)) return splits;
-	const idx = splits.sessionIds.indexOf(sessionId);
-	const ids = splits.sessionIds.filter((id) => id !== sessionId);
-	const widths = splits.widths.filter((_, i) => i !== idx);
-	if (ids.length <= 1) return null;
-	const total = widths.reduce((a, b) => a + b, 0);
-	return { ...splits, sessionIds: ids, widths: widths.map((w) => (w / total) * 100) };
 }
 
 export function closeSession(sessionId: string): void {
