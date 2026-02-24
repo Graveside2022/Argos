@@ -149,69 +149,38 @@ export function decodeMMIdentityResponse(
 	};
 }
 
-/**
- * Decode Call Control (CC) messages
- */
+/** Static CC message type descriptions. */
+const CC_MESSAGES: Record<number, { messageType: string; details: string[] }> = {
+	0x05: { messageType: 'Setup (Call)', details: ['Call establishment'] },
+	0x07: { messageType: 'Connect', details: ['Call connected'] },
+	0x25: { messageType: 'Disconnect', details: ['Call terminating'] },
+	0x2d: { messageType: 'Release', details: ['Call released'] }
+};
+
 export function decodeCC(_bytes: number[], msgType: number): L3DecodedMessage {
-	switch (msgType) {
-		case 0x05:
-			return {
-				messageType: 'Setup (Call)',
-				protocol: 'CC',
-				details: ['Call establishment']
-			};
-		case 0x07:
-			return {
-				messageType: 'Connect',
-				protocol: 'CC',
-				details: ['Call connected']
-			};
-		case 0x25:
-			return {
-				messageType: 'Disconnect',
-				protocol: 'CC',
-				details: ['Call terminating']
-			};
-		case 0x2d:
-			return {
-				messageType: 'Release',
-				protocol: 'CC',
-				details: ['Call released']
-			};
-		default:
-			return {
-				messageType: `CC Message 0x${msgType.toString(16).padStart(2, '0')}`,
-				protocol: 'CC',
-				details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
-			};
-	}
+	const entry = CC_MESSAGES[msgType];
+	if (entry) return { ...entry, protocol: 'CC' };
+
+	return {
+		messageType: `CC Message 0x${msgType.toString(16).padStart(2, '0')}`,
+		protocol: 'CC',
+		details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
+	};
 }
 
-/**
- * Decode SMS messages
- */
-export function decodeSMS(bytes: number[], msgType: number): L3DecodedMessage {
-	const details: string[] = [];
+/** Static SMS message type descriptions. */
+const SMS_MESSAGES: Record<number, { messageType: string; details: string[] }> = {
+	0x01: { messageType: 'CP-DATA (SMS)', details: ['SMS message transfer'] },
+	0x04: { messageType: 'CP-ACK (SMS)', details: ['SMS acknowledged'] }
+};
 
-	switch (msgType) {
-		case 0x01:
-			details.push('SMS message transfer');
-			return {
-				messageType: 'CP-DATA (SMS)',
-				protocol: 'SMS',
-				details
-			};
-		case 0x04:
-			return {
-				messageType: 'CP-ACK (SMS)',
-				protocol: 'SMS',
-				details: ['SMS acknowledged']
-			};
-		default:
-			return {
-				messageType: `SMS Message 0x${msgType.toString(16).padStart(2, '0')}`,
-				protocol: 'SMS',
-				details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
-			};
-	}
+export function decodeSMS(_bytes: number[], msgType: number): L3DecodedMessage {
+	const entry = SMS_MESSAGES[msgType];
+	if (entry) return { ...entry, protocol: 'SMS' };
+
+	return {
+		messageType: `SMS Message 0x${msgType.toString(16).padStart(2, '0')}`,
+		protocol: 'SMS',
+		details: [`Message type: 0x${msgType.toString(16).padStart(2, '0')}`]
+	};
 }

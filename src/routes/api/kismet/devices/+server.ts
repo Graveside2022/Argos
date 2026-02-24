@@ -1,17 +1,15 @@
 import { json } from '@sveltejs/kit';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { hasValidGpsCoords } from '$lib/server/db/geo';
 import { fusionKismetController } from '$lib/server/kismet/fusion-controller';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { KismetService } from '$lib/server/services/kismet.service';
+import { computeFallbackLocation } from '$lib/server/services/kismet/kismet-geo-helpers';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
-/**
- * Fetch current GPS position for fallback when devices lack their own location.
- * Calls the GPS service directly instead of HTTP fetch to avoid auth gate blocking.
- */
 /** Extract valid GPS coordinates from position data, or null. */
 function extractGpsCoords(data: {
 	latitude: number | null;
@@ -19,7 +17,7 @@ function extractGpsCoords(data: {
 }): { lat: number; lon: number } | null {
 	const lat = data.latitude ?? 0;
 	const lon = data.longitude ?? 0;
-	return lat !== 0 || lon !== 0 ? { lat, lon } : null;
+	return hasValidGpsCoords(lat, lon) ? { lat, lon } : null;
 }
 
 async function getReceiverGPS(): Promise<{ lat: number; lon: number } | null> {
@@ -32,30 +30,6 @@ async function getReceiverGPS(): Promise<{ lat: number; lon: number } | null> {
 	}
 }
 
-/** FNV-1a 32-bit hash → [0, 1) */
-function hashMAC(mac: string): number {
-	let hash = 0x811c9dc5;
-	for (let i = 0; i < mac.length; i++) {
-		hash ^= mac.charCodeAt(i);
-		hash = (hash * 0x01000193) | 0;
-	}
-	return ((hash >>> 0) % 100000) / 100000;
-}
-
-/** Second independent hash (different seed) → [0, 1) */
-function hashMAC2(mac: string): number {
-	let hash = 0x01000193;
-	for (let i = 0; i < mac.length; i++) {
-		hash ^= mac.charCodeAt(i);
-		hash = (hash * 0x811c9dc5) | 0;
-	}
-	return ((hash >>> 0) % 100000) / 100000;
-}
-
-/**
- * Normalize fusion controller WiFiDevice[] to frontend-expected format (lat/lon)
- * and apply deterministic, signal-aware GPS fallback for devices without valid coordinates.
- */
 /** Extract device MAC address from various property names. */
 function extractMac(d: Record<string, unknown>): string {
 	return (d.mac as string) || (d.macaddr as string) || '';
@@ -66,26 +40,6 @@ function extractSignalDbm(d: Record<string, unknown>): number {
 	const sig = d.signalStrength as number | undefined;
 	const sigObj = d.signal as Record<string, number> | undefined;
 	return sig ?? sigObj?.last_signal ?? -80;
-}
-
-/** Compute fallback lat/lon from GPS base + MAC hash + signal distance. */
-function computeFallbackLocation(
-	gps: { lat: number; lon: number },
-	mac: string,
-	signalDbm: number
-): { lat: number; lon: number } {
-	const angle = hashMAC(mac) * 2 * Math.PI;
-	const clamped = Math.max(-100, Math.min(-20, Math.round(signalDbm / 10) * 10));
-	const signalNorm = (clamped + 100) / 80;
-	const baseDist = 20 + (1 - signalNorm) * 180;
-	const dist = baseDist * (0.85 + hashMAC2(mac) * 0.3);
-
-	const R = 6371000;
-	const lat = gps.lat + ((dist * Math.cos(angle)) / R) * (180 / Math.PI);
-	const lon =
-		gps.lon +
-		((dist * Math.sin(angle)) / (R * Math.cos((gps.lat * Math.PI) / 180))) * (180 / Math.PI);
-	return { lat, lon };
 }
 
 /** Read a numeric coordinate from a location object, checking two possible keys. */
@@ -105,7 +59,7 @@ function resolveDeviceLocation(
 	gps: { lat: number; lon: number } | null
 ): { lat: number; lon: number } {
 	const coords = extractDeviceCoords(d);
-	if (coords.lat !== 0 || coords.lon !== 0 || !gps) return coords;
+	if (hasValidGpsCoords(coords.lat, coords.lon) || !gps) return coords;
 	return computeFallbackLocation(gps, extractMac(d), extractSignalDbm(d));
 }
 
