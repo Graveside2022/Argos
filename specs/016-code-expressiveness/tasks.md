@@ -53,11 +53,11 @@
 | 12 | **US10 — Hardcoded Paths/URLs (P1) [NEW]** | 2 | 2 | 0 | No |
 | 13 | **US11 — DRY Violations (P1) [NEW]** | 11 | 11 | 0 | Partial |
 | 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 3 | 0 | Partial |
-| 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 0 | **13** | Yes |
+| 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 8 | **5** | Yes |
 | 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 0 | **5** | Partial |
 | 17 | Final Verification & Metrics | 7 | 0 | **7** | No |
 | 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 0 | **10** | Partial |
-| **Total** | | **86** | **42** | **44** | |
+| **Total** | | **86** | **50** | **36** | |
 
 ---
 
@@ -289,14 +289,14 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Depends on**: Phases 11-14 (migration may change file sizes). All 13 tasks below are [P] — they can run in parallel since they touch completely independent files.
 
-- [ ] T045 [P] [US12] Decompose `src/lib/websocket/base.ts` (394 LOC) — extract reconnect logic, message handler, and heartbeat into separate modules in `src/lib/websocket/`.
-- [ ] T046 [P] [US12] Decompose `src/lib/stores/gsm-evil-store.ts` (380 LOC) — split into state, actions, and derived/computed modules in `src/lib/stores/`.
-- [ ] T047 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` (370 LOC) — split into health checks and status parsing modules.
-- [ ] T048 [P] [US12] Decompose `src/lib/stores/dashboard/terminal-store.ts` (347 LOC) — split into terminal state and WebSocket communication modules.
-- [ ] T049 [P] [US12] Decompose `src/lib/components/dashboard/dashboard-map-logic.svelte.ts` (335 LOC) — split into map initialization and marker management modules.
-- [ ] T050 [P] [US12] Decompose `src/lib/components/dashboard/tak/TakConfigView.svelte` (329 LOC) — extract TakConfigForm and TakConfigDisplay sub-components.
-- [ ] T051 [P] [US12] Decompose `src/lib/hackrf/sweep-manager/error-tracker.ts` (321 LOC) — split into error tracking and error analysis modules.
-- [ ] T052 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-frequency-analysis.ts` (313 LOC) — split into frequency analysis and frequency report modules.
+- [x] T045 [P] [US12] Decompose `src/lib/websocket/base.ts` (394→281 LOC) — extract reconnect logic, message handler, and heartbeat into separate modules in `src/lib/websocket/`.
+- [x] T046 [P] [US12] Decompose `src/lib/stores/gsm-evil-store.ts` (380→233 LOC) — split into state, actions, and derived/computed modules in `src/lib/stores/`.
+- [x] T047 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` (370→138 LOC) — split into health checks and status parsing modules.
+- [x] T048 [P] [US12] Decompose `src/lib/stores/dashboard/terminal-store.ts` (347→290 LOC) — split into terminal state and WebSocket communication modules.
+- [x] T049 [P] [US12] Decompose `src/lib/components/dashboard/dashboard-map-logic.svelte.ts` (335→260 LOC) — extract map-gps-derived.svelte.ts (GPS memoization & derived state).
+- [x] T050 [P] [US12] Decompose `src/lib/components/dashboard/tak/TakConfigView.svelte` (329→219 LOC) — extract TakServerForm and TakAuthMethodPicker sub-components.
+- [x] T051 [P] [US12] Decompose `src/lib/hackrf/sweep-manager/error-tracker.ts` (321→221 LOC) — extract error-recovery.ts (RecoveryManager class).
+- [x] T052 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-frequency-analysis.ts` (316→264 LOC) — extract gsm-grgsm-process.ts (spawn/verify/log helpers).
 - [ ] T053 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-capture.ts` (313 LOC) — split into capture management and capture processing modules.
 - [ ] T054 [P] [US12] Decompose `src/lib/server/hackrf/sweep-manager.ts` (313 LOC) — split into sweep coordination and sweep configuration modules.
 - [ ] T055 [P] [US12] Decompose `src/lib/server/tak/tak-service.ts` (312 LOC) — split into connection management and TAK operations modules.
