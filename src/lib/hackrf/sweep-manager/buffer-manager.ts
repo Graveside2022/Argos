@@ -1,5 +1,5 @@
 import type { SpectrumData } from '$lib/server/hackrf/types';
-import { logDebug, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import { type ParsedLine, parseLine, validateSpectrumData } from './buffer-parser';
 
@@ -39,7 +39,7 @@ export class BufferManager {
 		if (config.maxBufferSize) {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
-		logInfo('[STATUS] BufferManager initialized', {
+		logger.info('[STATUS] BufferManager initialized', {
 			maxBufferSize: this.bufferState.maxBufferSize,
 			maxLineLength: this.maxLineLength
 		});
@@ -63,7 +63,7 @@ export class BufferManager {
 
 	private logPeriodicStats(): void {
 		if (this.bufferState.lineCount % 1000 !== 0) return;
-		logDebug('[STATUS] Buffer processing stats', {
+		logger.debug('[STATUS] Buffer processing stats', {
 			linesProcessed: this.bufferState.lineCount,
 			bytesProcessed: this.bufferState.totalBytesProcessed,
 			bufferSize: this.bufferState.stdoutBuffer.length,
@@ -88,7 +88,7 @@ export class BufferManager {
 	/** Handle buffer overflow */
 	private handleBufferOverflow(): void {
 		this.bufferState.bufferOverflowCount++;
-		logWarn('[STATUS] Buffer overflow detected', {
+		logger.warn('[STATUS] Buffer overflow detected', {
 			bufferSize: this.bufferState.stdoutBuffer.length,
 			maxSize: this.bufferState.maxBufferSize,
 			overflowCount: this.bufferState.bufferOverflowCount
@@ -98,7 +98,7 @@ export class BufferManager {
 		this.bufferState.stdoutBuffer = this.bufferState.stdoutBuffer.slice(-keepSize);
 
 		if (this.bufferState.bufferOverflowCount >= this.overflowThreshold) {
-			logWarn('[WARN] Excessive buffer overflows detected', {
+			logger.warn('[WARN] Excessive buffer overflows detected', {
 				overflowCount: this.bufferState.bufferOverflowCount,
 				threshold: this.overflowThreshold,
 				recommendation: 'Consider increasing buffer size or reducing data rate'
@@ -135,7 +135,7 @@ export class BufferManager {
 		this.bufferState.lineCount = 0;
 		this.bufferState.totalBytesProcessed = 0;
 
-		logInfo('[CLEANUP] Buffer cleared', {
+		logger.info('[CLEANUP] Buffer cleared', {
 			previousStats: {
 				lineCount: oldStats.lineCount,
 				totalBytes: oldStats.totalBytesProcessed,
@@ -149,7 +149,7 @@ export class BufferManager {
 		if (config.maxBufferSize) {
 			this.bufferState.maxBufferSize = config.maxBufferSize;
 		}
-		logInfo('[CONFIG] Buffer configuration updated', {
+		logger.info('[CONFIG] Buffer configuration updated', {
 			maxBufferSize: this.bufferState.maxBufferSize
 		});
 	}
@@ -205,6 +205,6 @@ export class BufferManager {
 	/** Clean up resources */
 	cleanup(): void {
 		this.clearBuffer();
-		logInfo('[CLEANUP] BufferManager cleanup completed');
+		logger.info('[CLEANUP] BufferManager cleanup completed');
 	}
 }

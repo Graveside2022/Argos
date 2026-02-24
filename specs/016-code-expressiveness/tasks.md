@@ -49,15 +49,15 @@
 | 8 | US8 — Client-Side Libraries (P2) | 10 | 1 | **9** | Partial |
 | 9 | US5 — Circular Dependency Resolution (P3) | 3 | 3 | 0 | Yes |
 | 10 | US6 — Higher-Order Wrappers (P3) | 3 | 3 | 0 | Partial |
-| 11 | **US9 — Env Centralization (P1) [NEW]** | 3 | 0 | **3** | Partial |
-| 12 | **US10 — Hardcoded Paths/URLs (P1) [NEW]** | 2 | 0 | **2** | No |
-| 13 | **US11 — DRY Violations (P1) [NEW]** | 11 | 0 | **11** | Partial |
-| 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 0 | **3** | Partial |
+| 11 | **US9 — Env Centralization (P1) [NEW]** | 3 | 3 | 0 | Partial |
+| 12 | **US10 — Hardcoded Paths/URLs (P1) [NEW]** | 2 | 2 | 0 | No |
+| 13 | **US11 — DRY Violations (P1) [NEW]** | 11 | 11 | 0 | Partial |
+| 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 3 | 0 | Partial |
 | 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 0 | **13** | Yes |
 | 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 0 | **5** | Partial |
 | 17 | Final Verification & Metrics | 7 | 0 | **7** | No |
 | 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 0 | **10** | Partial |
-| **Total** | | **86** | **23** | **63** | |
+| **Total** | | **86** | **42** | **44** | |
 
 ---
 
@@ -271,9 +271,9 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **FR**: FR-030, FR-032 | **SC**: SC-026, SC-028
 
-- [ ] T042 [US11] Migrate 60 `logError()` call sites across 22 files to `logger.error()`. Pattern: `logError('msg', error)` -> `logger.error('msg', { error: errMsg(error) })`. Each migrated file MUST add `import { errMsg } from '$lib/server/api/error-utils'` if not already present. After migration, remove `logError` export from `logger.ts` to prevent reintroduction. Heaviest files: `sweep-cycle-init.ts` (6), `process-lifecycle.ts` (5), `signal-repository.ts` (5), `sweep-manager.ts` (4), `sweep-coordinator.ts` (4), `sweep-health-checker.ts` (4). FR-032, SC-028.
-- [ ] T043 [P] [US11] Add `dispose()` or cleanup methods to server-side `setInterval` instances lacking cleanup. Verified targets: `src/lib/server/hardware/resource-manager.ts:19` (no clearInterval), `src/lib/server/services/gsm-evil/gsm-monitor-service.ts:27` (no clearInterval), `src/lib/server/middleware/rate-limit-middleware.ts:20` (globalThis, no cleanup), `src/lib/utils/logger.ts:74` (no cleanup). FR-030, SC-026.
-- [ ] T044 [P] Fix 7 remaining unsafe `(error as ...)` casts using `errMsg()` + targeted type guards. Verified locations (live grep `b8480ff`): `hooks.server.ts:248`, `kismet-control-service-extended.ts:278`, `gsm-evil-stop-helpers.ts:74`, `sweep-coordinator.ts:117+267`, `sweep-cycle-init.ts:197`, `gsm-evil/activity/+server.ts:24`. For `.stdout` and `.signal` property accesses, use `typeof (error as Record<string, unknown>).stdout === 'string'` guards. FR-015, SC-011, audit finding B8.
+- [x] T042 [US11] Migrate 60 `logError()` call sites across 22 files to `logger.error()`. Pattern: `logError('msg', error)` -> `logger.error('msg', { error: errMsg(error) })`. Each migrated file MUST add `import { errMsg } from '$lib/server/api/error-utils'` if not already present. After migration, remove `logError` export from `logger.ts` to prevent reintroduction. Heaviest files: `sweep-cycle-init.ts` (6), `process-lifecycle.ts` (5), `signal-repository.ts` (5), `sweep-manager.ts` (4), `sweep-coordinator.ts` (4), `sweep-health-checker.ts` (4). FR-032, SC-028.
+- [x] T043 [P] [US11] Add `dispose()` or cleanup methods to server-side `setInterval` instances lacking cleanup. Verified targets: `src/lib/server/hardware/resource-manager.ts:19` (no clearInterval), `src/lib/server/services/gsm-evil/gsm-monitor-service.ts:27` (no clearInterval), `src/lib/server/middleware/rate-limit-middleware.ts:20` (globalThis, no cleanup), `src/lib/utils/logger.ts:74` (no cleanup). FR-030, SC-026.
+- [x] T044 [P] Fix 7 remaining unsafe `(error as ...)` casts using `errMsg()` + targeted type guards. Verified locations (live grep `b8480ff`): `hooks.server.ts:248`, `kismet-control-service-extended.ts:278`, `gsm-evil-stop-helpers.ts:74`, `sweep-coordinator.ts:117+267`, `sweep-cycle-init.ts:197`, `gsm-evil/activity/+server.ts:24`. For `.stdout` and `.signal` property accesses, use `typeof (error as Record<string, unknown>).stdout === 'string'` guards. FR-015, SC-011, audit finding B8.
 
 **Checkpoint**: Zero `logError(` in source. All `setInterval` has matching cleanup path. Zero unsafe error casts. `npm run build` succeeds.
 

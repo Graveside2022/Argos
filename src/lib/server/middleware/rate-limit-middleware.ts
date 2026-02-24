@@ -23,6 +23,15 @@ if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
 	);
 }
 
+/** Stop the rate-limiter cleanup interval and remove the globalThis reference. */
+export function disposeRateLimiter(): void {
+	const interval = (globalThis as Record<string, unknown>).__rateLimiterCleanup;
+	if (interval !== undefined) {
+		clearInterval(interval as ReturnType<typeof setInterval>);
+		delete (globalThis as Record<string, unknown>).__rateLimiterCleanup;
+	}
+}
+
 /**
  * Safe client address getter - handles VPN/Tailscale networking issues.
  * Returns 'unknown' when client address cannot be determined.

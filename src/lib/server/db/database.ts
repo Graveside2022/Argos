@@ -9,7 +9,7 @@ import { join } from 'path';
 
 import type { NetworkEdge, NetworkNode } from '$lib/types/network';
 import type { SignalMarker } from '$lib/types/signals';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import { DatabaseCleanupService } from './cleanup-service';
 import { runMigrations } from './migrations/run-migrations';
@@ -45,14 +45,14 @@ export class RFDatabase {
 			const schemaPath = join(process.cwd(), 'src/lib/server/db/schema.sql');
 			this.db.exec(readFileSync(schemaPath, 'utf-8'));
 		} catch (error) {
-			logError('Failed to load schema, using embedded', { error }, 'schema-load-failed');
+			logger.error('Failed to load schema, using embedded', { error }, 'schema-load-failed');
 			this.initializeSchema();
 		}
 
 		try {
 			runMigrations(this.db, join(process.cwd(), 'src/lib/server/db/migrations'));
 		} catch (error) {
-			logWarn('Could not run migrations', { error }, 'migrations-failed');
+			logger.warn('Could not run migrations', { error }, 'migrations-failed');
 		}
 
 		this.prepareStatements();
@@ -213,9 +213,9 @@ export class RFDatabase {
 			});
 			this.cleanupService.initialize();
 			this.cleanupService.start();
-			logInfo('Database cleanup service started', {}, 'cleanup-service-started');
+			logger.info('Database cleanup service started', {}, 'cleanup-service-started');
 		} catch (error) {
-			logError(
+			logger.error(
 				'Failed to initialize cleanup service',
 				{ error },
 				'cleanup-service-init-failed'
@@ -259,7 +259,7 @@ if (!(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY]) {
 	(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY] = true;
 
 	const shutdownDb = (signal: string) => {
-		logInfo(`${signal} received, closing database`, {}, 'database-shutdown');
+		logger.info(`${signal} received, closing database`, {}, 'database-shutdown');
 		if (dbInstance) {
 			dbInstance.close();
 			dbInstance = null;

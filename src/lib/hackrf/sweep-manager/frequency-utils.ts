@@ -3,7 +3,7 @@
  * Extracted from frequency-cycler.ts to comply with Article 2.2 (max 300 lines/file).
  */
 
-import { logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 export interface FrequencyConfig {
 	value: number;
@@ -77,7 +77,7 @@ export class FrequencyBlacklist {
 	add(frequency: FrequencyConfig): void {
 		const freqHz = convertToHz(frequency.value, frequency.unit);
 		this.blacklist.add(freqHz);
-		logWarn('[BLOCK] Frequency blacklisted', { frequency, freqHz });
+		logger.warn('[BLOCK] Frequency blacklisted', { frequency, freqHz });
 	}
 
 	/** Check if frequency is blacklisted */
@@ -90,7 +90,7 @@ export class FrequencyBlacklist {
 	remove(frequency: FrequencyConfig): void {
 		const freqHz = convertToHz(frequency.value, frequency.unit);
 		this.blacklist.delete(freqHz);
-		logInfo('[CLEAR] Frequency removed from blacklist', { frequency, freqHz });
+		logger.info('[CLEAR] Frequency removed from blacklist', { frequency, freqHz });
 	}
 
 	/** Get valid (non-blacklisted) frequencies from a list */
@@ -101,7 +101,7 @@ export class FrequencyBlacklist {
 	/** Clear all blacklisted frequencies */
 	clear(): void {
 		this.blacklist.clear();
-		logInfo('[CLEANUP] Frequency blacklist cleared');
+		logger.info('[CLEANUP] Frequency blacklist cleared');
 	}
 
 	/** Get the number of blacklisted frequencies */

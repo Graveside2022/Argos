@@ -1,6 +1,6 @@
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import type { SpectrumData } from '$lib/server/hackrf/types';
-import { logDebug, logInfo } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -29,7 +29,7 @@ const startCleanupInterval = () => {
 
 		activeConnections.forEach((conn, id) => {
 			if (now - conn.lastActivity.getTime() > staleTimeout) {
-				logDebug(`Removing stale SSE connection: ${id}`);
+				logger.debug(`Removing stale SSE connection: ${id}`);
 				activeConnections.delete(id);
 			}
 		});
@@ -44,7 +44,7 @@ const startCleanupInterval = () => {
 /** Log non-normal close errors. */
 function logCloseError(connId: string, error: unknown): void {
 	if (error instanceof Error && !error.message.includes('Controller is already closed')) {
-		logDebug(`SSE connection ${connId} closed with error`, {
+		logger.debug(`SSE connection ${connId} closed with error`, {
 			message: error.message,
 			name: error.name
 		});
@@ -154,7 +154,7 @@ export const GET: RequestHandler = () => {
 				lastActivity: new Date()
 			};
 			activeConnections.set(connectionId, connectionInfo);
-			logInfo(`SSE connection established: ${connectionId}`, {
+			logger.info(`SSE connection established: ${connectionId}`, {
 				totalConnections: activeConnections.size
 			});
 
@@ -227,14 +227,14 @@ export const GET: RequestHandler = () => {
 
 			// Remove from active connections
 			activeConnections.delete(connectionId);
-			logInfo(`SSE connection closed: ${connectionId}`, {
+			logger.info(`SSE connection closed: ${connectionId}`, {
 				remainingConnections: activeConnections.size
 			});
 
 			// If last connection, clear SSE emitter
 			if (activeConnections.size === 0) {
 				sweepManager.setSseEmitter(null);
-				logDebug('All SSE connections closed, clearing emitter');
+				logger.debug('All SSE connections closed, clearing emitter');
 			}
 
 			unsubscribeAll([

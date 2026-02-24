@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { type ChildProcess, execFile, spawn } from 'child_process';
 
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import { forceCleanupAllProcesses, forceKillAllProcesses, stopProcess } from './process-lifecycle';
 import type { ProcessConfig, ProcessState } from './process-manager-types';
@@ -49,7 +49,7 @@ export class ProcessManager {
 			this.processRegistry.set(pid, sweepProcess);
 		}
 
-		logInfo(`[OK] Real HackRF process spawned with PID: ${pid}`);
+		logger.info(`[OK] Real HackRF process spawned with PID: ${pid}`);
 		this.attachEventHandlers(sweepProcess);
 
 		return {
@@ -70,9 +70,9 @@ export class ProcessManager {
 			stdio: ['ignore', 'pipe', 'pipe']
 		}
 	): Promise<ProcessState> {
-		logInfo(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
+		logger.info(`[START] Spawning real hackrf_sweep with args: ${args.join(' ')}`);
 		const scriptPath = this.resolveScriptPath();
-		logInfo(`[FILE] Script path resolved to: ${scriptPath}`);
+		logger.info(`[FILE] Script path resolved to: ${scriptPath}`);
 
 		const sweepProcess = spawn(scriptPath, args, this.buildSpawnConfig(config));
 		return this.registerProcess(sweepProcess);
@@ -80,14 +80,14 @@ export class ProcessManager {
 
 	private attachStdoutHandler(sweepProcess: ChildProcess): void {
 		if (!sweepProcess.stdout || !this.eventHandlers.onStdout) {
-			logError('Failed to attach stdout handler', {
+			logger.error('Failed to attach stdout handler', {
 				hasStdout: !!sweepProcess.stdout,
 				hasHandler: !!this.eventHandlers.onStdout
 			});
 			return;
 		}
 		sweepProcess.stdout.on('data', this.eventHandlers.onStdout);
-		logInfo('Attached stdout handler to real process');
+		logger.info('Attached stdout handler to real process');
 	}
 
 	/** Attach stdout/stderr/exit handlers to a spawned process */
@@ -96,12 +96,12 @@ export class ProcessManager {
 
 		if (sweepProcess.stderr && this.eventHandlers.onStderr) {
 			sweepProcess.stderr.on('data', this.eventHandlers.onStderr);
-			logInfo('Attached stderr handler to real process');
+			logger.info('Attached stderr handler to real process');
 		}
 
 		if (this.eventHandlers.onExit) {
 			sweepProcess.on('exit', this.eventHandlers.onExit);
-			logInfo('Attached exit handler to real process');
+			logger.info('Attached exit handler to real process');
 		}
 	}
 
@@ -128,13 +128,13 @@ export class ProcessManager {
 		onExit?: (code: number | null, signal: string | null) => void;
 	}): void {
 		this.eventHandlers = handlers;
-		logInfo('Process event handlers set for real hardware');
+		logger.info('Process event handlers set for real hardware');
 	}
 
 	private pruneDeadProcesses(): void {
 		for (const [pid] of this.processRegistry) {
 			if (!this.isProcessAlive(pid)) {
-				logWarn(`Process ${pid} is dead, removing from registry`);
+				logger.warn(`Process ${pid} is dead, removing from registry`);
 				this.processRegistry.delete(pid);
 			}
 		}
