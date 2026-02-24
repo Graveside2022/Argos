@@ -19,6 +19,8 @@ export const GSM_LIMITS = {
 export const GEO = {
 	/** Earth radius in meters (WGS84 mean) */
 	EARTH_RADIUS_M: 6371000,
+	/** Approximate meters per degree of latitude */
+	METERS_PER_DEGREE_LAT: 111320,
 	/** Default search radius for nearby signals in meters */
 	DEFAULT_SEARCH_RADIUS_M: 100,
 	/** Minimum signal power for nearby search in dBm */

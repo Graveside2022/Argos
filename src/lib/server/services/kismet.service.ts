@@ -1,9 +1,11 @@
 import { RawKismetDeviceSchema, SimplifiedKismetDeviceSchema } from '$lib/schemas/kismet';
+import { hasValidGpsCoords } from '$lib/server/db/geo';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
+import { hashMAC, offsetGps, signalToDistance } from './kismet/kismet-geo-helpers';
 import { buildRawDevice, buildSimplifiedDevice } from './kismet-service-transform';
 import type { DevicesResponse, GPSPosition, KismetDevice } from './kismet-service-types';
 
@@ -15,14 +17,6 @@ export type { DevicesResponse, GPSPosition, KismetDevice } from './kismet-servic
  * Handles communication with Kismet server and provides fallback mechanisms
  */
 export class KismetService {
-	/** Check if GPS coordinates are valid (non-zero, non-null) */
-	private static hasValidLocation(
-		lat: number | null | undefined,
-		lon: number | null | undefined
-	): boolean {
-		return lat != null && lon != null && !(lat === 0 && lon === 0);
-	}
-
 	/**
 	 * Retrieves current GPS position via direct service call.
 	 * Uses the GPS service directly instead of HTTP fetch to avoid auth gate blocking.
@@ -33,7 +27,7 @@ export class KismetService {
 			const position = await getGpsPosition();
 			if (!position.success || !position.data) return null;
 			const { latitude, longitude } = position.data;
-			if (!this.hasValidLocation(latitude, longitude)) return null;
+			if (!hasValidGpsCoords(latitude, longitude)) return null;
 			return { latitude: latitude!, longitude: longitude! };
 		} catch (error) {
 			logWarn('Could not get GPS position', { error });
@@ -113,53 +107,6 @@ export class KismetService {
 		return { devices: [], error: firstError, source: firstError ? 'fallback' : 'kismet' };
 	}
 
-	/**
-	 * FNV-1a 32-bit hash of a MAC address, normalized to [0, 1).
-	 * Deterministic: same MAC always produces the same value.
-	 */
-	private static hashMAC(mac: string): number {
-		let hash = 0x811c9dc5;
-		for (let i = 0; i < mac.length; i++) {
-			hash ^= mac.charCodeAt(i);
-			hash = (hash * 0x01000193) | 0;
-		}
-		return ((hash >>> 0) % 100000) / 100000;
-	}
-
-	/** Second independent hash for the same MAC (different seed). */
-	private static hashMAC2(mac: string): number {
-		let hash = 0x01000193;
-		for (let i = 0; i < mac.length; i++) {
-			hash ^= mac.charCodeAt(i);
-			hash = (hash * 0x811c9dc5) | 0;
-		}
-		return ((hash >>> 0) % 100000) / 100000;
-	}
-
-	/** Compute deterministic distance from signal strength */
-	private static signalToDistance(signalDbm: number, mac: string): number {
-		const quantized = Math.round(signalDbm / 10) * 10;
-		const clamped = Math.max(-100, Math.min(-20, quantized));
-		const signalNorm = (clamped + 100) / 80;
-		const variation = this.hashMAC2(mac) * 0.3;
-		const baseDist = 20 + (1 - signalNorm) * 180;
-		return baseDist * (0.85 + variation);
-	}
-
-	/** Offset GPS position by angle and distance (haversine approximation) */
-	private static offsetGps(
-		gps: GPSPosition,
-		angle: number,
-		dist: number
-	): { lat: number; lon: number } {
-		const R = 6371000;
-		const dLat = ((dist * Math.cos(angle)) / R) * (180 / Math.PI);
-		const dLon =
-			((dist * Math.sin(angle)) / (R * Math.cos((gps.latitude * Math.PI) / 180))) *
-			(180 / Math.PI);
-		return { lat: gps.latitude + dLat, lon: gps.longitude + dLon };
-	}
-
 	/** Resolve device location, falling back to GPS with signal-aware offset */
 	private static resolveLocation(
 		deviceLat: number | undefined,
@@ -168,13 +115,13 @@ export class KismetService {
 		mac: string,
 		signalDbm: number
 	): { lat: number; lon: number } {
-		if (this.hasValidLocation(deviceLat, deviceLon)) {
+		if (hasValidGpsCoords(deviceLat, deviceLon)) {
 			return { lat: deviceLat!, lon: deviceLon! };
 		}
 		if (gpsPosition) {
-			const angle = this.hashMAC(mac) * 2 * Math.PI;
-			const dist = this.signalToDistance(signalDbm, mac);
-			return this.offsetGps(gpsPosition, angle, dist);
+			const angle = hashMAC(mac) * 2 * Math.PI;
+			const dist = signalToDistance(signalDbm, mac);
+			return offsetGps(gpsPosition.latitude, gpsPosition.longitude, angle, dist);
 		}
 		return { lat: 0, lon: 0 };
 	}

@@ -9,9 +9,6 @@ import { logger } from '$lib/utils/logger';
 
 import type { DbSignal } from './types';
 
-/** Meters per degree of latitude (approximate constant) */
-const METERS_PER_DEGREE_LAT = 111320;
-
 /**
  * Calculate the great-circle distance between two points using the Haversine formula.
  * Returns distance in meters.
@@ -32,6 +29,17 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 }
 
 /**
+ * Check if GPS coordinates represent a valid (non-null, non-zero) location.
+ * Used across Kismet device resolution and GPS position extraction.
+ */
+export function hasValidGpsCoords(
+	lat: number | null | undefined,
+	lon: number | null | undefined
+): boolean {
+	return lat != null && lon != null && !(lat === 0 && lon === 0);
+}
+
+/**
  * Convert a center point and radius in meters to a bounding box in the
  * spatial-grid coordinate system used by the signals table index
  * (lat/lon multiplied by 10000, then cast to integer).
@@ -41,8 +49,8 @@ export function convertRadiusToGrid(
 	lon: number,
 	radiusMeters: number
 ): { lat_min: number; lat_max: number; lon_min: number; lon_max: number } {
-	const latRange = radiusMeters / METERS_PER_DEGREE_LAT;
-	const lonRange = radiusMeters / (METERS_PER_DEGREE_LAT * Math.cos((lat * Math.PI) / 180));
+	const latRange = radiusMeters / GEO.METERS_PER_DEGREE_LAT;
+	const lonRange = radiusMeters / (GEO.METERS_PER_DEGREE_LAT * Math.cos((lat * Math.PI) / 180));
 
 	return {
 		lat_min: Math.floor((lat - latRange) * 10000),

@@ -48,7 +48,10 @@ const envSchema = z.object({
 	GSMEVIL_DIR: z.string().default(''),
 
 	// Temp directory (FR-024) — resolved at runtime below
-	ARGOS_TEMP_DIR: z.string().default('')
+	ARGOS_TEMP_DIR: z.string().default(''),
+
+	// GPSD socket path (FR-040)
+	GPSD_SOCKET_PATH: z.string().default('/var/run/gpsd.sock')
 });
 
 // Parse and validate environment variables at startup

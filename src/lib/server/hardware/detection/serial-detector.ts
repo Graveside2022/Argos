@@ -5,6 +5,7 @@
 
 import { readdir, readFile } from 'fs/promises';
 
+import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import type {
 	CellularCapabilities,
@@ -80,7 +81,7 @@ function buildGpsdVirtualDevice(): DetectedHardware {
 		connectionType: 'virtual',
 		status: 'connected',
 		capabilities: {
-			device: '/var/run/gpsd.sock',
+			device: env.GPSD_SOCKET_PATH,
 			protocol: 'GPSD'
 			// @constitutional-exemption Article-II-2.1 issue:#14
 		} as GPSCapabilities,
