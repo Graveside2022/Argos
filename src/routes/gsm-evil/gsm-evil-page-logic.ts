@@ -8,6 +8,7 @@ import { tick } from 'svelte';
 import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
 import { gsmEvilStore, type TowerLocation } from '$lib/stores/gsm-evil-store';
 import type { CapturedIMSI } from '$lib/types/gsm';
+import { fetchJSON } from '$lib/utils/fetch-json';
 import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
 import { logger } from '$lib/utils/logger';
 
@@ -26,19 +27,11 @@ export async function fetchTowerLocation(
 	lac: string,
 	ci: string
 ): Promise<{ found: boolean; location: TowerLocation } | null> {
-	try {
-		const response = await fetch('/api/gsm-evil/tower-location', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ mcc, mnc, lac, ci })
-		});
-		if (response.ok) {
-			return await response.json();
-		}
-	} catch (error) {
-		logger.error('Failed to fetch tower location', { error });
-	}
-	return null;
+	return fetchJSON<{ found: boolean; location: TowerLocation }>('/api/gsm-evil/tower-location', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ mcc, mnc, lac, ci })
+	});
 }
 
 /** Fetch tower locations for captured IMSIs */
@@ -151,17 +144,8 @@ export async function checkActivity(state: GsmEvilPageState): Promise<void> {
 
 /** Fetch captured IMSIs */
 export async function fetchIMSIs(): Promise<void> {
-	try {
-		const response = await fetch('/api/gsm-evil/imsi');
-		if (response.ok) {
-			const data = await response.json();
-			if (data.success) {
-				gsmEvilStore.setCapturedIMSIs(data.imsis);
-			}
-		}
-	} catch (error) {
-		logger.error('Failed to fetch IMSIs', { error });
-	}
+	const data = await fetchJSON<{ success: boolean; imsis: CapturedIMSI[] }>('/api/gsm-evil/imsi');
+	if (data?.success) gsmEvilStore.setCapturedIMSIs(data.imsis);
 }
 
 /** Start IMSI capture on a given frequency */

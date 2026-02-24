@@ -13,6 +13,7 @@
 		terminalSessions
 	} from '$lib/stores/dashboard/terminal-store';
 	import type { ShellInfo } from '$lib/types/terminal';
+	import { fetchJSON } from '$lib/utils/fetch-json';
 
 	import TerminalTabBar from './TerminalTabBar.svelte';
 	import TerminalTabContent from './TerminalTabContent.svelte';
@@ -27,15 +28,8 @@
 	onMount(async () => {
 		if (!browser) return;
 
-		try {
-			const res = await fetch('/api/terminal/shells');
-			if (res.ok) {
-				const data = await res.json();
-				availableShells = data.shells;
-			}
-		} catch {
-			availableShells = [{ path: '/bin/zsh', name: 'zsh', isDefault: true }];
-		}
+		const data = await fetchJSON<{ shells: ShellInfo[] }>('/api/terminal/shells');
+		availableShells = data?.shells ?? [{ path: '/bin/zsh', name: 'zsh', isDefault: true }];
 	});
 
 	function handleCreateSession(shell?: string) {

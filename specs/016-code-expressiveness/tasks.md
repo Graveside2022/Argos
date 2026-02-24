@@ -53,11 +53,11 @@
 | 12 | **US10 — Hardcoded Paths/URLs (P1) [NEW]** | 2 | 2 | 0 | No |
 | 13 | **US11 — DRY Violations (P1) [NEW]** | 11 | 11 | 0 | Partial |
 | 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 3 | 0 | Partial |
-| 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 8 | **5** | Yes |
-| 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 0 | **5** | Partial |
+| 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 13 | 0 | Yes |
+| 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 5 | 0 | Partial |
 | 17 | Final Verification & Metrics | 7 | 0 | **7** | No |
-| 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 0 | **10** | Partial |
-| **Total** | | **86** | **50** | **36** | |
+| 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 10 | 0 | Partial |
+| **Total** | | **86** | **70** | **16** | |
 
 ---
 
@@ -165,8 +165,8 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 ### Sub-phase 8f: Client-Side Fetch Wrapper (B1 — P0)
 
-- [ ] T078 [P] [US8] Create `src/lib/utils/fetch-json.ts` with typed `fetchJSON<T>(url: string, options?: RequestInit): Promise<T | null>` wrapper that handles try-catch, `response.ok` check, JSON parsing, and returns `null` on failure with `console.error()` logging. FR-034.
-- [ ] T079 [US8] Migrate ~37 client-side fetch try/catch/return-null patterns across 19 files to use `fetchJSON<T>()`. Heaviest files: `status-bar-data.ts` (5), `gsm-evil-page-logic.ts` (5), `tak-config-logic.ts` (4), `OverviewPanel.svelte` (3), `GsmEvilPanel.svelte` (3). SC-030.
+- [x] T078 [P] [US8] Create `src/lib/utils/fetch-json.ts` with typed `fetchJSON<T>(url: string, options?: RequestInit): Promise<T | null>` wrapper that handles try-catch, `response.ok` check, JSON parsing, and returns `null` on failure with `console.error()` logging. FR-034.
+- [x] T079 [US8] Migrate ~37 client-side fetch try/catch/return-null patterns across 19 files to use `fetchJSON<T>()`. Heaviest files: `status-bar-data.ts` (5), `gsm-evil-page-logic.ts` (5), `tak-config-logic.ts` (4), `OverviewPanel.svelte` (3), `GsmEvilPanel.svelte` (3). SC-030.
 
 ---
 

@@ -8,6 +8,7 @@ import { get } from 'svelte/store';
 
 import { browser } from '$app/environment';
 import { agentContext, lastInteractionEvent } from '$lib/stores/dashboard/agent-context-store';
+import { fetchJSON } from '$lib/utils/fetch-json';
 
 // ============================================================================
 // Types
@@ -96,17 +97,9 @@ function scrollToBottom(): void {
 export async function initializeChat(): Promise<void> {
 	if (!browser) return;
 
-	try {
-		const res = await fetch('/api/agent/status');
-		if (res.ok) {
-			const data = await res.json();
-			llmProvider = data.provider;
-		}
-	} catch {
-		llmProvider = 'unavailable';
-	} finally {
-		isCheckingLLM = false;
-	}
+	const data = await fetchJSON<{ provider: string }>('/api/agent/status');
+	llmProvider = data?.provider === 'anthropic' ? 'anthropic' : 'unavailable';
+	isCheckingLLM = false;
 
 	messages.push({
 		role: 'system',

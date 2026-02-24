@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection } from 'geojson';
 
 import { GEO } from '$lib/constants/limits';
+import { fetchJSON } from '$lib/utils/fetch-json';
 import { macToAngle } from '$lib/utils/geo';
 import { resolveThemeColor } from '$lib/utils/theme-colors';
 
@@ -237,10 +238,10 @@ function towerToFeature(t: CellTowerData): Feature {
 }
 
 async function fetchTowerData(lat: number, lon: number): Promise<CellTowerData[] | null> {
-	const res = await fetch(`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=5`);
-	if (!res.ok) return null;
-	const data = await res.json();
-	if (!data.success) return null;
+	const data = await fetchJSON<{ success: boolean; towers?: CellTowerData[] }>(
+		`/api/cell-towers/nearby?lat=${lat}&lon=${lon}&radius=5`
+	);
+	if (!data?.success) return null;
 	return data.towers?.length ? data.towers : null;
 }
 

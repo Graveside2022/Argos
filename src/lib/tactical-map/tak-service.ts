@@ -1,22 +1,17 @@
 import { takStatus } from '$lib/stores/tak-store';
 import type { TakStatus } from '$lib/types/tak';
-import { logger } from '$lib/utils/logger';
+import { fetchJSON } from '$lib/utils/fetch-json';
 
 export class TakService {
 	private statusCheckInterval: ReturnType<typeof setInterval> | null = null;
 
 	async checkTakStatus(): Promise<void> {
-		try {
-			const res = await fetch('/api/tak/connection');
-			if (res.ok) {
-				const takData = await res.json();
-				if (takData.success && takData.status) {
-					const { success: _success, ...rest } = takData;
-					takStatus.set(rest as TakStatus);
-				}
-			}
-		} catch (error) {
-			logger.error('Error checking TAK status', { error });
+		const data = await fetchJSON<{ success: boolean; status?: string } & TakStatus>(
+			'/api/tak/connection'
+		);
+		if (data?.success && data.status) {
+			const { success: _success, ...rest } = data;
+			takStatus.set(rest as TakStatus);
 		}
 	}
 

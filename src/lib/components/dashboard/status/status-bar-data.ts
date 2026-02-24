@@ -3,6 +3,7 @@
  * Extracted from TopStatusBar to separate data concerns from presentation.
  */
 import type { Satellite } from '$lib/gps/types';
+import { fetchJSON } from '$lib/utils/fetch-json';
 import { haversineMeters } from '$lib/utils/geo';
 
 import type { WeatherData } from './weather-helpers';
@@ -66,13 +67,8 @@ function buildHardwareResult(
 }
 
 export async function fetchHardwareStatus(): Promise<HardwareStatusResult | null> {
-	try {
-		const res = await fetch('/api/hardware/status');
-		if (!res.ok) return null;
-		return buildHardwareResult(await res.json());
-	} catch {
-		return null;
-	}
+	const data = await fetchJSON<Record<string, Record<string, unknown>>>('/api/hardware/status');
+	return data ? buildHardwareResult(data) : null;
 }
 
 export interface HardwareDetailsResult {
@@ -82,13 +78,7 @@ export interface HardwareDetailsResult {
 }
 
 export async function fetchHardwareDetails(): Promise<HardwareDetailsResult | null> {
-	try {
-		const res = await fetch('/api/hardware/details');
-		if (!res.ok) return null;
-		return await res.json();
-	} catch {
-		return null;
-	}
+	return fetchJSON<HardwareDetailsResult>('/api/hardware/details');
 }
 
 /** Open-Meteo /v1/forecast current_weather response shape (relevant fields only). */

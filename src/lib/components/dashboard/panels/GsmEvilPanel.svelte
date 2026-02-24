@@ -5,9 +5,9 @@
 	import TowerTable from '$lib/components/gsm-evil/TowerTable.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { mccToCountry, mncToCarrier } from '$lib/data/carrier-mappings';
-	import { gsmEvilStore } from '$lib/stores/gsm-evil-store';
+	import { gsmEvilStore, type IMSICapture } from '$lib/stores/gsm-evil-store';
+	import { fetchJSON } from '$lib/utils/fetch-json';
 	import { groupIMSIsByTower } from '$lib/utils/gsm-tower-utils';
-	import { logger } from '$lib/utils/logger';
 
 	let imsiCaptureActive = $state(false);
 	let imsiPollInterval: ReturnType<typeof setInterval>;
@@ -55,31 +55,21 @@
 	});
 
 	async function fetchTowerLocation(mcc: string, mnc: string, lac: string, ci: string) {
-		try {
-			const response = await fetch('/api/gsm-evil/tower-location', {
+		return fetchJSON<{ found: boolean; location: { lat: number; lon: number } }>(
+			'/api/gsm-evil/tower-location',
+			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ mcc, mnc, lac, ci })
-			});
-			if (response.ok) return await response.json();
-		} catch (error) {
-			logger.error('Failed to fetch tower location', { error });
-		}
-		return null;
+			}
+		);
 	}
 
 	async function fetchIMSIs() {
-		try {
-			const response = await fetch('/api/gsm-evil/imsi');
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success) {
-					gsmEvilStore.setCapturedIMSIs(data.imsis);
-				}
-			}
-		} catch (error) {
-			logger.error('Failed to fetch IMSIs', { error });
-		}
+		const data = await fetchJSON<{ success: boolean; imsis: IMSICapture[] }>(
+			'/api/gsm-evil/imsi'
+		);
+		if (data?.success) gsmEvilStore.setCapturedIMSIs(data.imsis);
 	}
 
 	/** Check if GSM Evil is currently running from status response. */
@@ -97,12 +87,8 @@
 	}
 
 	onMount(async () => {
-		try {
-			const res = await fetch('/api/gsm-evil/status');
-			if (isGsmRunning(await res.json())) startImsiPolling();
-		} catch (error) {
-			logger.error('[GSM] Status check failed', { error });
-		}
+		const data = await fetchJSON<Record<string, unknown>>('/api/gsm-evil/status');
+		if (data && isGsmRunning(data)) startImsiPolling();
 	});
 
 	onDestroy(() => {
