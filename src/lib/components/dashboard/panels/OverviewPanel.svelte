@@ -11,6 +11,7 @@
 	import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 	import { takStatus } from '$lib/stores/tak-store';
 	import type { SystemInfo } from '$lib/types/system';
+	import { fetchJSON } from '$lib/utils/fetch-json';
 
 	import GpsCard from './overview/GpsCard.svelte';
 	import HardwareCard from './overview/HardwareCard.svelte';
@@ -34,30 +35,15 @@
 	}
 
 	async function fetchSystem() {
-		try {
-			const res = await fetch('/api/system/info');
-			if (res.ok) systemInfo = await res.json();
-		} catch (error: unknown) {
-			console.error('[OverviewPanel] Failed to fetch system info:', error);
-		}
+		systemInfo = await fetchJSON<SystemInfo>('/api/system/info');
 	}
 
 	async function fetchHardware() {
-		try {
-			const res = await fetch('/api/hardware/status');
-			if (res.ok) hardwareStatus = await res.json();
-		} catch (error: unknown) {
-			console.error('[OverviewPanel] Failed to fetch hardware status:', error);
-		}
+		hardwareStatus = await fetchJSON<HardwareStatus>('/api/hardware/status');
 	}
 
 	async function fetchHardwareDetails() {
-		try {
-			const res = await fetch('/api/hardware/details');
-			if (res.ok) hardwareDetails = await res.json();
-		} catch (error: unknown) {
-			console.error('[OverviewPanel] Failed to fetch hardware details:', error);
-		}
+		hardwareDetails = await fetchJSON<HardwareDetails>('/api/hardware/details');
 	}
 
 	onMount(() => {

@@ -4,7 +4,7 @@
  */
 
 import type { TakServerConfig } from '$lib/types/tak';
-import { logger } from '$lib/utils/logger';
+import { fetchJSON } from '$lib/utils/fetch-json';
 
 export const DEFAULT_CONFIG: TakServerConfig = {
 	id: '',
@@ -26,14 +26,8 @@ export interface MessageState {
 
 /** Load TAK config from the API */
 export async function loadConfig(): Promise<TakServerConfig> {
-	try {
-		const res = await fetch('/api/tak/config');
-		const data = await res.json();
-		if (data && data.id) return data;
-	} catch (e) {
-		logger.error('[TakConfigView] Failed to load config', { error: e });
-	}
-	return { ...DEFAULT_CONFIG };
+	const data = await fetchJSON<TakServerConfig>('/api/tak/config');
+	return data?.id ? data : { ...DEFAULT_CONFIG };
 }
 
 /** Ensure config has an ID, generating one if needed */
