@@ -4,6 +4,7 @@
  */
 
 import { execFileAsync } from '$lib/server/exec';
+import { delay } from '$lib/utils/delay';
 
 export interface ProcessEntry {
 	pid: string;
@@ -61,5 +62,5 @@ export async function killMatchingProcesses(
 			// Process not found or already dead
 		}
 	}
-	await new Promise((resolve) => setTimeout(resolve, waitMs));
+	await delay(waitMs);
 }

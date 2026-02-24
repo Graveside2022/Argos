@@ -1,19 +1,8 @@
 import type { Feature, FeatureCollection } from 'geojson';
 
+import { GEO } from '$lib/constants/limits';
+import { macToAngle } from '$lib/utils/geo';
 import { resolveThemeColor } from '$lib/utils/theme-colors';
-
-/**
- * Deterministic angle from MAC address for radial client spreading.
- * Each client gets a stable unique position around its AP.
- */
-export function macToAngle(mac: string): number {
-	let hash = 0;
-	for (let i = 0; i < mac.length; i++) {
-		hash = (hash << 5) - hash + mac.charCodeAt(i);
-		hash |= 0;
-	}
-	return (Math.abs(hash) % 360) * (Math.PI / 180);
-}
 
 /**
  * Estimate distance from RSSI using log-distance path loss model.
@@ -43,8 +32,10 @@ export function spreadClientPosition(
 	if (!samePos) return [clientLon, clientLat];
 	const distMeters = rssiToMeters(clientRssi);
 	const angle = macToAngle(clientMac);
-	const dLat = (distMeters * Math.cos(angle)) / 111320;
-	const dLon = (distMeters * Math.sin(angle)) / (111320 * Math.cos((apLat * Math.PI) / 180));
+	const dLat = (distMeters * Math.cos(angle)) / GEO.METERS_PER_DEGREE_LAT;
+	const dLon =
+		(distMeters * Math.sin(angle)) /
+		(GEO.METERS_PER_DEGREE_LAT * Math.cos((apLat * Math.PI) / 180));
 	return [apLon + dLon, apLat + dLat];
 }
 
@@ -102,7 +93,7 @@ export function createRingPolygon(
 	innerRadius: number,
 	steps = 48
 ): Feature {
-	const earthRadius = 6371000;
+	const earthRadius = GEO.EARTH_RADIUS_M;
 	const makeRing = (r: number): [number, number][] => {
 		const coords: [number, number][] = [];
 		for (let i = 0; i <= steps; i++) {
@@ -168,20 +159,8 @@ export function getRadioColor(radio: string): string {
 		: resolveThemeColor('--muted-foreground', '#9aa0a6');
 }
 
-/**
- * Haversine distance in km between two coordinate pairs.
- */
-export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-	const R = 6371;
-	const dLat = ((lat2 - lat1) * Math.PI) / 180;
-	const dLon = ((lon2 - lon1) * Math.PI) / 180;
-	const a =
-		Math.sin(dLat / 2) ** 2 +
-		Math.cos((lat1 * Math.PI) / 180) *
-			Math.cos((lat2 * Math.PI) / 180) *
-			Math.sin(dLon / 2) ** 2;
-	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+// haversineKm re-exported from $lib/utils/geo
+export { haversineKm } from '$lib/utils/geo';
 
 /** Thresholds for relative time formatting: [divisor, max, suffix]. */
 const TIME_UNITS: [number, number, string][] = [

@@ -11,6 +11,7 @@ import path from 'path';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 export interface ChannelClassification {
@@ -161,7 +162,7 @@ async function countFramesFromTcpdump(captureTime: number): Promise<number> {
 export async function captureFrameCount(logPath: string, captureTime: number): Promise<number> {
 	try {
 		const startLines = await countLogLines(logPath);
-		await new Promise((resolve) => setTimeout(resolve, captureTime * 1000));
+		await delay(captureTime * 1000);
 
 		const frameCount = await countFramesFromLog(logPath, startLines);
 		logger.debug('[gsm-scan] Direct log analysis', { frameCount });

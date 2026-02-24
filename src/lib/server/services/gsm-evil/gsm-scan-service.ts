@@ -2,6 +2,7 @@ import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { env } from '$lib/server/env';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import {
@@ -82,7 +83,7 @@ async function scanSingleFrequency(freq: string): Promise<GsmScanResult | null> 
 		checkHardwareErrors(testOutput);
 
 		pid = spawnGrgsm(gsmArgs);
-		await new Promise((resolve) => setTimeout(resolve, HACKRF_INIT_DELAY_MS));
+		await delay(HACKRF_INIT_DELAY_MS);
 
 		logger.debug('[gsm-scan] Device init', {
 			device: 'HackRF',
@@ -159,7 +160,7 @@ export async function performGsmScan(requestedFreq?: number | null): Promise<Gsm
 			if (result) {
 				results.push(result);
 			}
-			await new Promise((resolve) => setTimeout(resolve, INTER_FREQ_DELAY_MS));
+			await delay(INTER_FREQ_DELAY_MS);
 		}
 
 		return buildScanResponse(results);

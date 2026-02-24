@@ -5,6 +5,7 @@ import path from 'path';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateInterfaceName, validateNumericParam } from '$lib/server/security/input-sanitizer';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { KismetServiceStatus } from './types';
@@ -67,7 +68,7 @@ export class KismetServiceManager {
 			}
 
 			await execFileAsync(this.START_SCRIPT, []);
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			await delay(2000);
 
 			const newStatus = await this.getStatus();
 			return newStatus.isRunning
@@ -82,7 +83,7 @@ export class KismetServiceManager {
 	/** Kill Kismet processes (TERM then KILL) and clean up monitor interface */
 	private static async killKismetProcesses(): Promise<void> {
 		await execFileAsync('/usr/bin/pkill', ['-TERM', 'kismet']);
-		await new Promise((resolve) => setTimeout(resolve, 3000));
+		await delay(3000);
 		await execFileAsync('/usr/bin/pkill', ['-KILL', 'kismet']).catch((error: unknown) => {
 			logger.warn('[kismet] Cleanup: pkill -KILL kismet failed', { error: String(error) });
 		});
@@ -111,7 +112,7 @@ export class KismetServiceManager {
 		const device = String(validateNumericParam(rawDevice, 'USB device', 1, 999));
 		try {
 			writeFileSync('/sys/bus/usb/drivers/usb/unbind', `${bus}-${device}`);
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await delay(1000);
 			writeFileSync('/sys/bus/usb/drivers/usb/bind', `${bus}-${device}`);
 			logger.info('[kismet] Reset USB device', { bus, device });
 		} catch (usbResetError) {
@@ -129,7 +130,7 @@ export class KismetServiceManager {
 		logger.info('[kismet] Resetting USB WiFi interface', { interfaceName });
 
 		await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'down']);
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await delay(1000);
 
 		const { stdout: lsusbOut } = await execFileAsync('/usr/bin/lsusb', []);
 		const usbLines = lsusbOut
@@ -140,7 +141,7 @@ export class KismetServiceManager {
 			await this.resetUsbDevice(usbLine);
 		}
 
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await delay(2000);
 		await execFileAsync('/usr/sbin/ip', ['link', 'set', interfaceName, 'up']);
 		logger.info('[kismet] Interface reset complete', { interfaceName });
 	}
@@ -195,7 +196,7 @@ export class KismetServiceManager {
 		try {
 			const stopResult = await this.stop();
 			if (stopResult.success || stopResult.message === 'Kismet is not running') {
-				await new Promise((resolve) => setTimeout(resolve, 1000));
+				await delay(1000);
 				return await this.start();
 			} else {
 				return stopResult;

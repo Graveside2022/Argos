@@ -13,6 +13,7 @@ import { execFileAsync } from '$lib/server/exec';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { safe } from '$lib/server/result';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStartResult } from './gsm-evil-types';
@@ -50,7 +51,7 @@ export async function killExistingGsmProcesses(): Promise<void> {
 	} catch {
 		/* no match is fine */
 	}
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await delay(1000);
 }
 
 /** Check if GSM processes are actively running via pgrep */
@@ -191,7 +192,7 @@ export function spawnGsmEvil2(gsmDir: string): void {
  * Throws with diagnostic information if either process failed to start.
  */
 export async function verifyProcessesRunning(): Promise<void> {
-	await new Promise((resolve) => setTimeout(resolve, 3000));
+	await delay(3000);
 
 	const isGrgsmRunning = await checkGrgsmRunning();
 	if (!isGrgsmRunning) {

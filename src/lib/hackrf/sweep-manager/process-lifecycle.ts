@@ -5,6 +5,7 @@
 
 import { type ChildProcess, execFile } from 'child_process';
 
+import { delay } from '$lib/utils/delay';
 import { logError, logInfo, logWarn } from '$lib/utils/logger';
 
 import type { ProcessState } from './process-manager-types';
@@ -32,7 +33,7 @@ export async function stopProcess(
 	try {
 		if (processState.actualProcessPid) {
 			await sendTermSignal(processState.actualProcessPid);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await delay(100);
 			await forceKillIfAlive(processState.actualProcessPid);
 		}
 
@@ -46,7 +47,7 @@ export async function stopProcess(
 	}
 
 	await pkillHackrfSweep();
-	await new Promise((resolve) => setTimeout(resolve, 500));
+	await delay(500);
 }
 
 /** Send SIGTERM to a process */
@@ -131,7 +132,7 @@ export async function forceCleanupAllProcesses(
 		await pkill(['-9', '-f', 'auto_sweep.sh']);
 
 		processRegistry.clear();
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await delay(1000);
 
 		logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
 	} catch (error) {

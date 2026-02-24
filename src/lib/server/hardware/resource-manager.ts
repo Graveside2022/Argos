@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import * as alfaMgr from './alfa-manager';
@@ -92,7 +93,7 @@ class ResourceManager extends EventEmitter {
 		const start = Date.now();
 		while (this.mutex.get(device)) {
 			if (Date.now() - start > maxWait) return false;
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await delay(50);
 		}
 		this.mutex.set(device, true);
 		return true;

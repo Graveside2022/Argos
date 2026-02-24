@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import { errMsg } from '$lib/server/api/error-utils';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -33,7 +34,7 @@ async function dockerLifecycle(
 	extra?: Record<string, unknown>
 ): Promise<Response> {
 	await execFileAsync('docker', [action, CONTAINER_NAME]);
-	if (action === 'start') await new Promise((resolve) => setTimeout(resolve, 2000));
+	if (action === 'start') await delay(2000);
 	return json({ success: true, action, message, ...extra });
 }
 

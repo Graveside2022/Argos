@@ -5,6 +5,7 @@ import * as path from 'path';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { withRetry } from '$lib/server/retry';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 export interface KismetStartResult {
@@ -117,7 +118,7 @@ async function startDirect(): Promise<boolean> {
 		fs.closeSync(logFd);
 
 		// Give Kismet a moment to start
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await delay(2000);
 
 		// Check if it started
 		return await isKismetRunning();

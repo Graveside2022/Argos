@@ -14,6 +14,7 @@ import { errMsg } from '$lib/server/api/error-utils';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import type { FrequencyTestResult } from '$lib/types/gsm';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import { testFrequency } from './gsm-scan-frequency-analysis';
@@ -92,7 +93,7 @@ async function scanFrequencies(
 		const outcome = await testFrequency(freqs[i], i, freqs.length);
 		events.push(...outcome.events);
 		results.push(outcome.result);
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		await delay(500);
 	}
 	return { results, events };
 }

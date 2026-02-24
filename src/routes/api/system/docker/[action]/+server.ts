@@ -3,6 +3,7 @@ import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
+import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
@@ -54,7 +55,7 @@ async function executeAction(action: string, container: string): Promise<Respons
 	await execFileAsync('/usr/bin/docker', args);
 
 	if (action === 'start') {
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await delay(2000);
 	}
 
 	return json({
