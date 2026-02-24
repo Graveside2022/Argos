@@ -3,7 +3,8 @@
 **Feature Branch**: `016-code-expressiveness`
 **Created**: 2026-02-23
 **Status**: Draft
-**Input**: User description: "Improve code expressiveness through shared abstractions — route handler factory, result types, DRY utilities, dead export cleanup, and circular dependency resolution. Close client-side tooling gaps with production-grade libraries. Raise overall expressiveness GPA from C+ to B+."
+**Updated**: 2026-02-24 (V2 audit verification — added Part C: Operational Hardening) | 2026-02-24 (V3 — backfill missing FR/SC for all 32 audit findings)
+**Input**: User description: "Improve code expressiveness through shared abstractions — route handler factory, result types, DRY utilities, dead export cleanup, and circular dependency resolution. Close client-side tooling gaps with production-grade libraries. Implement codebase expressiveness fixes from audit findings including type safety, abstraction, information density, cognitive complexity, and cyclomatic complexity."
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -125,7 +126,7 @@ An API consumer (frontend client, MCP server, or external script) receives a pre
 
 A developer building a data table, a long scrollable list, a validated form, or a toast notification uses well-maintained, headless libraries that integrate with the Lunaris design system instead of hand-rolling these patterns. The tooling gaps identified in the codebase analysis — tables without sorting/filtering, forms without schema validation, lists without virtualization, and an unused toast dependency — are closed with libraries that have 1,000+ GitHub stars, active maintenance, and Svelte 5 compatibility.
 
-**Why this priority**: P2 because these are client-side improvements that complement the server-side abstractions (P1). Each library fills a gap where custom code is either missing, incomplete, or more complex than necessary. The key insight: `svelte-sonner` (1,208 stars, 628K downloads/month) is already installed but has zero imports; `bits-ui` (3,073 stars) and `shadcn` are already dependencies; `@tanstack/table-core` (27,731 stars) integrates via an existing shadcn-svelte data-table helper.
+**Why this priority**: P2 because these are client-side improvements that complement the server-side abstractions (P1). Each library fills a gap where custom code is either missing, incomplete, or more complex than necessary. The key insight: `svelte-sonner` (1,208 stars, 628K downloads/month) is already installed and activated (3 imports as of T017); `bits-ui` (3,073 stars) and `shadcn` are already dependencies; `@tanstack/table-core` (27,731 stars) integrates via an existing shadcn-svelte data-table helper.
 
 **Independent Test**: Can be tested by adding one data table with sorting, one virtual list, and one validated form to existing pages — then verifying they render correctly with Lunaris styling.
 
@@ -136,6 +137,70 @@ A developer building a data table, a long scrollable list, a validated form, or 
 3. **Given** a developer builds a configuration form (e.g., GSM Evil settings), **When** they use `sveltekit-superforms` with Zod schemas, **Then** they get server+client validation, error messages, and accessible form structure without hand-writing validation logic
 4. **Given** an API operation succeeds or fails, **When** the UI needs to notify the user, **Then** `svelte-sonner` provides styled toast notifications consistent with the Lunaris dark theme
 5. **Given** a REST endpoint needs client-side caching and background refetching, **When** the developer uses `@tanstack/svelte-query` v6, **Then** they get automatic cache management, loading states, and error handling with Svelte 5 runes — without replacing existing WebSocket-fed stores
+
+---
+
+### User Story 9 - System Centralizes Environment Variable Access (Priority: P1) **[V2 NEW]**
+
+A developer configuring service URLs or API keys finds all environment variables validated and typed in a single module. No file reads `process.env` directly — all access goes through the validated env module. When a service URL changes, the developer updates one place.
+
+**Why this priority**: P1 because 35+ files bypass the Zod-validated `env.ts` module and read `process.env` directly with inconsistent fallback defaults. This is the root cause of A2 (hardcoded service URLs) — centralizing env access makes URL consolidation a mechanical follow-up.
+
+**Independent Test**: Search the codebase for `process.env.` in non-MCP server files — after migration, zero direct accesses remain (MCP servers exempt as standalone processes).
+
+**Acceptance Scenarios**:
+
+1. **Given** 35+ files read `process.env` directly, **When** the migration is complete, **Then** zero non-MCP server files contain `process.env.` — all use the typed `env` module
+2. **Given** a developer needs to change the Kismet API URL, **When** they update the env var, **Then** all 5 files that reference Kismet URLs pick up the change automatically through the shared env module
+3. **Given** a required env var is missing at startup, **When** the Zod validation runs, **Then** the system exits with a clear error message naming the missing variable
+
+---
+
+### User Story 10 - System Eliminates Hardcoded Temporary Paths and Service URLs (Priority: P1) **[V2 NEW]**
+
+A developer deploying Argos to a new environment finds all file paths and service URLs configurable through environment variables. No `/tmp/` paths are hardcoded — all use a configurable temp directory. No `localhost:NNNN` URLs are hardcoded — all reference the centralized service URL constants.
+
+**Why this priority**: P1 because 17 hardcoded `/tmp/` paths across 10 files and ~28 hardcoded localhost URLs across 15+ files cause silent breakage when deployment environment differs from development.
+
+**Independent Test**: Search for `/tmp/` and `localhost:` literals in source files — after migration, zero hardcoded instances remain (test files exempt).
+
+**Acceptance Scenarios**:
+
+1. **Given** 17 `/tmp/` paths exist across 10 files, **When** migration is complete, **Then** all use `ARGOS_TEMP_DIR` constant with configurable env var override
+2. **Given** 14 remaining hardcoded localhost URLs exist (original ~28, 14 already resolved), **When** migration is complete, **Then** all reference service URL constants sourced from env vars with sensible defaults
+3. **Given** GSM Evil runs on a non-default port, **When** the operator sets `GSM_EVIL_URL` env var, **Then** all GSM Evil health checks and status endpoints use the configured URL
+
+---
+
+### User Story 11 - System Consolidates DRY Violations (Priority: P1) **[V2 NEW]**
+
+A developer working across the codebase finds common patterns extracted into shared utilities: a `delay()` function (replacing 37 inline copies), consolidated haversine distance calculation (replacing 6 implementations), unified MAC-to-angle hashing (replacing 3 inconsistent algorithms), and centralized Earth radius / meters-per-degree constants (replacing 5+ hardcoded magic numbers).
+
+**Why this priority**: P1 because the delay pattern alone has 37 copies across 21 files, and the MAC-to-angle inconsistency is a correctness bug (same device gets different angles depending on code path).
+
+**Independent Test**: Search for `new Promise.*setTimeout` (should find only the shared `delay()` export), `6371000` (should find only the constant), and `macToAngle`/`hashMAC` (should find only one canonical implementation).
+
+**Acceptance Scenarios**:
+
+1. **Given** 37 inline delay patterns exist, **When** migration is complete, **Then** all use a shared `delay()` utility
+2. **Given** 3 different MAC-to-angle hash algorithms exist, **When** consolidation is complete, **Then** exactly 1 canonical algorithm exists and all code paths produce the same angle for the same MAC address
+3. **Given** the Earth radius `6371000` appears in 5 files, **When** consolidation is complete, **Then** all files reference `GEO.EARTH_RADIUS_M` from the constants module
+
+---
+
+### User Story 12 - Developer Encounters Clean, Right-Sized Files (Priority: P2) **[V2 NEW]**
+
+A developer navigating the codebase finds no source file exceeds 300 lines (the project convention). Oversized files have been decomposed into focused sub-modules with single responsibilities.
+
+**Why this priority**: P2 because 19 non-test files exceed the 300-line limit (worst: `base.ts` at 394, `gsm-evil-store.ts` at 380). This is a maintainability concern rather than a correctness issue. MCP server tool-definition files (5 of 19) are acceptable exceptions.
+
+**Independent Test**: Run `wc -l` on all source files — after decomposition, zero non-exempt files exceed 300 lines.
+
+**Acceptance Scenarios**:
+
+1. **Given** 14 actionable files exceed 300 lines, **When** decomposition is complete, **Then** all are under 300 lines or have documented exemption reasons
+2. **Given** `gsm-evil-store.ts` is 380 lines, **When** it is decomposed, **Then** state, actions, and computed logic are in separate focused modules
+3. **Given** `base.ts` (WebSocket) is 394 lines, **When** it is decomposed, **Then** reconnect logic, message handling, and heartbeat are in separate modules
 
 ---
 
@@ -172,14 +237,39 @@ A developer building a data table, a long scrollable list, a validated form, or 
 - **FR-012**: All changes MUST maintain 100% backward compatibility — no behavioral changes to API responses, error formats, or logging output
 - **FR-013**: All existing tests MUST continue to pass after each phase of migration
 - **FR-014**: System MUST define a unified API error response type so all routes return a consistent shape (success boolean, optional data, optional error string) — eliminating the current inconsistency where some routes return `{ success, error }`, others `{ status, message }`, and others `{ error }`
-- **FR-015**: System MUST eliminate all unsafe `(error as Error)` type casts (39 confirmed instances across 23 files — original estimate of 129 included non-error-context assertions) by routing error handling through the shared `errMsg()` utility or the route handler factory, which perform proper type narrowing
-- **FR-016**: System MUST consolidate or deprecate the 2 abandoned abstractions (`safeErrorResponse` with 0 consumers, `safeJsonParse` with 3 consumers) — their functionality should be absorbed into the route handler factory or removed if fully superseded. `safeParseWithHandling` (30+ call sites, actively used) is explicitly KEPT.
+- **FR-015**: System MUST eliminate all unsafe `(error as Error)` type casts (39 original across 23 files — 30 eliminated by prior work, 9 remaining as of HEAD `b8480ff`) by routing error handling through the shared `errMsg()` utility or the route handler factory, which perform proper type narrowing
+- **FR-016**: System MUST consolidate or deprecate the 2 abandoned abstractions (`safeErrorResponse` with 0 consumers — removed; `safeJsonParse` with 3 consumers — retained as niche Zod-validated JSON parser per research R7). `safeParseWithHandling` (30+ call sites, actively used) is explicitly KEPT.
 - **FR-017**: System MUST integrate `@tanstack/table-core` via the shadcn-svelte `data-table` helper to provide headless data tables with sorting, filtering, and pagination that render through existing Lunaris-styled Table components
 - **FR-018**: System MUST integrate Virtua (`virtua`) to provide virtual scrolling for long lists (signal entries, log viewers, scan results) with the `VList` component
 - **FR-019**: System MUST integrate `sveltekit-superforms` with Zod schema validation and `formsnap` for accessible form components — applied to configuration forms, settings pages, and any user input flows
-- **FR-020**: System MUST activate the already-installed `svelte-sonner` dependency (currently zero imports) to provide toast notifications for API success/error feedback across the UI
+- **FR-020**: System MUST activate the already-installed `svelte-sonner` dependency (activated in T017 with 3 imports — extend to all API success/error feedback paths) to provide toast notifications across the UI
 - **FR-021**: System MUST optionally integrate `@tanstack/svelte-query` v6 for REST-only endpoints that benefit from client-side caching and background refetching — this MUST NOT replace existing WebSocket-fed Svelte stores
 - **FR-022**: System MUST unify the dual Kismet store architecture (two stores independently fed by WebSocket and REST) into a single store with WebSocket as primary data source and REST as fallback
+
+Part C — Operational Hardening (from V2 Audit Findings):
+
+- **FR-023**: System MUST centralize all environment variable access through the Zod-validated `env.ts` module — zero non-MCP-server files may read `process.env` directly **[V2 NEW]**
+- **FR-024**: System MUST replace all 17 hardcoded `/tmp/` paths with a configurable `ARGOS_TEMP_DIR` constant that defaults to `os.tmpdir()/argos` and creates the directory on startup **[V2 NEW]**
+- **FR-025**: System MUST replace all ~28 hardcoded `localhost:NNNN` service URLs with constants sourced from env vars, adding `GSM_EVIL_URL`, `OPENWEBRX_URL`, and `BETTERCAP_URL` to the env schema **[V2 NEW]**
+- **FR-026**: System MUST provide a shared `delay(ms)` utility and migrate all 38 inline `new Promise(resolve => setTimeout(resolve, N))` patterns to use it **[V2 NEW]**
+- **FR-027**: System MUST consolidate all haversine distance calculations to use the canonical `calculateDistance()` from `geo.ts`, eliminating the 5 duplicate implementations (6 total including canonical — verified in research R13) **[V2 NEW]**
+- **FR-028**: System MUST unify the 3 MAC-to-angle hash algorithms into 1 canonical implementation so identical MAC addresses produce identical angles regardless of code path **[V2 NEW]**
+- **FR-029**: System MUST replace all hardcoded magic numbers (`6371000`, `111320`) with named constants from the existing constants module **[V2 NEW]**
+- **FR-030**: System MUST add `dispose()` or cleanup methods to the 4 server-side `setInterval` instances that currently lack cleanup (resource-manager, gsm-monitor-service, rate-limit-middleware, web-socket-manager cache timer) **[V2 NEW]**
+- **FR-031**: System MUST decompose the 14 actionable oversized files (>300 LOC, excluding MCP tool definitions) into focused sub-modules under 300 lines each **[V2 NEW]**
+- **FR-032**: System MUST standardize on `logger.error()` as the single error logging API, migrating the remaining 60 `logError()` call sites across 22 files (86 original, 26 already migrated) **[V2 NEW]**
+- **FR-033**: System MUST replace the `process.env.USER || 'kali'` fallback with a platform-independent user detection method **[V2 NEW]**
+- **FR-034**: System MUST provide a shared `fetchJSON<T>(url, options?)` client-side fetch wrapper that handles try-catch, JSON parsing, and typed error returns — replacing ~37 identical try/catch/return-null patterns across 19 client-side files (audit finding B1) **[V3 NEW]**
+- **FR-035**: System MUST define typed interfaces for all external API response shapes (Kismet raw device, OpenCelliD, gpsd, Open-Meteo) and validate responses at trust boundaries — eliminating ~100+ unsafe `as` casts on untyped API/JSON responses (audit findings C1, C4, C5) **[V3 NEW]**
+- **FR-036**: System MUST declare typed `globalThis` augmentations in `src/app.d.ts` for all singleton patterns — eliminating 11 `(globalThis as Record<string, unknown>)` casts across 5 files (audit finding C2) **[V3 NEW]**
+- **FR-037**: System MUST add runtime validation to unguarded `JSON.parse()` calls at trust boundaries (WebSocket messages, SSE events) using `safeJsonParse()` or Zod schemas (audit finding C3) **[V3 NEW]**
+- **FR-038**: System MUST fix swallowed errors in `OverviewPanel.svelte` — all error paths must log via `console.error()` and surface user-visible feedback (audit finding D1) **[V3 NEW]**
+- **FR-039**: System SHOULD resolve remaining `eslint-disable` directives where possible, or document why suppression is necessary for each of the 4 instances (audit finding D2) **[V3 NEW]**
+- **FR-040**: System SHOULD replace hardcoded `/var/run/gpsd.sock` with a configurable env var (audit finding A6) **[V3 NEW]**
+- **FR-041**: System SHOULD consolidate 3 GPS coordinate validation implementations into 1 canonical function (audit finding B10) **[V3 NEW]**
+- **FR-042**: System SHOULD migrate remaining ad-hoc retry patterns in Kismet service manager to `withRetry()` (audit finding B11, partial) **[V3 NEW]**
+- **FR-043**: System SHOULD replace switch/case chain in `l3-message-decoders.ts` with lookup table pattern (audit finding B12) **[V3 NEW]**
+- **FR-044**: System SHOULD extract FNV-1a MAC hash + GPS offset helper functions from `kismet.service.ts` and `kismet/devices/+server.ts` into a shared module (audit finding B2) **[V3 NEW]**
 
 ### Key Entities
 
@@ -213,6 +303,26 @@ A developer building a data table, a long scrollable list, a validated form, or 
 - **SC-016**: At least 1 form uses `sveltekit-superforms` + `formsnap` with Zod validation — demonstrating the pattern for future forms
 - **SC-017**: `svelte-sonner` is actively imported and used for user-facing success/error notifications — zero unused dependencies remain
 - **SC-018**: The dual Kismet store architecture is unified into a single store — verified by searching for duplicate store declarations
+
+Part C Success Criteria (V2 Audit Findings):
+
+- **SC-019**: Zero non-MCP-server files contain `process.env.` — all access goes through the validated env module **[V2 NEW]**
+- **SC-020**: Zero source files contain hardcoded `/tmp/` paths — all use the `ARGOS_TEMP_DIR` constant **[V2 NEW]**
+- **SC-021**: Zero source files contain hardcoded `localhost:NNNN` service URLs — all reference env-backed constants **[V2 NEW]**
+- **SC-022**: Zero inline `new Promise(resolve => setTimeout(resolve, N))` patterns remain — all use shared `delay()` **[V2 NEW]**
+- **SC-023**: Exactly 1 haversine implementation exists (`calculateDistance` in `geo.ts`) — zero duplicates **[V2 NEW]**
+- **SC-024**: Exactly 1 MAC-to-angle hash algorithm exists — zero inconsistent alternatives **[V2 NEW]**
+- **SC-025**: Zero hardcoded `6371000` or `111320` literals outside the constants module **[V2 NEW]**
+- **SC-026**: All server-side `setInterval` instances have corresponding `clearInterval` in a dispose/shutdown path **[V2 NEW]**
+- **SC-027**: Zero non-exempt source files exceed 300 lines (MCP tool definitions exempt) **[V2 NEW]**
+- **SC-028**: Zero `logError()` call sites remain — all error logging uses `logger.error()` **[V2 NEW]**
+- **SC-029**: Zero hardcoded `'kali'` username fallbacks exist in source code **[V2 NEW]**
+- **SC-030**: Zero client-side fetch calls use raw try/catch/return-null patterns — all use the shared `fetchJSON<T>()` wrapper **[V3 NEW]**
+- **SC-031**: Typed interfaces exist for Kismet raw device, OpenCelliD, gpsd, and Open-Meteo response shapes — zero `as string`/`as number` casts on external API data **[V3 NEW]**
+- **SC-032**: All `globalThis` singleton accesses use typed augmentations declared in `app.d.ts` — zero `(globalThis as Record<string, unknown>)` casts remain **[V3 NEW]**
+- **SC-033**: All `JSON.parse()` calls at trust boundaries use validated parsing (Zod schema or `safeJsonParse()`) — zero raw `JSON.parse() as Type` casts at boundaries **[V3 NEW]**
+- **SC-034**: Zero swallowed errors (`catch { /* silent */ }`) in component code — all error paths log and provide user feedback **[V3 NEW]**
+- **SC-035**: All `eslint-disable` directives have documented justification or are resolved **[V3 NEW]**
 
 ## Assumptions
 
@@ -253,9 +363,23 @@ Part B — Client-Side Tooling Gaps (no overlap with Part A — different files,
 - `@tanstack/table-core` + shadcn-svelte `data-table` helper for headless data tables
 - Virtua (`virtua`) for virtual scrolling of long lists
 - `sveltekit-superforms` + `formsnap` for schema-validated forms
-- Activate `svelte-sonner` (already installed, zero imports) for toast notifications
+- Extend `svelte-sonner` (already installed, 3 imports as of T017) to all API feedback paths
 - `@tanstack/svelte-query` v6 for REST endpoint caching (optional — defer if simple `fetchJSON<T>()` suffices)
 - Unify dual Kismet store architecture
+
+Part C — Operational Hardening (from V2 Audit Findings — no overlap with Part A or B):
+
+- Centralize `process.env` access through Zod-validated `env.ts` (35+ files)
+- Replace 17 hardcoded `/tmp/` paths with configurable `ARGOS_TEMP_DIR`
+- Replace ~28 hardcoded `localhost:NNNN` URLs with env-backed service constants
+- Extract shared `delay()` utility (38 inline copies across 21 files)
+- Consolidate haversine distance (6 implementations to 1)
+- Unify MAC-to-angle hashing (3 algorithms to 1 — correctness bug)
+- Replace magic number literals with named constants
+- Add `dispose()` methods to 4 uncleaned server `setInterval` instances
+- Decompose 14 actionable oversized files to under 300 lines
+- Standardize on `logger.error()` (migrate 86 `logError()` call sites)
+- Replace `'kali'` username fallback with platform-independent detection
 
 **Out of scope**:
 
