@@ -51,15 +51,21 @@ async function getMilSymModule() {
 	return milSymModule;
 }
 
+/** Type of the MilStdIconRenderer singleton — derived from the module's getInstance() return type. */
+type MilStdRenderer = Awaited<ReturnType<typeof getMilSymModule>>['MilStdIconRenderer'] extends {
+	getInstance(): infer R;
+}
+	? R
+	: never;
+
 export class SymbolFactory {
 	private static readonly DEFAULT_SIZE = 24;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private static renderer: any = null;
+	private static renderer: MilStdRenderer | null = null;
 
 	private static async getRenderer() {
 		const mod = await getMilSymModule();
 		if (!this.renderer) {
-			this.renderer = mod.MilStdIconRenderer.getInstance();
+			this.renderer = mod.MilStdIconRenderer.getInstance() as MilStdRenderer;
 		}
 		return { renderer: this.renderer, mod };
 	}

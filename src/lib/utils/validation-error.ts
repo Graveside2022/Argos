@@ -30,27 +30,30 @@ export interface FormattedValidationError {
 }
 
 /** Format a too_small issue by type. */
-function formatTooSmall(issue: Extract<ZodIssue, { code: 'too_small' }>): string {
+function formatTooSmall(issue: ZodIssue): string {
+	if (issue.code !== 'too_small') return 'Too small';
 	if (issue.type === 'string') return `Must be at least ${issue.minimum} characters`;
 	if (issue.type === 'number') return `Must be ${issue.inclusive ? '>=' : '>'} ${issue.minimum}`;
 	return 'Too small';
 }
 
 /** Format a too_big issue by type. */
-function formatTooBig(issue: Extract<ZodIssue, { code: 'too_big' }>): string {
+function formatTooBig(issue: ZodIssue): string {
+	if (issue.code !== 'too_big') return 'Too large';
 	if (issue.type === 'string') return `Must be at most ${issue.maximum} characters`;
 	if (issue.type === 'number') return `Must be ${issue.inclusive ? '<=' : '<'} ${issue.maximum}`;
 	return 'Too large';
 }
 
 /** Formatter lookup for Zod issue codes. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod issue union requires any for generic dispatch
-const ISSUE_FORMATTERS: Record<string, (issue: any) => string> = {
-	invalid_type: (i) => `Expected ${i.expected}, received ${i.received}`,
+const ISSUE_FORMATTERS: Record<string, (issue: ZodIssue) => string> = {
+	invalid_type: (i) =>
+		'expected' in i ? `Expected ${i.expected}, received ${i.received}` : i.message,
 	too_small: formatTooSmall,
 	too_big: formatTooBig,
-	invalid_string: (i) => `Invalid format: ${i.validation}`,
-	unrecognized_keys: (i) => `Unexpected keys: ${i.keys.join(', ')}`
+	invalid_string: (i) => ('validation' in i ? `Invalid format: ${i.validation}` : i.message),
+	unrecognized_keys: (i) =>
+		'keys' in i ? `Unexpected keys: ${(i.keys as string[]).join(', ')}` : i.message
 };
 
 /** Generate a user-friendly message for a Zod issue. */
@@ -173,8 +176,9 @@ export function safeParseWithHandling<T>(
 ): T | undefined {
 	const result = schema.safeParse(data);
 	if (!result.success) {
-		// Type assertion safe: Zod guarantees error exists when success is false
-		handleValidationError(result.error!, context, data, showToast);
+		if (result.error) {
+			handleValidationError(result.error, context, data, showToast);
+		}
 		return undefined;
 	}
 	return result.data;

@@ -291,10 +291,9 @@ export class SweepManager extends EventEmitter {
 }
 
 // Singleton — persisted via globalThis to survive Vite HMR reloads.
-const g = globalThis as Record<string, unknown>;
+// globalThis.__argos_sweepManager is typed in src/app.d.ts.
 export const sweepManager: SweepManager =
-	(g['__argos_sweepManager'] as SweepManager) ??
-	((g['__argos_sweepManager'] = new SweepManager()) as SweepManager);
+	globalThis.__argos_sweepManager ?? (globalThis.__argos_sweepManager = new SweepManager());
 export function getSweepManager(): SweepManager {
 	return sweepManager;
 }

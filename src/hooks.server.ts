@@ -265,10 +265,10 @@ export const handleError: HandleServerError = ({ error, event }) => {
 };
 
 // Graceful shutdown -- guarded via globalThis to prevent listener accumulation on HMR
-const SHUTDOWN_KEY = '__argos_hooks_shutdown_registered';
+// globalThis.__argos_hooks_shutdown_registered is typed in src/app.d.ts.
 if (dev) {
-	if (typeof process !== 'undefined' && !(globalThis as Record<string, unknown>)[SHUTDOWN_KEY]) {
-		(globalThis as Record<string, unknown>)[SHUTDOWN_KEY] = true;
+	if (typeof process !== 'undefined' && !globalThis.__argos_hooks_shutdown_registered) {
+		globalThis.__argos_hooks_shutdown_registered = true;
 		process.on('SIGINT', () => {
 			logger.info('Shutting down WebSocket server...');
 			wsManager.destroy();

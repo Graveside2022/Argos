@@ -107,7 +107,7 @@ function extractSpectrumData(data: unknown): SpectrumData {
 }
 
 /** Unsubscribe all event listeners from sweep manager. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic listener pairs
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Node.js EventEmitter.off() requires ((...args: any[]) => void); unknown[] is incompatible due to contravariance
 function unsubscribeAll(pairs: [string, ((...args: any[]) => void) | null][]) {
 	for (const [event, fn] of pairs) {
 		if (fn) sweepManager.off(event, fn);

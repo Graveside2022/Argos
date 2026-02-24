@@ -128,13 +128,27 @@ function cleanupConnection(endpoint: string, ws: WebSocket): void {
 	}
 }
 
+/** Type guard: ensure parsed JSON has a string `type` field (minimum WebSocketMessage shape). */
+function isWebSocketMessage(value: unknown): value is WebSocketMessage {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		typeof (value as Record<string, unknown>).type === 'string'
+	);
+}
+
 /**
  * Route an incoming WebSocket message buffer to the appropriate endpoint
  * handler. Handles ping/pong heartbeats and JSON parse errors.
  */
 function handleIncomingMessage(endpoint: string, ws: WebSocket, data: Buffer): void {
 	try {
-		const message = JSON.parse(data.toString()) as WebSocketMessage;
+		const parsed: unknown = JSON.parse(data.toString());
+		if (!isWebSocketMessage(parsed)) {
+			ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
+			return;
+		}
+		const message = parsed;
 
 		if (message.type === 'ping') {
 			ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));

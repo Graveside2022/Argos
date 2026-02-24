@@ -9,15 +9,13 @@ import { logAuthEvent } from '$lib/server/security/auth-audit';
 import { RateLimiter } from '$lib/server/security/rate-limiter';
 
 // Singleton rate limiter (globalThis for HMR persistence) - Phase 2.2.5
-// Safe: globalThis typed as Record for dynamic property access
+// globalThis.__rateLimiter and __rateLimiterCleanup are typed in src/app.d.ts.
 export const rateLimiter =
-	((globalThis as Record<string, unknown>).__rateLimiter as RateLimiter) ?? new RateLimiter();
-// Safe: globalThis typed as Record for dynamic property assignment
-(globalThis as Record<string, unknown>).__rateLimiter = rateLimiter;
+	globalThis.__rateLimiter ?? (globalThis.__rateLimiter = new RateLimiter());
 
 // Cleanup interval (globalThis guard for HMR) - Phase 2.2.5
-if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
-	(globalThis as Record<string, unknown>).__rateLimiterCleanup = setInterval(
+if (!globalThis.__rateLimiterCleanup) {
+	globalThis.__rateLimiterCleanup = setInterval(
 		() => rateLimiter.cleanup(),
 		300_000 // 5 minutes
 	);
@@ -25,10 +23,9 @@ if (!(globalThis as Record<string, unknown>).__rateLimiterCleanup) {
 
 /** Stop the rate-limiter cleanup interval and remove the globalThis reference. */
 export function disposeRateLimiter(): void {
-	const interval = (globalThis as Record<string, unknown>).__rateLimiterCleanup;
-	if (interval !== undefined) {
-		clearInterval(interval as ReturnType<typeof setInterval>);
-		delete (globalThis as Record<string, unknown>).__rateLimiterCleanup;
+	if (globalThis.__rateLimiterCleanup !== undefined) {
+		clearInterval(globalThis.__rateLimiterCleanup);
+		globalThis.__rateLimiterCleanup = undefined;
 	}
 }
 

@@ -25,6 +25,24 @@ interface TowerRow {
 	averageSignal: number;
 }
 
+/** Raw cell record shape from OpenCellID getInArea API response. */
+interface OpenCellIDCell {
+	radio?: string;
+	mcc: number;
+	mnc: number;
+	lac: number;
+	/** Cell ID — may appear as cellid, cid, or cell depending on API version. */
+	cellid?: number;
+	cid?: number;
+	cell?: number;
+	lat: number;
+	lon: number;
+	range?: number;
+	samples?: number;
+	updated?: number;
+	averageSignalStrength?: number;
+}
+
 /** Coerce a falsy number to 0 */
 function n(val: number): number {
 	return val || 0;
@@ -77,49 +95,56 @@ function buildTiles(
 }
 
 /** Fetch a single OpenCellID tile, returning cell objects or empty array */
-async function fetchTile(tile: Tile): Promise<Record<string, unknown>[]> {
+async function fetchTile(tile: Tile): Promise<OpenCellIDCell[]> {
 	const apiUrl = `https://opencellid.org/cell/getInArea?key=${OPENCELLID_API_KEY}&BBOX=${tile.s},${tile.w},${tile.n},${tile.e}&format=json&limit=200`;
 	const res = await fetch(apiUrl, { signal: AbortSignal.timeout(10000) });
 	if (!res.ok) return [];
 	const data = await res.json();
-	return Array.isArray(data.cells) ? data.cells : [];
+	return Array.isArray(data.cells) ? (data.cells as OpenCellIDCell[]) : [];
 }
 
 /** Extract cell ID from a raw API cell object */
-function extractCellId(c: Record<string, unknown>): number {
-	return (c.cellid as number) || (c.cid as number) || (c.cell as number) || 0;
+function extractCellId(c: OpenCellIDCell): number {
+	return c.cellid || c.cid || c.cell || 0;
+}
+
+/** Extract optional numeric metadata fields from a raw API cell. */
+function extractCellMeta(
+	c: OpenCellIDCell
+): Pick<CellTower, 'range' | 'samples' | 'updated' | 'avgSignal'> {
+	return {
+		range: n(c.range ?? 0),
+		samples: n(c.samples ?? 0),
+		updated: n(c.updated ?? 0),
+		avgSignal: n(c.averageSignalStrength ?? 0)
+	};
 }
 
 /** Convert a raw OpenCellID API cell to a CellTower */
-function apiCellToTower(c: Record<string, unknown>, ci: number): CellTower {
+function apiCellToTower(c: OpenCellIDCell, ci: number): CellTower {
 	return {
-		radio: (c.radio as string) || 'Unknown',
-		mcc: c.mcc as number,
-		mnc: c.mnc as number,
-		lac: c.lac as number,
+		radio: c.radio || 'Unknown',
+		mcc: c.mcc,
+		mnc: c.mnc,
+		lac: c.lac,
 		ci,
-		lat: c.lat as number,
-		lon: c.lon as number,
-		range: n(c.range as number),
-		samples: n(c.samples as number),
-		updated: n(c.updated as number),
-		avgSignal: n(c.averageSignalStrength as number)
+		lat: c.lat,
+		lon: c.lon,
+		...extractCellMeta(c)
 	};
 }
 
 /** Extract fulfilled cell arrays, flattening into a single list */
 function flattenFulfilledCells(
-	tileResults: PromiseSettledResult<Record<string, unknown>[]>[]
-): Record<string, unknown>[] {
+	tileResults: PromiseSettledResult<OpenCellIDCell[]>[]
+): OpenCellIDCell[] {
 	return tileResults
-		.filter(
-			(r): r is PromiseFulfilledResult<Record<string, unknown>[]> => r.status === 'fulfilled'
-		)
+		.filter((r): r is PromiseFulfilledResult<OpenCellIDCell[]> => r.status === 'fulfilled')
 		.flatMap((r) => r.value);
 }
 
 /** Deduplicate cell records by MCC+MNC+LAC+CI */
-function deduplicateCells(cells: Record<string, unknown>[]): CellTower[] {
+function deduplicateCells(cells: OpenCellIDCell[]): CellTower[] {
 	const seen = new Set<string>();
 	const towers: CellTower[] = [];
 	for (const c of cells) {
@@ -133,9 +158,7 @@ function deduplicateCells(cells: Record<string, unknown>[]): CellTower[] {
 }
 
 /** Merge and deduplicate tile results by MCC+MNC+LAC+CI */
-function mergeTileResults(
-	tileResults: PromiseSettledResult<Record<string, unknown>[]>[]
-): CellTower[] {
+function mergeTileResults(tileResults: PromiseSettledResult<OpenCellIDCell[]>[]): CellTower[] {
 	return deduplicateCells(flattenFulfilledCells(tileResults));
 }
 

@@ -254,9 +254,9 @@ export function getRFDatabase(): RFDatabase {
 }
 
 // Guarded via globalThis to prevent listener accumulation on Vite HMR reloads.
-const DB_SHUTDOWN_KEY = '__argos_db_shutdown_registered';
-if (!(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY]) {
-	(globalThis as Record<string, unknown>)[DB_SHUTDOWN_KEY] = true;
+// globalThis.__argos_db_shutdown_registered is typed in src/app.d.ts.
+if (!globalThis.__argos_db_shutdown_registered) {
+	globalThis.__argos_db_shutdown_registered = true;
 
 	const shutdownDb = (signal: string) => {
 		logger.info(`${signal} received, closing database`, {}, 'database-shutdown');
