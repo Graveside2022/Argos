@@ -15,20 +15,14 @@ import {
 	layerVisibility
 } from '$lib/stores/dashboard/dashboard-store';
 import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
-import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 import { takCotMessages } from '$lib/stores/tak-store';
 import { themeStore } from '$lib/stores/theme-store.svelte';
 
-import { MAP_UI_COLORS, resolveMapColor } from './map/map-colors';
+import { MAP_UI_COLORS } from './map/map-colors';
+import { buildConnectionLinesGeoJSON, buildDeviceGeoJSON } from './map/map-geojson';
+import { createGpsDerivedState, hasRealGPSFix } from './map/map-gps-derived.svelte';
 import {
-	buildAccuracyGeoJSON,
-	buildConnectionLinesGeoJSON,
-	buildDetectionRangeGeoJSON,
-	buildDeviceGeoJSON
-} from './map/map-geojson';
-import {
-	buildRangeBands,
 	type CellTowerFetchState,
 	handleClusterClick as onClusterClick,
 	handleDeviceClick as deviceClickHandler,
@@ -46,24 +40,8 @@ import { setupMap } from './map/map-setup';
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
 
-/** Whether a heading value is a valid finite number */
-function isValidHeading(h: number | null | undefined): h is number {
-	return h !== null && h !== undefined && !isNaN(h);
-}
-
-/** Whether the speed indicates the device is moving */
-function isMoving(spd: number | null | undefined): boolean {
-	return spd !== null && spd !== undefined && spd > 0.5;
-}
-
-/** Whether a GPS position represents a real fix (non-zero coords with fix flag) */
-function hasRealGPSFix(lat: number, lon: number, hasFix: boolean): boolean {
-	return hasFix && lat !== 0 && lon !== 0;
-}
-
 /** Create all reactive map state and effects. Call once from the component. */
 export function createMapState() {
-	const gps$ = fromStore(gpsStore);
 	const kismet$ = fromStore(kismetStore);
 	const takCot$ = fromStore(takCotMessages);
 	const isolatedMAC$ = fromStore(isolatedDeviceMAC);
@@ -86,62 +64,13 @@ export function createMapState() {
 	let popupContent: PopupState | null = $state(null);
 	let towerPopupLngLat: LngLatLike | null = $state(null);
 	let towerPopupContent: TowerPopupState | null = $state(null);
-	// GPS memoization: skip expensive GeoJSON rebuilds when position hasn't changed
-	// Infinity ensures first real GPS fix always triggers a build (Infinity - x = Infinity > threshold)
-	let prevGpsLat = Infinity;
-	let prevGpsLon = Infinity;
-	let prevGpsAccuracy = Infinity;
-	let cachedAccuracyGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
-	// Detection range has independent tracking to avoid shared mutable state between $derived blocks
-	let prevDetLat = Infinity;
-	let prevDetLon = Infinity;
-	let cachedDetectionGeoJSON: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
-	const accuracyColor = $derived.by(() => {
-		const _p = themeStore.palette;
-		const _r = cssReady;
-		return resolveMapColor(MAP_UI_COLORS.primary);
+	const gpsDerived = createGpsDerivedState({
+		get current() {
+			return cssReady;
+		}
 	});
-	const RANGE_BANDS = $derived.by(() => {
-		const _p = themeStore.palette;
-		return buildRangeBands();
-	});
-	const gpsLngLat: LngLatLike | null = $derived.by(() => {
-		const { lat, lon } = gps$.current.position;
-		if (lat === 0 && lon === 0) return null;
-		return [lon, lat] as LngLatLike;
-	});
-	const headingDeg: number | null = $derived.by(() => {
-		const h = gps$.current.status.heading;
-		const spd = gps$.current.status.speed;
-		return isValidHeading(h) && isMoving(spd) ? h : null;
-	});
-	const showCone = $derived(headingDeg !== null);
-	const accuracyGeoJSON: FeatureCollection = $derived.by(() => {
-		const lat = gps$.current.position.lat;
-		const lon = gps$.current.position.lon;
-		const acc = gps$.current.status.accuracy ?? 0;
-		const latChanged = Math.abs(lat - prevGpsLat) > 0.00001;
-		const lonChanged = Math.abs(lon - prevGpsLon) > 0.00001;
-		const accChanged = Math.abs(acc - prevGpsAccuracy) > 0.1;
-		if (!latChanged && !lonChanged && !accChanged) return cachedAccuracyGeoJSON;
-		prevGpsLat = lat;
-		prevGpsLon = lon;
-		prevGpsAccuracy = acc;
-		cachedAccuracyGeoJSON = buildAccuracyGeoJSON(lat, lon, acc);
-		return cachedAccuracyGeoJSON;
-	});
-	const detectionRangeGeoJSON: FeatureCollection = $derived.by(() => {
-		const lat = gps$.current.position.lat;
-		const lon = gps$.current.position.lon;
-		const latChanged = Math.abs(lat - prevDetLat) > 0.00001;
-		const lonChanged = Math.abs(lon - prevDetLon) > 0.00001;
-		if (!latChanged && !lonChanged) return cachedDetectionGeoJSON;
-		prevDetLat = lat;
-		prevDetLon = lon;
-		cachedDetectionGeoJSON = buildDetectionRangeGeoJSON(lat, lon, RANGE_BANDS);
-		return cachedDetectionGeoJSON;
-	});
+
 	const deviceGeoJSON: FeatureCollection = $derived(
 		buildDeviceGeoJSON(
 			kismet$.current,
@@ -202,14 +131,14 @@ export function createMapState() {
 			);
 	});
 	$effect(() => {
-		const { lat, lon } = gps$.current.position;
+		const { lat, lon } = gpsDerived.gps$.current.position;
 		if (initialViewSet || !map) return;
-		if (!hasRealGPSFix(lat, lon, gps$.current.status.hasGPSFix)) return;
+		if (!hasRealGPSFix(lat, lon, gpsDerived.gps$.current.status.hasGPSFix)) return;
 		map.flyTo({ center: [lon, lat], zoom: 15 });
 		initialViewSet = true;
 	});
 	$effect(() => {
-		const { lat, lon } = gps$.current.position;
+		const { lat, lon } = gpsDerived.gps$.current.position;
 		maybeFetchCellTowers(lat, lon, towerFetchState).then((r) => {
 			if (r) cellTowerGeoJSON = r;
 		});
@@ -257,7 +186,8 @@ export function createMapState() {
 		else init();
 	}
 	function handleLocateClick() {
-		if (map && gpsLngLat) map.flyTo({ center: gpsLngLat as [number, number], zoom: 18 });
+		if (map && gpsDerived.gpsLngLat)
+			map.flyTo({ center: gpsDerived.gpsLngLat as [number, number], zoom: 18 });
 	}
 	function handleDeviceCircleClick(ev: maplibregl.MapMouseEvent) {
 		if (map) applyDeviceClick(map, ev);
@@ -302,13 +232,13 @@ export function createMapState() {
 			return towerPopupContent;
 		},
 		get accuracyColor() {
-			return accuracyColor;
+			return gpsDerived.accuracyColor;
 		},
 		get accuracyGeoJSON() {
-			return accuracyGeoJSON;
+			return gpsDerived.accuracyGeoJSON;
 		},
 		get detectionRangeGeoJSON() {
-			return detectionRangeGeoJSON;
+			return gpsDerived.detectionRangeGeoJSON;
 		},
 		get deviceGeoJSON() {
 			return deviceGeoJSON;
@@ -317,13 +247,13 @@ export function createMapState() {
 			return connectionLinesGeoJSON;
 		},
 		get gpsLngLat() {
-			return gpsLngLat;
+			return gpsDerived.gpsLngLat;
 		},
 		get headingDeg() {
-			return headingDeg;
+			return gpsDerived.headingDeg;
 		},
 		get showCone() {
-			return showCone;
+			return gpsDerived.showCone;
 		},
 		handleMapLoad,
 		handleLocateClick,
