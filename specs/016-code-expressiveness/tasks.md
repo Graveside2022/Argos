@@ -311,11 +311,11 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Purpose**: Address audit findings C2, C3, D1 that span multiple user stories.
 
-- [ ] T058 [P] Declare `globalThis` types in `src/app.d.ts` for all `globalThis['__argos_*']` singleton augmentations (C2 fix from audit). Reference existing singletons: SweepManager, WebSocketManager, RateLimiter, RFDatabase. FR-036, SC-032.
-- [ ] T059 [P] Add runtime validation to unguarded `JSON.parse()` calls at trust boundaries (C3 fix from audit) — use `safeParseWithHandling` or `safeJsonParse` where external data enters the system (WebSocket messages, SSE events, GPS NMEA data). FR-037, SC-033.
-- [ ] T060 Fix swallowed errors in `src/lib/components/dashboard/panels/OverviewPanel.svelte` (D1 fix from audit) — ensure all error paths log via `console.error()` and surface user-visible feedback via toast or status indicator. FR-038, SC-034.
-- [ ] T085 [P] Define typed interfaces for all external API response shapes: `KismetRawDevice` (for `kismet/devices/+server.ts`), `OpenCelliDResponse` (for `cell-tower-service.ts`), `GpsdResponse` (for `gps-satellite-service.ts`), `OpenMeteoResponse` (for `status-bar-data.ts`). Place in appropriate `types/` files near consumers. Migrate ~100+ unsafe `as string`/`as number` casts to use typed interfaces. FR-035, SC-031, audit findings C1/C4/C5.
-- [ ] T086 [P] Audit and resolve remaining 4 `eslint-disable` directives: `hackrf/data-stream/+server.ts:110`, `symbol-factory.ts:56`, `validation-error.ts:47`, `dynamic-server.ts:14`. For each: either fix the underlying type issue or add inline comment documenting why suppression is necessary. FR-039, SC-035, audit finding D2.
+- [x] T058 [P] Declare `globalThis` types in `src/app.d.ts` for all `globalThis['__argos_*']` singleton augmentations (C2 fix from audit). Reference existing singletons: SweepManager, WebSocketManager, RateLimiter, RFDatabase. FR-036, SC-032.
+- [x] T059 [P] Add runtime validation to unguarded `JSON.parse()` calls at trust boundaries (C3 fix from audit) — use `safeParseWithHandling` or `safeJsonParse` where external data enters the system (WebSocket messages, SSE events, GPS NMEA data). FR-037, SC-033.
+- [x] T060 Fix swallowed errors in `src/lib/components/dashboard/panels/OverviewPanel.svelte` (D1 fix from audit) — ensure all error paths log via `console.error()` and surface user-visible feedback via toast or status indicator. FR-038, SC-034.
+- [x] T085 [P] Define typed interfaces for all external API response shapes: `OpenCellIDCell` (for `cell-tower-service.ts`), `GpsdSatelliteEntry` (for `gps-satellite-service.ts` — extracted from Zod schema), `OpenMeteoCurrentWeather` (for `status-bar-data.ts`). Migrate unsafe `as string`/`as number` casts to use typed interfaces. FR-035, SC-031, audit findings C1/C4/C5.
+- [x] T086 [P] Audit and resolve 3 `eslint-disable` directives: `hackrf/data-stream/+server.ts:110` (justified — Node.js EventEmitter constraint, comment updated), `symbol-factory.ts:56` (fixed — `MilStdRenderer` type derived from module), `validation-error.ts:47` (fixed — `(issue: ZodIssue)` with code-narrowing). `dynamic-server.ts:14` was already gone. FR-039, SC-035, audit finding D2.
 
 **Checkpoint**: `npm run build` succeeds. No swallowed errors. Typed globals.
 

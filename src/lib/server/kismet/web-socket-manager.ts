@@ -66,20 +66,16 @@ export class WebSocketManager extends EventEmitter {
 	 * reloads. Without this, each HMR re-evaluation creates a new singleton
 	 * with a new 60s cache cleanup interval, orphaning the old instance.
 	 */
-	private static readonly INSTANCE_KEY = '__argos_wsManager';
+	// globalThis.__argos_wsManager is typed in src/app.d.ts.
 	static getInstance(): WebSocketManager {
-		// Safe: globalThis typed as Record for HMR singleton persistence
-		const existing = (globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] as
-			| WebSocketManager
-			| undefined;
+		const existing = globalThis.__argos_wsManager;
 		if (existing) {
 			this.instance = existing;
 			return existing;
 		}
 		if (!this.instance) {
 			this.instance = new WebSocketManager();
-			// Safe: globalThis typed as Record for HMR singleton assignment
-			(globalThis as Record<string, unknown>)[WebSocketManager.INSTANCE_KEY] = this.instance;
+			globalThis.__argos_wsManager = this.instance;
 		}
 		return this.instance;
 	}
@@ -115,8 +111,17 @@ export class WebSocketManager extends EventEmitter {
 		});
 		ws.on('message', (data: Buffer) => {
 			try {
-				const message = JSON.parse(data.toString()) as ClientMessage;
-				this.handleClientMessage(ws, message);
+				const parsed: unknown = JSON.parse(data.toString());
+				// Validate minimum shape before treating as ClientMessage
+				if (
+					typeof parsed !== 'object' ||
+					parsed === null ||
+					typeof (parsed as Record<string, unknown>).type !== 'string'
+				) {
+					logger.error('Invalid client message shape (missing type field)', {});
+					return;
+				}
+				this.handleClientMessage(ws, parsed as ClientMessage);
 			} catch (error) {
 				logger.error('Error parsing client message:', { error });
 			}

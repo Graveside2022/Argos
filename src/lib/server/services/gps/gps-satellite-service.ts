@@ -14,25 +14,26 @@ import {
 import { queryGpsd } from './gps-socket';
 
 // Zod schema for gpsd SKY message with full satellite data
+const GpsdSatelliteEntrySchema = z
+	.object({
+		PRN: z.number(),
+		gnssid: z.number(),
+		ss: z.number(), // Signal strength (SNR in dB)
+		el: z.number(), // Elevation
+		az: z.number(), // Azimuth
+		used: z.boolean()
+	})
+	.passthrough();
+
 const GpsdSkySchema = z
 	.object({
 		class: z.string(),
-		satellites: z
-			.array(
-				z
-					.object({
-						PRN: z.number(),
-						gnssid: z.number(),
-						ss: z.number(), // Signal strength (SNR in dB)
-						el: z.number(), // Elevation
-						az: z.number(), // Azimuth
-						used: z.boolean()
-					})
-					.passthrough()
-			)
-			.optional()
+		satellites: z.array(GpsdSatelliteEntrySchema).optional()
 	})
 	.passthrough();
+
+/** Typed gpsd satellite entry from gpsd SKY message. */
+type GpsdSatelliteEntry = z.infer<typeof GpsdSatelliteEntrySchema>;
 
 /** gnssid → constellation lookup (0=GPS, 1=SBAS→GPS, 2=Galileo, 3=BeiDou, 6=GLONASS) */
 const CONSTELLATION_MAP: Record<number, Satellite['constellation']> = {
@@ -49,29 +50,28 @@ function mapConstellation(gnssid: number): Satellite['constellation'] {
 }
 
 /** Validate that data is a SKY-class gpsd object with a satellites array */
-function asSkyWithSatellites(data: unknown): Record<string, unknown>[] | null {
+function asSkyWithSatellites(data: unknown): unknown[] | null {
 	if (typeof data !== 'object' || data === null) return null;
 	const obj = data as Record<string, unknown>;
 	if (obj.class !== 'SKY' || !Array.isArray(obj.satellites)) return null;
-	return obj.satellites as Record<string, unknown>[];
+	return obj.satellites;
 }
 
-/** Type guard: satellite entry has required numeric PRN and gnssid fields */
-function isValidSatEntry(sat: unknown): sat is Record<string, unknown> {
-	if (typeof sat !== 'object' || sat === null) return false;
-	const rec = sat as Record<string, unknown>;
-	return typeof rec.PRN === 'number' && typeof rec.gnssid === 'number';
+/** Type guard: satellite entry matches GpsdSatelliteEntry shape */
+function isValidSatEntry(sat: unknown): sat is GpsdSatelliteEntry {
+	const result = GpsdSatelliteEntrySchema.safeParse(sat);
+	return result.success;
 }
 
-/** Map a raw satellite record to a typed Satellite object */
-function toSatellite(sat: Record<string, unknown>): Satellite {
+/** Map a typed gpsd satellite entry to a Satellite object */
+function toSatellite(sat: GpsdSatelliteEntry): Satellite {
 	return {
-		prn: sat.PRN as number,
-		constellation: mapConstellation(sat.gnssid as number),
-		snr: (sat.ss as number) || 0,
-		elevation: (sat.el as number) || 0,
-		azimuth: (sat.az as number) || 0,
-		used: (sat.used as boolean) || false
+		prn: sat.PRN,
+		constellation: mapConstellation(sat.gnssid),
+		snr: sat.ss || 0,
+		elevation: sat.el || 0,
+		azimuth: sat.az || 0,
+		used: sat.used || false
 	};
 }
 

@@ -37,8 +37,8 @@
 		try {
 			const res = await fetch('/api/system/info');
 			if (res.ok) systemInfo = await res.json();
-		} catch (_error: unknown) {
-			/* silent */
+		} catch (error: unknown) {
+			console.error('[OverviewPanel] Failed to fetch system info:', error);
 		}
 	}
 
@@ -46,8 +46,8 @@
 		try {
 			const res = await fetch('/api/hardware/status');
 			if (res.ok) hardwareStatus = await res.json();
-		} catch (_error: unknown) {
-			/* silent */
+		} catch (error: unknown) {
+			console.error('[OverviewPanel] Failed to fetch hardware status:', error);
 		}
 	}
 
@@ -55,8 +55,8 @@
 		try {
 			const res = await fetch('/api/hardware/details');
 			if (res.ok) hardwareDetails = await res.json();
-		} catch (_error: unknown) {
-			/* silent */
+		} catch (error: unknown) {
+			console.error('[OverviewPanel] Failed to fetch hardware details:', error);
 		}
 	}
 

@@ -91,18 +91,32 @@ export async function fetchHardwareDetails(): Promise<HardwareDetailsResult | nu
 	}
 }
 
+/** Open-Meteo /v1/forecast current_weather response shape (relevant fields only). */
+interface OpenMeteoCurrentWeather {
+	error?: boolean;
+	temperature_2m: number;
+	apparent_temperature: number;
+	relative_humidity_2m: number;
+	wind_speed_10m: number;
+	wind_gusts_10m: number;
+	precipitation: number;
+	pressure_msl: number;
+	weather_code: number;
+	is_day: number;
+}
+
 /** Map API weather response to WeatherData, returning null on error responses. */
-function mapWeatherResponse(data: Record<string, unknown>): WeatherData | null {
+function mapWeatherResponse(data: OpenMeteoCurrentWeather): WeatherData | null {
 	if (data.error) return null;
 	return {
-		temperature: data.temperature_2m as number,
-		apparentTemperature: data.apparent_temperature as number,
-		humidity: data.relative_humidity_2m as number,
-		windSpeed: data.wind_speed_10m as number,
-		windGusts: data.wind_gusts_10m as number,
-		precipitation: data.precipitation as number,
-		pressure: data.pressure_msl as number,
-		weatherCode: data.weather_code as number,
+		temperature: data.temperature_2m,
+		apparentTemperature: data.apparent_temperature,
+		humidity: data.relative_humidity_2m,
+		windSpeed: data.wind_speed_10m,
+		windGusts: data.wind_gusts_10m,
+		precipitation: data.precipitation,
+		pressure: data.pressure_msl,
+		weatherCode: data.weather_code,
 		isDay: data.is_day === 1
 	};
 }
@@ -130,7 +144,7 @@ export async function fetchWeather(
 	try {
 		const res = await fetch(`/api/weather/current?lat=${lat}&lon=${lon}`);
 		if (!res.ok) return null;
-		const data = await res.json();
+		const data = (await res.json()) as OpenMeteoCurrentWeather;
 		return mapWeatherResponse(data);
 	} catch {
 		return null;
