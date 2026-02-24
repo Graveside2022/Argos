@@ -5,7 +5,7 @@
 
 import { errMsg } from '$lib/server/api/error-utils';
 import type { SpectrumData } from '$lib/server/hackrf/types';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 export interface ParsedLine {
 	data: SpectrumData | null;
@@ -55,7 +55,7 @@ function tryParseLine(trimmedLine: string): ParsedLine {
 	}
 
 	if (trimmedLine.includes(',') && trimmedLine.length > 50) {
-		logInfo('[SEARCH] POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
+		logger.info('[SEARCH] POTENTIAL DATA LINE:', { preview: trimmedLine.substring(0, 200) });
 	}
 
 	const spectrumData = parseSpectrumData(trimmedLine);
@@ -71,7 +71,7 @@ export function parseLine(line: string, maxLineLength: number): ParsedLine {
 	const trimmedLine = line.trim();
 
 	if (trimmedLine.length > maxLineLength) {
-		logWarn('Line too long, truncating', {
+		logger.warn('Line too long, truncating', {
 			length: trimmedLine.length,
 			maxLength: maxLineLength
 		});
@@ -181,7 +181,7 @@ export function parseSpectrumData(line: string): SpectrumData | null {
 		if (parts.length < 7) return null;
 		return tryParseSpectrumData(parts);
 	} catch (error) {
-		logError('Error parsing spectrum data', {
+		logger.error('Error parsing spectrum data', {
 			error: errMsg(error),
 			line: line.substring(0, 100) + (line.length > 100 ? '...' : '')
 		});

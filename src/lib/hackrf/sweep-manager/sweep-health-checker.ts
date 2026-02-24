@@ -10,7 +10,7 @@ import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { errMsg } from '$lib/server/api/error-utils';
 import { delay } from '$lib/utils/delay';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 export interface CyclingHealth {
 	status: string;
@@ -49,7 +49,7 @@ function logHealthCheckState(ctx: HealthCheckContext, processState: ProcessState
 	const cycleState = ctx.frequencyCycler.getCycleState();
 	const recoveryStatus = ctx.errorTracker.getRecoveryStatus();
 
-	logInfo('[HEALTH] Health check:', {
+	logger.info('[HEALTH] Health check:', {
 		isRunning: ctx.isRunning,
 		hasSweepProcess: processState.isRunning,
 		pid: processState.actualProcessPid,
@@ -67,14 +67,14 @@ function logHealthCheckState(ctx: HealthCheckContext, processState: ProcessState
 async function logMemoryStatus(): Promise<void> {
 	try {
 		const memInfo = await checkSystemMemory();
-		logInfo(
+		logger.info(
 			`[MEM] Memory: ${memInfo.availablePercent}% available (${memInfo.availableMB}MB / ${memInfo.totalMB}MB)`
 		);
 		if (memInfo.availablePercent < 10) {
-			logWarn(`[WARN] Low memory: ${memInfo.availablePercent}% available`);
+			logger.warn(`[WARN] Low memory: ${memInfo.availablePercent}% available`);
 		}
 	} catch (e) {
-		logError('Failed to check memory:', { error: errMsg(e) });
+		logger.error('Failed to check memory:', { error: errMsg(e) });
 	}
 }
 
@@ -85,7 +85,7 @@ function checkDataStaleness(
 ): { needsRecovery: boolean; reason: string } {
 	if (lastDataReceived) {
 		const timeSinceData = now - lastDataReceived.getTime();
-		logInfo(`[STATUS] Time since last data: ${Math.round(timeSinceData / 1000)}s`);
+		logger.info(`[STATUS] Time since last data: ${Math.round(timeSinceData / 1000)}s`);
 		if (timeSinceData > 7200000) {
 			return { needsRecovery: true, reason: 'No data received for 2 hours' };
 		}
@@ -93,7 +93,7 @@ function checkDataStaleness(
 	}
 	if (processStartTime && now - processStartTime > 60000) {
 		const runTime = Math.round((now - processStartTime) / 1000);
-		logWarn(`[TIMER] Process running for ${runTime}s with no data`);
+		logger.warn(`[TIMER] Process running for ${runTime}s with no data`);
 		return { needsRecovery: true, reason: 'No initial data received' };
 	}
 	return { needsRecovery: false, reason: '' };
@@ -106,7 +106,7 @@ function checkProcessLiveness(
 	if (!processState.isRunning || !processState.actualProcessPid) return null;
 	const isAlive = ctx.processManager.isProcessAlive(processState.actualProcessPid);
 	if (isAlive) {
-		logInfo(`[OK] Process ${processState.actualProcessPid} is still alive`);
+		logger.info(`[OK] Process ${processState.actualProcessPid} is still alive`);
 		return null;
 	}
 	return 'Process no longer exists';
@@ -132,7 +132,7 @@ async function applyHealthResult(
 	reason: string
 ): Promise<void> {
 	if (needsRecovery) {
-		logWarn(`[WARN] Health check failed: ${reason}`);
+		logger.warn(`[WARN] Health check failed: ${reason}`);
 		ctx.cyclingHealth.processHealth = 'unhealthy';
 		await performRecovery(ctx, reason);
 	} else if (ctx.cyclingHealth.lastDataReceived) {
@@ -149,7 +149,7 @@ export async function performHealthCheck(ctx: HealthCheckContext): Promise<void>
 	const processState = ctx.processManager.getProcessState();
 	if (isHealthCheckSkippable(ctx, processState.isRunning)) {
 		if (ctx.cyclingHealth.recovery.isRecovering) {
-			logInfo('[WAIT] Already in recovery, skipping health check');
+			logger.info('[WAIT] Already in recovery, skipping health check');
 		}
 		return;
 	}
@@ -165,10 +165,10 @@ export async function performHealthCheck(ctx: HealthCheckContext): Promise<void>
 export async function performRecovery(ctx: HealthCheckContext, reason: string): Promise<void> {
 	const recoveryStatus = ctx.errorTracker.getRecoveryStatus();
 
-	logInfo('Recovery triggered via ErrorTracker', { reason, recoveryStatus });
+	logger.info('Recovery triggered via ErrorTracker', { reason, recoveryStatus });
 
 	if (!ctx.errorTracker.shouldAttemptRecovery()) {
-		logError('ErrorTracker recommends stopping recovery attempts');
+		logger.error('ErrorTracker recommends stopping recovery attempts');
 		ctx.emitError('Max recovery attempts reached', 'recovery_failed');
 		await ctx.stopSweep();
 		return;
@@ -192,13 +192,13 @@ export async function performRecovery(ctx: HealthCheckContext, reason: string): 
 		if (cycleState.currentFrequency && ctx.isRunning) {
 			await ctx.startSweepProcess(cycleState.currentFrequency);
 			ctx.errorTracker.recordSuccess();
-			logInfo('Recovery completed via services');
+			logger.info('Recovery completed via services');
 			ctx.emitEvent('recovery_complete', { reason });
 		}
 	} catch (error: unknown) {
 		const err = error as Error;
 		ctx.errorTracker.recordError(err, { operation: 'recovery' });
-		logError('Recovery failed', { error: err, reason });
+		logger.error('Recovery failed', { error: err, reason });
 		ctx.emitError(`Recovery failed: ${err.message}`, 'recovery_error');
 		await ctx.stopSweep();
 	} finally {
@@ -263,7 +263,7 @@ function killOrphanSweepProcesses(excludePgid: number): Promise<void> {
 
 /** Force cleanup of any lingering hackrf_sweep, hackrf_info, sweep_bridge processes */
 export async function forceCleanupExistingProcesses(processManager: ProcessManager): Promise<void> {
-	logInfo('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
+	logger.info('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
 
 	try {
 		const processState = processManager.getProcessState();
@@ -278,8 +278,8 @@ export async function forceCleanupExistingProcesses(processManager: ProcessManag
 		await pkillAsync(['-9', '-f', 'sweep_bridge.py']);
 
 		await delay(1000);
-		logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
+		logger.info('Cleanup complete', {}, 'hackrf-cleanup-complete');
 	} catch (error) {
-		logError('Cleanup failed', { error }, 'hackrf-cleanup-failed');
+		logger.error('Cleanup failed', { error }, 'hackrf-cleanup-failed');
 	}
 }

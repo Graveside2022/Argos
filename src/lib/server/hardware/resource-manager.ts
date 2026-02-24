@@ -11,13 +11,21 @@ import { HardwareDevice, type HardwareStatus, type ResourceState } from './types
 class ResourceManager extends EventEmitter {
 	private state: Map<HardwareDevice, ResourceState> = new Map();
 	private mutex: Map<HardwareDevice, boolean> = new Map();
+	private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
 	constructor() {
 		super();
 		this.initializeState();
 		scanForOrphans(this.state);
 		// Re-scan periodically to keep isDetected status fresh
-		setInterval(() => this.refreshDetection(), 30000);
+		this.refreshInterval = setInterval(() => this.refreshDetection(), 30000);
+	}
+
+	dispose(): void {
+		if (this.refreshInterval !== null) {
+			clearInterval(this.refreshInterval);
+			this.refreshInterval = null;
+		}
 	}
 
 	private initializeState(): void {

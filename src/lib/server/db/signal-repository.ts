@@ -9,7 +9,7 @@ import type Database from 'better-sqlite3';
 import { DbSignalSchema } from '$lib/schemas/database';
 import { errMsg } from '$lib/server/api/error-utils';
 import type { SignalMarker } from '$lib/types/signals';
-import { logError } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import { ensureDeviceExists, updateDeviceFromSignal } from './device-service';
@@ -100,7 +100,7 @@ function validateSignalBatch(dbSignals: DbSignal[]): DbSignal[] {
 		const validated = safeParseWithHandling(DbSignalSchema, dbSignal, 'background');
 		if (validated) acc.push(validated);
 		else
-			logError(
+			logger.error(
 				'Invalid signal data in batch, skipping',
 				{ signal_id: dbSignal.signal_id },
 				'signal-validation-failed'
@@ -127,7 +127,7 @@ function tryInsertSignal(stmt: Database.Statement, signal: DbSignal): boolean {
 		return true;
 	} catch (err) {
 		if (!isUniqueConstraintError(err)) {
-			logError(
+			logger.error(
 				'Failed to insert signal',
 				{ signalId: signal.signal_id, error: errMsg(err) },
 				'signal-insert-failed'
@@ -151,7 +151,7 @@ export function insertSignalsBatch(
 
 	const validatedSignals = validateSignalBatch(signals.map(signalMarkerToDbSignal));
 	if (validatedSignals.length === 0) {
-		logError('All signals in batch failed validation', {}, 'batch-validation-failed');
+		logger.error('All signals in batch failed validation', {}, 'batch-validation-failed');
 		return 0;
 	}
 
@@ -168,7 +168,7 @@ export function insertSignalsBatch(
 		)();
 		return successCount;
 	} catch (error) {
-		logError('Batch insert transaction failed', { error }, 'batch-insert-failed');
+		logger.error('Batch insert transaction failed', { error }, 'batch-insert-failed');
 		throw error;
 	}
 }
@@ -211,7 +211,7 @@ function validateSignalRows(rawRows: unknown[]): DbSignal[] {
 		const validated = safeParseWithHandling(DbSignalSchema, row, 'background');
 		if (validated) acc.push(validated);
 		else
-			logError(
+			logger.error(
 				'Invalid signal data returned from database query',
 				{ row },
 				'signal-query-validation-failed'

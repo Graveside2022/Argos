@@ -69,10 +69,17 @@ export async function forceKillGsmProcesses(): Promise<void> {
 	await delay(500);
 }
 
+/** Type guard for objects with a signal property */
+const hasSignal = (err: unknown): err is { signal: string } =>
+	typeof err === 'object' &&
+	err !== null &&
+	'signal' in err &&
+	typeof (err as Record<string, unknown>).signal === 'string';
+
 /** Build a GsmEvilStopResult from a stop error, distinguishing timeouts */
 export function buildStopErrorResult(error: unknown): GsmEvilStopResult {
 	const isTimeout =
-		(error as { signal?: string }).signal === 'SIGTERM' || errMsg(error).includes('timeout');
+		(hasSignal(error) && error.signal === 'SIGTERM') || errMsg(error).includes('timeout');
 
 	if (isTimeout) {
 		return {

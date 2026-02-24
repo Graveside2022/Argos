@@ -60,6 +60,7 @@ class Logger {
 	private isDevelopment: boolean;
 	private logToConsole: boolean = true;
 	private rateLimits: Map<string, { count: number; resetTime: number }> = new Map();
+	private rateLimitCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 	private constructor() {
 		this.buffer = new CircularLogBuffer(1000);
@@ -71,7 +72,7 @@ class Logger {
 		}
 
 		// Periodically clean up rate limit map
-		setInterval(() => {
+		this.rateLimitCleanupInterval = setInterval(() => {
 			const now = Date.now();
 			for (const [key, limit] of this.rateLimits.entries()) {
 				if (limit.resetTime < now) {
@@ -79,6 +80,13 @@ class Logger {
 				}
 			}
 		}, 60000); // Every minute
+	}
+
+	dispose(): void {
+		if (this.rateLimitCleanupInterval !== null) {
+			clearInterval(this.rateLimitCleanupInterval);
+			this.rateLimitCleanupInterval = null;
+		}
 	}
 
 	static getInstance(): Logger {
@@ -194,16 +202,3 @@ class Logger {
 
 // Export singleton instance
 export const logger = Logger.getInstance();
-
-// Export convenience functions
-export const logError = (message: string, context?: Record<string, unknown>, rateKey?: string) =>
-	logger.error(message, context, rateKey);
-
-export const logWarn = (message: string, context?: Record<string, unknown>, rateKey?: string) =>
-	logger.warn(message, context, rateKey);
-
-export const logInfo = (message: string, context?: Record<string, unknown>, rateKey?: string) =>
-	logger.info(message, context, rateKey);
-
-export const logDebug = (message: string, context?: Record<string, unknown>, rateKey?: string) =>
-	logger.debug(message, context, rateKey);

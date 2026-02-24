@@ -1,3 +1,4 @@
+import type { ExecFileException } from 'child_process';
 import { execFile } from 'child_process';
 
 import type { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
@@ -6,7 +7,8 @@ import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler
 import { convertToMHz } from '$lib/hackrf/sweep-manager/frequency-utils';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { isCriticalError } from '$lib/hackrf/sweep-manager/sweep-utils';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { normalizeError } from '$lib/server/api/error-utils';
+import { logger } from '$lib/utils/logger';
 
 import type { SpectrumData } from './types';
 
@@ -61,8 +63,8 @@ export async function startSweepProcess(
 			'-n'
 		];
 
-		logInfo(`[START] Starting hackrf_sweep for ${centerFreqMHz} MHz`);
-		logInfo(`[INFO] Command: hackrf_sweep ${args.join(' ')}`);
+		logger.info(`[START] Starting hackrf_sweep for ${centerFreqMHz} MHz`);
+		logger.info(`[INFO] Command: hackrf_sweep ${args.join(' ')}`);
 
 		ctx.bufferManager.clearBuffer();
 
@@ -71,7 +73,7 @@ export async function startSweepProcess(
 				if (parsedLine.isValid && parsedLine.data) {
 					onSpectrumData(parsedLine.data, frequency);
 				} else if (parsedLine.parseError) {
-					logWarn(
+					logger.warn(
 						'Failed to parse spectrum line',
 						{
 							error: parsedLine.parseError,
@@ -85,7 +87,7 @@ export async function startSweepProcess(
 
 		const handleStderr = (data: Buffer) => {
 			const message = data.toString().trim();
-			logWarn('Process stderr', { message });
+			logger.warn('Process stderr', { message });
 			if (isCriticalError(message)) {
 				ctx.errorTracker.recordError(message, {
 					frequency: frequency.value,
@@ -98,7 +100,7 @@ export async function startSweepProcess(
 			onStdout: handleStdout,
 			onStderr: handleStderr,
 			onExit: (code: number | null, signal: string | null) => {
-				logInfo('Process exited', { code, signal });
+				logger.info('Process exited', { code, signal });
 				onProcessExit(code, signal);
 			}
 		});
@@ -109,16 +111,16 @@ export async function startSweepProcess(
 			startupTimeoutMs: 5000
 		});
 
-		logInfo('[OK] HackRF sweep process started successfully', {
+		logger.info('[OK] HackRF sweep process started successfully', {
 			centerFreq: `${frequency.value} ${frequency.unit}`,
 			range: `${freqMinMHz} - ${freqMaxMHz} MHz`
 		});
 	} catch (error) {
-		const analysis = ctx.errorTracker.recordError(error as Error, {
+		const analysis = ctx.errorTracker.recordError(normalizeError(error), {
 			frequency: frequency.value,
 			operation: 'start_process'
 		});
-		logError('Failed to start sweep process', {
+		logger.error('Failed to start sweep process', {
 			error: error instanceof Error ? error.message : String(error),
 			analysis
 		});
@@ -144,7 +146,7 @@ export function handleSpectrumData(
 	try {
 		const validation = ctx.bufferManager.validateSpectrumData(data);
 		if (!validation.isValid) {
-			logWarn(
+			logger.warn(
 				'Invalid spectrum data received',
 				{ issues: validation.issues },
 				'invalid-spectrum'
@@ -158,7 +160,7 @@ export function handleSpectrumData(
 			ctx.emitEvent('status_change', { status: 'running' });
 		}
 	} catch (error) {
-		logError('Error handling spectrum data', {
+		logger.error('Error handling spectrum data', {
 			error: error instanceof Error ? error.message : String(error)
 		});
 	}
@@ -177,7 +179,7 @@ export function handleProcessExit(
 		{ operation: 'process_exit' }
 	);
 
-	logInfo('Process exit handled by services', {
+	logger.info('Process exit handled by services', {
 		code,
 		signal,
 		analysis: exitAnalysis,
@@ -210,7 +212,7 @@ export async function handleSweepError(
 		operation: 'sweep_error'
 	});
 
-	logError('Sweep error analyzed by ErrorTracker', {
+	logger.error('Sweep error analyzed by ErrorTracker', {
 		error: error.message,
 		frequency,
 		analysis: errorAnalysis
@@ -218,13 +220,13 @@ export async function handleSweepError(
 
 	if (ctx.errorTracker.shouldBlacklistFrequency(frequency.value)) {
 		ctx.frequencyCycler.blacklistFrequency(frequency);
-		logWarn('Frequency blacklisted by ErrorTracker', { frequency });
+		logger.warn('Frequency blacklisted by ErrorTracker', { frequency });
 	}
 
 	ctx.emitError(error.message, 'sweep_error', error);
 
 	if (ctx.errorTracker.hasMaxConsecutiveErrors() || ctx.errorTracker.hasMaxFailuresPerMinute()) {
-		logError('ErrorTracker recommends stopping sweep', {
+		logger.error('ErrorTracker recommends stopping sweep', {
 			analysis: errorAnalysis,
 			recommendedAction: errorAnalysis.recommendedAction
 		});
@@ -239,7 +241,7 @@ interface HackrfAvailabilityResult {
 }
 
 /** Classify hackrf_info error into a user-friendly result. */
-function classifyHackrfError(error: Error & { code?: number }): HackrfAvailabilityResult {
+function classifyHackrfError(error: ExecFileException): HackrfAvailabilityResult {
 	const reason =
 		error.code === 124 ? 'Device check timeout' : `Device check failed: ${error.message}`;
 	return { available: false, reason };
@@ -262,11 +264,7 @@ function classifyHackrfOutput(stdout: string, stderr: string): HackrfAvailabilit
 export function testHackrfAvailability(): Promise<HackrfAvailabilityResult> {
 	return new Promise((resolve) => {
 		execFile('/usr/bin/timeout', ['3', 'hackrf_info'], (error, stdout, stderr) => {
-			resolve(
-				error
-					? classifyHackrfError(error as Error & { code?: number })
-					: classifyHackrfOutput(stdout, stderr)
-			);
+			resolve(error ? classifyHackrfError(error) : classifyHackrfOutput(stdout, stderr));
 		});
 	});
 }

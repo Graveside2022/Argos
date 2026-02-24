@@ -1,4 +1,4 @@
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import {
 	analyzeError,
@@ -53,7 +53,7 @@ export class ErrorTracker {
 	constructor(config: RecoveryConfig = {}) {
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
 
-		logInfo('[SEARCH] ErrorTracker initialized', {
+		logger.info('[SEARCH] ErrorTracker initialized', {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
 			maxRecoveryAttempts: this.recoveryConfig.maxRecoveryAttempts
@@ -69,7 +69,7 @@ export class ErrorTracker {
 		this.deviceState.recoveryState = 'none';
 		this.recoveryAttempts = 0;
 		this.isRecovering = false;
-		logInfo('[OK] Operation successful - error counters reset');
+		logger.info('[OK] Operation successful - error counters reset');
 	}
 
 	private trackFrequencyError(frequency: number | undefined): void {
@@ -109,7 +109,7 @@ export class ErrorTracker {
 
 		this.applyAnalysisToState(analysis);
 
-		logError('[ERROR] Error recorded and analyzed', {
+		logger.error('[ERROR] Error recorded and analyzed', {
 			error: errorMessage,
 			context,
 			analysis,
@@ -180,7 +180,7 @@ export class ErrorTracker {
 				? 'escalating'
 				: 'retrying';
 
-		logWarn('[RETRY] Recovery process started', {
+		logger.warn('[RETRY] Recovery process started', {
 			attempt: this.recoveryAttempts,
 			maxAttempts: this.recoveryConfig.maxRecoveryAttempts,
 			deviceStatus: this.deviceState.status,
@@ -194,10 +194,10 @@ export class ErrorTracker {
 
 		if (successful) {
 			this.recordSuccess();
-			logInfo('[OK] Recovery completed successfully');
+			logger.info('[OK] Recovery completed successfully');
 		} else {
 			this.deviceState.recoveryState = 'cooling_down';
-			logWarn('[ERROR] Recovery attempt failed', {
+			logger.warn('[ERROR] Recovery attempt failed', {
 				attempt: this.recoveryAttempts,
 				nextAction:
 					this.recoveryAttempts >= (this.recoveryConfig.maxRecoveryAttempts || 3)
@@ -265,7 +265,7 @@ export class ErrorTracker {
 	/** Reset frequency error tracking for specific frequency */
 	resetFrequencyErrors(frequency: number): void {
 		this.errorState.frequencyErrors.delete(frequency);
-		logInfo('[CLEANUP] Frequency error count reset', { frequency });
+		logger.info('[CLEANUP] Frequency error count reset', { frequency });
 	}
 
 	/** Reset all error tracking */
@@ -279,7 +279,7 @@ export class ErrorTracker {
 		this.recoveryAttempts = 0;
 		this.isRecovering = false;
 		this.lastRecoveryAttempt = null;
-		logInfo('[CLEANUP] All error tracking reset');
+		logger.info('[CLEANUP] All error tracking reset');
 	}
 
 	/** Update configuration */
@@ -298,7 +298,7 @@ export class ErrorTracker {
 			this.errorState.maxFailuresPerMinute = config.maxFailuresPerMinute;
 		}
 		this.recoveryConfig = { ...this.recoveryConfig, ...config };
-		logInfo('[CONFIG] ErrorTracker configuration updated', {
+		logger.info('[CONFIG] ErrorTracker configuration updated', {
 			maxConsecutiveErrors: this.errorState.maxConsecutiveErrors,
 			maxFailuresPerMinute: this.errorState.maxFailuresPerMinute,
 			recoveryConfig: this.recoveryConfig
@@ -316,6 +316,6 @@ export class ErrorTracker {
 	/** Clean up resources */
 	cleanup(): void {
 		this.resetErrorTracking();
-		logInfo('[CLEANUP] ErrorTracker cleanup completed');
+		logger.info('[CLEANUP] ErrorTracker cleanup completed');
 	}
 }

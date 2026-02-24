@@ -1,8 +1,9 @@
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 /**
  * Alfa adapter detection utilities
@@ -31,7 +32,7 @@ export class AlfaDetector {
 			const found: { usbId: string; description: string }[] = [];
 			for (const [usbId, description] of Object.entries(this.ALFA_USB_IDS)) {
 				if (stdout.includes(usbId)) {
-					logInfo(`Detected Alfa adapter: ${description} (${usbId})`);
+					logger.info(`Detected Alfa adapter: ${description} (${usbId})`);
 					found.push({ usbId, description });
 				}
 			}
@@ -54,7 +55,7 @@ export class AlfaDetector {
 			// @constitutional-exemption Article-II-2.1 issue:#14 — USB ID dictionary lookup type narrowing
 			const alfaDevice = this.ALFA_USB_IDS[usbId as keyof typeof this.ALFA_USB_IDS];
 			if (!alfaDevice) return null;
-			logInfo(`Detected Alfa adapter via sysfs: ${alfaDevice} (${usbId})`);
+			logger.info(`Detected Alfa adapter via sysfs: ${alfaDevice} (${usbId})`);
 			return { usbId, description: alfaDevice };
 		} catch {
 			return null;
@@ -79,7 +80,7 @@ export class AlfaDetector {
 			try {
 				adapters = await this.detectViaLsusb();
 			} catch {
-				logWarn('lsusb not available, trying sysfs method');
+				logger.warn('lsusb not available, trying sysfs method');
 				adapters = await this.detectViaSysfs();
 			}
 
@@ -89,7 +90,7 @@ export class AlfaDetector {
 			}
 			return adapters;
 		} catch (error) {
-			logError('Error detecting Alfa adapters:', error as Record<string, unknown>);
+			logger.error('Error detecting Alfa adapters:', { error: errMsg(error) });
 			return [];
 		}
 	}
@@ -113,7 +114,7 @@ export class AlfaDetector {
 			const all = await readdir('/sys/class/net/');
 			return all.filter((iface) => !this.SKIP_INTERFACES.has(iface));
 		} catch (error) {
-			logError('Error finding network interfaces:', error as Record<string, unknown>);
+			logger.error('Error finding network interfaces:', { error: errMsg(error) });
 			return [];
 		}
 	}
@@ -125,7 +126,7 @@ export class AlfaDetector {
 		const candidates = await this.listCandidateInterfaces();
 		for (const iface of candidates) {
 			if (await this.isWirelessInterface(iface)) {
-				logInfo(`Found wireless interface: ${iface}`);
+				logger.info(`Found wireless interface: ${iface}`);
 				return iface;
 			}
 		}
@@ -139,19 +140,21 @@ export class AlfaDetector {
 		const adapters = await this.detectAlfaAdapters();
 
 		if (adapters.length === 0) {
-			logWarn('No Alfa adapters detected');
+			logger.warn('No Alfa adapters detected');
 			return null;
 		}
 
 		// Return the first adapter with an interface
 		for (const adapter of adapters) {
 			if (adapter.interface) {
-				logInfo(`Selected Alfa interface: ${adapter.interface} (${adapter.description})`);
+				logger.info(
+					`Selected Alfa interface: ${adapter.interface} (${adapter.description})`
+				);
 				return adapter.interface;
 			}
 		}
 
-		logWarn('Alfa adapter detected but no interface found');
+		logger.warn('Alfa adapter detected but no interface found');
 		return null;
 	}
 

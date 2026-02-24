@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import { WebSocket } from 'ws';
 
 import { env } from '$lib/server/env';
-import { logError, logInfo } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { PollerState } from './kismet-poller';
 import { pollKismetDevices } from './kismet-poller';
@@ -107,10 +107,10 @@ export class WebSocketManager extends EventEmitter {
 	private attachClientHandlers(ws: WebSocket): void {
 		ws.on('close', () => {
 			this.clients.delete(ws);
-			logInfo(`Client disconnected. Total clients: ${this.clients.size}`);
+			logger.info(`Client disconnected. Total clients: ${this.clients.size}`);
 		});
 		ws.on('error', (error) => {
-			logError('Client WebSocket error:', { error });
+			logger.error('Client WebSocket error:', { error });
 			this.clients.delete(ws);
 		});
 		ws.on('message', (data: Buffer) => {
@@ -118,7 +118,7 @@ export class WebSocketManager extends EventEmitter {
 				const message = JSON.parse(data.toString()) as ClientMessage;
 				this.handleClientMessage(ws, message);
 			} catch (error) {
-				logError('Error parsing client message:', { error });
+				logger.error('Error parsing client message:', { error });
 			}
 		});
 	}
@@ -163,7 +163,7 @@ export class WebSocketManager extends EventEmitter {
 		this.attachClientHandlers(ws);
 		this.sendInitialStatus(ws);
 		if (this.wantsDeviceUpdates(sub)) this.sendCachedDevices(ws, sub);
-		logInfo(`Client connected. Total clients: ${this.clients.size}`);
+		logger.info(`Client connected. Total clients: ${this.clients.size}`);
 	}
 
 	/** Handle subscribe/unsubscribe events */
@@ -256,7 +256,7 @@ export class WebSocketManager extends EventEmitter {
 			this.pollerState.updateThrottles.delete(key);
 		});
 		if (staleKeys.length > 0) {
-			logInfo(`Cleaned up ${staleKeys.length} stale devices from cache`);
+			logger.info(`Cleaned up ${staleKeys.length} stale devices from cache`);
 		}
 	}
 

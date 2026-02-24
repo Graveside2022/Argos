@@ -20,9 +20,13 @@ async function checkGrgsmRunning(): Promise<boolean> {
 }
 
 function extractPacketsFromError(error: unknown): number {
-	if (error && typeof error === 'object' && 'stdout' in error) {
-		const stdout = (error as { stdout: string }).stdout;
-		return stdout.split('\n').filter((l: string) => l.trim()).length;
+	if (
+		error &&
+		typeof error === 'object' &&
+		'stdout' in error &&
+		typeof error.stdout === 'string'
+	) {
+		return error.stdout.split('\n').filter((l: string) => l.trim()).length;
 	}
 	logger.warn('[gsm-evil-activity] tcpdump check failed', {
 		error: String(error)

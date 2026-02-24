@@ -14,7 +14,7 @@ import {
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { SystemStatus } from '$lib/types/enums';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import {
 	handleProcessExit,
@@ -74,14 +74,14 @@ export class SweepManager extends EventEmitter {
 
 		this.healthMonitorInterval = setInterval(() => {
 			this._performHealthCheck().catch((error) => {
-				logError('Error performing health check', {
+				logger.error('Error performing health check', {
 					error: error instanceof Error ? error.message : String(error)
 				});
 			});
 		}, 30000);
 
 		this._performStartupValidation().catch((error) => {
-			logError('Error during startup validation', {
+			logger.error('Error during startup validation', {
 				error: error instanceof Error ? error.message : String(error)
 			});
 		});
@@ -91,7 +91,7 @@ export class SweepManager extends EventEmitter {
 		this.sseEmitter = emitter;
 	}
 	private async _performStartupValidation(): Promise<void> {
-		logInfo('[SEARCH] SweepManager: Performing startup state validation...');
+		logger.info('[SEARCH] SweepManager: Performing startup state validation...');
 		this.mutableState.isRunning = false;
 		this.mutableState.status = { state: SystemStatus.Idle };
 		await forceCleanupExistingProcesses(this.processManager);
@@ -111,7 +111,7 @@ export class SweepManager extends EventEmitter {
 			isRecovering: rs.isRecovering
 		});
 		this.mutableState.isInitialized = true;
-		logInfo('[OK] SweepManager startup validation complete');
+		logger.info('[OK] SweepManager startup validation complete');
 	}
 
 	private _getCoordinatorContext(): SweepCoordinatorContext {
@@ -177,11 +177,11 @@ export class SweepManager extends EventEmitter {
 	}
 
 	async stopSweep(): Promise<void> {
-		logInfo('[STOP] Stopping sweep... Current state:', {
+		logger.info('[STOP] Stopping sweep... Current state:', {
 			state: this.mutableState.status.state
 		});
 		if (this.mutableState.status.state === SystemStatus.Idle) {
-			logInfo('Sweep already stopped');
+			logger.info('Sweep already stopped');
 			return;
 		}
 		this.mutableState.status.state = SystemStatus.Stopping;
@@ -197,11 +197,11 @@ export class SweepManager extends EventEmitter {
 		this._emitEvent('status_change', { status: 'stopped' });
 		await resourceManager.release('hackrf-sweep', HardwareDevice.HACKRF);
 		setTimeout(() => this._emitEvent('status', { state: SystemStatus.Idle }), 100);
-		logInfo('Sweep stopped successfully');
+		logger.info('Sweep stopped successfully');
 	}
 
 	async emergencyStop(): Promise<void> {
-		logWarn('[ALERT] Emergency stop initiated');
+		logger.warn('[ALERT] Emergency stop initiated');
 		this.mutableState.isRunning = false;
 		this.frequencyCycler.emergencyStop();
 		await this.processManager.forceKillProcess();
@@ -213,7 +213,7 @@ export class SweepManager extends EventEmitter {
 		this.mutableState.status = { state: SystemStatus.Idle };
 		this._emitEvent('status', this.mutableState.status);
 		this._emitEvent('status_change', { status: 'emergency_stopped' });
-		logWarn('[ALERT] Emergency stop completed');
+		logger.warn('[ALERT] Emergency stop completed');
 	}
 
 	async forceCleanup(): Promise<void> {
@@ -263,7 +263,7 @@ export class SweepManager extends EventEmitter {
 			(code: number | null, signal: string | null) => {
 				handleProcessExit(ctx, code, signal, (reason: string) => {
 					performRecovery(this._getHealthContext(), reason).catch((error) => {
-						logError('Error performing recovery', {
+						logger.error('Error performing recovery', {
 							error: error instanceof Error ? error.message : String(error)
 						});
 					});
@@ -278,7 +278,7 @@ export class SweepManager extends EventEmitter {
 			try {
 				this.sseEmitter(event, data);
 			} catch (error) {
-				logWarn('SSE emitter error, clearing reference', { error });
+				logger.warn('SSE emitter error, clearing reference', { error });
 				this.sseEmitter = null;
 			}
 		}
@@ -292,7 +292,7 @@ export class SweepManager extends EventEmitter {
 			timestamp: new Date().toISOString(),
 			details: error?.stack
 		});
-		logError(`[ERROR] ${type}: ${message}`, { type, details: error?.stack });
+		logger.error(`[ERROR] ${type}: ${message}`, { type, details: error?.stack });
 	}
 
 	async cleanup(): Promise<void> {

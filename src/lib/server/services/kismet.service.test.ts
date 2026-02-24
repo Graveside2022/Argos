@@ -20,9 +20,12 @@ vi.mock('$lib/server/services/gps/gps-position-service', () => ({
 
 // Mock the logger
 vi.mock('$lib/utils/logger', () => ({
-	logInfo: vi.fn(),
-	logError: vi.fn(),
-	logWarn: vi.fn()
+	logger: {
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+		debug: vi.fn()
+	}
 }));
 
 describe('KismetService', () => {

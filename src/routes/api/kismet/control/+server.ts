@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { errMsg } from '$lib/server/api/error-utils';
 import {
 	getKismetStatus,
 	startKismetExtended,
@@ -64,7 +65,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			{
 				success: false,
 				message: 'Server error',
-				error: (err as { message?: string }).message
+				error: errMsg(err)
 			},
 			{ status: 500 }
 		);

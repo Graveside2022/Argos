@@ -5,7 +5,7 @@
  */
 
 import type { Satellite, SatellitesApiResponse } from '$lib/gps/types';
-import { logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 const CIRCUIT_BREAKER_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 30000;
@@ -48,7 +48,7 @@ function isBreakerOpen(): boolean {
 /** Log the breaker-open event exactly once */
 function logBreakerOpen(): void {
 	if (circuitBreakerLogged) return;
-	logWarn(
+	logger.warn(
 		'[GPS Satellites] Circuit breaker open: gpsd unreachable',
 		{ consecutiveFailures },
 		'gps-satellites-circuit-breaker'
@@ -79,7 +79,7 @@ export function handleSatelliteQueryFailure(error: unknown): SatellitesApiRespon
 	lastFailureTimestamp = Date.now();
 
 	if (consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
-		logWarn(
+		logger.warn(
 			'[GPS Satellites] gpsd connection failed, circuit breaker activating',
 			{
 				consecutiveFailures,

@@ -1,8 +1,9 @@
 import { RawKismetDeviceSchema, SimplifiedKismetDeviceSchema } from '$lib/schemas/kismet';
+import { errMsg } from '$lib/server/api/error-utils';
 import { hasValidGpsCoords } from '$lib/server/db/geo';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import { hashMAC, offsetGps, signalToDistance } from './kismet/kismet-geo-helpers';
@@ -30,7 +31,7 @@ export class KismetService {
 			if (!hasValidGpsCoords(latitude, longitude)) return null;
 			return { latitude: latitude!, longitude: longitude! };
 		} catch (error) {
-			logWarn('Could not get GPS position', { error });
+			logger.warn('Could not get GPS position', { error });
 			return null;
 		}
 	}
@@ -39,10 +40,10 @@ export class KismetService {
 	private static async tryProxyMethod(
 		gpsPosition: GPSPosition | null
 	): Promise<KismetDevice[] | null> {
-		logWarn('Attempting to fetch devices from Kismet using KismetProxy...');
+		logger.warn('Attempting to fetch devices from Kismet using KismetProxy...');
 		const kismetDevices = await KismetProxy.getDevices();
 		const devices = this.transformKismetDevices(kismetDevices, gpsPosition);
-		logInfo(`Successfully fetched ${devices.length} devices from Kismet`);
+		logger.info(`Successfully fetched ${devices.length} devices from Kismet`);
 		return devices;
 	}
 
@@ -50,12 +51,12 @@ export class KismetService {
 	private static async tryLastTimeEndpoint(
 		gpsPosition: GPSPosition | null
 	): Promise<KismetDevice[] | null> {
-		logWarn('Attempting direct Kismet REST API...');
+		logger.warn('Attempting direct Kismet REST API...');
 		const timestamp = Math.floor(Date.now() / 1000) - 1800;
 		const response = await KismetProxy.proxyGet(`/devices/last-time/${timestamp}/devices.json`);
 		if (!Array.isArray(response)) return null;
 		const devices = this.transformRawKismetDevices(response, gpsPosition);
-		logInfo(`Fetched ${devices.length} devices via last-time endpoint`);
+		logger.info(`Fetched ${devices.length} devices via last-time endpoint`);
 		return devices;
 	}
 
@@ -70,7 +71,7 @@ export class KismetService {
 
 	/** Extract error message from unknown error */
 	private static extractErrorMessage(err: unknown): string {
-		return (err as { message?: string }).message || 'Unknown error';
+		return errMsg(err);
 	}
 
 	/** Try each strategy in order, returning the first successful result */
@@ -85,7 +86,7 @@ export class KismetService {
 			} catch (err: unknown) {
 				const msg = this.extractErrorMessage(err);
 				firstError ??= msg;
-				logError('Kismet fetch strategy failed', { error: msg });
+				logger.error('Kismet fetch strategy failed', { error: msg });
 			}
 		}
 		return { devices: null, firstError };
@@ -103,7 +104,7 @@ export class KismetService {
 		const { devices, firstError } = await this.tryStrategies(strategies);
 		if (devices) return { devices, error: null, source: 'kismet' };
 
-		logWarn(`Returning 0 devices (error: ${firstError || 'none'})`);
+		logger.warn(`Returning 0 devices (error: ${firstError || 'none'})`);
 		return { devices: [], error: firstError, source: firstError ? 'fallback' : 'kismet' };
 	}
 
@@ -147,7 +148,7 @@ export class KismetService {
 				'background'
 			);
 			if (!validated) {
-				logError(
+				logger.error(
 					'Invalid simplified Kismet device',
 					{ device },
 					'kismet-device-validation-failed'
@@ -169,7 +170,7 @@ export class KismetService {
 		for (const device of rawDevices) {
 			const validated = safeParseWithHandling(RawKismetDeviceSchema, device, 'background');
 			if (!validated) {
-				logError(
+				logger.error(
 					'Invalid raw Kismet device',
 					{ device },
 					'raw-kismet-device-validation-failed'

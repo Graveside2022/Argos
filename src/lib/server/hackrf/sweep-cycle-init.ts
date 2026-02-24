@@ -4,13 +4,13 @@ import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler
 import { convertToHz } from '$lib/hackrf/sweep-manager/frequency-utils';
 import type { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import { forceCleanupExistingProcesses } from '$lib/hackrf/sweep-manager/sweep-health-checker';
-import { errMsg } from '$lib/server/api/error-utils';
+import { errMsg, normalizeError } from '$lib/server/api/error-utils';
 import type { SweepMutableState } from '$lib/server/hackrf/types';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { SystemStatus } from '$lib/types/enums';
 import { delay } from '$lib/utils/delay';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { SweepCoordinatorContext } from './sweep-coordinator';
 import { handleSweepError } from './sweep-coordinator';
@@ -43,14 +43,14 @@ export interface CycleRuntimeContext {
 /** Wait up to 10s for the service to finish initializing */
 async function waitForInit(ctx: CycleInitContext): Promise<boolean> {
 	if (ctx.state.isInitialized) return true;
-	logWarn('Service not yet initialized, waiting...');
+	logger.warn('Service not yet initialized, waiting...');
 	let waitTime = 0;
 	while (!ctx.state.isInitialized && waitTime < 10000) {
 		await delay(500);
 		waitTime += 500;
 	}
 	if (!ctx.state.isInitialized) {
-		logError('Service failed to initialize within 10 seconds');
+		logger.error('Service failed to initialize within 10 seconds');
 		return false;
 	}
 	return true;
@@ -68,7 +68,7 @@ function checkStaleState(ctx: CycleInitContext): boolean {
 		ctx.emitError('Sweep is already running', 'state_check');
 		return false;
 	}
-	logWarn('Detected stale running state, resetting...');
+	logger.warn('Detected stale running state, resetting...');
 	ctx.state.isRunning = false;
 	ctx.state.status = { state: SystemStatus.Idle };
 	ctx.emitEvent('status', ctx.state.status);
@@ -139,7 +139,7 @@ async function initializeCycleAndRun(
 	await forceCleanupExistingProcesses(ctx.processManager);
 	await delay(2000);
 
-	logInfo(
+	logger.info(
 		'[SEARCH] Using auto_sweep.sh for device detection (supports HackRF and USRP B205 mini)...'
 	);
 
@@ -175,8 +175,8 @@ async function initializeCycleAndRun(
 		return true;
 	} catch (runError: unknown) {
 		const error = runError as Error;
-		logError('[ERROR] Error in _runNextFrequency:', { error: error.message });
-		if (error.stack) logError('Stack:', { stack: error.stack });
+		logger.error('[ERROR] Error in _runNextFrequency:', { error: error.message });
+		if (error.stack) logger.error('Stack:', { stack: error.stack });
 		return true;
 	}
 }
@@ -195,16 +195,19 @@ async function handleRunError(
 	error: unknown,
 	currentFrequency: { value: number; unit: string }
 ): Promise<void> {
-	const errorAnalysis = ctx.errorTracker.recordError(error as Error, {
+	const errorAnalysis = ctx.errorTracker.recordError(normalizeError(error), {
 		frequency: currentFrequency.value,
 		operation: 'start_sweep'
 	});
-	logError('[ERROR] Error starting sweep process:', {
+	logger.error('[ERROR] Error starting sweep process:', {
 		error: errMsg(error),
 		analysis: errorAnalysis
 	});
-	await handleSweepError(ctx.getCoordinatorContext(), error as Error, currentFrequency, () =>
-		ctx.stopSweep()
+	await handleSweepError(
+		ctx.getCoordinatorContext(),
+		normalizeError(error),
+		currentFrequency,
+		() => ctx.stopSweep()
 	);
 }
 
@@ -219,7 +222,7 @@ export async function runNextFrequency(ctx: CycleRuntimeContext): Promise<void> 
 		if (shouldStartCycleTimer(cycleState)) {
 			ctx.frequencyCycler.startCycleTimer(() => {
 				cycleToNextFrequency(ctx).catch((error) => {
-					logError('Error cycling to next frequency', {
+					logger.error('Error cycling to next frequency', {
 						error: error instanceof Error ? error.message : String(error)
 					});
 				});
@@ -241,7 +244,7 @@ export async function cycleToNextFrequency(ctx: CycleRuntimeContext): Promise<vo
 	await ctx.processManager.stopProcess(processState);
 	ctx.frequencyCycler.startSwitchTimer(() => {
 		runNextFrequency(ctx).catch((error) => {
-			logError('Error running next frequency', {
+			logger.error('Error running next frequency', {
 				error: error instanceof Error ? error.message : String(error)
 			});
 		});

@@ -6,7 +6,7 @@
 import { type ChildProcess, execFile } from 'child_process';
 
 import { delay } from '$lib/utils/delay';
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { ProcessState } from './process-manager-types';
 
@@ -21,7 +21,7 @@ export async function stopProcess(
 		return;
 	}
 
-	logInfo(
+	logger.info(
 		'Stopping sweep process',
 		{
 			pid: processState.actualProcessPid,
@@ -39,7 +39,7 @@ export async function stopProcess(
 
 		killProcessGroup(processState);
 	} catch (error) {
-		logError('Error during process termination', { error }, 'process-termination-error');
+		logger.error('Error during process termination', { error }, 'process-termination-error');
 	}
 
 	if (processState.actualProcessPid) {
@@ -54,9 +54,9 @@ export async function stopProcess(
 async function sendTermSignal(pid: number): Promise<void> {
 	try {
 		process.kill(pid, 'SIGTERM');
-		logInfo('Sent SIGTERM to process', { pid }, 'process-sigterm-sent');
+		logger.info('Sent SIGTERM to process', { pid }, 'process-sigterm-sent');
 	} catch (_error: unknown) {
-		logWarn('Process already dead or SIGTERM failed', { pid }, 'process-sigterm-failed');
+		logger.warn('Process already dead or SIGTERM failed', { pid }, 'process-sigterm-failed');
 	}
 }
 
@@ -64,10 +64,10 @@ async function sendTermSignal(pid: number): Promise<void> {
 async function forceKillIfAlive(pid: number): Promise<void> {
 	try {
 		process.kill(pid, 0);
-		logWarn('Process still alive, sending SIGKILL', { pid }, 'process-sigkill-needed');
+		logger.warn('Process still alive, sending SIGKILL', { pid }, 'process-sigkill-needed');
 		process.kill(pid, 'SIGKILL');
 	} catch (_error: unknown) {
-		logInfo('Process terminated successfully', { pid }, 'process-terminated');
+		logger.info('Process terminated successfully', { pid }, 'process-terminated');
 	}
 }
 
@@ -79,13 +79,13 @@ function killProcessGroup(processState: ProcessState): void {
 	) {
 		try {
 			process.kill(-processState.sweepProcessPgid, 'SIGKILL');
-			logInfo(
+			logger.info(
 				'Killed process group',
 				{ pgid: processState.sweepProcessPgid },
 				'process-group-killed'
 			);
 		} catch (e) {
-			logError(
+			logger.error(
 				'Process group kill failed',
 				{ error: e, pgid: processState.sweepProcessPgid },
 				'process-group-kill-failed'
@@ -100,13 +100,13 @@ async function pkillHackrfSweep(): Promise<void> {
 		await new Promise<void>((resolve) => {
 			execFile('/usr/bin/pkill', ['-9', '-x', 'hackrf_sweep'], (error) => {
 				if (error && error.code !== 1) {
-					logError('pkill error', { error }, 'pkill-error');
+					logger.error('pkill error', { error }, 'pkill-error');
 				}
 				resolve();
 			});
 		});
 	} catch (e) {
-		logError('Failed to run pkill', { error: e }, 'pkill-failed');
+		logger.error('Failed to run pkill', { error: e }, 'pkill-failed');
 	}
 }
 
@@ -116,7 +116,7 @@ async function pkillHackrfSweep(): Promise<void> {
 export async function forceCleanupAllProcesses(
 	processRegistry: Map<number, ChildProcess>
 ): Promise<void> {
-	logInfo('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
+	logger.info('Force cleaning up existing HackRF processes', {}, 'hackrf-cleanup-start');
 
 	const pkill = (args: string[]) =>
 		new Promise<void>((resolve) => {
@@ -134,9 +134,9 @@ export async function forceCleanupAllProcesses(
 		processRegistry.clear();
 		await delay(1000);
 
-		logInfo('Cleanup complete', {}, 'hackrf-cleanup-complete');
+		logger.info('Cleanup complete', {}, 'hackrf-cleanup-complete');
 	} catch (error) {
-		logError('Cleanup failed', { error }, 'hackrf-cleanup-failed');
+		logger.error('Cleanup failed', { error }, 'hackrf-cleanup-failed');
 	}
 }
 
@@ -146,9 +146,9 @@ function forceKillSingleProcess(pid: number, childProcess: ChildProcess): void {
 			childProcess.kill('SIGKILL');
 		}
 		process.kill(pid, 'SIGKILL');
-		logInfo(`Force killed PID: ${pid}`);
+		logger.info(`Force killed PID: ${pid}`);
 	} catch (_error: unknown) {
-		logInfo('Process already dead or kill failed');
+		logger.info('Process already dead or kill failed');
 	}
 }
 
@@ -164,5 +164,5 @@ export async function forceKillAllProcesses(
 
 	processRegistry.clear();
 	await forceCleanupAllProcesses(processRegistry);
-	logInfo('[OK] Force process kill completed');
+	logger.info('[OK] Force process kill completed');
 }

@@ -4,7 +4,7 @@
 // transforms raw responses, and pushes updates to the WebSocketManager.
 
 import { KismetRawDeviceSchema, KismetSystemStatusSchema } from '$lib/schemas/rf';
-import { logError } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import type { KismetRawDevice } from './kismet-device-transform';
 import { hasDeviceChanged, transformRawDevice } from './kismet-device-transform';
@@ -55,7 +55,7 @@ async function fetchDevices(
 
 /** Emit an error broadcast when polling fails */
 function broadcastPollError(broadcast: BroadcastFn, error: unknown): void {
-	logError('Error polling Kismet:', { error });
+	logger.error('Error polling Kismet:', { error });
 	broadcast({
 		type: 'error',
 		data: { error: 'Failed to poll Kismet data', timestamp: new Date().toISOString() },
@@ -203,7 +203,7 @@ async function fetchAndEmitSystemStatus(
 
 		const statusResult = KismetSystemStatusSchema.safeParse(await response.json());
 		if (!statusResult.success) {
-			logError('Invalid Kismet system status response', { error: statusResult.error });
+			logger.error('Invalid Kismet system status response', { error: statusResult.error });
 			return;
 		}
 
@@ -214,6 +214,6 @@ async function fetchAndEmitSystemStatus(
 		};
 		broadcast(message, (sub) => sub.types.has('status_change') || sub.types.has('*'));
 	} catch (error) {
-		logError('Error emitting system status:', { error });
+		logger.error('Error emitting system status:', { error });
 	}
 }

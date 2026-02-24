@@ -4,7 +4,7 @@
 // Using the battle-tested mgrs npm package for reliable conversion
 import * as mgrs from 'mgrs';
 
-import { logError } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 // Note: Helper interfaces and constants removed as we're now using the mgrs npm package
 
@@ -23,7 +23,7 @@ export function latLonToMGRS(lat: number, lon: number): string {
 		// We need to format it as "32U MA 51885 43428"
 		return formatMGRS(mgrsString);
 	} catch (error) {
-		logError('Error converting to MGRS', { error });
+		logger.error('Error converting to MGRS', { error });
 		return 'Invalid';
 	}
 }

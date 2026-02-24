@@ -7,7 +7,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type Database from 'better-sqlite3';
 
-import { logError, logInfo } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 interface AggregationConfig {
 	shouldAggregateHourly: boolean;
@@ -57,9 +57,9 @@ export function runAggregation(
 			if (config.shouldAggregateDaily)
 				aggregateDaily(statements, currentDay - 86400000, currentDay);
 		})();
-		logInfo('Aggregation completed', {}, 'aggregation-completed');
+		logger.info('Aggregation completed', {}, 'aggregation-completed');
 	} catch (error) {
-		logError('Aggregation failed', { error }, 'aggregation-failed');
+		logger.error('Aggregation failed', { error }, 'aggregation-failed');
 	}
 }
 
@@ -110,5 +110,5 @@ export function cleanupAggregatedData(db: DatabaseType, daysToKeep: number = 30)
 	});
 
 	cleanup();
-	logInfo('Cleaned up aggregated data', { daysToKeep }, 'aggregated-data-cleanup-completed');
+	logger.info('Cleaned up aggregated data', { daysToKeep }, 'aggregated-data-cleanup-completed');
 }

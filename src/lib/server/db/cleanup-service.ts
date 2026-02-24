@@ -6,7 +6,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type Database from 'better-sqlite3';
 
-import { logError, logInfo } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import {
 	cleanupAggregatedData as doCleanupAggregatedData,
@@ -66,13 +66,13 @@ export class DatabaseCleanupService {
 	initialize() {
 		try {
 			this.statements = prepareCleanupStatements(this.db);
-			logInfo(
+			logger.info(
 				'Database cleanup service initialized successfully',
 				{},
 				'cleanup-service-initialized'
 			);
 		} catch (error) {
-			logError(
+			logger.error(
 				'Failed to initialize cleanup service',
 				{ error },
 				'cleanup-service-init-failed'
@@ -102,9 +102,13 @@ export class DatabaseCleanupService {
 				void this.runAggregation();
 			}, this.config.aggregateInterval);
 
-			logInfo('Database cleanup service started', {}, 'cleanup-service-started');
+			logger.info('Database cleanup service started', {}, 'cleanup-service-started');
 		} catch (error) {
-			logError('Error starting cleanup service', { error }, 'cleanup-service-start-error');
+			logger.error(
+				'Error starting cleanup service',
+				{ error },
+				'cleanup-service-start-error'
+			);
 			this.stop();
 			throw error;
 		}
@@ -121,7 +125,7 @@ export class DatabaseCleanupService {
 			clearInterval(this.aggregateTimer);
 			this.aggregateTimer = undefined;
 		}
-		logInfo('Database cleanup service stopped', {}, 'cleanup-service-stopped');
+		logger.info('Database cleanup service stopped', {}, 'cleanup-service-stopped');
 	}
 
 	/** Get a required prepared statement or throw. */
@@ -165,10 +169,10 @@ export class DatabaseCleanupService {
 
 			if (stats.signals + stats.devices > 10000) this.db.exec('VACUUM');
 			stats.duration = Date.now() - startTime;
-			logInfo('Cleanup completed', { stats }, 'cleanup-completed');
+			logger.info('Cleanup completed', { stats }, 'cleanup-completed');
 			return stats;
 		} catch (error) {
-			logError('Cleanup failed', { error }, 'cleanup-failed');
+			logger.error('Cleanup failed', { error }, 'cleanup-failed');
 			throw error;
 		}
 	}
@@ -210,7 +214,7 @@ export class DatabaseCleanupService {
 
 	/** Manual vacuum */
 	vacuum() {
-		logInfo('Running VACUUM', {}, 'vacuum-start');
+		logger.info('Running VACUUM', {}, 'vacuum-start');
 		// Safe: page_count * page_size always returns a single numeric 'size' column
 		const before = this.db
 			.prepare(
@@ -225,14 +229,14 @@ export class DatabaseCleanupService {
 			.get() as { size: number };
 
 		const saved = (before.size - after.size) / 1024 / 1024;
-		logInfo('VACUUM completed', { spaceSavedMB: saved.toFixed(2) }, 'vacuum-completed');
+		logger.info('VACUUM completed', { spaceSavedMB: saved.toFixed(2) }, 'vacuum-completed');
 		return { before: before.size, after: after.size, saved };
 	}
 
 	/** Analyze database and update statistics */
 	analyze() {
 		this.db.exec('ANALYZE');
-		logInfo('Database statistics updated', {}, 'database-analyze-completed');
+		logger.info('Database statistics updated', {}, 'database-analyze-completed');
 	}
 
 	/** Export aggregated data for analysis -- delegates to cleanup-aggregation */

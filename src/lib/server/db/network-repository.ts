@@ -6,7 +6,7 @@ import type Database from 'better-sqlite3';
 
 import { DbRelationshipSchema } from '$lib/schemas/database';
 import type { NetworkEdge, NetworkNode } from '$lib/types/network';
-import { logError } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import type { DbRelationship } from './types';
@@ -51,7 +51,7 @@ export function storeNetworkGraph(
 			if (validated) {
 				insertRelationship.run(validated);
 			} else {
-				logError(
+				logger.error(
 					'Invalid relationship data, skipping',
 					{ edge_id: edge.id },
 					'relationship-validation-failed'
@@ -86,7 +86,7 @@ function validateRelationshipRows(rawRows: unknown[]): DbRelationship[] {
 		const validated = safeParseWithHandling(DbRelationshipSchema, row, 'background');
 		if (validated) acc.push(validated);
 		else
-			logError(
+			logger.error(
 				'Invalid relationship data returned from database query',
 				{ row },
 				'relationship-query-validation-failed'

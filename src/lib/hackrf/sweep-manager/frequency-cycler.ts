@@ -1,4 +1,4 @@
-import { logError, logInfo, logWarn } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 
 import { FrequencyBlacklist, type FrequencyConfig, normalizeFrequencies } from './frequency-utils';
 
@@ -63,7 +63,7 @@ export class FrequencyCycler {
 			Math.max(500, Math.floor(this.cycleConfig.cycleTime * 0.25))
 		);
 
-		logInfo('[RETRY] Frequency cycling initialized', {
+		logger.info('[RETRY] Frequency cycling initialized', {
 			frequencies: config.frequencies.length,
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime,
@@ -89,7 +89,7 @@ export class FrequencyCycler {
 	): void {
 		this.cycleState.cycleTimer = setTimeout(() => {
 			this.cycleToNext(onCycleComplete).catch((error) => {
-				logError('Error cycling to next frequency', {
+				logger.error('Error cycling to next frequency', {
 					error: error instanceof Error ? error.message : String(error)
 				});
 			});
@@ -106,7 +106,7 @@ export class FrequencyCycler {
 		onCycleStart?: (currentFreq: FrequencyConfig) => void
 	): void {
 		if (!this.shouldCycle()) {
-			logInfo('Single frequency mode - no cycling needed');
+			logger.info('Single frequency mode - no cycling needed');
 			return;
 		}
 
@@ -115,7 +115,7 @@ export class FrequencyCycler {
 
 		this.scheduleCycleTimer(onCycleComplete);
 
-		logInfo('[RETRY] Automatic cycling started', {
+		logger.info('[RETRY] Automatic cycling started', {
 			currentFreq: currentFreq?.value,
 			nextCycleIn: this.cycleConfig.cycleTime
 		});
@@ -134,11 +134,11 @@ export class FrequencyCycler {
 		const nextFreq = this.getCurrentFrequency();
 		this.cycleState.currentFrequency = nextFreq;
 		if (!nextFreq) {
-			logError('No next frequency available');
+			logger.error('No next frequency available');
 			return;
 		}
 
-		logInfo('[RETRY] Cycling to next frequency', {
+		logger.info('[RETRY] Cycling to next frequency', {
 			from:
 				this.cycleState.currentIndex === 0
 					? this.cycleConfig.frequencies[this.cycleConfig.frequencies.length - 1]
@@ -150,7 +150,7 @@ export class FrequencyCycler {
 		this.cycleState.switchTimer = setTimeout(() => {
 			this.cycleState.inFrequencyTransition = false;
 			onCycleComplete(nextFreq).catch((error) => {
-				logError('Error in cycle completion callback', {
+				logger.error('Error in cycle completion callback', {
 					error: error instanceof Error ? error.message : String(error)
 				});
 			});
@@ -160,7 +160,7 @@ export class FrequencyCycler {
 	/** Skip to specific frequency index */
 	skipToFrequency(index: number): FrequencyConfig | null {
 		if (index < 0 || index >= this.cycleConfig.frequencies.length) {
-			logWarn('Invalid frequency index', {
+			logger.warn('Invalid frequency index', {
 				index,
 				total: this.cycleConfig.frequencies.length
 			});
@@ -168,7 +168,7 @@ export class FrequencyCycler {
 		}
 		this.cycleState.currentIndex = index;
 		const frequency = this.getCurrentFrequency();
-		logInfo('Skipped to frequency', { index, frequency });
+		logger.info('Skipped to frequency', { index, frequency });
 		return frequency;
 	}
 
@@ -184,7 +184,7 @@ export class FrequencyCycler {
 			clearTimeout(this.cycleState.switchTimer);
 			this.cycleState.switchTimer = null;
 		}
-		logInfo('[STOP] Frequency cycling stopped');
+		logger.info('[STOP] Frequency cycling stopped');
 	}
 
 	blacklistFrequency(frequency: FrequencyConfig): void {
@@ -234,7 +234,7 @@ export class FrequencyCycler {
 	updateTiming(cycleTime?: number, switchingTime?: number): void {
 		if (cycleTime !== undefined) this.cycleConfig.cycleTime = cycleTime;
 		if (switchingTime !== undefined) this.cycleConfig.switchingTime = switchingTime;
-		logInfo('[TIMER] Cycle timing updated', {
+		logger.info('[TIMER] Cycle timing updated', {
 			cycleTime: this.cycleConfig.cycleTime,
 			switchingTime: this.cycleConfig.switchingTime
 		});
@@ -244,13 +244,13 @@ export class FrequencyCycler {
 	resetCycling(): void {
 		this.stopCycling();
 		this.cycleState.currentIndex = 0;
-		logInfo('[RETRY] Cycling reset');
+		logger.info('[RETRY] Cycling reset');
 	}
 
 	/** Emergency stop — alias for stopCycling with warning log */
 	emergencyStop(): void {
 		this.stopCycling();
-		logWarn('[ALERT] Emergency stop - frequency cycling halted');
+		logger.warn('[ALERT] Emergency stop - frequency cycling halted');
 	}
 
 	/** Start cycle timer with callback */
@@ -267,6 +267,6 @@ export class FrequencyCycler {
 	cleanup(): void {
 		this.stopCycling();
 		this.frequencyBlacklist.clear();
-		logInfo('[CLEANUP] FrequencyCycler cleanup completed');
+		logger.info('[CLEANUP] FrequencyCycler cleanup completed');
 	}
 }

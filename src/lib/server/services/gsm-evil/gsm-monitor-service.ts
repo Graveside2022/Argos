@@ -20,11 +20,20 @@ class GsmMonitorService extends EventEmitter {
 	private isRunning = false;
 	private lastActivity = 0;
 	private channelStats: Map<string, number> = new Map();
+	private idleInterval: ReturnType<typeof setInterval> | null = null;
 
 	private constructor() {
 		super();
 		// Auto-stop if no frames requested for 30 seconds
-		setInterval(() => this.checkIdle(), 10000);
+		this.idleInterval = setInterval(() => this.checkIdle(), 10000);
+	}
+
+	public dispose(): void {
+		if (this.idleInterval !== null) {
+			clearInterval(this.idleInterval);
+			this.idleInterval = null;
+		}
+		this.stopMonitor();
 	}
 
 	public static getInstance(): GsmMonitorService {

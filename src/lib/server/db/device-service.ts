@@ -5,7 +5,7 @@
 import type Database from 'better-sqlite3';
 
 import { DbDeviceSchema } from '$lib/schemas/database';
-import { logError } from '$lib/utils/logger';
+import { logger } from '$lib/utils/logger';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 import { detectDeviceType } from './geo';
@@ -24,7 +24,7 @@ export function ensureDeviceExists(db: Database.Database, signal: DbSignal): voi
 	if (rawExisting) {
 		const validated = safeParseWithHandling(DbDeviceSchema, rawExisting, 'background');
 		if (!validated) {
-			logError(
+			logger.error(
 				'Invalid device data in database',
 				{ device_id: signal.device_id },
 				'device-validation-failed'
@@ -70,7 +70,7 @@ function fetchExistingDevice(db: Database.Database, deviceId: string): DbDevice 
 	if (!rawExisting) return undefined;
 	const validated = safeParseWithHandling(DbDeviceSchema, rawExisting, 'background');
 	if (!validated) {
-		logError(
+		logger.error(
 			'Invalid existing device data in database',
 			{ device_id: deviceId },
 			'device-validation-failed'

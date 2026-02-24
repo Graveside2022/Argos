@@ -277,7 +277,7 @@ export async function stopKismetExtended(): Promise<KismetControlResult> {
 		return {
 			success: false,
 			message: 'Failed to stop Kismet',
-			error: (error as { message?: string }).message
+			error: errMsg(error)
 		};
 	}
 }
