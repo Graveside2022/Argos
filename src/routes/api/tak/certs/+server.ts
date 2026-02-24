@@ -1,10 +1,7 @@
 import { json } from '@sveltejs/kit';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { CertManager } from '$lib/server/tak/cert-manager';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const MAX_P12_SIZE = 1024 * 1024; // 1 MB
 
@@ -37,20 +34,20 @@ function validateFormData(formData: FormData):
 }
 
 // POST: Upload .p12 certificate
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
+	const formData = await request.formData();
+	const validated = validateFormData(formData);
+
+	if (validated instanceof Response) {
+		return validated;
+	}
+
+	const { file, password, configId } = validated;
+	const buffer = Buffer.from(await file.arrayBuffer());
+
 	try {
-		const formData = await request.formData();
-		const validated = validateFormData(formData);
-
-		if (validated instanceof Response) {
-			return validated;
-		}
-
-		const { file, password, configId } = validated;
-		const buffer = Buffer.from(await file.arrayBuffer());
 		const paths = await CertManager.saveAndExtract(configId, buffer, password);
-
-		return json({
+		return {
 			success: true,
 			id: configId,
 			paths: {
@@ -58,12 +55,11 @@ export const POST: RequestHandler = async ({ request }) => {
 				keyPath: paths.keyPath,
 				caPath: paths.caPath
 			}
-		});
+		};
 	} catch (err) {
 		if (isInputValidationError(err)) {
 			return json({ success: false, error: err.message }, { status: 400 });
 		}
-		logger.error('Failed to upload/extract certs', { error: errMsg(err) });
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		throw err;
 	}
-};
+});

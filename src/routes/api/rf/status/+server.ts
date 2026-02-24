@@ -1,10 +1,7 @@
-import { json } from '@sveltejs/kit';
-
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
-import { logger } from '$lib/utils/logger';
 
 import type { RequestHandler } from './$types';
 
@@ -47,16 +44,10 @@ function buildStatusPayload(hackrfInfo: DeviceInfo) {
 	};
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		const hackrfInfo = await detectHackrf();
-		return json({ status: 'success', data: buildStatusPayload(hackrfInfo) });
-	} catch (error: unknown) {
-		const msg = errMsg(error);
-		logger.error('Error in rf/status endpoint', { error: msg });
-		return json({ status: 'error', message: msg }, { status: 500 });
-	}
-};
+export const GET = createHandler(async () => {
+	const hackrfInfo = await detectHackrf();
+	return { status: 'success', data: buildStatusPayload(hackrfInfo) };
+});
 
 // Add CORS headers
 export const OPTIONS: RequestHandler = ({ request }) => {

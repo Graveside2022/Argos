@@ -3,13 +3,11 @@ import path from 'node:path';
 
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { CertManager } from '$lib/server/tak/cert-manager';
 import type { ParsedTakPackage } from '$lib/server/tak/tak-package-parser';
 import { TakPackageParser } from '$lib/server/tak/tak-package-parser';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const MAX_PACKAGE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -125,8 +123,13 @@ function processPackage(
 	return { config, warning };
 }
 
-/** Handle top-level errors: validation errors, known patterns, or generic 500. */
-function handleCatchError(err: unknown): Response {
+/** Safely remove a temp file if it exists. */
+function cleanupTempFile(zipPath: string): void {
+	if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+}
+
+/** Map a caught error to a 400 Response, or re-throw if unrecognised. */
+function handleImportError(err: unknown): Response {
 	if (isInputValidationError(err)) {
 		return json({ success: false, error: err.message }, { status: 400 });
 	}
@@ -134,16 +137,10 @@ function handleCatchError(err: unknown): Response {
 	const matched = matchKnownError(msg);
 	if (matched) return matched;
 
-	logger.error('Failed to process data package', { error: msg });
-	return json({ error: 'Internal Server Error' }, { status: 500 });
+	throw err;
 }
 
-/** Safely remove a temp file if it exists. */
-function cleanupTempFile(zipPath: string): void {
-	if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-}
-
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	try {
 		const formData = await request.formData();
 		const validated = validateUpload(formData);
@@ -162,6 +159,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			cleanupTempFile(zipPath);
 		}
 	} catch (err) {
-		return handleCatchError(err);
+		return handleImportError(err);
 	}
-};
+});

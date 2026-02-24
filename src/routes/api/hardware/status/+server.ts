@@ -1,10 +1,6 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 
-import type { RequestHandler } from './$types';
-
-export const GET: RequestHandler = async () => {
-	const status = resourceManager.getStatus();
-	return json(status);
-};
+export const GET = createHandler(() => {
+	return resourceManager.getStatus();
+});

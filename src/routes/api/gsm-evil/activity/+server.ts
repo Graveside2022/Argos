@@ -1,13 +1,11 @@
-import { json } from '@sveltejs/kit';
 import { stat } from 'fs/promises';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { getGsmEvilDir } from '$lib/server/gsm-database-path';
 import { gsmMonitor } from '$lib/server/services/gsm-evil/gsm-monitor-service';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 async function checkGrgsmRunning(): Promise<boolean> {
 	try {
@@ -90,15 +88,15 @@ function buildSuggestion(packets: number, recentIMSI: boolean): string | null {
 	return null;
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const grgsmRunning = await checkGrgsmRunning();
 		if (!grgsmRunning) {
-			return json({
+			return {
 				success: false,
 				hasActivity: false,
 				message: 'GSM monitor not running'
-			});
+			};
 		}
 
 		const packets = await countGsmtapPackets();
@@ -106,7 +104,7 @@ export const GET: RequestHandler = async () => {
 		const currentFreq = await getCurrentFrequency();
 		const channelInfo = getChannelInfo();
 
-		return json({
+		return {
 			success: true,
 			hasActivity: packets > 0,
 			packetCount: packets,
@@ -116,14 +114,14 @@ export const GET: RequestHandler = async () => {
 				packets > 0 ? `Receiving data (${packets} packets/sec)` : 'No activity detected',
 			channelInfo: channelInfo || 'No channel info',
 			suggestion: buildSuggestion(packets, recentIMSI)
-		});
+		};
 	} catch (error: unknown) {
 		logger.error('Activity check error', { error: String(error) });
-		return json({
+		return {
 			success: false,
 			hasActivity: false,
 			message: 'Failed to check activity',
 			error: errMsg(error)
-		});
+		};
 	}
-};
+});

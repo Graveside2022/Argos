@@ -1,12 +1,9 @@
 import { json } from '@sveltejs/kit';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { delay } from '$lib/utils/delay';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const CONTAINER_NAME = 'openwebrx-hackrf';
 
@@ -55,18 +52,10 @@ function executeAction(action: string): Promise<Response> {
  * Control OpenWebRX Docker container
  * Body: { action: 'start' | 'stop' | 'restart' | 'status' }
  */
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const { action } = await request.json();
-		if (!action || !VALID_ACTIONS.has(action)) {
-			return json({ success: false, error: 'Invalid action' }, { status: 400 });
-		}
-		return executeAction(action);
-	} catch (err) {
-		logger.error('OpenWebRX control error', { error: errMsg(err) });
-		return json(
-			{ success: false, error: `Failed to control OpenWebRX: ${errMsg(err)}` },
-			{ status: 500 }
-		);
+export const POST = createHandler(async ({ request }) => {
+	const { action } = await request.json();
+	if (!action || !VALID_ACTIONS.has(action)) {
+		return json({ success: false, error: 'Invalid action' }, { status: 400 });
 	}
-};
+	return executeAction(action);
+});

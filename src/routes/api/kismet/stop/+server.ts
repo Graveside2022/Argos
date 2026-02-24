@@ -1,11 +1,10 @@
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Find running Kismet PIDs. Returns empty array if none found. */
 async function findKismetPids(): Promise<string[]> {
@@ -51,38 +50,30 @@ async function cleanupKismonInterface(): Promise<void> {
 	}
 }
 
-export const POST: RequestHandler = async () => {
-	try {
-		logger.info('Stopping Kismet with robust cleanup');
-		const pids = await findKismetPids();
-		if (pids.length === 0) {
-			logger.info('No Kismet processes found');
-			return json({ success: true, status: 'stopped', message: 'Kismet was not running' });
-		}
+export const POST = createHandler(async () => {
+	logger.info('Stopping Kismet with robust cleanup');
+	const pids = await findKismetPids();
+	if (pids.length === 0) {
+		logger.info('No Kismet processes found');
+		return { success: true, status: 'stopped', message: 'Kismet was not running' };
+	}
 
-		logger.info('Found Kismet processes to terminate', { pids: pids.join(', ') });
-		await terminateKismet();
-		await cleanupKismonInterface();
+	logger.info('Found Kismet processes to terminate', { pids: pids.join(', ') });
+	await terminateKismet();
+	await cleanupKismonInterface();
 
-		if (await isKismetRunning()) {
-			logger.error('Kismet processes may still be running');
-			return json(
-				{ success: false, status: 'error', message: 'Failed to stop all Kismet processes' },
-				{ status: 500 }
-			);
-		}
-
-		logger.info('Verification passed: No Kismet processes found');
-		return json({
-			success: true,
-			status: 'stopped',
-			message: 'Kismet WiFi discovery stopped successfully'
-		});
-	} catch (error) {
-		logger.error('Kismet stop error', { error: errMsg(error) });
+	if (await isKismetRunning()) {
+		logger.error('Kismet processes may still be running');
 		return json(
-			{ success: false, error: errMsg(error), message: 'Failed to stop Kismet' },
+			{ success: false, status: 'error', message: 'Failed to stop all Kismet processes' },
 			{ status: 500 }
 		);
 	}
-};
+
+	logger.info('Verification passed: No Kismet processes found');
+	return {
+		success: true,
+		status: 'stopped',
+		message: 'Kismet WiFi discovery stopped successfully'
+	};
+});

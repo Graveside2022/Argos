@@ -3,12 +3,9 @@
  * Scans system for all hardware and returns detection status
  */
 
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { scanAllHardware } from '$lib/server/hardware/detection/hardware-detector';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /**
  * GET /api/hardware/scan
@@ -33,22 +30,13 @@ function groupByCategory(detected: Awaited<ReturnType<typeof scanAllHardware>>['
 	return grouped;
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		logger.info('Scanning system hardware', { endpoint: '/api/hardware/scan' });
-		const scanResult = await scanAllHardware();
-		return json({
-			success: true,
-			stats: scanResult.stats,
-			hardware: groupByCategory(scanResult.detected),
-			timestamp: scanResult.timestamp
-		});
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		logger.error('Hardware scan error', { endpoint: '/api/hardware/scan', error: msg });
-		return json(
-			{ success: false, error: msg || 'Unknown error', timestamp: Date.now() },
-			{ status: 500 }
-		);
-	}
-};
+export const GET = createHandler(async () => {
+	logger.info('Scanning system hardware', { endpoint: '/api/hardware/scan' });
+	const scanResult = await scanAllHardware();
+	return {
+		success: true,
+		stats: scanResult.stats,
+		hardware: groupByCategory(scanResult.detected),
+		timestamp: scanResult.timestamp
+	};
+});

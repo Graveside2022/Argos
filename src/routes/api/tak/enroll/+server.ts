@@ -1,11 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { CertManager } from '$lib/server/tak/cert-manager';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const EnrollSchema = z.object({
 	hostname: z.string().min(1).max(253),
@@ -116,39 +115,38 @@ async function performEnrollment(
 	}
 }
 
-/** Handle top-level catch errors: InputValidationError or generic 500. */
-function handleCatchError(err: unknown, context: string): Response {
-	if (isInputValidationError(err)) {
-		return json({ success: false, error: err.message }, { status: 400 });
-	}
-	logger.error(context, { error: errMsg(err) });
-	return json({ error: 'Internal Server Error' }, { status: 500 });
+/** Save PEM certs and return the success response payload. */
+async function enrollAndSaveCerts(body: unknown): Promise<Response | Record<string, unknown>> {
+	const data = parseEnrollRequest(body);
+	if (data instanceof Response) return data;
+
+	const { hostname, port, username, password, id } = data;
+	const configId = id || crypto.randomUUID();
+
+	const result = await performEnrollment(hostname, port, username, password);
+	if (result instanceof Response) return result;
+
+	CertManager.init();
+	const paths = CertManager.savePemCerts(configId, result.cert, result.key, result.ca);
+
+	return {
+		success: true,
+		id: configId,
+		paths: {
+			certPath: paths.certPath,
+			keyPath: paths.keyPath,
+			caPath: paths.caPath
+		}
+	};
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	try {
-		const data = parseEnrollRequest(await request.json());
-		if (data instanceof Response) return data;
-
-		const { hostname, port, username, password, id } = data;
-		const configId = id || crypto.randomUUID();
-
-		const result = await performEnrollment(hostname, port, username, password);
-		if (result instanceof Response) return result;
-
-		CertManager.init();
-		const paths = CertManager.savePemCerts(configId, result.cert, result.key, result.ca);
-
-		return json({
-			success: true,
-			id: configId,
-			paths: {
-				certPath: paths.certPath,
-				keyPath: paths.keyPath,
-				caPath: paths.caPath
-			}
-		});
+		return await enrollAndSaveCerts(await request.json());
 	} catch (err) {
-		return handleCatchError(err, 'Enrollment failed');
+		if (isInputValidationError(err)) {
+			return json({ success: false, error: err.message }, { status: 400 });
+		}
+		throw err;
 	}
-};
+});

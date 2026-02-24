@@ -1,52 +1,28 @@
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { TakService } from '$lib/server/tak/tak-service';
 import { logger } from '$lib/utils/logger';
 
-import type { RequestHandler } from './$types';
-
 /** GET /api/tak/connection — Check current TAK server connection status */
-export const GET: RequestHandler = async () => {
-	try {
-		const service = TakService.getInstance();
-		const status = service.getStatus();
-		return json({ success: true, ...status });
-	} catch (err) {
-		logger.error('[TAK API] Status check failed', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return json({ success: false, error: 'Status check failed' }, { status: 500 });
-	}
-};
+export const GET = createHandler(async () => {
+	const service = TakService.getInstance();
+	const status = service.getStatus();
+	return { success: true, ...status };
+});
 
 /** POST /api/tak/connection — Connect to the configured TAK server */
-export const POST: RequestHandler = async () => {
-	try {
-		const service = TakService.getInstance();
-		// Reload config from DB — cert/truststore uploads may have changed paths since last load
-		service.reloadConfig();
-		logger.info('[TAK API] Config before connect:', { config: service.getStatus() });
-		await service.connect();
-		const status = service.getStatus();
-		return json({ success: true, status: status.status });
-	} catch (err) {
-		logger.error('[TAK] Connect failed', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return json({ success: false, error: 'Connection failed' }, { status: 500 });
-	}
-};
+export const POST = createHandler(async () => {
+	const service = TakService.getInstance();
+	// Reload config from DB — cert/truststore uploads may have changed paths since last load
+	service.reloadConfig();
+	logger.info('[TAK API] Config before connect:', { config: service.getStatus() });
+	await service.connect();
+	const status = service.getStatus();
+	return { success: true, status: status.status };
+});
 
 /** DELETE /api/tak/connection — Disconnect from the TAK server */
-export const DELETE: RequestHandler = async () => {
-	try {
-		const service = TakService.getInstance();
-		service.disconnect();
-		return json({ success: true, status: 'disconnected' });
-	} catch (err) {
-		logger.error('[TAK] Disconnect failed', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return json({ success: false, error: 'Disconnect failed' }, { status: 500 });
-	}
-};
+export const DELETE = createHandler(async () => {
+	const service = TakService.getInstance();
+	service.disconnect();
+	return { success: true, status: 'disconnected' };
+});

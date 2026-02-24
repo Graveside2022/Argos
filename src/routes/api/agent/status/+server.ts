@@ -3,11 +3,8 @@
  * Returns current LLM provider availability (Anthropic Claude only)
  */
 
-import { json } from '@sveltejs/kit';
-
+import { createHandler } from '$lib/server/api/create-handler';
 import { env } from '$lib/server/env';
-
-import type { RequestHandler } from './$types';
 
 /**
  * Check if Anthropic API is available
@@ -28,10 +25,10 @@ async function isAnthropicAvailable(): Promise<boolean> {
 	}
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	const hasAnthropic = await isAnthropicAvailable();
 
-	return json({
+	return {
 		provider: hasAnthropic ? 'anthropic' : 'unavailable',
 		available: {
 			anthropic: hasAnthropic
@@ -39,5 +36,5 @@ export const GET: RequestHandler = async () => {
 		message: hasAnthropic
 			? 'Claude Sonnet 4.5 online'
 			: 'No LLM available. Set ANTHROPIC_API_KEY environment variable.'
-	});
-};
+	};
+});

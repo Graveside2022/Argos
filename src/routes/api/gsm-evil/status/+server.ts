@@ -1,12 +1,8 @@
-import { json } from '@sveltejs/kit';
-
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Extract first non-timeout PID line from pgrep output. */
 function extractFirstPidLine(stdout: string, excludePattern?: string): string | undefined {
@@ -122,30 +118,18 @@ function deriveDataCollection(
 	return { active, lastActivity: active ? 'Active' : null, packetsReceived: 0 };
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		const grgsm = await checkGrgsmStatus();
-		const gsmevil = await checkGsmevilStatus();
-		const dataCollection = deriveDataCollection(grgsm.isRunning, gsmevil.isRunning);
-		const overallStatus = grgsm.isRunning && gsmevil.isRunning ? 'running' : 'stopped';
+export const GET = createHandler(async () => {
+	const grgsm = await checkGrgsmStatus();
+	const gsmevil = await checkGsmevilStatus();
+	const dataCollection = deriveDataCollection(grgsm.isRunning, gsmevil.isRunning);
+	const overallStatus = grgsm.isRunning && gsmevil.isRunning ? 'running' : 'stopped';
 
-		return json({
-			status: overallStatus,
-			details: { grgsm, gsmevil, dataCollection },
-			message:
-				overallStatus === 'running'
-					? 'GSM Evil is running and monitoring'
-					: 'GSM Evil is stopped'
-		});
-	} catch (error: unknown) {
-		logger.error('Status check error', { error: errMsg(error) });
-		return json(
-			{
-				status: 'error',
-				message: 'Failed to check GSM Evil status',
-				error: errMsg(error)
-			},
-			{ status: 500 }
-		);
-	}
-};
+	return {
+		status: overallStatus,
+		details: { grgsm, gsmevil, dataCollection },
+		message:
+			overallStatus === 'running'
+				? 'GSM Evil is running and monitoring'
+				: 'GSM Evil is stopped'
+	};
+});

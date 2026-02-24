@@ -2,12 +2,10 @@ import { json } from '@sveltejs/kit';
 import Database from 'better-sqlite3';
 import path from 'path';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { env } from '$lib/server/env';
 import { validateNumericParam } from '$lib/server/security/input-sanitizer';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 interface TowerLocationData {
 	lat: number;
@@ -198,35 +196,27 @@ async function resolveTowerLocation(params: CellParams): Promise<LocationResult>
 	return { found: false, message: 'Tower not found in database or API' };
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
+	const body = await request.json();
+
+	let params: CellParams;
 	try {
-		const body = await request.json();
-
-		let params: CellParams;
-		try {
-			params = validateCellParams(body);
-		} catch (validationError) {
-			return json(
-				{
-					success: false,
-					message: `Invalid parameter: ${(validationError as Error).message}`
-				},
-				{ status: 400 }
-			);
-		}
-
-		const result = await resolveTowerLocation(params);
-
-		if (!result.found && result.message === 'OPENCELLID_API_KEY not configured') {
-			return json({ success: false, message: result.message }, { status: 503 });
-		}
-
-		return json({ success: true, ...result });
-	} catch (error: unknown) {
-		logger.error('Tower location lookup error', { error: errMsg(error) });
+		params = validateCellParams(body);
+	} catch (validationError) {
 		return json(
-			{ success: false, message: 'Failed to lookup tower location' },
-			{ status: 500 }
+			{
+				success: false,
+				message: `Invalid parameter: ${(validationError as Error).message}`
+			},
+			{ status: 400 }
 		);
 	}
-};
+
+	const result = await resolveTowerLocation(params);
+
+	if (!result.found && result.message === 'OPENCELLID_API_KEY not configured') {
+		return json({ success: false, message: result.message }, { status: 503 });
+	}
+
+	return { success: true, ...result };
+});

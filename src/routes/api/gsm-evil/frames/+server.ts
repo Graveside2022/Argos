@@ -1,13 +1,11 @@
-import { json } from '@sveltejs/kit';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Lookup table for GSM L3 RR Management message types (protocol discriminator 0x06) */
 const GSM_RR_MESSAGE_TYPES: Record<number, string> = {
@@ -84,40 +82,40 @@ function parseFrames(recentFrames: string): string[] {
 		.filter((f) => f.length > 0);
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		const isRunning = await checkGrgsmProcess();
 		if (!isRunning) {
-			return json({
+			return {
 				success: false,
 				frames: [],
 				message: 'GSM monitor not running'
-			});
+			};
 		}
 
 		const recentFrames = await readRecentFrames();
 		const frames = parseFrames(recentFrames);
 
 		if (frames.length === 0) {
-			return json({
+			return {
 				success: false,
 				frames: [],
 				message: 'No GSM frames captured - check if data is flowing'
-			});
+			};
 		}
 
-		return json({
+		return {
 			success: true,
 			frames: frames,
 			message: frames.length > 0 ? 'Live frames captured' : 'No frames detected'
-		});
+		};
 	} catch (error: unknown) {
 		logger.error('Frame capture error', { error: errMsg(error) });
-		return json({
+		return {
 			success: false,
 			frames: [],
 			message: 'Failed to capture frames',
 			error: errMsg(error)
-		});
+		};
 	}
-};
+});

@@ -1,12 +1,9 @@
 import { json } from '@sveltejs/kit';
 import path from 'path';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
 import { delay } from '$lib/utils/delay';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /** Containers that may be managed via this endpoint */
 const VALID_CONTAINERS = ['openwebrx-hackrf', 'bettercap'];
@@ -73,8 +70,12 @@ async function executeAction(action: string, container: string): Promise<Respons
  * Actions: start, stop, restart
  * Body: { container: string } (e.g., "openwebrx-hackrf", "bettercap")
  */
-export const POST: RequestHandler = async ({ params, request }) => {
-	const { action } = params;
+export const POST = createHandler(async ({ params, request }) => {
+	const action = params.action;
+	if (!action) {
+		return json({ success: false, error: 'Action required' }, { status: 400 });
+	}
+
 	const body = await request.json();
 	const { container } = body;
 
@@ -86,18 +87,5 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		return json({ success: false, error: 'Invalid container name' }, { status: 400 });
 	}
 
-	try {
-		return await executeAction(action, container);
-	} catch (error) {
-		const msg = errMsg(error);
-		logger.error('Docker action error', { action, container, error: msg });
-
-		return json(
-			{
-				success: false,
-				error: `Failed to ${action} ${container}: ${msg}`
-			},
-			{ status: 500 }
-		);
-	}
-};
+	return await executeAction(action, container);
+});

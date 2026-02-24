@@ -1,9 +1,8 @@
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
-
-import type { RequestHandler } from './$types';
 
 /** Names that identify Argos-managed containers */
 const ARGOS_CONTAINER_NAMES = ['argos', 'hackrf', 'openwebrx', 'bettercap'];
@@ -71,11 +70,10 @@ async function fetchDockerStatus() {
 	};
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
-		const status = await fetchDockerStatus();
-		return json(status);
+		return await fetchDockerStatus();
 	} catch (error) {
 		return dockerErrorResponse(errMsg(error));
 	}
-};
+});

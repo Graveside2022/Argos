@@ -1,10 +1,7 @@
-import { json } from '@sveltejs/kit';
 import os from 'os';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
-
-import type { RequestHandler } from './$types';
 
 /** Heap limit configured via --max-old-space-size */
 const HEAP_LIMIT_MB = 1024;
@@ -82,48 +79,41 @@ async function checkZram(): Promise<{ enabled: boolean; size: string }> {
 	return { enabled: false, size: '0MB' };
 }
 
-export const GET: RequestHandler = async () => {
-	try {
-		const totalMem = os.totalmem();
-		const freeMem = os.freemem();
-		const usedMem = totalMem - freeMem;
-		const memoryPercentage = Math.round((usedMem / totalMem) * 100);
+export const GET = createHandler(async () => {
+	const totalMem = os.totalmem();
+	const freeMem = os.freemem();
+	const usedMem = totalMem - freeMem;
+	const memoryPercentage = Math.round((usedMem / totalMem) * 100);
 
-		const heapStats = process.memoryUsage();
-		const heapUsedMB = Math.round(heapStats.heapUsed / 1024 / 1024);
-		const heapTotalMB = Math.round(heapStats.heapTotal / 1024 / 1024);
+	const heapStats = process.memoryUsage();
+	const heapUsedMB = Math.round(heapStats.heapUsed / 1024 / 1024);
+	const heapTotalMB = Math.round(heapStats.heapTotal / 1024 / 1024);
 
-		const [earlyoomRunning, zram] = await Promise.all([checkEarlyoom(), checkZram()]);
+	const [earlyoomRunning, zram] = await Promise.all([checkEarlyoom(), checkZram()]);
 
-		const risk = assessSystemMemoryRisk(memoryPercentage);
-		assessHeapRisk(risk, heapUsedMB);
-		assessProtectionRisk(risk, earlyoomRunning, zram.enabled);
+	const risk = assessSystemMemoryRisk(memoryPercentage);
+	assessHeapRisk(risk, heapUsedMB);
+	assessProtectionRisk(risk, earlyoomRunning, zram.enabled);
 
-		return json({
-			success: true,
-			risk_level: risk.level,
-			risk_reasons: risk.reasons,
-			system: {
-				memory_used_mb: Math.round(usedMem / 1024 / 1024),
-				memory_total_mb: Math.round(totalMem / 1024 / 1024),
-				memory_percentage: memoryPercentage
-			},
-			nodejs: {
-				heap_used_mb: heapUsedMB,
-				heap_total_mb: heapTotalMB,
-				heap_limit_mb: HEAP_LIMIT_MB,
-				heap_percentage: Math.round((heapUsedMB / HEAP_LIMIT_MB) * 100)
-			},
-			protection: {
-				earlyoom_running: earlyoomRunning,
-				zram_enabled: zram.enabled,
-				zram_size: zram.size
-			}
-		});
-	} catch (error) {
-		return json({
-			success: false,
-			error: errMsg(error)
-		});
-	}
-};
+	return {
+		success: true,
+		risk_level: risk.level,
+		risk_reasons: risk.reasons,
+		system: {
+			memory_used_mb: Math.round(usedMem / 1024 / 1024),
+			memory_total_mb: Math.round(totalMem / 1024 / 1024),
+			memory_percentage: memoryPercentage
+		},
+		nodejs: {
+			heap_used_mb: heapUsedMB,
+			heap_total_mb: heapTotalMB,
+			heap_limit_mb: HEAP_LIMIT_MB,
+			heap_percentage: Math.round((heapUsedMB / HEAP_LIMIT_MB) * 100)
+		},
+		protection: {
+			earlyoom_running: earlyoomRunning,
+			zram_enabled: zram.enabled,
+			zram_size: zram.size
+		}
+	};
+});

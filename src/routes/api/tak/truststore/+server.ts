@@ -3,12 +3,9 @@ import path from 'node:path';
 
 import { json } from '@sveltejs/kit';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { execFileAsync } from '$lib/server/exec';
 import { CertManager } from '$lib/server/tak/cert-manager';
-import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 const MAX_TRUSTSTORE_SIZE = 1024 * 1024; // 1 MB
 
@@ -95,7 +92,7 @@ async function extractCaCert(
 	return caPath;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	try {
 		const formData = await request.formData();
 		const validated = validateFormData(formData);
@@ -109,16 +106,15 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const caPath = await extractCaCert(configDir, truststorePath, password);
 
-		return json({
+		return {
 			success: true,
 			id: configId,
 			paths: { truststorePath, caPath }
-		});
+		};
 	} catch (err) {
 		if (isInputValidationError(err)) {
 			return json({ success: false, error: err.message }, { status: 400 });
 		}
-		logger.error('Failed to process truststore', { error: errMsg(err) });
-		return json({ error: 'Internal Server Error' }, { status: 500 });
+		throw err;
 	}
-};
+});

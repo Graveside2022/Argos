@@ -3,14 +3,12 @@
  * GET /api/terminal/shells
  */
 
-import { json } from '@sveltejs/kit';
 import { access, constants } from 'fs/promises';
 import path from 'path';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import type { ShellInfo, ShellsResponse } from '$lib/types/terminal';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 // Four independent tmux profiles — resolved relative to project root
 const PROJECT_ROOT = process.cwd();
@@ -49,7 +47,7 @@ function getShellName(shellPath: string): string {
 	return SHELL_NAMES[basename] || basename;
 }
 
-export const GET: RequestHandler = async () => {
+export const GET = createHandler(async () => {
 	try {
 		// Get system default shell (prefer ZSH if SHELL not set)
 		const defaultShell = process.env.SHELL || '/bin/zsh';
@@ -91,7 +89,7 @@ export const GET: RequestHandler = async () => {
 			defaultShell
 		};
 
-		return json(response);
+		return response;
 	} catch (error) {
 		logger.error('Error detecting shells', {
 			endpoint: 'terminal/shells',
@@ -99,9 +97,9 @@ export const GET: RequestHandler = async () => {
 		});
 
 		// Return at least zsh as fallback
-		return json({
+		return {
 			shells: [{ path: '/bin/zsh', name: 'zsh', isDefault: true }],
 			defaultShell: '/bin/zsh'
-		} satisfies ShellsResponse);
+		} satisfies ShellsResponse;
 	}
-};
+});

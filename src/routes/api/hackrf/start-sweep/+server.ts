@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 import { logger } from '$lib/utils/logger';
@@ -89,21 +89,15 @@ async function startSweepCycle(
 	);
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const parsed = parseStartSweepBody(await request.json());
-		if (parsed.error) return parsed.error;
+export const POST = createHandler(async ({ request }) => {
+	const parsed = parseStartSweepBody(await request.json());
+	if (parsed.error) return parsed.error;
 
-		const frequencies = parsed.data.frequencies.map(toFrequency);
-		const cycleTimeMs = parsed.data.cycleTime * 1000;
-		logger.info('[start-sweep] Attempting to start sweep', { frequencies, cycleTimeMs });
-		return await startSweepCycle(frequencies, cycleTimeMs);
-	} catch (error: unknown) {
-		const msg = errMsg(error);
-		logger.error('Error in start-sweep endpoint', { error: msg });
-		return json({ status: 'error', message: msg }, { status: 500 });
-	}
-};
+	const frequencies = parsed.data.frequencies.map(toFrequency);
+	const cycleTimeMs = parsed.data.cycleTime * 1000;
+	logger.info('[start-sweep] Attempting to start sweep', { frequencies, cycleTimeMs });
+	return await startSweepCycle(frequencies, cycleTimeMs);
+});
 
 // Add CORS headers
 export const OPTIONS: RequestHandler = ({ request }) => {

@@ -1,11 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { startGsmEvil, stopGsmEvil } from '$lib/server/services/gsm-evil/gsm-evil-control-service';
 import { logger } from '$lib/utils/logger';
-
-import type { RequestHandler } from './$types';
 
 /**
  * Zod schema for GSM Evil control POST request
@@ -50,7 +49,7 @@ const actionHandlers: Record<string, (frequency?: string) => Promise<Response>> 
  * Start or stop GSM Evil monitoring (grgsm_livemon_headless + GsmEvil2)
  * Body: { action: "start" | "stop", frequency?: string }
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	try {
 		const rawBody = await request.json();
 
@@ -87,4 +86,4 @@ export const POST: RequestHandler = async ({ request }) => {
 			{ status: 400 }
 		);
 	}
-};
+});

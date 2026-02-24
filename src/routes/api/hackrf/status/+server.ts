@@ -1,13 +1,12 @@
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { getSweepManager } from '$lib/server/hackrf/sweep-manager';
 import { SystemStatus } from '$lib/types/enums';
 import { logger } from '$lib/utils/logger';
 
-import type { RequestHandler } from './$types';
-
-export const GET: RequestHandler = () => {
+export const GET = createHandler(() => {
 	try {
 		const manager = getSweepManager();
 		const status = manager.getStatus();
@@ -35,4 +34,4 @@ export const GET: RequestHandler = () => {
 			error: errMsg(error)
 		});
 	}
-};
+});

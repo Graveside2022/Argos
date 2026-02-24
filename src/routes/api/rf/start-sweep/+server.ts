@@ -1,7 +1,7 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 
 import { StartSweepRequestSchema } from '$lib/schemas/rf';
-import { errMsg } from '$lib/server/api/error-utils';
+import { createHandler } from '$lib/server/api/create-handler';
 import { sweepManager } from '$lib/server/hackrf/sweep-manager';
 import { getCorsHeaders } from '$lib/server/security/cors';
 import { logger } from '$lib/utils/logger';
@@ -58,34 +58,30 @@ async function startSweepCycle(frequencies: FreqResult[], cycleTimeMs: number): 
 	);
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	try {
-		const rawBody = await request.json();
-		const validated = safeParseWithHandling(StartSweepRequestSchema, rawBody, 'user-action');
-		if (!validated) return error(400, 'Invalid sweep configuration');
+export const POST = createHandler(async ({ request }) => {
+	const rawBody = await request.json();
+	const validated = safeParseWithHandling(StartSweepRequestSchema, rawBody, 'user-action');
+	if (!validated)
+		return json({ status: 'error', message: 'Invalid sweep configuration' }, { status: 400 });
 
-		const { frequencies: frequencyRanges, cycleTime } = validated;
-		const frequencies = frequencyRanges
-			.map(toFrequency)
-			.filter((f): f is { value: number; unit: string } => f !== null);
+	const { frequencies: frequencyRanges, cycleTime } = validated;
+	const frequencies = frequencyRanges
+		.map(toFrequency)
+		.filter((f): f is { value: number; unit: string } => f !== null);
 
-		if (frequencies.length === 0) {
-			return json(
-				{
-					status: 'error',
-					message: 'No valid frequencies after parsing',
-					rawFrequencies: frequencyRanges
-				},
-				{ status: 400 }
-			);
-		}
-
-		return await startSweepCycle(frequencies, cycleTime * 1000);
-	} catch (err: unknown) {
-		logger.error('Error in rf/start-sweep endpoint', { error: errMsg(err) });
-		return json({ status: 'error', message: errMsg(err) }, { status: 500 });
+	if (frequencies.length === 0) {
+		return json(
+			{
+				status: 'error',
+				message: 'No valid frequencies after parsing',
+				rawFrequencies: frequencyRanges
+			},
+			{ status: 400 }
+		);
 	}
-};
+
+	return await startSweepCycle(frequencies, cycleTime * 1000);
+});
 
 // Add CORS headers
 export const OPTIONS: RequestHandler = ({ request }) => {

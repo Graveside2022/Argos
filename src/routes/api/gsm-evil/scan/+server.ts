@@ -1,15 +1,14 @@
 import { json } from '@sveltejs/kit';
 
+import { createHandler } from '$lib/server/api/create-handler';
 import { performGsmScan } from '$lib/server/services/gsm-evil/gsm-scan-service';
-
-import type { RequestHandler } from './$types';
 
 /**
  * POST /api/gsm-evil/scan
  * Perform GSM frequency scan to detect active towers
  * Body (optional): { frequency?: number }
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST = createHandler(async ({ request }) => {
 	// Parse request body for frequency parameter
 	let requestedFreq = null;
 	try {
@@ -23,4 +22,4 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const result = await performGsmScan(requestedFreq);
 	return json(result, { status: result.success ? 200 : 500 });
-};
+});
