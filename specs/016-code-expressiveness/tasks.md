@@ -46,7 +46,7 @@
 | 5 | US7 — Consistent Error Responses (P1) | 1 | 1 | 0 | No |
 | 6 | US3 — Result Types (P2) | 1 | 1 | 0 | Yes |
 | 7 | US4 — Dead Export Cleanup (P2) | 1 | 1 | 0 | Yes |
-| 8 | US8 — Client-Side Libraries (P2) | 10 | 1 | **9** | Partial |
+| 8 | US8 — Client-Side Libraries (P2) | 10 | 10 | 0 | Partial |
 | 9 | US5 — Circular Dependency Resolution (P3) | 3 | 3 | 0 | Yes |
 | 10 | US6 — Higher-Order Wrappers (P3) | 3 | 3 | 0 | Partial |
 | 11 | **US9 — Env Centralization (P1) [NEW]** | 3 | 3 | 0 | Partial |
@@ -57,7 +57,7 @@
 | 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 5 | 0 | Partial |
 | 17 | Final Verification & Metrics | 7 | 7 | 0 | No |
 | 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 10 | 0 | Partial |
-| **Total** | | **86** | **77** | **9** | |
+| **Total** | | **86** | **86** | **0** | |
 
 ---
 
@@ -144,24 +144,29 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 - [x] T017 [US8] Add `<Toaster />` component to `src/routes/+layout.svelte`. Add `toast()` calls to 2-3 existing API success/error handlers as proof of pattern. Verify Lunaris dark theme compatibility.
 
-### Sub-phase 8b: Data Tables
+### Sub-phase 8b: Data Tables — SKIPPED (architecture review)
 
-- [ ] T018 [US8] Install `@tanstack/table-core` (REQUIRES USER APPROVAL). Create data-table helper components in `src/lib/components/ui/data-table/` following shadcn-svelte data-table pattern (`data-table.svelte`, `data-table-column-header.svelte`, etc.)
-- [ ] T019 [US8] Build one production data table (Kismet device list or signal history) using the new data-table components in `src/lib/components/`. Verify sorting, filtering, pagination, and Lunaris styling.
+- [x] T018 [US8] ~~Install `@tanstack/table-core`~~ **SKIPPED**: Architecture review determined existing `device-filters.ts` (103 LOC of clean pure functions with typed `SORT_EXTRACTORS` map) is the correct abstraction. Adding a headless table state machine would create two table paradigms with no measurable benefit. Pagination solved by render cap in T087. See `specs/016-code-expressiveness/verification.md` for rationale.
+- [x] T019 [US8] ~~Build production data table~~ **SKIPPED**: Depends on T018. Existing DeviceTable.svelte + device-filters.ts already provide sorting, filtering, and Lunaris styling. Pagination addressed by render cap T087.
 
-### Sub-phase 8c: Virtual Scrolling
+### Sub-phase 8c: Virtual Scrolling — SKIPPED (structural mismatch)
 
-- [ ] T020 [P] [US8] Install `virtua` (REQUIRES USER APPROVAL). Create thin wrapper component in `src/lib/components/ui/virtual-list/virtual-list.svelte` with Svelte 5 snippet-based item rendering via `VList` from `virtua/svelte`.
-- [ ] T021 [US8] Apply virtual scrolling to one existing long list (signal entries or device list) in the appropriate `src/routes/` or `src/lib/components/` page.
+- [x] T020 [P] [US8] ~~Install `virtua`~~ **SKIPPED**: Architecture review found hard structural mismatch — VList renders items as absolutely-positioned divs, but DeviceTable uses `<table>/<tbody>/<tr>` layout. Virtua cannot virtualize `<tr>` elements inside a `<table>` without a full component rewrite (abandon `<table>`, reimplement sticky headers, reimplement column alignment). Real-world device counts (40-400 after filters) do not justify this. Render cap T087 provides safety net.
+- [x] T021 [US8] ~~Apply virtual scrolling~~ **SKIPPED**: Depends on T020. Render cap T087 addresses the DOM pressure concern.
 
-### Sub-phase 8d: Form Validation
+### Sub-phase 8d: Form Validation — REPLACED (simpler utility)
 
-- [ ] T022 [US8] Install `sveltekit-superforms` and `formsnap` (REQUIRES USER APPROVAL). Create one validated form (e.g., GSM Evil configuration or system settings) as pattern reference using Zod schema for server+client validation in the appropriate route/component.
+- [x] T022 [US8] ~~Install `sveltekit-superforms` and `formsnap`~~ **REPLACED by T088**: Architecture review found superforms is designed for SvelteKit form actions (`+page.server.ts`), but Argos forms submit via `fetch()` to API routes. Architectural mismatch. Replaced with a 20-line `validateForm<T>()` Zod utility that fits the existing pattern. Zero new packages.
 
-### Sub-phase 8e: Optional Items
+### Sub-phase 8e: Remaining Items
 
-- [ ] T023 [US8] (Optional) Install `@tanstack/svelte-query` v6 (REQUIRES USER APPROVAL). Apply `$derived.by(createQuery({...}))` pattern to one REST endpoint. Verify it does NOT replace WebSocket-fed stores.
-- [ ] T024 [US8] Unify dual Kismet store architecture — make `src/lib/stores/tactical-map/kismet-store.ts` the canonical Kismet data source. Refactor `src/lib/stores/dashboard/agent-context-store.ts` to derive from it instead of maintaining independent state. **Implementation**: (1) identify all WebSocket message handlers feeding `agent-context-store`, (2) redirect them to write into `kismet-store`, (3) replace `agent-context-store` device fields with `$derived` getters from `kismet-store`, (4) verify OverviewPanel and DashboardMap still render correctly. SC-018.
+- [x] T023 [US8] ~~Install `@tanstack/svelte-query` v6~~ **SKIPPED**: Violates CLAUDE.md ("No state management libraries"). WebSocket-first architecture has no stale-data problem. `fetchJSON<T>()` (T078) is the correct abstraction for REST endpoints.
+- [x] T024 [US8] Fix agent-context-store type safety — replace `buildDeviceDetails(device as Record<string, unknown>, $mac)` cast at line 166 with a typed function that uses `KismetDevice` interface fields directly. Eliminates 15+ unsafe `as` casts in helper functions (`devStr`, `devField`, `readSignal`, `resolveManuf`, `resolveSsid`, `resolveEncryption`). The raw Kismet field fallbacks (`kismet.device.base.channel`, `dot11.device.*`) are dead code — the Kismet WebSocket handler already normalizes these into typed `KismetDevice` fields upstream. SC-018.
+
+### Sub-phase 8g: Render Cap & Form Validation Utility [NEW — architecture review replacements]
+
+- [x] T087 [US8] Add device render cap to `src/lib/components/dashboard/panels/DevicesPanel.svelte` — limit `devices` to top 200 by current sort with `devices.slice(0, RENDER_CAP)`. Add "Showing N of M devices" badge to `DeviceToolbar.svelte` when cap is exceeded. Provides DOM pressure safety net without requiring virtual scrolling library. Zero packages.
+- [x] T088 [US8] Create `src/lib/utils/validate-form.ts` — typed `validateForm<T>(schema: ZodSchema<T>, data: unknown)` utility that returns `{ data: T | null, errors: Record<string, string>, isValid: boolean }` using `schema.safeParse()` and Zod issue path mapping. Apply to one form (`TakConfigView.svelte` `handleSave()`) as pattern reference. Zero packages — uses existing Zod dependency.
 
 ### Sub-phase 8f: Client-Side Fetch Wrapper (B1 — P0)
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { z } from 'zod';
 
 	import TakAuthEnroll from '$lib/components/dashboard/tak/TakAuthEnroll.svelte';
 	import TakAuthImport from '$lib/components/dashboard/tak/TakAuthImport.svelte';
@@ -13,6 +14,7 @@
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 	import { takStatus } from '$lib/stores/tak-store';
 	import type { TakServerConfig } from '$lib/types/tak';
+	import { validateForm } from '$lib/utils/validate-form';
 
 	import {
 		applyCertPaths,
@@ -26,6 +28,25 @@
 		loadConfig,
 		saveConfig
 	} from './tak-config-logic';
+
+	const TakServerConfigSchema = z.object({
+		id: z.string(),
+		name: z.string().min(1, 'Server name is required'),
+		hostname: z.string().min(1, 'Hostname is required'),
+		port: z.number().int().min(1).max(65535, 'Port must be 1-65535'),
+		protocol: z.literal('tls'),
+		certPath: z.string().optional(),
+		keyPath: z.string().optional(),
+		caPath: z.string().optional(),
+		shouldConnectOnStartup: z.boolean(),
+		authMethod: z.enum(['enroll', 'import']).optional(),
+		truststorePath: z.string().optional(),
+		truststorePass: z.string(),
+		certPass: z.string(),
+		enrollmentUser: z.string().optional(),
+		enrollmentPass: z.string().optional(),
+		enrollmentPort: z.number().int().min(1).max(65535, 'Enrollment port must be 1-65535')
+	});
 
 	let config: TakServerConfig = $state({ ...DEFAULT_CONFIG });
 	let isLoading = $state(false);
@@ -46,6 +67,13 @@
 
 	async function handleSave() {
 		isSaving = true;
+		const validation = validateForm(TakServerConfigSchema, config);
+		if (!validation.isValid) {
+			const firstError = Object.values(validation.errors)[0] ?? 'Validation failed';
+			showMessage(firstError, 'error');
+			isSaving = false;
+			return;
+		}
 		const result = await saveConfig(config);
 		if (result.success && result.config) {
 			config = result.config;
