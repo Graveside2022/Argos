@@ -1,5 +1,9 @@
 # GSM Evil
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — Custom Argos module wrapping `grgsm_livemon` + GsmEvil2 Python scripts. Argos integration: 14 server files in `src/lib/server/services/gsm-evil/`, 12 API routes at `/api/gsm-evil/*`, 6 UI components in `src/lib/components/gsm-evil/`, dedicated `gsm-evil-store.ts` (321 lines), SSE streaming via `intelligent-scan-stream`, iframe isolation on dashboard. Env var: `GSMEVIL_DIR`. **No additional integration work required.**
+>
+> **Future tool interactions:** `gr-gsm` (already integrated — provides `grgsm_livemon` binary this module wraps), `kalibrate-hackrf` (GSM frequency calibration — shares SDR hardware, run sequentially), `srsRAN` (complementary LTE monitoring), `IMSI-catcher` (overlapping capability — GSM Evil already captures IMSIs).
+
 > **RISK CLASSIFICATION**: HIGH RISK - SENSITIVE SOFTWARE
 > GSM signal monitoring and IMSI detection module. Military education/training toolkit - Not for public release.
 
@@ -12,7 +16,7 @@
 | Method               | Supported | Notes                                          |
 | -------------------- | --------- | ---------------------------------------------- |
 | **Docker Container** | N/A       | Integrated Argos module, not a standalone tool |
-| **Native Install**   | YES       | Already running as part of Argos application   |
+| **Native Install**   | YES       | **ACTIVE** — running as part of Argos application |
 
 ---
 

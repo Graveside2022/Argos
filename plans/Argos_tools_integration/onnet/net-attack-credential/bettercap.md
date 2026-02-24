@@ -1,5 +1,7 @@
 # BetterCAP
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — Docker container configured in `docker/docker-compose.portainer-dev.yml` (port 8081, `--net=host`, `CAP_ADD: NET_ADMIN + NET_RAW`). Environment variables `BETTERCAP_USER`/`BETTERCAP_PASSWORD` in `.env`. Server-side URL configured in `src/lib/server/env.ts` as `BETTERCAP_URL`. **No additional integration work required.**
+
 > **RISK CLASSIFICATION**: HIGH RISK - SENSITIVE SOFTWARE
 > Multi-protocol man-in-the-middle framework capable of ARP spoofing, DNS spoofing, WiFi deauthentication, BLE reconnaissance, HTTP proxying, and credential sniffing across wired and wireless networks. Military education/training toolkit - Not for public release.
 
@@ -9,8 +11,8 @@
 
 | Method               | Supported | Notes                                                                                               |
 | -------------------- | --------- | --------------------------------------------------------------------------------------------------- |
-| **Docker Container** | YES       | `kalilinux/kali-rolling` base; requires `--privileged` and `--net=host` for LAN/WiFi/BLE operations |
-| **Native Install**   | YES       | `apt install bettercap`; recommended over Docker for reduced network overhead                       |
+| **Docker Container** | YES       | **ACTIVE** — already in `docker-compose.portainer-dev.yml` with REST API on port 8081              |
+| **Native Install**   | YES       | `apt install bettercap`; alternative to Docker but **do not run both simultaneously**               |
 
 ---
 

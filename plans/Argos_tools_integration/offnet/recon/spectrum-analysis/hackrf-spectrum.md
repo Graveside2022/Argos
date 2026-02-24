@@ -1,5 +1,9 @@
 # HackRF Spectrum
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — Core spectrum analyzer module. Argos integration: `src/lib/server/hackrf/sweep-manager.ts` (globalThis singleton wrapping `hackrf_sweep`), 6 API routes at `/api/hackrf/*` + 5 at `/api/rf/*` (both share SweepManager), SSE `data-stream` with 50ms throttle, client-side `src/lib/hackrf/sweep-manager/` (BufferManager, ProcessManager, ErrorTracker, FrequencyCycler), `hackrf-store.ts`. Installed via `apt install hackrf libhackrf-dev`. **No additional integration work required.**
+>
+> **Future tool interactions:** `openwebrx` (already integrated — shares HackRF hardware, only one at a time), `fissure` (SDR attack framework — shares HackRF, run sequentially), `gps-sdr-sim` (GPS spoofing — uses HackRF for transmit), `artemis` (signal ID — can use HackRF as input). All share the same HackRF One — **only one tool can use the HackRF at a time**.
+
 > **RISK CLASSIFICATION**: LOW RISK
 > Passive wideband spectrum analyzer with no transmit capability in this mode; uses hackrf_sweep for receive-only frequency scanning. Military education/training toolkit - Not for public release.
 
@@ -10,7 +14,7 @@
 | Method               | Supported | Notes                                                                                               |
 | -------------------- | --------- | --------------------------------------------------------------------------------------------------- |
 | **Docker Container** | YES       | Part of main Argos container; USB passthrough (`--privileged --device=/dev/bus/usb`) for HackRF One |
-| **Native Install**   | YES       | Already installed on Argos system; `hackrf` and `libhackrf-dev` ARM64 packages in Kali 2025.4       |
+| **Native Install**   | YES       | **ACTIVE** — `hackrf` and `libhackrf-dev` ARM64 packages installed on Argos system                  |
 
 ---
 

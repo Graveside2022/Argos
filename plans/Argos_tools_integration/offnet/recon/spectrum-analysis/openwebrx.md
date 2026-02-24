@@ -1,5 +1,7 @@
 # OpenWebRX
 
+> **✅ ALREADY INTEGRATED IN ARGOS** — Docker container configured in `docker/docker-compose.portainer-dev.yml` (port 8073, USB passthrough, `privileged: true`). API proxy at `src/routes/api/openwebrx/control/+server.ts`. Environment variables `PUBLIC_OPENWEBRX_URL` and `OPENWEBRX_PASSWORD` in `.env`. **No additional integration work required.**
+
 > **RISK CLASSIFICATION**: LOW RISK
 > Passive web-based SDR receiver with no transmit capability; provides receive-only demodulation and visualization via browser interface. Military education/training toolkit - Not for public release.
 
@@ -9,7 +11,7 @@
 
 | Method               | Supported | Notes                                                                                          |
 | -------------------- | --------- | ---------------------------------------------------------------------------------------------- |
-| **Docker Container** | YES       | Official `jketterl/openwebrx-full` image supports arm64; USB passthrough for SDR hardware      |
+| **Docker Container** | YES       | **ACTIVE** — already in `docker-compose.portainer-dev.yml` with web UI on port 8073            |
 | **Native Install**   | YES       | Already installed on Argos system; all dependencies available as ARM64 packages in Kali 2025.4 |
 
 ---
