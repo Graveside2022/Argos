@@ -1,4 +1,5 @@
 import { createHandler } from '$lib/server/api/create-handler';
+import { errMsg } from '$lib/server/api/error-utils';
 import { getRFDatabase } from '$lib/server/db/database';
 
 const DANGEROUS_KEYWORDS = [
@@ -35,11 +36,6 @@ function enforceLimit(query: string): { query?: string; error?: string } {
 		return { error: 'LIMIT cannot exceed 1000 rows' };
 	}
 	return { query };
-}
-
-/** Safe error message extraction. */
-function errMsg(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
 
 /** Execute a prepared SELECT query with optional params. */

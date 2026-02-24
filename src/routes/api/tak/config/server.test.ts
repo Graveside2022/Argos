@@ -146,7 +146,7 @@ describe('POST /api/tak/config', () => {
 		const data = await response.json();
 
 		expect(response.status).toBe(500);
-		expect(data.error).toBe('Internal Server Error');
+		expect(data.error).toBe('Internal server error');
 	});
 
 	it('accepts optional authMethod enum values', async () => {

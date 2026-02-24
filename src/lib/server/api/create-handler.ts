@@ -95,10 +95,14 @@ async function validateBody(
 	);
 }
 
+/** Extract logging context from handler options or request URL */
+function resolveContext(event: RequestEvent, options?: HandlerOptions): string {
+	return options?.method ?? event.url?.pathname ?? 'unknown';
+}
+
 /** Log the error and return a standardized 500 (or custom status) error response */
 function buildErrorResponse(err: unknown, event: RequestEvent, options?: HandlerOptions): Response {
-	const context = options?.method ?? event.url.pathname;
-	logger.error(`[${context}] ${errMsg(err)}`);
+	logger.error(`[${resolveContext(event, options)}] ${errMsg(err)}`);
 	return json(
 		{ success: false, error: 'Internal server error' },
 		{ status: options?.errorStatus ?? 500 }
