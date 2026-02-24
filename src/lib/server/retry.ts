@@ -7,6 +7,8 @@
  * @module
  */
 
+import { normalizeError } from '$lib/server/api/error-utils';
+
 /** Configuration for retry behavior */
 export interface RetryOptions {
 	/** Maximum number of attempts (including first try). Default: 3 */
@@ -55,18 +57,6 @@ function computeDelay(attempt: number, delayMs: number, backoff: 'linear' | 'exp
 /** Create a promise that resolves after the given milliseconds */
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Normalize an unknown thrown value to an Error instance.
- *
- * @param err - The caught value
- * @returns An Error instance
- */
-function normalizeError(err: unknown): Error {
-	if (err instanceof Error) return err;
-	if (typeof err === 'string') return new Error(err);
-	return new Error(String(err));
 }
 
 /** Determine whether a failed attempt should be retried */

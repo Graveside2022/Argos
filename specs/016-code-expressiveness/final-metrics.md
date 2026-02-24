@@ -69,24 +69,25 @@ All 8 cycles resolved via shared type extraction pattern:
 
 ## Route Handler Migration
 
-71 API route handlers migrated to use shared utilities:
+39 API route files touched across two tiers of migration:
 
-- `createHandler()` factory for try/catch, error formatting, logging
-- Shared `errMsg()` replacing 19 local copies
-- Shared `execFileAsync()` replacing 36 local declarations
-- Unified `ApiErrorResponse` shape across all error responses
+- **Tier 1 — Factory adoption**: 6 route files use `createHandler()` factory
+  (try/catch, error formatting, logging handled by factory)
+- **Tier 2 — Shared import migration**: ~33 additional route files migrated
+  to use shared `errMsg()` and/or `execFileAsync()` imports (replacing local copies)
+- Remaining ~27 route files unchanged (no local errMsg/execFileAsync to replace)
 
 ## Expressiveness Scorecard (Updated)
 
-| Technique             | Before   | After | Notes                                                |
-| --------------------- | -------- | ----- | ---------------------------------------------------- |
-| DRY                   | D        | **A** | errMsg + execFileAsync consolidated, factory pattern |
-| YAGNI                 | C+       | **A** | ~120 dead exports removed, 9 files deleted           |
-| Factory Functions     | F        | **A** | createHandler() across 71 routes                     |
-| Result Type           | F        | **B** | safe() utility + 3 demo conversions                  |
-| Higher-Order Wrappers | —        | **A** | withRetry(), withTimeout() created + migrated        |
-| Circular Dependencies | 8 cycles | **0** | All resolved                                         |
-| Unsafe Error Casts    | 38       | **0** | All replaced with errMsg()                           |
+| Technique             | Before   | After  | Notes                                                |
+| --------------------- | -------- | ------ | ---------------------------------------------------- |
+| DRY                   | D        | **A**  | errMsg + execFileAsync consolidated                  |
+| YAGNI                 | C+       | **A**  | ~120 dead exports removed, 9 files deleted           |
+| Factory Functions     | F        | **C+** | createHandler() created + 6 routes; 60 remain manual |
+| Result Type           | F        | **B**  | safe() utility + 3 demo conversions                  |
+| Higher-Order Wrappers | —        | **B+** | withRetry() created + migrated; withTimeout() ready  |
+| Circular Dependencies | 8 cycles | **0**  | All resolved                                         |
+| Unsafe Error Casts    | 38       | **0**  | All replaced with errMsg()                           |
 
 ## Deferred Tasks (Phase 8 client-side)
 
