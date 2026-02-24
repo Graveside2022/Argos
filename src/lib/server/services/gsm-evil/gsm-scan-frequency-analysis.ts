@@ -6,19 +6,18 @@
  * with cell identity and signal classification.
  */
 
-import { spawn } from 'child_process';
-import { closeSync, openSync } from 'fs';
-import { readFile, unlink } from 'fs/promises';
+import { unlink } from 'fs/promises';
 import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { env } from '$lib/server/env';
-import { validateNumericParam, validatePathWithinDir } from '$lib/server/security/input-sanitizer';
+import { validatePathWithinDir } from '$lib/server/security/input-sanitizer';
 import type { FrequencyTestResult } from '$lib/types/gsm';
 import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 import { validateGain } from '$lib/validators/gsm';
 
+import { readFrameHexLines, spawnGrgsm, verifyProcessAlive } from './gsm-grgsm-process';
 import {
 	appendCellIdentityEvents,
 	appendChannelEvents,
@@ -40,57 +39,6 @@ import {
 export interface FrequencyTestOutcome {
 	result: FrequencyTestResult;
 	events: ScanEvent[];
-}
-
-/** Spawn grgsm_livemon_headless and return its PID */
-function spawnGrgsm(freq: string, gain: number, stderrLog: string): string {
-	const gsmArgs = ['grgsm_livemon_headless', '-f', `${freq}M`, '-g', String(gain)];
-	const logFd = openSync(stderrLog, 'a');
-	const child = spawn('/usr/bin/sudo', gsmArgs, {
-		detached: true,
-		stdio: ['ignore', logFd, logFd]
-	});
-	child.unref();
-	closeSync(logFd);
-	const spawnedPid = child.pid;
-	if (!spawnedPid) throw new Error('Failed to start grgsm_livemon_headless');
-	const pid = String(spawnedPid);
-	validateNumericParam(pid, 'pid', 1, 4194304);
-	if (!pid || pid === '0') throw new Error('Failed to start grgsm_livemon_headless');
-	return pid;
-}
-
-/** Read last N lines from stderr log, or empty string on failure */
-async function readStderrTail(stderrLog: string): Promise<string> {
-	try {
-		const logContent = await readFile(stderrLog, 'utf-8');
-		return logContent.split('\n').slice(-10).join('\n').trim();
-	} catch {
-		return '';
-	}
-}
-
-/** Verify grgsm process is still alive; throw with detail if not */
-async function verifyProcessAlive(pid: string, stderrLog: string): Promise<void> {
-	try {
-		const validPid = validateNumericParam(parseInt(pid), 'pid', 1, 4194304);
-		process.kill(validPid, 0);
-	} catch {
-		const stderrContent = await readStderrTail(stderrLog);
-		const errorDetail = stderrContent
-			? `grgsm_livemon_headless exited during init. Error: ${stderrContent}`
-			: 'grgsm_livemon_headless exited during init with no error output. Check if HackRF is accessible.';
-		throw new Error(errorDetail);
-	}
-}
-
-/** Try to read hex frame lines from the stderr log for analysis */
-async function readFrameHexLines(stderrLog: string): Promise<string[]> {
-	const logContent = await readFile(stderrLog, 'utf-8');
-	return logContent
-		.split('\n')
-		.filter((l) => /^\s*[0-9a-f]{2}\s/.test(l))
-		.slice(-30);
 }
 
 /** Check whether frame analysis should be skipped (already have complete cell identity) */
