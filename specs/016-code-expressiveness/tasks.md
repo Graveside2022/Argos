@@ -1,25 +1,63 @@
 # Tasks: Code Expressiveness Improvement
 
 **Feature Branch**: `016-code-expressiveness`
-**Created**: 2026-02-23
-**Source**: plan.md (25 tasks, 10 phases), spec.md (8 user stories)
+**Created**: 2026-02-23 | **Regenerated**: 2026-02-24 (V4 — all 32 audit findings now have tasks)
+**Source**: plan.md (5 phases), spec.md (12 user stories, 33 FRs, 29 SCs), research.md, data-model.md, contracts/
+
+**Tests**: Not explicitly requested. Existing tests must continue to pass (FR-013). New shared utilities already have tests (prior art). No new test tasks generated.
+
+**Phase Mapping** (plan.md → tasks.md → spec parts):
+
+| Plan Phase | Task Phases | Spec Part |
+|-----------|-------------|-----------|
+| Phase 1 (Operational Hardening) | 11, 12, 13, 14 | Part C |
+| Phase 2 (Route Migration) | 3, 4, 5 (done) | Part A |
+| Phase 3 (Client Libraries) | 8 | Part B |
+| Phase 4 (Structural Cleanup) | 7, 9, 15, 16 | Part A+C |
+| Phase 5 (Verification) | 17 | All |
+
+**Prior Art**: US3 (`safe()`), US6 (`withRetry()`, `withTimeout()`), and significant portions of US1/US2/US4/US5/US7 are already complete on this branch. Completed tasks are marked `[x]`. Remaining work focuses on Part C operational hardening, Part B client-side tooling, remaining route migration, and file decomposition.
+
+**Live Verification** (all counts verified via grep against HEAD):
+
+| Metric | Research Count | Verified Count | Delta |
+|--------|----------------|----------------|-------|
+| `createHandler()` consumers | 6 routes | 14 routes | +8 (prior work) |
+| `process.env` (non-MCP) | 46 accesses | 33 accesses | -13 (prior work) |
+| `logError()` calls | 60 | 60 | Match |
+| Inline delay patterns | 38 | 38 | Match |
+| `/tmp/` hardcoded | 17 | 17 | Match |
+| `localhost:NNNN` hardcoded (non-MCP, non-test) | ~28 | 14 | -14 (prior work) |
+| `6371000` magic number | 5 | 5 | Match |
+| `111320` magic number | 3 | 3 | Match |
+| Unsafe error casts | 8 | 7 | -1 (live grep 2026-02-24) |
+| Local `errMsg` in routes | 19 | 1 | -18 (prior work) |
+| Total route files | 66 | 66 | Match |
+| Routes NOT using factory | ~60 | ~60 | 6 use factory (not 14 — see F2) |
 
 ## Task Summary
 
-| Phase | Description | Tasks | Parallel |
-|-------|-------------|-------|----------|
-| 1 | Setup | 1 | No |
-| 2 | Foundational (shared utilities) | 4 | Yes |
-| 3 | US1 — Route Handler Factory (P1) | 4 | Partial |
-| 4 | US2 — DRY Consolidation (P1) | 4 | Yes |
-| 5 | US7 — Consistent Error Responses (P1) | 1 | No |
-| 6 | US3 — Result Types (P2) | 1 | Yes |
-| 7 | US4 — Dead Export Cleanup (P2) | 1 | Yes |
-| 8 | US8 — Client-Side Libraries (P2) | 8 | Partial |
-| 9 | US5 — Circular Dependency Resolution (P3) | 3 | Yes |
-| 10 | US6 — Higher-Order Wrappers (P3) | 3 | Partial |
-| 11 | Polish & Cross-Cutting | 2 | No |
-| **Total** | | **32** | |
+| Phase | Description | Tasks | Done | Remaining | Parallel |
+|-------|-------------|-------|------|-----------|----------|
+| 1 | Setup | 1 | 1 | 0 | No |
+| 2 | Foundational (shared utilities) | 4 | 4 | 0 | Yes |
+| 3 | US1 — Route Handler Factory (P1) | 4 | 4 | 0 | Partial |
+| 4 | US2 — DRY Consolidation (P1) | 4 | 4 | 0 | Yes |
+| 5 | US7 — Consistent Error Responses (P1) | 1 | 1 | 0 | No |
+| 6 | US3 — Result Types (P2) | 1 | 1 | 0 | Yes |
+| 7 | US4 — Dead Export Cleanup (P2) | 1 | 1 | 0 | Yes |
+| 8 | US8 — Client-Side Libraries (P2) | 10 | 1 | **9** | Partial |
+| 9 | US5 — Circular Dependency Resolution (P3) | 3 | 3 | 0 | Yes |
+| 10 | US6 — Higher-Order Wrappers (P3) | 3 | 3 | 0 | Partial |
+| 11 | **US9 — Env Centralization (P1) [NEW]** | 3 | 0 | **3** | Partial |
+| 12 | **US10 — Hardcoded Paths/URLs (P1) [NEW]** | 2 | 0 | **2** | No |
+| 13 | **US11 — DRY Violations (P1) [NEW]** | 11 | 0 | **11** | Partial |
+| 14 | **US11 — Logging & Cleanup [NEW]** | 3 | 0 | **3** | Partial |
+| 15 | **US12 — Oversized File Decomposition (P2) [NEW]** | 13 | 0 | **13** | Yes |
+| 16 | **Cross-cutting — Type Safety [NEW]** | 5 | 0 | **5** | Partial |
+| 17 | Final Verification & Metrics | 7 | 0 | **7** | No |
+| 18 | **US1 — Route Migration at Scale [NEW — F2/F5/F7]** | 10 | 0 | **10** | Partial |
+| **Total** | | **86** | **23** | **63** | |
 
 ---
 
@@ -35,7 +73,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 - [x] T002 [P] Create shared `errMsg()` utility in `src/lib/server/api/error-utils.ts` — handles Error instances, strings, objects with message property, and unknown types. Add JSDoc. Add unit tests in `src/lib/server/api/error-utils.test.ts`
 - [x] T003 [P] Create shared `execFileAsync()` utility in `src/lib/server/exec.ts` — wraps `promisify(execFile)` with optional `maxBuffer`, `timeout`, `cwd`, `env` overrides. Add JSDoc. Add unit tests in `src/lib/server/exec.test.ts`
-- [x] T004 [P] Create unified API response types in `src/lib/server/api/api-response.ts` — `ApiErrorResponse` (`{ success: false, error: string }`) and `ApiSuccessResponse<T>` (`{ success: true, ... }`) types per spec FR-014. Add JSDoc. Type-only file, no runtime code.
+- [x] T004 [P] Create unified API response types in `src/lib/server/api/api-response.ts` — `ApiErrorResponse` (`{ success: false, error: string }`) and `ApiSuccessResponse<T>` (`{ success: true, ... }`) types per spec FR-014 and `contracts/api-error-response.ts`. Add JSDoc. Type-only file, no runtime code.
 - [x] T005 [P] Create `safe()` result tuple utility in `src/lib/server/result.ts` — returns `[T, null] | [null, Error]`, normalizes non-Error thrown values. Add JSDoc. Add unit tests in `src/lib/server/result.test.ts`
 
 ---
@@ -46,10 +84,10 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: Create one new route using factory, verify success/error/validation paths. Migrate 3 existing routes and confirm identical behavior.
 
-- [x] T006 [US1] Create `createHandler()` factory in `src/lib/server/api/create-handler.ts` — wraps `HandlerFn` (business logic function) returning `HandlerResult` (data object or Response) with try-catch, `errMsg()`, `logger.error()`, `json()` response. Uses types from T004. Ensure return type satisfies SvelteKit `RequestHandler` (FR-004/FR-005). Add JSDoc. Add unit tests in `src/lib/server/api/create-handler.test.ts`
+- [x] T006 [US1] Create `createHandler()` factory in `src/lib/server/api/create-handler.ts` per `contracts/route-handler-factory.ts` — wraps `HandlerFn` returning `HandlerResult` with try-catch, `errMsg()`, `logger.error()`, `json()` response. Ensure return type satisfies SvelteKit `RequestHandler` (FR-004/FR-005). Add JSDoc. Add unit tests in `src/lib/server/api/create-handler.test.ts`
 - [x] T007 [US1] Migrate 3 pilot routes to factory: `src/routes/api/signals/+server.ts`, `src/routes/api/system/info/+server.ts`, `src/routes/api/db/cleanup/+server.ts` — verify identical behavior with existing tests
-- [x] T008 [US1] Migrate remaining routes (batch 1 — system, hackrf, rf domains): `src/routes/api/system/**`, `src/routes/api/hackrf/**`, `src/routes/api/rf/**` to use `createHandler()`. Verify with `npm run build` + targeted vitest
-- [x] T009 [US1] Migrate remaining routes (batch 2 — gsm-evil, kismet, tak, signals, openwebrx domains): `src/routes/api/gsm-evil/**`, `src/routes/api/kismet/**`, `src/routes/api/tak/**`, `src/routes/api/signals/**`, `src/routes/api/openwebrx/**` to use `createHandler()`. Verify with `npm run build` + `npm run test:unit`
+- [x] T008 [US1] Pilot migration (batch 1 — system, hackrf domains): Migrated `system/info`, `system/metrics`, `hackrf/root`, `hackrf/emergency-stop` to `createHandler()`. 6 routes total use factory as of HEAD `b8480ff`. **Note: original scope was broader but only pilot routes were completed.**
+- [x] T009 [US1] Pilot migration (batch 2 — signals, db): Migrated `signals/root`, `db/cleanup` to `createHandler()`. Remaining ~52 routes deferred to Phase 18 (T068-T077).
 
 ---
 
@@ -59,10 +97,10 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: `grep -r "function errMsg" src/` returns only the shared module. `grep -r "promisify(execFile)" src/` returns only the shared module.
 
-- [x] T010 [P] [US2] Replace all 19 local `errMsg()` definitions with import from `src/lib/server/api/error-utils.ts` — files listed in `specs/016-code-expressiveness/research.md` R1
-- [x] T011 [P] [US2] Replace all 36 local `execFileAsync`/`promisify(execFile)` declarations with import from `src/lib/server/exec.ts` — files listed in `specs/016-code-expressiveness/research.md` R2
+- [x] T010 [P] [US2] Replace all 19 local `errMsg()` definitions with import from `src/lib/server/api/error-utils.ts`
+- [x] T011 [P] [US2] Replace all 36 local `execFileAsync`/`promisify(execFile)` declarations with import from `src/lib/server/exec.ts`
 - [x] T012 [US2] Absorb `safeErrorResponse()` and `logAndRespond()` into factory pattern. Remove `src/lib/server/security/error-response.ts` if fully superseded (0 external consumers confirmed)
-- [x] T013 [US2] Evaluate `safeJsonParse()` in `src/lib/server/security/safe-json.ts` (3 consumers) — absorb into factory or keep as niche utility. Document decision in research.md
+- [x] T013 [US2] Evaluate `safeJsonParse()` in `src/lib/server/security/safe-json.ts` (3 consumers: `gps-data-parser.ts`, `gps-satellite-service.ts`, `hardware-details-service.ts`) — keep as niche Zod-validated JSON parsing utility per research.md R7
 
 ---
 
@@ -72,7 +110,7 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Independent test**: `grep -rn "(error as Error)\|(err as Error)" src/` returns zero results.
 
-- [x] T014 [US7] Eliminate all 39 `(error as Error)` / `(err as Error)` casts across 23 files — replace with `errMsg()` calls or route through factory. Files listed in `specs/016-code-expressiveness/research.md` R3
+- [x] T014 [US7] Eliminate all 39 `(error as Error)` / `(err as Error)` casts across 23 files — replace with `errMsg()` calls or route through factory
 
 ---
 
@@ -104,26 +142,31 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 ### Sub-phase 8a: Activate svelte-sonner (lowest risk)
 
-- [x] T017 [US8] Add `<Toaster />` component to `src/routes/+layout.svelte`. Add `toast()` calls to 2–3 existing API success/error handlers as proof of pattern. Verify Lunaris dark theme compatibility.
+- [x] T017 [US8] Add `<Toaster />` component to `src/routes/+layout.svelte`. Add `toast()` calls to 2-3 existing API success/error handlers as proof of pattern. Verify Lunaris dark theme compatibility.
 
 ### Sub-phase 8b: Data Tables
 
-- [ ] T018 [US8] Install `@tanstack/table-core`. Create data-table helper components in `src/lib/components/data-table/` following shadcn-svelte data-table pattern (`data-table.svelte`, `data-table-column-header.svelte`, etc.)
-- [ ] T019 [US8] Build one production data table (Kismet device list or signal history) using the new data-table components. Verify sorting, filtering, pagination, and Lunaris styling in `src/lib/components/` or `src/routes/` as appropriate
+- [ ] T018 [US8] Install `@tanstack/table-core` (REQUIRES USER APPROVAL). Create data-table helper components in `src/lib/components/ui/data-table/` following shadcn-svelte data-table pattern (`data-table.svelte`, `data-table-column-header.svelte`, etc.)
+- [ ] T019 [US8] Build one production data table (Kismet device list or signal history) using the new data-table components in `src/lib/components/`. Verify sorting, filtering, pagination, and Lunaris styling.
 
 ### Sub-phase 8c: Virtual Scrolling
 
-- [ ] T020 [P] [US8] Install `virtua`. Create thin wrapper component in `src/lib/components/ui/virtual-list/virtual-list.svelte` with Svelte 5 snippet-based item rendering
-- [ ] T021 [US8] Apply virtual scrolling to one existing long list (signal entries or device list) in the appropriate `src/routes/` or `src/lib/components/` page
+- [ ] T020 [P] [US8] Install `virtua` (REQUIRES USER APPROVAL). Create thin wrapper component in `src/lib/components/ui/virtual-list/virtual-list.svelte` with Svelte 5 snippet-based item rendering via `VList` from `virtua/svelte`.
+- [ ] T021 [US8] Apply virtual scrolling to one existing long list (signal entries or device list) in the appropriate `src/routes/` or `src/lib/components/` page.
 
 ### Sub-phase 8d: Form Validation
 
-- [ ] T022 [US8] Install `sveltekit-superforms` and `formsnap`. Create one validated form (e.g., GSM Evil configuration or system settings) as pattern reference in the appropriate route/component
+- [ ] T022 [US8] Install `sveltekit-superforms` and `formsnap` (REQUIRES USER APPROVAL). Create one validated form (e.g., GSM Evil configuration or system settings) as pattern reference using Zod schema for server+client validation in the appropriate route/component.
 
 ### Sub-phase 8e: Optional Items
 
-- [ ] T023 [US8] (Optional) Install `@tanstack/svelte-query` v6. Apply `$derived.by(createQuery({...}))` pattern to one REST endpoint. Verify it does NOT replace WebSocket-fed stores.
-- [ ] T024 [US8] Unify dual Kismet store architecture — ensure single store at `src/lib/stores/tactical-map/kismet-store.ts` is sole source of truth with WebSocket primary, REST fallback. Verify dashboard and connection stores derive from it cleanly.
+- [ ] T023 [US8] (Optional) Install `@tanstack/svelte-query` v6 (REQUIRES USER APPROVAL). Apply `$derived.by(createQuery({...}))` pattern to one REST endpoint. Verify it does NOT replace WebSocket-fed stores.
+- [ ] T024 [US8] Unify dual Kismet store architecture — make `src/lib/stores/tactical-map/kismet-store.ts` the canonical Kismet data source. Refactor `src/lib/stores/dashboard/agent-context-store.ts` to derive from it instead of maintaining independent state. **Implementation**: (1) identify all WebSocket message handlers feeding `agent-context-store`, (2) redirect them to write into `kismet-store`, (3) replace `agent-context-store` device fields with `$derived` getters from `kismet-store`, (4) verify OverviewPanel and DashboardMap still render correctly. SC-018.
+
+### Sub-phase 8f: Client-Side Fetch Wrapper (B1 — P0)
+
+- [ ] T078 [P] [US8] Create `src/lib/utils/fetch-json.ts` with typed `fetchJSON<T>(url: string, options?: RequestInit): Promise<T | null>` wrapper that handles try-catch, `response.ok` check, JSON parsing, and returns `null` on failure with `console.error()` logging. FR-034.
+- [ ] T079 [US8] Migrate ~37 client-side fetch try/catch/return-null patterns across 19 files to use `fetchJSON<T>()`. Heaviest files: `status-bar-data.ts` (5), `gsm-evil-page-logic.ts` (5), `tak-config-logic.ts` (4), `OverviewPanel.svelte` (3), `GsmEvilPanel.svelte` (3). SC-030.
 
 ---
 
@@ -134,18 +177,18 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 **Independent test**: Run `npx madge --circular src/` and confirm zero output.
 
 - [x] T025a [P] [US5] Resolve circular dependency cycles 1-3 (dashboard + hackrf + gsm-server):
-  - `map-handlers.ts ↔ map-handlers-helpers.ts` → shared `map-handler-types.ts`
-  - `process-lifecycle.ts ↔ process-manager.ts` → invert dependency direction
-  - `l3-decoder.ts ↔ l3-message-decoders.ts` → shared `l3-types.ts`
+  - `map-handlers.ts <-> map-handlers-helpers.ts` -> shared `map-handler-types.ts`
+  - `process-lifecycle.ts <-> process-manager.ts` -> invert dependency direction
+  - `l3-decoder.ts <-> l3-message-decoders.ts` -> shared `l3-types.ts`
   Verify with `npx madge --circular src/` (expect 5 remaining)
 - [x] T025b [P] [US5] Resolve circular dependency cycles 4-6 (gps + gsm-evil services):
-  - `gps-position-service.ts ↔ gps-response-builder.ts` → shared `gps-types.ts`
-  - `gsm-evil-control-helpers.ts ↔ gsm-evil-control-service.ts` → shared `gsm-evil-types.ts`
-  - `gsm-evil-control-service.ts ↔ gsm-evil-stop-helpers.ts` → same `gsm-evil-types.ts`
+  - `gps-position-service.ts <-> gps-response-builder.ts` -> shared `gps-types.ts`
+  - `gsm-evil-control-helpers.ts <-> gsm-evil-control-service.ts` -> shared `gsm-evil-types.ts`
+  - `gsm-evil-control-service.ts <-> gsm-evil-stop-helpers.ts` -> same `gsm-evil-types.ts`
   Verify with `npx madge --circular src/` (expect 2 remaining)
 - [x] T025c [P] [US5] Resolve circular dependency cycles 7-8 (kismet + gsm-evil page):
-  - `kismet-service-transform.ts ↔ kismet.service.ts` → shared kismet types file
-  - `gsm-evil-page-logic.ts ↔ gsm-evil-scan-stream.ts` → extract shared interface
+  - `kismet-service-transform.ts <-> kismet.service.ts` -> shared kismet types file
+  - `gsm-evil-page-logic.ts <-> gsm-evil-scan-stream.ts` -> extract shared interface
   Verify with `npx madge --circular src/` (expect 0 remaining)
 
 ---
@@ -154,75 +197,342 @@ These utilities are consumed by multiple user stories and MUST be completed befo
 
 **Story goal**: `withRetry()` and `withTimeout()` available as shared utilities. Existing ad-hoc patterns migrated.
 
-**Independent test**: Unit tests for wrappers pass. 2–3 existing patterns converted.
+**Independent test**: Unit tests for wrappers pass. 2-3 existing patterns converted.
 
 - [x] T026 [P] [US6] Create `withRetry()` in `src/lib/server/retry.ts` — configurable `attempts`, `delayMs`, `backoff` (linear/exponential). Add JSDoc. Add unit tests in `src/lib/server/retry.test.ts`
 - [x] T027 [P] [US6] Create `withTimeout()` in `src/lib/server/timeout.ts` — configurable `timeoutMs`. Add JSDoc. Add unit tests in `src/lib/server/timeout.test.ts`
-- [x] T028 [US6] Identify and migrate 2–3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
+- [x] T028 [US6] Identify and migrate 2-3 existing ad-hoc retry/timeout patterns in service files to use `withRetry()` / `withTimeout()` wrappers
 
 ---
 
-## Phase 11: Polish & Cross-Cutting Concerns
+## Phase 11: US9 — Environment Centralization (P1) [NEW — Part C]
 
-- [x] T029 Run full verification suite: `npm run build` + `npm run test:unit` + `npx madge --circular src/`. Verify backward compatibility (FR-012) by calling key API endpoints and asserting response shapes match pre-migration format. Verify all success criteria from spec.md (SC-001 through SC-018)
-- [x] T030 Record final metrics (cloc, madge, jscpd) and compare against baseline from T001. Document results in `specs/016-code-expressiveness/final-metrics.md`
+**Story goal**: All environment variables validated and typed in a single module. Zero `process.env` in non-MCP files.
+
+**Independent test**: `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/` returns empty.
+
+**FR**: FR-023 | **SC**: SC-019
+
+- [ ] T031 [US9] Expand Zod schema in `src/lib/server/env.ts` from 4 to ~19 env vars per `contracts/env-schema.ts` — add Kismet auth (KISMET_HOST, KISMET_PORT, KISMET_API_KEY, KISMET_USER, KISMET_PASSWORD), API keys (ANTHROPIC_API_KEY, OPENCELLID_API_KEY), public URLs (PUBLIC_KISMET_API_URL, PUBLIC_HACKRF_API_URL), self/CORS (ARGOS_API_URL, ARGOS_CORS_ORIGINS), service URLs (GSM_EVIL_URL, OPENWEBRX_URL, BETTERCAP_URL), temp dir (ARGOS_TEMP_DIR). All new vars MUST have sensible defaults so existing deployments don't break. Update `.env.example` with new vars and comments.
+- [ ] T032 [US9] Migrate 33 `process.env` accesses across non-MCP files to typed `env` import from `$lib/server/env`. Target files (verified via `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/`). MCP server files (`src/lib/server/mcp/`) are exempt — they are standalone processes that cannot import SvelteKit modules.
+- [ ] T033 [P] [US9] Add `ARGOS_TEMP_DIR` runtime resolution in `src/lib/server/env.ts` — default to `path.join(os.tmpdir(), 'argos')`, create directory on startup with `mkdirSync({ recursive: true })`.
+
+**Checkpoint**: `npm run build` succeeds. `grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/` returns empty.
 
 ---
 
-## Dependencies
+## Phase 12: US10 — Hardcoded Paths & URLs (P1) [NEW — Part C]
+
+**Story goal**: All file paths and service URLs configurable through env vars. Zero hardcoded `/tmp/` or `localhost:NNNN`.
+
+**Independent test**: `grep -r '/tmp/' src/ --include='*.ts'` returns empty. `grep -rn 'localhost:[0-9]' src/ --include='*.ts' | grep -v mcp/ | grep -v test` returns empty.
+
+**FR**: FR-024, FR-025 | **SC**: SC-020, SC-021
+
+**Depends on**: Phase 11 (T031 — env schema expansion must complete first, since URL/path constants source from env vars).
+
+- [ ] T034 [US10] Replace 17 hardcoded `/tmp/` paths across service files with `path.join(env.ARGOS_TEMP_DIR, 'filename')`. Targets found via `grep -rn '/tmp/' src/ --include='*.ts'`.
+- [ ] T035 [US10] Replace 14 hardcoded `localhost:NNNN` service URLs across non-MCP/non-test files with env-backed constants from the expanded `env.ts`. Reference `env.GSM_EVIL_URL`, `env.OPENWEBRX_URL`, `env.BETTERCAP_URL`, `env.KISMET_API_URL`, etc. Targets found via `grep -rn 'localhost:[0-9]' src/ --include='*.ts' | grep -v mcp/ | grep -v test`.
+
+**Checkpoint**: Zero `/tmp/` literals. Zero hardcoded `localhost:NNNN` in non-MCP/non-test source. `npm run build` succeeds.
+
+---
+
+## Phase 13: US11 — DRY Violations (P1) [NEW — Part C]
+
+**Story goal**: Common patterns extracted into shared utilities — `delay()`, consolidated haversine, unified MAC-to-angle, named constants.
+
+**Independent test**:
+- `grep -rn 'new Promise.*setTimeout' src/ --include='*.ts'` finds only `delay.ts` and `retry.ts`
+- `grep -rn '6371000' src/ --include='*.ts'` finds only `constants/limits.ts`
+- `grep -rn 'hashMAC\|macToAngle' src/ --include='*.ts'` finds only one canonical file
+
+**FR**: FR-026, FR-027, FR-028, FR-029 | **SC**: SC-022, SC-023, SC-024, SC-025
+
+- [ ] T036 [P] [US11] Create `src/lib/utils/delay.ts` with `export const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))`. Placed in `utils/` (not `server/`) because some consumers are client-side stores. FR-026.
+- [ ] T037 [US11] Migrate 38 inline `new Promise(resolve => setTimeout(resolve, N))` patterns across source files to use `import { delay } from '$lib/utils/delay'`. Heaviest in: services/, stores/, routes/api/. SC-022.
+- [ ] T038 [P] [US11] Export `GEO` constant object from `src/lib/constants/limits.ts` with `EARTH_RADIUS_M` (6371000) and `METERS_PER_DEGREE_LAT` (111320). Replace 4 hardcoded `6371000` instances in `kismet/devices/+server.ts:83`, `kismet.service.ts:155`, `status-bar-data.ts:95`, `map-helpers.ts:105` and 2 hardcoded `111320` in `map-helpers.ts:46-47` with `GEO.EARTH_RADIUS_M` / `GEO.METERS_PER_DEGREE_LAT`. Keep the canonical definition in `geo.ts:13` but have it import from `limits.ts`. FR-029, SC-025.
+- [ ] T039 [US11] Consolidate 5 haversine implementations to use canonical `calculateDistance()` from `src/lib/server/db/geo.ts:19`. Remove duplicates in: `status-bar-data.ts:94` (`haversineMeters`), `map-helpers.ts:105` (inline), `map-helpers.ts:174` (`haversineKm`), `kismet.service.ts:149` (approximation). Verify `map-handlers.ts:230` (`haversineKm` consumer) is updated. FR-027, SC-023.
+- [ ] T040 [US11] Unify 3 MAC-to-angle hash algorithms into 1 canonical implementation. Currently: DJB2-ish in `src/lib/components/dashboard/map/map-helpers.ts:9` (`macToAngle`), FNV-1a in `src/lib/server/services/kismet.service.ts:120` (`hashMAC`), and copied FNV-1a in `src/routes/api/kismet/devices/+server.ts:36` (`hashMAC`). All 3 sites also have `hashMAC2` for distance jitter. Consolidate into one canonical module. This is a **correctness bug** — same MAC produces different angles depending on code path. FR-028, SC-024.
+- [ ] T041 [P] [US11] Replace `process.env.USER || 'kali'` fallback in `src/lib/server/services/kismet/kismet-control-service-extended.ts:76` and `:183` with `os.userInfo().username`. FR-033, SC-029.
+- [ ] T080 [P] [US11] Extract FNV-1a MAC hash functions (`hashMAC`, `hashMAC2`, `signalToDistance`, `offsetGps`, `computeFallbackLocation`) from `kismet.service.ts` and `kismet/devices/+server.ts` into a shared `src/lib/server/services/kismet/kismet-geo-helpers.ts` module. Both files import from the shared module. ~80 LOC saved. FR-044, audit finding B2.
+- [ ] T081 [P] [US11] Consolidate 3 GPS coordinate validation implementations (`hasValidLocation`, `extractGpsCoords`, threshold check) into canonical function in `src/lib/server/db/geo.ts`. FR-041, audit finding B10.
+- [ ] T082 [P] [US11] Migrate remaining ad-hoc retry patterns in Kismet service manager (`kismet-control-service-extended.ts`) to use `withRetry()`. FR-042, audit finding B11.
+- [ ] T083 [P] [US11] Replace switch/case chain in `src/lib/server/services/gsm-evil/l3-message-decoders.ts` with lookup table (Record<number, DecoderFn>) pattern. FR-043, audit finding B12.
+- [ ] T084 [P] [US11] Make `/var/run/gpsd.sock` path configurable via `GPSD_SOCKET_PATH` env var in `src/lib/server/hardware/serial-detector.ts:83`. Add to env.ts schema with default `/var/run/gpsd.sock`. FR-040, audit finding A6.
+
+**Checkpoint**: `npm run build` succeeds. `npm run test:unit` passes. Zero inline delay patterns (except `retry.ts` private `sleep()`). Zero magic number literals outside constants module. One canonical haversine. One canonical MAC-to-angle. Zero `'kali'` fallback.
+
+---
+
+## Phase 14: US11 — Logging & Cleanup [NEW — Part C]
+
+**Purpose**: Standardize error logging API. Add missing cleanup methods. Fix remaining unsafe error casts.
+
+**FR**: FR-030, FR-032 | **SC**: SC-026, SC-028
+
+- [ ] T042 [US11] Migrate 60 `logError()` call sites across 22 files to `logger.error()`. Pattern: `logError('msg', error)` -> `logger.error('msg', { error: errMsg(error) })`. Each migrated file MUST add `import { errMsg } from '$lib/server/api/error-utils'` if not already present. After migration, remove `logError` export from `logger.ts` to prevent reintroduction. Heaviest files: `sweep-cycle-init.ts` (6), `process-lifecycle.ts` (5), `signal-repository.ts` (5), `sweep-manager.ts` (4), `sweep-coordinator.ts` (4), `sweep-health-checker.ts` (4). FR-032, SC-028.
+- [ ] T043 [P] [US11] Add `dispose()` or cleanup methods to server-side `setInterval` instances lacking cleanup. Verified targets: `src/lib/server/hardware/resource-manager.ts:19` (no clearInterval), `src/lib/server/services/gsm-evil/gsm-monitor-service.ts:27` (no clearInterval), `src/lib/server/middleware/rate-limit-middleware.ts:20` (globalThis, no cleanup), `src/lib/utils/logger.ts:74` (no cleanup). FR-030, SC-026.
+- [ ] T044 [P] Fix 7 remaining unsafe `(error as ...)` casts using `errMsg()` + targeted type guards. Verified locations (live grep `b8480ff`): `hooks.server.ts:248`, `kismet-control-service-extended.ts:278`, `gsm-evil-stop-helpers.ts:74`, `sweep-coordinator.ts:117+267`, `sweep-cycle-init.ts:197`, `gsm-evil/activity/+server.ts:24`. For `.stdout` and `.signal` property accesses, use `typeof (error as Record<string, unknown>).stdout === 'string'` guards. FR-015, SC-011, audit finding B8.
+
+**Checkpoint**: Zero `logError(` in source. All `setInterval` has matching cleanup path. Zero unsafe error casts. `npm run build` succeeds.
+
+---
+
+## Phase 15: US12 — Oversized File Decomposition (P2) [NEW — Part C]
+
+**Story goal**: Zero non-exempt source files exceed 300 lines (MCP tool-definition files and test files exempt).
+
+**Independent test**: `find src/ -name '*.ts' -o -name '*.svelte' | xargs wc -l | sort -rn | head -20` shows no non-exempt files > 300 lines.
+
+**FR**: FR-031 | **SC**: SC-027
+
+**Depends on**: Phases 11-14 (migration may change file sizes). All 13 tasks below are [P] — they can run in parallel since they touch completely independent files.
+
+- [ ] T045 [P] [US12] Decompose `src/lib/websocket/base.ts` (394 LOC) — extract reconnect logic, message handler, and heartbeat into separate modules in `src/lib/websocket/`.
+- [ ] T046 [P] [US12] Decompose `src/lib/stores/gsm-evil-store.ts` (380 LOC) — split into state, actions, and derived/computed modules in `src/lib/stores/`.
+- [ ] T047 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-evil-health-service.ts` (370 LOC) — split into health checks and status parsing modules.
+- [ ] T048 [P] [US12] Decompose `src/lib/stores/dashboard/terminal-store.ts` (347 LOC) — split into terminal state and WebSocket communication modules.
+- [ ] T049 [P] [US12] Decompose `src/lib/components/dashboard/dashboard-map-logic.svelte.ts` (335 LOC) — split into map initialization and marker management modules.
+- [ ] T050 [P] [US12] Decompose `src/lib/components/dashboard/tak/TakConfigView.svelte` (329 LOC) — extract TakConfigForm and TakConfigDisplay sub-components.
+- [ ] T051 [P] [US12] Decompose `src/lib/hackrf/sweep-manager/error-tracker.ts` (321 LOC) — split into error tracking and error analysis modules.
+- [ ] T052 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-frequency-analysis.ts` (313 LOC) — split into frequency analysis and frequency report modules.
+- [ ] T053 [P] [US12] Decompose `src/lib/server/services/gsm-evil/gsm-scan-capture.ts` (313 LOC) — split into capture management and capture processing modules.
+- [ ] T054 [P] [US12] Decompose `src/lib/server/hackrf/sweep-manager.ts` (313 LOC) — split into sweep coordination and sweep configuration modules.
+- [ ] T055 [P] [US12] Decompose `src/lib/server/tak/tak-service.ts` (312 LOC) — split into connection management and TAK operations modules.
+- [ ] T056 [P] [US12] Decompose `src/lib/server/services/kismet/kismet-control-service-extended.ts` (306 LOC) — split into control commands and status checking modules.
+- [ ] T057 [US12] Evaluate `src/lib/components/dashboard/DashboardMap.svelte` (300 LOC) — borderline. Extract map-controls sub-component only if decomposition yields a cleaner responsibility split.
+
+**Checkpoint**: Zero non-exempt files > 300 LOC. All imports updated across consumers. `npm run build` succeeds. All tests pass.
+
+---
+
+## Phase 16: Cross-cutting — Type Safety [NEW]
+
+**Purpose**: Address audit findings C2, C3, D1 that span multiple user stories.
+
+- [ ] T058 [P] Declare `globalThis` types in `src/app.d.ts` for all `globalThis['__argos_*']` singleton augmentations (C2 fix from audit). Reference existing singletons: SweepManager, WebSocketManager, RateLimiter, RFDatabase. FR-036, SC-032.
+- [ ] T059 [P] Add runtime validation to unguarded `JSON.parse()` calls at trust boundaries (C3 fix from audit) — use `safeParseWithHandling` or `safeJsonParse` where external data enters the system (WebSocket messages, SSE events, GPS NMEA data). FR-037, SC-033.
+- [ ] T060 Fix swallowed errors in `src/lib/components/dashboard/panels/OverviewPanel.svelte` (D1 fix from audit) — ensure all error paths log via `console.error()` and surface user-visible feedback via toast or status indicator. FR-038, SC-034.
+- [ ] T085 [P] Define typed interfaces for all external API response shapes: `KismetRawDevice` (for `kismet/devices/+server.ts`), `OpenCelliDResponse` (for `cell-tower-service.ts`), `GpsdResponse` (for `gps-satellite-service.ts`), `OpenMeteoResponse` (for `status-bar-data.ts`). Place in appropriate `types/` files near consumers. Migrate ~100+ unsafe `as string`/`as number` casts to use typed interfaces. FR-035, SC-031, audit findings C1/C4/C5.
+- [ ] T086 [P] Audit and resolve remaining 4 `eslint-disable` directives: `hackrf/data-stream/+server.ts:110`, `symbol-factory.ts:56`, `validation-error.ts:47`, `dynamic-server.ts:14`. For each: either fix the underlying type issue or add inline comment documenting why suppression is necessary. FR-039, SC-035, audit finding D2.
+
+**Checkpoint**: `npm run build` succeeds. No swallowed errors. Typed globals.
+
+---
+
+## Phase 18: Route Handler Migration at Scale (SC-004) [NEW — Analysis Finding F2/F5/F7]
+
+**Story goal**: At least 50 of 66 route handler files use `createHandler()` factory (SC-004). Currently only 6 routes use it.
+
+**Independent test**: `grep -r 'createHandler(' src/routes/ --include='*.ts' -l | wc -l` returns 50+.
+
+**FR**: FR-003, FR-014 | **SC**: SC-004, SC-012
+
+**Depends on**: Phase 11 (env constants must exist before routes reference them). Independent of Phase 8/13/15.
+
+**Note**: Streaming/SSE routes (~5) and WebSocket proxy routes are exempt from factory migration.
+
+- [ ] T068 [US1] Migrate system domain routes to factory (batch 1): `src/routes/api/system/stats/+server.ts`, `src/routes/api/system/memory/+server.ts`, `src/routes/api/system/services/+server.ts`, `src/routes/api/system/logs/+server.ts`, `src/routes/api/system/docker/[action]/+server.ts`. 5 files.
+- [ ] T069 [US1] Migrate hackrf + rf domain routes to factory (batch 2): `src/routes/api/hackrf/start/+server.ts`, `src/routes/api/hackrf/stop/+server.ts`, `src/routes/api/hackrf/status/+server.ts`, `src/routes/api/rf/+server.ts`, `src/routes/api/rf/[id]/+server.ts`. Exempt: `hackrf/data-stream` (streaming). 5 files.
+- [ ] T070 [US1] Migrate gsm-evil domain routes to factory (batch 3): `src/routes/api/gsm-evil/scan/+server.ts`, `src/routes/api/gsm-evil/status/+server.ts`, `src/routes/api/gsm-evil/control/+server.ts`, `src/routes/api/gsm-evil/frames/+server.ts`, `src/routes/api/gsm-evil/activity/+server.ts`. 5 files.
+- [ ] T071 [US1] Migrate gsm-evil domain routes to factory (batch 4): `src/routes/api/gsm-evil/imsi/+server.ts`, `src/routes/api/gsm-evil/imsi-data/+server.ts`, `src/routes/api/gsm-evil/intelligent-scan/+server.ts`, `src/routes/api/gsm-evil/tower-location/+server.ts`, `src/routes/api/gsm-evil/gsm-evil-status/+server.ts`. 5 files.
+- [ ] T072 [US1] Migrate kismet domain routes to factory (batch 5): `src/routes/api/kismet/devices/+server.ts`, `src/routes/api/kismet/status/+server.ts`, `src/routes/api/kismet/start/+server.ts`, `src/routes/api/kismet/stop/+server.ts`, `src/routes/api/kismet/control/+server.ts`. Exempt: `kismet/ws` (WebSocket proxy). 5 files.
+- [ ] T073 [US1] Migrate tak domain routes to factory (batch 6): `src/routes/api/tak/config/+server.ts`, `src/routes/api/tak/connection/+server.ts`, `src/routes/api/tak/certs/+server.ts`, `src/routes/api/tak/enroll/+server.ts`, `src/routes/api/tak/import/+server.ts`. 5 files.
+- [ ] T074 [US1] Migrate signals + rf remaining routes to factory (batch 7): `src/routes/api/signals/batch/+server.ts`, `src/routes/api/signals/statistics/+server.ts`, `src/routes/api/signals/cleanup/+server.ts`, `src/routes/api/rf/statistics/+server.ts`. 4 files.
+- [ ] T075 [US1] Migrate gps + cell-towers + weather routes to factory (batch 8): `src/routes/api/gps/position/+server.ts`, `src/routes/api/gps/location/+server.ts`, `src/routes/api/gps/satellites/+server.ts`, `src/routes/api/cell-towers/nearby/+server.ts`, `src/routes/api/weather/current/+server.ts`. 5 files.
+- [ ] T076 [US1] Migrate remaining misc routes to factory (batch 9): `src/routes/api/terminal/shells/+server.ts`, `src/routes/api/openwebrx/control/+server.ts`, `src/routes/api/map-tiles/[...path]/+server.ts`, `src/routes/api/agent/status/+server.ts`, `src/routes/api/database/query/+server.ts`. Exempt: `agent/stream` (streaming), `streaming/status` (SSE). 5 files.
+- [ ] T077 [US1] Migrate final routes + verify SC-004 (batch 10): `src/routes/api/database/schema/+server.ts`, `src/routes/api/database/health/+server.ts`, `src/routes/api/db/+server.ts`, `src/routes/api/hardware/scan/+server.ts`, `src/routes/api/hardware/status/+server.ts`, `src/routes/api/hardware/details/+server.ts`. Verify: `grep -r 'createHandler(' src/routes/ -l | wc -l` ≥ 50. 5 files.
+
+**Checkpoint**: 50+ routes use `createHandler()`. Zero local `errMsg()` definitions. `npm run build` succeeds. All tests pass.
+
+---
+
+## Phase 17: Final Verification & Metrics
+
+**Purpose**: Validate all 35 success criteria (SC-001 through SC-035). Record before/after metrics. Depends on ALL other phases.
+
+- [ ] T061 Run full test suite: `npm run test:unit`, `npm run test:integration`, `npm run test:security`. All must pass. (Use targeted tests on RPi if memory-constrained.) **Coverage gate**: Run `npx vitest run --coverage` on new shared utilities (`error-utils.ts`, `exec.ts`, `result.ts`, `retry.ts`, `timeout.ts`, `delay.ts`, `fetch-json.ts`) and verify ≥80% branch coverage per Constitution Article III.2.
+- [ ] T062 Run `npm run build` — verify zero new warnings.
+- [ ] T063 Measure LOC delta (target: -1,000 from Part A+C net). `cloc src/` or `find src/ -name '*.ts' -o -name '*.svelte' | xargs wc -l`.
+- [ ] T064 Verify each SC-001 through SC-035 with targeted grep/search. Document pass/fail for each criterion. **Includes FR-014 validation**: spot-check 10 migrated routes to confirm unified error response shape (`{ success: false, error: string }`) by sending invalid requests and inspecting response bodies.
+- [ ] T065 Run `npx madge --circular src/` — confirm 0 cycles remain.
+- [ ] T066 Run production build, measure bundle size delta. Compare to pre-branch baseline from T001.
+- [ ] T067 Document final metrics in verification report at `specs/016-code-expressiveness/verification.md`.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
 
 ```
-Phase 1 (Setup)
-  └── Phase 2 (Foundational: T002-T005) — all [P], can run in parallel
-        ├── Phase 3 (US1: Factory) — depends on T002 (errMsg) + T004 (types)
-        │     ├── Phase 4 (US2: DRY) — T010 depends on T002, T011 depends on T003, T012-T013 depend on T006
-        │     └── Phase 5 (US7: Error casts) — depends on T002 + T006
-        ├── Phase 6 (US3: Result types) — depends on T005 only
-        ├── Phase 7 (US4: Dead exports) — independent after Phase 2
-        ├── Phase 8 (US8: Client-side) — independent (different layer entirely)
-        ├── Phase 9 (US5: Circular deps) — independent
-        └── Phase 10 (US6: Wrappers) — independent
-  Phase 11 (Polish) — depends on ALL phases completing
+Already Complete (Phases 1-7, 9-10):
+  Setup → Foundational → US1 Factory → US2 DRY → US7 Errors
+  US3 Result Types  |  US4 Dead Exports  |  US5 Circular Deps  |  US6 Wrappers
+  US8a Sonner
+
+Remaining work (Phases 8b-e, 11-18):
+
+Phase 11 (US9 Env) ──→ Phase 12 (US10 Paths/URLs)
+        │                           │
+Phase 13 (US11 DRY) ──────────────┤
+        │                           │
+Phase 14 (US11 Logging) ──────────┤──→ Phase 15 (US12 Decompose)
+        │                           │
+Phase 11 (US9 Env) ──→ Phase 18 (Route Migration) ──┤
+        │                                             │
+Phase 8b-e (US8 Libs) ───────────────────────────────┤──→ Phase 17 (Verification)
+        │                                             │
+Phase 16 (Type Safety) ──────────────────────────────┘
 ```
 
-### Story Completion Order
+### Remaining Story Completion Order
 
-1. **Must complete first**: Phase 2 (Foundational) — blocks Phases 3-7
-2. **P1 stories (do next)**: Phase 3 (US1) → Phase 4 (US2) → Phase 5 (US7)
-3. **P2 stories (parallel after P1 foundation)**: Phase 6 (US3), Phase 7 (US4), Phase 8 (US8) — all independent
-4. **P3 stories (parallel anytime after Phase 2)**: Phase 9 (US5), Phase 10 (US6) — independent
-5. **Always last**: Phase 11 (Polish)
+| Priority | Story | Phase | Can Start After | Deps |
+|----------|-------|-------|-----------------|------|
+| P1 | US9 (env centralization) | 11 | Immediately | None |
+| P1 | US10 (hardcoded paths/URLs) | 12 | T031 (env schema) | US9 partial |
+| P1 | US11 (DRY violations) | 13, 14 | Immediately | None |
+| P1 | US1 (route migration at scale) | 18 | Phase 11 (env) | US9 |
+| P2 | US8 (client libraries) | 8b-e | Immediately | None (independent layer) |
+| P2 | US12 (oversized files) | 15 | Phases 11-14, 18 | Migration changes file sizes |
+| — | Type safety fixes | 16 | Immediately | None |
 
-## Parallel Execution Examples
+### Within Each Phase
 
-### Maximum parallelism after Phase 2:
+- Tasks marked [P] can run in parallel (different files, no shared state)
+- Non-[P] tasks must run sequentially within their sub-phase
+- Verify `npm run build` after each batch of parallel tasks
+
+### Parallel Opportunities
+
+**Part C creation tasks (independent files, run first)**:
 ```
-Agent 1: T006 (factory) → T007 (pilot) → T008 (batch 1) → T009 (batch 2)
-Agent 2: T010 (errMsg DRY) + T011 (exec DRY) → T012 (absorb safeErrorResponse)
-Agent 3: T017 (sonner) → T018 (data-table setup) → T019 (data-table production)
-Agent 4: T025a-c (circular deps) — independent, can run anytime
+T033 (ARGOS_TEMP_DIR) ──┐
+T036 (delay.ts)         ┤── all different files, no deps
+T038 (GEO constants)    ┤
+T041 (kali user)        ┤
+T043 (dispose methods)  ┤
+T044 (error casts)      ┤
+T058 (globalThis types) ┤
+T059 (JSON validation)  ┤
+T078 (fetchJSON)        ┤
+T080 (MAC hash extract) ┤
+T085 (API interfaces)   ┤
+T086 (eslint-disable)   ┘
 ```
 
-### After US1 factory is complete (T006-T009 done):
+**Phase 8 library setup (independent component families)**:
 ```
-Agent 1: T014 (error casts) — needs factory + errMsg
-Agent 2: T020 (virtua setup) → T021 (virtua apply)
-Agent 3: T026 (withRetry) + T027 (withTimeout) → T028 (migrate patterns)
-Agent 4: T022 (superforms) — independent
+T018 (data-table) ──→ T019 (data-table apply)
+T020 (virtua)     ──→ T021 (virtua apply)
+T022 (superforms) ── independent
+T023 (svelte-query) ── independent
+
+T018 ┐
+T020 ┤── can run in parallel (different component families)
+T022 ┤
+T023 ┘
 ```
+
+**Phase 15 decomposition (13 independent files)**:
+```
+T045 through T056 — ALL can run in parallel (different files, no shared state)
+T057 — sequential (depends on evaluating borderline case)
+```
+
+---
+
+## Parallel Execution Plan (2 Agents)
+
+### Wave 1 — Part C Foundation
+```
+Agent A: T031 (env schema) → T032 (process.env migration) → T034 (/tmp/ paths) → T035 (localhost URLs)
+Agent B: T036 (delay.ts) → T037 (delay migration) → T038 (GEO) → T039 (haversine) → T040 (MAC-to-angle) → T041 (kali)
+```
+
+### Wave 2 — Logging + Client Libraries
+```
+Agent A: T042 (logError migration) → T044 (error casts) → T043 (dispose)
+Agent B: T018 (data-table) → T019 (data-table apply) → T020 (virtua) → T021 (virtua apply)
+```
+
+### Wave 3 — Decomposition + Forms
+```
+Agent A: T045-T051 (decompose files batch 1 — 7 files)
+Agent B: T022 (superforms) → T023 (svelte-query) → T024 (Kismet store) → T052-T057 (decompose batch 2 — 6 files)
+```
+
+### Wave 4 — Cleanup + Verification
+```
+Agent A: T058-T060 (type safety fixes)
+Agent B: T061-T067 (final verification)
+```
+
+---
 
 ## Implementation Strategy
 
-### MVP (minimum viable: do this first)
-- **Phase 1-2**: Setup + Foundational utilities (T001-T005)
-- **Phase 3**: Route Handler Factory (T006-T009) — highest impact single change
-- **Phase 4**: DRY Consolidation (T010-T013) — biggest LOC reduction
+### MVP First (Recommended — Phase 11 + 13)
 
-This MVP alone delivers ~1,000 net lines saved (gross elimination ~1,400-2,100, offset by new utility code) and transforms the server-side code quality from D/F grades to A/B on factory functions, DRY, and error handling.
+1. **Phase 11**: Env centralization (T031-T033) — operational foundation
+2. **Phase 13**: DRY violations (T036-T041) — includes correctness bug fix (MAC-to-angle)
+3. **STOP and VALIDATE**: `npm run build`, `npm run test:unit`, grep checks
+4. This alone delivers US9, US11 — the highest operational value with zero behavioral changes
 
-### Incremental delivery after MVP:
-- **Wave 2**: US7 error casts (T014) + US8 sonner activation (T017) — quick wins
-- **Wave 3**: US4 dead exports (T016) + US5 circular deps (T025a-c) — cleanup
-- **Wave 4**: US8 remaining (T018-T024) — client-side tooling
-- **Wave 5**: US6 wrappers (T026-T028) + US3 result types (T015) — refinements
-- **Final**: Polish (T029-T030) — verification and metrics
+### Incremental Delivery After MVP
+
+1. Phases 11, 13 → Operational foundation + DRY (US9, US11)
+2. Phase 12 → Hardcoded paths/URLs (US10)
+3. Phase 14 → Logging & cleanup (US11 continued)
+4. Phase 8b-e → Client tooling gaps closed (US8) — independent, can interleave
+5. Phase 15 → Oversized files decomposed (US12)
+6. Phase 16 → Type safety fixes
+7. Phase 17 → Verification against all 29 success criteria
+
+### Already Delivered (23 tasks, 10 phases complete)
+
+| Story | What | Status |
+|-------|------|--------|
+| US1 | Route handler factory — `createHandler()` in 6 route files (pilot). Scale migration in Phase 18 | Partial |
+| US2 | DRY consolidation — `errMsg()`, `execFileAsync()` shared | Done |
+| US3 | Result types — `safe()`, `safeSync()` with 3 consumers | Done |
+| US4 | Dead exports — identified and removed | Done |
+| US5 | Circular deps — all 8 cycles resolved | Done |
+| US6 | HO wrappers — `withRetry()`, `withTimeout()` with tests | Done |
+| US7 | Error casts — 30 of 39 original eliminated (9 remain in T044) | Done |
+| US8 partial | svelte-sonner activated (3 imports) | 1/8 done |
+| US8 extended | Client fetch wrapper (B1) — new sub-phase 8f | Pending |
+| US11 extended | B2, B10-B12, A6 DRY fixes — 5 new tasks | Pending |
+| Type safety extended | C1/C4/C5 API typing, D2 eslint-disable — 2 new tasks | Pending |
+
+---
+
+## Format Validation
+
+All tasks verified against checklist format: `- [ ] [TaskID] [P?] [Story?] Description with file path`
+
+- 86 total tasks, all have checkbox + task ID
+- [P] marker present only on tasks with no file-level dependencies
+- [Story] label present on all user story phase tasks (US1-US12)
+- Setup/Foundational/Polish tasks have NO story label
+- Every task includes file path or grep command for verification
+- Completed tasks marked `[x]` with original IDs preserved for commit message traceability
+
+---
+
+## Notes
+
+- [P] tasks = different files, no dependencies
+- [Story] label maps task to specific user story for traceability
+- US3 and US6 are fully DONE — `safe()`, `withRetry()`, `withTimeout()` already implemented with tests
+- `svelte-sonner` is already installed (v1.0.7) with 3 imports — T018+ extends other library coverage
+- `createHandler()` exists with 6 consumers (pilot routes). T008-T009 completed pilot migration only. Phase 18 (T068-T077) handles remaining ~60 routes in 10 batches of 5 files each (SC-004 target: 50+)
+- MCP server files (`src/lib/server/mcp/`) are exempt from env centralization (standalone processes)
+- Streaming/SSE route handlers are exempt from factory migration (can't wrap streaming responses)
+- Four dependency gates require user approval: T018 (@tanstack/table-core), T020 (virtua), T022 (superforms+formsnap), T023 (svelte-query)
+- `madge` is already installed as devDependency (installed during US5 work)
+- Commit after each task or logical group. Format: `type(scope): TXXX — description`
+- RPi 5 memory constraint: Never run concurrent `svelte-check` or full test suite while Antigravity is active
+- **Deferred P2 audit findings (acknowledged, no tasks)**: A5 (client-side setInterval consistency — all components already have cleanup, just inconsistent pattern), C6 (milsymbol `any` — external library limitation), C7 (type branding for domain IDs — significant refactor for marginal compile-time safety), C8 (typed WebSocket message discriminated union — nice-to-have), C9 (repository/data access abstraction — would require new architectural pattern, out of scope), D5 (`@ts-expect-error` in tests — 2 instances for SSR testing, acceptable). These are documented in `codebase-audit-findings.md` for future work.

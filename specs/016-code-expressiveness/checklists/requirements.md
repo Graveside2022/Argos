@@ -52,3 +52,18 @@
     - Reference Documentation section with all GitHub repos, docs URLs, npm stats
     - All libraries verified: 1,000+ stars (except formsnap at 790, included because it's the shadcn-svelte form component), headless/compatible with Lunaris, MIT licensed, actively maintained
     - Explicitly rejected: Tzezar Datagrid (240 stars), SVAR DataGrid (not headless), svelte-headless-table (maintainer says "no Svelte 5 port planned")
+- **Rev 4 (2026-02-24)**: Added Part C — Operational Hardening from V2 audit verification:
+    - FR-023 through FR-033: 11 new requirements from verified audit findings
+    - SC-019 through SC-029: 11 new measurable success criteria
+    - User Stories 9-12: env centralization, hardcoded paths/URLs, DRY violations, oversized files
+    - All counts verified by exhaustive grep against live codebase (branch HEAD `b8480ff`)
+    - Key new findings: D3 (35+ `process.env` bypass), D4 (19 oversized files), corrected B9 (236 total logger calls, not 170)
+- **Rev 5 (2026-02-24)**: Backfilled missing FR/SC coverage for all 32 audit findings:
+    - FR-034: Client-side fetch wrapper (B1, P0 — was the only P0 finding without a task)
+    - FR-035: External API response typing (C1/C4/C5, P1 — 100+ unsafe casts)
+    - FR-036: globalThis typing (C2, P1 — orphaned T058 now has formal requirement)
+    - FR-037: JSON.parse validation (C3, P1 — orphaned T059 now has formal requirement)
+    - FR-038: Swallowed errors (D1, P1 — orphaned T060 now has formal requirement)
+    - FR-039 through FR-044: P2 SHOULD requirements for remaining audit findings
+    - SC-030 through SC-035: Measurable outcomes for new FRs
+    - Gap analysis confirmed: all 32 findings (A1-A6, B1-B12, C1-C9, D1-D5) now have task or explicit scope decision

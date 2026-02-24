@@ -1,13 +1,15 @@
 # Quickstart: Code Expressiveness Improvement
 
-**Date**: 2026-02-23 | **Branch**: `016-code-expressiveness`
+**Date**: 2026-02-23 (original) | 2026-02-24 (updated with Part C) | 2026-02-24 (V3 — all 32 findings)
+**Branch**: `016-code-expressiveness`
 
 ## Overview
 
-This feature has two independent parts:
+This feature has three independent parts:
 
 - **Part A**: Server-side abstractions (route handler factory, DRY utilities, error cleanup)
 - **Part B**: Client-side tooling (data tables, virtual scroll, forms, toasts)
+- **Part C**: Operational hardening (env centralization, path/URL consolidation, file decomposition)
 
 ## Part A: Using the New Server Abstractions
 
@@ -169,6 +171,85 @@ The `<Toaster />` component is added once in `+layout.svelte`.
 </form>
 ```
 
+## Part C: Operational Hardening Patterns
+
+### 1. Environment Variables (use typed env, not process.env)
+
+```typescript
+// BEFORE — scattered process.env reads with inconsistent defaults
+const url = process.env.KISMET_API_URL || 'http://localhost:2501';
+const key = process.env.KISMET_API_KEY || '';
+
+// AFTER — centralized, Zod-validated, typed
+import { env } from '$lib/server/env';
+const url = env.KISMET_API_URL; // validated at startup
+const key = env.KISMET_API_KEY; // typed, with sensible default
+```
+
+### 2. Temp Paths (use ARGOS_TEMP_DIR, not /tmp/)
+
+```typescript
+// BEFORE
+const logPath = '/tmp/kismet-start.log';
+
+// AFTER
+import { env } from '$lib/server/env';
+const logPath = path.join(env.ARGOS_TEMP_DIR, 'kismet-start.log');
+```
+
+### 3. Delay Utility (use delay(), not inline Promise)
+
+```typescript
+// BEFORE
+await new Promise((resolve) => setTimeout(resolve, 2000));
+
+// AFTER
+import { delay } from '$lib/utils/delay';
+await delay(2000);
+```
+
+### 4. Logger Standardization (use logger.error(), not logError())
+
+```typescript
+// BEFORE
+import { logError } from '$lib/utils/logger';
+logError('Failed to start sweep', error);
+
+// AFTER
+import { logger } from '$lib/utils/logger';
+logger.error('Failed to start sweep', { error: errMsg(error) });
+```
+
+### 5. Geographic Constants (use named constants, not magic numbers)
+
+```typescript
+// BEFORE
+const R = 6371000;
+const latRange = radiusMeters / 111320;
+
+// AFTER
+import { GEO } from '$lib/constants/limits';
+const R = GEO.EARTH_RADIUS_M;
+const latRange = radiusMeters / GEO.METERS_PER_DEGREE_LAT;
+```
+
+### 6. Client-Side Fetch Wrapper (use fetchJSON, not raw try/catch)
+
+```typescript
+// BEFORE — repeated 37 times across 19 files
+let data = null;
+try {
+	const res = await fetch('/api/system/info');
+	if (res.ok) data = await res.json();
+} catch (_error) {
+	/* silent */
+}
+
+// AFTER
+import { fetchJSON } from '$lib/utils/fetch-json';
+const data = await fetchJSON<SystemInfo>('/api/system/info');
+```
+
 ## Verification
 
 ```bash
@@ -176,4 +257,9 @@ The `<Toaster />` component is added once in `+layout.svelte`.
 npm run build              # Must succeed
 npm run test:unit          # Must pass
 npx madge --circular src/  # Must report 0 cycles (after Phase 4)
+
+# Part C specific verification greps
+grep -r 'process\.env\.' src/ --include='*.ts' | grep -v mcp/  # Should be empty
+grep -r '/tmp/' src/ --include='*.ts'                           # Should be empty
+grep -r 'logError(' src/ --include='*.ts'                       # Should be empty
 ```
