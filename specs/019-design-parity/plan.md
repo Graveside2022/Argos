@@ -6,7 +6,7 @@
 
 ## Summary
 
-Fix **40 discrepancies** across 8 areas between the Pencil Lunaris design (`pencil-lunaris.pen`) and the live Argos dashboard. The gap report identified systemic issues beyond the initial 7: (1) `--palantir-*` CSS variable namespace must be replaced with Lunaris tokens, (2) Icon Rail needs restructuring (remove Terminal/Chat, resize to 32px hit zones, switch to Lucide icons, fix active state), (3) Bottom Panel needs fixed named tabs replacing dynamic terminal sessions, (4) Widgets must be extracted from the sidebar, (5) Command Bar needs REC badge, NODE prefix, and compact dots. All changes are UI-only — no new APIs, no schema changes, no new dependencies.
+Fix **40+ discrepancies** across 8 areas between the Pencil Lunaris design (`pencil-lunaris.pen`) and the live Argos dashboard. The gap report identified systemic issues beyond the initial 7: (1) `--palantir-*` CSS variable namespace (254 refs across 32 files) must be replaced with Lunaris tokens, with 274 non-palantir token definitions safely migrated first, (2) Icon Rail needs restructuring (remove Terminal/Chat, resize to 32px hit zones, switch to Lucide icons, fix active state), (3) Bottom Panel needs fixed named tabs replacing dynamic terminal sessions, (4) Command Bar needs REC badge, callsign, and compact dots. Widget extraction from sidebar is **deferred** to a future spec. All changes are UI-only — no new APIs, no schema changes, no new dependencies.
 
 > [!IMPORTANT]
 > **Gap Report Reference:** See `gap_report.md` in the conversation artifacts for the complete 40-item discrepancy analysis with Pencil screenshots and code excerpts.
@@ -22,7 +22,7 @@ Fix **40 discrepancies** across 8 areas between the Pencil Lunaris design (`penc
 **Project Type**: Web (SvelteKit monolith)
 **Performance Goals**: Command bar render < 16ms, no additional network requests on initial load
 **Constraints**: < 200MB heap, no new npm dependencies, no font additions
-**Scale/Scope**: ~35 files modified (29 palantir migration + 6 feature changes), 0 files created (aside from tests), 1 file deleted (`palantir-design-system.css`), ~800 lines changed
+**Scale/Scope**: ~38 files modified (32 palantir migration + 6 feature changes), 0 files created (aside from tests), 1 file deleted + renamed (`palantir-design-system.css` → `dashboard-utilities.css`), ~800 lines changed
 
 ## Constitution Check
 
@@ -48,24 +48,28 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### Files to Modify
 
-| File                                                       | Purpose                    | Change                                                                                                                 |
-| ---------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `src/lib/stores/dashboard/dashboard-store.ts`              | Panel state management     | Change `activePanel` default from `null` to `'overview'`; change `activeBottomTab` default from `null` to `'terminal'` |
-| `src/lib/components/dashboard/TopStatusBar.svelte`         | Command bar component      | Remove text labels from hardware indicators; add REC badge; change callsign to ARGOS-1; add latency indicator          |
-| `src/lib/components/dashboard/status/WifiDropdown.svelte`  | WiFi status in command bar | Remove `<span class="status-label">WiFi Adapter</span>`                                                                |
-| `src/lib/components/dashboard/status/SdrDropdown.svelte`   | SDR status in command bar  | Remove `<span class="status-label">Software Defined Radio</span>`                                                      |
-| `src/lib/components/dashboard/status/GpsDropdown.svelte`   | GPS status in command bar  | Remove text label, keep dot + sat count                                                                                |
-| `src/routes/dashboard/BottomPanelTabs.svelte`              | Bottom panel tab bar       | Replace X close SVG with chevron-down; add fixed named tabs                                                            |
-| `src/lib/components/dashboard/command-bar.css`             | Command bar styles         | Add `.rec-badge` styles; adjust `.status-label` removal                                                                |
-| `src/lib/components/dashboard/icon-rail.css`               | Icon Rail styles           | Replace `--palantir-*` vars; resize hit zones to 32px; fix active state                                                |
-| `src/lib/components/dashboard/ResizableBottomPanel.svelte` | Bottom panel container     | Remove drag handle; fix height to 240px; replace `--palantir-*` vars                                                   |
-| `src/lib/components/dashboard/TerminalTabBar.svelte`       | Terminal tab bar           | Replace dynamic session tabs with fixed named tabs; replace `--palantir-*` vars                                        |
-| `src/lib/components/dashboard/panels/OverviewPanel.svelte` | Overview sidebar           | Extract widgets to external placement; reorder sections                                                                |
-| `src/lib/styles/palantir-design-system.css`                | Token bridge (DELETE)      | Delete `:root` var defs; migrate utility classes to Lunaris tokens; rename to `dashboard-utilities.css`                |
-| `src/app.css`                                              | Root stylesheet            | Update import from `palantir-design-system.css` to `dashboard-utilities.css`                                           |
-| `src/lib/styles/dashboard.css`                             | Dashboard layout           | Replace 9 `--palantir-*` refs with direct Lunaris tokens                                                               |
-| + 26 additional dashboard component files                  | Palantir migration         | Replace all `var(--palantir-*)` refs with direct Lunaris tokens (see Phase 7 mapping table)                            |
-| `src/lib/components/dashboard/status/dropdown.css`         | Dropdown panel styles      | Fix shadow, radius, width to match Lunaris spec                                                                        |
+| File                                                       | Purpose                    | Change                                                                                                                                                                                                    |
+| ---------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/stores/dashboard/dashboard-store.ts`              | Panel state management     | Change `activePanel` default from `null` to `'overview'`; change `activeBottomTab` default from `null` to `'terminal'`                                                                                    |
+| `src/lib/components/dashboard/TopStatusBar.svelte`         | Command bar component      | Remove text labels from hardware indicators; add REC badge; change callsign to ARGOS-1; add latency indicator                                                                                             |
+| `src/lib/components/dashboard/status/WifiDropdown.svelte`  | WiFi status in command bar | Remove `<span class="status-label">WiFi Adapter</span>`                                                                                                                                                   |
+| `src/lib/components/dashboard/status/SdrDropdown.svelte`   | SDR status in command bar  | Remove `<span class="status-label">Software Defined Radio</span>`                                                                                                                                         |
+| `src/lib/components/dashboard/status/GpsDropdown.svelte`   | GPS status in command bar  | Remove text label, keep dot + sat count                                                                                                                                                                   |
+| `src/routes/dashboard/BottomPanelTabs.svelte`              | Bottom panel tab bar       | Replace X close SVG with chevron-down; add fixed named tabs                                                                                                                                               |
+| `src/lib/components/dashboard/command-bar.css`             | Command bar styles         | Add `.rec-badge` styles; adjust `.status-label` removal                                                                                                                                                   |
+| `src/lib/components/dashboard/icon-rail.css`               | Icon Rail styles           | Replace `--palantir-*` vars; resize hit zones to 32px; fix active state                                                                                                                                   |
+| `src/lib/components/dashboard/ResizableBottomPanel.svelte` | Bottom panel container     | Remove drag handle; fix height to 240px; replace `--palantir-*` vars                                                                                                                                      |
+| `src/lib/components/dashboard/TerminalTabBar.svelte`       | Terminal tab bar           | Replace dynamic session tabs with fixed named tabs; replace `--palantir-*` vars                                                                                                                           |
+| `src/lib/components/dashboard/panels/OverviewPanel.svelte` | Overview sidebar           | Extract widgets to external placement; reorder sections                                                                                                                                                   |
+| `src/lib/styles/palantir-design-system.css`                | Token bridge (DELETE)      | Migrate non-palantir tokens (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) to `app.css`; migrate utility classes to Lunaris tokens; rename to `dashboard-utilities.css` |
+| `src/app.css`                                              | Root stylesheet            | Add non-palantir token definitions; add `--accent-muted` token; fix `--radius-*` conflict; update import path                                                                                             |
+| `src/lib/components/status/TAKIndicator.svelte`            | TAK status (12 refs)       | Migrate 12 `var(--palantir-*)` refs to direct Lunaris tokens                                                                                                                                              |
+| `src/routes/dashboard/dashboard-page.css`                  | Dashboard page styles      | Migrate 1 `var(--palantir-*)` ref to direct Lunaris token                                                                                                                                                 |
+| `src/routes/dashboard/+page.svelte`                        | Dashboard page component   | Remove duplicate `import '$lib/styles/palantir-design-system.css'` (already imported via `app.css`)                                                                                                       |
+| `src/lib/components/dashboard/DashboardMap.svelte`         | Map component              | Rename `class="palantir-popup"` to `class="map-popup"`                                                                                                                                                    |
+| `src/lib/styles/dashboard.css`                             | Dashboard layout           | Replace 9 `--palantir-*` refs with direct Lunaris tokens                                                                                                                                                  |
+| + 26 additional dashboard component files                  | Palantir migration         | Replace all `var(--palantir-*)` refs with direct Lunaris tokens (see Phase 7 mapping table)                                                                                                               |
+| `src/lib/components/dashboard/status/dropdown.css`         | Dropdown panel styles      | Fix shadow, radius, width to match Lunaris spec                                                                                                                                                           |
 
 ### Related Files (read-only reference)
 
@@ -73,7 +77,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | ---------------------------------------------------- | ------------------------------------------------------- |
 | `src/lib/components/dashboard/DashboardShell.svelte` | Shell layout (verify `--panel-width` and `--card` vars) |
 | `src/lib/components/dashboard/PanelContainer.svelte` | Panel container (reactive to `activePanel` store)       |
-| `src/lib/components/status/TAKIndicator.svelte`      | TAK indicator (keep as-is, already compact)             |
+
+> **Note**: `TAKIndicator.svelte` was previously listed as read-only but has 12 `--palantir-*` refs and is now in the modification scope above.
 
 ### Existing Types/Patterns
 
@@ -169,7 +174,7 @@ tests/
 
 **Changes**:
 
-1. `TopStatusBar.svelte`: Add a periodic latency check (ping the gateway via the existing `/api/system/status` endpoint which already returns uptime — piggyback latency measurement on the response time of this existing call).
+1. `TopStatusBar.svelte`: Add a periodic latency check by measuring the HTTP round-trip time of the existing `fetchHardwareStatus()` call (wrapping with `Date.now()` before/after). This measures approximate request RTT including server processing, not ICMP ping latency. Sufficient for at-a-glance situational awareness.
 2. Display as `{latencyMs}ms` in the right group between coordinates and mesh count.
 3. If no network, show `--ms`.
 
@@ -191,53 +196,85 @@ tests/
 1. `tests/unit/components/dashboard-store-defaults.test.ts`: Import `activePanel` and `activeBottomTab`, verify defaults are `'overview'` and `'terminal'`.
 2. `tests/unit/components/command-bar-compact.test.ts`: Mount `WifiDropdown` with `deviceState='active'`, verify no `.status-label` element exists, verify `.status-dot` is rendered with correct class.
 
-### Phase 7: CSS Variable Namespace Elimination (FR-009, FR-015, FR-016, FR-017) — P1
+### Phase 7: CSS Variable Namespace Elimination (FR-009, FR-009a–c, FR-015–FR-019) — P1
 
-**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every reference across all 29+ dashboard component files with direct Lunaris tokens. Delete `palantir-design-system.css`.
+**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every reference across all **32 files** (254 occurrences) with direct Lunaris tokens. Safely migrate non-palantir tokens before deleting the bridge file's `:root` block. Delete `palantir-design-system.css`.
+
+> **CORRECTED SCOPE**: Previous draft claimed 206 refs across 29 files. Actual grep: **230 `var(--palantir-*)` refs across 31 consumer files** + 24 internal refs in the bridge file = **254 `var(--palantir-*)` total across 32 files**. Including class names, import paths, and comments, there are 295 total "palantir" mentions across 36 files. Key out-of-dashboard files: `TAKIndicator.svelte` (12 refs), `dashboard-page.css` (1 ref), `symbol-layer.ts` (1 comment ref).
+
+**Pre-migration step (BLOCKING — must complete BEFORE `:root` deletion)**:
+
+The `:root` block in `palantir-design-system.css` (lines 12-106) defines non-palantir tokens used by **274 references across 40+ files**:
+
+- `--space-*` (122 refs across 31 files) — spacing scale
+- `--text-*` (98 refs across 35 files) — typography scale
+- `--font-weight-*` (11 refs across 10 files)
+- `--letter-spacing-*` (13 refs across 13 files)
+- `--radius-sm/md/lg/xl` (30 refs across 17 files) — **conflicts with `app.css` `@theme inline` definitions**
+
+**Steps**:
+
+1. Copy `--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*` definitions from `palantir-design-system.css` lines 66-99 into `app.css` `:root` block
+2. Copy `--radius-sm/md/lg/xl` fixed values (4px, 6px, 8px, 12px) from `palantir-design-system.css` lines 101-105, replacing the conflicting `calc()` definitions in `app.css` `@theme inline` (lines 223-226)
+3. Add `--accent-muted: color-mix(in srgb, var(--primary) 15%, transparent)` to `app.css` `:root`
+4. Build and verify no regressions before proceeding to palantir elimination
 
 **Migration mapping** (every `var(--palantir-*)` reference → direct Lunaris token):
 
-| `--palantir-*` variable       | → Lunaris token                                       | Resolved value   |
-| ----------------------------- | ----------------------------------------------------- | ---------------- |
-| `--palantir-bg-app`           | `--background`                                        | `#111111`        |
-| `--palantir-bg-chrome`        | `--background`                                        | `#111111`        |
-| `--palantir-bg-surface`       | `--card`                                              | `#1A1A1A`        |
-| `--palantir-bg-panel`         | `--card`                                              | `#1A1A1A`        |
-| `--palantir-bg-elevated`      | `--surface-elevated`                                  | `#151515`        |
-| `--palantir-bg-input`         | `--input`                                             | `#2E2E2E`        |
-| `--palantir-bg-hover`         | `--surface-hover`                                     | `#1E1E1E`        |
-| `--palantir-bg-button`        | `--secondary`                                         | `#2E2E2E`        |
-| `--palantir-bg-header`        | `--surface-header`                                    | `#181818`        |
-| `--palantir-bg-inset`         | `--surface-inset`                                     | `#0D0D0D`        |
-| `--palantir-bg-terminal`      | `--surface-terminal`                                  | `#0A0A0A`        |
-| `--palantir-overlay-backdrop` | `--overlay-backdrop`                                  | `#0E1116E6`      |
-| `--palantir-border-subtle`    | `--border`                                            | `#2E2E2E`        |
-| `--palantir-border-default`   | `--border`                                            | `#2E2E2E`        |
-| `--palantir-border-strong`    | `--border`                                            | `#2E2E2E`        |
-| `--palantir-text-primary`     | `--foreground`                                        | `#FFFFFF`        |
-| `--palantir-text-secondary`   | `--foreground-muted`                                  | `#BBBBBB`        |
-| `--palantir-text-tertiary`    | `--foreground-secondary`                              | `#888888`        |
-| `--palantir-text-on-accent`   | `--primary-foreground`                                | `#111111`        |
-| `--palantir-interactive`      | `--interactive`                                       | `#4A8AF4`        |
-| `--palantir-accent`           | `--primary`                                           | `#A8B8E0`        |
-| `--palantir-accent-hover`     | `--ring`                                              | `#666666`        |
-| `--palantir-accent-muted`     | `color-mix(in srgb, var(--primary) 15%, transparent)` | —                |
-| `--palantir-success`          | `--success`                                           | `#8BBFA0`        |
-| `--palantir-warning`          | `--warning`                                           | `#D4A054`        |
-| `--palantir-error`            | `--destructive`                                       | `#FF5C33`        |
-| `--palantir-info`             | `--info`                                              | `#A8B8E0`        |
-| `--palantir-signal-*`         | `--signal-*`                                          | (already direct) |
-| `--palantir-chart-*`          | `--chart-*`                                           | (already direct) |
+| `--palantir-*` variable       | → Lunaris token          | Resolved value   |
+| ----------------------------- | ------------------------ | ---------------- |
+| `--palantir-bg-app`           | `--background`           | `#111111`        |
+| `--palantir-bg-chrome`        | `--background`           | `#111111`        |
+| `--palantir-bg-surface`       | `--card`                 | `#1A1A1A`        |
+| `--palantir-bg-panel`         | `--card`                 | `#1A1A1A`        |
+| `--palantir-bg-elevated`      | `--surface-elevated`     | `#151515`        |
+| `--palantir-bg-input`         | `--input`                | `#2E2E2E`        |
+| `--palantir-bg-hover`         | `--surface-hover`        | `#1E1E1E`        |
+| `--palantir-bg-button`        | `--secondary`            | `#2E2E2E`        |
+| `--palantir-bg-header`        | `--surface-header`       | `#181818`        |
+| `--palantir-bg-inset`         | `--surface-inset`        | `#0D0D0D`        |
+| `--palantir-bg-terminal`      | `--surface-terminal`     | `#0A0A0A`        |
+| `--palantir-overlay-backdrop` | `--overlay-backdrop`     | `#0E1116E6`      |
+| `--palantir-border-subtle`    | `--border`               | `#2E2E2E`        |
+| `--palantir-border-default`   | `--border`               | `#2E2E2E`        |
+| `--palantir-border-strong`    | `--border`               | `#2E2E2E`        |
+| `--palantir-text-primary`     | `--foreground`           | `#FFFFFF`        |
+| `--palantir-text-secondary`   | `--foreground-muted`     | `#BBBBBB`        |
+| `--palantir-text-tertiary`    | `--foreground-secondary` | `#888888`        |
+| `--palantir-text-on-accent`   | `--primary-foreground`   | `#111111`        |
+| `--palantir-interactive`      | `--interactive`          | `#4A8AF4`        |
+| `--palantir-accent`           | `--primary`              | `#A8B8E0`        |
+| `--palantir-accent-hover`     | `--ring`                 | `#666666`        |
+| `--palantir-accent-muted`     | `--accent-muted`         | (new token)      |
+| `--palantir-success`          | `--success`              | `#8BBFA0`        |
+| `--palantir-warning`          | `--warning`              | `#D4A054`        |
+| `--palantir-error`            | `--destructive`          | `#FF5C33`        |
+| `--palantir-info`             | `--info`                 | `#A8B8E0`        |
+| `--palantir-signal-*`         | `--signal-*`             | (already direct) |
+| `--palantir-chart-*`          | `--chart-*`              | (already direct) |
 
 **Changes**:
 
-1. All 29 dashboard component files (`.svelte` + `.css`): Find-and-replace every `var(--palantir-*)` with `var(--lunaris-equivalent)` per mapping table above.
-2. `dashboard.css`: Replace 9 `--palantir-*` references with direct Lunaris tokens.
-3. `palantir-design-system.css`: Delete the `:root` variable definition block (lines 12-106). Migrate utility classes (`.map-popup`, `.status-dot`, `.tactical-sidebar`, etc.) to use direct Lunaris tokens, then rename file to `dashboard-utilities.css`.
-4. `app.css`: Update `@import './lib/styles/palantir-design-system.css'` to `@import './lib/styles/dashboard-utilities.css'`.
-5. Verify `--font-sans` resolves to `Geist` and `--font-mono` resolves to `Fira Code` (already correct in `dashboard.css`).
+1. **Pre-migration**: Add non-palantir token definitions to `app.css`, add `--accent-muted` token, fix radius conflicts (see pre-migration steps above).
+2. All **32 component files** (`.svelte` + `.css`): Find-and-replace every `var(--palantir-*)` with `var(--lunaris-equivalent)` per mapping table above. Includes:
+    - 27 files in `src/lib/components/dashboard/` (`.svelte` + `.css`)
+    - `src/lib/components/status/TAKIndicator.svelte` (12 refs)
+    - `src/routes/dashboard/dashboard-page.css` (1 ref)
+    - `src/lib/styles/dashboard.css` (12 refs)
+    - `src/lib/styles/palantir-design-system.css` (24 internal refs in utility classes)
+3. `DashboardMap.svelte` line 257: Rename `class="palantir-popup"` to `class="map-popup"`.
+4. `+page.svelte` line 3: Remove duplicate `import '$lib/styles/palantir-design-system.css'` (already imported via `app.css`).
+5. `palantir-design-system.css`: Delete the `:root` block (lines 12-106) — safe now because tokens are in `app.css`. Migrate utility class `var(--palantir-*)` refs to direct Lunaris tokens. Rename file to `dashboard-utilities.css`.
+6. `app.css`: Update `@import './lib/styles/palantir-design-system.css'` to `@import './lib/styles/dashboard-utilities.css'`.
+7. Verify `--font-sans` resolves to `Geist` and `--font-mono` resolves to `Fira Code` (already correct in `dashboard.css`).
 
-**Scope**: ~206 replacements across 29 component files + 2 CSS files. ~400 lines changed.
+**Scope**: 230 `var(--palantir-*)` replacements across 31 consumer files + 24 bridge-internal refs + 1 class rename + 1 import path update + 1 duplicate import removal + 1 comment cleanup + ~274 non-palantir token definitions migrated. ~500 lines changed.
+
+**Commit strategy for Phase 7** (rollback safety):
+
+- **Commit 7a**: Add non-palantir tokens to `app.css` + fix radius conflict (safe, additive only)
+- **Commit 7b**: Migrate all `var(--palantir-*)` refs across 32 files (the big find-replace)
+- **Commit 7c**: Delete `:root` block, rename file, update imports (the deletion commit — `git revert` target if needed)
 
 ### Phase 8: Icon Rail Restructuring (FR-010, FR-011, FR-012) — P2
 
@@ -248,7 +285,7 @@ tests/
 1. `IconRail.svelte`: Remove Terminal and Chat buttons from the rail. Add Logo (`waypoints`) icon between spacer and Layers. Add separator line before Settings.
 2. `IconRail.svelte`: Resize hit zones from 40×40px to 48×32px.
 3. `IconRail.svelte` + `icon-rail.css`: Replace active state `::before` left-bar pseudo-element with background fill `#ffffff14`.
-4. `IconRail.svelte`: Replace inline SVG strings with Lucide icon references at 18×18px.
+4. `IconRail.svelte`: Replace inline SVG strings with `@lucide/svelte` component imports (`House`, `List`, `Zap`, `Waypoints`, `Layers`, `Settings`) at 18×18px. `@lucide/svelte` v0.561.0 is already installed — no new dependency needed.
 5. `icon-rail.css`: Update `--palantir-*` vars, set padding to 10px top/bottom, gap to 4px.
 
 ### Phase 9: Bottom Panel Tab Architecture (FR-013, FR-014) — P2
@@ -259,18 +296,15 @@ tests/
 
 1. `ResizableBottomPanel.svelte`: Remove drag handle, fix height to 240px, remove resize logic.
 2. `TerminalTabBar.svelte` / `BottomPanelTabs.svelte`: Replace dynamic session tab list with fixed named tabs: Terminal, Chat, Logs, Captures, Devices.
-3. Active tab indicator: Replace background fill with 2px bottom border in `#809AD0`.
-4. Tab font: Geist 14px weight 500, active color `#809AD0`, inactive `#BBBBBB`.
+3. Active tab indicator: Replace background fill with 2px bottom border in `var(--primary)` (`#A8B8E0`).
+4. Tab font: Geist 14px weight 500, active color `var(--primary)`, inactive `#BBBBBB`.
 5. Tab bar height: 40px, padding 4px 12px, gap 4px.
 
-### Phase 10: Widget Placement (FR-017 scope expansion) — P3
+### Phase 10: Widget Placement — DEFERRED
 
-**Goal**: Extract widgets from OverviewPanel sidebar to standalone components.
+**Status**: Deferred to future spec. Widgets remain in the Overview Panel sidebar.
 
-**Changes**:
-
-1. `OverviewPanel.svelte`: Remove SpeedTestWidget, NetworkLatencyWidget, WeatherWidget, NodeMeshWidget imports and `.widgets-container` div.
-2. Determine new placement for widgets (future spec — may defer).
+**Rationale**: Extracting widgets from the sidebar without a defined new placement would effectively remove them from the UI. The Pencil design shows them as standalone frames, but no placement context exists for where they should go in the dashboard grid. Keeping them in the sidebar is a safe default until a future spec defines their new home.
 
 ## Complexity Tracking
 
@@ -278,12 +312,29 @@ No constitution violations requiring justification. All changes are within exist
 
 ## Risk Assessment
 
-| Risk                                                             | Likelihood | Impact                       | Mitigation                                                                                                                                    |
-| ---------------------------------------------------------------- | ---------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vite cache serves stale TopStatusBar again                       | Medium     | High (invisible command bar) | Touch file after edits; document `rm -rf node_modules/.vite` in quickstart                                                                    |
-| Persisted `null` in localStorage overrides new default           | Low        | Medium (panels don't open)   | `persistedWritable` already uses default when key missing; users with existing `null` will see closed panels until they clear storage         |
-| Removing text labels confuses users unfamiliar with dot meanings | Low        | Low                          | Tooltip on hover; dropdown still shows full names on click                                                                                    |
-| Latency indicator adds network request overhead                  | Low        | Low                          | Piggyback on existing `/api/system/status` call, no additional request                                                                        |
-| `--palantir-*` elimination breaks non-dashboard components       | Medium     | Medium                       | Full grep confirms 206 refs across 29 files, all in `src/lib/components/dashboard/` + 2 CSS files. No non-dashboard usage. Safe to eliminate. |
-| Icon Rail restructuring removes Terminal/Chat quick access       | Low        | Low                          | Terminal and Chat move to Bottom Panel fixed tabs; same functionality, different location                                                     |
-| Fixed 240px bottom panel limits vertical space on small screens  | Low        | Medium                       | Design targets 1440×900; smaller viewports may need responsive rules in future spec                                                           |
+| Risk                                                             | Likelihood | Impact                       | Mitigation                                                                                                                                                                                                      |
+| ---------------------------------------------------------------- | ---------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite cache serves stale TopStatusBar again                       | Medium     | High (invisible command bar) | Touch file after edits; document `rm -rf node_modules/.vite` in quickstart                                                                                                                                      |
+| Persisted `null` in localStorage overrides new default           | Low        | Medium (panels don't open)   | `persistedWritable` already uses default when key missing; users with existing `null` will see closed panels until they clear storage                                                                           |
+| Removing text labels confuses users unfamiliar with dot meanings | Low        | Low                          | Tooltip on hover; dropdown still shows full names on click                                                                                                                                                      |
+| Latency indicator adds network request overhead                  | Low        | Low                          | Piggyback on existing `/api/system/status` call, no additional request                                                                                                                                          |
+| `--palantir-*` elimination breaks non-dashboard components       | Medium     | **High**                     | **CORRECTED**: 254 refs across 32 files. TAKIndicator.svelte (12 refs) is OUTSIDE `dashboard/` dir and must be included. `dashboard-page.css` (1 ref) and `+page.svelte` (duplicate import) also need updating. |
+| Deleting `:root` block destroys non-palantir tokens              | **High**   | **Critical**                 | The `:root` block defines `--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*` used by 274 refs across 40+ files. **Pre-migration to `app.css` is mandatory before deletion.**        |
+| Radius token conflict silently changes border-radius values      | High       | Medium                       | Bridge file defines `--radius-sm: 4px` but `app.css` computes `6.4px`. Deleting bridge changes all radii. Fix: migrate fixed values to `app.css`, removing `calc()` definitions.                                |
+| `--palantir-accent-muted` cannot be simple variable swap         | Medium     | Medium                       | Uses `color-mix()` expression. New `--accent-muted` token must be defined in `app.css` before migration.                                                                                                        |
+| Icon Rail restructuring removes Terminal/Chat quick access       | Low        | Low                          | Terminal and Chat move to Bottom Panel fixed tabs; same functionality, different location                                                                                                                       |
+| Fixed 240px bottom panel limits vertical space on small screens  | Low        | Medium                       | Design targets 1440×900; smaller viewports may need responsive rules in future spec                                                                                                                             |
+
+## Rollback Strategy
+
+| Phase                                 | Rollback approach                                                  | Recovery time |
+| ------------------------------------- | ------------------------------------------------------------------ | ------------- |
+| Phases 1-6 (component changes)        | `git revert <commit>` per phase — each phase commits independently | < 1 min       |
+| Phase 7a (token migration to app.css) | `git revert` — additive only, safe to revert                       | < 1 min       |
+| Phase 7b (palantir find-replace)      | `git revert` — single atomic commit for all 254 replacements       | < 1 min       |
+| Phase 7c (`:root` deletion + rename)  | `git revert` — restores bridge file and imports                    | < 1 min       |
+| Full rollback (all phases)            | `git reset --hard` to pre-019 branch point                         | < 1 min       |
+
+**Key principle**: Phase 7 is split into 3 atomic commits (7a, 7b, 7c) specifically so that the most dangerous operation (`:root` deletion) can be reverted independently without losing the token migration work.
+
+**Gate tags**: Tag the branch at each gate pass (`019-gate-1` through `019-gate-6`) to provide known-good rollback points.

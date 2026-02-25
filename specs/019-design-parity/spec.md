@@ -76,7 +76,7 @@ As an operator, the bottom panel's collapse control uses a downward caret icon (
 
 ### User Story 4 — CSS Variable Namespace Matches Lunaris Tokens (Priority: P1)
 
-As an EW operator, the dashboard uses the Lunaris design system colors consistently — every panel, border, and text element uses the correct Lunaris token values (`$--sidebar=#141414`, `$--card=#151515`, `$--border=#2E2E2E`, accent `#809AD0`) instead of the divergent `--palantir-*` variable namespace.
+As an EW operator, the dashboard uses the Lunaris design system colors consistently — every panel, border, and text element uses the correct Lunaris token values (`$--sidebar=#18181b`, `$--card=#1A1A1A`, `$--border=#2E2E2E`, accent `var(--primary)` = `#A8B8E0` for Blue palette) instead of the divergent `--palantir-*` variable namespace.
 
 **Why this priority**: The `--palantir-*` CSS variables are the root cause of 90% of the visual discrepancies. Every component references these variables for backgrounds, borders, and text colors, producing different values than the Lunaris design.
 
@@ -84,9 +84,9 @@ As an EW operator, the dashboard uses the Lunaris design system colors consisten
 
 **Acceptance Scenarios**:
 
-1. **Given** the dashboard loads, **When** inspecting the Icon Rail background, **Then** it resolves to `#141414` (not `--palantir-bg-chrome`).
-2. **Given** the dashboard loads, **When** inspecting any panel border, **Then** it resolves to `#2E2E2E` (not `--palantir-border-subtle`).
-3. **Given** an active icon or tab, **When** inspecting its color, **Then** it resolves to `#809AD0` (the Lunaris accent).
+1. **Given** the dashboard loads, **When** inspecting the Icon Rail background, **Then** it resolves to `#18181b` (via `var(--sidebar)`, not `--palantir-bg-chrome`).
+2. **Given** the dashboard loads, **When** inspecting any panel border, **Then** it resolves to `#2E2E2E` (via `var(--border)`, not `--palantir-border-subtle`).
+3. **Given** an active icon or tab, **When** inspecting its color, **Then** it resolves to `var(--primary)` (`#A8B8E0` for Blue palette — the Lunaris accent).
 
 ---
 
@@ -139,6 +139,29 @@ As a developer, the Speed Test, Network Latency, Weather, and Node Mesh widgets 
 - What happens on a narrow viewport (< 768px) where the command bar can't fit all compact indicators? Responsive rules should hide lower-priority segments (coordinates, date) as designed.
 - What happens when GPS has no fix? The "REC" badge should still appear if any hardware is active (it is independent of GPS). The coordinates segment should be hidden.
 
+### Known Accessibility Trade-offs (WCAG AA)
+
+The Lunaris dark aesthetic produces several color combinations below WCAG AA contrast ratios. These are acknowledged design decisions:
+
+| Element                           | Colors             | Contrast | WCAG AA                    | Decision                                               |
+| --------------------------------- | ------------------ | -------- | -------------------------- | ------------------------------------------------------ |
+| Section headers (CPU, DISK, etc.) | #888888 on #151515 | 4.07:1   | FAIL (needs 4.5:1 for 9px) | Accept — uppercase + letter-spacing aids readability   |
+| Muted text (dates, secondary)     | #666666 on #1A1A1A | 2.84:1   | FAIL                       | Accept — paired with primary text above                |
+| Inactive text                     | #555555 on #111111 | 2.45:1   | FAIL                       | Accept — per CLAUDE.md, inactive always has text label |
+| REC badge                         | #FF5C33 on #1A1A1A | 3.64:1   | FAIL at 10px               | Accept — paired with red dot visual indicator          |
+
+### Deferred to Future Specs
+
+These Pencil design elements are NOT in scope for this spec:
+
+- **Terminal Unavailable overlay** (Pencil frame `hKXlP`) — error state styling deferred
+- **Agent Chat panel content** (Pencil frame `j0YYx`) — chat UI deferred
+- **Device Manager table content** (Pencil frame `LFDvo`) — table UI deferred
+- **Custom map zoom controls** (28x28px buttons at map bottom-right) — map controls deferred
+- **Map grid overlay** (4×4 subtle lines at #1A1A1A) — decorative element deferred
+- **Widget extraction from Overview Panel** (Phase 10) — deferred; widgets remain in sidebar to avoid UI disappearance
+- **Bottom panel "Network Map" tab variant** visible in some Pencil frames — tab set is fixed as: Terminal, Chat, Logs, Captures, Devices
+
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
@@ -151,24 +174,31 @@ As a developer, the Speed Test, Network Latency, Weather, and Node Mesh widgets 
 - **FR-006**: The bottom panel collapse control MUST use a downward caret icon instead of an "X" close icon.
 - **FR-007**: The command bar right group MUST include a network latency indicator showing current ping time in milliseconds.
 - **FR-008**: When the Vite dev server compiles a Svelte component to an empty output (< 2KB for a component with a template), the system SHOULD log a warning to help developers identify stale cache issues.
-- **FR-009**: All dashboard CSS MUST use Lunaris design tokens directly (`--sidebar`, `--card`, `--border`, `--foreground`, `--primary`, etc.) instead of `--palantir-*` variables. The `palantir-design-system.css` bridge file MUST be deleted and all 29 component files referencing `--palantir-*` MUST be migrated to direct Lunaris token references.
+- **FR-009**: All dashboard CSS MUST use Lunaris design tokens directly (`--sidebar`, `--card`, `--border`, `--foreground`, `--primary`, etc.) instead of `--palantir-*` variables. The `palantir-design-system.css` bridge file MUST be deleted and all **31 consumer files** (230 `var(--palantir-*)` references) plus the bridge file's own 24 internal utility-class references (254 total `var(--palantir-*)`) MUST be migrated to direct Lunaris token references. Additionally, 1 `class="palantir-popup"` reference (FR-019), 1 `@import` path in `app.css`, 1 duplicate import in `+page.svelte`, and 1 comment in `src/lib/map/layers/symbol-layer.ts` must also be cleaned — bringing the total "palantir" mentions to **295 across 36 files**. This includes `src/lib/components/status/TAKIndicator.svelte` (12 refs) and `src/routes/dashboard/dashboard-page.css` (1 ref) which are outside the `dashboard/` directory.
+- **FR-009a**: The non-palantir tokens defined in `palantir-design-system.css` `:root` block (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`) MUST be migrated to `app.css` BEFORE the bridge file `:root` block is deleted. These tokens have 274 references across 40+ files and deleting them without migration would break the entire UI.
+- **FR-009b**: The `--radius-sm/md/lg/xl` tokens in `palantir-design-system.css` (fixed values: 4px, 6px, 8px, 12px) conflict with `app.css` `@theme inline` definitions (computed values: 6.4px, 8.4px, 10.4px, 14.4px). The bridge file values MUST be preserved as the authoritative source since components were built against them. Migrate fixed-value radius definitions to `app.css` and remove the conflicting `calc()` definitions.
+- **FR-009c**: The `--palantir-accent-muted` token uses `color-mix(in srgb, var(--primary) 15%, transparent)` which is not a simple variable swap. A new `--accent-muted` token MUST be defined in `app.css` `:root` with this expression, and all
+  `var(--palantir-accent-muted)` usages replaced with `var(--accent-muted)`.
 - **FR-010**: The Icon Rail MUST contain exactly these items in order: Overview (`house`), Devices (`list`), Tools (`zap`), [spacer], Logo (`waypoints`), Layers (`layers`), [separator line], Settings (`settings`). Terminal and Chat buttons MUST NOT appear in the rail.
 - **FR-011**: Icon Rail hit zones MUST be 48px wide × 32px tall with 4px corner radius. Active state MUST use background fill `#ffffff14` (not a left-bar pseudo-element).
-- **FR-012**: All dashboard icons MUST use Lucide `icon_font` references at 18×18px, not inline SVG strings.
+- **FR-012**: All dashboard icons MUST use `@lucide/svelte` component imports (already installed, v0.561.0) at 18×18px, replacing inline SVG strings. No new dependency required.
 - **FR-013**: The bottom panel MUST have a fixed height of 240px with no drag-to-resize handle.
-- **FR-014**: The bottom panel tab bar MUST contain fixed named tabs: Terminal, Chat, Logs, Captures, Devices. The active tab indicator MUST be a 2px bottom border in `#809AD0`.
-- **FR-015**: The Icon Rail background MUST be `#141414` (Lunaris `$--sidebar`), not `#111111` or `--palantir-bg-chrome`.
+- **FR-014**: The bottom panel tab bar MUST contain fixed named tabs: Terminal, Chat, Logs, Captures, Devices. The active tab indicator MUST be a 2px bottom border in `var(--primary)` (`#A8B8E0` for Blue palette). (Note: the Pencil design used `#809AD0` which maps to `--signal-weak`, not `--primary`. Using `var(--primary)` ensures palette switching works — see FR-017 note.)
+- **FR-015**: The Icon Rail background MUST be `var(--sidebar)` which resolves to `#18181b`, not `#111111` or `--palantir-bg-chrome`. (Note: previous draft incorrectly stated `#141414`; the actual `--sidebar` token value is `#18181b`.)
 - **FR-016**: Font families MUST resolve to `Geist` (sans) and `Fira Code` (mono) explicitly.
-- **FR-017**: The command bar brand mark "ARGOS" MUST use color `#809AD0`, Fira Code 14px, weight 600, letter-spacing 2px.
+- **FR-017**: The command bar brand mark "ARGOS" MUST use color `var(--primary)` (`#A8B8E0` for Blue palette), Fira Code 14px, weight 600, letter-spacing 2px. (Note: the Pencil design used `#809AD0` which maps to `--signal-weak`/`--feature-drone`, not `--primary`. The accent MUST use `var(--primary)` so it responds to palette switching.)
+- **FR-018**: The TAK indicator in the command bar (`src/lib/components/status/TAKIndicator.svelte`) is NOT present in the Pencil design. It MUST be retained in the live implementation as it provides critical operational status for TAK Server connectivity. Its 12 `--palantir-*` references MUST be migrated alongside dashboard components.
+- **FR-019**: The `class="palantir-popup"` CSS class in `DashboardMap.svelte` line 257 MUST be renamed to `class="map-popup"` (matching the existing `.map-popup` utility class) as part of the namespace elimination.
 
 ## Assumptions
 
 - The Pencil design file (`pencil-lunaris.pen`) is the authoritative visual reference for the Lunaris UI specification.
 - The "REC" badge (red text `#FF5C33`, via `var(--destructive)`) appearance is tied to any active data collection service (Kismet scanning, GPS tracking, HackRF sweep) — if at least one is running, show "REC."
 - The callsign "ARGOS-1" is the implementation default; future work may make this user-configurable via Settings.
-- Network latency is measured via a periodic ping to the default gateway or a configured endpoint.
+- Network latency is measured as the HTTP round-trip time of the existing `/api/system/status` health check (not ICMP ping). This measures approximate request RTT including server processing, not pure network latency. Sufficient for at-a-glance situational awareness; on localhost it will show ~1-5ms.
 - The overview panel default-open behavior overrides any previously persisted `null` state.
-- The `--palantir-*` CSS variable namespace (206 references across 29 dashboard files) will be fully eliminated and replaced with direct Lunaris tokens. `palantir-design-system.css` will be deleted (utility classes migrated to `dashboard-utilities.css`). Grep confirms no non-dashboard components use `--palantir-*`.
+- The `--palantir-*` CSS variable namespace (**254 `var(--palantir-*)` references across 32 files**; 295 total "palantir" mentions across 36 files when including class names, import paths, and comments) will be fully eliminated and replaced with direct Lunaris tokens. `palantir-design-system.css` will be deleted (utility classes migrated to `dashboard-utilities.css`). **Note**: `TAKIndicator.svelte` (in `src/lib/components/status/`, not dashboard/) has 12 `--palantir-*` refs and MUST be included in migration scope.
+- The non-palantir tokens defined in `palantir-design-system.css` `:root` block (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) are used by **274 references across 40+ files**. These MUST be migrated to `app.css` or the renamed `dashboard-utilities.css` BEFORE the `:root` block is deleted.
 
 ## Success Criteria _(mandatory)_
 

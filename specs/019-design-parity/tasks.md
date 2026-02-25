@@ -5,13 +5,13 @@
 **Design Reference**: `pencil-lunaris.pen` frame `ZQUdr` ("Dashboard — System Overview")
 **Codebase Reference**: [`docs/CODEBASE_MAP.md`](file:///home/kali/Documents/Argos/Argos/docs/CODEBASE_MAP.md) — canonical file path index
 
-**Methodology**: Step-by-step visual parity. Each phase targets one UI region of the Pencil mockup. After each phase, a **REVIEW GATE** pauses for visual comparison between the live dashboard and the corresponding Pencil frame. No phase starts until its gate is approved.
+**Methodology**: **Strictly sequential** visual parity. Each phase targets one UI region. Each task executes one at a time. After each phase, a **REVIEW GATE** halts all work for visual comparison against the Pencil frame. **No phase starts until the previous gate is explicitly approved by the user.** No parallel task execution. No parallel agent dispatch. One task → verify → next task.
 
 **Tests**: Unit tests included for store defaults and component rendering.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
+- ~~**[P]**: Can run in parallel~~ — **REMOVED**: All tasks execute sequentially. See "Execution Rules" below.
 - **[Story]**: Which user story this task belongs to (US1, US2, US3)
 - **[GATE]**: Review checkpoint — take live screenshot, compare to Pencil frame, prompt user for approval
 - Include exact file paths in descriptions
@@ -376,8 +376,8 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 - [ ] T005a [US5] Remove Terminal and Chat buttons from `src/lib/components/dashboard/IconRail.svelte` — these functions move to the Bottom Panel fixed tab bar. Add Logo (`waypoints`) icon between the flex spacer and Layers icon. Add a horizontal separator line (24×1px, `var(--separator)` = `#ffffff1a`) between Layers and Settings.
 - [ ] T005b [US5] Resize Icon Rail hit zones in `src/lib/components/dashboard/IconRail.svelte` + `src/lib/components/dashboard/icon-rail.css` — change from 40×40px to 48×32px (48px wide = fill container, 32px tall). Set `border-radius: 4px` on all hit zones.
-- [ ] T005c [US5] Fix Icon Rail active state in `src/lib/components/dashboard/IconRail.svelte` + `icon-rail.css` — replace the `::before` left-bar pseudo-element with a background fill `var(--hover-tint)` (`#ffffff14`). Active icon color: `var(--primary)` (`#809AD0`). Inactive icon color: `#808080`.
-- [ ] T005d [US5] Replace inline SVG icon strings in `src/lib/components/dashboard/IconRail.svelte` with Lucide icon references at 18×18px. Icons: `house` (Overview), `list` (Devices), `zap` (Tools), `waypoints` (Logo, 20×20px, white), `layers` (Layers), `settings` (Settings).
+- [ ] T005c [US5] Fix Icon Rail active state in `src/lib/components/dashboard/IconRail.svelte` + `icon-rail.css` — replace the `::before` left-bar pseudo-element with a background fill `var(--hover-tint)` (`#ffffff14`). Active icon color: `var(--primary)` (`#A8B8E0` for Blue palette — see Accent Color Decision in Notes). Inactive icon color: `#808080`.
+- [ ] T005d [US5] Replace inline SVG icon strings in `src/lib/components/dashboard/IconRail.svelte` with `@lucide/svelte` component imports (already installed, v0.561.0) at 18×18px. Import: `import { House, List, Zap, Waypoints, Layers, Settings } from '@lucide/svelte'`. Icons: `House` (Overview), `List` (Devices), `Zap` (Tools), `Waypoints` (Logo, 20×20px, white), `Layers` (Layers), `Settings` (Settings). No new dependency needed.
 - [ ] T005e [US5] Update Icon Rail layout in `icon-rail.css` — set background to `var(--sidebar)` (`#18181b`), border-right to `1px solid var(--border)`, padding to `10px 0`, gap to `4px`, `align-items: center`.
 
 ### 🚦 GATE 1: Icon Rail Review
@@ -393,13 +393,13 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 **Goal**: Make the top command bar match the Pencil design — compact hardware dots, REC badge, tactical callsign, latency/mesh/weather/date/time segments.
 
-**Pencil spec**: 40px height, `#1A1A1A` background, border-bottom `#2E2E2E`. Left group: "ARGOS" brand (#809AD0, Fira Code 14px, letter-spacing 2), red collection dot, red "REC" text (`#FF5C33`), "ARGOS-1" callsign (white, Fira Code 12px). Right group: GPS coords, latency, mesh "3/4", weather icon + temp, date, Zulu time.
+**Pencil spec**: 40px height, `#1A1A1A` background, border-bottom `#2E2E2E`. Left group: "ARGOS" brand (`var(--primary)` = `#A8B8E0`, Fira Code 14px, letter-spacing 2), red collection dot, red "REC" text (`#FF5C33`), "ARGOS-1" callsign (white, Fira Code 12px). Right group: GPS coords, latency, mesh "3/4", weather icon + temp, date, Zulu time. (Note: Pencil uses `#809AD0` for brand — we use `var(--primary)` for palette switching. See Accent Color Decision in Notes.)
 
 ### Implementation
 
-- [ ] T006 [P] [US2] Remove text label `<span class="status-label">WiFi Adapter</span>` from `src/lib/components/dashboard/status/WifiDropdown.svelte` — keep only the status dot (this will recover ~110px of the 716px width problem). Add `title="WiFi Adapter"` to the `.device-btn` div for hover tooltip accessibility.
-- [ ] T007 [P] [US2] Remove text label `<span class="status-label">Software Defined Radio</span>` from `src/lib/components/dashboard/status/SdrDropdown.svelte` — keep only the status dot (recovers ~188px). Add `title="Software Defined Radio"` tooltip.
-- [ ] T008 [P] [US2] Remove text label from `src/lib/components/dashboard/status/GpsDropdown.svelte` — currently shows "GPS {sats} SAT". Change to dot-only with `title="GPS {sats} SAT"` tooltip. Keep the sat count visible as a small superscript badge next to the dot (recovers ~92px).
+- [ ] T006 [US2] Remove text label `<span class="status-label">WiFi Adapter</span>` from `src/lib/components/dashboard/status/WifiDropdown.svelte` — keep only the status dot (this will recover ~110px of the 716px width problem). Add `title="WiFi Adapter"` to the `.device-btn` div for hover tooltip accessibility.
+- [ ] T007 [US2] Remove text label `<span class="status-label">Software Defined Radio</span>` from `src/lib/components/dashboard/status/SdrDropdown.svelte` — keep only the status dot (recovers ~188px). Add `title="Software Defined Radio"` tooltip.
+- [ ] T008 [US2] Remove text label from `src/lib/components/dashboard/status/GpsDropdown.svelte` — currently shows "GPS {sats} SAT". Change to dot-only with `title="GPS {sats} SAT"` tooltip. Keep the sat count visible as a small superscript badge next to the dot (recovers ~92px).
 - [ ] T009 [US2] Add "REC" badge to `src/lib/components/dashboard/TopStatusBar.svelte` — after the `.collection-dot` element, add `{#if isCollecting}<span class="rec-badge">REC</span>{/if}` where `isCollecting` is derived from `wifiState === 'active' || sdrState === 'active' || gpsState === 'active'`.
 - [ ] T010 [US2] Change callsign display in `src/lib/components/dashboard/TopStatusBar.svelte` — replace `{locationName || 'ARGOS-1'}` with `{'ARGOS-1'}` in the `.callsign` span. Remove the `locationName` state variable, `lastGeocodeLat/Lon` variables, and the `reverseGeocode()` call from the GPS effect. (Default "ARGOS-1"; configurable via Settings in future spec.)
 - [ ] T011 [US2] Add network latency indicator to `src/lib/components/dashboard/TopStatusBar.svelte` — add `let latencyMs = $state<number | null>(null)` and measure RTT of the existing `fetchHardwareStatus()` call by wrapping it with `Date.now()` before/after. Display `{latencyMs ?? '--'}ms` in the right group between coordinates and mesh count.
@@ -466,7 +466,7 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 - [ ] T020 [US3] Replace X close icon with chevron-down caret in `src/routes/dashboard/BottomPanelTabs.svelte` lines 66-76 — replace the two `<line>` SVG elements with `<polyline points="6 9 12 15 18 9" />`. Change `title` from "Close panel" to "Collapse panel".
 - [ ] T021 [US1] Verify bottom panel tab bar matches design — compare tab order (Terminal, Chat, Logs, Captures, Devices), active tab indicator (steel blue bottom border), tab font (Geist, 14px), icon sizing (14px), and overall tab bar height (32-40px range).
 - [ ] T021a [US6] Remove drag-to-resize handle from `src/lib/components/dashboard/ResizableBottomPanel.svelte` — delete the resize handle element and all resize event handlers. Fix the panel height to 240px (`height: 240px; min-height: 240px; max-height: 240px`). Remove any CSS for `.resize-handle` or `.drag-handle`.
-- [ ] T021b [US6] Replace dynamic terminal session tabs with fixed named tabs in `src/routes/dashboard/BottomPanelTabs.svelte` and/or `src/lib/components/dashboard/TerminalTabBar.svelte` — the tab bar MUST show exactly: Terminal, Chat, Logs, Captures, Devices, "+" (new tab), [spacer], collapse caret. Active tab indicator: 2px bottom border in `var(--primary)` (`#809AD0`). Tab font: Geist 14px weight 500. Active color: `var(--primary)`. Inactive color: `var(--foreground-muted)` (`#BBBBBB`).
+- [ ] T021b [US6] Replace dynamic terminal session tabs with fixed named tabs in `src/routes/dashboard/BottomPanelTabs.svelte` and/or `src/lib/components/dashboard/TerminalTabBar.svelte` — the tab bar MUST show exactly: Terminal, Chat, Logs, Captures, Devices, "+" (new tab), [spacer], collapse caret. Active tab indicator: 2px bottom border in `var(--primary)` (`#A8B8E0` for Blue palette). Tab font: Geist 14px weight 500. Active color: `var(--primary)`. Inactive color: `var(--foreground-muted)` (`#BBBBBB`).
 - [ ] T021c [US6] Set bottom panel tab bar height to 40px in CSS. Tab padding: active = `6px 12px 4px 12px`, inactive = `6px 12px`. Gap between tabs: 4px. Tab bar padding: `4px 12px`.
 - [ ] T021d [US6] Fix bottom panel width — currently spans full width (1392px from x:48). Per Pencil design it should span from x:328 (right of Overview Panel) to x:1444, making it 1116px wide. Verify the flex layout in `src/lib/components/dashboard/DashboardShell.svelte` places the bottom panel inside the main-right area, not as a full-width child.
 
@@ -479,20 +479,37 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 ---
 
-## Phase 6b: CSS Variable Namespace Elimination (FR-009, FR-015, FR-016, FR-017)
+## Phase 6b: CSS Variable Namespace Elimination (FR-009, FR-009a–c, FR-015–FR-019)
 
-**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every `var(--palantir-*)` reference with the direct Lunaris token. Delete the bridge file. Zero `--palantir-*` references should remain anywhere in the codebase.
+**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every `var(--palantir-*)` reference with the direct Lunaris token. Safely migrate non-palantir tokens. Delete the bridge file. Zero `--palantir-*` references should remain anywhere in the codebase.
+
+> **CORRECTED SCOPE**: 230 `var(--palantir-*)` refs across 31 consumer files + 24 bridge-internal refs = **254 `var(--palantir-*)` total across 32 files**. Total "palantir" mentions (including class names, imports, comments): **295 across 36 files**. Additionally, 274 non-palantir token refs (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) across 40+ files would break if the `:root` block is deleted without pre-migration.
 
 **Migration mapping**: See plan.md Phase 7 for the complete `--palantir-*` → Lunaris token mapping table.
 
-### Implementation
+### Pre-Migration: Non-Palantir Token Safety (Commit 7a — MUST complete first)
 
-- [ ] T021e [P] [US4] Migrate all `var(--palantir-*)` references in `src/lib/components/dashboard/` `.svelte` files to direct Lunaris tokens per the mapping table in plan.md Phase 7. Files: TerminalPanel.svelte, IconRail.svelte, TerminalTabBar.svelte, ResizableBottomPanel.svelte, LogsPanel.svelte, DashboardMap.svelte, TerminalToolbar.svelte, and all files under `panels/`, `status/`, `shared/`, `views/`, `map/` subdirectories. (~170 replacements across 27 `.svelte` files.)
-- [ ] T021f [P] [US4] Migrate all `var(--palantir-*)` references in `src/lib/components/dashboard/` `.css` files to direct Lunaris tokens. Files: `icon-rail.css`, `command-bar.css`, `status/dropdown.css`, `panels/devices/device-table-cells.css`, `map/map-overrides.css`. (~36 replacements across 5 `.css` files.)
-- [ ] T021g [US4] Migrate all `var(--palantir-*)` references in `src/lib/styles/dashboard.css` to direct Lunaris tokens. (9 replacements.)
-- [ ] T021h [US4] Migrate utility classes in `src/lib/styles/palantir-design-system.css` (`.map-popup`, `.status-dot-*`, `.bg-surface`, `.text-tertiary`, `.tactical-sidebar`, etc.) from `var(--palantir-*)` to direct Lunaris tokens. Delete the `:root` variable definition block (lines 12-106). Rename file to `src/lib/styles/dashboard-utilities.css`.
+- [ ] T021-pre-a [US4] **BLOCKING** — Copy non-palantir token definitions from `src/lib/styles/palantir-design-system.css` lines 66-99 (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`) into `src/app.css` `:root` block. These tokens are used by 244 references across 40+ files and would break if lost.
+- [ ] T021-pre-b [US4] **BLOCKING** — Fix `--radius-*` conflict: copy the fixed-value definitions from `palantir-design-system.css` lines 101-105 (`--radius-sm: 4px`, `--radius-md: 6px`, `--radius-lg: 8px`, `--radius-xl: 12px`) into `src/app.css` `:root` block, REPLACING the conflicting `calc()` definitions at lines 223-226 in `@theme inline`. Components were built against the fixed values.
+- [ ] T021-pre-c [US4] Add `--accent-muted: color-mix(in srgb, var(--primary) 15%, transparent)` to `src/app.css` `:root` block. This is needed because `--palantir-accent-muted` uses a `color-mix()` expression that cannot be a simple variable swap.
+- [ ] T021-pre-d [US4] Run `npm run build` to verify no visual regressions from the token migration. The pre-migration should be purely additive (duplicate definitions temporarily exist in both files).
+
+### Palantir Variable Migration (Commit 7b)
+
+- [ ] T021e [US4] Migrate all `var(--palantir-*)` references in `src/lib/components/dashboard/` `.svelte` files to direct Lunaris tokens per the mapping table in plan.md Phase 7. Files: TerminalPanel.svelte, IconRail.svelte, TerminalTabBar.svelte, ResizableBottomPanel.svelte, LogsPanel.svelte, DashboardMap.svelte, TerminalToolbar.svelte, and all files under `panels/`, `status/`, `shared/`, `views/`, `map/` subdirectories. (~170 replacements across 27 `.svelte` files.) **Note**: `--palantir-accent-muted` → `var(--accent-muted)` (new token, not `color-mix()` inline).
+- [ ] T021e-tak [US4] Migrate all 12 `var(--palantir-*)` references in `src/lib/components/status/TAKIndicator.svelte` to direct Lunaris tokens. This file is OUTSIDE the `dashboard/` directory and was missing from the original scope.
+- [ ] T021f [US4] Migrate all `var(--palantir-*)` references in `src/lib/components/dashboard/` `.css` files to direct Lunaris tokens. Files: `icon-rail.css`, `command-bar.css`, `status/dropdown.css`, `panels/devices/device-table-cells.css`, `map/map-overrides.css`. (~36 replacements across 5 `.css` files.)
+- [ ] T021f-route [US4] Migrate 1 `var(--palantir-*)` reference in `src/routes/dashboard/dashboard-page.css` to direct Lunaris token.
+- [ ] T021g [US4] Migrate all `var(--palantir-*)` references in `src/lib/styles/dashboard.css` to direct Lunaris tokens. (12 replacements.)
+- [ ] T021g-popup [US4] Rename `class="palantir-popup"` to `class="map-popup"` in `src/lib/components/dashboard/DashboardMap.svelte` line 257 (FR-019).
+- [ ] T021g-import [US4] Remove duplicate import `import '$lib/styles/palantir-design-system.css'` from `src/routes/dashboard/+page.svelte` line 3. This import is redundant because `app.css` already imports the file globally.
+
+### Bridge File Deletion (Commit 7c — the revertable deletion)
+
+- [ ] T021h [US4] Migrate utility classes in `src/lib/styles/palantir-design-system.css` (`.map-popup`, `.status-dot-*`, `.bg-surface`, `.text-tertiary`, `.tactical-sidebar`, etc.) from `var(--palantir-*)` to direct Lunaris tokens. Delete the `:root` variable definition block (lines 12-106) — **safe because non-palantir tokens were migrated to `app.css` in T021-pre-a/b/c**. Rename file to `src/lib/styles/dashboard-utilities.css`.
 - [ ] T021i [US4] Update `src/app.css` line 3: change `@import './lib/styles/palantir-design-system.css'` to `@import './lib/styles/dashboard-utilities.css'`.
-- [ ] T021j [US4] Verify zero `--palantir-*` references remain: `grep -r 'palantir' src/ --include='*.svelte' --include='*.css' --include='*.ts' -l` must return empty output.
+- [ ] T021j-comment [US4] Clean comment reference in `src/lib/map/layers/symbol-layer.ts` line 44 — replace `--palantir-text-primary` with `--foreground` in the comment text. This file was not in the original scope but would cause the T021j verification grep to fail.
+- [ ] T021j [US4] Verify zero `palantir` references remain: `grep -r 'palantir' src/ --include='*.svelte' --include='*.css' --include='*.ts' -l` must return empty output. This catches `var(--palantir-*)`, class names like `palantir-popup`, import paths, and comments. Must run AFTER T021i (import path change) and T021j-comment (comment cleanup).
 - [ ] T021k [US4] Verify `--font-sans` resolves to `Geist` and `--font-mono` resolves to `Fira Code` in `src/lib/styles/dashboard.css` (already correct — confirm no changes needed).
 
 ### 🚦 GATE 5b: CSS Token Review
@@ -525,87 +542,109 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 - [ ] T025 Run full typecheck: `npm run typecheck` — verify no type errors introduced
 - [ ] T026 Run linter: `npm run lint` — verify no lint violations
 - [ ] T027 Run build: `npm run build` — verify production build succeeds
-- [ ] T028 [P] Update spec task status — mark all completed tasks in this file
-- [ ] T029 [P] Run quickstart.md validation — follow the verification steps in `specs/019-design-parity/quickstart.md`
+- [ ] T028 Update spec task status — mark all completed tasks in this file
+- [ ] T029 Run quickstart.md validation — follow the verification steps in `specs/019-design-parity/quickstart.md`
 - [ ] T030 Update `docs/CODEBASE_MAP.md` to reflect all file changes: `palantir-design-system.css` renamed to `dashboard-utilities.css`, import path change in `app.css`, any new/removed components from Icon Rail or Bottom Panel restructuring. Verify all paths referenced in CODEBASE_MAP still exist.
 
 ---
 
 ## Dependencies & Execution Order
 
-### Phase Dependencies
+### Execution Rules (NON-NEGOTIABLE)
 
-- **Phase 1 (Setup)**: No dependencies — start immediately
-- **Phase 2 (Icon Rail)**: Depends on Phase 1 — review + implementation (FR-010, FR-011, FR-012)
-- **Phase 3 (Command Bar)**: Depends on Phase 1 — main UI code changes (FR-003–FR-005, FR-007, FR-017)
-- **Phase 4 (Overview Panel)**: Depends on Phase 1 — store default change (FR-001)
-- **Phase 5 (Map Area)**: Depends on Phase 1 — review-only comparison
-- **Phase 6 (Bottom Panel)**: Depends on Phase 1 — store default + icon + structure (FR-002, FR-006, FR-013, FR-014)
-- **Phase 6b (CSS Elimination)**: Depends on Phases 2-6 — must run AFTER all component changes to avoid merge conflicts (FR-009, FR-015, FR-016)
-- **Phase 7 (Full Layout)**: Depends on Phases 2-6b — integration validation
-- **Phase 8 (Polish)**: Depends on Phase 7 — final checks + CODEBASE_MAP.md update
+> **STRICT SEQUENTIAL EXECUTION**: Every phase runs one at a time. Every task within a phase runs one at a time. No parallel work. No "starting the next phase while waiting for review." No agent parallelism.
+>
+> **HARD STOP AT GATES**: When a gate is reached, ALL work stops. The implementer presents the gate deliverables and waits for explicit user approval before touching any file in the next phase. "Approved" is the only word that unlocks the next phase.
+>
+> **ONE TASK, ONE VERIFY**: After each task, verify the change works (build still passes, no visual regression in the targeted region). Do not batch multiple tasks and verify at the end.
 
-### Gate Dependency Chain
+### Execution Sequence (strictly ordered)
 
 ```
-GATE 1 (Icon Rail) ──────────────────────┐
-GATE 2 (Command Bar) ───────────────────┤
-GATE 3 (Overview Panel) ────────────────┤
-GATE 4 (Map Area) ──────────────────────┼──→ GATE 5b (CSS) ──→ GATE 6 (Full Dashboard)
-GATE 5 (Bottom Panel) ──────────────────┘
+Phase 1: T001 → T002 → T003
+  ↓
+GATE 1 (Icon Rail):
+  T004 → T005 → T005a → T005b → T005c → T005d → T005e
+  → 🚦 STOP — screenshot + compare + user approval
+  ↓
+GATE 2 (Command Bar):
+  T006 → T007 → T008 → T009 → T010 → T011 → T012 → T013
+  → 🚦 STOP — screenshot + compare + user approval
+  ↓
+GATE 3 (Overview Panel):
+  T014 → T015 → T016
+  → 🚦 STOP — screenshot + compare + user approval
+  ↓
+GATE 4 (Map Area):
+  T017 → T018
+  → 🚦 STOP — screenshot + compare + user approval
+  ↓
+GATE 5 (Bottom Panel):
+  T019 → T020 → T021 → T021a → T021b → T021c → T021d
+  → 🚦 STOP — screenshot + compare + user approval
+  ↓
+GATE 5b (CSS Elimination):
+  T021-pre-a → T021-pre-b → T021-pre-c → T021-pre-d
+  → T021e → T021e-tak → T021f → T021f-route → T021g → T021g-popup → T021g-import
+  → T021h → T021i → T021j-comment → T021j → T021k
+  → 🚦 STOP — grep verification + computed color inspection + user approval
+  ↓
+GATE 6 (Full Dashboard — FINAL):
+  T022 → T023 → T024
+  → 🚦 STOP — full-page screenshot + side-by-side compare + user approval
+  ↓
+Phase 8 (Polish):
+  T025 → T026 → T027 → T028 → T029 → T030
 ```
 
-Gates 1-5 can proceed in any order (they target independent UI regions). GATE 5b (CSS elimination) runs after all component gates pass. GATE 6 (final) runs last.
+### Why No Parallelism
 
-### Parallel Opportunities
+Even though some tasks touch different files, parallel execution:
+1. **Masks regressions** — if T006 breaks the command bar layout, T007 and T008 pile on before you notice
+2. **Prevents clean rollback** — reverting one task's commit is easy; untangling three interleaved changes is not
+3. **Defeats the gate purpose** — gates exist to catch problems early, not to rubber-stamp batched work
 
-Within Phase 2 (Icon Rail):
-- T005a-T005e can run sequentially (same files) but T005d and T005e can overlap (icon content vs CSS)
+The time cost of sequential execution (~15 min longer than parallel) is trivial compared to the cost of debugging a regression buried under 5 simultaneous changes.
 
-Within Phase 3 (Command Bar):
-- T006, T007, T008 can run in parallel (different dropdown files)
-- T012 can run in parallel with T006-T008 (CSS file vs Svelte files)
-- T013 (test) can run in parallel with T012 (different file)
+### Gate Deliverables (same for every gate)
 
-Within Phase 6 (Bottom Panel):
-- T019 (store change) and T020 (icon change) touch different files — can run in parallel
-- T021a and T021b touch different files (ResizableBottomPanel vs BottomPanelTabs/TerminalTabBar)
+Each gate MUST produce these before requesting approval:
+1. A live screenshot of the targeted region (via CDP on port 9224)
+2. A Pencil frame screenshot of the same region (via `mcp__pencil__get_screenshot`)
+3. A concise diff summary: what matches, what doesn't, what was deferred
+4. A prompt to the user: **"Approve / Request changes / Defer to future work"**
 
-Within Phase 6b (CSS Elimination):
-- T021e and T021f can run in parallel (.svelte files vs .css files)
-- T021g (dashboard.css) is independent and can run in parallel with T021e/T021f
-
----
-
-## Implementation Strategy
-
-### Step-by-Step with Review Gates
-
-1. **Phase 1**: Setup (clear cache, write failing tests)
-2. **Phase 2**: Implement Icon Rail restructuring → **GATE 1** → User approves
-3. **Phase 3**: Implement Command Bar changes → **GATE 2** → User approves
-4. **Phase 4**: Implement Overview Panel default → **GATE 3** → User approves
-5. **Phase 5**: Review Map Area → **GATE 4** → User approves (likely defers map changes)
-6. **Phase 6**: Implement Bottom Panel changes → **GATE 5** → User approves
-7. **Phase 6b**: Eliminate `--palantir-*` namespace → **GATE 5b** → User approves
-8. **Phase 7**: Full layout validation → **GATE 6** → Final approval
-9. **Phase 8**: Polish (typecheck, lint, build, update CODEBASE_MAP.md)
-
-Each gate produces:
-1. A live screenshot (via CDP on port 9224)
-2. A Pencil frame screenshot (via `mcp__pencil__get_screenshot`)
-3. A diff summary of what matches and what doesn't
-4. A prompt to the user: "Approve / Request changes / Defer to future work"
+**No work beyond the gate until the user says "Approved."**
 
 ---
 
 ## Notes
 
-- Total tasks: **45** (T001–T029 + T005a-T005e + T021a-T021k)
-- Tasks by user story: US1 = 10, US2 = 8, US3 = 1, US4 = 7 (CSS), US5 = 5 (Icon Rail), US6 = 4 (Bottom Panel), Shared = 10
+- Total tasks: **52** (T001–T030 + T005a-T005e + T021-pre-a/b/c/d + T021a-T021k + T021e-tak + T021f-route + T021g-popup + T021g-import)
+- Tasks by user story: US1 = 10, US2 = 8, US3 = 1, US4 = 15 (CSS — expanded with pre-migration + new scope files), US5 = 5 (Icon Rail), US6 = 4 (Bottom Panel), Shared = 9
 - Review gates: **8** (one per UI region + CSS elimination + full dashboard final)
 - No new npm dependencies required
 - No new files created except 2 test files; 1 file deleted + renamed (`palantir-design-system.css` → `dashboard-utilities.css`)
-- ~35 files modified total (29 palantir migration + 6 feature changes)
+- **~38 files modified total** (32 palantir migration + 6 feature changes) — corrected from original 35 estimate
+- **254 `--palantir-*` refs across 32 files** — corrected from original 206/29 estimate
+- **274 non-palantir token refs across 40+ files** — must be migrated to `app.css` BEFORE `:root` deletion
+- Phase 7 uses **3 atomic commits** (7a: token pre-migration, 7b: palantir find-replace, 7c: `:root` deletion + rename) for rollback safety
 - CODEBASE_MAP.md must be updated in Phase 8 to reflect renamed/deleted files
 - Pencil design node IDs for screenshot comparison: `NHlPD` (rail), `nsKH5` (command bar), `SydG2` (overview), `gpiRi` (map), `sEDB5` (bottom panel), `ZQUdr` (full dashboard)
+
+### Accent Color Decision
+
+The Pencil design uses `#809AD0` for brand mark and active indicators. However, in the codebase `#809AD0` maps to `--signal-weak` / `--feature-drone`, NOT `--primary` (`#A8B8E0`). **Decision: Use `var(--primary)` (`#A8B8E0` for Blue palette)** so the accent responds to palette switching. The Pencil design value was likely picked from a different palette context or is a secondary blue — the token-based approach is authoritative.
+
+### Deferred Items
+
+These items were identified during review but are explicitly OUT OF SCOPE:
+- Widget extraction from Overview Panel (Phase 10 — widgets remain in sidebar)
+- Terminal Unavailable overlay (Pencil frame `hKXlP`)
+- Agent Chat panel content (Pencil frame `j0YYx`)
+- Device Manager table content (Pencil frame `LFDvo`)
+- Custom map zoom controls (28x28px buttons)
+- Map grid overlay (4×4 subtle lines)
+- Bottom panel "Network Map" tab variant (tab set is fixed: Terminal, Chat, Logs, Captures, Devices)
+- GPS legend overlay styling verification
+- Node Mesh tri-color value rendering ("3/4" with three different colors)
