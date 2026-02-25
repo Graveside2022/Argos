@@ -44,34 +44,32 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-8);
-		color: var(--palantir-text-secondary);
+		gap: 8px;
+		padding: 32px;
+		color: var(--foreground-secondary, #888888);
 		text-align: center;
 	}
 	.error-content svg {
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-tertiary, #999999);
 	}
 	.error-title {
-		font-size: var(--text-lg);
-		font-weight: var(--font-weight-semibold);
-		color: var(--palantir-text-primary);
+		font-family: var(--font-secondary, Geist, sans-serif);
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--foreground);
 	}
 	.error-detail {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
-	}
-	.error-detail code {
-		font-family: var(--font-mono);
-		color: var(--palantir-accent);
+		font-family: var(--font-secondary, Geist, sans-serif);
+		font-size: 14px;
+		color: var(--foreground-secondary, #888888);
 	}
 	.error-cmd {
-		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-		background: var(--palantir-bg-elevated);
-		padding: var(--space-2) var(--space-4);
-		border-radius: var(--radius-md);
-		color: var(--palantir-accent);
-		border: 1px solid var(--palantir-border-subtle);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 14px;
+		background: var(--card);
+		padding: 8px 16px;
+		border-radius: 4px;
+		color: var(--interactive);
+		border: 1px solid var(--border);
 	}
 </style>

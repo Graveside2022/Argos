@@ -53,21 +53,22 @@
 	}
 
 	.tool-view-header {
-		height: 40px;
-		min-height: 40px;
+		height: 48px;
+		min-height: 48px;
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
 		padding: 0 var(--space-4);
-		background: var(--palantir-bg-surface);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		background: var(--surface-elevated, #151515);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.tool-view-title {
-		font-size: var(--text-sm);
-		font-weight: var(--font-weight-semibold);
-		color: var(--palantir-text-primary);
-		letter-spacing: var(--letter-spacing-wide);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--foreground);
+		letter-spacing: 1.5px;
 	}
 
 	.tool-view-content {

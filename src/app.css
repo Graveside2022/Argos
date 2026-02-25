@@ -61,6 +61,22 @@
 	--error-bg: #24100b;
 	--info-bg: #222229;
 
+	/* Surface depth tokens (Lunaris layout structure) */
+	--surface-elevated: #151515;
+	--surface-hover: #1e1e1e;
+	--surface-header: #181818;
+	--surface-inset: #0d0d0d;
+	--surface-terminal: #0a0a0a;
+	--overlay-backdrop: #0e1116e6;
+
+	/* Foreground hierarchy (Lunaris layout structure) */
+	--foreground-secondary: #888888;
+	--foreground-tertiary: #999999;
+	--foreground-muted: #bbbbbb;
+
+	/* Interactive accent (palette-independent) */
+	--interactive: #4a8af4;
+
 	/* Widget and interaction tokens */
 	--widget-bg: #151515;
 	--hover-tint: #ffffff14;
@@ -191,6 +207,18 @@
 	--color-feature-rf: var(--feature-rf);
 	--color-feature-drone: var(--feature-drone);
 	--color-feature-radio: var(--feature-radio);
+
+	/* Lunaris layout structure tokens */
+	--color-surface-elevated: var(--surface-elevated);
+	--color-surface-hover: var(--surface-hover);
+	--color-surface-header: var(--surface-header);
+	--color-surface-inset: var(--surface-inset);
+	--color-surface-terminal: var(--surface-terminal);
+	--color-overlay-backdrop: var(--overlay-backdrop);
+	--color-foreground-secondary: var(--foreground-secondary);
+	--color-foreground-tertiary: var(--foreground-tertiary);
+	--color-foreground-muted: var(--foreground-muted);
+	--color-interactive: var(--interactive);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);

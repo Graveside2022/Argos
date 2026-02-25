@@ -5,8 +5,8 @@
 
 	import TAKIndicator from '$lib/components/status/TAKIndicator.svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
+	import { takStatus } from '$lib/stores/tak-store';
 
-	import CoordsDisplay from './status/CoordsDisplay.svelte';
 	import GpsDropdown from './status/GpsDropdown.svelte';
 	import SdrDropdown from './status/SdrDropdown.svelte';
 	import {
@@ -19,7 +19,8 @@
 		type SdrInfo,
 		type WifiInfo
 	} from './status/status-bar-data';
-	import type { WeatherData } from './status/weather-helpers';
+	import { getWeatherIcon, type WeatherData } from './status/weather-helpers';
+	import WeatherDropdown from './status/WeatherDropdown.svelte';
 	import WifiDropdown from './status/WifiDropdown.svelte';
 
 	let wifiState: DeviceState = $state('offline');
@@ -36,6 +37,7 @@
 	let gpsAccuracy: number | null = $state(null);
 	let gpsFix = $state(0);
 	let zuluTime = $state('');
+	let dateStr = $state('');
 	let locationName = $state('');
 	let lastGeocodeLat = 0;
 	let lastGeocodeLon = 0;
@@ -47,9 +49,28 @@
 	let currentGpsLat = 0;
 	let currentGpsLon = 0;
 
+	// Mesh count — TAK store has status but no node counts yet; show fallback
+	let meshDisplay = $derived($takStatus.status === 'connected' ? '1/1' : '\u2014/\u2014');
+
+	const MONTHS = [
+		'JAN',
+		'FEB',
+		'MAR',
+		'APR',
+		'MAY',
+		'JUN',
+		'JUL',
+		'AUG',
+		'SEP',
+		'OCT',
+		'NOV',
+		'DEC'
+	];
+
 	function updateClock() {
 		const now = new Date();
-		zuluTime = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`;
+		zuluTime = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}Z`;
+		dateStr = `${String(now.getUTCDate()).padStart(2, '0')} ${MONTHS[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
 	}
 	updateClock();
 
@@ -57,10 +78,8 @@
 		openDropdown = openDropdown === which ? null : which;
 	}
 
-	/** Map fixType string to numeric value. */
 	const FIX_TYPE_MAP: Record<string, number> = { '3D': 3, '2D': 2 };
 
-	/** Reset GPS display state to a given mode. */
 	function resetGpsState(state: 'offline' | 'standby') {
 		gpsState = state;
 		gpsSats = 0;
@@ -70,7 +89,6 @@
 		gpsFix = 0;
 	}
 
-	/** Apply GPS fix data to display state and trigger location lookups. */
 	function applyGpsFix(gps: typeof $gpsStore) {
 		const s = gps.status;
 		gpsState = 'active';
@@ -109,7 +127,6 @@
 		});
 	}
 
-	/** Apply fetched hardware details to component state. */
 	function applyHardwareDetails(
 		d: import('./status/status-bar-data').HardwareDetailsResult | null
 	) {
@@ -171,14 +188,17 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
-	class="top-status-bar"
+	class="command-bar"
 	onclick={(e) => {
 		if (e.target === e.currentTarget) openDropdown = null;
 	}}
 >
-	<div class="status-group">
-		<span class="app-brand">ARGOS</span>
-		<span class="status-divider"></span>
+	<!-- Left group: Brand + Collection + Callsign + Hardware -->
+	<div class="left-group">
+		<span class="brand-mark">ARGOS</span>
+		<span class="collection-dot"></span>
+		<span class="callsign">{locationName || 'ARGOS-1'}</span>
+		<span class="bar-divider"></span>
 
 		<WifiDropdown
 			deviceState={wifiState}
@@ -186,14 +206,12 @@
 			open={openDropdown === 'wifi'}
 			onToggle={() => toggleDropdown('wifi')}
 		/>
-
 		<SdrDropdown
 			deviceState={sdrState}
 			info={sdrInfo}
 			open={openDropdown === 'sdr'}
 			onToggle={() => toggleDropdown('sdr')}
 		/>
-
 		<GpsDropdown
 			deviceState={gpsState}
 			info={gpsInfo}
@@ -204,77 +222,39 @@
 			open={openDropdown === 'gps'}
 			onToggle={() => toggleDropdown('gps')}
 		/>
-
 		<TAKIndicator />
 	</div>
 
-	<CoordsDisplay
-		{locationName}
-		{weather}
-		{gpsCoords}
-		{zuluTime}
-		weatherOpen={openDropdown === 'weather'}
-		onToggleWeather={() => toggleDropdown('weather')}
-	/>
+	<!-- Spacer -->
+	<div class="bar-spacer"></div>
+
+	<!-- Right group: Latency + Mesh + Weather + Date + Zulu -->
+	<div class="right-group">
+		{#if gpsCoords.lat}
+			<span class="segment segment-coords">{gpsCoords.lat}/{gpsCoords.lon}</span>
+			<span class="bar-divider"></span>
+		{/if}
+		<span class="segment segment-mesh">{meshDisplay}</span>
+		{#if weather}
+			<div class="device-wrapper">
+				<button class="segment segment-weather" onclick={() => toggleDropdown('weather')}>
+					<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — getWeatherIcon() returns hardcoded SVG strings, no user input -->
+					<span class="weather-icon"
+						>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
+					>
+					<span>{Math.round(weather.temperature)}°C</span>
+				</button>
+				{#if openDropdown === 'weather'}<WeatherDropdown {weather} />{/if}
+			</div>
+		{:else}
+			<span class="segment segment-muted">--°C</span>
+		{/if}
+		<span class="bar-divider"></span>
+		<span class="segment segment-date">{dateStr}</span>
+		<span class="segment segment-zulu">{zuluTime}</span>
+	</div>
 </div>
 
 <style>
-	.top-status-bar {
-		height: var(--top-bar-height);
-		min-height: var(--top-bar-height);
-		background: var(--palantir-bg-chrome);
-		border-bottom: 1px solid var(--palantir-border-subtle);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 var(--space-4);
-		z-index: 100;
-		position: relative;
-	}
-	.status-group {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		flex-shrink: 0;
-	}
-	.app-brand {
-		font-family: var(--font-mono);
-		font-size: 14px;
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: 2px;
-		color: var(--primary);
-	}
-	.status-divider {
-		width: 1px;
-		height: 20px;
-		background: var(--palantir-border-subtle);
-	}
-
-	@media (max-width: 767px) {
-		.top-status-bar {
-			padding: 0 var(--space-2);
-		}
-		.status-group {
-			gap: var(--space-2);
-		}
-		.app-brand {
-			font-size: var(--text-brand);
-		}
-	}
-	@media (max-width: 599px) {
-		.status-divider {
-			display: none;
-		}
-	}
-	@media (max-width: 479px) {
-		.top-status-bar {
-			height: auto;
-			min-height: 36px;
-			flex-wrap: wrap;
-			padding: var(--space-1) var(--space-2);
-		}
-		.app-brand {
-			font-size: 12px;
-		}
-	}
+	@import './command-bar.css';
 </style>

@@ -15,10 +15,14 @@
 	--palantir-bg-chrome: var(--background);
 	--palantir-bg-surface: var(--card);
 	--palantir-bg-panel: var(--card);
-	--palantir-bg-elevated: var(--secondary);
+	--palantir-bg-elevated: var(--surface-elevated);
 	--palantir-bg-input: var(--input);
-	--palantir-bg-hover: var(--hover-tint);
+	--palantir-bg-hover: var(--surface-hover);
 	--palantir-bg-button: var(--secondary);
+	--palantir-bg-header: var(--surface-header);
+	--palantir-bg-inset: var(--surface-inset);
+	--palantir-bg-terminal: var(--surface-terminal);
+	--palantir-overlay-backdrop: var(--overlay-backdrop);
 
 	/* Borders — all solid #2E2E2E via --border */
 	--palantir-border-subtle: var(--border);
@@ -27,9 +31,12 @@
 
 	/* Text — mapped to Lunaris text hierarchy */
 	--palantir-text-primary: var(--foreground);
-	--palantir-text-secondary: var(--text-secondary, #bbbbbb);
-	--palantir-text-tertiary: var(--text-tertiary, #888888);
+	--palantir-text-secondary: var(--foreground-muted);
+	--palantir-text-tertiary: var(--foreground-secondary);
 	--palantir-text-on-accent: var(--primary-foreground);
+
+	/* Interactive accent (palette-independent) */
+	--palantir-interactive: var(--interactive);
 
 	/* Accent — mapped to Lunaris primary */
 	--palantir-accent: var(--primary);

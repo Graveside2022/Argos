@@ -27,27 +27,28 @@
 <style>
 	.panel-header {
 		padding: var(--space-3) var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
 	}
 
 	.panel-title {
-		font-size: var(--text-sm);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-primary);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 1.5px;
+		color: var(--foreground-muted, #bbbbbb);
 	}
 
 	.back-btn {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		background: var(--hover-tint);
-		border: 1px solid var(--palantir-border-subtle);
+		background: var(--surface-hover, #1e1e1e);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
-		color: var(--palantir-accent);
+		color: var(--interactive, #4a8af4);
 		font-size: var(--text-xs);
 		cursor: pointer;
 		padding: var(--space-1) var(--space-3);
@@ -57,8 +58,8 @@
 
 	.back-btn:hover {
 		background: var(--secondary);
-		border-color: var(--palantir-accent);
-		color: var(--palantir-text-primary);
+		border-color: var(--interactive);
+		color: var(--foreground);
 	}
 
 	.back-btn :global(svg) {

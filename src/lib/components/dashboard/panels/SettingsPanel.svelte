@@ -41,6 +41,10 @@
 		activeView.set(view);
 		activePanel.set(null);
 	}
+
+	function openHardwarePanel() {
+		activePanel.set('hardware');
+	}
 </script>
 
 <div class="settings-panel">
@@ -150,6 +154,49 @@
 			</div>
 		</div>
 
+		<!-- Hardware Card -->
+		<button class="settings-card clickable-card" onclick={openHardwarePanel}>
+			<div class="card-header">
+				<svg
+					class="card-icon"
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+					<rect x="9" y="9" width="6" height="6" />
+					<line x1="9" y1="1" x2="9" y2="4" />
+					<line x1="15" y1="1" x2="15" y2="4" />
+					<line x1="9" y1="20" x2="9" y2="23" />
+					<line x1="15" y1="20" x2="15" y2="23" />
+					<line x1="20" y1="9" x2="23" y2="9" />
+					<line x1="20" y1="14" x2="23" y2="14" />
+					<line x1="1" y1="9" x2="4" y2="9" />
+					<line x1="1" y1="14" x2="4" y2="14" />
+				</svg>
+				<span class="card-title">Hardware</span>
+				<svg
+					class="card-chevron"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<polyline points="9 18 15 12 9 6" />
+				</svg>
+			</div>
+			<p class="card-description">GPS, SDR, and WiFi device settings</p>
+		</button>
+
 		<!-- Logs & Analytics Card -->
 		<div class="settings-card">
 			<div class="card-header">
@@ -196,101 +243,5 @@
 </div>
 
 <style>
-	.settings-panel {
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-	}
-
-	.panel-header {
-		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
-	}
-
-	.panel-title {
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-secondary);
-	}
-
-	.cards-container {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		padding: var(--space-4);
-		overflow-y: auto;
-	}
-
-	.settings-card {
-		padding: var(--space-3);
-		background: var(--palantir-bg-elevated);
-		border: 1px solid var(--palantir-border-subtle);
-		border-radius: var(--radius-md);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-
-	.card-header {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-	}
-
-	.card-icon {
-		flex-shrink: 0;
-		color: var(--palantir-text-secondary);
-	}
-
-	.card-title {
-		font-size: var(--text-sm);
-		font-weight: var(--font-weight-medium);
-		color: var(--palantir-text-primary);
-	}
-
-	.card-description {
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-		line-height: 1.4;
-		margin: 0;
-	}
-
-	.card-body {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		margin-top: var(--space-1);
-	}
-
-	.setting-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-	}
-
-	.setting-label {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-primary);
-	}
-
-	.open-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		padding: 4px 10px;
-		font-size: var(--text-xs);
-		color: var(--palantir-accent);
-		background: transparent;
-		border: 1px solid var(--palantir-border-subtle);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.open-btn:hover {
-		background: var(--palantir-bg-hover);
-		border-color: var(--palantir-accent);
-	}
+	@import './settings-panel.css';
 </style>

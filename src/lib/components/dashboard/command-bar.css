@@ -1,0 +1,153 @@
+.command-bar {
+	height: var(--top-bar-height);
+	min-height: var(--top-bar-height);
+	background: var(--card);
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	padding: 0 16px;
+	gap: 12px;
+	z-index: 100;
+	position: relative;
+}
+
+.left-group {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+}
+
+.brand-mark {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 2px;
+	color: var(--primary);
+}
+
+.collection-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--destructive);
+	flex-shrink: 0;
+}
+
+.callsign {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 1px;
+	color: var(--foreground);
+	max-width: 160px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.bar-divider {
+	width: 1px;
+	height: 20px;
+	background: var(--border);
+	flex-shrink: 0;
+}
+
+.bar-spacer {
+	flex: 1;
+}
+
+.right-group {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+}
+
+.segment {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--foreground);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.segment-coords {
+	color: var(--foreground-secondary);
+}
+
+.segment-mesh {
+	font-weight: 500;
+}
+
+.segment-weather {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: transparent;
+	border: none;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--foreground);
+}
+
+.segment-weather:hover {
+	background: var(--surface-hover);
+}
+
+.weather-icon {
+	display: flex;
+	align-items: center;
+	color: var(--foreground-secondary);
+}
+
+.segment-muted {
+	color: var(--muted-foreground);
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.segment-date {
+	color: var(--muted-foreground);
+	letter-spacing: 0.5px;
+}
+
+.segment-zulu {
+	font-weight: 600;
+	letter-spacing: 1px;
+}
+
+.device-wrapper {
+	position: relative;
+}
+
+@media (max-width: 767px) {
+	.command-bar {
+		padding: 0 8px;
+	}
+	.left-group,
+	.right-group {
+		gap: 8px;
+	}
+	.brand-mark {
+		font-size: 13px;
+	}
+	.segment-coords,
+	.segment-date {
+		display: none;
+	}
+}
+@media (max-width: 599px) {
+	.bar-divider {
+		display: none;
+	}
+	.callsign {
+		display: none;
+	}
+	.segment-mesh {
+		display: none;
+	}
+}

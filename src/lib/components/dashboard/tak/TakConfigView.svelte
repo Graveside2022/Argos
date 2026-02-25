@@ -152,13 +152,13 @@
 </script>
 
 <ToolViewWrapper
-	title="TAK Server Configuration"
+	title="TAK SERVER"
 	status={$takStatus.status === 'connected' ? 'Connected' : ''}
 	onBack={() => activeView.set('map')}
 >
-	<div class="flex h-full flex-col gap-3 overflow-y-auto p-4">
+	<div class="tak-body">
 		{#if isLoading}
-			<p class="py-5 text-xs text-muted-foreground">Loading configuration...</p>
+			<p class="loading-text">Loading configuration...</p>
 		{:else}
 			<TakStatusSection
 				port={config.port}
@@ -177,7 +177,7 @@
 			<Separator />
 
 			<!-- CLIENT CERTIFICATE / ENROLLMENT -->
-			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+			<div class="form-section-card">
 				{#if config.authMethod === 'import'}
 					<TakAuthImport
 						{config}
@@ -191,7 +191,7 @@
 
 			<Separator />
 
-			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+			<div class="form-section-card">
 				<TakTruststore
 					{config}
 					onUploaded={handleTruststoreUploaded}
@@ -201,19 +201,15 @@
 
 			<Separator />
 
-			<div class="rounded-lg border border-border/60 bg-card/40 p-3">
+			<div class="form-section-card">
 				<TakDataPackage configId={config.id} onImported={handlePackageImported} />
 			</div>
 
 			<Separator />
 
 			<!-- SAVE -->
-			<div class="flex items-center gap-2">
-				<button
-					onclick={handleSave}
-					disabled={isSaving}
-					class="inline-flex items-center gap-1.5 rounded-md border border-primary/50 bg-primary/20 px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/40 disabled:opacity-50"
-				>
+			<div class="save-row">
+				<button onclick={handleSave} disabled={isSaving} class="save-btn">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						width="14"
@@ -234,9 +230,9 @@
 				</button>
 				{#if message}
 					<span
-						class="text-[10px] {messageType === 'success'
-							? 'text-green-400'
-							: 'text-destructive'}"
+						class="save-message"
+						class:success={messageType === 'success'}
+						class:error={messageType === 'error'}
 					>
 						{message}
 					</span>
@@ -245,3 +241,7 @@
 		{/if}
 	</div>
 </ToolViewWrapper>
+
+<style>
+	@import './tak-config-view.css';
+</style>

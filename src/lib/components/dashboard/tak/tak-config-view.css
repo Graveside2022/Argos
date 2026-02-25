@@ -1,0 +1,68 @@
+/* TakConfigView styles — extracted to comply with Article 2.2 (max 300 lines/file) */
+
+.tak-body {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 24px 32px;
+	overflow-y: auto;
+	height: 100%;
+}
+
+.loading-text {
+	padding: 20px 0;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.form-section-card {
+	padding: 12px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+}
+
+.save-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.save-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: 12px;
+	font-weight: 600;
+	color: white;
+	background: var(--primary);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.15s ease;
+	width: 100%;
+	justify-content: center;
+}
+
+.save-btn:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--primary) 85%, white);
+}
+
+.save-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.save-message {
+	font-size: 10px;
+}
+
+.save-message.success {
+	color: var(--status-healthy, #8bbfa0);
+}
+
+.save-message.error {
+	color: var(--destructive);
+}

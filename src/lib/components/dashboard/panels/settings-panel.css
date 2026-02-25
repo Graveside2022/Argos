@@ -1,0 +1,120 @@
+/* SettingsPanel styles — extracted to comply with Article 2.2 (max 300 lines/file) */
+
+.settings-panel {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.panel-header {
+	padding: var(--space-4);
+	border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	color: var(--foreground-secondary, #888888);
+}
+
+.cards-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	overflow-y: auto;
+}
+
+.settings-card {
+	padding: 8px 12px;
+	background: var(--surface-elevated, #151515);
+	border: none;
+	border-bottom: 1px solid var(--border);
+	border-radius: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.card-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+}
+
+.card-icon {
+	flex-shrink: 0;
+	color: var(--foreground-secondary, #888888);
+}
+
+.card-title {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 1.2px;
+	color: var(--foreground);
+}
+
+.card-description {
+	font-size: var(--text-xs);
+	color: var(--foreground-secondary, #888888);
+	line-height: 1.4;
+	margin: 0;
+}
+
+.card-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	margin-top: var(--space-1);
+}
+
+.setting-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.setting-label {
+	font-size: var(--text-sm);
+	color: var(--foreground);
+}
+
+.open-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 10px;
+	font-size: var(--text-xs);
+	color: var(--interactive, #4a8af4);
+	background: transparent;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.open-btn:hover {
+	background: var(--surface-hover, #1e1e1e);
+	border-color: var(--interactive);
+}
+
+.clickable-card {
+	cursor: pointer;
+	text-align: left;
+	width: 100%;
+	transition: background 0.15s ease;
+}
+
+.clickable-card:hover {
+	background: var(--surface-hover, #1e1e1e);
+}
+
+.card-chevron {
+	flex-shrink: 0;
+	color: var(--foreground-tertiary, #999999);
+	margin-left: auto;
+}

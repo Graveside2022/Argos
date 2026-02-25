@@ -1,0 +1,63 @@
+/* GSM Scanner page layout styles */
+
+.gsm-scanner {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	background: var(--background);
+	color: var(--foreground);
+}
+
+.scan-results-panel {
+	flex: 1;
+	background: var(--surface-inset, #0d0d0d);
+	border: 1px solid var(--border);
+	margin: 0 8px;
+	overflow-y: auto;
+}
+
+.console-panel {
+	display: flex;
+	flex-direction: column;
+}
+
+.console-header {
+	height: 36px;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	background: var(--card);
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-status, 10px);
+	font-weight: 600;
+	letter-spacing: 1.2px;
+	color: var(--foreground-secondary, #888888);
+}
+
+.console-body {
+	min-height: 140px;
+	background: var(--surface-terminal, #0a0a0a);
+}
+
+.imsi-capture-panel {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.live-frames-panel {
+	display: flex;
+	flex-direction: column;
+}
+
+.live-frames-panel .panel-header {
+	height: 36px;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	background: var(--card);
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-status, 10px);
+	font-weight: 600;
+	letter-spacing: 1.2px;
+	color: var(--foreground-secondary, #888888);
+}

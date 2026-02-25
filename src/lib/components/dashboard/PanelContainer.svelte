@@ -5,7 +5,9 @@
 	import { activePanel } from '$lib/stores/dashboard/dashboard-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 
+	import HardwareConfigPanel from './panels/HardwareConfigPanel.svelte';
 	import LayersPanel from './panels/LayersPanel.svelte';
+	import OnnetToolsPanel from './panels/OnnetToolsPanel.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
 	import SettingsPanel from './panels/SettingsPanel.svelte';
 	import ToolsPanel from './panels/ToolsPanel.svelte';
@@ -114,6 +116,10 @@
 					<LayersPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
+				{:else if $activePanel === 'hardware'}
+					<HardwareConfigPanel />
+				{:else if $activePanel === 'onnet-tools'}
+					<OnnetToolsPanel />
 				{/if}
 			</div>
 			<div
@@ -173,6 +179,10 @@
 					<LayersPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
+				{:else if $activePanel === 'hardware'}
+					<HardwareConfigPanel />
+				{:else if $activePanel === 'onnet-tools'}
+					<OnnetToolsPanel />
 				{/if}
 			</div>
 		{:else}
@@ -186,6 +196,10 @@
 					<LayersPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
+				{:else if $activePanel === 'hardware'}
+					<HardwareConfigPanel />
+				{:else if $activePanel === 'onnet-tools'}
+					<OnnetToolsPanel />
 				{/if}
 			</div>
 		{/if}
@@ -200,8 +214,8 @@
 		width: 0;
 		min-width: 0;
 		overflow: hidden;
-		background: var(--palantir-bg-surface);
-		border-right: 1px solid var(--palantir-border-subtle);
+		background: var(--surface-elevated, #151515);
+		border-right: 1px solid var(--border);
 		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 		transition:
 			width 0.2s ease,
@@ -228,6 +242,7 @@
 		width: var(--panel-width);
 		height: 100%;
 		overflow-y: auto;
+		overflow-x: hidden;
 		display: flex;
 		flex-direction: column;
 		flex: 1;
@@ -237,7 +252,7 @@
 	/* ---- Right ---- */
 	.panel-container[data-position='right'] {
 		border-right: none;
-		border-left: 1px solid var(--palantir-border-subtle);
+		border-left: 1px solid var(--border);
 		box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
 	}
 
@@ -266,11 +281,11 @@
 	}
 
 	.panel-container[data-position='top'] {
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 	}
 
 	/* ---- Bottom ---- */
 	.panel-container[data-position='bottom'] {
-		border-top: 1px solid var(--palantir-border-subtle);
+		border-top: 1px solid var(--border);
 	}
 </style>
