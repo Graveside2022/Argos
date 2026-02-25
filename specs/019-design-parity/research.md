@@ -69,7 +69,7 @@ The latency value will be slightly higher than pure network RTT (includes server
 
 ### R6: How to eliminate `--palantir-*` CSS variables?
 
-**Decision**: Full elimination — replace every `var(--palantir-*)` reference across all 29 files with the direct Lunaris token. Delete the bridge file, rename utility classes file.
+**Decision**: Full elimination — replace every `var(--palantir-*)` reference across all **32 files** (254 refs — corrected from initial 29/206 estimate) with the direct Lunaris token. Delete the bridge file, rename utility classes file.
 
 **Rationale**: The `--palantir-*` variables are defined in `src/lib/styles/palantir-design-system.css` as a pure bridge — each one just maps to an existing Lunaris token (e.g., `--palantir-bg-panel: var(--card)`). This indirection layer:
 
@@ -83,21 +83,21 @@ The Lunaris tokens are already defined in `app.css`. By replacing `var(--palanti
 - Design-code vocabulary alignment (component code matches Pencil design token names)
 - One fewer file to maintain
 
-**Scope**: ~206 replacements across 29 `.svelte` + 5 `.css` files + `dashboard.css`. The utility classes in `palantir-design-system.css` (`.map-popup`, `.status-dot`, `.tactical-sidebar`) are kept but migrated to Lunaris tokens and the file renamed to `dashboard-utilities.css`.
+**Scope**: **254 replacements across 32 files** (corrected from original 206/29 estimate). Includes `TAKIndicator.svelte` (12 refs, outside `dashboard/` dir), `dashboard-page.css` (1 ref), and `+page.svelte` (duplicate import). Additionally, the `:root` block defines non-palantir tokens (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) used by 274 refs across 40+ files — these MUST be migrated to `app.css` before the `:root` block is deleted. The utility classes in `palantir-design-system.css` (`.map-popup`, `.status-dot`, `.tactical-sidebar`) are kept but migrated to Lunaris tokens and the file renamed to `dashboard-utilities.css`.
 
 **Alternatives considered**: Redefining values in place (update `--palantir-bg-panel` to point to correct hex). Lower effort but perpetuates the dead namespace. Rejected in favor of clean elimination.
 
 ### R7: Should the Icon Rail use Lucide icon fonts or continue with inline SVGs?
 
-**Decision**: Migrate to Lucide icon fonts (matching the Pencil design).
+**Decision**: Migrate to `@lucide/svelte` component imports (already installed, v0.561.0).
 
-**Rationale**: The Pencil design uses Lucide `icon_font` entries (`house`, `list`, `zap`, `waypoints`, `layers`, `settings`). Lucide is a popular open-source icon set with consistent styling. The project already references Lucide icons in the design file but uses custom inline SVGs in the code. Migrating to the `lucide-svelte` package (if available) or using Lucide SVG sprites would:
+**Rationale**: The Pencil design uses Lucide `icon_font` entries (`house`, `list`, `zap`, `waypoints`, `layers`, `settings`). `@lucide/svelte` v0.561.0 is already in `package.json` — no new dependency required (confirmed 2026-02-25). Import individual components: `import { House, List, Zap, Waypoints, Layers, Settings } from '@lucide/svelte'`. This will:
 
 1. Match the design system exactly
 2. Reduce component file size (no more 200-char SVG strings)
 3. Ensure icon consistency across the app
 
-**Alternatives considered**: Keep inline SVGs but update them to match Lucide's paths. Viable but maintenance-heavy.
+**Alternatives considered**: Keep inline SVGs but update them to match Lucide's paths. Viable but maintenance-heavy when `@lucide/svelte` is already available.
 
 ### R8: Should the Bottom Panel keep dynamic terminal sessions or switch to fixed named tabs?
 

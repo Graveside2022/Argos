@@ -34,4 +34,7 @@
 - FR-001 and FR-002 mention store variable names (`activePanel`, `activeBottomTab`) for precision — these reference the current codebase but the requirement itself is behavior-focused ("default to open")
 - FR-008 (Vite cache warning) is a developer-experience improvement, marked SHOULD rather than MUST
 - Screenshot references point to both Pencil frame IDs and local PNG files for auditable comparison
-- All items pass validation. Spec is ready for `/speckit.plan`.
+- **Post-review additions (2026-02-25)**: FR-009a (non-palantir token migration), FR-009b (radius conflict), FR-009c (accent-muted token), FR-015 hex correction (#18181b not #141414), FR-017 accent color correction (var(--primary) not #809AD0), FR-018 (TAKIndicator scope), FR-019 (palantir-popup rename), accessibility trade-offs section, deferred items section, rollback strategy in plan.md
+- **Scope corrections**: 254 `var(--palantir-*)` refs/32 files (not 206/29), 295 total "palantir" mentions/36 files, 274 non-palantir token refs require pre-migration
+- **Post-analyze corrections (2026-02-25)**: FR-009 clarified var() vs total mention counts, FR-012 confirmed `@lucide/svelte` already installed (no new dep), FR-014 accent color aligned to `var(--primary)` (not `#809AD0`), latency assumption clarified as HTTP RTT not ICMP, T021j-comment added for symbol-layer.ts cleanup
+- Spec is ready for implementation with the corrected scope.
