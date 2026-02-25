@@ -287,27 +287,19 @@
 
 	{#if $gpsStore.status.hasGPSFix}
 		<div class="gps-legend">
-			<div class="legend-row">
-				<span class="legend-label">GPS</span>
-				<span class="legend-value legend-fix"
-					>{$gpsStore.status.fixType} · {$gpsStore.status.satellites} sat</span
-				>
+			<div class="legend-line1">
+				<span class="legend-gps-tag">GPS</span>
+				<span class="legend-fix-badge">{$gpsStore.status.satellites} SAT</span>
+				<span class="legend-sep">·</span>
+				<span class="legend-location">{$gpsStore.status.currentCountry.name}</span>
 			</div>
-			<div class="legend-divider"></div>
-			<div class="legend-row">
-				<span class="legend-label">Location</span>
-				<span class="legend-value">{$gpsStore.status.currentCountry.name}</span>
-			</div>
-			<div class="legend-row">
-				<span class="legend-label">Lat/Lon</span>
-				<span class="legend-value"
-					>{$gpsStore.status.formattedCoords.lat}
-					{$gpsStore.status.formattedCoords.lon}</span
-				>
-			</div>
-			<div class="legend-row">
-				<span class="legend-label">MGRS</span>
-				<span class="legend-value">{$gpsStore.status.mgrsCoord}</span>
+			<div class="legend-line2">
+				<span class="legend-coord">{$gpsStore.status.formattedCoords.lat}</span>
+				<span class="legend-coord">{$gpsStore.status.formattedCoords.lon}</span>
+				<span class="legend-mgrs">{$gpsStore.status.mgrsCoord}</span>
+				{#if $gpsStore.status.altitude != null}
+					<span class="legend-asl">{Math.round($gpsStore.status.altitude)}m ASL</span>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -332,49 +324,64 @@
 		left: 16px;
 		background: rgba(17, 17, 17, 0.85);
 		border: 1px solid var(--border, #2e2e2e);
-		border-radius: 6px;
-		padding: 8px 12px;
+		border-radius: 4px;
+		padding: 6px 10px;
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: 2px;
 		backdrop-filter: blur(4px);
 		z-index: 10;
-		min-width: 180px;
 		pointer-events: none;
 	}
 
-	.legend-row {
+	.legend-line1,
+	.legend-line2 {
 		display: flex;
-		justify-content: space-between;
 		align-items: baseline;
-		gap: 12px;
-	}
-
-	.legend-label {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		text-transform: uppercase;
-		color: var(--muted-foreground, #555555);
+		gap: 6px;
+		font-family: var(--font-mono, 'Fira Code', monospace);
 		white-space: nowrap;
-		flex-shrink: 0;
 	}
 
-	.legend-value {
-		font-family: var(--font-mono);
+	.legend-gps-tag {
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--primary, #a8b8e0);
+		letter-spacing: 0.5px;
+	}
+
+	.legend-fix-badge {
+		font-size: 10px;
+		color: var(--success, #8bbfa0);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.legend-sep {
+		font-size: 10px;
+		color: var(--muted-foreground, #555555);
+	}
+
+	.legend-location {
 		font-size: 10px;
 		color: var(--foreground, #e8e8e8);
-		text-align: right;
 	}
 
-	.legend-fix {
-		color: var(--success, #8bbfa0);
+	.legend-coord {
+		font-size: 10px;
+		color: var(--foreground, #e8e8e8);
+		font-variant-numeric: tabular-nums;
 	}
 
-	.legend-divider {
-		height: 1px;
-		background: var(--border, #2e2e2e);
-		margin: 2px 0;
+	.legend-mgrs {
+		font-size: 10px;
+		color: var(--muted-foreground, #888888);
+		font-variant-numeric: tabular-nums;
+		margin-left: 4px;
+	}
+
+	.legend-asl {
+		font-size: 10px;
+		color: var(--muted-foreground, #888888);
+		font-variant-numeric: tabular-nums;
 	}
 </style>

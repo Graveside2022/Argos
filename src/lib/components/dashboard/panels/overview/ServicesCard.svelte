@@ -1,213 +1,75 @@
 <script lang="ts">
-	import type { HardwareDetails } from './types';
+	import { formatUptime } from './types';
 
 	interface Props {
-		kismetStatus: string;
-		kismetDeviceCount: number;
-		gpsHasFix: boolean;
-		gpsSatellites: number;
-		takStatus: string;
-		takMessageCount: number;
-		gpsDetails: HardwareDetails['gps'] | undefined;
-		expandedRow: string | null;
-		onToggleExpand: (id: string) => void;
-		onOpenKismet: () => void;
-		onOpenTakConfig: () => void;
+		gpsdUptime: number | null;
+		gpsdRunning: boolean;
 	}
 
-	let {
-		kismetStatus,
-		kismetDeviceCount,
-		gpsHasFix,
-		gpsSatellites,
-		takStatus,
-		takMessageCount,
-		gpsDetails,
-		expandedRow,
-		onToggleExpand,
-		onOpenKismet,
-		onOpenTakConfig
-	}: Props = $props();
+	let { gpsdUptime, gpsdRunning }: Props = $props();
+
+	let uptimeDisplay = $derived(
+		gpsdUptime != null && gpsdUptime > 0 ? formatUptime(gpsdUptime) : '—'
+	);
 </script>
 
-<section class="panel-section">
-	<h3 class="section-header">SERVICES</h3>
-	<button class="scan-row clickable" onclick={onOpenKismet}>
-		<span class="scan-dot" class:active={kismetStatus === 'running'}></span>
-		<span class="scan-name">Kismet WiFi</span>
-		{#if kismetStatus === 'running'}
-			<span class="scan-count">{kismetDeviceCount}</span>
-		{:else}
-			<span class="scan-status-text">stopped</span>
-		{/if}
-		<span class="row-chevron">&#8250;</span>
-	</button>
-	<button class="scan-row clickable" onclick={() => onToggleExpand('gps')}>
-		<span class="scan-dot" class:active={gpsHasFix}></span>
-		<span class="scan-name">GPS</span>
-		{#if gpsHasFix}
-			<span class="scan-count">{gpsSatellites} sats</span>
-		{:else}
-			<span class="scan-status-text">no fix</span>
-		{/if}
-		<span class="row-chevron" class:expanded={expandedRow === 'gps'}>&#8250;</span>
-	</button>
-	{#if expandedRow === 'gps' && gpsDetails}
-		<div class="detail-panel">
-			{#if gpsDetails.device}
-				<div class="detail-row">
-					<span class="detail-key">Device</span>
-					<span class="detail-val">{gpsDetails.device}</span>
-				</div>
-			{/if}
-			{#if gpsDetails.protocol}
-				<div class="detail-row">
-					<span class="detail-key">Protocol</span>
-					<span class="detail-val">{gpsDetails.protocol}</span>
-				</div>
-			{/if}
-			{#if gpsDetails.baudRate}
-				<div class="detail-row">
-					<span class="detail-key">Baud Rate</span>
-					<span class="detail-val">{gpsDetails.baudRate}</span>
-				</div>
-			{/if}
-			{#if gpsDetails.usbAdapter}
-				<div class="detail-row">
-					<span class="detail-key">Adapter</span>
-					<span class="detail-val">{gpsDetails.usbAdapter}</span>
-				</div>
-			{/if}
-			{#if gpsDetails.gpsdVersion}
-				<div class="detail-row">
-					<span class="detail-key">GPSD</span>
-					<span class="detail-val">v{gpsDetails.gpsdVersion}</span>
-				</div>
-			{/if}
-		</div>
-	{/if}
-	<button class="scan-row clickable" onclick={onOpenTakConfig}>
-		<span class="scan-dot" class:active={takStatus === 'connected'}></span>
-		<span class="scan-name">TAK Server</span>
-		{#if takStatus === 'connected'}
-			<span class="scan-count">{takMessageCount} msg</span>
-		{:else}
-			<span class="scan-status-text">{takStatus}</span>
-		{/if}
-		<span class="row-chevron">&#8250;</span>
-	</button>
+<section class="svc-section">
+	<h3 class="section-label">SERVICES</h3>
+	<div class="svc-row">
+		<span class="svc-dot" class:active={gpsdRunning}></span>
+		<span class="svc-name">gpsd</span>
+		<span class="svc-uptime">{uptimeDisplay}</span>
+	</div>
 </section>
 
 <style>
-	.panel-section {
-		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+	.svc-section {
+		padding: 10px 14px;
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: 6px;
 	}
 
-	.section-header {
+	.section-label {
 		font-family: var(--font-mono, 'Fira Code', monospace);
 		font-size: 9px;
 		font-weight: 600;
 		letter-spacing: 1.2px;
 		text-transform: uppercase;
-		color: var(--foreground-secondary, #888888);
+		color: var(--muted-foreground, #888888);
 		margin: 0;
 	}
 
-	.scan-row {
+	.svc-row {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
-		padding: var(--space-2);
-		background: var(--palantir-bg-elevated);
-		border-radius: var(--radius-md);
-		width: 100%;
-		text-align: left;
+		gap: 8px;
 	}
 
-	.scan-row.clickable {
-		cursor: pointer;
-		transition: background 0.15s ease;
-	}
-
-	.scan-row.clickable:hover {
-		background: var(--palantir-bg-hover);
-	}
-
-	.scan-dot {
+	.svc-dot {
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background: var(--palantir-text-tertiary);
 		flex-shrink: 0;
+		background: var(--muted-foreground, #555555);
 	}
 
-	.scan-dot.active {
-		background: var(--palantir-success);
-		box-shadow: 0 0 4px color-mix(in srgb, var(--palantir-success) 50%, transparent);
+	.svc-dot.active {
+		background: var(--success, #8bbfa0);
 	}
 
-	.scan-name {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-primary);
+	.svc-name {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--foreground);
 		flex: 1;
 	}
 
-	.scan-count {
+	.svc-uptime {
 		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-		color: var(--palantir-accent);
+		font-size: 10px;
+		color: var(--muted-foreground);
 		font-variant-numeric: tabular-nums;
-	}
-
-	.scan-status-text {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-	}
-
-	.row-chevron {
-		font-size: var(--text-base);
-		color: var(--palantir-text-tertiary);
-		flex-shrink: 0;
-		transition: transform 0.15s ease;
-	}
-
-	.row-chevron.expanded {
-		transform: rotate(90deg);
-	}
-
-	.detail-panel {
-		margin-top: calc(-1 * var(--space-2));
-		padding: var(--space-3);
-		background: var(--palantir-bg-elevated);
-		border-radius: 0 0 var(--radius-md) var(--radius-md);
-		border-top: 1px solid var(--palantir-border-subtle);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-
-	.detail-row {
-		display: flex;
-		justify-content: space-between;
-		gap: var(--space-3);
-	}
-
-	.detail-key {
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-		white-space: nowrap;
-	}
-
-	.detail-val {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--palantir-text-primary);
-		text-align: right;
-		word-break: break-all;
 	}
 </style>

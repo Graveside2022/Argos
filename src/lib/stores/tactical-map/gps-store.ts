@@ -17,6 +17,7 @@ export interface GPSStatus {
 	fixType: string;
 	heading: number | null;
 	speed: number | null;
+	altitude: number | null;
 	currentCountry: { name: string; flag: string };
 	formattedCoords: { lat: string; lon: string };
 	mgrsCoord: string;
@@ -37,6 +38,7 @@ const initialGPSState: GPSState = {
 		fixType: 'No',
 		heading: null,
 		speed: null,
+		altitude: null,
 		currentCountry: { name: 'Unknown', flag: '[GLOBE]' },
 		formattedCoords: { lat: '0.000000°N', lon: '0.000000°E' },
 		mgrsCoord: 'Invalid'

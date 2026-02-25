@@ -1,162 +1,120 @@
 <script lang="ts">
-	import HardwareDeviceRow from './HardwareDeviceRow.svelte';
-	import type { DeviceState, HardwareDetailRow, HardwareDetails, HardwareStatus } from './types';
+	import type { HardwareDetails, HardwareStatus } from './types';
 
 	interface Props {
 		hardwareStatus: HardwareStatus | null;
 		hardwareDetails: HardwareDetails | null;
-		expandedRow: string | null;
-		onToggleExpand: (id: string) => void;
 	}
 
-	let { hardwareStatus, hardwareDetails, expandedRow, onToggleExpand }: Props = $props();
+	let { hardwareStatus, hardwareDetails }: Props = $props();
 
-	type FieldMapping = [string, string | undefined, HardwareDetailRow['className']?];
+	// Build display label: "HackRF One" or "wlan1 (RT5370)"
+	let hackrfLabel = $derived(hardwareDetails?.sdr?.product ?? 'HackRF One');
 
-	/** Collect truthy field mappings into detail rows. */
-	function collectRows(fields: FieldMapping[]): HardwareDetailRow[] {
-		return fields
-			.filter((f): f is [string, string, HardwareDetailRow['className']?] => !!f[1])
-			.map(([key, value, className]) =>
-				className ? { key, value, className } : { key, value }
-			);
+	function buildWifiLabel(iface: string | undefined, chipset: string | undefined): string {
+		if (iface && chipset) return `${iface} (${chipset})`;
+		return iface ?? 'WiFi Adapter';
 	}
 
-	/** SDR field mappings from a resolved sdr info object. */
-	function sdrFields(sdr: NonNullable<HardwareDetails['sdr']>): FieldMapping[] {
-		return [
-			['Make', sdr.manufacturer],
-			['Model', sdr.product],
-			['Serial', sdr.serial],
-			['FW API', sdr.firmwareApi],
-			['USB', sdr.usbSpeed]
-		];
-	}
+	let wifiLabel = $derived(
+		buildWifiLabel(
+			hardwareDetails?.wifi?.monitorInterface ?? hardwareDetails?.wifi?.interface,
+			hardwareDetails?.wifi?.chipset
+		)
+	);
 
-	/** WiFi field mappings from a resolved wifi info object. */
-	function wifiFields(wifi: NonNullable<HardwareDetails['wifi']>): FieldMapping[] {
-		return [
-			['Chipset', wifi.chipset],
-			['MAC', wifi.mac],
-			['Driver', wifi.driver],
-			['Interface', wifi.monitorInterface || wifi.interface],
-			['Mode', wifi.mode],
-			['Bands', wifi.bands?.length ? wifi.bands.join(', ') : undefined]
-		];
-	}
+	let hackrfStatus = $derived(
+		hardwareStatus?.hackrf?.isDetected
+			? (hardwareStatus.hackrf.owner ?? 'connected')
+			: 'not found'
+	);
 
-	/** Build detail rows for a device given its field mappings, owner, and detection state. */
-	function buildDetails(
-		fields: FieldMapping[],
-		owner: string | undefined,
-		hasInfo: boolean,
-		isDetected: boolean
-	): HardwareDetailRow[] {
-		fields.push(['Used by', owner, 'accent']);
-		const rows = collectRows(fields);
-		if (!hasInfo && !isDetected)
-			rows.push({ key: 'Status', value: 'Not detected', className: 'dim' });
-		return rows;
-	}
+	let wifiStatus = $derived(
+		hardwareStatus?.alfa?.isDetected
+			? (hardwareDetails?.wifi?.mode ?? (hardwareStatus.alfa.owner ? 'in use' : 'connected'))
+			: 'not found'
+	);
 
-	/** Map a nullable info object to field mappings, returning [] if null. */
-	function mapFields<T>(
-		info: T | undefined | null,
-		mapper: (v: T) => FieldMapping[]
-	): FieldMapping[] {
-		return info ? mapper(info) : [];
-	}
-
-	/** Get owner and detection from a nullable device status entry. */
-	function deviceStatus(device: DeviceState | undefined): [string | undefined, boolean] {
-		return [device?.owner ?? undefined, !!device?.isDetected];
-	}
-
-	let hackrfDetails = $derived.by(() => {
-		const fields = mapFields(hardwareDetails?.sdr, sdrFields);
-		const [owner, detected] = deviceStatus(hardwareStatus?.hackrf);
-		return buildDetails(fields, owner, !!hardwareDetails?.sdr?.manufacturer, detected);
-	});
-
-	let alfaDetails = $derived.by(() => {
-		const fields = mapFields(hardwareDetails?.wifi, wifiFields);
-		const [owner, detected] = deviceStatus(hardwareStatus?.alfa);
-		return buildDetails(fields, owner, !!hardwareDetails?.wifi?.chipset, detected);
-	});
-
-	let bluetoothDetails = $derived.by((): HardwareDetailRow[] => {
-		const rows: HardwareDetailRow[] = [];
-		if (hardwareStatus?.bluetooth) {
-			rows.push({
-				key: 'Status',
-				value: hardwareStatus.bluetooth.isDetected ? 'Detected' : 'Not detected'
-			});
-			if (hardwareStatus.bluetooth.owner) {
-				rows.push({
-					key: 'Used by',
-					value: hardwareStatus.bluetooth.owner,
-					className: 'accent'
-				});
-			}
-		}
-		return rows;
-	});
+	let hackrfActive = $derived(!!hardwareStatus?.hackrf?.isDetected);
+	let wifiActive = $derived(!!hardwareStatus?.alfa?.isDetected);
 </script>
 
-<section class="panel-section">
-	<h3 class="section-header">HARDWARE</h3>
+<section class="hw-section">
+	<h3 class="section-label">HARDWARE</h3>
+
 	{#if hardwareStatus}
-		<HardwareDeviceRow
-			deviceId="hackrf"
-			displayName="HackRF"
-			device={hardwareStatus.hackrf}
-			details={hackrfDetails}
-			expanded={expandedRow === 'hackrf'}
-			onToggle={onToggleExpand}
-		/>
-		<HardwareDeviceRow
-			deviceId="alfa"
-			displayName="ALFA WiFi"
-			device={hardwareStatus.alfa}
-			details={alfaDetails}
-			expanded={expandedRow === 'alfa'}
-			onToggle={onToggleExpand}
-		/>
-		<HardwareDeviceRow
-			deviceId="bluetooth"
-			displayName="Bluetooth"
-			device={hardwareStatus.bluetooth}
-			details={bluetoothDetails}
-			expanded={expandedRow === 'bluetooth'}
-			onToggle={onToggleExpand}
-		/>
+		<div class="hw-row">
+			<span class="hw-dot" class:active={hackrfActive}></span>
+			<span class="hw-name">{hackrfLabel}</span>
+			<span class="hw-status" class:active={hackrfActive}>{hackrfStatus}</span>
+		</div>
+		<div class="hw-row">
+			<span class="hw-dot" class:active={wifiActive}></span>
+			<span class="hw-name">{wifiLabel}</span>
+			<span class="hw-status" class:active={wifiActive}>{wifiStatus}</span>
+		</div>
 	{:else}
-		<div class="no-data">Scanning hardware...</div>
+		<span class="loading">Scanning hardware...</span>
 	{/if}
 </section>
 
 <style>
-	.panel-section {
-		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+	.hw-section {
+		padding: 10px 14px;
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: 6px;
 	}
 
-	.section-header {
+	.section-label {
 		font-family: var(--font-mono, 'Fira Code', monospace);
 		font-size: 9px;
 		font-weight: 600;
 		letter-spacing: 1.2px;
 		text-transform: uppercase;
-		color: var(--foreground-secondary, #888888);
+		color: var(--muted-foreground, #888888);
 		margin: 0;
 	}
 
-	.no-data {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
+	.hw-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.hw-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		background: var(--muted-foreground, #555555);
+	}
+
+	.hw-dot.active {
+		background: var(--success, #8bbfa0);
+	}
+
+	.hw-name {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--foreground);
+		flex: 1;
+	}
+
+	.hw-status {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted-foreground);
+	}
+
+	.hw-status.active {
+		color: var(--success, #8bbfa0);
+	}
+
+	.loading {
+		font-size: 11px;
+		color: var(--muted-foreground);
 		font-style: italic;
 	}
 </style>

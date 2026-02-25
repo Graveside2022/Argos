@@ -49,6 +49,7 @@ export class GPSService {
 	private applyGPSFix(data: {
 		latitude: number;
 		longitude: number;
+		altitude?: number | null;
 		accuracy?: number;
 		satellites?: number;
 		fix?: number;
@@ -68,6 +69,7 @@ export class GPSService {
 			fixType,
 			heading: d.heading,
 			speed: d.speed,
+			altitude: data.altitude ?? null,
 			currentCountry: detectCountry(position.lat, position.lon),
 			formattedCoords: formatCoordinates(position.lat, position.lon),
 			mgrsCoord: latLonToMGRS(position.lat, position.lon)
@@ -91,7 +93,9 @@ export class GPSService {
 				return;
 			}
 
-			this.applyGPSFix(result.data as { latitude: number; longitude: number });
+			this.applyGPSFix(
+				result.data as { latitude: number; longitude: number; altitude?: number | null }
+			);
 		} catch (error) {
 			logger.error('GPS fetch error', { error });
 			GPSService.setNoDataStatus('GPS: Error');
