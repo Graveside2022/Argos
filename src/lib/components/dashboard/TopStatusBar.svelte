@@ -7,10 +7,8 @@
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { takStatus } from '$lib/stores/tak-store';
 
-	import GpsDropdown from './status/GpsDropdown.svelte';
 	import LatencyDropdown from './status/LatencyDropdown.svelte';
 	import MeshDropdown from './status/MeshDropdown.svelte';
-	import SdrDropdown from './status/SdrDropdown.svelte';
 	import {
 		type DeviceState,
 		fetchHardwareDetails,
@@ -26,7 +24,6 @@
 		type WeatherData
 	} from './status/weather-helpers';
 	import WeatherDropdown from './status/WeatherDropdown.svelte';
-	import WifiDropdown from './status/WifiDropdown.svelte';
 
 	let wifiState = $state<DeviceState>('offline');
 	let sdrState = $state<DeviceState>('offline');
@@ -42,13 +39,12 @@
 
 	let wifiInfo: WifiInfo = $state({});
 	let sdrInfo: SdrInfo = $state({});
-	let gpsInfo: GpsInfo = $state({});
+	let _gpsInfo: GpsInfo = $state({});
 
-	let gpsSats = $state(0);
-	// GPS coords passed to GpsDropdown via gpsInfo — no longer displayed in command bar
-	let gpsSpeed: number | null = $state(null);
-	let gpsAccuracy: number | null = $state(null);
-	let gpsFix = $state(0);
+	let _gpsSats = $state(0);
+	let _gpsSpeed: number | null = $state(null);
+	let _gpsAccuracy: number | null = $state(null);
+	let _gpsFix = $state(0);
 	let zuluTime = $state('');
 	let dateStr = $state('');
 	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | 'latency' | 'mesh' | null = $state(null);
@@ -92,21 +88,19 @@
 
 	function resetGpsState(state: 'offline' | 'standby') {
 		gpsState = state;
-		gpsSats = 0;
-		// gpsCoords removed — no longer displayed in command bar
-		gpsSpeed = null;
-		gpsAccuracy = null;
-		gpsFix = 0;
+		_gpsSats = 0;
+		_gpsSpeed = null;
+		_gpsAccuracy = null;
+		_gpsFix = 0;
 	}
 
 	function applyGpsFix(gps: typeof $gpsStore) {
 		const s = gps.status;
 		gpsState = 'active';
-		gpsSats = s.satellites;
-		// gpsCoords removed — coords now only in GpsDropdown via gpsInfo
-		gpsSpeed = s.speed;
-		gpsAccuracy = s.accuracy || null;
-		gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
+		_gpsSats = s.satellites;
+		_gpsSpeed = s.speed;
+		_gpsAccuracy = s.accuracy || null;
+		_gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
 		currentGpsLat = gps.position.lat;
 		currentGpsLon = gps.position.lon;
 		void fetchWeather(
@@ -130,7 +124,7 @@
 		if (!d) return;
 		if (d.wifi) wifiInfo = { ...wifiInfo, ...d.wifi };
 		if (d.sdr) sdrInfo = { ...sdrInfo, ...d.sdr };
-		if (d.gps) gpsInfo = { ...d.gps };
+		if (d.gps) _gpsInfo = { ...d.gps };
 	}
 
 	$effect(() => {
@@ -190,30 +184,6 @@
 		<span class="collection-dot"></span>
 		{#if isCollecting}<span class="rec-badge">REC</span>{/if}
 		<span class="callsign">ARGOS-1</span>
-
-		<!-- Hardware dropdowns — compact dots still clickable for detail popups -->
-		<WifiDropdown
-			deviceState={wifiState}
-			info={wifiInfo}
-			open={openDropdown === 'wifi'}
-			onToggle={() => toggleDropdown('wifi')}
-		/>
-		<SdrDropdown
-			deviceState={sdrState}
-			info={sdrInfo}
-			open={openDropdown === 'sdr'}
-			onToggle={() => toggleDropdown('sdr')}
-		/>
-		<GpsDropdown
-			deviceState={gpsState}
-			info={gpsInfo}
-			sats={gpsSats}
-			fix={gpsFix}
-			speed={gpsSpeed}
-			accuracy={gpsAccuracy}
-			open={openDropdown === 'gps'}
-			onToggle={() => toggleDropdown('gps')}
-		/>
 	</div>
 
 	<!-- Spacer -->

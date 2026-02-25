@@ -288,10 +288,11 @@
 	{#if $gpsStore.status.hasGPSFix}
 		<div class="gps-legend">
 			<div class="legend-line1">
-				<span class="legend-gps-tag">GPS</span>
-				<span class="legend-fix-badge">{$gpsStore.status.satellites} SAT</span>
-				<span class="legend-sep">·</span>
-				<span class="legend-location">{$gpsStore.status.currentCountry.name}</span>
+				<span class="legend-gps-tag">GPS {$gpsStore.status.satellites} SAT</span>
+				{#if $gpsStore.status.currentCountry.name}
+					<span class="legend-sep">·</span>
+					<span class="legend-location">{$gpsStore.status.currentCountry.name}</span>
+				{/if}
 			</div>
 			<div class="legend-line2">
 				<span class="legend-coord">{$gpsStore.status.formattedCoords.lat}</span>
@@ -321,67 +322,65 @@
 	.gps-legend {
 		position: absolute;
 		bottom: 16px;
-		left: 16px;
-		background: rgba(17, 17, 17, 0.85);
-		border: 1px solid var(--border, #2e2e2e);
-		border-radius: 4px;
+		left: 12px;
+		background: color-mix(in srgb, var(--background) 80%, transparent);
+		border-radius: 2px;
 		padding: 6px 10px;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		backdrop-filter: blur(4px);
+		gap: 4px;
 		z-index: 10;
 		pointer-events: none;
 	}
 
-	.legend-line1,
+	.legend-line1 {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		white-space: nowrap;
+	}
+
 	.legend-line2 {
 		display: flex;
-		align-items: baseline;
-		gap: 6px;
+		align-items: center;
+		gap: 12px;
 		font-family: var(--font-mono, 'Fira Code', monospace);
 		white-space: nowrap;
 	}
 
 	.legend-gps-tag {
 		font-size: 10px;
-		font-weight: 700;
-		color: var(--primary, #a8b8e0);
-		letter-spacing: 0.5px;
-	}
-
-	.legend-fix-badge {
-		font-size: 10px;
-		color: var(--success, #8bbfa0);
-		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		color: var(--primary);
+		letter-spacing: 1px;
 	}
 
 	.legend-sep {
 		font-size: 10px;
-		color: var(--muted-foreground, #555555);
+		color: var(--muted-foreground);
 	}
 
 	.legend-location {
 		font-size: 10px;
-		color: var(--foreground, #e8e8e8);
+		color: var(--foreground-muted);
+		letter-spacing: 0.5px;
 	}
 
 	.legend-coord {
 		font-size: 10px;
-		color: var(--foreground, #e8e8e8);
-		font-variant-numeric: tabular-nums;
+		color: var(--foreground-muted);
 	}
 
 	.legend-mgrs {
 		font-size: 10px;
-		color: var(--muted-foreground, #888888);
-		font-variant-numeric: tabular-nums;
-		margin-left: 4px;
+		color: var(--muted-foreground);
+		letter-spacing: 0.5px;
 	}
 
 	.legend-asl {
 		font-size: 10px;
-		color: var(--muted-foreground, #888888);
-		font-variant-numeric: tabular-nums;
+		color: var(--muted-foreground);
+		letter-spacing: 0.5px;
 	}
 </style>

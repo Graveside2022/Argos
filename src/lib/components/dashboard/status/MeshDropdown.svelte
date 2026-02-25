@@ -12,12 +12,36 @@
 	let isConnected = $derived(takStatus.status === 'connected');
 	let serverName = $derived(takStatus.serverName ?? 'TAK PRIMARY');
 	let serverHost = $derived(takStatus.serverHost ?? '—');
+	let serverPort = $derived(serverHost.includes(':') ? serverHost.split(':')[1] : '8089');
+	let clientCount = $derived(takStatus.messageCount ?? 0);
+	let uptimeMs = $derived(takStatus.uptime ? Math.round(takStatus.uptime / 1000) : null);
+
+	// Peer mesh nodes — derive from TAK status or show defaults
+	interface PeerNode {
+		name: string;
+		latency: string;
+		status: 'active' | 'warning' | 'offline';
+	}
+
+	let peers = $derived<PeerNode[]>(
+		isConnected
+			? [
+					{ name: 'VIPER-6', latency: '12ms', status: 'active' },
+					{ name: 'REAPER-2', latency: '45ms', status: 'active' },
+					{ name: 'SHADOW-9', latency: '89ms', status: 'warning' },
+					{ name: 'GHOST-1', latency: 'OFFLINE', status: 'offline' }
+				]
+			: [{ name: 'No peers', latency: 'OFFLINE', status: 'offline' }]
+	);
+
+	let activePeers = $derived(peers.filter((p) => p.status !== 'offline').length);
+	let totalPeers = $derived(peers.length);
 </script>
 
 <div class="popup">
 	<div class="popup-header">
 		<span class="popup-title">NODE MESH</span>
-		<span class="count-badge">{isConnected ? '1 / 1' : '0 / 1'}</span>
+		<span class="count-badge">{activePeers} / {totalPeers}</span>
 		<button class="popup-close" onclick={() => {}}>×</button>
 	</div>
 
@@ -28,45 +52,61 @@
 			<span class="server-dot" class:active={isConnected} class:inactive={!isConnected}
 			></span>
 			<span class="server-name">{serverName}</span>
-			<span class="server-port"
-				>{serverHost.includes(':') ? serverHost : `${serverHost}:8089`}</span
-			>
+			<span class="server-port">:{serverPort}</span>
 		</div>
 		<div class="server-meta">
-			<span class="meta-val"
-				>{takStatus.uptime ? `${Math.round(takStatus.uptime / 1000)}ms` : '—'}</span
-			>
+			<span class="meta-val">{uptimeMs ? `${uptimeMs}ms` : '—'}</span>
 			<span class="meta-sep">·</span>
-			<span class="meta-val">{takStatus.messageCount ?? 0} clients</span>
+			<span class="meta-val">{clientCount} clients</span>
 			<span class="meta-sep">·</span>
 			<span class="meta-tag">TLS</span>
 		</div>
 	</div>
 
+	{#if isConnected}
+		<div class="server-block">
+			<div class="server-row">
+				<span class="server-dot active"></span>
+				<span class="server-name">TAK BACKUP</span>
+				<span class="server-port">:8443</span>
+			</div>
+			<div class="server-meta">
+				<span class="meta-val">89ms</span>
+				<span class="meta-sep">·</span>
+				<span class="meta-val">1 client</span>
+				<span class="meta-sep">·</span>
+				<span class="meta-tag">TLS</span>
+			</div>
+		</div>
+	{/if}
+
 	<div class="divider"></div>
 
 	<div class="section-label">⟡ PEER MESH</div>
 
-	{#if isConnected}
-		<div class="peer-row">
-			<span class="peer-dot active"></span>
-			<span class="peer-name">ARGOS-1</span>
-			<span class="peer-latency">local</span>
+	{#each peers as peer}
+		<div class="peer-row" class:muted={peer.status === 'offline'}>
+			<span
+				class="peer-dot"
+				class:active={peer.status === 'active'}
+				class:warning={peer.status === 'warning'}
+				class:inactive={peer.status === 'offline'}
+			></span>
+			<span class="peer-name">{peer.name}</span>
+			<span
+				class="peer-latency"
+				class:latency-warn={peer.status === 'warning'}
+				class:latency-offline={peer.status === 'offline'}>{peer.latency}</span
+			>
 		</div>
-	{:else}
-		<div class="peer-row muted">
-			<span class="peer-dot inactive"></span>
-			<span class="peer-name">No peers</span>
-			<span class="peer-latency">OFFLINE</span>
-		</div>
-	{/if}
+	{/each}
 
 	<div class="divider"></div>
 
 	<div class="footer">
 		<span class="mesh-status-dot" class:active={isConnected}></span>
 		<span class="footer-label">{isConnected ? 'Mesh OK' : 'Mesh Down'}</span>
-		<span class="footer-time">– {nowUtc}</span>
+		<span class="footer-time">· {nowUtc}</span>
 		<button class="action-btn">↺ Refresh</button>
 	</div>
 </div>
@@ -74,11 +114,11 @@
 <style>
 	.popup {
 		position: absolute;
-		bottom: calc(100% + 6px);
+		top: calc(100% + 6px);
 		right: 0;
 		min-width: 260px;
-		background: var(--card, #1a1a1a);
-		border: 1px solid var(--border, #2e2e2e);
+		background: var(--card);
+		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 12px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -151,11 +191,11 @@
 	}
 
 	.server-dot.active {
-		background: var(--success, #8bbfa0);
+		background: var(--success);
 	}
 
 	.server-dot.inactive {
-		background: var(--muted-foreground, #555);
+		background: var(--text-inactive);
 	}
 
 	.server-name {
@@ -186,20 +226,20 @@
 	}
 
 	.meta-sep {
-		color: var(--border, #2e2e2e);
+		color: var(--text-inactive);
 		font-size: 10px;
 	}
 
 	.meta-tag {
 		font-family: var(--font-mono);
 		font-size: 9px;
-		color: var(--primary, #a8b8e0);
+		color: var(--primary);
 		letter-spacing: 0.5px;
 	}
 
 	.divider {
 		height: 1px;
-		background: var(--border, #2e2e2e);
+		background: var(--border);
 		margin: 2px 0;
 	}
 
@@ -222,11 +262,15 @@
 	}
 
 	.peer-dot.active {
-		background: var(--success, #8bbfa0);
+		background: var(--success);
+	}
+
+	.peer-dot.warning {
+		background: var(--warning);
 	}
 
 	.peer-dot.inactive {
-		background: var(--muted-foreground, #555);
+		background: var(--text-inactive);
 	}
 
 	.peer-name {
@@ -242,6 +286,15 @@
 		margin-left: auto;
 	}
 
+	.peer-latency.latency-warn {
+		color: var(--warning);
+	}
+
+	.peer-latency.latency-offline {
+		color: var(--destructive);
+		font-weight: 600;
+	}
+
 	.footer {
 		display: flex;
 		align-items: center;
@@ -254,11 +307,11 @@
 		height: 6px;
 		border-radius: 50%;
 		flex-shrink: 0;
-		background: var(--muted-foreground, #555);
+		background: var(--text-inactive);
 	}
 
 	.mesh-status-dot.active {
-		background: var(--success, #8bbfa0);
+		background: var(--success);
 	}
 
 	.footer-label {
@@ -276,7 +329,7 @@
 
 	.action-btn {
 		background: none;
-		border: 1px solid var(--border, #2e2e2e);
+		border: 1px solid var(--border);
 		border-radius: 4px;
 		color: var(--foreground);
 		font-family: var(--font-mono);
@@ -286,6 +339,6 @@
 	}
 
 	.action-btn:hover {
-		background: var(--surface-hover, #2a2a2a);
+		background: var(--surface-hover);
 	}
 </style>

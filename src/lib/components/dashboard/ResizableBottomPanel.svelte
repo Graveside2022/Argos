@@ -158,7 +158,7 @@
 		height: 12px;
 		min-height: 12px;
 		flex-shrink: 0;
-		background: #161616;
+		background: var(--surface-elevated);
 		cursor: ns-resize;
 		display: flex;
 		align-items: center;
@@ -169,21 +169,21 @@
 
 	.drag-handle:hover,
 	.drag-handle:focus {
-		background: #2a2a2a;
+		background: var(--surface-hover);
 		outline: none;
 	}
 
 	.drag-indicator {
 		width: 40px;
 		height: 4px;
-		background: #606060;
+		background: var(--text-inactive);
 		border-radius: 3px;
 		transition: background 0.15s ease;
 	}
 
 	.drag-handle:hover .drag-indicator,
 	.drag-handle:focus .drag-indicator {
-		background: #888888;
+		background: var(--foreground-secondary);
 	}
 
 	.panel-body {
