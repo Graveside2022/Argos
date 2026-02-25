@@ -483,7 +483,7 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 **Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every `var(--palantir-*)` reference with the direct Lunaris token. Safely migrate non-palantir tokens. Delete the bridge file. Zero `--palantir-*` references should remain anywhere in the codebase.
 
-> **CORRECTED SCOPE**: 230 `var(--palantir-*)` refs across 31 consumer files + 24 bridge-internal refs = **254 `var(--palantir-*)` total across 32 files**. Total "palantir" mentions (including class names, imports, comments): **295 across 36 files**. Additionally, 274 non-palantir token refs (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) across 40+ files would break if the `:root` block is deleted without pre-migration.
+> **CORRECTED SCOPE**: 231 `var(--palantir-*)` refs across 32 consumer files + 61 bridge-internal refs = **292 `var(--palantir-*)` total across 33 files**. Total "palantir" mentions (including class names, imports, comments): **295 across 36 files**. Additionally, 274 non-palantir token refs (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) across 40+ files would break if the `:root` block is deleted without pre-migration.
 
 **Migration mapping**: See plan.md Phase 7 for the complete `--palantir-*` → Lunaris token mapping table.
 
@@ -625,8 +625,8 @@ Each gate MUST produce these before requesting approval:
 - Review gates: **8** (one per UI region + CSS elimination + full dashboard final)
 - No new npm dependencies required
 - No new files created except 2 test files; 1 file deleted + renamed (`palantir-design-system.css` → `dashboard-utilities.css`)
-- **~38 files modified total** (32 palantir migration + 6 feature changes) — corrected from original 35 estimate
-- **254 `--palantir-*` refs across 32 files** — corrected from original 206/29 estimate
+- **~39 files modified total** (33 palantir migration + 6 feature changes) — corrected from original 35 estimate
+- **292 `--palantir-*` refs across 33 files** (231 consumer + 61 bridge) — corrected from original 206/29 estimate
 - **274 non-palantir token refs across 40+ files** — must be migrated to `app.css` BEFORE `:root` deletion
 - Phase 7 uses **3 atomic commits** (7a: token pre-migration, 7b: palantir find-replace, 7c: `:root` deletion + rename) for rollback safety
 - CODEBASE_MAP.md must be updated in Phase 8 to reflect renamed/deleted files
