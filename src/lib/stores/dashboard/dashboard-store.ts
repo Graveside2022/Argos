@@ -11,12 +11,12 @@ type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'devices' | null;
 
 const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'devices'];
 
-export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', null, {
+export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', 'terminal', {
 	serialize: (tab) => (tab === null ? 'null' : tab),
 	deserialize: (raw) => {
-		// Graceful fallback: map removed 'gsm-evil' tab to null
-		if (raw === 'gsm-evil') return null;
-		return VALID_TABS.includes(raw as BottomTab) ? (raw as BottomTab) : null;
+		// Graceful fallback: map removed 'gsm-evil' tab to terminal default
+		if (raw === 'gsm-evil') return 'terminal';
+		return VALID_TABS.includes(raw as BottomTab) ? (raw as BottomTab) : 'terminal';
 	}
 });
 
@@ -46,6 +46,11 @@ export function toggleBottomTab(tab: 'terminal' | 'chat' | 'logs' | 'captures' |
 /** Close the bottom panel */
 export function closeBottomPanel(): void {
 	activeBottomTab.set(null);
+}
+
+/** Open the bottom panel (restores terminal tab) */
+export function openBottomPanel(): void {
+	activeBottomTab.set('terminal');
 }
 
 /** Set bottom panel height with clamping */

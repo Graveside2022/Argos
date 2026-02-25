@@ -28,13 +28,13 @@
 		bottomPanelHeight,
 		closeBottomPanel,
 		isBottomPanelOpen,
+		openBottomPanel,
 		setBottomPanelHeight
 	} from '$lib/stores/dashboard/dashboard-store';
 	import {
 		createSession,
 		nextTab,
 		previousTab,
-		terminalPanelState,
 		toggleTerminalPanel
 	} from '$lib/stores/dashboard/terminal-store';
 	import { GPSService } from '$lib/tactical-map/gps-service';
@@ -168,14 +168,22 @@
 	{/snippet}
 
 	{#snippet bottomPanel()}
+		<!--
+			ResizableBottomPanel wraps EVERYTHING (tab bar + content).
+			- Drag handle is at the very top edge — intuitive "grab top to resize"
+			- When collapsed: panel height = 0, but tab bar inside still shows via min-height
+			- Tab bar always visible; chevron rotates ▼/▲ to show collapse state
+		-->
 		<ResizableBottomPanel
 			isOpen={$isBottomPanelOpen}
-			height={$terminalPanelState.isMaximized ? window.innerHeight * 0.8 : $bottomPanelHeight}
+			height={$bottomPanelHeight}
 			onHeightChange={setBottomPanelHeight}
-			onClose={closeBottomPanel}
+			onOpen={openBottomPanel}
 		>
+			<!-- Tab bar sits inside the resizable panel, always rendered -->
 			<BottomPanelTabs activeTab={$activeBottomTab} />
 
+			<!-- Content area shown only when open -->
 			<div class="bottom-panel-content">
 				{#if mountedTabs.has('terminal')}
 					<div class="tab-pane" class:tab-active={$activeBottomTab === 'terminal'}>

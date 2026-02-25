@@ -30,7 +30,7 @@ export const ANSI_COLORS = {
 } as const;
 
 // ── UI chrome fallback defaults ──────────────────────────────────────
-const CHROME_BACKGROUND = '#0a0a0a';
+const CHROME_BACKGROUND = '#151515';
 const CHROME_SELECTION_FG = '#ffffff';
 
 /** Build the full xterm.js ITheme, resolving CSS vars at call time. */

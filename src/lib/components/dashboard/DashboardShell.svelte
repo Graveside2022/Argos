@@ -22,26 +22,26 @@
 		<div class="content-area" class:content-sidebar={mode === 'sidebar'}>
 			{#if mode === 'sidebar'}
 				{#if sidebar}
-					<div class="left-panel">
-						{@render sidebar()}
-					</div>
+					{@render sidebar()}
 				{/if}
-				{#if content}
-					<div class="main-content">
-						{@render content()}
-					</div>
-				{/if}
+				<div class="main-right">
+					{#if content}
+						<div class="main-content">
+							{@render content()}
+						</div>
+					{/if}
+					{#if bottomPanel}
+						<div class="bottom-area">
+							{@render bottomPanel()}
+						</div>
+					{/if}
+				</div>
 			{:else if fullWidth}
 				<div class="full-width">
 					{@render fullWidth()}
 				</div>
 			{/if}
 		</div>
-		{#if bottomPanel}
-			<div class="bottom-area">
-				{@render bottomPanel()}
-			</div>
-		{/if}
 	</div>
 </div>
 
@@ -76,14 +76,13 @@
 		flex-direction: row;
 	}
 
-	.left-panel {
-		width: var(--panel-width, 280px);
-		min-width: var(--panel-width, 280px);
-		flex: 0 0 var(--panel-width, 280px);
-		overflow-y: auto;
-		overflow-x: hidden;
-		background: var(--card);
-		border-right: 1px solid var(--border);
+	.main-right {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		min-width: 0;
+		min-height: 0;
 	}
 
 	.main-content {
