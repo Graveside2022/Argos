@@ -3,8 +3,8 @@ import { derived, writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { persistedWritable } from '$lib/stores/persisted-writable';
 
-/** Which panel is open in the icon rail (null = closed) */
-export const activePanel = writable<string | null>(null);
+/** Which panel is open in the icon rail ('overview' by default per Lunaris design) */
+export const activePanel = writable<string | null>('overview');
 
 /** Bottom panel tab type — gsm-evil removed (full-screen view), captures added */
 type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'devices' | null;

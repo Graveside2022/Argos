@@ -27,9 +27,9 @@
 	import WeatherDropdown from './status/WeatherDropdown.svelte';
 	import WifiDropdown from './status/WifiDropdown.svelte';
 
-	let wifiState: DeviceState = $state('offline');
-	let sdrState: DeviceState = $state('offline');
-	let gpsState: DeviceState = $state('offline');
+	let wifiState = $state<DeviceState>('offline');
+	let sdrState = $state<DeviceState>('offline');
+	let gpsState = $state<DeviceState>('offline');
 
 	// REC badge — shown when any hardware is actively collecting
 	let isCollecting = $derived(
@@ -44,7 +44,7 @@
 	let gpsInfo: GpsInfo = $state({});
 
 	let gpsSats = $state(0);
-	let gpsCoords = $state({ lat: '', lon: '', mgrs: '' });
+	// GPS coords passed to GpsDropdown via gpsInfo — no longer displayed in command bar
 	let gpsSpeed: number | null = $state(null);
 	let gpsAccuracy: number | null = $state(null);
 	let gpsFix = $state(0);
@@ -92,7 +92,7 @@
 	function resetGpsState(state: 'offline' | 'standby') {
 		gpsState = state;
 		gpsSats = 0;
-		gpsCoords = { lat: '', lon: '', mgrs: '' };
+		// gpsCoords removed — no longer displayed in command bar
 		gpsSpeed = null;
 		gpsAccuracy = null;
 		gpsFix = 0;
@@ -102,7 +102,7 @@
 		const s = gps.status;
 		gpsState = 'active';
 		gpsSats = s.satellites;
-		gpsCoords = { lat: s.formattedCoords.lat, lon: s.formattedCoords.lon, mgrs: s.mgrsCoord };
+		// gpsCoords removed — coords now only in GpsDropdown via gpsInfo
 		gpsSpeed = s.speed;
 		gpsAccuracy = s.accuracy || null;
 		gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
