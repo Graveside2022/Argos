@@ -4,33 +4,37 @@
 
 	import { browser } from '$app/environment';
 
+	/** Height of the always-visible tab bar strip */
+	const TAB_BAR_HEIGHT = 40;
+
 	interface Props {
 		isOpen: boolean;
 		height: number;
 		minHeight?: number;
 		maxHeightPercent?: number;
 		onHeightChange?: (height: number) => void;
-		onClose?: () => void;
+		onOpen?: () => void;
 		children?: import('svelte').Snippet;
 	}
 
 	let {
 		isOpen,
 		height,
-		minHeight = 100,
+		minHeight = 120,
 		maxHeightPercent = 0.8,
 		onHeightChange,
-		onClose: _onClose,
+		onOpen,
 		children
 	}: Props = $props();
 
 	let isDragging = $state(false);
 	let startY = $state(0);
 	let startHeight = $state(0);
-	let panelEl: HTMLDivElement | undefined = $state();
 
-	// Calculate max height based on viewport
 	let maxHeight = $derived(browser ? window.innerHeight * maxHeightPercent : 600);
+
+	// When open: full height (tab bar + content). When collapsed: tab bar only.
+	let panelHeight = $derived(isOpen ? height : TAB_BAR_HEIGHT);
 
 	function handleMouseDown(e: MouseEvent) {
 		e.preventDefault();
@@ -48,18 +52,23 @@
 		startHeight = height;
 	}
 
+	function applyDrag(deltaY: number) {
+		if (!isOpen && deltaY > 10) onOpen?.();
+		const newHeight = Math.max(
+			minHeight + TAB_BAR_HEIGHT,
+			Math.min(maxHeight, startHeight + deltaY)
+		);
+		onHeightChange?.(newHeight);
+	}
+
 	function handleMouseMove(e: MouseEvent) {
 		if (!isDragging) return;
-		const deltaY = startY - e.clientY;
-		const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
-		onHeightChange?.(newHeight);
+		applyDrag(startY - e.clientY);
 	}
 
 	function handleTouchMove(e: TouchEvent) {
 		if (!isDragging || e.touches.length !== 1) return;
-		const deltaY = startY - e.touches[0].clientY;
-		const newHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
-		onHeightChange?.(newHeight);
+		applyDrag(startY - e.touches[0].clientY);
 	}
 
 	function handleMouseUp() {
@@ -69,25 +78,23 @@
 		document.body.style.userSelect = '';
 	}
 
-	function handleDoubleClick() {
-		// Toggle between min height and 50% of viewport
-		const midHeight = browser ? window.innerHeight * 0.5 : 400;
-		if (height < midHeight * 0.8) {
-			onHeightChange?.(midHeight);
-		} else {
-			onHeightChange?.(minHeight);
-		}
+	const KEY_HEIGHTS: Record<string, () => number> = {
+		ArrowUp: () => Math.min(maxHeight, height + 20),
+		ArrowDown: () => Math.max(minHeight + TAB_BAR_HEIGHT, height - 20)
+	};
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (!isOpen || !(e.key in KEY_HEIGHTS)) return;
+		e.preventDefault();
+		onHeightChange?.(KEY_HEIGHTS[e.key]());
 	}
 
-	// Global mouse/touch event handlers
 	onMount(() => {
 		if (!browser) return;
-
 		window.addEventListener('mousemove', handleMouseMove);
 		window.addEventListener('mouseup', handleMouseUp);
 		window.addEventListener('touchmove', handleTouchMove);
 		window.addEventListener('touchend', handleMouseUp);
-
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('mouseup', handleMouseUp);
@@ -104,105 +111,87 @@
 	});
 </script>
 
-{#if isOpen}
+<div class="resizable-panel" class:dragging={isDragging} style="height: {panelHeight}px">
+	<!-- Drag handle at the very top — grab here to resize -->
 	<div
-		class="resizable-panel"
-		class:dragging={isDragging}
-		style="height: {height}px"
-		bind:this={panelEl}
+		class="drag-handle"
+		role="separator"
+		aria-orientation="horizontal"
+		aria-label="Resize panel"
+		aria-valuenow={height}
+		aria-valuemin={minHeight}
+		aria-valuemax={maxHeight}
+		tabindex="0"
+		onmousedown={handleMouseDown}
+		ontouchstart={handleTouchStart}
+		onkeydown={handleKeydown}
 	>
-		<!-- Drag handle -->
-		<div
-			class="drag-handle"
-			role="separator"
-			aria-orientation="horizontal"
-			aria-valuenow={height}
-			aria-valuemin={minHeight}
-			aria-valuemax={maxHeight}
-			tabindex="0"
-			onmousedown={handleMouseDown}
-			ontouchstart={handleTouchStart}
-			ondblclick={handleDoubleClick}
-			onkeydown={(e) => {
-				if (e.key === 'ArrowUp') {
-					e.preventDefault();
-					onHeightChange?.(Math.min(maxHeight, height + 20));
-				} else if (e.key === 'ArrowDown') {
-					e.preventDefault();
-					onHeightChange?.(Math.max(minHeight, height - 20));
-				}
-			}}
-		>
-			<div class="drag-indicator"></div>
-		</div>
-
-		<!-- Panel content -->
-		<div class="panel-content">
-			{@render children?.()}
-		</div>
+		<div class="drag-indicator"></div>
 	</div>
 
-	{#if isDragging}
-		<div class="drag-overlay" role="presentation"></div>
-	{/if}
+	<!-- Panel content (tab bar + body) -->
+	<div class="panel-body">
+		{@render children?.()}
+	</div>
+</div>
+
+{#if isDragging}
+	<div class="drag-overlay" role="presentation"></div>
 {/if}
 
 <style>
 	.resizable-panel {
 		display: flex;
 		flex-direction: column;
-		background: var(--palantir-bg-panel, #1a1a1a);
-		border-top: 1px solid var(--palantir-border-default, #2e2e2e);
-		overflow: hidden;
+		background: var(--card, #1a1a1a);
+		border-top: 1px solid var(--border, #2e2e2e);
 		flex-shrink: 0;
-		transition: height 0.05s ease-out;
+		overflow: hidden;
+		transition: height 0.15s ease;
 	}
 
 	.resizable-panel.dragging {
 		transition: none;
-		user-select: none;
 	}
 
 	.drag-handle {
-		height: 6px;
-		min-height: 6px;
-		background: var(--palantir-bg-surface, #1a1a1a);
+		height: 12px;
+		min-height: 12px;
+		flex-shrink: 0;
+		background: #161616;
 		cursor: ns-resize;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-bottom: 1px solid var(--palantir-border-subtle, #2e2e2e);
+		border-bottom: 1px solid var(--border, #2e2e2e);
 		transition: background 0.15s ease;
 	}
 
 	.drag-handle:hover,
 	.drag-handle:focus {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-	}
-
-	.drag-handle:focus {
+		background: #2a2a2a;
 		outline: none;
-		box-shadow: inset 0 0 0 2px var(--palantir-accent, #a8b8e0);
 	}
 
 	.drag-indicator {
 		width: 40px;
-		height: 3px;
-		background: var(--palantir-border-default, #2e2e2e);
-		border-radius: 2px;
+		height: 4px;
+		background: #606060;
+		border-radius: 3px;
 		transition: background 0.15s ease;
 	}
 
 	.drag-handle:hover .drag-indicator,
 	.drag-handle:focus .drag-indicator {
-		background: var(--palantir-text-tertiary, #888888);
+		background: #888888;
 	}
 
-	.panel-content {
+	.panel-body {
 		flex: 1;
-		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+		overflow: hidden;
+		min-height: 0;
 	}
 
 	.drag-overlay {

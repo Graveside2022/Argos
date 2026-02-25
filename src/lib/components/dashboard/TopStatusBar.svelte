@@ -4,11 +4,12 @@
 	import { Network, Signal } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
-	import TAKIndicator from '$lib/components/status/TAKIndicator.svelte';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { takStatus } from '$lib/stores/tak-store';
 
 	import GpsDropdown from './status/GpsDropdown.svelte';
+	import LatencyDropdown from './status/LatencyDropdown.svelte';
+	import MeshDropdown from './status/MeshDropdown.svelte';
 	import SdrDropdown from './status/SdrDropdown.svelte';
 	import {
 		type DeviceState,
@@ -50,7 +51,7 @@
 	let gpsFix = $state(0);
 	let zuluTime = $state('');
 	let dateStr = $state('');
-	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | null = $state(null);
+	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | 'latency' | 'mesh' | null = $state(null);
 
 	let weather: WeatherData | null = $state(null);
 	let lastWeatherLat = 0;
@@ -83,7 +84,7 @@
 	}
 	updateClock();
 
-	function toggleDropdown(which: 'wifi' | 'sdr' | 'gps' | 'weather') {
+	function toggleDropdown(which: 'wifi' | 'sdr' | 'gps' | 'weather' | 'latency' | 'mesh') {
 		openDropdown = openDropdown === which ? null : which;
 	}
 
@@ -213,7 +214,6 @@
 			open={openDropdown === 'gps'}
 			onToggle={() => toggleDropdown('gps')}
 		/>
-		<TAKIndicator />
 	</div>
 
 	<!-- Spacer -->
@@ -221,14 +221,27 @@
 
 	<!-- Right group: Latency + Mesh + Weather + Date + Zulu -->
 	<div class="right-group">
-		<span class="segment segment-latency">
-			<Signal size={12} class="segment-icon" />
-			{latencyMs ?? '--'}ms
-		</span>
-		<span class="segment segment-mesh">
-			<Network size={12} class="segment-icon" />
-			{meshDisplay}
-		</span>
+		<div class="device-wrapper">
+			<button
+				class="segment segment-latency segment-btn"
+				onclick={() => toggleDropdown('latency')}
+			>
+				<Signal size={12} class="segment-icon" />
+				{latencyMs ?? '--'}ms
+			</button>
+			{#if openDropdown === 'latency'}
+				<LatencyDropdown {latencyMs} />
+			{/if}
+		</div>
+		<div class="device-wrapper">
+			<button class="segment segment-mesh segment-btn" onclick={() => toggleDropdown('mesh')}>
+				<Network size={12} class="segment-icon" />
+				{meshDisplay}
+			</button>
+			{#if openDropdown === 'mesh'}
+				<MeshDropdown takStatus={$takStatus} />
+			{/if}
+		</div>
 		{#if weather}
 			<div class="device-wrapper">
 				<button class="segment segment-weather" onclick={() => toggleDropdown('weather')}>

@@ -17,6 +17,7 @@
 	} from 'svelte-maplibre-gl';
 
 	import { isolatedDeviceMAC } from '$lib/stores/dashboard/dashboard-store';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 
 	import { createMapState, MAP_UI_COLORS, onClusterClick } from './dashboard-map-logic.svelte';
 	import DeviceOverlay from './map/DeviceOverlay.svelte';
@@ -283,6 +284,33 @@
 	{#if ms.popupContent}
 		<DeviceOverlay content={ms.popupContent} onclose={ms.closeDevicePopup} />
 	{/if}
+
+	{#if $gpsStore.status.hasGPSFix}
+		<div class="gps-legend">
+			<div class="legend-row">
+				<span class="legend-label">GPS</span>
+				<span class="legend-value legend-fix"
+					>{$gpsStore.status.fixType} · {$gpsStore.status.satellites} sat</span
+				>
+			</div>
+			<div class="legend-divider"></div>
+			<div class="legend-row">
+				<span class="legend-label">Location</span>
+				<span class="legend-value">{$gpsStore.status.currentCountry.name}</span>
+			</div>
+			<div class="legend-row">
+				<span class="legend-label">Lat/Lon</span>
+				<span class="legend-value"
+					>{$gpsStore.status.formattedCoords.lat}
+					{$gpsStore.status.formattedCoords.lon}</span
+				>
+			</div>
+			<div class="legend-row">
+				<span class="legend-label">MGRS</span>
+				<span class="legend-value">{$gpsStore.status.mgrsCoord}</span>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -296,5 +324,57 @@
 	.map-area :global(.map-container) {
 		width: 100%;
 		height: 100%;
+	}
+
+	.gps-legend {
+		position: absolute;
+		bottom: 16px;
+		left: 16px;
+		background: rgba(17, 17, 17, 0.85);
+		border: 1px solid var(--border, #2e2e2e);
+		border-radius: 6px;
+		padding: 8px 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		backdrop-filter: blur(4px);
+		z-index: 10;
+		min-width: 180px;
+		pointer-events: none;
+	}
+
+	.legend-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 12px;
+	}
+
+	.legend-label {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--muted-foreground, #555555);
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.legend-value {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--foreground, #e8e8e8);
+		text-align: right;
+	}
+
+	.legend-fix {
+		color: var(--success, #8bbfa0);
+	}
+
+	.legend-divider {
+		height: 1px;
+		background: var(--border, #2e2e2e);
+		margin: 2px 0;
 	}
 </style>

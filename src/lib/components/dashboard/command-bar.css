@@ -85,6 +85,19 @@
 	color: var(--foreground-secondary);
 }
 
+.segment-btn {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 2px 4px;
+	border-radius: 4px;
+	transition: background 0.1s;
+}
+
+.segment-btn:hover {
+	background: var(--surface-hover);
+}
+
 .segment-mesh {
 	font-weight: 500;
 }
