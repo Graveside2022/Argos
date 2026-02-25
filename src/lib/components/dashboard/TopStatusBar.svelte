@@ -1,6 +1,7 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
+	import { Network, Signal } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	import TAKIndicator from '$lib/components/status/TAKIndicator.svelte';
@@ -15,17 +16,28 @@
 		fetchHardwareStatus,
 		fetchWeather,
 		type GpsInfo,
-		reverseGeocode,
 		type SdrInfo,
 		type WifiInfo
 	} from './status/status-bar-data';
-	import { getWeatherIcon, type WeatherData } from './status/weather-helpers';
+	import {
+		getWeatherCondition,
+		getWeatherIcon,
+		type WeatherData
+	} from './status/weather-helpers';
 	import WeatherDropdown from './status/WeatherDropdown.svelte';
 	import WifiDropdown from './status/WifiDropdown.svelte';
 
 	let wifiState: DeviceState = $state('offline');
 	let sdrState: DeviceState = $state('offline');
 	let gpsState: DeviceState = $state('offline');
+
+	// REC badge — shown when any hardware is actively collecting
+	let isCollecting = $derived(
+		wifiState === 'active' || sdrState === 'active' || gpsState === 'active'
+	);
+
+	// Network latency — measured from fetchHardwareStatus() RTT
+	let latencyMs: number | null = $state(null);
 
 	let wifiInfo: WifiInfo = $state({});
 	let sdrInfo: SdrInfo = $state({});
@@ -38,9 +50,6 @@
 	let gpsFix = $state(0);
 	let zuluTime = $state('');
 	let dateStr = $state('');
-	let locationName = $state('');
-	let lastGeocodeLat = 0;
-	let lastGeocodeLon = 0;
 	let openDropdown: 'wifi' | 'sdr' | 'gps' | 'weather' | null = $state(null);
 
 	let weather: WeatherData | null = $state(null);
@@ -99,19 +108,6 @@
 		gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
 		currentGpsLat = gps.position.lat;
 		currentGpsLon = gps.position.lon;
-		void reverseGeocode(
-			gps.position.lat,
-			gps.position.lon,
-			lastGeocodeLat,
-			lastGeocodeLon,
-			!!locationName
-		).then((name) => {
-			if (name) {
-				locationName = name;
-				lastGeocodeLat = gps.position.lat;
-				lastGeocodeLon = gps.position.lon;
-			}
-		});
 		void fetchWeather(
 			gps.position.lat,
 			gps.position.lon,
@@ -142,28 +138,22 @@
 		resetGpsState(gps.status.gpsStatus.includes('Error') ? 'offline' : 'standby');
 	});
 
+	async function fetchStatusWithLatency() {
+		const start = Date.now();
+		const r = await fetchHardwareStatus();
+		latencyMs = Date.now() - start;
+		if (r) {
+			wifiState = r.wifiState;
+			sdrState = r.sdrState;
+			wifiInfo = { ...wifiInfo, owner: r.wifiOwner };
+			sdrInfo = { ...sdrInfo, owner: r.sdrOwner };
+		}
+	}
+
 	onMount(() => {
-		void fetchHardwareStatus().then((r) => {
-			if (r) {
-				wifiState = r.wifiState;
-				sdrState = r.sdrState;
-				wifiInfo = { ...wifiInfo, owner: r.wifiOwner };
-				sdrInfo = { ...sdrInfo, owner: r.sdrOwner };
-			}
-		});
+		void fetchStatusWithLatency();
 		void fetchHardwareDetails().then((d) => applyHardwareDetails(d));
-		const statusInterval = setInterval(
-			() =>
-				void fetchHardwareStatus().then((r) => {
-					if (r) {
-						wifiState = r.wifiState;
-						sdrState = r.sdrState;
-						wifiInfo = { ...wifiInfo, owner: r.wifiOwner };
-						sdrInfo = { ...sdrInfo, owner: r.sdrOwner };
-					}
-				}),
-			5000
-		);
+		const statusInterval = setInterval(() => void fetchStatusWithLatency(), 5000);
 		const clockInterval = setInterval(updateClock, 1000);
 		const weatherInterval = setInterval(() => {
 			if (currentGpsLat && currentGpsLon) {
@@ -197,9 +187,10 @@
 	<div class="left-group">
 		<span class="brand-mark">ARGOS</span>
 		<span class="collection-dot"></span>
-		<span class="callsign">{locationName || 'ARGOS-1'}</span>
-		<span class="bar-divider"></span>
+		{#if isCollecting}<span class="rec-badge">REC</span>{/if}
+		<span class="callsign">ARGOS-1</span>
 
+		<!-- Hardware dropdowns — compact dots still clickable for detail popups -->
 		<WifiDropdown
 			deviceState={wifiState}
 			info={wifiInfo}
@@ -230,11 +221,14 @@
 
 	<!-- Right group: Latency + Mesh + Weather + Date + Zulu -->
 	<div class="right-group">
-		{#if gpsCoords.lat}
-			<span class="segment segment-coords">{gpsCoords.lat}/{gpsCoords.lon}</span>
-			<span class="bar-divider"></span>
-		{/if}
-		<span class="segment segment-mesh">{meshDisplay}</span>
+		<span class="segment segment-latency">
+			<Signal size={12} class="segment-icon" />
+			{latencyMs ?? '--'}ms
+		</span>
+		<span class="segment segment-mesh">
+			<Network size={12} class="segment-icon" />
+			{meshDisplay}
+		</span>
 		{#if weather}
 			<div class="device-wrapper">
 				<button class="segment segment-weather" onclick={() => toggleDropdown('weather')}>
@@ -242,14 +236,14 @@
 					<span class="weather-icon"
 						>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
 					>
-					<span>{Math.round(weather.temperature)}°C</span>
+					<span>{Math.round(weather.temperature)}°F</span>
+					<span class="weather-desc">{getWeatherCondition(weather.weatherCode)}</span>
 				</button>
 				{#if openDropdown === 'weather'}<WeatherDropdown {weather} />{/if}
 			</div>
 		{:else}
-			<span class="segment segment-muted">--°C</span>
+			<span class="segment segment-muted">--°F</span>
 		{/if}
-		<span class="bar-divider"></span>
 		<span class="segment segment-date">{dateStr}</span>
 		<span class="segment segment-zulu">{zuluTime}</span>
 	</div>

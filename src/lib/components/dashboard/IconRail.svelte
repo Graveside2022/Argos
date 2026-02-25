@@ -1,64 +1,18 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
+	import { House, Layers, List, Settings, Waypoints, Zap } from '@lucide/svelte';
+
 	import {
 		activeBottomTab,
 		activePanel,
 		toggleBottomTab,
 		togglePanel
 	} from '$lib/stores/dashboard/dashboard-store';
-	import { toggleTerminalPanel } from '$lib/stores/dashboard/terminal-store';
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 
-	const topIcons = [
-		{
-			id: 'overview',
-			label: 'Overview',
-			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
-		},
-		{
-			id: 'tools',
-			label: 'Tools',
-			svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
-		}
-	];
-
-	const devicesIcon = {
-		id: 'devices',
-		label: 'Devices',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>`
-	};
-
-	const chatIcon = {
-		id: 'chat',
-		label: 'Agent Chat',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
-	};
-
-	const terminalIcon = {
-		id: 'terminal',
-		label: 'Terminal',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`
-	};
-
-	const layersIcon = {
-		id: 'layers',
-		label: 'Layers',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`
-	};
-
-	const bottomIcon = {
-		id: 'settings',
-		label: 'Settings',
-		svg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
-	};
-
 	function handleClick(id: string) {
-		if (id === 'terminal') {
-			toggleTerminalPanel();
-		} else if (id === 'chat') {
-			toggleBottomTab('chat');
-		} else if (id === 'devices') {
+		if (id === 'devices') {
 			toggleBottomTab('devices');
 		} else {
 			togglePanel(id);
@@ -68,90 +22,76 @@
 
 <nav class="icon-rail" data-position={themeStore.railPosition} aria-label="Dashboard navigation">
 	<div class="rail-top">
-		<!-- Overview (home) -->
+		<!-- Overview (house) -->
 		<button
 			class="rail-btn"
 			class:active={$activePanel === 'overview'}
-			title={topIcons[0].label}
-			aria-label={topIcons[0].label}
+			title="Overview"
+			aria-label="Overview"
 			aria-pressed={$activePanel === 'overview'}
-			onclick={() => handleClick(topIcons[0].id)}
+			onclick={() => handleClick('overview')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html topIcons[0].svg}
+			<House size={18} />
 		</button>
-		<!-- Devices (middle) -->
+		<!-- Devices (list) -->
 		<button
 			class="rail-btn"
 			class:active={$activeBottomTab === 'devices'}
-			title={devicesIcon.label}
-			aria-label={devicesIcon.label}
+			title="Devices"
+			aria-label="Devices"
 			aria-pressed={$activeBottomTab === 'devices'}
-			onclick={() => handleClick(devicesIcon.id)}
+			onclick={() => handleClick('devices')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html devicesIcon.svg}
+			<List size={18} />
 		</button>
 		<!-- Tools (zap) -->
 		<button
 			class="rail-btn"
 			class:active={$activePanel === 'tools'}
-			title={topIcons[1].label}
-			aria-label={topIcons[1].label}
+			title="Tools"
+			aria-label="Tools"
 			aria-pressed={$activePanel === 'tools'}
-			onclick={() => handleClick(topIcons[1].id)}
+			onclick={() => handleClick('tools')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html topIcons[1].svg}
+			<Zap size={18} />
 		</button>
 	</div>
 
 	<div class="rail-spacer"></div>
 
 	<div class="rail-bottom">
+		<!-- Logo (waypoints) — brand mark, always white -->
 		<button
-			class="rail-btn"
-			class:active={$activeBottomTab === 'terminal'}
-			title={terminalIcon.label}
-			aria-label={terminalIcon.label}
-			aria-pressed={$activeBottomTab === 'terminal'}
-			onclick={() => handleClick(terminalIcon.id)}
+			class="rail-btn rail-logo"
+			title="Argos"
+			aria-label="Argos"
+			onclick={() => handleClick('overview')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html terminalIcon.svg}
+			<Waypoints size={20} />
 		</button>
+		<!-- Layers -->
 		<button
 			class="rail-btn"
-			class:active={$activeBottomTab === 'chat'}
-			title={chatIcon.label}
-			aria-label={chatIcon.label}
-			aria-pressed={$activeBottomTab === 'chat'}
-			onclick={() => handleClick(chatIcon.id)}
+			class:active={$activePanel === 'layers'}
+			title="Layers"
+			aria-label="Layers"
+			aria-pressed={$activePanel === 'layers'}
+			onclick={() => handleClick('layers')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html chatIcon.svg}
+			<Layers size={18} />
 		</button>
+		<!-- Separator -->
+		<div class="rail-separator"></div>
+		<!-- Settings -->
 		<button
 			class="rail-btn"
-			class:active={$activePanel === layersIcon.id}
-			title={layersIcon.label}
-			aria-label={layersIcon.label}
-			aria-pressed={$activePanel === layersIcon.id}
-			onclick={() => handleClick(layersIcon.id)}
+			class:active={$activePanel === 'settings'}
+			title="Settings"
+			aria-label="Settings"
+			aria-pressed={$activePanel === 'settings'}
+			onclick={() => handleClick('settings')}
 		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html layersIcon.svg}
-		</button>
-		<button
-			class="rail-btn"
-			class:active={$activePanel === bottomIcon.id}
-			title={bottomIcon.label}
-			aria-label={bottomIcon.label}
-			aria-pressed={$activePanel === bottomIcon.id}
-			onclick={() => handleClick(bottomIcon.id)}
-		>
-			<!-- @constitutional-exemption Article-IX-9.4 issue:#13 — Static hardcoded SVG icon string, no user input reaches this directive -->
-			{@html bottomIcon.svg}
+			<Settings size={18} />
 		</button>
 	</div>
 </nav>
@@ -161,12 +101,12 @@
 		width: var(--icon-rail-width);
 		min-width: var(--icon-rail-width);
 		flex-shrink: 0;
-		background: var(--palantir-bg-chrome);
-		border-right: 1px solid var(--palantir-border-subtle);
+		background: var(--sidebar);
+		border-right: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: var(--space-2) 0;
+		padding: 10px 0;
 		position: relative;
 		z-index: 10;
 	}
@@ -175,7 +115,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-1);
+		gap: 4px;
 	}
 
 	.rail-spacer {
@@ -186,20 +126,20 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-1);
+		gap: 4px;
 	}
 
 	.rail-btn {
-		width: 40px;
-		height: 40px;
+		width: 48px;
+		height: 32px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		border: none;
 		background: transparent;
-		color: var(--palantir-text-tertiary);
+		color: #808080;
 		cursor: pointer;
-		border-radius: var(--radius-md);
+		border-radius: 4px;
 		position: relative;
 		padding: 0;
 		margin: 0;
@@ -210,44 +150,30 @@
 	}
 
 	.rail-btn:hover {
-		background-color: var(--palantir-bg-hover);
-		color: var(--palantir-text-secondary);
+		background-color: var(--surface-hover);
+		color: var(--foreground-muted);
 	}
 
 	.rail-btn.active {
-		display: flex !important;
-		align-items: center;
-		justify-content: center;
-		color: var(--palantir-accent);
-		background-color: color-mix(in srgb, var(--palantir-accent) 12%, transparent);
+		color: var(--primary);
+		background-color: #ffffff14;
 	}
 
-	.rail-btn.active::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 0;
-		bottom: 0;
-		width: 3px;
-		background: var(--palantir-accent);
-		border-radius: 0 1px 1px 0;
+	/* Logo icon — always white, no active state */
+	.rail-logo {
+		color: #ffffff;
 	}
 
-	.rail-btn.active::after {
-		content: '';
-		position: absolute;
-		right: 0;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 1px;
-		height: 24px;
-		background: linear-gradient(
-			to bottom,
-			transparent,
-			color-mix(in srgb, var(--palantir-accent) 50%, transparent),
-			transparent
-		);
-		opacity: 0.6;
+	.rail-logo:hover {
+		color: #ffffff;
+	}
+
+	/* Separator line between Layers and Settings */
+	.rail-separator {
+		width: 24px;
+		height: 1px;
+		background: #ffffff1a;
+		margin: 2px 0;
 	}
 
 	@import './icon-rail.css';

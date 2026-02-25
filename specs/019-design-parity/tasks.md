@@ -357,9 +357,9 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 **Purpose**: Clean environment, prevent the stale-cache issue discovered during audit
 
-- [ ] T001 Clear Vite compilation cache by removing `node_modules/.vite/` directory to prevent stale component output
-- [ ] T002 Touch `src/lib/components/dashboard/TopStatusBar.svelte` to force HMR recompile and verify compiled output is > 20KB (not the 970-byte empty shell found during audit)
-- [ ] T003 Write unit test for store defaults in `tests/unit/components/dashboard-store-defaults.test.ts` — verify `activePanel` initial value is `'overview'` and `activeBottomTab` initial value is `'terminal'` (tests should FAIL before implementation)
+- [x] T001 Clear Vite compilation cache by removing `node_modules/.vite/` directory to prevent stale component output
+- [x] T002 Touch `src/lib/components/dashboard/TopStatusBar.svelte` to force HMR recompile and verify compiled output is > 20KB (not the 970-byte empty shell found during audit)
+- [x] T003 Write unit test for store defaults in `tests/unit/components/dashboard-store-defaults.test.ts` — verify `activePanel` initial value is `'overview'` and `activeBottomTab` initial value is `'terminal'` (tests should FAIL before implementation)
 
 ---
 
@@ -369,16 +369,16 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 **Pencil spec**: 48px wide, `#18181b` background, border-right `#2e2e2e`, 7 items: Overview (house), Devices (list), Tools (zap), [spacer], Logo (waypoints), Layers (layers), [separator line], Settings (settings). Padding 10px vertical, 4px gap between items.
 
-- [ ] T004 [US1] Compare live Icon Rail (`src/lib/components/dashboard/IconRail.svelte`) against Pencil frame `NHlPD` — document any differences in icon order, icon types, or missing elements
-- [ ] T005 [US1] Verify Icon Rail icon order matches design: Top group = Overview (house), Devices (list), Tools (zap). Bottom group = Logo (waypoints) is missing from live — the live has Terminal (prompt), Chat (message), Layers, Settings. Note: the design has a Logo icon between spacer and bottom group that the live app doesn't have. Document in gate review whether this Logo icon should be added or if the live rail's Terminal/Chat icons are the intentional replacement.
+- [x] T004 [US1] Compare live Icon Rail (`src/lib/components/dashboard/IconRail.svelte`) against Pencil frame `NHlPD` — document any differences in icon order, icon types, or missing elements
+- [x] T005 [US1] Verify Icon Rail icon order matches design: Top group = Overview (house), Devices (list), Tools (zap). Bottom group = Logo (waypoints) is missing from live — the live has Terminal (prompt), Chat (message), Layers, Settings. Note: the design has a Logo icon between spacer and bottom group that the live app doesn't have. Document in gate review whether this Logo icon should be added or if the live rail's Terminal/Chat icons are the intentional replacement.
 
 ### Implementation
 
-- [ ] T005a [US5] Remove Terminal and Chat buttons from `src/lib/components/dashboard/IconRail.svelte` — these functions move to the Bottom Panel fixed tab bar. Add Logo (`waypoints`) icon between the flex spacer and Layers icon. Add a horizontal separator line (24×1px, `var(--separator)` = `#ffffff1a`) between Layers and Settings.
-- [ ] T005b [US5] Resize Icon Rail hit zones in `src/lib/components/dashboard/IconRail.svelte` + `src/lib/components/dashboard/icon-rail.css` — change from 40×40px to 48×32px (48px wide = fill container, 32px tall). Set `border-radius: 4px` on all hit zones.
-- [ ] T005c [US5] Fix Icon Rail active state in `src/lib/components/dashboard/IconRail.svelte` + `icon-rail.css` — replace the `::before` left-bar pseudo-element with a background fill `var(--hover-tint)` (`#ffffff14`). Active icon color: `var(--primary)` (`#A8B8E0` for Blue palette — see Accent Color Decision in Notes). Inactive icon color: `#808080`.
-- [ ] T005d [US5] Replace inline SVG icon strings in `src/lib/components/dashboard/IconRail.svelte` with `@lucide/svelte` component imports (already installed, v0.561.0) at 18×18px. Import: `import { House, List, Zap, Waypoints, Layers, Settings } from '@lucide/svelte'`. Icons: `House` (Overview), `List` (Devices), `Zap` (Tools), `Waypoints` (Logo, 20×20px, white), `Layers` (Layers), `Settings` (Settings). No new dependency needed.
-- [ ] T005e [US5] Update Icon Rail layout in `icon-rail.css` — set background to `var(--sidebar)` (`#18181b`), border-right to `1px solid var(--border)`, padding to `10px 0`, gap to `4px`, `align-items: center`.
+- [x] T005a [US5] Remove Terminal and Chat buttons from `src/lib/components/dashboard/IconRail.svelte` — these functions move to the Bottom Panel fixed tab bar. Add Logo (`waypoints`) icon between the flex spacer and Layers icon. Add a horizontal separator line (24×1px, `var(--separator)` = `#ffffff1a`) between Layers and Settings.
+- [x] T005b [US5] Resize Icon Rail hit zones in `src/lib/components/dashboard/IconRail.svelte` + `src/lib/components/dashboard/icon-rail.css` — change from 40×40px to 48×32px (48px wide = fill container, 32px tall). Set `border-radius: 4px` on all hit zones.
+- [x] T005c [US5] Fix Icon Rail active state in `src/lib/components/dashboard/IconRail.svelte` + `icon-rail.css` — replace the `::before` left-bar pseudo-element with a background fill `var(--hover-tint)` (`#ffffff14`). Active icon color: `var(--primary)` (`#A8B8E0` for Blue palette — see Accent Color Decision in Notes). Inactive icon color: `#808080`.
+- [x] T005d [US5] Replace inline SVG icon strings in `src/lib/components/dashboard/IconRail.svelte` with `@lucide/svelte` component imports (already installed, v0.561.0) at 18×18px. Import: `import { House, List, Zap, Waypoints, Layers, Settings } from '@lucide/svelte'`. Icons: `House` (Overview), `List` (Devices), `Zap` (Tools), `Waypoints` (Logo, 20×20px, white), `Layers` (Layers), `Settings` (Settings). No new dependency needed.
+- [x] T005e [US5] Update Icon Rail layout in `icon-rail.css` — set background to `var(--sidebar)` (`#18181b`), border-right to `1px solid var(--border)`, padding to `10px 0`, gap to `4px`, `align-items: center`.
 
 ### 🚦 GATE 1: Icon Rail Review
 
@@ -397,14 +397,14 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 ### Implementation
 
-- [ ] T006 [US2] Remove text label `<span class="status-label">WiFi Adapter</span>` from `src/lib/components/dashboard/status/WifiDropdown.svelte` — keep only the status dot (this will recover ~110px of the 716px width problem). Add `title="WiFi Adapter"` to the `.device-btn` div for hover tooltip accessibility.
-- [ ] T007 [US2] Remove text label `<span class="status-label">Software Defined Radio</span>` from `src/lib/components/dashboard/status/SdrDropdown.svelte` — keep only the status dot (recovers ~188px). Add `title="Software Defined Radio"` tooltip.
-- [ ] T008 [US2] Remove text label from `src/lib/components/dashboard/status/GpsDropdown.svelte` — currently shows "GPS {sats} SAT". Change to dot-only with `title="GPS {sats} SAT"` tooltip. Keep the sat count visible as a small superscript badge next to the dot (recovers ~92px).
-- [ ] T009 [US2] Add "REC" badge to `src/lib/components/dashboard/TopStatusBar.svelte` — after the `.collection-dot` element, add `{#if isCollecting}<span class="rec-badge">REC</span>{/if}` where `isCollecting` is derived from `wifiState === 'active' || sdrState === 'active' || gpsState === 'active'`.
-- [ ] T010 [US2] Change callsign display in `src/lib/components/dashboard/TopStatusBar.svelte` — replace `{locationName || 'ARGOS-1'}` with `{'ARGOS-1'}` in the `.callsign` span. Remove the `locationName` state variable, `lastGeocodeLat/Lon` variables, and the `reverseGeocode()` call from the GPS effect. (Default "ARGOS-1"; configurable via Settings in future spec.)
-- [ ] T011 [US2] Add network latency indicator to `src/lib/components/dashboard/TopStatusBar.svelte` — add `let latencyMs = $state<number | null>(null)` and measure RTT of the existing `fetchHardwareStatus()` call by wrapping it with `Date.now()` before/after. Display `{latencyMs ?? '--'}ms` in the right group between coordinates and mesh count.
-- [ ] T012 [US2] Add CSS styles to `src/lib/components/dashboard/command-bar.css` — add `.rec-badge` class (color: `var(--destructive)` which resolves to `#FF5C33`, font-family: `var(--font-mono)`, font-size: 10px, font-weight: 600, letter-spacing: 1px, text-transform: uppercase). Add `.segment-latency` class matching `.segment` base with `font-variant-numeric: tabular-nums`.
-- [ ] T013 [US2] Write unit test in `tests/unit/components/command-bar-compact.test.ts` — mount `WifiDropdown` with `deviceState='active'`, verify no `.status-label` element exists, verify `.status-dot.dot-active` is rendered. Test `SdrDropdown` similarly.
+- [x] T006 [US2] Remove text label `<span class="status-label">WiFi Adapter</span>` from `src/lib/components/dashboard/status/WifiDropdown.svelte` — keep only the status dot (this will recover ~110px of the 716px width problem). Add `title="WiFi Adapter"` to the `.device-btn` div for hover tooltip accessibility.
+- [x] T007 [US2] Remove text label `<span class="status-label">Software Defined Radio</span>` from `src/lib/components/dashboard/status/SdrDropdown.svelte` — keep only the status dot (recovers ~188px). Add `title="Software Defined Radio"` tooltip.
+- [x] T008 [US2] Remove text label from `src/lib/components/dashboard/status/GpsDropdown.svelte` — currently shows "GPS {sats} SAT". Change to dot-only with `title="GPS {sats} SAT"` tooltip. Keep the sat count visible as a small superscript badge next to the dot (recovers ~92px).
+- [x] T009 [US2] Add "REC" badge to `src/lib/components/dashboard/TopStatusBar.svelte` — after the `.collection-dot` element, add `{#if isCollecting}<span class="rec-badge">REC</span>{/if}` where `isCollecting` is derived from `wifiState === 'active' || sdrState === 'active' || gpsState === 'active'`.
+- [x] T010 [US2] Change callsign display in `src/lib/components/dashboard/TopStatusBar.svelte` — replace `{locationName || 'ARGOS-1'}` with `{'ARGOS-1'}` in the `.callsign` span. Remove the `locationName` state variable, `lastGeocodeLat/Lon` variables, and the `reverseGeocode()` call from the GPS effect. (Default "ARGOS-1"; configurable via Settings in future spec.)
+- [x] T011 [US2] Add network latency indicator to `src/lib/components/dashboard/TopStatusBar.svelte` — add `let latencyMs = $state<number | null>(null)` and measure RTT of the existing `fetchHardwareStatus()` call by wrapping it with `Date.now()` before/after. Display `{latencyMs ?? '--'}ms` in the right group between coordinates and mesh count.
+- [x] T012 [US2] Add CSS styles to `src/lib/components/dashboard/command-bar.css` — add `.rec-badge` class (color: `var(--destructive)` which resolves to `#FF5C33`, font-family: `var(--font-mono)`, font-size: 10px, font-weight: 600, letter-spacing: 1px, text-transform: uppercase). Add `.segment-latency` class matching `.segment` base with `font-variant-numeric: tabular-nums`.
+- [x] T013 [US2] Write unit test in `tests/unit/components/command-bar-compact.test.ts` — mount `WifiDropdown` with `deviceState='active'`, verify no `.status-label` element exists, verify `.status-dot.dot-active` is rendered. Test `SdrDropdown` similarly.
 
 ### 🚦 GATE 2: Command Bar Review
 

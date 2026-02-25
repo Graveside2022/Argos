@@ -12,14 +12,19 @@
 </script>
 
 <div class="device-wrapper">
-	<div class="status-item device-btn" onclick={onToggle} role="button" tabindex="0">
+	<div
+		class="status-item device-btn"
+		onclick={onToggle}
+		role="button"
+		tabindex="0"
+		title="WiFi Adapter"
+	>
 		<span
 			class="status-dot"
 			class:dot-active={deviceState === 'active'}
 			class:dot-standby={deviceState === 'standby'}
 			class:dot-offline={deviceState === 'offline'}
 		></span>
-		<span class="status-label">WiFi Adapter</span>
 	</div>
 	{#if open}
 		<div class="device-dropdown">

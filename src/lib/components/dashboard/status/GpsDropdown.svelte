@@ -28,6 +28,7 @@
 		}}
 		role="button"
 		tabindex="0"
+		title="GPS {sats} SAT"
 	>
 		<span
 			class="status-dot"
@@ -35,8 +36,6 @@
 			class:dot-standby={deviceState === 'standby'}
 			class:dot-offline={deviceState === 'offline'}
 		></span>
-		<span class="status-label">GPS</span>
-		<span class="sat-count">{sats} SAT</span>
 	</div>
 	{#if open}
 		<div class="device-dropdown">
