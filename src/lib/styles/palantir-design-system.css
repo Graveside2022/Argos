@@ -8,55 +8,53 @@
    vars are not yet loaded.
    ============================================================ */
 
-/* ---- Color Palette (bridged to shadcn theme) ---- */
+/* ---- Color Palette (bridged to Lunaris base tokens) ---- */
 :root {
-	/* Backgrounds — mapped to shadcn surface hierarchy
-	   3-tier depth: chrome (darkest) → surface/panel (mid) → elevated (lightest) */
-	--palantir-bg-app: var(--background, #0e1116);
-	--palantir-bg-chrome: var(--background, #0e1116);
-	--palantir-bg-surface: var(--card, #16181d);
-	--palantir-bg-panel: var(--card, #1c1f26);
-	--palantir-bg-elevated: var(--accent, #25282f);
-	--palantir-bg-input: var(--input, #1a1d23);
-	--palantir-bg-hover: var(--accent, #2a2d35);
-	--palantir-bg-button: var(--secondary, #2a2d35);
+	/* Backgrounds — mapped to Lunaris surface hierarchy */
+	--palantir-bg-app: var(--background);
+	--palantir-bg-chrome: var(--background);
+	--palantir-bg-surface: var(--card);
+	--palantir-bg-panel: var(--card);
+	--palantir-bg-elevated: var(--secondary);
+	--palantir-bg-input: var(--input);
+	--palantir-bg-hover: var(--hover-tint);
+	--palantir-bg-button: var(--secondary);
 
-	/* Borders — mapped to shadcn border */
-	--palantir-border-subtle: var(--border, rgba(255, 255, 255, 0.06));
-	--palantir-border-default: var(--border, rgba(255, 255, 255, 0.1));
-	--palantir-border-strong: var(--border, rgba(255, 255, 255, 0.15));
+	/* Borders — all solid #2E2E2E via --border */
+	--palantir-border-subtle: var(--border);
+	--palantir-border-default: var(--border);
+	--palantir-border-strong: var(--border);
 
-	/* Text — mapped to shadcn foreground hierarchy */
-	--palantir-text-primary: var(--foreground, #e8eaed);
-	--palantir-text-secondary: var(--muted-foreground, #9aa0a6);
-	--palantir-text-tertiary: var(--muted-foreground, #5f6368);
-	--palantir-text-on-accent: var(--primary-foreground, #ffffff);
+	/* Text — mapped to Lunaris text hierarchy */
+	--palantir-text-primary: var(--foreground);
+	--palantir-text-secondary: var(--text-secondary, #bbbbbb);
+	--palantir-text-tertiary: var(--text-tertiary, #888888);
+	--palantir-text-on-accent: var(--primary-foreground);
 
-	/* Accent — mapped to shadcn primary */
-	--palantir-accent: var(--primary, #4a9eff);
-	--palantir-accent-hover: var(--ring, #3a8eef);
-	--palantir-accent-muted: color-mix(in srgb, var(--primary, #4a9eff) 15%, transparent);
+	/* Accent — mapped to Lunaris primary */
+	--palantir-accent: var(--primary);
+	--palantir-accent-hover: var(--ring);
+	--palantir-accent-muted: color-mix(in srgb, var(--primary) 15%, transparent);
 
-	/* Status — mapped to shadcn semantic tokens */
-	--palantir-success: var(--success, #4ade80);
-	--palantir-warning: var(--warning, #fbbf24);
-	--palantir-error: var(--destructive, #f87171);
-	--palantir-info: var(--info, #60a5fa);
+	/* Status — mapped to Lunaris semantic tokens */
+	--palantir-success: var(--success);
+	--palantir-warning: var(--warning);
+	--palantir-error: var(--destructive);
+	--palantir-info: var(--info);
 
-	/* Signal strength scale — mapped to shadcn signal tokens */
-	--palantir-signal-critical: var(--signal-critical, #dc2626);
-	--palantir-signal-strong: var(--signal-strong, #f97316);
-	--palantir-signal-good: var(--signal-good, #fbbf24);
-	--palantir-signal-fair: var(--signal-fair, #10b981);
-	--palantir-signal-weak: var(--signal-weak, #4a90e2);
+	/* Signal strength scale — mapped to Lunaris signal tokens */
+	--palantir-signal-critical: var(--signal-very-strong);
+	--palantir-signal-strong: var(--signal-strong);
+	--palantir-signal-good: var(--signal-good);
+	--palantir-signal-fair: var(--signal-fair);
+	--palantir-signal-weak: var(--signal-weak);
 
-	/* Chart / data viz — mapped to shadcn chart tokens */
-	--palantir-chart-1: var(--chart-1, #4a9eff);
-	--palantir-chart-2: var(--chart-2, #10b981);
-	--palantir-chart-3: var(--chart-3, #f97316);
-	--palantir-chart-4: var(--chart-4, #a78bfa);
-	--palantir-chart-5: var(--chart-5, #f87171);
-	--palantir-chart-6: var(--chart-6, #fbbf24);
+	/* Chart / data viz — mapped to Lunaris chart tokens */
+	--palantir-chart-1: var(--chart-1);
+	--palantir-chart-2: var(--chart-2);
+	--palantir-chart-3: var(--chart-3);
+	--palantir-chart-4: var(--chart-4);
+	--palantir-chart-5: var(--chart-5);
 
 	/* Spacing scale (8px grid) */
 	--space-1: 0.25rem; /* 4px */
@@ -69,11 +67,15 @@
 	--space-10: 2.5rem; /* 40px */
 	--space-12: 3rem; /* 48px */
 
-	/* Typography */
-	--text-xs: 0.6875rem; /* 11px */
-	--text-sm: 0.75rem; /* 12px */
-	--text-base: 0.875rem; /* 14px */
-	--text-lg: 1rem; /* 16px */
+	/* Typography — Lunaris 6-step scale */
+	--text-hero: 1.5rem; /* 24px — hero metrics */
+	--text-brand: 0.8125rem; /* 13px — brand text */
+	--text-sm: 0.75rem; /* 12px — secondary data */
+	--text-xs: 0.6875rem; /* 11px — primary data rows */
+	--text-status: 0.625rem; /* 10px — status text */
+	--text-section: 0.5625rem; /* 9px — section headers (UPPERCASE) */
+	--text-base: 0.875rem; /* 14px — body/brand mark (utility) */
+	--text-lg: 1rem; /* 16px — large text (utility) */
 	--text-xl: 1.125rem; /* 18px */
 	--text-2xl: 1.5rem; /* 24px */
 	--text-3xl: 1.875rem; /* 30px */
@@ -94,11 +96,6 @@
 	--radius-md: 6px;
 	--radius-lg: 8px;
 	--radius-xl: 12px;
-
-	/* Feature category colors (for mission cards) */
-	--feature-rf: var(--feature-rf, #f97316);
-	--feature-drone: var(--feature-drone, #06b6d4);
-	--feature-radio: var(--feature-radio, #a855f7);
 }
 
 /* ---- Map Popup ---- */
@@ -109,7 +106,7 @@
 	padding: var(--space-3);
 	color: var(--palantir-text-primary);
 	font-size: var(--text-sm);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	box-shadow: 0 4px 16px #00000066;
 }
 
 .popup-title {
@@ -150,28 +147,23 @@
 }
 
 .signal-critical {
-	background: var(--palantir-signal-critical);
-	box-shadow: 0 0 6px rgba(220, 38, 38, 0.4);
+	background: var(--signal-very-strong);
 }
 
 .signal-strong {
-	background: var(--palantir-signal-strong);
-	box-shadow: 0 0 6px rgba(249, 115, 22, 0.4);
+	background: var(--signal-strong);
 }
 
 .signal-good {
-	background: var(--palantir-signal-good);
-	box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+	background: var(--signal-good);
 }
 
 .signal-fair {
-	background: var(--palantir-signal-fair);
-	box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+	background: var(--signal-fair);
 }
 
 .signal-weak {
-	background: var(--palantir-signal-weak);
-	box-shadow: 0 0 6px rgba(74, 144, 226, 0.4);
+	background: var(--signal-weak);
 }
 
 /* ---- Status dot ---- */
@@ -184,7 +176,6 @@
 
 .status-dot-online {
 	background: var(--palantir-success);
-	box-shadow: 0 0 4px rgba(74, 222, 128, 0.5);
 }
 
 .status-dot-offline {
@@ -193,16 +184,6 @@
 
 .status-dot-warning {
 	background: var(--palantir-warning);
-	box-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
-}
-
-/* ---- Utility: muted accent glow (replaces neon glow) ---- */
-.accent-glow {
-	box-shadow: 0 0 12px rgba(74, 158, 255, 0.15);
-}
-
-.accent-glow-strong {
-	box-shadow: 0 0 20px rgba(74, 158, 255, 0.25);
 }
 
 /* ---- Utility Classes ---- */
@@ -245,16 +226,16 @@
 }
 
 .bg-success-muted {
-	background: rgba(74, 222, 128, 0.12);
+	background: var(--success-bg);
 }
 .bg-error-muted {
-	background: rgba(248, 113, 113, 0.12);
+	background: var(--error-bg);
 }
 .bg-warning-muted {
-	background: rgba(251, 191, 36, 0.12);
+	background: var(--warning-bg);
 }
 .bg-info-muted {
-	background: rgba(74, 158, 255, 0.12);
+	background: var(--info-bg);
 }
 
 /* Feature category utilities */
@@ -284,7 +265,7 @@
 
 /* ---- Sidebar Layout Patterns ---- */
 .tactical-sidebar {
-	width: 320px;
+	width: 280px;
 	background: var(--palantir-bg-panel);
 	border-right: 1px solid var(--palantir-border-default);
 	display: flex;

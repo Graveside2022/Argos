@@ -1,6 +1,6 @@
 /**
  * Signal strength utilities for the dashboard.
- * Maps RSSI values to Palantir design system signal colors.
+ * Maps RSSI values to Lunaris design system signal colors.
  */
 
 import { resolveThemeColor } from '$lib/utils/theme-colors';
@@ -15,7 +15,7 @@ export interface SignalBand {
 	range: string;
 }
 
-/** Five signal strength bands using Palantir CSS variables */
+/** Five signal strength bands using Lunaris CSS variables */
 export const signalBands: SignalBand[] = [
 	{
 		key: 'critical',
@@ -23,7 +23,7 @@ export const signalBands: SignalBand[] = [
 		dbm: '> -50 dBm',
 		label: '> -50 dBm (Very Strong)',
 		min: -50,
-		cssVar: '--palantir-signal-critical',
+		cssVar: '--signal-very-strong',
 		range: '25m'
 	},
 	{
@@ -32,7 +32,7 @@ export const signalBands: SignalBand[] = [
 		dbm: '-50 to -60 dBm',
 		label: '-50 to -60 dBm (Strong)',
 		min: -60,
-		cssVar: '--palantir-signal-strong',
+		cssVar: '--signal-strong',
 		range: '60m'
 	},
 	{
@@ -41,7 +41,7 @@ export const signalBands: SignalBand[] = [
 		dbm: '-60 to -70 dBm',
 		label: '-60 to -70 dBm (Good)',
 		min: -70,
-		cssVar: '--palantir-signal-good',
+		cssVar: '--signal-good',
 		range: '100m'
 	},
 	{
@@ -50,7 +50,7 @@ export const signalBands: SignalBand[] = [
 		dbm: '-70 to -80 dBm',
 		label: '-70 to -80 dBm (Fair)',
 		min: -80,
-		cssVar: '--palantir-signal-fair',
+		cssVar: '--signal-fair',
 		range: '175m'
 	},
 	{
@@ -59,7 +59,7 @@ export const signalBands: SignalBand[] = [
 		dbm: '< -80 dBm',
 		label: '< -80 dBm (Weak)',
 		min: -Infinity,
-		cssVar: '--palantir-signal-weak',
+		cssVar: '--signal-weak',
 		range: '300m'
 	}
 ];
@@ -80,13 +80,13 @@ export function getSignalBandKey(rssi: number): string {
 
 /** Signal hex color thresholds: [minRssi, cssVar, fallbackHex]. First match wins. */
 const SIGNAL_HEX_THRESHOLDS: [number, string, string][] = [
-	[-50, '--signal-critical', '#dc2626'],
-	[-60, '--signal-strong', '#f97316'],
-	[-70, '--signal-good', '#fbbf24'],
-	[-80, '--signal-fair', '#10b981']
+	[-50, '--signal-very-strong', '#c45b4a'],
+	[-60, '--signal-strong', '#d4a054'],
+	[-70, '--signal-good', '#c4a84a'],
+	[-80, '--signal-fair', '#8bbfa0']
 ];
 
-const WEAK_SIGNAL: [string, string] = ['--signal-weak', '#4a90e2'];
+const WEAK_SIGNAL: [string, string] = ['--signal-weak', '#809ad0'];
 
 /** Resolve the CSS var name and fallback hex for an RSSI value. */
 function resolveSignalPair(rssi: number): [string, string] {
@@ -96,7 +96,7 @@ function resolveSignalPair(rssi: number): [string, string] {
 
 /** Get an inline hex color for contexts where CSS vars aren't available (e.g. Leaflet markers) */
 export function getSignalHex(rssi: number): string {
-	if (rssi === 0) return '#9a9a9a';
+	if (rssi === 0) return resolveThemeColor('--signal-none', '#555555');
 	const [cssVar, fallback] = resolveSignalPair(rssi);
 	return resolveThemeColor(cssVar, fallback);
 }

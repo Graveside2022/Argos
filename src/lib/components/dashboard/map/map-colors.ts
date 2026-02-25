@@ -9,21 +9,21 @@ import { resolveThemeColor } from '$lib/utils/theme-colors';
 
 // ── Signal-strength band colors ──────────────────────────────────────
 export const SIGNAL_COLORS = {
-	critical: { var: '--signal-critical', fallback: '#dc2626' },
-	strong: { var: '--signal-strong', fallback: '#f97316' },
-	good: { var: '--signal-good', fallback: '#fbbf24' },
-	fair: { var: '--signal-fair', fallback: '#10b981' },
-	weak: { var: '--signal-weak', fallback: '#4a90e2' }
+	critical: { var: '--signal-very-strong', fallback: '#c45b4a' },
+	strong: { var: '--signal-strong', fallback: '#d4a054' },
+	good: { var: '--signal-good', fallback: '#c4a84a' },
+	fair: { var: '--signal-fair', fallback: '#8bbfa0' },
+	weak: { var: '--signal-weak', fallback: '#809ad0' }
 } as const;
 
 // ── General map UI colors (fallbacks for CSS vars) ───────────────────
 export const MAP_UI_COLORS = {
-	foreground: { var: '--foreground', fallback: '#e0e0e8' },
-	mutedForeground: { var: '--muted-foreground', fallback: '#888' },
-	background: { var: '--background', fallback: '#111119' },
-	secondary: { var: '--secondary', fallback: '#3a3a5c' },
-	border: { var: '--border', fallback: '#6a6a8e' },
-	primary: { var: '--primary', fallback: '#4a9eff' }
+	foreground: { var: '--foreground', fallback: '#ffffff' },
+	mutedForeground: { var: '--muted-foreground', fallback: '#666666' },
+	background: { var: '--background', fallback: '#111111' },
+	secondary: { var: '--secondary', fallback: '#2e2e2e' },
+	border: { var: '--border', fallback: '#2e2e2e' },
+	primary: { var: '--primary', fallback: '#a8b8e0' }
 } as const;
 
 /** Resolve a MAP_UI_COLORS or SIGNAL_COLORS entry to its current hex. */

@@ -37,10 +37,10 @@ const CHROME_SELECTION_FG = '#ffffff';
 export function buildTerminalTheme(): ITheme {
 	return {
 		background: CHROME_BACKGROUND,
-		foreground: resolveThemeColor('--foreground', '#e8eaed'),
-		cursor: resolveThemeColor('--primary', '#4a9eff'),
+		foreground: resolveThemeColor('--foreground', '#ffffff'),
+		cursor: resolveThemeColor('--primary', '#a8b8e0'),
 		cursorAccent: CHROME_BACKGROUND,
-		selectionBackground: resolveThemeColor('--accent', 'rgba(74, 158, 255, 0.3)'),
+		selectionBackground: resolveThemeColor('--accent', 'rgba(168, 184, 224, 0.3)'),
 		selectionForeground: CHROME_SELECTION_FG,
 		// @constitutional-exemption Article-IV issue:#11 — 16 ANSI standard colors are protocol constants, not theme colors
 		...ANSI_COLORS

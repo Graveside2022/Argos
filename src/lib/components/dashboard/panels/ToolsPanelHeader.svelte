@@ -44,7 +44,7 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		background: rgba(255, 255, 255, 0.05);
+		background: var(--hover-tint);
 		border: 1px solid var(--palantir-border-subtle);
 		border-radius: var(--radius-sm);
 		color: var(--palantir-accent);
@@ -56,7 +56,7 @@
 	}
 
 	.back-btn:hover {
-		background: rgba(255, 255, 255, 0.1);
+		background: var(--secondary);
 		border-color: var(--palantir-accent);
 		color: var(--palantir-text-primary);
 	}

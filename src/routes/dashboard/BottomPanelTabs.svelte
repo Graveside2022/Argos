@@ -156,8 +156,8 @@
 		justify-content: space-between;
 		height: 32px;
 		min-height: 32px;
-		background: var(--palantir-bg-chrome, #0e1116);
-		border-bottom: 1px solid var(--palantir-border-subtle, #1e2228);
+		background: var(--palantir-bg-chrome, #111111);
+		border-bottom: 1px solid var(--palantir-border-subtle, #2e2e2e);
 		padding: 0 var(--space-2, 0.5rem);
 	}
 
@@ -179,7 +179,7 @@
 		background: transparent;
 		border: none;
 		border-bottom: 2px solid transparent;
-		color: var(--palantir-text-tertiary, #5f6368);
+		color: var(--palantir-text-tertiary, #888888);
 		font-size: 12px;
 		line-height: 1;
 		font-family: var(--font-sans, system-ui);
@@ -191,13 +191,13 @@
 	}
 
 	.panel-tab:hover {
-		color: var(--palantir-text-secondary, #9aa0a6);
+		color: var(--palantir-text-secondary, #bbbbbb);
 		background: var(--palantir-bg-hover, rgba(255, 255, 255, 0.04));
 	}
 
 	.panel-tab.active {
-		color: var(--palantir-text-primary, #e8eaed);
-		border-bottom-color: var(--palantir-accent, #4a9eff);
+		color: var(--palantir-text-primary, #ffffff);
+		border-bottom-color: var(--palantir-accent, #a8b8e0);
 	}
 
 	.panel-tab svg {
@@ -213,7 +213,7 @@
 		height: 24px;
 		background: transparent;
 		border: none;
-		color: var(--palantir-text-tertiary, #5f6368);
+		color: var(--palantir-text-tertiary, #888888);
 		cursor: pointer;
 		border-radius: var(--radius-sm, 4px);
 		transition:
@@ -223,6 +223,6 @@
 
 	.tab-close-btn:hover {
 		background: var(--palantir-bg-hover, rgba(255, 255, 255, 0.06));
-		color: var(--palantir-text-secondary, #9aa0a6);
+		color: var(--palantir-text-secondary, #bbbbbb);
 	}
 </style>

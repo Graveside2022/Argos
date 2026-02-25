@@ -131,7 +131,7 @@ export function buildConeSVG(heading: number): string {
 	const y1 = half - coneLength * Math.cos(rad1);
 	const x2 = half + coneLength * Math.sin(rad2);
 	const y2 = half - coneLength * Math.cos(rad2);
-	const coneColor = resolveThemeColor('--primary', '#4a9eff');
+	const coneColor = resolveThemeColor('--primary', '#a8b8e0');
 	return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
 		<defs><radialGradient id="hc" cx="50%" cy="50%" r="50%">
 			<stop offset="0%" stop-color="${coneColor}" stop-opacity="0.5"/>
@@ -143,11 +143,11 @@ export function buildConeSVG(heading: number): string {
 
 /** Radio type → [CSS variable, fallback hex]. */
 const RADIO_COLOR_MAP: Record<string, [string, string]> = {
-	LTE: ['--chart-1', '#4a9eff'],
-	NR: ['--chart-5', '#ec4899'],
-	UMTS: ['--chart-2', '#10b981'],
-	GSM: ['--chart-3', '#f97316'],
-	CDMA: ['--chart-4', '#8b5cf6']
+	LTE: ['--chart-1', '#a8b8e0'],
+	NR: ['--chart-5', '#c45b4a'],
+	UMTS: ['--chart-2', '#8bbfa0'],
+	GSM: ['--chart-3', '#d4a054'],
+	CDMA: ['--chart-4', '#bdb2d4']
 };
 
 /**
@@ -157,7 +157,7 @@ export function getRadioColor(radio: string): string {
 	const entry = RADIO_COLOR_MAP[radio?.toUpperCase()];
 	return entry
 		? resolveThemeColor(entry[0], entry[1])
-		: resolveThemeColor('--muted-foreground', '#9aa0a6');
+		: resolveThemeColor('--muted-foreground', '#666666');
 }
 
 // haversineKm re-exported from $lib/utils/geo

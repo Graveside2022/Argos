@@ -118,7 +118,7 @@
 	}
 	@media (max-width: 599px) {
 		.coords-group {
-			font-size: 10px;
+			font-size: var(--text-status);
 			gap: var(--space-1);
 		}
 		.time-value {

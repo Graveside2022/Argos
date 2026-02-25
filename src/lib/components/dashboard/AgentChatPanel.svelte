@@ -139,8 +139,8 @@
 		height: 100%;
 		background: var(--background);
 		color: var(--foreground);
-		font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-		font-size: 13px;
+		font-family: var(--font-primary, monospace);
+		font-size: var(--text-brand);
 	}
 
 	.chat-messages {
@@ -201,7 +201,7 @@
 		color: var(--foreground);
 		padding: 8px 12px;
 		font-family: inherit;
-		font-size: 13px;
+		font-size: var(--text-brand);
 		resize: none;
 		outline: none;
 	}

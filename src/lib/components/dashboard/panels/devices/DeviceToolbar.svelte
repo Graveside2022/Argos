@@ -149,7 +149,7 @@
 
 	.cap-badge {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-section);
 		color: var(--palantir-text-tertiary);
 		letter-spacing: 0.5px;
 	}
@@ -158,11 +158,11 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 2px;
-		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
-		border: 1px solid color-mix(in srgb, var(--palantir-accent) 25%, transparent);
+		background: var(--hover-tint);
+		border: 1px solid var(--palantir-border-subtle);
 		border-radius: var(--radius-sm);
 		color: var(--palantir-accent);
-		font-size: 10px;
+		font-size: var(--text-status);
 		font-weight: var(--font-weight-semibold);
 		padding: 2px 6px;
 		cursor: pointer;
@@ -170,7 +170,7 @@
 	}
 
 	.back-btn:hover {
-		background: color-mix(in srgb, var(--palantir-accent) 20%, transparent);
+		background: var(--secondary);
 	}
 
 	.toolbar-separator {
@@ -215,7 +215,7 @@
 	}
 
 	.no-signal-label {
-		font-size: 10px;
+		font-size: var(--text-status);
 		font-weight: var(--font-weight-semibold);
 		color: var(--palantir-text-tertiary);
 		line-height: 1;

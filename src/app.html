@@ -13,8 +13,7 @@
 		<script>
 			try {
 				var t = JSON.parse(localStorage.getItem('argos-theme') || '{}');
-				if (t.palette && t.palette !== 'default')
-					document.documentElement.dataset.palette = t.palette;
+				if (t.palette) document.documentElement.dataset.palette = t.palette;
 			} catch (e) {
 				/* dark class already set on <html> */
 			}
@@ -22,16 +21,14 @@
 		<!-- Critical CSS - FOUC prevention only -->
 		<style>
 			body {
-				background-color: #0e1116;
-				color: #e8eaed;
-				font-family:
-					'Inter',
-					system-ui,
-					-apple-system,
-					sans-serif;
+				background-color: #111111;
+				color: #ffffff;
+				font-family: 'Geist', system-ui, sans-serif;
 			}
 		</style>
 
+		<!-- Geist Sans for UI navigation chrome -->
+		<link rel="stylesheet" href="/fonts/geist.css" />
 		<!-- FiraCode Nerd Font for terminal rendering with Nerd Font glyphs -->
 		<link rel="stylesheet" href="/fonts/firacode-nerd-font.css" />
 		%sveltekit.head%

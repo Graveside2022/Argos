@@ -66,9 +66,9 @@
 
 	.popup-title {
 		font-weight: 600;
-		font-size: 13px;
+		font-size: var(--text-brand);
 		margin-bottom: 8px;
-		color: var(--palantir-text-primary, #e0e0e8);
+		color: var(--palantir-text-primary, #ffffff);
 	}
 
 	.popup-row {
@@ -85,11 +85,11 @@
 
 	.popup-value {
 		color: var(--palantir-text-secondary, #aaa);
-		font-family: monospace;
+		font-family: var(--font-primary, monospace);
 	}
 
 	.popup-divider {
-		border-top: 1px solid var(--palantir-border-default, #2a2a3e);
+		border-top: 1px solid var(--palantir-border-default, #2e2e2e);
 		margin: 4px 0;
 	}
 

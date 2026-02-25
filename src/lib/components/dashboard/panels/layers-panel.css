@@ -140,7 +140,7 @@
 	height: 32px;
 	border-radius: 4px;
 	background-size: cover;
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	border: 1px solid var(--border);
 }
 
 .provider-icon.vector {
@@ -152,7 +152,7 @@
 }
 
 .provider-name {
-	font-size: 10px;
+	font-size: var(--text-status);
 	color: var(--palantir-text-primary);
 }
 
@@ -176,7 +176,7 @@
 	background: var(--palantir-bg-elevated);
 	border: 1px solid var(--palantir-border-default);
 	color: var(--palantir-text-primary);
-	font-size: 10px;
+	font-size: var(--text-status);
 	padding: 0 8px;
 	border-radius: 4px;
 	cursor: pointer;
@@ -220,7 +220,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 10px;
+	font-size: var(--text-status);
 	font-weight: 700;
 }
 
@@ -230,7 +230,7 @@
 }
 
 .vis-name {
-	font-size: 9px;
+	font-size: var(--text-section);
 	color: var(--palantir-text-secondary);
 }
 

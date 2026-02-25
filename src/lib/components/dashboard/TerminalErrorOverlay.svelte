@@ -37,7 +37,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(14, 17, 22, 0.9);
+		background: rgba(17, 17, 17, 0.9);
 		z-index: 10;
 	}
 	.error-content {
