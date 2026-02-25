@@ -2,6 +2,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	import NetworkLatencyWidget from '$lib/components/dashboard/widgets/NetworkLatencyWidget.svelte';
+	import NodeMeshWidget from '$lib/components/dashboard/widgets/NodeMeshWidget.svelte';
+	import SpeedTestWidget from '$lib/components/dashboard/widgets/SpeedTestWidget.svelte';
+	import WeatherWidget from '$lib/components/dashboard/widgets/WeatherWidget.svelte';
 	import {
 		activePanel,
 		type ActiveView,
@@ -63,13 +67,19 @@
 
 <div class="overview-panel">
 	<header class="panel-header">
-		<span class="panel-title">OVERVIEW</span>
+		<span class="panel-title">SYSTEM OVERVIEW</span>
 	</header>
 
+	<!-- Sections 1-5: CPU, Disk, Memory, Power, Network Status -->
 	<SystemInfoCard {systemInfo} />
 
+	<!-- Section 6: Hardware -->
+	<HardwareCard {hardwareStatus} {hardwareDetails} {expandedRow} onToggleExpand={toggleExpand} />
+
+	<!-- Section 7: GPS Position -->
 	<GpsCard status={$gpsStore.status} />
 
+	<!-- Section 8: Services -->
 	<ServicesCard
 		kismetStatus={$kismetStore.status}
 		kismetDeviceCount={$kismetStore.deviceCount}
@@ -84,11 +94,21 @@
 		onOpenTakConfig={() => activeView.set('tak-config')}
 	/>
 
-	<HardwareCard {hardwareStatus} {hardwareDetails} {expandedRow} onToggleExpand={toggleExpand} />
-
+	<!-- Section 9: WiFi Interfaces -->
 	{#if systemInfo}
 		<WifiInterfacesCard interfaces={systemInfo.wifiInterfaces} />
 	{/if}
+
+	<!-- Section 10: Sidebar Widgets -->
+	<div class="widgets-container">
+		<SpeedTestWidget />
+		<NetworkLatencyWidget
+			connected={$kismetStore.status === 'connected'}
+			latency={systemInfo?.networkLatency ?? 0}
+		/>
+		<WeatherWidget />
+		<NodeMeshWidget connectedNodes={$takStatus.status === 'connected' ? 1 : 0} totalNodes={1} />
+	</div>
 </div>
 
 <style>
@@ -100,13 +120,21 @@
 
 	.panel-header {
 		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.panel-title {
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-secondary);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 1.5px;
+		color: var(--foreground-secondary, #888888);
+	}
+
+	.widgets-container {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 8px 12px;
 	}
 </style>

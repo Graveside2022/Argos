@@ -134,10 +134,11 @@
 	}
 
 	.panel-title {
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-secondary);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 1.5px;
+		color: var(--foreground-secondary, #888888);
 	}
 
 	.device-count {

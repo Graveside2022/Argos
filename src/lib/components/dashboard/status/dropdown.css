@@ -1,0 +1,146 @@
+/* Shared status bar dropdown styles */
+
+.device-wrapper {
+	position: relative;
+}
+
+.status-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--foreground-secondary, #888888);
+}
+
+.device-btn {
+	cursor: pointer;
+	padding: 2px 6px;
+	border-radius: 2px;
+	transition: background 0.15s ease;
+}
+
+.device-btn:hover {
+	background: var(--surface-hover, #1e1e1e);
+}
+
+.status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.dot-active {
+	background: var(--status-healthy, #8bbfa0);
+}
+
+.dot-standby {
+	background: var(--status-warning, #d4a054);
+}
+
+.dot-offline {
+	background: var(--foreground-tertiary, #999999);
+}
+
+.status-label {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-sm, 12px);
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+}
+
+.device-dropdown {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	min-width: 260px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 8px 12px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.dropdown-title {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-status, 10px);
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	color: var(--foreground-secondary, #888888);
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--border);
+}
+
+.dropdown-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.dropdown-key {
+	font-family: var(--font-secondary, Geist, sans-serif);
+	font-size: var(--text-sm, 12px);
+	color: var(--foreground-secondary, #888888);
+	white-space: nowrap;
+}
+
+.dropdown-val {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: var(--text-sm, 12px);
+	color: var(--foreground);
+	text-align: right;
+	word-break: break-all;
+}
+
+.dropdown-val.dim {
+	color: var(--foreground-tertiary, #999999);
+	font-style: italic;
+}
+
+.dropdown-val.accent {
+	color: var(--status-healthy, #8bbfa0);
+	font-weight: 600;
+}
+
+.dropdown-divider {
+	height: 1px;
+	background: var(--border);
+	margin: 2px 0;
+}
+
+@media (max-width: 900px) {
+	.status-label {
+		font-size: 11px;
+	}
+}
+
+@media (max-width: 767px) {
+	.status-label {
+		font-size: var(--text-status, 10px);
+	}
+}
+
+@media (max-width: 599px) {
+	.status-label {
+		display: none;
+	}
+}
+
+@media (max-width: 479px) {
+	.status-dot {
+		width: 10px;
+		height: 10px;
+	}
+
+	.device-btn {
+		padding: 8px;
+		min-width: 44px;
+		min-height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+}

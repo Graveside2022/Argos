@@ -34,10 +34,11 @@
 
 <style>
 	.category-card {
-		padding: var(--space-3);
-		background: var(--palantir-bg-elevated);
-		border: 1px solid var(--palantir-border-subtle);
-		border-radius: var(--radius-md);
+		padding: 8px 12px;
+		background: var(--surface-elevated, #151515);
+		border: none;
+		border-bottom: 1px solid var(--border);
+		border-radius: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
@@ -48,8 +49,8 @@
 	}
 
 	.category-card:hover {
-		border-color: var(--palantir-accent);
-		background: var(--palantir-bg-hover);
+		border-color: var(--interactive);
+		background: var(--surface-hover, #1e1e1e);
 	}
 
 	.category-header {
@@ -62,19 +63,21 @@
 		width: 20px;
 		height: 20px;
 		flex-shrink: 0;
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-secondary, #888888);
 	}
 
 	.category-name {
 		flex: 1;
-		font-size: var(--text-sm);
-		font-weight: var(--font-weight-medium);
-		color: var(--palantir-text-primary);
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: var(--text-xs);
+		font-weight: 600;
+		letter-spacing: 1.2px;
+		color: var(--foreground);
 	}
 
 	.chevron-right {
 		flex-shrink: 0;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-tertiary, #999999);
 	}
 
 	.chevron-right :global(svg) {
@@ -83,14 +86,14 @@
 
 	.category-description {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary, #888888);
 		line-height: 1.4;
 		margin: 0;
 	}
 
 	.category-meta {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-tertiary, #999999);
 	}
 
 	.tool-count {

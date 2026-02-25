@@ -6,18 +6,22 @@ import { persistedWritable } from '$lib/stores/persisted-writable';
 /** Which panel is open in the icon rail (null = closed) */
 export const activePanel = writable<string | null>(null);
 
-/** Bottom panel tab: 'terminal' | 'chat' | null (closed) */
-type BottomTab = 'terminal' | 'chat' | 'devices' | 'gsm-evil' | 'logs' | null;
+/** Bottom panel tab type — gsm-evil removed (full-screen view), captures added */
+type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'devices' | null;
 
-const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'devices', 'gsm-evil', 'logs'];
+const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'devices'];
 
 export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', null, {
 	serialize: (tab) => (tab === null ? 'null' : tab),
-	deserialize: (raw) => (VALID_TABS.includes(raw as BottomTab) ? (raw as BottomTab) : null)
+	deserialize: (raw) => {
+		// Graceful fallback: map removed 'gsm-evil' tab to null
+		if (raw === 'gsm-evil') return null;
+		return VALID_TABS.includes(raw as BottomTab) ? (raw as BottomTab) : null;
+	}
 });
 
 /** Shared bottom panel height (persisted to localStorage) */
-const DEFAULT_BOTTOM_HEIGHT = 300;
+const DEFAULT_BOTTOM_HEIGHT = 240;
 const MIN_BOTTOM_HEIGHT = 100;
 const MAX_BOTTOM_HEIGHT_PERCENT = 0.8;
 
@@ -35,7 +39,7 @@ export const bottomPanelHeight = persistedWritable<number>(
 export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
-export function toggleBottomTab(tab: 'terminal' | 'chat' | 'devices' | 'gsm-evil' | 'logs'): void {
+export function toggleBottomTab(tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'devices'): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }
 

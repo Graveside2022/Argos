@@ -8,29 +8,32 @@
 
 .panel-header {
 	padding: var(--space-4);
-	border-bottom: 1px solid var(--palantir-border-subtle);
+	border-bottom: 1px solid var(--border);
 }
 
 .panel-title {
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-semibold);
-	letter-spacing: var(--letter-spacing-widest);
-	color: var(--palantir-text-secondary);
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	color: var(--foreground-secondary, #888888);
 }
 
 .panel-section {
 	padding: var(--space-4);
-	border-bottom: 1px solid var(--palantir-border-subtle);
+	border-bottom: 1px solid var(--border);
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-3);
 }
 
 .section-label {
-	font-size: var(--text-xs);
-	font-weight: var(--font-weight-semibold);
-	letter-spacing: var(--letter-spacing-widest);
-	color: var(--palantir-text-tertiary);
+	font-family: var(--font-mono, 'Fira Code', monospace);
+	font-size: 9px;
+	font-weight: 600;
+	letter-spacing: 1.2px;
+	text-transform: uppercase;
+	color: var(--foreground-secondary, #888888);
 }
 
 .toggle-row {
@@ -43,7 +46,7 @@
 
 .toggle-label {
 	font-size: var(--text-sm);
-	color: var(--palantir-text-primary);
+	color: var(--foreground);
 }
 
 .band-label {
@@ -61,7 +64,7 @@
 
 .band-range {
 	font-size: var(--text-xs);
-	color: var(--palantir-text-tertiary);
+	color: var(--foreground-tertiary, #999999);
 }
 
 /* Toggle switch */
@@ -69,8 +72,8 @@
 	width: 32px;
 	height: 18px;
 	border-radius: 9px;
-	background: var(--palantir-bg-elevated);
-	border: 1px solid var(--palantir-border-default);
+	background: var(--surface-elevated, #151515);
+	border: 1px solid var(--border);
 	cursor: pointer;
 	position: relative;
 	transition: all 0.15s ease;
@@ -79,8 +82,8 @@
 }
 
 .toggle-switch.on {
-	background: var(--palantir-accent);
-	border-color: var(--palantir-accent);
+	background: var(--primary);
+	border-color: var(--primary);
 }
 
 .toggle-knob {
@@ -90,7 +93,7 @@
 	width: 12px;
 	height: 12px;
 	border-radius: 50%;
-	background: var(--palantir-text-secondary);
+	background: var(--foreground-secondary, #888888);
 	transition:
 		transform 0.15s ease,
 		background 0.15s ease;
@@ -98,7 +101,7 @@
 
 .toggle-switch.on .toggle-knob {
 	transform: translateX(14px);
-	background: var(--palantir-text-on-accent);
+	background: var(--foreground);
 }
 
 /* Map Provider Styles */
@@ -114,15 +117,15 @@
 	align-items: center;
 	gap: 6px;
 	padding: 8px;
-	background: var(--palantir-bg-subtle);
-	border: 1px solid var(--palantir-border-default);
+	background: var(--card);
+	border: 1px solid var(--border);
 	border-radius: 4px;
 	cursor: pointer;
 	transition: all 0.2s;
 }
 
 .provider-btn:hover:not(:disabled) {
-	background: var(--palantir-bg-hover);
+	background: var(--surface-hover, #1e1e1e);
 }
 
 .provider-btn:disabled {
@@ -131,8 +134,8 @@
 }
 
 .provider-btn.active {
-	background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
-	border-color: var(--palantir-accent);
+	background: color-mix(in srgb, var(--primary) 15%, transparent);
+	border: 2px solid var(--primary);
 }
 
 .provider-icon {
@@ -153,7 +156,7 @@
 
 .provider-name {
 	font-size: var(--text-status);
-	color: var(--palantir-text-primary);
+	color: var(--foreground);
 }
 
 .custom-input-row {
@@ -164,18 +167,18 @@
 
 .custom-input-row input {
 	flex: 1;
-	background: var(--palantir-bg-default);
-	border: 1px solid var(--palantir-border-default);
+	background: var(--background);
+	border: 1px solid var(--border);
 	border-radius: 4px;
 	padding: 4px 8px;
 	font-size: 11px;
-	color: var(--palantir-text-primary);
+	color: var(--foreground);
 }
 
 .apply-btn {
-	background: var(--palantir-bg-elevated);
-	border: 1px solid var(--palantir-border-default);
-	color: var(--palantir-text-primary);
+	background: var(--surface-elevated, #151515);
+	border: 1px solid var(--border);
+	color: var(--foreground);
 	font-size: var(--text-status);
 	padding: 0 8px;
 	border-radius: 4px;
@@ -196,27 +199,27 @@
 	gap: 4px;
 	padding: 6px;
 	background: transparent;
-	border: 1px solid var(--palantir-border-default);
+	border: 1px solid var(--border);
 	border-radius: 4px;
 	cursor: pointer;
 	transition: all 0.2s;
 }
 
 .vis-btn:hover {
-	background: var(--palantir-bg-hover);
+	background: var(--surface-hover, #1e1e1e);
 }
 
 .vis-btn.active {
-	background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
-	border-color: var(--palantir-accent);
+	background: color-mix(in srgb, var(--interactive) 15%, transparent);
+	border-color: var(--interactive);
 }
 
 .vis-icon {
 	width: 20px;
 	height: 20px;
 	border-radius: 4px;
-	background: var(--palantir-bg-elevated);
-	color: var(--palantir-text-secondary);
+	background: var(--surface-elevated, #151515);
+	color: var(--foreground-secondary, #888888);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -225,15 +228,15 @@
 }
 
 .vis-btn.active .vis-icon {
-	background: var(--palantir-accent);
-	color: var(--palantir-text-on-accent);
+	background: var(--interactive);
+	color: var(--foreground);
 }
 
 .vis-name {
 	font-size: var(--text-section);
-	color: var(--palantir-text-secondary);
+	color: var(--foreground-secondary, #888888);
 }
 
 .vis-btn.active .vis-name {
-	color: var(--palantir-text-primary);
+	color: var(--foreground);
 }

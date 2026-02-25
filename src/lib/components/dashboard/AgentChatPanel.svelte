@@ -91,7 +91,7 @@
 			onkeydown={handleKeydown}
 			placeholder={llmProvider === 'unavailable'
 				? 'Agent unavailable. Configure ANTHROPIC_API_KEY in environment.'
-				: 'Type a message (Enter to send, Shift+Enter for new line)...'}
+				: 'Type a message...'}
 			disabled={isStreaming || llmProvider === 'unavailable'}
 			class="chat-input"
 			rows="1"
@@ -195,13 +195,14 @@
 
 	.chat-input {
 		flex: 1;
+		height: 32px;
 		background: var(--background);
 		border: 1px solid var(--border);
 		border-radius: 4px;
 		color: var(--foreground);
-		padding: 8px 12px;
-		font-family: inherit;
-		font-size: var(--text-brand);
+		padding: 6px 12px;
+		font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
+		font-size: 13px;
 		resize: none;
 		outline: none;
 	}
@@ -219,18 +220,19 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 40px;
-		height: auto;
-		background: var(--primary);
+		width: 32px;
+		height: 32px;
+		background: var(--interactive, #4a8af4);
 		border: none;
 		border-radius: 4px;
-		color: var(--primary-foreground);
+		color: white;
 		cursor: pointer;
+		flex-shrink: 0;
 		transition: background 0.1s;
 	}
 
 	.send-btn:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 85%, white);
+		background: color-mix(in srgb, var(--interactive, #4a8af4) 85%, white);
 	}
 
 	.send-btn:disabled {

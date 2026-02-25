@@ -9,7 +9,7 @@
 </script>
 
 <section class="panel-section">
-	<div class="section-label">GPS POSITION</div>
+	<h3 class="section-header">GPS POSITION</h3>
 	{#if status.hasGPSFix}
 		<div class="info-grid">
 			<div class="info-item">
@@ -51,11 +51,14 @@
 		gap: var(--space-3);
 	}
 
-	.section-label {
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-tertiary);
+	.section-header {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--foreground-secondary, #888888);
+		margin: 0;
 	}
 
 	.info-grid {

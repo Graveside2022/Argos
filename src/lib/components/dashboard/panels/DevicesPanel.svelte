@@ -167,6 +167,6 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--palantir-bg-surface);
+		background: var(--card);
 	}
 </style>

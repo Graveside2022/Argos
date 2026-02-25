@@ -250,42 +250,38 @@
 	}
 </script>
 
-<div class="flex flex-col min-h-screen bg-background text-foreground">
-	<!-- Header -->
+<div class="gsm-scanner" class:gsm-active={imsiCaptureActive}>
 	<GsmHeader {isActive} {buttonText} onscanbutton={handleScanButton} />
 
-	<!-- IMSI Capture Panel (shows after scan starts IMSI capture) — displayed first -->
 	{#if imsiCaptureActive}
-		<TowerTable {groupedTowers} {towerLookupAttempted} {selectedFrequency} />
-	{/if}
-
-	<!-- Frequency Selector Panel (Compact) - Hidden when IMSI capture is active -->
-	{#if !imsiCaptureActive}
-		<div class="frequency-panel-compact">
-			<!-- Scan Results Table -->
+		<!-- Active State: IMSI capture table + live frames -->
+		<div class="imsi-capture-panel">
+			<TowerTable {groupedTowers} {towerLookupAttempted} {selectedFrequency} />
+		</div>
+		<div class="live-frames-panel">
+			<div class="panel-header">LIVE FRAMES</div>
+			<LiveFramesConsole {gsmFrames} {activityStatus} />
+		</div>
+	{:else}
+		<!-- Empty/Scanning State: scan results + console -->
+		<div class="scan-results-panel">
 			<ScanResultsTable
 				{scanResults}
 				{selectedFrequency}
 				onselect={(freq) => gsmEvilStore.setSelectedFrequency(freq)}
 			/>
-
-			<!-- Scan Progress Console -->
-			<ScanConsole {scanProgress} {isScanning} />
 		</div>
-	{/if}
-
-	<!-- Live GSM Frames (shows after scan starts IMSI capture) -->
-	{#if imsiCaptureActive}
-		<LiveFramesConsole {gsmFrames} {activityStatus} />
+		<div class="console-panel">
+			<div class="console-header">CONSOLE</div>
+			<div class="console-body">
+				<ScanConsole {scanProgress} {isScanning} />
+			</div>
+		</div>
 	{/if}
 </div>
 
 <ErrorDialog bind:open={errorDialogOpen} message={errorDialogMessage} />
 
 <style>
-	.frequency-panel-compact {
-		background: linear-gradient(135deg, var(--color-muted) 0%, var(--color-background) 100%);
-		border-bottom: 1px solid var(--color-border);
-		padding: 0.75rem 1rem;
-	}
+	@import './gsm-evil-page.css';
 </style>

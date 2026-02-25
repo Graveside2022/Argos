@@ -55,7 +55,9 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 8px 12px;
+		height: 36px;
+		min-height: 36px;
+		padding: 0 12px;
 		background: var(--card);
 		border-bottom: 1px solid var(--border);
 	}
@@ -67,7 +69,7 @@
 	}
 
 	.agent-icon {
-		color: var(--primary);
+		color: var(--interactive, #4a8af4);
 	}
 
 	.toolbar-title {
@@ -102,13 +104,14 @@
 		height: 28px;
 		background: transparent;
 		border: none;
-		color: var(--foreground);
+		color: var(--muted-foreground);
 		cursor: pointer;
 		border-radius: 4px;
 		transition: background 0.1s;
 	}
 
 	.toolbar-btn:hover {
-		background: var(--accent);
+		background: var(--surface-hover, #1e1e1e);
+		color: var(--foreground);
 	}
 </style>

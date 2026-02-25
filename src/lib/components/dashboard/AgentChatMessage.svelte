@@ -75,13 +75,12 @@
 	}
 
 	.message.user .message-content {
-		background: color-mix(in srgb, var(--accent) 60%, transparent);
-		border-left: 3px solid var(--chart-2);
+		background: var(--card);
+		border: 1px solid var(--border);
 	}
 
 	.message.assistant .message-content {
-		background: var(--card);
-		border-left: 3px solid var(--chart-4);
+		background: var(--surface-hover, #1e1e1e);
 	}
 
 	.message.system .message-content {

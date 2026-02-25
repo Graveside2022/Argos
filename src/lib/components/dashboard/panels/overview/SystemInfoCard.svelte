@@ -8,153 +8,165 @@
 	}
 
 	let { systemInfo }: Props = $props();
+
+	function meterColor(value: number, warn: number, crit: number): string {
+		if (value > crit) return 'var(--status-error, #C45B4A)';
+		if (value > warn) return 'var(--status-warning, #D4A054)';
+		return 'var(--primary)';
+	}
 </script>
 
-<section class="panel-section">
-	<div class="section-label">SYSTEM</div>
-	{#if systemInfo}
+{#if systemInfo}
+	<!-- CPU Section -->
+	<section class="sidebar-section">
+		<h3 class="section-header">CPU</h3>
+		<div class="hero-metric">{systemInfo.cpu.usage.toFixed(0)}%</div>
+		<div class="meter-bar">
+			<div
+				class="meter-fill"
+				style="width: {systemInfo.cpu.usage}%; background: {meterColor(
+					systemInfo.cpu.usage,
+					50,
+					80
+				)}"
+			></div>
+		</div>
+		<div class="section-detail">
+			{systemInfo.cpu.cores} cores &middot; {systemInfo.cpu.model}
+		</div>
+	</section>
+
+	<!-- Disk Section -->
+	<section class="sidebar-section">
+		<h3 class="section-header">DISK</h3>
+		<div class="hero-metric">{formatBytes(systemInfo.storage.used)}</div>
+		<div class="meter-bar">
+			<div
+				class="meter-fill"
+				style="width: {systemInfo.storage.percentage}%; background: {meterColor(
+					systemInfo.storage.percentage,
+					75,
+					90
+				)}"
+			></div>
+		</div>
+		<div class="section-detail">
+			{formatBytes(systemInfo.storage.total)} total &middot; {systemInfo.storage.percentage}%
+			used
+		</div>
+	</section>
+
+	<!-- Memory Section -->
+	<section class="sidebar-section">
+		<h3 class="section-header">MEMORY</h3>
+		<div class="hero-metric">{formatBytes(systemInfo.memory.used)}</div>
+		<div class="meter-bar">
+			<div
+				class="meter-fill"
+				style="width: {systemInfo.memory.percentage}%; background: {meterColor(
+					systemInfo.memory.percentage,
+					70,
+					85
+				)}"
+			></div>
+		</div>
+		<div class="section-detail">
+			{formatBytes(systemInfo.memory.total)} total &middot; {systemInfo.memory.percentage.toFixed(
+				0
+			)}% used
+		</div>
+	</section>
+
+	<!-- Power Section -->
+	<section class="sidebar-section">
+		<h3 class="section-header">POWER</h3>
+		{#if systemInfo.battery}
+			<div class="hero-metric">{systemInfo.battery.level}%</div>
+			<div class="meter-bar">
+				<div
+					class="meter-fill"
+					style="width: {systemInfo.battery.level}%; background: {meterColor(
+						100 - systemInfo.battery.level,
+						60,
+						80
+					)}"
+				></div>
+			</div>
+			<div class="section-detail">
+				{systemInfo.battery.charging ? 'Charging' : 'On battery'}
+			</div>
+		{:else}
+			<div class="section-detail">
+				AC Power &middot; {systemInfo.temperature != null
+					? `${systemInfo.temperature.toFixed(1)}°C`
+					: '—'}
+			</div>
+		{/if}
+	</section>
+
+	<!-- Network Status Section -->
+	<section class="sidebar-section">
+		<h3 class="section-header">NETWORK STATUS</h3>
 		<div class="info-grid">
+			<div class="info-item">
+				<span class="info-label">IP</span>
+				<span class="info-value">{systemInfo.ip}</span>
+			</div>
+			{#if systemInfo.tailscaleIp}
+				<div class="info-item">
+					<span class="info-label">TAILSCALE</span>
+					<span class="info-value">{systemInfo.tailscaleIp}</span>
+				</div>
+			{/if}
 			<div class="info-item">
 				<span class="info-label">HOST</span>
 				<span class="info-value">{systemInfo.hostname}</span>
 			</div>
 			<div class="info-item">
-				<span class="info-label">IP</span>
-				<span class="info-value mono">{systemInfo.ip}</span>
-			</div>
-			{#if systemInfo.tailscaleIp}
-				<div class="info-item">
-					<span class="info-label">TAILSCALE</span>
-					<span class="info-value mono">{systemInfo.tailscaleIp}</span>
-				</div>
-			{/if}
-			<div class="info-item">
 				<span class="info-label">UPTIME</span>
 				<span class="info-value">{formatUptime(systemInfo.uptime)}</span>
 			</div>
-			{#if systemInfo.temperature != null}
-				<div class="info-item">
-					<span class="info-label">TEMP</span>
-					<span class="info-value">{systemInfo.temperature.toFixed(1)}C</span>
-				</div>
-			{/if}
 		</div>
-
-		<!-- CPU -->
-		<div class="meter-row">
-			<span class="meter-label">CPU ({systemInfo.cpu.cores} cores)</span>
-			<div class="meter-bar">
-				<div
-					class="meter-fill"
-					style="width: {systemInfo.cpu.usage}%; background: {systemInfo.cpu.usage > 80
-						? 'var(--palantir-error)'
-						: systemInfo.cpu.usage > 50
-							? 'var(--palantir-warning)'
-							: 'var(--palantir-accent)'}"
-				></div>
-			</div>
-			<span class="meter-value">{systemInfo.cpu.usage.toFixed(0)}%</span>
-		</div>
-
-		<!-- Memory -->
-		<div class="meter-row">
-			<span class="meter-label">RAM</span>
-			<div class="meter-bar">
-				<div
-					class="meter-fill"
-					style="width: {systemInfo.memory.percentage}%; background: {systemInfo.memory
-						.percentage > 85
-						? 'var(--palantir-error)'
-						: 'var(--palantir-accent)'}"
-				></div>
-			</div>
-			<span class="meter-value"
-				>{systemInfo.memory.percentage.toFixed(0)}% ({formatBytes(
-					systemInfo.memory.used
-				)})</span
-			>
-		</div>
-
-		<!-- Storage -->
-		<div class="meter-row">
-			<span class="meter-label">DISK</span>
-			<div class="meter-bar">
-				<div
-					class="meter-fill"
-					style="width: {systemInfo.storage.percentage}%; background: {systemInfo.storage
-						.percentage > 90
-						? 'var(--palantir-error)'
-						: 'var(--palantir-accent)'}"
-				></div>
-			</div>
-			<span class="meter-value">{systemInfo.storage.percentage}%</span>
-		</div>
-	{:else}
+	</section>
+{:else}
+	<section class="sidebar-section">
+		<h3 class="section-header">SYSTEM</h3>
 		<div class="no-data">Loading system info...</div>
-	{/if}
-</section>
+	</section>
+{/if}
 
 <style>
-	.panel-section {
-		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+	.sidebar-section {
+		padding: 10px 14px;
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: 6px;
 	}
 
-	.section-label {
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-tertiary);
+	.section-header {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		color: var(--foreground-secondary, #888888);
+		margin: 0;
 	}
 
-	.info-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-2);
-	}
-
-	.info-item {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.info-label {
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-		letter-spacing: var(--letter-spacing-wider);
-	}
-
-	.info-value {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-primary);
-	}
-
-	.info-value.mono {
-		font-family: var(--font-mono);
+	.hero-metric {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 24px;
+		font-weight: 600;
+		color: var(--foreground);
+		line-height: 1.1;
 		font-variant-numeric: tabular-nums;
 	}
 
-	.meter-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-
-	.meter-label {
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-		min-width: 42px;
-		letter-spacing: var(--letter-spacing-wide);
-	}
-
 	.meter-bar {
-		flex: 1;
+		width: 100%;
 		height: 4px;
-		background: var(--bar-track);
+		background: var(--surface-elevated, #151515);
 		border-radius: 2px;
 		overflow: hidden;
 	}
@@ -165,18 +177,41 @@
 		transition: width 0.3s ease;
 	}
 
-	.meter-value {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--palantir-text-secondary);
-		min-width: 48px;
-		text-align: right;
+	.section-detail {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 10px;
+		color: var(--muted-foreground);
+	}
+
+	.info-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 6px;
+	}
+
+	.info-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.info-label {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 9px;
+		letter-spacing: 1px;
+		color: var(--foreground-secondary, #888888);
+	}
+
+	.info-value {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 11px;
+		color: var(--foreground);
 		font-variant-numeric: tabular-nums;
 	}
 
 	.no-data {
-		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
+		font-size: 12px;
+		color: var(--muted-foreground);
 		font-style: italic;
 	}
 </style>
