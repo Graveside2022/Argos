@@ -69,7 +69,7 @@ The latency value will be slightly higher than pure network RTT (includes server
 
 ### R6: How to eliminate `--palantir-*` CSS variables?
 
-**Decision**: Full elimination — replace every `var(--palantir-*)` reference across all **32 files** (254 refs — corrected from initial 29/206 estimate) with the direct Lunaris token. Delete the bridge file, rename utility classes file.
+**Decision**: Full elimination — replace every `var(--palantir-*)` reference across all **33 files** (292 refs — corrected from initial 29/206 estimate, then verified at 292/33 via codemap audit 2026-02-25T14:09Z) with the direct Lunaris token. Delete the bridge file, rename utility classes file.
 
 **Rationale**: The `--palantir-*` variables are defined in `src/lib/styles/palantir-design-system.css` as a pure bridge — each one just maps to an existing Lunaris token (e.g., `--palantir-bg-panel: var(--card)`). This indirection layer:
 
@@ -83,7 +83,7 @@ The Lunaris tokens are already defined in `app.css`. By replacing `var(--palanti
 - Design-code vocabulary alignment (component code matches Pencil design token names)
 - One fewer file to maintain
 
-**Scope**: **254 replacements across 32 files** (corrected from original 206/29 estimate). Includes `TAKIndicator.svelte` (12 refs, outside `dashboard/` dir), `dashboard-page.css` (1 ref), and `+page.svelte` (duplicate import). Additionally, the `:root` block defines non-palantir tokens (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) used by 274 refs across 40+ files — these MUST be migrated to `app.css` before the `:root` block is deleted. The utility classes in `palantir-design-system.css` (`.map-popup`, `.status-dot`, `.tactical-sidebar`) are kept but migrated to Lunaris tokens and the file renamed to `dashboard-utilities.css`.
+**Scope**: **292 replacements across 33 files** (231 consumer + 61 bridge; corrected from original 206/29, then 254/32 estimates). Includes `TAKIndicator.svelte` (12 refs, outside `dashboard/` dir), `dashboard-page.css` (1 ref), `symbol-layer.ts` (1 comment ref), and `+page.svelte` (duplicate import). Additionally, the `:root` block defines non-palantir tokens (`--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*`) used by 274 refs across 40+ files — these MUST be migrated to `app.css` before the `:root` block is deleted. The utility classes in `palantir-design-system.css` (`.map-popup`, `.status-dot`, `.tactical-sidebar`) are kept but migrated to Lunaris tokens and the file renamed to `dashboard-utilities.css`.
 
 **Alternatives considered**: Redefining values in place (update `--palantir-bg-panel` to point to correct hex). Lower effort but perpetuates the dead namespace. Rejected in favor of clean elimination.
 

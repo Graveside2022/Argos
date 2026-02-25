@@ -6,7 +6,7 @@
 
 ## Summary
 
-Fix **40+ discrepancies** across 8 areas between the Pencil Lunaris design (`pencil-lunaris.pen`) and the live Argos dashboard. The gap report identified systemic issues beyond the initial 7: (1) `--palantir-*` CSS variable namespace (254 refs across 32 files) must be replaced with Lunaris tokens, with 274 non-palantir token definitions safely migrated first, (2) Icon Rail needs restructuring (remove Terminal/Chat, resize to 32px hit zones, switch to Lucide icons, fix active state), (3) Bottom Panel needs fixed named tabs replacing dynamic terminal sessions, (4) Command Bar needs REC badge, callsign, and compact dots. Widget extraction from sidebar is **deferred** to a future spec. All changes are UI-only — no new APIs, no schema changes, no new dependencies.
+Fix **40+ discrepancies** across 8 areas between the Pencil Lunaris design (`pencil-lunaris.pen`) and the live Argos dashboard. The gap report identified systemic issues beyond the initial 7: (1) `--palantir-*` CSS variable namespace (292 refs across 33 files) must be replaced with Lunaris tokens, with 274 non-palantir token definitions safely migrated first, (2) Icon Rail needs restructuring (remove Terminal/Chat, resize to 32px hit zones, switch to Lucide icons, fix active state), (3) Bottom Panel needs fixed named tabs replacing dynamic terminal sessions, (4) Command Bar needs REC badge, callsign, and compact dots. Widget extraction from sidebar is **deferred** to a future spec. All changes are UI-only — no new APIs, no schema changes, no new dependencies.
 
 > [!IMPORTANT]
 > **Gap Report Reference:** See `gap_report.md` in the conversation artifacts for the complete 40-item discrepancy analysis with Pencil screenshots and code excerpts.
@@ -22,7 +22,7 @@ Fix **40+ discrepancies** across 8 areas between the Pencil Lunaris design (`pen
 **Project Type**: Web (SvelteKit monolith)
 **Performance Goals**: Command bar render < 16ms, no additional network requests on initial load
 **Constraints**: < 200MB heap, no new npm dependencies, no font additions
-**Scale/Scope**: ~38 files modified (32 palantir migration + 6 feature changes), 0 files created (aside from tests), 1 file deleted + renamed (`palantir-design-system.css` → `dashboard-utilities.css`), ~800 lines changed
+**Scale/Scope**: ~39 files modified (33 palantir migration + 6 feature changes), 0 files created (aside from tests), 1 file deleted + renamed (`palantir-design-system.css` → `dashboard-utilities.css`), ~800 lines changed
 
 ## Constitution Check
 
@@ -198,9 +198,9 @@ tests/
 
 ### Phase 7: CSS Variable Namespace Elimination (FR-009, FR-009a–c, FR-015–FR-019) — P1
 
-**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every reference across all **32 files** (254 occurrences) with direct Lunaris tokens. Safely migrate non-palantir tokens before deleting the bridge file's `:root` block. Delete `palantir-design-system.css`.
+**Goal**: Eliminate the entire `--palantir-*` CSS variable namespace. Replace every reference across all **33 files** (292 occurrences) with direct Lunaris tokens. Safely migrate non-palantir tokens before deleting the bridge file's `:root` block. Delete `palantir-design-system.css`.
 
-> **CORRECTED SCOPE**: Previous draft claimed 206 refs across 29 files. Actual grep: **230 `var(--palantir-*)` refs across 31 consumer files** + 24 internal refs in the bridge file = **254 `var(--palantir-*)` total across 32 files**. Including class names, import paths, and comments, there are 295 total "palantir" mentions across 36 files. Key out-of-dashboard files: `TAKIndicator.svelte` (12 refs), `dashboard-page.css` (1 ref), `symbol-layer.ts` (1 comment ref).
+> **CORRECTED SCOPE**: Previous draft claimed 206 refs across 29 files. Verified grep (2026-02-25T14:09Z): **231 `var(--palantir-*)` refs across 32 consumer files** + 61 refs in the bridge file itself = **292 `var(--palantir-*)` total across 33 files**. Including class names, import paths, and comments, there are 295 total "palantir" mentions across 36 files. Key out-of-dashboard files: `TAKIndicator.svelte` (12 refs), `dashboard-page.css` (1 ref), `symbol-layer.ts` (1 comment ref).
 
 **Pre-migration step (BLOCKING — must complete BEFORE `:root` deletion)**:
 
@@ -256,24 +256,25 @@ The `:root` block in `palantir-design-system.css` (lines 12-106) defines non-pal
 **Changes**:
 
 1. **Pre-migration**: Add non-palantir token definitions to `app.css`, add `--accent-muted` token, fix radius conflicts (see pre-migration steps above).
-2. All **32 component files** (`.svelte` + `.css`): Find-and-replace every `var(--palantir-*)` with `var(--lunaris-equivalent)` per mapping table above. Includes:
+2. All **33 files** (`.svelte` + `.css` + `.ts`): Find-and-replace every `var(--palantir-*)` with `var(--lunaris-equivalent)` per mapping table above. Includes:
     - 27 files in `src/lib/components/dashboard/` (`.svelte` + `.css`)
     - `src/lib/components/status/TAKIndicator.svelte` (12 refs)
     - `src/routes/dashboard/dashboard-page.css` (1 ref)
     - `src/lib/styles/dashboard.css` (12 refs)
-    - `src/lib/styles/palantir-design-system.css` (24 internal refs in utility classes)
+    - `src/lib/map/layers/symbol-layer.ts` (1 comment ref)
+    - `src/lib/styles/palantir-design-system.css` (61 internal refs — definitions + utility classes)
 3. `DashboardMap.svelte` line 257: Rename `class="palantir-popup"` to `class="map-popup"`.
 4. `+page.svelte` line 3: Remove duplicate `import '$lib/styles/palantir-design-system.css'` (already imported via `app.css`).
 5. `palantir-design-system.css`: Delete the `:root` block (lines 12-106) — safe now because tokens are in `app.css`. Migrate utility class `var(--palantir-*)` refs to direct Lunaris tokens. Rename file to `dashboard-utilities.css`.
 6. `app.css`: Update `@import './lib/styles/palantir-design-system.css'` to `@import './lib/styles/dashboard-utilities.css'`.
 7. Verify `--font-sans` resolves to `Geist` and `--font-mono` resolves to `Fira Code` (already correct in `dashboard.css`).
 
-**Scope**: 230 `var(--palantir-*)` replacements across 31 consumer files + 24 bridge-internal refs + 1 class rename + 1 import path update + 1 duplicate import removal + 1 comment cleanup + ~274 non-palantir token definitions migrated. ~500 lines changed.
+**Scope**: 231 `var(--palantir-*)` replacements across 32 consumer files + 61 bridge-internal refs (292 total across 33 files) + 1 class rename + 1 import path update + 1 duplicate import removal + 1 comment cleanup + ~274 non-palantir token definitions migrated. ~500 lines changed.
 
 **Commit strategy for Phase 7** (rollback safety):
 
 - **Commit 7a**: Add non-palantir tokens to `app.css` + fix radius conflict (safe, additive only)
-- **Commit 7b**: Migrate all `var(--palantir-*)` refs across 32 files (the big find-replace)
+- **Commit 7b**: Migrate all `var(--palantir-*)` refs across 33 files (the big find-replace)
 - **Commit 7c**: Delete `:root` block, rename file, update imports (the deletion commit — `git revert` target if needed)
 
 ### Phase 8: Icon Rail Restructuring (FR-010, FR-011, FR-012) — P2
@@ -318,7 +319,7 @@ No constitution violations requiring justification. All changes are within exist
 | Persisted `null` in localStorage overrides new default           | Low        | Medium (panels don't open)   | `persistedWritable` already uses default when key missing; users with existing `null` will see closed panels until they clear storage                                                                           |
 | Removing text labels confuses users unfamiliar with dot meanings | Low        | Low                          | Tooltip on hover; dropdown still shows full names on click                                                                                                                                                      |
 | Latency indicator adds network request overhead                  | Low        | Low                          | Piggyback on existing `/api/system/status` call, no additional request                                                                                                                                          |
-| `--palantir-*` elimination breaks non-dashboard components       | Medium     | **High**                     | **CORRECTED**: 254 refs across 32 files. TAKIndicator.svelte (12 refs) is OUTSIDE `dashboard/` dir and must be included. `dashboard-page.css` (1 ref) and `+page.svelte` (duplicate import) also need updating. |
+| `--palantir-*` elimination breaks non-dashboard components       | Medium     | **High**                     | **CORRECTED**: 292 refs across 33 files. TAKIndicator.svelte (12 refs) is OUTSIDE `dashboard/` dir and must be included. `dashboard-page.css` (1 ref) and `+page.svelte` (duplicate import) also need updating. |
 | Deleting `:root` block destroys non-palantir tokens              | **High**   | **Critical**                 | The `:root` block defines `--space-*`, `--text-*`, `--font-weight-*`, `--letter-spacing-*`, `--radius-*` used by 274 refs across 40+ files. **Pre-migration to `app.css` is mandatory before deletion.**        |
 | Radius token conflict silently changes border-radius values      | High       | Medium                       | Bridge file defines `--radius-sm: 4px` but `app.css` computes `6.4px`. Deleting bridge changes all radii. Fix: migrate fixed values to `app.css`, removing `calc()` definitions.                                |
 | `--palantir-accent-muted` cannot be simple variable swap         | Medium     | Medium                       | Uses `color-mix()` expression. New `--accent-muted` token must be defined in `app.css` before migration.                                                                                                        |
