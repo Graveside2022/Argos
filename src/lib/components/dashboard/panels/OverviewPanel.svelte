@@ -102,10 +102,7 @@
 	<!-- Section 10: Sidebar Widgets -->
 	<div class="widgets-container">
 		<SpeedTestWidget />
-		<NetworkLatencyWidget
-			connected={$kismetStore.status === 'connected'}
-			latency={systemInfo?.networkLatency ?? 0}
-		/>
+		<NetworkLatencyWidget connected={$kismetStore.status === 'running'} latency={0} />
 		<WeatherWidget />
 		<NodeMeshWidget connectedNodes={$takStatus.status === 'connected' ? 1 : 0} totalNodes={1} />
 	</div>
