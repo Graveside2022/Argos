@@ -154,7 +154,7 @@
 	.meter-bar {
 		flex: 1;
 		height: 4px;
-		background: var(--palantir-bg-elevated);
+		background: var(--bar-track);
 		border-radius: 2px;
 		overflow: hidden;
 	}

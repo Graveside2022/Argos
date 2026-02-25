@@ -142,7 +142,7 @@
 	}
 
 	.sub-row :global(td) {
-		border-top: 1px solid rgba(255, 255, 255, 0.03);
+		border-top: 1px solid var(--separator);
 	}
 
 	.sub-cell {
@@ -150,7 +150,7 @@
 	}
 
 	.sub-label {
-		font-size: 9px;
+		font-size: var(--text-section);
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: var(--letter-spacing-wide);
 		color: var(--palantir-text-tertiary);
@@ -158,6 +158,6 @@
 	}
 
 	.sub-row-parent {
-		border-top: 1px dashed rgba(255, 255, 255, 0.06);
+		border-top: 1px dashed var(--separator);
 	}
 </style>

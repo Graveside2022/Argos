@@ -7,14 +7,19 @@
 import { browser } from '$app/environment';
 
 export type ThemePalette =
-	| 'default'
+	| 'ash'
 	| 'blue'
-	| 'green'
-	| 'orange'
-	| 'red'
+	| 'blush'
+	| 'iron'
+	| 'iris'
+	| 'khaki'
+	| 'mauve'
+	| 'pewter'
+	| 'plum'
 	| 'rose'
-	| 'violet'
-	| 'yellow';
+	| 'sand'
+	| 'silver'
+	| 'violet';
 
 export type RailPosition = 'left' | 'right' | 'top' | 'bottom';
 
@@ -26,19 +31,24 @@ export interface ThemeState {
 const STORAGE_KEY = 'argos-theme';
 
 const DEFAULT_STATE: ThemeState = {
-	palette: 'default',
+	palette: 'blue',
 	railPosition: 'left'
 };
 
 const VALID_PALETTES: ThemePalette[] = [
-	'default',
+	'ash',
 	'blue',
-	'green',
-	'orange',
-	'red',
+	'blush',
+	'iron',
+	'iris',
+	'khaki',
+	'mauve',
+	'pewter',
+	'plum',
 	'rose',
-	'violet',
-	'yellow'
+	'sand',
+	'silver',
+	'violet'
 ];
 
 const VALID_RAIL_POSITIONS: RailPosition[] = ['left', 'right', 'top', 'bottom'];
@@ -77,13 +87,7 @@ function saveState(state: ThemeState): void {
 
 function applyPalette(palette: ThemePalette): void {
 	if (!browser) return;
-	const el = document.documentElement;
-
-	if (palette === 'default') {
-		delete el.dataset.palette;
-	} else {
-		el.dataset.palette = palette;
-	}
+	document.documentElement.dataset.palette = palette;
 }
 
 function applyDarkMode(): void {

@@ -107,7 +107,7 @@
 	}
 	.expand-icon {
 		display: inline-block;
-		font-size: 10px;
+		font-size: var(--text-status);
 		margin-left: var(--space-1);
 		transition: transform 0.2s ease;
 		color: var(--palantir-text-tertiary);
@@ -132,6 +132,6 @@
 	}
 	.satellite-item .dropdown-key,
 	.satellite-item .dropdown-val {
-		font-size: 10px;
+		font-size: var(--text-status);
 	}
 </style>

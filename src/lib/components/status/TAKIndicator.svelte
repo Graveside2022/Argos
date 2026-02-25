@@ -116,15 +116,15 @@
 		top: calc(100% + 4px);
 		right: 0;
 		width: 200px;
-		background: var(--palantir-bg-surface, #161b22);
-		border: 1px solid var(--palantir-border-default, #30363d);
+		background: var(--palantir-bg-surface);
+		border: 1px solid var(--palantir-border-default);
 		border-radius: 6px;
 		padding: 8px 0;
 		z-index: 50;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 	}
 	.dropdown-title {
-		font-size: 10px;
+		font-size: var(--text-status);
 		font-weight: 600;
 		letter-spacing: 0.1em;
 		color: var(--palantir-text-tertiary);

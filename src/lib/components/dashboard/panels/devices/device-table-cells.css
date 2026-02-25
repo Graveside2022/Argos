@@ -65,7 +65,7 @@
 
 .cell-secondary {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-status);
 	color: var(--palantir-text-tertiary);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -99,7 +99,7 @@
 }
 
 .vendor-text {
-	font-size: 10px;
+	font-size: var(--text-status);
 	color: var(--palantir-text-tertiary);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -110,13 +110,13 @@
 
 .mono-value {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-status);
 	color: var(--palantir-text-tertiary);
 	font-variant-numeric: tabular-nums;
 }
 
 .enc-badge {
-	font-size: 10px;
+	font-size: var(--text-status);
 	color: var(--palantir-text-tertiary);
 	letter-spacing: 0.02em;
 }

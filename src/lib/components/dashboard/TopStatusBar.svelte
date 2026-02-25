@@ -239,10 +239,10 @@
 	}
 	.app-brand {
 		font-family: var(--font-mono);
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: var(--font-weight-semibold);
-		letter-spacing: 0.14em;
-		color: var(--palantir-text-primary);
+		letter-spacing: 2px;
+		color: var(--primary);
 	}
 	.status-divider {
 		width: 1px;
@@ -258,7 +258,7 @@
 			gap: var(--space-2);
 		}
 		.app-brand {
-			font-size: 13px;
+			font-size: var(--text-brand);
 		}
 	}
 	@media (max-width: 599px) {

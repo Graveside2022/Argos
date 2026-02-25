@@ -168,7 +168,7 @@
 
 	.terminal-tab:hover,
 	.terminal-tab.active {
-		background: var(--palantir-bg-elevated, #1a1f27);
+		background: var(--palantir-bg-elevated, #2e2e2e);
 		color: var(--palantir-text-primary);
 	}
 
@@ -230,7 +230,7 @@
 	}
 
 	.toolbar-btn:hover {
-		background: var(--palantir-bg-elevated, #1a1f27);
+		background: var(--palantir-bg-elevated, #2e2e2e);
 		color: var(--palantir-text-primary);
 	}
 
@@ -257,11 +257,11 @@
 		position: absolute;
 		top: calc(100% + 4px);
 		left: 0;
-		background: var(--palantir-bg-panel, #0e1116);
-		border: 1px solid var(--palantir-border-default, #2a2f38);
+		background: var(--palantir-bg-panel);
+		border: 1px solid var(--palantir-border-default);
 		border-radius: var(--radius-md);
 		padding: var(--space-2);
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--background) 40%, transparent);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 		z-index: 1000;
 		min-width: 140px;
 	}
@@ -285,12 +285,12 @@
 	}
 
 	.dropdown-item:hover {
-		background: var(--palantir-bg-elevated, #1a1f27);
+		background: var(--palantir-bg-elevated, #2e2e2e);
 		color: var(--palantir-text-primary);
 	}
 
 	.default-badge {
-		font-size: 10px;
+		font-size: var(--text-status);
 		padding: 1px 4px;
 		background: var(--palantir-bg-elevated);
 		border-radius: var(--radius-sm);

@@ -47,7 +47,7 @@
 		background: linear-gradient(
 			to right,
 			var(--color-muted),
-			color-mix(in oklch, var(--color-muted) 80%, transparent)
+			color-mix(in srgb, var(--color-muted) 80%, transparent)
 		);
 		padding: 0.75rem 1rem;
 		display: flex;
@@ -60,10 +60,10 @@
 		padding: 1rem;
 		height: 400px;
 		overflow-y: auto;
-		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+		font-family: var(--font-primary, monospace);
 		font-size: 0.875rem;
 		line-height: 1.6;
-		background: color-mix(in oklch, var(--color-background) 80%, black);
+		background: color-mix(in srgb, var(--color-background) 80%, black);
 	}
 
 	.console-line {
@@ -115,7 +115,7 @@
 	}
 
 	.console-body::-webkit-scrollbar-thumb:hover {
-		background: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
+		background: color-mix(in srgb, var(--color-muted-foreground) 30%, transparent);
 	}
 
 	@keyframes blink {

@@ -208,7 +208,7 @@
 	}
 	@media (max-width: 767px) {
 		.status-label {
-			font-size: 10px;
+			font-size: var(--text-status);
 		}
 		.sat-count {
 			display: none;

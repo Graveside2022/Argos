@@ -78,7 +78,7 @@
 					>
 						<Select.Trigger class="w-[140px] h-8 text-xs">
 							{paletteOptions.find((p) => p.value === themeStore.palette)?.label ??
-								'Default'}
+								'Blue ★'}
 						</Select.Trigger>
 						<Select.Content>
 							{#each paletteOptions as option (option.value)}

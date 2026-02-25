@@ -215,7 +215,7 @@
 
 	.client-count {
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: var(--text-section);
 		color: var(--palantir-accent);
 		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
 		padding: 0 4px;

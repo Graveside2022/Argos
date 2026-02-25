@@ -59,7 +59,7 @@ Correctness over speed. Reliability over features. Clarity over cleverness.
 **3.5 Organization**: Tests live alongside source (`.test.ts`). Integration in `tests/`.
 
 ## Article IV — User Experience
-**4.1 Design Language**: Lunaris design system. Military-grade enterprise dashboard. Dark mode only. Dual-font (Fira Code data, Geist UI chrome). Steel blue accent (#809AD0). Desaturated semantic status colors. Visual hierarchy with consistent spacing tokens. Reference: `specs/012-lunaris-ui-redesign/design-reference.md`.
+**4.1 Design Language**: Lunaris design system. Military-grade enterprise dashboard. Dark mode only. Dual-font (Fira Code data, Geist UI chrome). Steel blue accent (default `--primary`: `#A8B8E0`, swappable via 13 MIL-STD palette themes). Desaturated semantic status colors. Visual hierarchy with consistent spacing tokens. Reference: `specs/012-lunaris-ui-redesign/design-reference.md`.
 **4.2 Reuse Workflow**: Search `src/lib/` -> Extend existing -> Create new only if necessary. Document decision.
 **4.3 State Communication**: Handle ALL states: Empty, Loading, Default, Active, Error, Success, Disabled, Disconnected. No generic placeholders.
 **4.4 Accessibility**: Contrast ratios. Semantic HTML. Keyboard navigation. Screen reader support. Reduced motion.

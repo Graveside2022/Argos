@@ -21,7 +21,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--palantir-bg-panel, #0e1116);
+		background: var(--palantir-bg-panel, #1a1a1a);
 	}
 
 	.logs-header {
@@ -31,8 +31,8 @@
 		height: 32px;
 		min-height: 32px;
 		padding: 0 var(--space-3);
-		background: var(--palantir-bg-surface, #12161c);
-		border-bottom: 1px solid var(--palantir-border-subtle, #1e2228);
+		background: var(--palantir-bg-surface, #1a1a1a);
+		border-bottom: 1px solid var(--palantir-border-subtle, #2e2e2e);
 	}
 
 	.logs-title {

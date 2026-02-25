@@ -178,8 +178,7 @@
 			cursorBlink: true,
 			cursorStyle: 'bar',
 			fontSize: 14,
-			fontFamily:
-				"'FiraCode Nerd Font', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
+			fontFamily: "'FiraCode Nerd Font', 'Fira Code', 'JetBrains Mono', monospace",
 			lineHeight: 1.2,
 			scrollback: 10000,
 			theme: buildTerminalTheme()
@@ -279,10 +278,10 @@
 		background: transparent;
 	}
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar-thumb) {
-		background: rgba(255, 255, 255, 0.1);
+		background: var(--hover-tint);
 		border-radius: 4px;
 	}
 	.terminal-container :global(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-		background: rgba(255, 255, 255, 0.2);
+		background: var(--secondary);
 	}
 </style>
