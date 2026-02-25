@@ -5,8 +5,7 @@
 
 	let { latencyMs }: Props = $props();
 
-	// Rough jitter/loss estimates derived from latency bucket
-	let jitterMs = $derived(latencyMs !== null ? Math.round(latencyMs * 0.07) : null);
+	let jitterMs = $derived(latencyMs !== null ? (latencyMs * 0.07).toFixed(1) : null);
 	let qualityLabel = $derived(
 		latencyMs === null
 			? 'Unknown'
@@ -30,7 +29,11 @@
 						: 'error'
 	);
 
-	const nowUtc = new Date().toISOString().slice(11, 16) + 'Z';
+	const nowUtc =
+		new Date().getUTCHours().toString().padStart(2, '0') +
+		':' +
+		new Date().getUTCMinutes().toString().padStart(2, '0') +
+		'Z';
 </script>
 
 <div class="popup">
@@ -40,10 +43,15 @@
 	</div>
 
 	<div class="status-row">
-		<span class="status-dot connected"></span>
+		<span class="signal-bars">
+			<span class="bar bar-1" class:active={latencyMs !== null}></span>
+			<span class="bar bar-2" class:active={latencyMs !== null && latencyMs < 300}></span>
+			<span class="bar bar-3" class:active={latencyMs !== null && latencyMs < 120}></span>
+			<span class="bar bar-4" class:active={latencyMs !== null && latencyMs < 50}></span>
+		</span>
 		<span class="status-label">Connected</span>
 		{#if latencyMs !== null}
-			<span class="status-value">– {latencyMs}ms</span>
+			<span class="status-value">— {latencyMs}ms</span>
 		{/if}
 	</div>
 
@@ -56,7 +64,7 @@
 
 	<div class="row">
 		<span class="key">Jitter</span>
-		<span class="val">{jitterMs !== null ? `${jitterMs}.2 ms` : '--'}</span>
+		<span class="val">{jitterMs !== null ? `${jitterMs} ms` : '--'}</span>
 	</div>
 	<div class="row">
 		<span class="key">Packet Loss</span>
@@ -68,7 +76,7 @@
 	<div class="footer">
 		<span class="quality-dot {qualityClass}"></span>
 		<span class="quality-label">{qualityLabel}</span>
-		<span class="footer-time">– {nowUtc}</span>
+		<span class="footer-time">· {nowUtc}</span>
 		<button class="action-btn">↺ Ping</button>
 	</div>
 </div>
@@ -76,11 +84,11 @@
 <style>
 	.popup {
 		position: absolute;
-		bottom: calc(100% + 6px);
+		top: calc(100% + 6px);
 		right: 0;
 		min-width: 240px;
-		background: var(--card, #1a1a1a);
-		border: 1px solid var(--border, #2e2e2e);
+		background: var(--card);
+		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 12px;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -124,15 +132,37 @@
 		color: var(--foreground);
 	}
 
-	.status-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		flex-shrink: 0;
+	.signal-bars {
+		display: flex;
+		align-items: flex-end;
+		gap: 1px;
+		height: 12px;
 	}
 
-	.status-dot.connected {
-		background: var(--success, #8bbfa0);
+	.bar {
+		width: 3px;
+		border-radius: 1px;
+		background: var(--text-inactive);
+	}
+
+	.bar-1 {
+		height: 4px;
+	}
+
+	.bar-2 {
+		height: 6px;
+	}
+
+	.bar-3 {
+		height: 9px;
+	}
+
+	.bar-4 {
+		height: 12px;
+	}
+
+	.bar.active {
+		background: var(--success);
 	}
 
 	.status-label {
@@ -154,7 +184,7 @@
 	.metric-label {
 		font-family: var(--font-mono);
 		font-size: 10px;
-		color: var(--primary, #a8b8e0);
+		color: var(--primary);
 		letter-spacing: 0.5px;
 	}
 
@@ -167,7 +197,7 @@
 
 	.divider {
 		height: 1px;
-		background: var(--border, #2e2e2e);
+		background: var(--border);
 		margin: 2px 0;
 	}
 
@@ -204,23 +234,23 @@
 	}
 
 	.quality-dot.success {
-		background: var(--success, #8bbfa0);
+		background: var(--success);
 	}
 
 	.quality-dot.warn-low {
-		background: #d4a054;
+		background: var(--warning);
 	}
 
 	.quality-dot.warn {
-		background: var(--warning, #d4a054);
+		background: var(--warning);
 	}
 
 	.quality-dot.error {
-		background: var(--destructive, #ff5c33);
+		background: var(--destructive);
 	}
 
 	.quality-dot.muted {
-		background: var(--muted-foreground, #555);
+		background: var(--text-inactive);
 	}
 
 	.quality-label {
@@ -238,7 +268,7 @@
 
 	.action-btn {
 		background: none;
-		border: 1px solid var(--border, #2e2e2e);
+		border: 1px solid var(--border);
 		border-radius: 4px;
 		color: var(--foreground);
 		font-family: var(--font-mono);
@@ -248,6 +278,6 @@
 	}
 
 	.action-btn:hover {
-		background: var(--surface-hover, #2a2a2a);
+		background: var(--surface-hover);
 	}
 </style>

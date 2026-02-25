@@ -137,7 +137,7 @@
 		height: 24px;
 		background: transparent;
 		border: none;
-		color: #666666;
+		color: var(--muted-foreground);
 		cursor: pointer;
 		border-radius: 4px;
 		flex-shrink: 0;

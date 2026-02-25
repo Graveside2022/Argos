@@ -1,3 +1,4 @@
+import { reverseGeocode } from '$lib/components/dashboard/status/status-bar-data';
 import { GPSApiResponseSchema } from '$lib/schemas/rf';
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
@@ -11,6 +12,9 @@ export type { GPSApiResponse, GPSPositionData } from '$lib/gps/types';
 export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;
 	private readonly UPDATE_INTERVAL = 2000; // 2 seconds
+	private lastGeoLat = 0;
+	private lastGeoLon = 0;
+	private cachedLocationName = '';
 
 	/** Convert fix code to human-readable fix type */
 	private static resolveFixType(fix: number): string {
@@ -60,6 +64,9 @@ export class GPSService {
 		const d = { ...GPSService.GPS_FIELD_DEFAULTS, ...data };
 		const fixType = GPSService.resolveFixType(d.fix);
 
+		const locationName = this.cachedLocationName;
+		const flag = detectCountry(position.lat, position.lon).flag;
+
 		updateGPSPosition(position);
 		updateGPSStatus({
 			hasGPSFix: d.fix >= 2,
@@ -70,10 +77,30 @@ export class GPSService {
 			heading: d.heading,
 			speed: d.speed,
 			altitude: data.altitude ?? null,
-			currentCountry: detectCountry(position.lat, position.lon),
+			currentCountry: { name: locationName, flag },
 			formattedCoords: formatCoordinates(position.lat, position.lon),
 			mgrsCoord: latLonToMGRS(position.lat, position.lon)
 		});
+
+		// Fire async reverse geocode — updates store when resolved
+		void this.updateLocationName(position.lat, position.lon);
+	}
+
+	/** Call reverse geocode API and update store with city name. */
+	private async updateLocationName(lat: number, lon: number): Promise<void> {
+		const name = await reverseGeocode(
+			lat,
+			lon,
+			this.lastGeoLat,
+			this.lastGeoLon,
+			this.cachedLocationName !== ''
+		);
+		if (name) {
+			this.cachedLocationName = name;
+			this.lastGeoLat = lat;
+			this.lastGeoLon = lon;
+			updateGPSStatus({ currentCountry: { name, flag: detectCountry(lat, lon).flag } });
+		}
 	}
 
 	async updateGPSPosition(): Promise<void> {

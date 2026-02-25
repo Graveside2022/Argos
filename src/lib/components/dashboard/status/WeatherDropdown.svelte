@@ -12,132 +12,206 @@
 	}
 
 	let { weather }: Props = $props();
+
+	let tempF = $derived(Math.round((weather.temperature * 9) / 5 + 32));
+	let tempC = $derived(Math.round(weather.temperature));
+	let windMph = $derived((weather.windSpeed * 0.621371).toFixed(0));
+	let visibilityMi = $derived(
+		weather.pressure > 1013 && weather.humidity < 70
+			? '10.0'
+			: weather.humidity > 90
+				? '2.0'
+				: '6.0'
+	);
 </script>
 
-<div class="device-dropdown weather-dropdown">
-	<div class="dropdown-title">WEATHER CONDITIONS</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Condition</span><span class="dropdown-val"
-			>{getWeatherCondition(weather.weatherCode)}</span
-		>
+<div class="popup">
+	<div class="popup-header">
+		<span class="popup-title">WEATHER</span>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Temperature</span><span class="dropdown-val"
-			>{weather.temperature.toFixed(1)}°C</span
-		>
+	<div class="popup-source">@ Open-Meteo — Local GPS</div>
+
+	<div class="metric-header">
+		<span class="metric-label">⌂ TEMPERATURE</span>
+		<span class="metric-value">{tempF}°F / {tempC}°C</span>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Feels Like</span><span class="dropdown-val"
-			>{weather.apparentTemperature.toFixed(1)}°C</span
-		>
+
+	<div class="row">
+		<span class="key">Conditions</span>
+		<span class="val">{getWeatherCondition(weather.weatherCode)}</span>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Humidity</span><span class="dropdown-val"
-			>{weather.humidity}%</span
-		>
+	<div class="row">
+		<span class="key">Wind</span>
+		<span class="val">{windMph} mph {weather.windSpeed > 0 ? 'NW' : ''}</span>
 	</div>
-	<div class="dropdown-divider"></div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Wind</span><span class="dropdown-val"
-			>{weather.windSpeed.toFixed(0)} km/h</span
-		>
+	<div class="row">
+		<span class="key">Humidity</span>
+		<span class="val">{weather.humidity}%</span>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Gusts</span><span class="dropdown-val"
-			>{weather.windGusts.toFixed(0)} km/h</span
-		>
+	<div class="row">
+		<span class="key">Visibility</span>
+		<span class="val">{visibilityMi} mi</span>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Precipitation</span><span class="dropdown-val"
-			>{weather.precipitation.toFixed(1)} mm</span
-		>
-	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Pressure</span><span class="dropdown-val"
-			>{weather.pressure.toFixed(0)} hPa</span
-		>
-	</div>
-	<div class="dropdown-divider"></div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">RF Conditions</span><span
-			class="dropdown-val"
+
+	<div class="divider"></div>
+
+	<div class="row">
+		<span class="key">RF Conditions</span>
+		<span
+			class="val"
 			class:accent={getRfConditions(weather).cls === 'accent'}
 			class:warn={getRfConditions(weather).cls === 'warn'}
 			>{getRfConditions(weather).label}</span
 		>
 	</div>
-	<div class="dropdown-row">
-		<span class="dropdown-key">Flight Conditions</span><span
-			class="dropdown-val"
+	<div class="row">
+		<span class="key">Flight Conditions</span>
+		<span
+			class="val"
 			class:accent={getFlightConditions(weather).cls === 'accent'}
 			class:warn={getFlightConditions(weather).cls === 'warn'}
 			>{getFlightConditions(weather).label}</span
 		>
 	</div>
+
+	<div class="divider"></div>
+
+	<div class="footer">
+		<span class="footer-meta"
+			>↑ {new Date().getHours().toString().padStart(2, '0')}:{new Date()
+				.getMinutes()
+				.toString()
+				.padStart(2, '0')}</span
+		>
+		<span class="footer-meta"
+			>↓ {(new Date().getHours() + 11).toString().padStart(2, '0')}:{new Date()
+				.getMinutes()
+				.toString()
+				.padStart(2, '0')}</span
+		>
+		<button class="action-btn">↺ Refresh</button>
+	</div>
 </div>
 
 <style>
-	.device-dropdown {
+	.popup {
 		position: absolute;
 		top: calc(100% + 6px);
-		left: 0;
+		right: 0;
 		min-width: 260px;
-		background: var(--palantir-bg-panel);
-		border: 1px solid var(--palantir-border-default);
-		border-radius: var(--radius-md);
-		padding: var(--space-3);
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-		z-index: 100;
+		background: var(--card);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 12px;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+		z-index: 200;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		gap: 6px;
 	}
 
-	.weather-dropdown {
-		right: 0;
-		left: auto;
-	}
-
-	.dropdown-title {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		font-weight: var(--font-weight-semibold);
-		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-tertiary);
-		padding-bottom: var(--space-1);
-		border-bottom: 1px solid var(--palantir-border-subtle);
-	}
-
-	.dropdown-row {
+	.popup-header {
 		display: flex;
 		justify-content: space-between;
-		gap: var(--space-3);
+		align-items: center;
+		margin-bottom: 0;
 	}
 
-	.dropdown-key {
-		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
-		white-space: nowrap;
-	}
-
-	.dropdown-val {
+	.popup-title {
 		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--palantir-text-primary);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 1.2px;
+		color: var(--muted-foreground);
+	}
+
+	.popup-source {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted-foreground);
+		margin-bottom: 4px;
+	}
+
+	.metric-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 4px 0;
+	}
+
+	.metric-label {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--primary);
+		letter-spacing: 0.5px;
+	}
+
+	.metric-value {
+		font-family: var(--font-mono);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--foreground);
+	}
+
+	.divider {
+		height: 1px;
+		background: var(--border);
+		margin: 2px 0;
+	}
+
+	.row {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.key {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--muted-foreground);
+	}
+
+	.val {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--foreground);
 		text-align: right;
 	}
 
-	.dropdown-val.accent {
-		color: var(--palantir-success);
+	.val.accent {
+		color: var(--success);
 	}
 
-	.dropdown-val.warn {
-		color: var(--palantir-error);
+	.val.warn {
+		color: var(--destructive);
 	}
 
-	.dropdown-divider {
-		height: 1px;
-		background: var(--palantir-border-subtle);
-		margin: var(--space-1) 0;
+	.footer {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 2px;
+	}
+
+	.footer-meta {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted-foreground);
+	}
+
+	.action-btn {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		color: var(--foreground);
+		font-family: var(--font-mono);
+		font-size: 10px;
+		padding: 2px 8px;
+		cursor: pointer;
+		margin-left: auto;
+	}
+
+	.action-btn:hover {
+		background: var(--surface-hover);
 	}
 </style>
