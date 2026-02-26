@@ -84,10 +84,12 @@ src/lib/components/dashboard/map/
 
 # ── Modified files ─────────────────────────────────────────────
 
-src/lib/types/rf-range.ts                           # MODIFY — Add viewshed-specific fields to store state
-src/lib/stores/dashboard/rf-range-store.ts           # MODIFY — Add viewshed settings to persisted state
+src/lib/components/dashboard/panels/viewshed/
+    ├── DTEDStatus.svelte                            # NEW — DTED tile status indicator
+    ├── ViewshedControls.svelte                      # NEW — Height AGL + Radius sliders
+    └── OpacityControls.svelte                       # NEW — Green/Red opacity + Adjust Together
 src/lib/components/dashboard/panels/
-    └── LineOfSightView.svelte                       # REWRITE — Replace Friis UI with viewshed controls
+    └── LineOfSightView.svelte                       # REWRITE — Composition shell for sub-components
 src/lib/components/dashboard/DashboardMap.svelte     # MODIFY — Replace GeoJSON rf-range with ImageSource
 src/lib/components/dashboard/
     └── dashboard-map-logic.svelte.ts                # MODIFY — Wire viewshed derived state
@@ -178,21 +180,23 @@ src/lib/components/dashboard/map/
 
 **Goal**: Rewrite the LineOfSightView.svelte component to match ATAK-style viewshed controls.
 
+**New files** (component split — Article II.2: max 300 lines/file):
+
+- `src/lib/components/dashboard/panels/viewshed/DTEDStatus.svelte` — NEW — DTED tile status indicator: fetches `/api/viewshed/status`, shows "Loaded: X tiles covering [region]" or "No elevation data" message with guidance
+- `src/lib/components/dashboard/panels/viewshed/ViewshedControls.svelte` — NEW — Height Above Ground slider (0.5–100m) + Radius slider (100m–50km) + "RF CAPPED" badge. Reads from viewshed store, emits changes.
+- `src/lib/components/dashboard/panels/viewshed/OpacityControls.svelte` — NEW — Visible (Green) + Obstructed (Red) opacity sliders (0–100%) with "Adjust Together" toggle. Self-contained proportional linking logic.
+
 **Modified files**:
 
-- `src/lib/components/dashboard/panels/LineOfSightView.svelte` — **Full rewrite**. New layout:
+- `src/lib/components/dashboard/panels/LineOfSightView.svelte` — **Rewrite as composition shell**. Composes the three sub-components above plus retained elements:
     1. **Enable toggle** (existing pattern, retained)
-    2. **DTED Status indicator** — "Loaded: X tiles covering [region]" or "No elevation data — place DTED tiles in /data/dted/"
-    3. **Height Above Ground** — labeled slider (0.5–100m, default 2m) + numeric readout
-    4. **Radius** — labeled slider (100m–50km, default 5km) + numeric readout + "RF CAPPED" badge when RF range limits the radius
-    5. **Hardware Preset selector** (existing, retained — caps radius)
-    6. **Frequency source** (existing, retained — Auto/Manual)
-    7. **Computed RF Range readout** (existing, retained — shows max RF range)
-    8. **Opacity section header** — "OVERLAY OPACITY"
-    9. **Visible (Green) slider** — 0–100%, default 37%
-    10. **Obstructed (Red) slider** — 0–100%, default 92%
-    11. **Adjust Together toggle** — when ON, moving either slider moves the other proportionally
-    12. **Show on Map toggle** (existing pattern, syncs with `layerVisibility`)
+    2. **`<DTEDStatus />`** sub-component
+    3. **`<ViewshedControls />`** sub-component (height, radius, RF CAPPED badge)
+    4. **Hardware Preset selector** (existing, retained — caps radius)
+    5. **Frequency source** (existing, retained — Auto/Manual)
+    6. **Computed RF Range readout** (existing, retained — shows max RF range)
+    7. **`<OpacityControls />`** sub-component (green/red sliders + adjust-together)
+    8. **Show on Map toggle** (existing pattern, syncs with `layerVisibility`)
 
 - `src/lib/components/dashboard/panels/map-settings-shared.css` — Add `.opacity-slider` styles, `.dted-status` indicator styles.
 

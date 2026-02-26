@@ -163,30 +163,23 @@ interface ViewshedStoreState {
 	redOpacity: number;
 	/** Whether opacity sliders are linked */
 	adjustTogether: boolean;
-	/** Active RF range preset ID (retained from existing LOS card) */
-	activePresetId: string;
-	/** Frequency source: 'auto' (from SDR) or 'manual' (user-entered) */
-	frequencySource: FrequencySource;
-	/** Manual frequency in MHz (when frequencySource is 'manual') */
-	manualFrequencyMHz: number;
 }
 ```
+
+**Note**: Preset (`activePresetId`), frequency source, and manual frequency are NOT stored here. They remain in the existing `RFRangeStoreState` (`src/lib/stores/dashboard/rf-range-store.ts`) and are read from there by the viewshed derived state. This avoids duplication and ensures preset/frequency changes are reactive across both the old RF range logic and the new viewshed.
 
 **Persistence**: `localStorage` via `persistedWritable` (existing utility). Zod schema validates on hydration — invalid values reset to defaults.
 
 **Defaults**:
 
-| Field                | Default         | Rationale                                      |
-| -------------------- | --------------- | ---------------------------------------------- |
-| `isEnabled`          | `false`         | Overlay off by default                         |
-| `heightAglM`         | `2.0`           | Eye-level for standing operator (ATAK default) |
-| `radiusM`            | `5000`          | 5 km — practical LOS range for most terrain    |
-| `greenOpacity`       | `0.37`          | ATAK default for "seen" overlay                |
-| `redOpacity`         | `0.92`          | ATAK default for "unseen" overlay              |
-| `adjustTogether`     | `true`          | ATAK default behavior                          |
-| `activePresetId`     | `'hackrf-bare'` | First hardware preset                          |
-| `frequencySource`    | `'auto'`        | Match SDR frequency when available             |
-| `manualFrequencyMHz` | `2400`          | 2.4 GHz default                                |
+| Field            | Default | Rationale                                      |
+| ---------------- | ------- | ---------------------------------------------- |
+| `isEnabled`      | `false` | Overlay off by default                         |
+| `heightAglM`     | `2.0`   | Eye-level for standing operator (ATAK default) |
+| `radiusM`        | `5000`  | 5 km — practical LOS range for most terrain    |
+| `greenOpacity`   | `0.37`  | ATAK default for "seen" overlay                |
+| `redOpacity`     | `0.92`  | ATAK default for "unseen" overlay              |
+| `adjustTogether` | `true`  | ATAK default behavior                          |
 
 ---
 
