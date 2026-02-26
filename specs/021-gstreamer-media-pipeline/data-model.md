@@ -201,6 +201,7 @@ class SystemMetrics:
     cpu_pct: float         # CPU usage percentage (0-100)
     mem_mb: float          # Memory usage in MB
     disk_free_mb: float    # Free disk space in recordings directory
+    disk_warning: bool     # True when free space < disk_warning_threshold_mb
 ```
 
 **MQTT payload example** (matches schema from spec):
@@ -243,7 +244,8 @@ class SystemMetrics:
 	"system": {
 		"cpu_pct": 38.2,
 		"mem_mb": 512,
-		"disk_free_mb": 12400
+		"disk_free_mb": 12400,
+		"disk_warning": false
 	}
 }
 ```
