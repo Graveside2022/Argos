@@ -29,11 +29,15 @@ import {
 } from './map-geojson-helpers';
 import { createCirclePolygon, createRingPolygon } from './map-helpers';
 
-export interface RangeBand {
+/** Minimum fields needed by buildDetectionRangeGeoJSON */
+export interface RangeBandCore {
 	outerR: number;
 	innerR: number;
 	band: string;
 	color: string;
+}
+
+export interface RangeBand extends RangeBandCore {
 	rssi: string;
 	label: string;
 }
@@ -53,11 +57,11 @@ export function buildAccuracyGeoJSON(
 	};
 }
 
-/** Build concentric signal-detection range rings. */
+/** Build concentric signal-detection range rings. Accepts RangeBand or RFRangeBand. */
 export function buildDetectionRangeGeoJSON(
 	lat: number,
 	lon: number,
-	rangeBands: RangeBand[]
+	rangeBands: RangeBandCore[]
 ): FeatureCollection {
 	if (isOrigin(lat, lon)) return EMPTY_COLLECTION;
 	const features: Feature[] = [];

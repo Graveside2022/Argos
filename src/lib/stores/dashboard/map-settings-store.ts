@@ -70,3 +70,17 @@ function createMapSettingsStore() {
 }
 
 export const mapSettings = createMapSettingsStore();
+
+// ── Map Settings panel navigation ────────────────────────────────────
+
+export type MapSettingsView = 'hub' | 'provider' | 'layers' | 'line-of-sight';
+
+export const activeMapSettingsView = writable<MapSettingsView>('hub');
+
+export function navigateToMapSettingsView(view: MapSettingsView): void {
+	activeMapSettingsView.set(view);
+}
+
+export function navigateBackToHub(): void {
+	activeMapSettingsView.set('hub');
+}

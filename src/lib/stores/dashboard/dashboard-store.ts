@@ -88,14 +88,15 @@ export function togglePanel(panel: string): void {
 	activePanel.update((current) => (current === panel ? null : panel));
 }
 
-/** Map layer visibility — shared between LayersPanel and DashboardMap */
+/** Map layer visibility — shared between MapSettingsPanel and DashboardMap */
 export const layerVisibility = writable<Record<string, boolean>>({
 	deviceDots: true, // Default to Symbols now? Requirement says "Replace dots"
 	milSyms: false,
 	connectionLines: false,
 	cellTowers: false,
 	signalMarkers: false,
-	accuracyCircle: true
+	accuracyCircle: true,
+	rfRange: false
 });
 
 /** Toggle a single map layer on/off */
