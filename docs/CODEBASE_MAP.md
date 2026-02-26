@@ -178,7 +178,7 @@ Argos/
 │   │   ├── map/                   # Map utilities (layers/, symbols/, visibility-engine)
 │   │   ├── utils/                 # 19 files: logger, fetchJSON, validateForm, geo, delay, theme-colors, etc.
 │   │   ├── websocket/             # BaseWebSocket decomposed into 4 files
-│   │   └── styles/                # palantir-design-system.css (Lunaris token bridge), dashboard.css
+│   │   └── styles/                # dashboard-utilities.css (utility classes), dashboard.css
 │   ├── app.d.ts                   # Typed globalThis singletons (SweepManager, WSManager, etc.)
 │   ├── hooks.server.ts            # Security middleware chain + WebSocket upgrade
 │   ├── hooks.client.ts            # Client-side error handling
@@ -562,9 +562,9 @@ src/routes/dashboard/+page.svelte
 
 `status/` (1 .svelte):
 
-| File                  | Purpose                                                                 |
-| --------------------- | ----------------------------------------------------------------------- |
-| `TAKIndicator.svelte` | TAK connection status dot in command bar. 12 `--palantir-*` references. |
+| File                  | Purpose                                                             |
+| --------------------- | ------------------------------------------------------------------- |
+| `TAKIndicator.svelte` | TAK connection status dot in command bar. Uses Lunaris base tokens. |
 
 `ui/` — shadcn-svelte primitives (35 files): AlertDialog (11), Badge, Button, Input, Select (11), Separator, Switch, Table (8). Direct imports, no barrel files.
 
@@ -811,16 +811,16 @@ Legacy `errMsg()` utility is still exported but rarely used directly — `create
 - Direct imports from source (no barrel files anywhere)
 - DashboardShell uses Svelte 5 snippet slots for layout composition
 
-### CSS Token Architecture (spec-017, bridge to be eliminated by spec-019)
+### CSS Token Architecture (spec-017 → spec-019 complete)
 
-Three-layer token system — all hex, no oklch:
+Three-layer token system — all hex, no oklch. The palantir bridge layer was **eliminated by spec-019 Phase 6b** — all 292 `var(--palantir-*)` references migrated to direct Lunaris base tokens.
 
 ```
 Layer 1: Base Tokens (app.css :root) — SOURCE OF TRUTH
   ├── Surface: --background (#111111), --card (#1A1A1A), --border (#2E2E2E), --sidebar (#18181b)
   ├── Depth: --surface-elevated (#151515), --surface-hover (#1E1E1E), --surface-header (#181818),
   │          --surface-inset (#0D0D0D), --surface-terminal (#0A0A0A)
-  ├── Accent: --primary (#A8B8E0 default Blue ★), --interactive (#4A8AF4)
+  ├── Accent: --primary (#A8B8E0 default Blue ★), --interactive (#4A8AF4), --accent-muted (color-mix)
   ├── Text: --foreground, --text-secondary (#BBBBBB), --text-tertiary (#888888), --text-inactive (#555555)
   ├── Foreground: --foreground-secondary (#888888), --foreground-tertiary (#999999), --foreground-muted (#BBBBBB)
   ├── Status: --success (#8BBFA0), --warning (#D4A054), --destructive (#FF5C33), --error-desat (#C45B4A)
@@ -828,23 +828,21 @@ Layer 1: Base Tokens (app.css :root) — SOURCE OF TRUTH
   ├── Signals: --signal-very-strong → --signal-none (6 steps)
   ├── Widget: --widget-bg, --hover-tint, --separator, --bar-track, --switch-off
   ├── Charts: --chart-1..5, --feature-rf, --feature-drone, --feature-radio
-  └── 13 palette themes: [data-palette='ash|blue|blush|...'] each overrides --primary
-
-Layer 2: Palantir Bridge (palantir-design-system.css) — MIGRATION TARGET for spec-019
-  ├── --palantir-bg-*, --palantir-text-*, --palantir-accent-*, --palantir-signal-*
-  ├── Maps --palantir-* → var(--base-token) 1:1
   ├── Spacing: --space-1 (4px) through --space-12 (48px)
   ├── Typography: --text-hero (24px) through --text-section (9px)
   ├── Font weights, letter-spacing, radius tokens
-  └── Utility classes: .bg-surface, .bg-elevated, .text-tertiary, .tactical-sidebar, .map-popup
+  └── 13 palette themes: [data-palette='ash|blue|blush|...'] each overrides --primary
 
-Layer 3: Tailwind Utilities (app.css @theme inline)
+Layer 2: Tailwind Utilities (app.css @theme inline)
   └── --color-* mappings → enables bg-success, text-warning, border-border etc.
 
-Layer 4: Dashboard Layout (dashboard.css)
+Layer 3: Dashboard Layout (dashboard.css)
   ├── Font stacks: --font-sans: 'Geist', --font-mono: 'Fira Code'
   ├── Layout dims: --icon-rail-width: 48px, --panel-width: 280px, --top-bar-height: 40px
   └── Dashboard-scope overrides
+
+Layer 4: Dashboard Utilities (dashboard-utilities.css)
+  └── Utility classes: .map-popup, .status-dot-*, .bg-surface, .bg-elevated, .text-tertiary, .tactical-sidebar
 ```
 
 **Palette switching**: 13 MIL-STD themes defined as `[data-palette='...']` selectors, each overriding only `--primary`. Applied via `data-palette` attribute on `<html>`. FOUC prevention in `app.html` sync script.
@@ -853,49 +851,9 @@ Layer 4: Dashboard Layout (dashboard.css)
 
 **Runtime resolution**: `src/lib/utils/theme-colors.ts` exports `resolveThemeColor(varName, fallback)` for contexts where CSS vars aren't available (MapLibre GL, xterm.js, Leaflet markers). Used by `map-colors.ts`, `signal-utils.ts`, `terminal-theme.ts`.
 
-### Palantir Reference Audit (pre-spec-019 baseline)
+### Palantir Reference Audit (spec-019 — COMPLETE)
 
-**292 `var(--palantir-*)` references across 33 files** + 3 additional mentions (class name, import, comment) = **295 total "palantir" mentions across 36 files**.
-
-| File                                                                     | `--palantir-*` Refs | Key tokens used                                           |
-| ------------------------------------------------------------------------ | ------------------: | --------------------------------------------------------- |
-| `src/lib/styles/palantir-design-system.css`                              |              **61** | All tokens defined (source file)                          |
-| `src/lib/components/dashboard/TerminalTabBar.svelte`                     |              **19** | bg, border, text                                          |
-| `src/lib/components/dashboard/panels/overview/HardwareDeviceRow.svelte`  |              **18** | text, bg, border                                          |
-| `src/lib/components/dashboard/shared/ToolCard.svelte`                    |              **16** | text, bg, border, accent, status                          |
-| `src/lib/components/dashboard/panels/overview/ServicesCard.svelte`       |              **14** | status, text, bg                                          |
-| `src/lib/components/dashboard/panels/devices/DeviceToolbar.svelte`       |              **13** | text, bg, border, interactive                             |
-| `src/lib/components/dashboard/map/DeviceOverlay.svelte`                  |              **13** | signal, accent, bg, border                                |
-| `src/lib/styles/dashboard.css`                                           |              **12** | bg-panel, text-primary, border-\*, bg-elevated, bg-chrome |
-| `src/lib/components/status/TAKIndicator.svelte`                          |              **12** | success, error, text-_, border-_                          |
-| `src/lib/components/dashboard/TerminalToolbar.svelte`                    |              **11** | bg, text, border                                          |
-| `src/lib/components/dashboard/IconRail.svelte`                           |               **9** | bg-chrome, border-subtle, text-\*, bg-hover, accent       |
-| `src/lib/components/dashboard/status/WeatherDropdown.svelte`             |               **9** | bg, text, border                                          |
-| `src/lib/components/dashboard/panels/devices/DeviceTable.svelte`         |               **8** | text, bg, border                                          |
-| `src/lib/components/dashboard/TerminalPanel.svelte`                      |               **8** | bg, text, border                                          |
-| `src/lib/components/dashboard/ResizableBottomPanel.svelte`               |               **8** | bg, border                                                |
-| `src/lib/components/dashboard/panels/devices/DeviceWhitelist.svelte`     |               **6** | text, bg                                                  |
-| `src/lib/components/dashboard/map/map-overrides.css`                     |               **6** | bg-panel, bg-elevated, text-primary, border-default       |
-| `src/lib/components/dashboard/status/SatelliteTable.svelte`              |               **6** | text, border                                              |
-| `src/lib/components/dashboard/panels/devices/device-table-cells.css`     |               **6** | border, text                                              |
-| `src/lib/components/dashboard/LogsPanel.svelte`                          |               **6** | bg, text, border                                          |
-| `src/lib/components/dashboard/panels/overview/WifiInterfacesCard.svelte` |               **5** | text, border                                              |
-| `src/lib/components/dashboard/status/CoordsDisplay.svelte`               |               **4** | text                                                      |
-| `src/lib/components/dashboard/panels/overview/GpsCard.svelte`            |               **4** | text, status                                              |
-| `src/lib/components/dashboard/map/TowerPopup.svelte`                     |               **4** | bg, border, text                                          |
-| `src/lib/components/dashboard/icon-rail.css`                             |               **3** | border-subtle (3x)                                        |
-| `src/lib/components/dashboard/panels/overview/HardwareCard.svelte`       |               **2** | text                                                      |
-| `src/lib/components/dashboard/panels/devices/DeviceSubRows.svelte`       |               **2** | text                                                      |
-| `src/lib/components/dashboard/views/ToolUnavailableView.svelte`          |               **2** | text-secondary, accent                                    |
-| `src/lib/components/dashboard/views/KismetView.svelte`                   |               **1** | bg-app                                                    |
-| `src/lib/components/dashboard/views/OpenWebRXView.svelte`                |               **1** | bg-app                                                    |
-| `src/lib/components/dashboard/views/LogsAnalyticsView.svelte`            |               **1** | bg-app                                                    |
-| `src/routes/dashboard/dashboard-page.css`                                |               **1** | bg-app                                                    |
-| `src/lib/map/layers/symbol-layer.ts`                                     |               **1** | signal-\* (comment)                                       |
-
-**Notable**: All NEW spec-018 files (DashboardShell, widgets, CapturesPanel, HardwareConfigPanel, OnnetToolsPanel, all new CSS files) use **zero** `--palantir-*` tokens — they were written directly against Lunaris base tokens.
-
-Also: `DashboardMap.svelte` line 257 has `class="palantir-popup"` (FR-019 migration target).
+The palantir bridge layer has been **fully eliminated** by spec-019 Phase 6b. All 292 `var(--palantir-*)` references across 33 files were migrated to direct Lunaris base tokens. Zero `palantir` references remain in `src/`. The bridge file `palantir-design-system.css` was deleted; utility classes were preserved in `dashboard-utilities.css`.
 
 ## Gotchas
 
@@ -929,19 +887,11 @@ The GSM Evil page renders inside an iframe on the dashboard for process isolatio
 
 All server singletons persist across HMR via `globalThis.__argos_*` properties, now type-safe via `src/app.d.ts` declarations. State survives Vite hot reloads but NOT server restarts.
 
-### Three-Layer Token System (spec-019 migration target)
+### Token System (spec-019 complete)
 
-All components now reference CSS custom properties (no hardcoded hex). However, the system has three layers:
+All components reference CSS custom properties directly from `app.css :root` (no hardcoded hex, no bridge layer). The palantir bridge (`palantir-design-system.css`) was eliminated by spec-019 Phase 6b — all 292 `var(--palantir-*)` references migrated, non-palantir tokens (spacing, typography, radius) moved to `app.css :root`, and utility classes moved to `dashboard-utilities.css`.
 
-- **Base tokens** (`--background`, `--primary`, `--surface-elevated`, etc.) in `app.css` — the source of truth
-- **Palantir bridge** (`--palantir-bg-*`, `--palantir-text-*`) in `palantir-design-system.css` — maps to base tokens, used by 32 legacy dashboard components (292 references). **To be eliminated by spec-019.**
-- **Tailwind utilities** (`bg-background`, `text-primary`) in `app.css @theme inline` — maps to base tokens
-
-When adding new colors: define in `:root`, add `@theme inline` mapping if Tailwind classes are needed. Do NOT add new `--palantir-*` tokens.
-
-### Non-Palantir Tokens in Bridge File
-
-`palantir-design-system.css` also defines non-palantir tokens in its `:root` block: `--space-*` (spacing scale, 12 values), `--text-*` (typography scale), `--font-weight-*`, `--letter-spacing-*`, `--radius-sm/md/lg/xl`. These have **274 references across 40+ files** and MUST be migrated to `app.css` before the bridge file is deleted. The `--radius-*` values conflict with `app.css @theme inline` definitions (fixed vs calc-based values); the bridge file values are authoritative.
+When adding new colors: define in `:root`, add `@theme inline` mapping if Tailwind classes are needed.
 
 ### Runtime Color Resolution
 
@@ -1009,7 +959,7 @@ All barrel files (`index.ts`) were eliminated. Import directly from source files
 2. Add `--color-*` Tailwind mapping in `src/app.css` `@theme inline` block (if Tailwind classes needed)
 3. If used by map/terminal/canvas, add entry in `map-colors.ts` or use `resolveThemeColor()` directly
 4. For palette-sensitive values, ensure the token references `var(--primary)` or another palette-swapped base
-5. **Do NOT add new `--palantir-*` bridge aliases** — the bridge is being eliminated
+5. **Do NOT use `--palantir-*` tokens** — the bridge has been eliminated (spec-019)
 
 **To add map layers**:
 

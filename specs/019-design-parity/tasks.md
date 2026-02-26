@@ -524,9 +524,9 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 **Goal**: Verify the complete dashboard loads with all regions visible — no user interaction required.
 
-- [ ] T022 [US1] Clear browser localStorage and reload `/dashboard` — verify all 4 zones visible: Command Bar (top), Overview Panel (left), Map (center), Bottom Panel (bottom/terminal). Take full-page screenshot for comparison against Pencil frame `ZQUdr`.
-- [ ] T023 [US1] Run unit tests: `npx vitest run tests/unit/components/dashboard-store-defaults.test.ts` — verify tests pass (activePanel = 'overview', activeBottomTab = 'terminal').
-- [ ] T024 [US2] Run unit tests: `npx vitest run tests/unit/components/command-bar-compact.test.ts` — verify compact indicator tests pass.
+- [x] T022 [US1] Clear browser localStorage and reload `/dashboard` — verify all 4 zones visible: Command Bar (top), Overview Panel (left), Map (center), Bottom Panel (bottom/terminal). Take full-page screenshot for comparison against Pencil frame `ZQUdr`.
+- [x] T023 [US1] Run unit tests: `npx vitest run tests/unit/components/dashboard-store-defaults.test.ts` — verify tests pass (activePanel = 'overview', activeBottomTab = 'terminal').
+- [x] T024 [US2] Run unit tests: `npx vitest run tests/unit/components/command-bar-compact.test.ts` — verify compact indicator tests pass.
 
 ### 🚦 GATE 6: Full Dashboard Review (FINAL)
 
@@ -539,12 +539,12 @@ Extracted via CDP (`getBoundingClientRect()` + `getComputedStyle()`) from the ru
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T025 Run full typecheck: `npm run typecheck` — verify no type errors introduced
-- [ ] T026 Run linter: `npm run lint` — verify no lint violations
-- [ ] T027 Run build: `npm run build` — verify production build succeeds
-- [ ] T028 Update spec task status — mark all completed tasks in this file
-- [ ] T029 Run quickstart.md validation — follow the verification steps in `specs/019-design-parity/quickstart.md`
-- [ ] T030 Update `docs/CODEBASE_MAP.md` to reflect all file changes: `palantir-design-system.css` renamed to `dashboard-utilities.css`, import path change in `app.css`, any new/removed components from Icon Rail or Bottom Panel restructuring. Verify all paths referenced in CODEBASE_MAP still exist.
+- [x] T025 Run full typecheck: `npm run typecheck` — verify no type errors introduced
+- [x] T026 Run linter: `npm run lint` — verify no lint violations (pre-existing only, no new violations from spec-019)
+- [x] T027 Run build: `npm run build` — verify production build succeeds
+- [x] T028 Update spec task status — mark all completed tasks in this file
+- [x] T029 Run quickstart.md validation — follow the verification steps in `specs/019-design-parity/quickstart.md`
+- [x] T030 Update `docs/CODEBASE_MAP.md` to reflect all file changes: `palantir-design-system.css` renamed to `dashboard-utilities.css`, import path change in `app.css`, any new/removed components from Icon Rail or Bottom Panel restructuring. Verify all paths referenced in CODEBASE_MAP still exist.
 
 ---
 
