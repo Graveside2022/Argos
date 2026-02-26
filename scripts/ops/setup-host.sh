@@ -275,20 +275,82 @@ fi
 # --- 8. udev rules for SDR devices ---
 echo "[8/24] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
-if [[ -f "$UDEV_FILE" ]]; then
-  echo "  SDR udev rules already exist"
-else
-  echo "  Installing SDR udev rules..."
-  cat > "$UDEV_FILE" << 'UDEV'
-# HackRF One
+UDEV_CONTENT='# HackRF One
 ATTR{idVendor}=="1d50", ATTR{idProduct}=="6089", MODE="0666", GROUP="plugdev"
-# RTL-SDR
+# RTL-SDR (RTL2832U / RTL2838)
 ATTR{idVendor}=="0bda", ATTR{idProduct}=="2838", MODE="0666", GROUP="plugdev"
 ATTR{idVendor}=="0bda", ATTR{idProduct}=="2832", MODE="0666", GROUP="plugdev"
-UDEV
+# Ettus Research USRP B200/B205mini/B210
+ATTR{idVendor}=="2500", ATTR{idProduct}=="0020", MODE="0666", GROUP="plugdev"
+ATTR{idVendor}=="2500", ATTR{idProduct}=="0022", MODE="0666", GROUP="plugdev"
+ATTR{idVendor}=="2500", ATTR{idProduct}=="0023", MODE="0666", GROUP="plugdev"'
+
+if [[ -f "$UDEV_FILE" ]] && grep -q "2500" "$UDEV_FILE"; then
+  echo "  SDR udev rules already include USRP"
+else
+  echo "  Installing SDR udev rules..."
+  echo "$UDEV_CONTENT" > "$UDEV_FILE"
   udevadm control --reload-rules
   udevadm trigger
   usermod -aG plugdev "$SETUP_USER" 2>/dev/null || true
+fi
+
+# --- 8b. SDR Infrastructure (SoapySDR + UHD) ---
+# SoapySDR provides unified device enumeration across all SDR brands.
+# UHD host tools are required for Ettus USRP devices (B205-mini, B210).
+# This section installs the base infrastructure; individual SoapySDR modules
+# are added per-device. Full SoapySDR device management UI is a future feature.
+echo "[8b/24] SDR infrastructure (SoapySDR + UHD)..."
+
+SDR_INFRA_PKGS=(
+  soapysdr-tools           # SoapySDRUtil CLI — unified device enumeration
+  uhd-host                 # UHD CLI tools (uhd_find_devices, uhd_usrp_probe)
+  soapysdr-module-hackrf   # SoapySDR ↔ HackRF bridge
+  soapysdr-module-rtlsdr   # SoapySDR ↔ RTL-SDR bridge
+  soapysdr0.8-module-uhd   # SoapySDR ↔ UHD/USRP bridge
+)
+
+for pkg in "${SDR_INFRA_PKGS[@]}"; do
+  pkg_name="${pkg%%#*}"          # strip inline comment
+  pkg_name="${pkg_name// /}"     # strip whitespace
+  if dpkg -s "$pkg_name" &>/dev/null 2>&1; then
+    echo "  $pkg_name — already installed"
+  else
+    echo "  $pkg_name — installing..."
+    apt-get install -y -qq "$pkg_name" 2>/dev/null || echo "  WARNING: $pkg_name not available"
+  fi
+done
+
+# Download UHD firmware images (required for B200-series USRPs to function).
+# The B205-mini loads firmware from host at runtime — without these images,
+# the device appears on USB but cannot be initialized.
+UHD_IMAGES_DIR="/usr/share/uhd/images"
+if [[ -f "$UHD_IMAGES_DIR/usrp_b200_fw.hex" ]]; then
+  echo "  UHD firmware images already present"
+else
+  echo "  Downloading UHD firmware images (~100MB)..."
+  if command -v uhd_images_downloader &>/dev/null; then
+    uhd_images_downloader --types "b2xx" 2>&1 | tail -3
+    echo "  UHD B2xx firmware images downloaded"
+  else
+    # Fallback: try the libexec path directly
+    UHD_DOWNLOADER="/usr/libexec/uhd/utils/uhd_images_downloader.py"
+    if [[ -f "$UHD_DOWNLOADER" ]]; then
+      python3 "$UHD_DOWNLOADER" --types "b2xx" 2>&1 | tail -3
+      echo "  UHD B2xx firmware images downloaded"
+    else
+      echo "  WARNING: UHD images downloader not found — USRP devices will not work"
+      echo "  Try: sudo apt install uhd-host && sudo uhd_images_downloader --types b2xx"
+    fi
+  fi
+
+  # UHD downloads images to a versioned path (e.g. /usr/share/uhd/4.9.0/images/)
+  # but the runtime expects them at /usr/share/uhd/images/. Create symlink if needed.
+  UHD_VERSIONED_DIR=$(find /usr/share/uhd -maxdepth 2 -name "images" -type d ! -path "$UHD_IMAGES_DIR" 2>/dev/null | head -1)
+  if [[ -n "$UHD_VERSIONED_DIR" && ! -e "$UHD_IMAGES_DIR" ]]; then
+    ln -sf "$UHD_VERSIONED_DIR" "$UHD_IMAGES_DIR"
+    echo "  Symlinked $UHD_IMAGES_DIR → $UHD_VERSIONED_DIR"
+  fi
 fi
 
 # --- 9. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
