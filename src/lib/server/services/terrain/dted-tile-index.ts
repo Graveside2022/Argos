@@ -12,6 +12,7 @@ import { readdirSync, statSync } from 'node:fs';
 import path from 'path';
 
 import type { DTEDTile, DTEDTileIndexEntry, ViewshedBounds } from '$lib/types/viewshed';
+import { logger } from '$lib/utils/logger';
 
 import { parseDTEDFile } from './dted-parser';
 
@@ -164,7 +165,10 @@ export class DTEDTileIndex {
 			const tile = parseDTEDFile(entry.filePath);
 			this.addToCache(key, tile);
 			return tile;
-		} catch {
+		} catch (err: unknown) {
+			logger.warn(
+				`Failed to parse DTED tile ${key}: ${err instanceof Error ? err.message : String(err)}`
+			);
 			return null;
 		}
 	}

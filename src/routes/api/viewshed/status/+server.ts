@@ -1,19 +1,7 @@
 import { json } from '@sveltejs/kit';
 
 import { createHandler } from '$lib/server/api/create-handler';
-import { env } from '$lib/server/env';
-import { DTEDTileIndex } from '$lib/server/services/terrain/dted-tile-index';
-
-// ── Singleton tile index (shared with compute endpoint) ─────────────
-
-let tileIndex: DTEDTileIndex | null = null;
-
-function getTileIndex(): DTEDTileIndex {
-	if (!tileIndex) {
-		tileIndex = new DTEDTileIndex(env.DTED_DATA_DIR);
-	}
-	return tileIndex;
-}
+import { getTileIndex } from '$lib/server/services/terrain/tile-index-singleton';
 
 // ── GET handler ─────────────────────────────────────────────────────
 

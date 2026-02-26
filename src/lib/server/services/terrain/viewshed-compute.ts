@@ -136,7 +136,7 @@ function sweepRay(ctx: SweepContext, rayDeg: number): number {
 		if (sampElev === null) continue;
 
 		const elevAngle = Math.atan2(sampElev - ctx.observerHeight, dist);
-		const isVisible = elevAngle > maxElevAngle;
+		const isVisible = elevAngle >= maxElevAngle;
 		maxElevAngle = Math.max(maxElevAngle, elevAngle);
 
 		setPixel(ctx, sampLat, sampLon, isVisible);
@@ -194,7 +194,7 @@ function encodePng(rgba: Uint8Array, width: number, height: number): string {
 /** Return an empty result when no elevation data is available */
 function emptyResult(): ViewshedResult {
 	return {
-		imageDataUri: '',
+		imageDataUri: null,
 		bounds: { north: 0, south: 0, east: 0, west: 0 },
 		meta: {
 			computeTimeMs: 0,

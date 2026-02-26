@@ -61,8 +61,8 @@ export interface ViewshedParams {
 
 /** Output of a viewshed computation */
 export interface ViewshedResult {
-	/** PNG image as a base64 data URI */
-	imageDataUri: string;
+	/** PNG image as a base64 data URI, or null when no elevation data covers the area */
+	imageDataUri: string | null;
 	/** Geographic bounding box for the image overlay */
 	bounds: ViewshedBounds;
 	/** Computation metadata */

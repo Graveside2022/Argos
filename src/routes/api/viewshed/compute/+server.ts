@@ -2,9 +2,9 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { createHandler } from '$lib/server/api/create-handler';
-import { env } from '$lib/server/env';
-import { DTEDTileIndex } from '$lib/server/services/terrain/dted-tile-index';
+import { getTileIndex } from '$lib/server/services/terrain/tile-index-singleton';
 import { computeViewshed } from '$lib/server/services/terrain/viewshed-compute';
+import type { ViewshedResult } from '$lib/types/viewshed';
 
 // ── Zod validation schema ───────────────────────────────────────────
 
@@ -18,33 +18,11 @@ const viewshedRequestSchema = z.object({
 	noCache: z.boolean().optional()
 });
 
-// ── Singleton tile index ────────────────────────────────────────────
-
-let tileIndex: DTEDTileIndex | null = null;
-
-function getTileIndex(): DTEDTileIndex {
-	if (!tileIndex) {
-		tileIndex = new DTEDTileIndex(env.DTED_DATA_DIR);
-	}
-	return tileIndex;
-}
-
 // ── Result cache (single most-recent result) ────────────────────────
 
 interface CachedResult {
 	key: string;
-	result: {
-		imageDataUri: string;
-		bounds: { north: number; south: number; east: number; west: number };
-		meta: {
-			computeTimeMs: number;
-			cellCount: number;
-			tilesUsed: number;
-			imageWidth: number;
-			imageHeight: number;
-			cached: boolean;
-		};
-	};
+	result: ViewshedResult;
 }
 
 let cachedResult: CachedResult | null = null;
@@ -95,8 +73,17 @@ function noCoverageResponse(lat: number, lon: number) {
 	});
 }
 
+/** Safely parse JSON from the request body, returning null on malformed input */
+async function parseRequestBody(request: Request): Promise<unknown> {
+	try {
+		return await request.json();
+	} catch {
+		return null;
+	}
+}
+
 /** Check if the cache holds a matching result */
-function getCachedResult(key: string, noCache?: boolean): CachedResult['result'] | null {
+function getCachedResult(key: string, noCache?: boolean): ViewshedResult | null {
 	if (noCache) return null;
 	if (cachedResult?.key !== key) return null;
 	return { ...cachedResult.result, meta: { ...cachedResult.result.meta, cached: true } };
@@ -106,7 +93,12 @@ function getCachedResult(key: string, noCache?: boolean): CachedResult['result']
 
 export const POST = createHandler(
 	async ({ request }) => {
-		const parsed = viewshedRequestSchema.safeParse(await request.json());
+		const body = await parseRequestBody(request);
+		if (body === null) {
+			return json({ error: 'Invalid JSON in request body' }, { status: 400 });
+		}
+
+		const parsed = viewshedRequestSchema.safeParse(body);
 		if (!parsed.success) return validationErrorResponse(parsed.error.issues);
 
 		const params = parsed.data;

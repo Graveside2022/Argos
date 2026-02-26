@@ -24,8 +24,9 @@ describe('Viewshed Compute', () => {
 		it('should return a valid PNG data URI', () => {
 			const result = computeViewshed(NTC_PARAMS, tileIndex);
 
+			expect(result.imageDataUri).not.toBeNull();
 			expect(result.imageDataUri).toMatch(/^data:image\/png;base64,/);
-			expect(result.imageDataUri.length).toBeGreaterThan(100);
+			expect(result.imageDataUri!.length).toBeGreaterThan(100);
 		});
 
 		it('should return geographic bounds centered on observer', () => {
@@ -96,6 +97,7 @@ describe('Viewshed Compute', () => {
 			};
 			const result = computeViewshed(uncoveredParams, tileIndex);
 
+			expect(result.imageDataUri).toBeNull();
 			expect(result.meta.tilesUsed).toBe(0);
 			expect(result.meta.cellCount).toBe(0);
 		});
