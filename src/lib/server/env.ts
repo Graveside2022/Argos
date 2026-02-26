@@ -47,6 +47,9 @@ const envSchema = z.object({
 	// GSM Evil data directory
 	GSMEVIL_DIR: z.string().default(''),
 
+	// DTED terrain elevation data directory (022-terrain-viewshed)
+	DTED_DATA_DIR: z.string().default('./data/dted'),
+
 	// Temp directory (FR-024) — resolved at runtime below
 	ARGOS_TEMP_DIR: z.string().default(''),
 
