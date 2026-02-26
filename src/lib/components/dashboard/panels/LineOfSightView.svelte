@@ -298,10 +298,10 @@
 				<span class="toggle-label">Show on Map</span>
 				<button
 					class="toggle-switch"
-					class:on={$layerVisibility.rfRange}
-					onclick={() => toggleLayerVisibility('rfRange')}
+					class:on={$layerVisibility.viewshed}
+					onclick={() => toggleLayerVisibility('viewshed')}
 					role="switch"
-					aria-checked={$layerVisibility.rfRange}
+					aria-checked={$layerVisibility.viewshed}
 				>
 					<span class="toggle-knob"></span>
 				</button>

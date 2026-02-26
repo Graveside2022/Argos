@@ -37,7 +37,7 @@ import {
 	updateSymbolLayer
 } from './map/map-handlers';
 import { setupMap } from './map/map-setup';
-import { createRFRangeDerivedState } from './map/rf-range-derived.svelte';
+import { createViewshedDerivedState } from './map/viewshed-derived.svelte';
 
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
@@ -73,8 +73,8 @@ export function createMapState() {
 		}
 	});
 
-	// RF range overlay — derived from GPS + HackRF frequency + RF profile
-	const rfRangeDerived = createRFRangeDerivedState();
+	// Viewshed overlay — terrain-aware LOS from GPS position
+	const viewshedDerived = createViewshedDerivedState();
 
 	// HackRF SSE data service — populates hackrfStore.targetFrequency
 	const hackrfService = new HackRFDataService();
@@ -252,20 +252,20 @@ export function createMapState() {
 		get detectionRangeGeoJSON() {
 			return gpsDerived.detectionRangeGeoJSON;
 		},
-		get rfRangeGeoJSON() {
-			return rfRangeDerived.rfRangeGeoJSON;
+		get viewshedImageUrl() {
+			return viewshedDerived.viewshedImageUrl;
 		},
-		get rfRangeLabelGeoJSON() {
-			return rfRangeDerived.rfRangeLabelGeoJSON;
+		get viewshedBounds() {
+			return viewshedDerived.viewshedBounds;
 		},
-		get rfRangeActive() {
-			return rfRangeDerived.rfRangeActive;
+		get viewshedActive() {
+			return viewshedDerived.viewshedActive;
 		},
-		get rfRangeDisplayRange() {
-			return rfRangeDerived.displayRangeMeters;
+		get isComputingViewshed() {
+			return viewshedDerived.isComputing;
 		},
-		get rfRangeIsCapped() {
-			return rfRangeDerived.isCapped;
+		get viewshedInactiveReason() {
+			return viewshedDerived.viewshedInactiveReason;
 		},
 		get deviceGeoJSON() {
 			return deviceGeoJSON;

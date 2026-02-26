@@ -8,15 +8,17 @@
 		CustomControl,
 		FillLayer,
 		GeoJSONSource,
+		ImageSource,
 		LineLayer,
 		MapLibre,
 		Marker,
 		NavigationControl,
 		Popup,
+		RasterLayer,
 		SymbolLayer as MapLibreSymbolLayer
 	} from 'svelte-maplibre-gl';
 
-	import { isolatedDeviceMAC } from '$lib/stores/dashboard/dashboard-store';
+	import { isolatedDeviceMAC, layerVisibility } from '$lib/stores/dashboard/dashboard-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 
 	import { createMapState, MAP_UI_COLORS, onClusterClick } from './dashboard-map-logic.svelte';
@@ -45,45 +47,24 @@
 		class="map-container"
 		onload={ms.handleMapLoad}
 	>
-		<GeoJSONSource id="rf-range-src" data={ms.rfRangeGeoJSON}>
-			<FillLayer
-				id="rf-range-fill"
-				paint={{
-					'fill-color': ['get', 'color'],
-					'fill-opacity': [
-						'match',
-						['get', 'band'],
-						'strong',
-						0.14,
-						'usable',
-						0.11,
-						'marginal',
-						0.09,
-						'maximum',
-						0.06,
-						0.07
-					]
-				}}
-			/>
-		</GeoJSONSource>
-
-		<GeoJSONSource id="rf-range-label-src" data={ms.rfRangeLabelGeoJSON}>
-			<MapLibreSymbolLayer
-				id="rf-range-label"
-				layout={{
-					'text-field': ['get', 'label'],
-					'text-font': ['Open Sans Regular'],
-					'text-size': 10,
-					'text-anchor': 'bottom',
-					'text-offset': [0, -0.8]
-				}}
-				paint={{
-					'text-color': '#888888',
-					'text-halo-color': '#111111',
-					'text-halo-width': 1.5
-				}}
-			/>
-		</GeoJSONSource>
+		{#if ms.viewshedImageUrl && ms.viewshedBounds}
+			<ImageSource
+				id="viewshed-src"
+				url={ms.viewshedImageUrl}
+				coordinates={[
+					[ms.viewshedBounds.west, ms.viewshedBounds.north],
+					[ms.viewshedBounds.east, ms.viewshedBounds.north],
+					[ms.viewshedBounds.east, ms.viewshedBounds.south],
+					[ms.viewshedBounds.west, ms.viewshedBounds.south]
+				]}
+			>
+				<RasterLayer
+					id="viewshed-layer"
+					paint={{ 'raster-fade-duration': 0 }}
+					layout={{ visibility: $layerVisibility.viewshed ? 'visible' : 'none' }}
+				/>
+			</ImageSource>
+		{/if}
 
 		<GeoJSONSource id="detection-range-src" data={ms.detectionRangeGeoJSON}>
 			<FillLayer

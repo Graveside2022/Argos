@@ -96,7 +96,7 @@ export const layerVisibility = writable<Record<string, boolean>>({
 	cellTowers: false,
 	signalMarkers: false,
 	accuracyCircle: true,
-	rfRange: false
+	viewshed: false
 });
 
 /** Toggle a single map layer on/off */
