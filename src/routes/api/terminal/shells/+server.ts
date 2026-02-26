@@ -77,10 +77,17 @@ export const GET = createHandler(async () => {
 			return true;
 		});
 
-		// Sort with default shell first
+		// Always include a plain zsh option for non-persistent sessions
+		if (!uniqueShells.some((s) => s.path === '/bin/zsh')) {
+			uniqueShells.push({ path: '/bin/zsh', name: 'zsh', isDefault: false });
+		}
+
+		// Sort: tmux profiles first (alphabetical), then plain shells last
 		uniqueShells.sort((a, b) => {
-			if (a.isDefault) return -1;
-			if (b.isDefault) return 1;
+			const aIsTmux = a.path.includes('tmux');
+			const bIsTmux = b.path.includes('tmux');
+			if (aIsTmux && !bIsTmux) return -1;
+			if (!aIsTmux && bIsTmux) return 1;
 			return a.name.localeCompare(b.name);
 		});
 

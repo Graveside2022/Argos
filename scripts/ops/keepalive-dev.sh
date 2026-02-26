@@ -107,12 +107,12 @@ check_vite() {
     LAST_RESTART=$(date +%s)
 
     # Kill any stale tmux session (but NOT the Vite process — it's already dead)
-    tmux kill-session -t argos-dev 2>/dev/null
+    tmux kill-session -t argos-logs 2>/dev/null
 
     # Start Vite DIRECTLY via oom-protect wrapper in a detached tmux session.
     # Do NOT use "npm run dev" here — it runs kill-dev first which would
     # destroy any running Vite instance and cause a restart storm.
-    tmux new-session -d -s argos-dev \
+    tmux new-session -d -s argos-logs \
         "./scripts/dev/vite-oom-protect.sh 2>&1 | tee /tmp/argos-dev.log"
 
     sleep 8  # Vite takes 3-6s to bind port; wait longer to be sure
