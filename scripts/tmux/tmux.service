@@ -1,0 +1,25 @@
+[Unit]
+Description=tmux dev sessions (dev1/dev2/dev3 + argos-logs)
+Documentation=man:tmux(1)
+After=network.target
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+Environment=DISPLAY=:0
+
+# Create named dev sessions — SSH auto-attaches to dev1 via .zshrc
+ExecStart=/usr/bin/tmux new-session -d -s dev1 -c %h/Documents/Argos/Argos
+ExecStartPost=/usr/bin/tmux new-session -d -s dev2 -c %h/Documents/Argos/Argos
+ExecStartPost=/usr/bin/tmux new-session -d -s dev3 -c %h/Documents/Argos/Argos
+ExecStartPost=/usr/bin/tmux new-session -d -s argos-logs -c %h/Documents/Argos/Argos
+
+# Save layout before shutdown (resurrect) — best-effort, ignore failures
+ExecStop=-%h/.tmux/plugins/tmux-resurrect/scripts/save.sh
+ExecStop=-/usr/bin/tmux kill-server
+KillMode=control-group
+
+RestartSec=2
+
+[Install]
+WantedBy=default.target
