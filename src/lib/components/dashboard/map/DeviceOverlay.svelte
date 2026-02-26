@@ -137,7 +137,7 @@
 		right: 6px;
 		background: none;
 		border: none;
-		color: var(--palantir-text-tertiary, #666);
+		color: var(--foreground-secondary);
 		cursor: pointer;
 		padding: 2px;
 		display: flex;
@@ -145,7 +145,7 @@
 	}
 
 	.overlay-close:hover {
-		color: var(--palantir-text-primary, #ffffff);
+		color: var(--foreground);
 	}
 
 	.overlay-title {
@@ -153,7 +153,7 @@
 		font-size: var(--text-brand);
 		margin-bottom: 6px;
 		padding-right: 16px;
-		color: var(--palantir-text-primary, #ffffff);
+		color: var(--foreground);
 	}
 
 	.overlay-row {
@@ -164,18 +164,18 @@
 	}
 
 	.overlay-label {
-		color: var(--palantir-text-tertiary, #666);
+		color: var(--foreground-secondary);
 		letter-spacing: 0.05em;
 	}
 
 	.overlay-value {
-		color: var(--palantir-text-secondary, #aaa);
+		color: var(--foreground-muted);
 		font-family: var(--font-mono, monospace);
 		font-size: var(--text-status);
 	}
 
 	.overlay-accent {
-		color: var(--palantir-accent, #4a90e2);
+		color: var(--primary);
 	}
 
 	.overlay-mono {
@@ -184,15 +184,15 @@
 	}
 
 	.overlay-divider {
-		border-top: 1px solid var(--palantir-border-default, #2e2e2e);
+		border-top: 1px solid var(--border);
 		margin: 3px 0;
 	}
 
 	/* Affiliation dropdown */
 	.affil-select {
-		background: var(--palantir-bg-panel, #1a1a1a);
-		color: var(--palantir-text-secondary, #aaa);
-		border: 1px solid var(--palantir-border-default, #2e2e2e);
+		background: var(--card);
+		color: var(--foreground-muted);
+		border: 1px solid var(--border);
 		border-radius: 3px;
 		font-family: var(--font-mono, monospace);
 		font-size: var(--text-status);
@@ -208,12 +208,12 @@
 	}
 
 	.affil-select:hover {
-		border-color: var(--palantir-accent, #4a90e2);
+		border-color: var(--primary);
 	}
 
 	.affil-select:focus {
-		border-color: var(--palantir-accent, #4a90e2);
-		box-shadow: 0 0 0 1px var(--palantir-accent, #4a90e2);
+		border-color: var(--primary);
+		box-shadow: 0 0 0 1px var(--primary);
 	}
 
 	.affil-indicator {

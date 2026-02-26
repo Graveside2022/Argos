@@ -58,12 +58,12 @@
 	.coord-value {
 		font-family: var(--font-mono);
 		font-size: var(--text-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-variant-numeric: tabular-nums;
 	}
 	.coord-sep {
 		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 	.location-name {
 		text-transform: uppercase;
@@ -86,12 +86,12 @@
 		transition: background 0.15s ease;
 	}
 	.weather-chip:hover {
-		background: var(--palantir-bg-hover);
+		background: var(--surface-hover);
 	}
 	.weather-icon {
 		display: flex;
 		align-items: center;
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 	}
 	.time-value {
 		letter-spacing: 0.08em;

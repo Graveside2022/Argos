@@ -41,7 +41,7 @@ export class SymbolLayer {
 				},
 				paint: {
 					// MapLibre GL paint operates on WebGL canvas — CSS variables unsupported.
-					// Values match --palantir-text-primary (light on dark) for dark-only tactical theme.
+					// Values match --foreground (light on dark) for dark-only tactical theme.
 					'text-color': 'hsl(0, 0%, 100%)',
 					'text-halo-color': 'hsl(0, 0%, 0%)',
 					'text-halo-width': 1

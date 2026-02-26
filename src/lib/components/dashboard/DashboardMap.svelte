@@ -255,7 +255,7 @@
 		{#if ms.towerPopupLngLat && ms.towerPopupContent}
 			<Popup
 				lnglat={ms.towerPopupLngLat}
-				class="palantir-popup"
+				class="map-popup"
 				closeButton={true}
 				onclose={ms.closeTowerPopup}
 			>

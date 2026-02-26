@@ -20,6 +20,6 @@
 
 	.placeholder-text {
 		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 </style>

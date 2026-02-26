@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './lib/styles/palantir-design-system.css';
+@import './lib/styles/dashboard-utilities.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -103,6 +103,50 @@
 	--feature-rf: #d4a054;
 	--feature-drone: #809ad0;
 	--feature-radio: #bdb2d4;
+
+	/* Accent derived */
+	--accent-muted: color-mix(in srgb, var(--primary) 15%, transparent);
+
+	/* Spacing scale (8px grid) */
+	--space-1: 0.25rem; /* 4px */
+	--space-2: 0.5rem; /* 8px */
+	--space-3: 0.75rem; /* 12px */
+	--space-4: 1rem; /* 16px */
+	--space-5: 1.25rem; /* 20px */
+	--space-6: 1.5rem; /* 24px */
+	--space-8: 2rem; /* 32px */
+	--space-10: 2.5rem; /* 40px */
+	--space-12: 3rem; /* 48px */
+
+	/* Typography — Lunaris 6-step scale */
+	--text-hero: 1.5rem; /* 24px */
+	--text-brand: 0.8125rem; /* 13px */
+	--text-sm: 0.75rem; /* 12px */
+	--text-xs: 0.6875rem; /* 11px */
+	--text-status: 0.625rem; /* 10px */
+	--text-section: 0.5625rem; /* 9px */
+	--text-base: 0.875rem; /* 14px */
+	--text-lg: 1rem; /* 16px */
+	--text-xl: 1.125rem; /* 18px */
+	--text-2xl: 1.5rem; /* 24px */
+	--text-3xl: 1.875rem; /* 30px */
+
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--font-weight-bold: 700;
+
+	--letter-spacing-tight: -0.01em;
+	--letter-spacing-normal: 0;
+	--letter-spacing-wide: 0.025em;
+	--letter-spacing-wider: 0.05em;
+	--letter-spacing-widest: 0.1em;
+
+	/* Radius (fixed values — components built against these) */
+	--radius-sm: 4px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+	--radius-xl: 12px;
 }
 
 /* ---- Lunaris Accent Themes (13 MIL-STD palettes) ---- */
@@ -220,10 +264,10 @@
 	--color-foreground-muted: var(--foreground-muted);
 	--color-interactive: var(--interactive);
 
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--radius-sm: 4px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+	--radius-xl: 12px;
 }
 
 @plugin "@tailwindcss/forms";

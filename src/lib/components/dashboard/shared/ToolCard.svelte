@@ -117,8 +117,8 @@
 <style>
 	.tool-card {
 		padding: var(--space-3);
-		background: var(--palantir-bg-elevated);
-		border: 1px solid var(--palantir-border-subtle);
+		background: var(--surface-elevated);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		display: flex;
 		flex-direction: column;
@@ -127,7 +127,7 @@
 	}
 
 	.tool-card.isRunning {
-		border-color: var(--palantir-border-default);
+		border-color: var(--border);
 	}
 
 	.tool-card.not-installed {
@@ -135,7 +135,7 @@
 	}
 
 	.tool-card.not-installed .tool-name {
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 
 	.tool-header {
@@ -148,11 +148,11 @@
 		width: 20px;
 		height: 20px;
 		flex-shrink: 0;
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 	}
 
 	.tool-card.isRunning .tool-icon {
-		color: var(--palantir-accent);
+		color: var(--primary);
 	}
 
 	.tool-info {
@@ -166,7 +166,7 @@
 	.tool-name {
 		font-size: var(--text-sm);
 		font-weight: var(--font-weight-medium);
-		color: var(--palantir-text-primary);
+		color: var(--foreground);
 	}
 
 	.tool-status-row {
@@ -183,45 +183,45 @@
 	}
 
 	.dot-active {
-		background: var(--palantir-success);
-		box-shadow: 0 0 4px color-mix(in srgb, var(--palantir-success) 50%, transparent);
+		background: var(--success);
+		box-shadow: 0 0 4px color-mix(in srgb, var(--success) 50%, transparent);
 	}
 
 	.dot-transition {
-		background: var(--palantir-warning);
+		background: var(--warning);
 		animation: pulse 1s infinite;
 	}
 
 	.dot-stopped {
-		background: var(--palantir-text-tertiary);
+		background: var(--foreground-secondary);
 	}
 
 	.tool-status-label {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		letter-spacing: var(--letter-spacing-wide);
 	}
 
 	.tool-count {
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		color: var(--palantir-accent);
+		color: var(--primary);
 		font-variant-numeric: tabular-nums;
 		margin-left: auto;
 	}
 
 	.tool-description {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		line-height: 1.4;
 		margin: 0;
 	}
 
 	.installation-badge {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		padding: 2px var(--space-2);
-		border: 1px dashed var(--palantir-border-subtle);
+		border: 1px dashed var(--border);
 		border-radius: var(--radius-sm);
 	}
 

@@ -21,7 +21,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--palantir-bg-panel, #1a1a1a);
+		background: var(--card);
 	}
 
 	.logs-header {
@@ -31,14 +31,14 @@
 		height: 32px;
 		min-height: 32px;
 		padding: 0 var(--space-3);
-		background: var(--palantir-bg-surface, #1a1a1a);
-		border-bottom: 1px solid var(--palantir-border-subtle, #2e2e2e);
+		background: var(--card);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.logs-title {
 		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		letter-spacing: 0.05em;
 	}
 
@@ -46,8 +46,8 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background: var(--palantir-success, #10b981);
-		box-shadow: 0 0 8px var(--palantir-success, #10b981);
+		background: var(--success);
+		box-shadow: 0 0 8px var(--success);
 		animation: pulse 2s infinite ease-in-out;
 	}
 

@@ -186,7 +186,7 @@
 
 	td {
 		padding: var(--space-1) var(--space-2);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 	}
 
 	tbody tr:hover {
@@ -204,13 +204,13 @@
 	}
 
 	.sortable:hover {
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 	}
 
 	.row-chevron {
 		display: inline-block;
 		font-size: 11px;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		transition: transform 0.15s ease;
 		margin-right: 2px;
 	}
@@ -222,8 +222,8 @@
 	.client-count {
 		font-family: var(--font-mono);
 		font-size: var(--text-section);
-		color: var(--palantir-accent);
-		background: color-mix(in srgb, var(--palantir-accent) 15%, transparent);
+		color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 15%, transparent);
 		padding: 0 4px;
 		border-radius: 3px;
 		margin-left: 4px;
@@ -231,13 +231,13 @@
 	}
 
 	.isolated-parent {
-		background: color-mix(in srgb, var(--palantir-accent) 6%, transparent);
-		border-bottom: 1px solid color-mix(in srgb, var(--palantir-accent) 15%, transparent);
+		background: color-mix(in srgb, var(--primary) 6%, transparent);
+		border-bottom: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
 	}
 
 	.empty-row {
 		text-align: center;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		font-style: italic;
 		padding: var(--space-6) var(--space-3) !important;
 	}

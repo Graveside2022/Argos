@@ -57,7 +57,7 @@
 
 .cell-primary {
 	font-size: var(--text-xs);
-	color: var(--palantir-text-primary);
+	color: var(--foreground);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -66,7 +66,7 @@
 .cell-secondary {
 	font-family: var(--font-mono);
 	font-size: var(--text-status);
-	color: var(--palantir-text-tertiary);
+	color: var(--foreground-secondary);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -95,12 +95,12 @@
 	font-size: var(--text-xs);
 	text-transform: uppercase;
 	letter-spacing: var(--letter-spacing-wide);
-	color: var(--palantir-text-secondary);
+	color: var(--foreground-muted);
 }
 
 .vendor-text {
 	font-size: var(--text-status);
-	color: var(--palantir-text-tertiary);
+	color: var(--foreground-secondary);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -111,12 +111,12 @@
 .mono-value {
 	font-family: var(--font-mono);
 	font-size: var(--text-status);
-	color: var(--palantir-text-tertiary);
+	color: var(--foreground-secondary);
 	font-variant-numeric: tabular-nums;
 }
 
 .enc-badge {
 	font-size: var(--text-status);
-	color: var(--palantir-text-tertiary);
+	color: var(--foreground-secondary);
 	letter-spacing: 0.02em;
 }

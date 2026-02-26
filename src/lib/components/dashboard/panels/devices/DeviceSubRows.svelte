@@ -138,7 +138,7 @@
 	@import './device-table-cells.css';
 
 	.sub-row {
-		background: var(--palantir-bg-elevated);
+		background: var(--surface-elevated);
 	}
 
 	.sub-row :global(td) {
@@ -153,7 +153,7 @@
 		font-size: var(--text-section);
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: var(--letter-spacing-wide);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		text-transform: uppercase;
 	}
 

@@ -68,7 +68,7 @@
 		font-weight: 600;
 		font-size: var(--text-brand);
 		margin-bottom: 8px;
-		color: var(--palantir-text-primary, #ffffff);
+		color: var(--foreground);
 	}
 
 	.popup-row {
@@ -79,17 +79,17 @@
 	}
 
 	.popup-label {
-		color: var(--palantir-text-tertiary, #666);
+		color: var(--foreground-secondary);
 		letter-spacing: 0.05em;
 	}
 
 	.popup-value {
-		color: var(--palantir-text-secondary, #aaa);
+		color: var(--foreground-muted);
 		font-family: var(--font-primary, monospace);
 	}
 
 	.popup-divider {
-		border-top: 1px solid var(--palantir-border-default, #2e2e2e);
+		border-top: 1px solid var(--border);
 		margin: 4px 0;
 	}
 

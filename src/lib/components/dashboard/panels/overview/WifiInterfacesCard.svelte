@@ -27,7 +27,7 @@
 <style>
 	.panel-section {
 		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
@@ -37,7 +37,7 @@
 		font-size: var(--text-xs);
 		font-weight: var(--font-weight-semibold);
 		letter-spacing: var(--letter-spacing-widest);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 
 	.iface-row {
@@ -45,18 +45,18 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--space-1) var(--space-2);
-		background: var(--palantir-bg-elevated);
+		background: var(--surface-elevated);
 		border-radius: var(--radius-sm);
 	}
 
 	.iface-name {
 		font-size: var(--text-sm);
-		color: var(--palantir-text-primary);
+		color: var(--foreground);
 	}
 
 	.iface-mac {
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 </style>
