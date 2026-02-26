@@ -630,14 +630,16 @@ fi
 # --- 14. EarlyOOM Configuration ---
 echo "[14/24] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
-  # Memory threshold: 10% RAM, 50% swap, check every 60s
+  # Memory threshold: 2.5% RAM free (97.5% used), 50% swap, check every 60s
+  # This is the last-resort killer — other guards (Claude hook at 90%, tmux guard
+  # at 90%, cgroup soft limit) intervene earlier. EarlyOOM only fires when ~200 MB free.
   # Avoid list: system-critical + development tools + headless browser
-  # Prefer list: only ollama (large model, recoverable)
+  # Prefer list: ollama (large model) and bun (claude-mem daemon workers)
   cat > /etc/default/earlyoom << 'EARLYOOM'
-EARLYOOM_ARGS="-m 10 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
+EARLYOOM_ARGS="-m 2 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
 EARLYOOM
   systemctl restart earlyoom
-  echo "  EarlyOOM configured (protect: system + dev tools, prefer kill: ollama + bun daemons)."
+  echo "  EarlyOOM configured (trigger: 2.5% free, protect: system + dev tools, prefer kill: ollama + bun)."
 else
   echo "  Warning: /etc/default/earlyoom not found. Install earlyoom first."
 fi
@@ -651,18 +653,19 @@ SLICE_DIR="/etc/systemd/system/user-${SETUP_UID}.slice.d"
 SLICE_CONF="$SLICE_DIR/memory-limit.conf"
 
 # Calculate limits dynamically based on total RAM.
-# Hybrid formula: reserve max(512 MiB, 5% of RAM) for kernel+system.
-# - Small machines (4-8 GB RPi): reserves 512 MiB (tight but safe)
-# - Large machines (32-128 GB x86): reserves 1.6-6.4 GiB (proportional headroom)
-#   MemoryHigh (soft) = MemoryMax - 512 MiB → triggers aggressive reclaim before hard limit
+# Hybrid formula: reserve max(200 MiB, 2.5% of RAM) for kernel+system.
+# This allows ~97.5% of RAM for user processes before the hard kill fires.
+# - RPi 5 (8 GB): reserves 200 MiB → MemoryMax ~7900M, MemoryHigh ~7700M
+# - Large machines (32+ GB): reserves 2.5% (proportional headroom)
+#   MemoryHigh (soft) = MemoryMax - 200 MiB → triggers aggressive reclaim before hard limit
 #   MemoryMax  (hard) = total - reserve      → OOM-kills the process
 TOTAL_MEM_BYTES=$(free -b | awk '/Mem:/ {print $2}')
 TOTAL_MEM_MIB=$(( TOTAL_MEM_BYTES / 1048576 ))
-RESERVE_PERCENT=$(( TOTAL_MEM_MIB * 5 / 100 ))
-RESERVE_MIN=512
+RESERVE_PERCENT=$(( TOTAL_MEM_MIB * 25 / 1000 ))
+RESERVE_MIN=200
 RESERVE_MIB=$(( RESERVE_PERCENT > RESERVE_MIN ? RESERVE_PERCENT : RESERVE_MIN ))
 MEM_MAX_MIB=$(( TOTAL_MEM_MIB - RESERVE_MIB ))
-MEM_HIGH_MIB=$(( MEM_MAX_MIB - 512 ))      # soft limit 512 MiB below hard limit
+MEM_HIGH_MIB=$(( MEM_MAX_MIB - 200 ))      # soft limit 200 MiB below hard limit
 
 # Sanity check: don't set limits on machines with < 2 GiB
 if [[ "$TOTAL_MEM_MIB" -lt 2048 ]]; then
@@ -674,7 +677,7 @@ else
   else
     echo "  Total RAM: ${TOTAL_MEM_MIB} MiB"
     echo "  Setting MemoryHigh=${MEM_HIGH_MIB}M (soft), MemoryMax=${MEM_MAX_MIB}M (hard)"
-    echo "  Reserving ${RESERVE_MIB} MiB for kernel/system (max of 512M or 5%)"
+    echo "  Reserving ${RESERVE_MIB} MiB for kernel/system (max of 200M or 2.5%)"
     mkdir -p "$SLICE_DIR"
     cat > "$SLICE_CONF" << EOF
 # Argos: Prevent user processes from consuming all system memory.
@@ -1123,19 +1126,19 @@ if [[ -f "$ZSHRC" ]] && ! grep -qF "$TMUX_MARKER" "$ZSHRC"; then
 # ========================================
 # Must run BEFORE Powerlevel10k instant prompt (tmux needs raw TTY access).
 # Guards: skip if already in tmux, non-interactive, VS Code Remote SSH,
-# or high memory pressure (>80% used). Prevents OOM loop on SSH reconnect.
+# or high memory pressure (>90% used). Prevents OOM loop on SSH reconnect.
 if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]] && [[ $- == *i* ]] \
    && [[ -z "$VSCODE_INJECTION" ]] && [[ -z "$VSCODE_GIT_ASKPASS_NODE" ]]; then
-    # Memory pressure guard: skip tmux if >80% RAM used
+    # Memory pressure guard: skip tmux if >90% RAM used
     _mem_pct=$(awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%d", (t-a)*100/t}' /proc/meminfo 2>/dev/null)
-    if (( _mem_pct < 80 )); then
+    if (( _mem_pct < 90 )); then
         if tmux has-session -t dev1 2>/dev/null; then
             exec tmux attach-session -t dev1
         else
             exec tmux new-session -s dev1 -c "$HOME/Documents/Argos/Argos"
         fi
     else
-        echo "[tmux skip] Memory at ${_mem_pct}% — attaching to tmux skipped to avoid OOM"
+        echo "[tmux skip] Memory at ${_mem_pct}% (>90%) — attaching to tmux skipped to avoid OOM"
     fi
     unset _mem_pct
 fi
