@@ -1651,7 +1651,7 @@ if prompt_install "Tmux Sessions" \
 # (injected in step 21) connects SSH logins to dev1 automatically.
 USER_ID=$(id -u "$SETUP_USER")
 export XDG_RUNTIME_DIR="/run/user/$USER_ID"
-for sess in dev1 dev2 dev3; do
+for sess in dev1 dev2 dev3 argos-logs; do
   if sudo -u "$SETUP_USER" tmux has-session -t "$sess" 2>/dev/null; then
     echo "  $sess — already running"
   else
@@ -1659,6 +1659,19 @@ for sess in dev1 dev2 dev3; do
     echo "  $sess — created (cwd: $PROJECT_DIR)"
   fi
 done
+
+# Install tmux.service so dev sessions auto-create on boot.
+# Install custom tmux.service that pre-creates named dev sessions on boot.
+# @continuum-boot is OFF in tmux.conf to prevent continuum from overwriting this.
+TMUX_SERVICE_DIR="$SETUP_HOME/.config/systemd/user"
+sudo -u "$SETUP_USER" mkdir -p "$TMUX_SERVICE_DIR"
+sudo -u "$SETUP_USER" cp "$PROJECT_DIR/scripts/tmux/tmux.service" "$TMUX_SERVICE_DIR/tmux.service"
+# Ensure user lingering so tmux sessions start at boot, not first login
+loginctl enable-linger "$SETUP_USER" 2>/dev/null || true
+sudo -u "$SETUP_USER" XDG_RUNTIME_DIR="/run/user/$USER_ID" systemctl --user daemon-reload
+sudo -u "$SETUP_USER" XDG_RUNTIME_DIR="/run/user/$USER_ID" systemctl --user enable tmux.service
+echo "  tmux.service installed — dev1/dev2/dev3/argos-logs auto-create on boot"
+
 echo "  SSH login will auto-attach to dev1."
 echo "  Switch sessions: Ctrl-b then :switch-client -t dev2"
 
