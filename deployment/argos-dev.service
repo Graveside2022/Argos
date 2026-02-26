@@ -16,7 +16,7 @@ Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=argos-dev
+SyslogIdentifier=argos-logs
 
 [Install]
 WantedBy=multi-user.target

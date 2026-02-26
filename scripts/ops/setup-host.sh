@@ -54,7 +54,7 @@ fi
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/23] Network configuration..."
+echo "[1/24] Network configuration..."
 
 configure_networking() {
   local changed=false
@@ -160,7 +160,7 @@ DNSCONF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/23] System packages..."
+echo "[2/24] System packages..."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -179,7 +179,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 3. Node.js ---
-echo "[3/23] Node.js..."
+echo "[3/24] Node.js..."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -195,7 +195,7 @@ else
 fi
 
 # --- 4. Kismet ---
-echo "[4/23] Kismet..."
+echo "[4/24] Kismet..."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -215,7 +215,7 @@ else
 fi
 
 # --- 5. gpsd ---
-echo "[5/23] gpsd..."
+echo "[5/24] gpsd..."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -224,7 +224,7 @@ else
 fi
 
 # --- 6. Docker (for third-party tools only) ---
-echo "[6/23] Docker..."
+echo "[6/24] Docker..."
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -254,7 +254,7 @@ else
 fi
 
 # --- 7. OpenSSH Server ---
-echo "[7/23] OpenSSH server..."
+echo "[7/24] OpenSSH server..."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
 else
@@ -273,7 +273,7 @@ else
 fi
 
 # --- 8. udev rules for SDR devices ---
-echo "[8/23] udev rules..."
+echo "[8/24] udev rules..."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 if [[ -f "$UDEV_FILE" ]]; then
   echo "  SDR udev rules already exist"
@@ -292,7 +292,7 @@ UDEV
 fi
 
 # --- 9. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
-echo "[9/23] GSM Evil..."
+echo "[9/24] GSM Evil..."
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
 
@@ -442,7 +442,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
 fi
 
 # --- 10. Kismet GPS config ---
-echo "[10/23] Kismet GPS config..."
+echo "[10/24] Kismet GPS config..."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -456,7 +456,7 @@ else
 fi
 
 # --- 11. npm dependencies ---
-echo "[11/23] npm dependencies..."
+echo "[11/24] npm dependencies..."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -480,7 +480,7 @@ else
 fi
 
 # --- 12. .env from template ---
-echo "[12/23] Environment file..."
+echo "[12/24] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -537,7 +537,7 @@ echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 13. Development Monitor Service ---
-echo "[13/23] Development Monitor Service..."
+echo "[13/24] Development Monitor Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -566,7 +566,7 @@ else
 fi
 
 # --- 14. EarlyOOM Configuration ---
-echo "[14/23] Configure EarlyOOM..."
+echo "[14/24] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 10% RAM, 50% swap, check every 60s
   # Avoid list: system-critical + development tools + headless browser
@@ -581,7 +581,7 @@ else
 fi
 
 # --- 15. cgroup Memory Limit (defense against runaway processes) ---
-echo "[15/23] cgroup memory limit..."
+echo "[15/24] cgroup memory limit..."
 
 # Detect the primary UID (the user who will run Argos)
 SETUP_UID=$(id -u "$SETUP_USER")
@@ -631,7 +631,7 @@ EOF
 fi
 
 # --- 16. Tailscale ---
-echo "[16/23] Tailscale..."
+echo "[16/24] Tailscale..."
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
 else
@@ -667,7 +667,7 @@ else
 fi
 
 # --- 17. Claude Code ---
-echo "[17/23] Claude Code..."
+echo "[17/24] Claude Code..."
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
 else
@@ -677,7 +677,7 @@ else
 fi
 
 # --- 18. Gemini CLI ---
-echo "[18/23] Gemini CLI..."
+echo "[18/24] Gemini CLI..."
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
 else
@@ -687,7 +687,7 @@ else
 fi
 
 # --- 19. Agent Browser (Playwright-based browser automation for Claude Code) ---
-echo "[19/23] Agent Browser..."
+echo "[19/24] Agent Browser..."
 if sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null; then
   echo "  agent-browser already installed"
 else
@@ -699,7 +699,7 @@ echo "  Ensuring Chromium for agent-browser..."
 sudo -u "$SETUP_USER" agent-browser install
 
 # --- 20. ChromaDB (claude-mem vector search backend) ---
-echo "[20/23] ChromaDB for claude-mem..."
+echo "[20/24] ChromaDB for claude-mem..."
 
 # claude-mem runtime dependencies:
 #   - bun: runs the worker daemon (worker-service.cjs)
@@ -948,7 +948,7 @@ fi
 echo "  ChromaDB service installed and running on port 8000."
 
 # --- 21. Zsh + Dotfiles ---
-echo "[21/23] Zsh + Dotfiles..."
+echo "[21/24] Zsh + Dotfiles..."
 DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
 DOTFILES_DIR="$SETUP_HOME/.dotfiles"
 
@@ -1046,8 +1046,48 @@ else
   echo "  Warning: dotfiles repo missing zshrc. Skipping config copy."
 fi
 
+# Inject tmux auto-attach for SSH dev sessions
+# Must be placed ABOVE the Powerlevel10k instant prompt block in .zshrc
+# (P10k captures the TTY, which prevents tmux attach from working)
+ZSHRC="$SETUP_HOME/.zshrc"
+TMUX_MARKER="# Tmux auto-attach for SSH sessions"
+if [[ -f "$ZSHRC" ]] && ! grep -qF "$TMUX_MARKER" "$ZSHRC"; then
+  echo "  Injecting tmux auto-attach block into .zshrc..."
+  # Build the block to inject
+  TMUX_BLOCK="$(cat << 'TMUX_EOF'
+
+# ========================================
+# Tmux auto-attach for SSH sessions
+# ========================================
+# Must run BEFORE Powerlevel10k instant prompt (tmux needs raw TTY access).
+# Guards: skip if already in tmux, non-interactive, or VS Code Remote SSH.
+if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]] && [[ $- == *i* ]] \
+   && [[ -z "$VSCODE_INJECTION" ]] && [[ -z "$VSCODE_GIT_ASKPASS_NODE" ]]; then
+    exec tmux attach-session -t dev1 2>/dev/null || \
+        exec tmux new-session -s dev1 -c "$HOME/Documents/Argos/Argos"
+fi
+
+TMUX_EOF
+)"
+  # Insert before the P10k instant prompt block (or at line 5 if P10k not found)
+  if grep -qn "Enable Powerlevel10k instant prompt" "$ZSHRC"; then
+    P10K_LINE=$(grep -n "Enable Powerlevel10k instant prompt" "$ZSHRC" | head -1 | cut -d: -f1)
+    # Insert before the comment line (which is typically 1 line above the `if` block)
+    INSERT_LINE=$(( P10K_LINE - 1 ))
+    [[ "$INSERT_LINE" -lt 1 ]] && INSERT_LINE=1
+    # Use sed to insert the block at the target line
+    sudo -u "$SETUP_USER" sed -i "${INSERT_LINE}r /dev/stdin" "$ZSHRC" <<< "$TMUX_BLOCK"
+  else
+    # No P10k found — prepend after the first few PATH/profile lines
+    sudo -u "$SETUP_USER" sed -i "5r /dev/stdin" "$ZSHRC" <<< "$TMUX_BLOCK"
+  fi
+  echo "  Tmux auto-attach configured (SSH → dev1 session)"
+else
+  echo "  Tmux auto-attach already present in .zshrc"
+fi
+
 # --- 22. Set Zsh as default shell ---
-echo "[22/23] Default shell..."
+echo "[22/24] Default shell..."
 CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
 if [[ "$CURRENT_SHELL" == */zsh ]]; then
   echo "  $SETUP_USER already using zsh"
@@ -1058,7 +1098,7 @@ else
 fi
 
 # --- 23. Headless Debug Service ---
-echo "[23/23] Headless Debug Service..."
+echo "[23/24] Headless Debug Service..."
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
     sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
@@ -1072,6 +1112,27 @@ if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
 else
     echo "  Warning: deployment/argos-headless.service not found. Skipping."
 fi
+
+# --- 24. Persistent Tmux Dev Sessions ---
+echo "[24/24] Persistent tmux dev sessions..."
+# Pre-create detached tmux sessions for SSH development work.
+# dev1/dev2/dev3: SSH dev workspaces (auto-attach on SSH login goes to dev1)
+# argos-logs, tmux-0, tmux-1: web terminal sessions (managed by npm run dev / web UI)
+#
+# These sessions survive across SSH disconnects. The .zshrc auto-attach block
+# (injected in step 21) connects SSH logins to dev1 automatically.
+USER_ID=$(id -u "$SETUP_USER")
+export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+for sess in dev1 dev2 dev3; do
+  if sudo -u "$SETUP_USER" tmux has-session -t "$sess" 2>/dev/null; then
+    echo "  $sess — already running"
+  else
+    sudo -u "$SETUP_USER" tmux new-session -d -s "$sess" -c "$PROJECT_DIR"
+    echo "  $sess — created (cwd: $PROJECT_DIR)"
+  fi
+done
+echo "  SSH login will auto-attach to dev1."
+echo "  Switch sessions: Ctrl-b then :switch-client -t dev2"
 
 echo ""
 echo "=== Provisioning Complete ==="

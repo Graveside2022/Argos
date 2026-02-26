@@ -10,7 +10,7 @@ interface ServiceDef {
 /** Service definitions for health monitoring */
 const MONITORED_SERVICES: ServiceDef[] = [
 	{ name: 'kismet', port: 2501, process: 'kismet' },
-	{ name: 'argos-dev', port: 5173, process: 'vite' }
+	{ name: 'argos-logs', port: 5173, process: 'vite' }
 ];
 
 /** Lookup table: [processRunning][portListening] → health status */

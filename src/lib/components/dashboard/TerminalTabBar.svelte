@@ -75,9 +75,9 @@
 	<div class="shell-dropdown-wrapper">
 		<button
 			class="toolbar-btn add-btn"
-			aria-label={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
-			title={$terminalPanelState.splits ? 'Add split pane' : 'New terminal'}
-			onclick={() => onCreateSession()}
+			aria-label="New terminal"
+			title="New terminal"
+			onclick={onToggleShellDropdown}
 		>
 			<svg
 				width="14"
@@ -89,27 +89,6 @@
 			>
 				<line x1="12" y1="5" x2="12" y2="19" />
 				<line x1="5" y1="12" x2="19" y2="12" />
-			</svg>
-		</button>
-		<button
-			class="toolbar-btn dropdown-toggle"
-			aria-label={$terminalPanelState.splits
-				? 'Select tmux profile for split'
-				: 'Select tmux profile'}
-			title={$terminalPanelState.splits
-				? 'Select tmux profile for split'
-				: 'Select tmux profile'}
-			onclick={onToggleShellDropdown}
-		>
-			<svg
-				width="10"
-				height="10"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-			>
-				<polyline points="6 9 12 15 18 9" />
 			</svg>
 		</button>
 
@@ -235,13 +214,7 @@
 	}
 
 	.add-btn {
-		border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-	}
-
-	.dropdown-toggle {
-		width: 16px;
-		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-		border-left: 1px solid var(--border);
+		border-radius: var(--radius-sm);
 	}
 
 	.shell-dropdown-wrapper {
