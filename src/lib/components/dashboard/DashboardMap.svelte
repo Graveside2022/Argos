@@ -45,6 +45,46 @@
 		class="map-container"
 		onload={ms.handleMapLoad}
 	>
+		<GeoJSONSource id="rf-range-src" data={ms.rfRangeGeoJSON}>
+			<FillLayer
+				id="rf-range-fill"
+				paint={{
+					'fill-color': ['get', 'color'],
+					'fill-opacity': [
+						'match',
+						['get', 'band'],
+						'strong',
+						0.14,
+						'usable',
+						0.11,
+						'marginal',
+						0.09,
+						'maximum',
+						0.06,
+						0.07
+					]
+				}}
+			/>
+		</GeoJSONSource>
+
+		<GeoJSONSource id="rf-range-label-src" data={ms.rfRangeLabelGeoJSON}>
+			<MapLibreSymbolLayer
+				id="rf-range-label"
+				layout={{
+					'text-field': ['get', 'label'],
+					'text-font': ['Open Sans Regular'],
+					'text-size': 10,
+					'text-anchor': 'bottom',
+					'text-offset': [0, -0.8]
+				}}
+				paint={{
+					'text-color': '#888888',
+					'text-halo-color': '#111111',
+					'text-halo-width': 1.5
+				}}
+			/>
+		</GeoJSONSource>
+
 		<GeoJSONSource id="detection-range-src" data={ms.detectionRangeGeoJSON}>
 			<FillLayer
 				id="detection-range-fill"

@@ -18,6 +18,7 @@ import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-s
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 import { takCotMessages } from '$lib/stores/tak-store';
 import { themeStore } from '$lib/stores/theme-store.svelte';
+import { HackRFDataService } from '$lib/tactical-map/hackrf-data-service';
 
 import { MAP_UI_COLORS } from './map/map-colors';
 import { buildConnectionLinesGeoJSON, buildDeviceGeoJSON } from './map/map-geojson';
@@ -36,6 +37,7 @@ import {
 	updateSymbolLayer
 } from './map/map-handlers';
 import { setupMap } from './map/map-setup';
+import { createRFRangeDerivedState } from './map/rf-range-derived.svelte';
 
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
@@ -69,6 +71,16 @@ export function createMapState() {
 		get current() {
 			return cssReady;
 		}
+	});
+
+	// RF range overlay — derived from GPS + HackRF frequency + RF profile
+	const rfRangeDerived = createRFRangeDerivedState();
+
+	// HackRF SSE data service — populates hackrfStore.targetFrequency
+	const hackrfService = new HackRFDataService();
+	$effect(() => {
+		hackrfService.start();
+		return () => hackrfService.stop();
 	});
 
 	const deviceGeoJSON: FeatureCollection = $derived(
@@ -239,6 +251,21 @@ export function createMapState() {
 		},
 		get detectionRangeGeoJSON() {
 			return gpsDerived.detectionRangeGeoJSON;
+		},
+		get rfRangeGeoJSON() {
+			return rfRangeDerived.rfRangeGeoJSON;
+		},
+		get rfRangeLabelGeoJSON() {
+			return rfRangeDerived.rfRangeLabelGeoJSON;
+		},
+		get rfRangeActive() {
+			return rfRangeDerived.rfRangeActive;
+		},
+		get rfRangeDisplayRange() {
+			return rfRangeDerived.displayRangeMeters;
+		},
+		get rfRangeIsCapped() {
+			return rfRangeDerived.isCapped;
 		},
 		get deviceGeoJSON() {
 			return deviceGeoJSON;

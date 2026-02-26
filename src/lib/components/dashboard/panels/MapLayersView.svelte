@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Input from '$lib/components/ui/input/input.svelte';
 	import { type VisibilityMode, visibilityMode } from '$lib/map/visibility-engine';
 	import {
 		activeBands,
@@ -7,80 +6,14 @@
 		toggleBand,
 		toggleLayerVisibility
 	} from '$lib/stores/dashboard/dashboard-store';
-	import {
-		DEFAULT_SATELLITE_SOURCE,
-		DEFAULT_VECTOR_SOURCE,
-		mapSettings
-	} from '$lib/stores/dashboard/map-settings-store';
 	import { signalBands } from '$lib/utils/signal-utils';
-
-	let customUrl = $state('');
-	const stadiaStore = mapSettings.stadiaAvailable;
-	let stadiaAvailable = $derived($stadiaStore);
-
-	function selectVector() {
-		mapSettings.setProvider(DEFAULT_VECTOR_SOURCE);
-	}
-
-	function selectSatellite() {
-		mapSettings.setProvider(DEFAULT_SATELLITE_SOURCE);
-	}
-
-	function applyCustom() {
-		if (!customUrl) return;
-		mapSettings.setProvider({
-			name: 'Custom',
-			type: 'satellite',
-			url: customUrl,
-			attribution: 'Custom'
-		});
-	}
 
 	function setVisibilityMode(mode: VisibilityMode) {
 		visibilityMode.set(mode);
 	}
 </script>
 
-<div class="layers-panel">
-	<header class="panel-header">
-		<span class="panel-title">LAYERS</span>
-	</header>
-
-	<!-- Map Provider -->
-	<section class="panel-section">
-		<div class="section-label">MAP PROVIDER</div>
-		<div class="provider-grid">
-			<button
-				class="provider-btn"
-				class:active={$mapSettings.type === 'vector'}
-				onclick={selectVector}
-				disabled={!stadiaAvailable}
-				title={!stadiaAvailable ? 'Requires Stadia Maps API key' : ''}
-			>
-				<span class="provider-icon vector"></span>
-				<span class="provider-name">Tactical</span>
-			</button>
-			<button
-				class="provider-btn"
-				class:active={$mapSettings.name === 'Satellite Hybrid'}
-				onclick={selectSatellite}
-			>
-				<span class="provider-icon satellite"></span>
-				<span class="provider-name">Satellite</span>
-			</button>
-		</div>
-
-		<div class="custom-input-row">
-			<Input
-				type="text"
-				placeholder="Custom XYZ URL..."
-				bind:value={customUrl}
-				class="flex-1 h-7 text-xs"
-			/>
-			<button class="apply-btn" onclick={applyCustom}>Set</button>
-		</div>
-	</section>
-
+<div class="layers-view">
 	<!-- Visibility Filter -->
 	<section class="panel-section">
 		<div class="section-label">VISIBILITY FILTER</div>
@@ -227,5 +160,10 @@
 </div>
 
 <style>
-	@import './layers-panel.css';
+	@import './map-settings-shared.css';
+
+	.layers-view {
+		display: flex;
+		flex-direction: column;
+	}
 </style>

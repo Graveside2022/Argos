@@ -6,7 +6,7 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 
 	import HardwareConfigPanel from './panels/HardwareConfigPanel.svelte';
-	import LayersPanel from './panels/LayersPanel.svelte';
+	import MapSettingsPanel from './panels/MapSettingsPanel.svelte';
 	import OnnetToolsPanel from './panels/OnnetToolsPanel.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
 	import SettingsPanel from './panels/SettingsPanel.svelte';
@@ -112,8 +112,8 @@
 					<OverviewPanel />
 				{:else if $activePanel === 'tools'}
 					<ToolsPanel />
-				{:else if $activePanel === 'layers'}
-					<LayersPanel />
+				{:else if $activePanel === 'map-settings'}
+					<MapSettingsPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
 				{:else if $activePanel === 'hardware'}
@@ -175,8 +175,8 @@
 					<OverviewPanel />
 				{:else if $activePanel === 'tools'}
 					<ToolsPanel />
-				{:else if $activePanel === 'layers'}
-					<LayersPanel />
+				{:else if $activePanel === 'map-settings'}
+					<MapSettingsPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
 				{:else if $activePanel === 'hardware'}
@@ -192,8 +192,8 @@
 					<OverviewPanel />
 				{:else if $activePanel === 'tools'}
 					<ToolsPanel />
-				{:else if $activePanel === 'layers'}
-					<LayersPanel />
+				{:else if $activePanel === 'map-settings'}
+					<MapSettingsPanel />
 				{:else if $activePanel === 'settings'}
 					<SettingsPanel />
 				{:else if $activePanel === 'hardware'}

@@ -1,23 +1,4 @@
-/* LayersPanel styles — extracted to comply with Article 2.2 (max 300 lines/file) */
-
-.layers-panel {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-}
-
-.panel-header {
-	padding: var(--space-4);
-	border-bottom: 1px solid var(--border);
-}
-
-.panel-title {
-	font-family: var(--font-mono, 'Fira Code', monospace);
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 1.5px;
-	color: var(--foreground-secondary, #888888);
-}
+/* Map Settings shared styles — used by MapSettingsPanel, MapProviderView, MapLayersView, LineOfSightView */
 
 .panel-section {
 	padding: var(--space-4);

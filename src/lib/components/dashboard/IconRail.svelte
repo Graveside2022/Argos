@@ -1,7 +1,7 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
-	import { House, Layers, List, Settings, Waypoints, Zap } from '@lucide/svelte';
+	import { House, List, Map, Settings, Waypoints, Zap } from '@lucide/svelte';
 
 	import {
 		activeBottomTab,
@@ -69,16 +69,16 @@
 		>
 			<Waypoints size={20} />
 		</button>
-		<!-- Layers -->
+		<!-- Map Settings -->
 		<button
 			class="rail-btn"
-			class:active={$activePanel === 'layers'}
-			title="Layers"
-			aria-label="Layers"
-			aria-pressed={$activePanel === 'layers'}
-			onclick={() => handleClick('layers')}
+			class:active={$activePanel === 'map-settings'}
+			title="Map Settings"
+			aria-label="Map Settings"
+			aria-pressed={$activePanel === 'map-settings'}
+			onclick={() => handleClick('map-settings')}
 		>
-			<Layers size={18} />
+			<Map size={18} />
 		</button>
 		<!-- Separator -->
 		<div class="rail-separator"></div>
