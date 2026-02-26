@@ -1,6 +1,8 @@
 import type { StyleSpecification } from 'maplibre-gl';
 import { writable } from 'svelte/store';
 
+import { activePanel } from './dashboard-store';
+
 export type MapProviderType = 'vector' | 'satellite' | 'custom';
 
 export interface MapSourceConfig {
@@ -84,3 +86,10 @@ export function navigateToMapSettingsView(view: MapSettingsView): void {
 export function navigateBackToHub(): void {
 	activeMapSettingsView.set('hub');
 }
+
+// Reset subview to hub when the Map Settings panel is closed
+activePanel.subscribe((panel) => {
+	if (panel !== 'map-settings') {
+		activeMapSettingsView.set('hub');
+	}
+});

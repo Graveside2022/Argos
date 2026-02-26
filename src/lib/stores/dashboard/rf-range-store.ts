@@ -82,11 +82,34 @@ export function setActivePreset(presetId: string): void {
 	rfRangeStore.update((s) => ({ ...s, activePresetId: presetId }));
 }
 
+const PROFILE_CLAMP_RANGES: Record<string, [number, number]> = {
+	txPowerDbm: [RF_PROFILE_LIMITS.TX_POWER_MIN_DBM, RF_PROFILE_LIMITS.TX_POWER_MAX_DBM],
+	antennaGainDbi: [
+		RF_PROFILE_LIMITS.ANTENNA_GAIN_MIN_DBI,
+		RF_PROFILE_LIMITS.ANTENNA_GAIN_MAX_DBI
+	],
+	rxAntennaGainDbi: [
+		RF_PROFILE_LIMITS.ANTENNA_GAIN_MIN_DBI,
+		RF_PROFILE_LIMITS.ANTENNA_GAIN_MAX_DBI
+	],
+	sensitivityDbm: [RF_PROFILE_LIMITS.SENSITIVITY_MIN_DBM, RF_PROFILE_LIMITS.SENSITIVITY_MAX_DBM],
+	heightAboveGroundM: [RF_PROFILE_LIMITS.HEIGHT_MIN_M, RF_PROFILE_LIMITS.HEIGHT_MAX_M]
+};
+
+function clampProfileField(key: string, value: unknown): unknown {
+	if (typeof value !== 'number') return value;
+	const range = PROFILE_CLAMP_RANGES[key];
+	return range ? Math.max(range[0], Math.min(range[1], value)) : value;
+}
+
 export function updateCustomProfile(partial: Partial<RFRangeProfile>): void {
+	const clamped = Object.fromEntries(
+		Object.entries(partial).map(([k, v]) => [k, clampProfileField(k, v)])
+	) as Partial<RFRangeProfile>;
 	rfRangeStore.update((s) => ({
 		...s,
 		activePresetId: 'custom',
-		customProfile: { ...s.customProfile, ...partial }
+		customProfile: { ...s.customProfile, ...clamped }
 	}));
 }
 

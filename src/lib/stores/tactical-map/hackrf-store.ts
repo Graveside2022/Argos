@@ -18,6 +18,7 @@ export interface SimplifiedSignal {
 export interface HackRFState {
 	isSearching: boolean;
 	connectionStatus: 'Connected' | 'Disconnected';
+	/** Active frequency in MHz. SSE data arrives in Hz and is converted by HackRFDataService. */
 	targetFrequency: number;
 	signalCount: number;
 	currentSignal: SimplifiedSignal | null;
