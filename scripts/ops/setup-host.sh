@@ -541,6 +541,10 @@ else
   fi
 fi
 
+# Ensure ops scripts are executable (git may strip execute bits)
+chmod +x "$PROJECT_DIR"/scripts/ops/*.sh "$PROJECT_DIR"/scripts/dev/*.sh 2>/dev/null || true
+echo "  Scripts marked executable"
+
 # --- 12. .env from template ---
 echo "[12/24] Environment file..."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
