@@ -1,8 +1,32 @@
 #!/usr/bin/env bash
 # Argos Host Provisioning Script
 # Idempotent setup for Kali Linux or Parrot OS on Raspberry Pi 5
-# Usage: sudo bash scripts/ops/setup-host.sh
+# Usage: sudo bash scripts/ops/setup-host.sh [--all]
+#   --all  Install everything without prompts (shows summary first)
 set -euo pipefail
+
+# --- Parse arguments ---
+INSTALL_ALL=false
+for arg in "$@"; do
+  case "$arg" in
+    --all) INSTALL_ALL=true ;;
+    --help|-h)
+      echo "Usage: sudo bash scripts/ops/setup-host.sh [--all]"
+      echo ""
+      echo "Options:"
+      echo "  --all   Install all optional components without individual prompts"
+      echo "          (still shows a summary and asks for one confirmation)"
+      echo ""
+      echo "Without --all, you'll be prompted for each optional component."
+      exit 0
+      ;;
+    *)
+      echo "Error: Unknown option '$arg'" >&2
+      echo "Usage: sudo bash scripts/ops/setup-host.sh [--all]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -51,10 +75,109 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# --- Interactive prompt helper ---
+# Asks the user whether to install an optional component.
+# Usage: if prompt_install "short_name" "description"; then ... fi
+# Returns 0 (yes) or 1 (no). Respects INSTALL_ALL flag.
+# Tracks choices in INSTALLED_COMPONENTS array for the final summary.
+declare -A SKIP_COMPONENTS=()
+INSTALLED_COMPONENTS=()
+SKIPPED_COMPONENTS=()
+
+prompt_install() {
+  local name="$1"
+  local description="$2"
+
+  echo ""
+  echo "  $description"
+  echo ""
+
+  if [[ "$INSTALL_ALL" == "true" ]]; then
+    INSTALLED_COMPONENTS+=("$name")
+    return 0
+  fi
+
+  local answer
+  read -rp "  Install $name? [y/N]: " answer
+  case "$answer" in
+    [Yy]|[Yy]es)
+      INSTALLED_COMPONENTS+=("$name")
+      return 0
+      ;;
+    *)
+      SKIPPED_COMPONENTS+=("$name")
+      SKIP_COMPONENTS["$name"]=1
+      echo "  Skipping $name."
+      return 1
+      ;;
+  esac
+}
+
+# Show --all summary before starting
+if [[ "$INSTALL_ALL" == "true" ]]; then
+  echo ""
+  echo "┌─────────────────────────────────────────────┐"
+  echo "│  FULL INSTALL MODE (--all)                   │"
+  echo "├─────────────────────────────────────────────┤"
+  echo "│                                              │"
+  echo "│  CORE (always installed):                    │"
+  echo "│   1. Network config (WiFi + DNS)             │"
+  echo "│   2. System packages (build tools, SDR)      │"
+  echo "│   3. Node.js 22 (app runtime)                │"
+  echo "│   4. Kismet (WiFi scanner)                   │"
+  echo "│   5. gpsd (GPS daemon)                       │"
+  echo "│   7. OpenSSH server                          │"
+  echo "│   8. SDR udev rules + infrastructure         │"
+  echo "│  10. Kismet GPS link                         │"
+  echo "│  11. npm dependencies                        │"
+  echo "│  12. Environment file (.env)                 │"
+  echo "│  14. EarlyOOM (prevents system freezes)      │"
+  echo "│  15. cgroup memory limits                    │"
+  echo "│                                              │"
+  echo "│  OPTIONAL (included with --all):             │"
+  echo "│   6. Docker (OpenWebRX + Bettercap)          │"
+  echo "│   9. GSM Evil (cell tower monitoring)        │"
+  echo "│  13. Dev monitor (auto-restart dev server)   │"
+  echo "│  16. zram compressed swap (4 GB)             │"
+  echo "│  17. Text-mode boot (disable desktop)        │"
+  echo "│  18. On-demand VNC (remote desktop)          │"
+  echo "│  19. Tailscale (secure remote access)        │"
+  echo "│  20. Claude Code (AI coding assistant)       │"
+  echo "│  21. Gemini CLI (Google AI assistant)        │"
+  echo "│  22. Agent Browser (browser automation)      │"
+  echo "│  23. ChromaDB (AI memory backend)            │"
+  echo "│  24. Zsh + dotfiles (shell environment)      │"
+  echo "│  25. Set Zsh as default shell                │"
+  echo "│  26. Headless debug service (Chromium)       │"
+  echo "│  27. Persistent tmux sessions                │"
+  echo "│                                              │"
+  echo "└─────────────────────────────────────────────┘"
+  echo ""
+  read -rp "Install everything listed above? [Y/n]: " CONFIRM_ALL
+  case "$CONFIRM_ALL" in
+    [Nn]|[Nn]o)
+      echo "Switching to interactive mode (you'll be prompted for each item)."
+      INSTALL_ALL=false
+      ;;
+    *)
+      echo "Installing everything..."
+      ;;
+  esac
+fi
+
+TOTAL_SECTIONS=27
+
+# =============================================
+# CORE COMPONENTS (always installed)
+# These are required for Argos to function.
+# =============================================
+
 # --- 1. Network Configuration ---
 # Raspberry Pi OS often uses netplan to manage wlan0, which locks NetworkManager out.
 # Argos needs: wlan0 = NM-managed (default WiFi), wlan1+ = unmanaged (Kismet capture).
-echo "[1/24] Network configuration..."
+echo ""
+echo "[1/$TOTAL_SECTIONS] Network Configuration"
+echo "  Sets up WiFi and DNS so Argos can talk to your radios and the internet."
 
 configure_networking() {
   local changed=false
@@ -160,7 +283,9 @@ DNSCONF
 configure_networking
 
 # --- 2. System packages ---
-echo "[2/24] System packages..."
+echo ""
+echo "[2/$TOTAL_SECTIONS] System Packages"
+echo "  Installs radio drivers, build tools, and utilities that Argos needs to compile and run."
 PACKAGES=(
   wireless-tools iw ethtool usbutils tmux zsh build-essential
   python3 python3-venv python3-pip
@@ -179,7 +304,9 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 # --- 3. Node.js ---
-echo "[3/24] Node.js..."
+echo ""
+echo "[3/$TOTAL_SECTIONS] Node.js"
+echo "  Installs Node.js 22 — the JavaScript runtime that powers the Argos web app."
 if command -v node &>/dev/null && command -v npm &>/dev/null; then
   NODE_VER="$(node --version)"
   echo "  Node.js $NODE_VER already installed (npm $(npm --version))"
@@ -195,7 +322,9 @@ else
 fi
 
 # --- 4. Kismet ---
-echo "[4/24] Kismet..."
+echo ""
+echo "[4/$TOTAL_SECTIONS] Kismet"
+echo "  Installs the Kismet WiFi scanner — detects nearby wireless networks and devices."
 if command -v kismet &>/dev/null; then
   echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
 else
@@ -215,7 +344,9 @@ else
 fi
 
 # --- 5. gpsd ---
-echo "[5/24] gpsd..."
+echo ""
+echo "[5/$TOTAL_SECTIONS] gpsd"
+echo "  Installs the GPS daemon — reads your GPS dongle so Argos can show your location on the map."
 if command -v gpsd &>/dev/null; then
   echo "  gpsd already installed"
 else
@@ -223,8 +354,19 @@ else
   apt-get install -y -qq gpsd gpsd-clients
 fi
 
+# =============================================
+# OPTIONAL COMPONENTS
+# You'll be prompted for each of these.
+# =============================================
+
 # --- 6. Docker (for third-party tools only) ---
-echo "[6/24] Docker..."
+echo ""
+echo "[6/$TOTAL_SECTIONS] Docker"
+if prompt_install "Docker" \
+  "Runs third-party radio tools (OpenWebRX, Bettercap) in isolated containers.
+  You need this if you want the wideband radio receiver or network attack tools.
+  Skip if you only need the core Argos dashboard."; then
+
 if command -v docker &>/dev/null; then
   echo "  Docker already installed: $(docker --version)"
 else
@@ -253,8 +395,12 @@ else
   echo "  Docker installed. User $SETUP_USER added to docker group."
 fi
 
+fi  # end Docker prompt
+
 # --- 7. OpenSSH Server ---
-echo "[7/24] OpenSSH server..."
+echo ""
+echo "[7/$TOTAL_SECTIONS] OpenSSH Server"
+echo "  Ensures you can remotely connect to this Pi over SSH from your laptop or phone."
 if dpkg -s openssh-server &>/dev/null; then
   echo "  OpenSSH server already installed"
 else
@@ -273,7 +419,9 @@ else
 fi
 
 # --- 8. udev rules for SDR devices ---
-echo "[8/24] udev rules..."
+echo ""
+echo "[8/$TOTAL_SECTIONS] SDR udev Rules"
+echo "  Allows your user account to access radio hardware (HackRF, RTL-SDR, USRP) without sudo."
 UDEV_FILE="/etc/udev/rules.d/99-sdr.rules"
 UDEV_CONTENT='# HackRF One
 ATTR{idVendor}=="1d50", ATTR{idProduct}=="6089", MODE="0666", GROUP="plugdev"
@@ -300,7 +448,9 @@ fi
 # UHD host tools are required for Ettus USRP devices (B205-mini, B210).
 # This section installs the base infrastructure; individual SoapySDR modules
 # are added per-device. Full SoapySDR device management UI is a future feature.
-echo "[8b/24] SDR infrastructure (SoapySDR + UHD)..."
+echo ""
+echo "[8b/$TOTAL_SECTIONS] SDR Infrastructure (SoapySDR + UHD)"
+echo "  Installs the universal radio driver layer so Argos can talk to any supported SDR device."
 
 SDR_INFRA_PKGS=(
   soapysdr-tools           # SoapySDRUtil CLI — unified device enumeration
@@ -354,7 +504,12 @@ else
 fi
 
 # --- 9. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
-echo "[9/24] GSM Evil..."
+echo ""
+echo "[9/$TOTAL_SECTIONS] GSM Evil"
+if prompt_install "GSM Evil" \
+  "Monitors cell towers and intercepts GSM radio traffic near your position.
+  Lets you see which towers your phone connects to and detect rogue base stations (IMSI catchers).
+  Requires a HackRF or RTL-SDR radio. Skip if you don't do cellular analysis."; then
 GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 ARCH="$(dpkg --print-architecture)"
 
@@ -503,8 +658,12 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
   fi
 fi
 
+fi  # end GSM Evil prompt
+
 # --- 10. Kismet GPS config ---
-echo "[10/24] Kismet GPS config..."
+echo ""
+echo "[10/$TOTAL_SECTIONS] Kismet GPS Config"
+echo "  Links Kismet to your GPS so scanned networks appear with location data on the map."
 KISMET_CONF="/etc/kismet/kismet.conf"
 if [[ -f "$KISMET_CONF" ]]; then
   if grep -q "gps=gpsd:host=localhost" "$KISMET_CONF"; then
@@ -518,7 +677,9 @@ else
 fi
 
 # --- 11. npm dependencies ---
-echo "[11/24] npm dependencies..."
+echo ""
+echo "[11/$TOTAL_SECTIONS] npm Dependencies"
+echo "  Installs all the JavaScript libraries Argos needs (this may take a few minutes on RPi)."
 cd "$PROJECT_DIR"
 if [[ -d node_modules ]]; then
   echo "  node_modules exists — running npm ci..."
@@ -546,7 +707,9 @@ chmod +x "$PROJECT_DIR"/scripts/ops/*.sh "$PROJECT_DIR"/scripts/dev/*.sh 2>/dev/
 echo "  Scripts marked executable"
 
 # --- 12. .env from template ---
-echo "[12/24] Environment file..."
+echo ""
+echo "[12/$TOTAL_SECTIONS] Environment File (.env)"
+echo "  Creates the configuration file with API keys for maps, cell towers, and security."
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   echo "  .env already exists — not overwriting"
 else
@@ -603,7 +766,13 @@ echo "  Generating MCP server configuration..."
 sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run mcp:install-b"
 
 # --- 13. Development Monitor Service ---
-echo "[13/24] Development Monitor Service..."
+echo ""
+echo "[13/$TOTAL_SECTIONS] Development Monitor Service"
+if prompt_install "Dev Monitor" \
+  "Watches the Argos dev server and automatically restarts it if it crashes.
+  Useful during development — you won't have to manually restart after a crash.
+  Skip if you only plan to run Argos in production mode."; then
+
 if [[ -f "$PROJECT_DIR/deployment/argos-dev-monitor.service" ]]; then
   echo "  Installing argos-dev-monitor.service for user $SETUP_USER..."
   
@@ -631,8 +800,12 @@ else
   echo "  Warning: deployment/argos-dev-monitor.service not found. Skipping."
 fi
 
+fi  # end Dev Monitor prompt
+
 # --- 14. EarlyOOM Configuration ---
-echo "[14/24] Configure EarlyOOM..."
+echo ""
+echo "[14/$TOTAL_SECTIONS] EarlyOOM Configuration"
+echo "  Prevents the Pi from freezing when memory runs low — kills the least important process first."
 if [[ -f /etc/default/earlyoom ]]; then
   # Memory threshold: 2.5% RAM free (97.5% used), 50% swap, check every 10s
   # This is the last-resort killer — other guards (Claude hook at 90%, tmux guard
@@ -651,7 +824,9 @@ else
 fi
 
 # --- 15. cgroup Memory Limit (defense against runaway processes) ---
-echo "[15/24] cgroup memory limit..."
+echo ""
+echo "[15/$TOTAL_SECTIONS] cgroup Memory Limit"
+echo "  Sets a hard cap on how much RAM your user account can use, protecting the system from runaway processes."
 
 # Detect the primary UID (the user who will run Argos)
 SETUP_UID=$(id -u "$SETUP_USER")
@@ -701,8 +876,211 @@ EOF
   fi
 fi
 
-# --- 16. Tailscale ---
-echo "[16/24] Tailscale..."
+# --- 16. zram Compressed Swap ---
+echo ""
+echo "[16/$TOTAL_SECTIONS] zram Compressed Swap"
+if prompt_install "zram Swap" \
+  "Creates 4 GB of compressed virtual memory using your RAM (no SD card wear).
+  Gives Argos extra breathing room when running multiple tools at once.
+  Highly recommended on 8 GB Pi — prevents freezes during heavy workloads."; then
+
+if systemctl is-active --quiet zram-swap 2>/dev/null; then
+  echo "  zram-swap already active"
+else
+  echo "  Installing zram-swap systemd service..."
+  cat > /etc/systemd/system/zram-swap.service << 'ZRAM_UNIT'
+[Unit]
+Description=Configure zram swap device
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'modprobe zram && DEV=$(zramctl --find --size 4G --algorithm zstd) && mkswap "$DEV" && swapon -p 100 "$DEV" && echo "$DEV" > /run/zram-swap-device'
+ExecStop=/bin/bash -c 'DEV=$(cat /run/zram-swap-device 2>/dev/null || echo /dev/zram0); swapoff "$DEV" 2>/dev/null; zramctl --reset "$DEV" 2>/dev/null; rm -f /run/zram-swap-device; true'
+
+[Install]
+WantedBy=multi-user.target
+ZRAM_UNIT
+  systemctl daemon-reload
+  systemctl enable zram-swap
+  systemctl start zram-swap
+  echo "  zram-swap installed and active (4 GB zstd compressed)."
+fi
+
+fi  # end zram prompt
+
+# --- 17. Text-Mode Boot (disable LightDM desktop greeter) ---
+echo ""
+echo "[17/$TOTAL_SECTIONS] Text-Mode Boot"
+if prompt_install "Text-Mode Boot" \
+  "Disables the graphical desktop login screen so the Pi boots straight to a terminal.
+  Saves ~300 MB of RAM that would be used by the desktop environment.
+  Best for headless/remote setups. You can always re-enable it later with:
+    sudo systemctl set-default graphical.target && sudo systemctl enable lightdm"; then
+
+# Patch /etc/lightdm/Xsession with has_option() if missing.
+# Some /etc/X11/Xsession.d/ scripts call has_option() which LightDM's Xsession
+# doesn't define. This causes errors if lightdm is ever re-enabled.
+XSESSION_FILE="/etc/lightdm/Xsession"
+if [[ -f "$XSESSION_FILE" ]]; then
+  if grep -q "has_option()" "$XSESSION_FILE"; then
+    echo "  has_option() already patched in Xsession"
+  else
+    echo "  Patching $XSESSION_FILE with has_option() function..."
+    # Insert the function after the errormsg() function definition
+    sed -i '/^errormsg () {/,/^}/{
+      /^}$/a\
+\
+# has_option() - required by /etc/X11/Xsession.d/ scripts\
+# Reads OPTIONFILE and checks if an option is present\
+has_option() {\
+    if [ -f "$OPTIONFILE" ]; then\
+        grep -qs "^$1" "$OPTIONFILE"\
+        return $?\
+    fi\
+    return 1\
+}
+    }' "$XSESSION_FILE"
+    echo "  has_option() patched into Xsession"
+  fi
+else
+  echo "  No /etc/lightdm/Xsession found (LightDM may not be installed)"
+fi
+
+# Disable lightdm and switch to text-mode boot
+CURRENT_TARGET=$(systemctl get-default 2>/dev/null)
+if [[ "$CURRENT_TARGET" == "multi-user.target" ]]; then
+  echo "  Already booting in text mode (multi-user.target)"
+else
+  echo "  Switching from $CURRENT_TARGET to multi-user.target..."
+  systemctl set-default multi-user.target
+  if systemctl is-enabled --quiet lightdm 2>/dev/null; then
+    systemctl disable lightdm
+    echo "  LightDM disabled."
+  fi
+  echo "  Text-mode boot configured. Desktop will not start on next reboot."
+fi
+
+fi  # end Text-Mode Boot prompt
+
+# --- 18. On-Demand VNC (socket-activated remote desktop) ---
+echo ""
+echo "[18/$TOTAL_SECTIONS] On-Demand VNC"
+if prompt_install "On-Demand VNC" \
+  "Lets you view a remote desktop on this Pi from any VNC viewer (e.g., your laptop).
+  The desktop only starts when you connect, and shuts down when you disconnect — saving RAM.
+  Connect to port 5901 from any VNC client. Skip if you only use SSH."; then
+
+# Install VNC packages (only needed for this section)
+for pkg in tigervnc-standalone-server tigervnc-tools socat; do
+  if dpkg -s "$pkg" &>/dev/null; then
+    echo "  $pkg — already installed"
+  else
+    echo "  $pkg — installing..."
+    apt-get install -y -qq "$pkg"
+  fi
+done
+
+# Create systemd user unit directory
+sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd/user"
+
+# VNC socket unit — listens on port 5901
+VNC_SOCKET="$SETUP_HOME/.config/systemd/user/vnc-ondemand.socket"
+echo "  Installing vnc-ondemand.socket (port 5901)..."
+cat > "$VNC_SOCKET" << 'VNC_SOCKET_UNIT'
+[Unit]
+Description=On-demand VNC socket (port 5901)
+
+[Socket]
+ListenStream=5901
+Accept=false
+FreeBind=true
+ReusePort=true
+
+[Install]
+WantedBy=sockets.target
+VNC_SOCKET_UNIT
+chown "$SETUP_USER":"$SETUP_USER" "$VNC_SOCKET"
+
+# VNC proxy service — forwards socket connections to the VNC backend
+VNC_SERVICE="$SETUP_HOME/.config/systemd/user/vnc-ondemand.service"
+cat > "$VNC_SERVICE" << 'VNC_SERVICE_UNIT'
+[Unit]
+Description=On-demand VNC proxy (triggers VNC server)
+Requires=vnc-backend.service
+After=vnc-backend.service
+
+[Service]
+# Wait for VNC to be ready on port 5911 before proxying (up to 15s)
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do ss -tln | grep -q ":5911 " && exit 0; sleep 0.5; done; echo "vnc-backend port 5911 not ready after 15s" >&2; exit 1'
+# Accept connection from systemd socket, forward to VNC, exit on disconnect
+ExecStart=/usr/bin/socat ACCEPT-FD:3 TCP:127.0.0.1:5911
+# On exit: stop backend via independent transient unit (avoids cgroup kill + deadlock)
+ExecStopPost=/usr/bin/systemd-run --user --no-block systemctl --user stop vnc-backend.service
+TimeoutStopSec=5
+StandardOutput=journal
+StandardError=journal
+VNC_SERVICE_UNIT
+chown "$SETUP_USER":"$SETUP_USER" "$VNC_SERVICE"
+
+# VNC backend service — runs TigerVNC server on display :11
+VNC_BACKEND="$SETUP_HOME/.config/systemd/user/vnc-backend.service"
+cat > "$VNC_BACKEND" << 'VNC_BACKEND_UNIT'
+[Unit]
+Description=TigerVNC Server (on-demand backend)
+After=syslog.target network.target
+# Proxy ExecStopPost stops us on disconnect — no watcher needed
+
+[Service]
+Type=forking
+PIDFile=%h/.config/tigervnc/%H:11.pid
+# Bind to localhost:5911 — the socket proxy forwards external connections here
+ExecStart=/usr/bin/vncserver :11 -localhost -geometry 1920x1200 -depth 24 -rfbport 5911
+ExecStop=/usr/bin/vncserver -kill :11
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+# Cap memory to protect Argos from VNC bloat
+MemoryMax=1200M
+# VNC is expendable — let earlyoom/OOM kill it before Argos (oom_score_adj=-500)
+OOMScoreAdjust=300
+VNC_BACKEND_UNIT
+chown "$SETUP_USER":"$SETUP_USER" "$VNC_BACKEND"
+
+# Set VNC password if not already configured
+VNC_PASSWD_FILE="$SETUP_HOME/.vnc/passwd"
+if [[ -f "$VNC_PASSWD_FILE" ]]; then
+  echo "  VNC password already set"
+else
+  echo ""
+  echo "  Set a VNC password (used when connecting from your VNC viewer):"
+  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.vnc"
+  sudo -u "$SETUP_USER" vncpasswd "$VNC_PASSWD_FILE"
+fi
+
+# Enable lingering so socket stays active without a login session
+loginctl enable-linger "$SETUP_USER"
+
+# Enable and start the socket
+USER_ID=$(id -u "$SETUP_USER")
+export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+sudo -u "$SETUP_USER" systemctl --user daemon-reload
+sudo -u "$SETUP_USER" systemctl --user enable vnc-ondemand.socket
+sudo -u "$SETUP_USER" systemctl --user restart vnc-ondemand.socket
+echo "  On-demand VNC installed. Connect to port 5901 with any VNC viewer."
+echo "  The desktop starts when you connect and stops when you disconnect."
+
+fi  # end VNC prompt
+
+# --- 19. Tailscale ---
+echo ""
+echo "[19/$TOTAL_SECTIONS] Tailscale"
+if prompt_install "Tailscale" \
+  "Creates a secure private network so you can access this Pi from anywhere (home, office, field).
+  Works through firewalls and NAT — no port forwarding needed. Free for personal use.
+  Skip if you'll only use this Pi on the local network."; then
+
 if command -v tailscale &>/dev/null; then
   echo "  Tailscale already installed: $(tailscale version | head -1)"
 else
@@ -737,8 +1115,16 @@ else
   echo "  DNS health check: OK ($(grep -c '^nameserver' /etc/resolv.conf) nameservers)"
 fi
 
-# --- 17. Claude Code ---
-echo "[17/24] Claude Code..."
+fi  # end Tailscale prompt
+
+# --- 20. Claude Code ---
+echo ""
+echo "[20/$TOTAL_SECTIONS] Claude Code"
+if prompt_install "Claude Code" \
+  "Installs Anthropic's AI coding assistant that can read and write code on this Pi.
+  Useful for development, debugging, and building new features for Argos.
+  Skip if you don't plan to develop or modify the Argos codebase."; then
+
 if sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null; then
   echo "  Claude Code already installed"
 else
@@ -747,8 +1133,16 @@ else
   echo "  Claude Code installed. Run 'claude' to authenticate."
 fi
 
-# --- 18. Gemini CLI ---
-echo "[18/24] Gemini CLI..."
+fi  # end Claude Code prompt
+
+# --- 21. Gemini CLI ---
+echo ""
+echo "[21/$TOTAL_SECTIONS] Gemini CLI"
+if prompt_install "Gemini CLI" \
+  "Installs Google's AI coding assistant as an alternative to Claude Code.
+  Provides a second AI option for development work on the Pi.
+  Skip if you don't use Google's Gemini AI."; then
+
 if sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null; then
   echo "  Gemini CLI already installed"
 else
@@ -757,8 +1151,16 @@ else
   echo "  Gemini CLI installed. Run 'gemini' to authenticate."
 fi
 
-# --- 19. Agent Browser (Playwright-based browser automation for Claude Code) ---
-echo "[19/24] Agent Browser..."
+fi  # end Gemini CLI prompt
+
+# --- 22. Agent Browser (Playwright-based browser automation for Claude Code) ---
+echo ""
+echo "[22/$TOTAL_SECTIONS] Agent Browser"
+if prompt_install "Agent Browser" \
+  "Gives AI assistants (Claude, Gemini) the ability to control a web browser on this Pi.
+  Used for automated testing and visual verification of the Argos dashboard.
+  Skip if you don't use AI coding assistants for development."; then
+
 if sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null; then
   echo "  agent-browser already installed"
 else
@@ -769,8 +1171,15 @@ fi
 echo "  Ensuring Chromium for agent-browser..."
 sudo -u "$SETUP_USER" agent-browser install
 
-# --- 20. ChromaDB (claude-mem vector search backend) ---
-echo "[20/24] ChromaDB for claude-mem..."
+fi  # end Agent Browser prompt
+
+# --- 23. ChromaDB (claude-mem vector search backend) ---
+echo ""
+echo "[23/$TOTAL_SECTIONS] ChromaDB"
+if prompt_install "ChromaDB" \
+  "Installs a vector database that gives AI assistants long-term memory across sessions.
+  Claude Code uses this to remember past conversations and project context.
+  Skip if you don't use Claude Code or don't need AI memory."; then
 
 # claude-mem runtime dependencies:
 #   - bun: runs the worker daemon (worker-service.cjs)
@@ -1018,8 +1427,16 @@ fi
 
 echo "  ChromaDB service installed and running on port 8000."
 
-# --- 21. Zsh + Dotfiles ---
-echo "[21/24] Zsh + Dotfiles..."
+fi  # end ChromaDB prompt
+
+# --- 24. Zsh + Dotfiles ---
+echo ""
+echo "[24/$TOTAL_SECTIONS] Zsh + Dotfiles"
+if prompt_install "Zsh + Dotfiles" \
+  "Installs a customized shell environment with autocompletions, syntax highlighting, and a nice prompt.
+  Includes Oh My Zsh, Powerlevel10k theme, tmux plugin manager, and FiraCode Nerd Font.
+  Also configures tmux auto-attach so SSH sessions reconnect to your work automatically.
+  Skip if you prefer to keep your current shell setup."; then
 DOTFILES_REPO="https://github.com/Graveside2022/raspberry-pi-dotfiles.git"
 DOTFILES_DIR="$SETUP_HOME/.dotfiles"
 
@@ -1168,8 +1585,20 @@ else
   echo "  Tmux auto-attach already present in .zshrc"
 fi
 
-# --- 22. Set Zsh as default shell ---
-echo "[22/24] Default shell..."
+fi  # end Zsh + Dotfiles prompt
+
+# --- 25. Set Zsh as default shell ---
+echo ""
+echo "[25/$TOTAL_SECTIONS] Set Zsh as Default Shell"
+if prompt_install "Zsh as Default" \
+  "Changes your login shell from bash to zsh (requires Zsh + Dotfiles above).
+  Next time you SSH in, you'll get the fancy zsh prompt instead of plain bash.
+  Skip if you installed Zsh above but want to switch manually later."; then
+
+if [[ "${SKIP_COMPONENTS[Zsh + Dotfiles]+_}" ]]; then
+  echo "  Skipping — Zsh + Dotfiles was not installed (required dependency)."
+else
+
 CURRENT_SHELL="$(getent passwd "$SETUP_USER" | cut -d: -f7)"
 if [[ "$CURRENT_SHELL" == */zsh ]]; then
   echo "  $SETUP_USER already using zsh"
@@ -1179,8 +1608,18 @@ else
   echo "  Default shell set to zsh (takes effect on next login)"
 fi
 
-# --- 23. Headless Debug Service ---
-echo "[23/24] Headless Debug Service..."
+fi  # end Zsh + Dotfiles dependency check
+
+fi  # end Zsh default prompt
+
+# --- 26. Headless Debug Service ---
+echo ""
+echo "[26/$TOTAL_SECTIONS] Headless Debug Service"
+if prompt_install "Headless Debug" \
+  "Runs a hidden Chromium browser on port 9224 for automated testing and screenshots.
+  AI assistants use this to visually verify the Argos dashboard without a monitor.
+  Skip if you don't use AI coding assistants or automated testing."; then
+
 if [[ -f "$PROJECT_DIR/deployment/argos-headless.service" ]]; then
     echo "  Installing argos-headless.service..."
     sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
@@ -1195,8 +1634,15 @@ else
     echo "  Warning: deployment/argos-headless.service not found. Skipping."
 fi
 
-# --- 24. Persistent Tmux Dev Sessions ---
-echo "[24/24] Persistent tmux dev sessions..."
+fi  # end Headless Debug prompt
+
+# --- 27. Persistent Tmux Dev Sessions ---
+echo ""
+echo "[27/$TOTAL_SECTIONS] Persistent Tmux Dev Sessions"
+if prompt_install "Tmux Sessions" \
+  "Creates 3 pre-built terminal workspaces (dev1, dev2, dev3) that survive SSH disconnects.
+  When you SSH in, you'll auto-attach to dev1 where you left off — no lost work.
+  Skip if you don't use tmux or prefer to manage your own sessions."; then
 # Pre-create detached tmux sessions for SSH development work.
 # dev1/dev2/dev3: SSH dev workspaces (auto-attach on SSH login goes to dev1)
 # argos-logs, tmux-0, tmux-1: web terminal sessions (managed by npm run dev / web UI)
@@ -1216,18 +1662,48 @@ done
 echo "  SSH login will auto-attach to dev1."
 echo "  Switch sessions: Ctrl-b then :switch-client -t dev2"
 
+fi  # end Tmux Sessions prompt
+
 echo ""
-echo "=== Provisioning Complete ==="
+echo "==========================================="
+echo "  Provisioning Complete!"
+echo "==========================================="
+echo ""
+
+# Show summary of what was installed vs skipped
+if [[ ${#INSTALLED_COMPONENTS[@]} -gt 0 ]]; then
+  echo "Installed: ${INSTALLED_COMPONENTS[*]}"
+fi
+if [[ ${#SKIPPED_COMPONENTS[@]} -gt 0 ]]; then
+  echo "Skipped:   ${SKIPPED_COMPONENTS[*]}"
+  echo ""
+  echo "To install skipped components later, re-run:"
+  echo "  sudo bash scripts/ops/setup-host.sh"
+fi
+
 echo ""
 echo "Next steps:"
 echo "  1. Edit .env to set service passwords"
 echo "  2. npm run dev          — start development server"
-echo "  3. sudo bash scripts/ops/install-services.sh  — install systemd services"
-echo "  4. sudo systemctl start argos-final           — start production server"
+echo "  3. Open http://<pi-ip>:5173 in your browser"
 echo ""
-echo "To update API keys later:"
-echo "  Edit .env and set STADIA_MAPS_API_KEY and/or OPENCELLID_API_KEY"
-echo "  Then restart: npm run dev"
+echo "Production deployment:"
+echo "  sudo bash scripts/ops/install-services.sh"
+echo "  sudo systemctl start argos-final"
 echo ""
-echo "To import/refresh cell tower database:"
+echo "API keys (can be set later in .env):"
+echo "  STADIA_MAPS_API_KEY  — vector map tiles (https://stadiamaps.com)"
+echo "  OPENCELLID_API_KEY   — cell tower database (https://opencellid.org)"
+echo ""
+echo "Cell tower database:"
 echo "  bash scripts/ops/import-celltowers.sh"
+echo ""
+
+# VNC instructions (only if installed)
+if [[ ! "${SKIP_COMPONENTS[On-Demand VNC]+_}" ]]; then
+  echo "Remote desktop (VNC):"
+  echo "  Connect any VNC viewer to <pi-ip>:5901"
+  echo "  Desktop starts on connect, stops on disconnect (saves RAM)"
+  echo "  To change password: vncpasswd ~/.vnc/passwd"
+  echo ""
+fi
