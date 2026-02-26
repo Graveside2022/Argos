@@ -181,8 +181,10 @@
 	<!-- Left group: Brand + Collection + Callsign + Hardware -->
 	<div class="left-group">
 		<span class="brand-mark">ARGOS</span>
-		<span class="collection-dot"></span>
-		{#if isCollecting}<span class="rec-badge">REC</span>{/if}
+		<span class="rec-indicator">
+			<span class="collection-dot"></span>
+			{#if isCollecting}<span class="rec-badge">REC</span>{/if}
+		</span>
 		<span class="callsign">ARGOS-1</span>
 	</div>
 
