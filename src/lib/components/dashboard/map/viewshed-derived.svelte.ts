@@ -229,14 +229,19 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			return;
 		}
 
-		saveMemoState(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity);
-
-		// Debounce to avoid rapid API calls during slider changes
+		// Debounce to avoid rapid API calls during slider changes.
+		// Memo is saved inside the callback so rapid changes aren't dropped.
 		if (debounceId !== null) clearTimeout(debounceId);
 		debounceId = setTimeout(() => {
 			debounceId = null;
+			saveMemoState(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity);
 			fetchViewshed(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity);
 		}, DEBOUNCE_MS);
+
+		return () => {
+			if (debounceId !== null) clearTimeout(debounceId);
+			abortController?.abort();
+		};
 	});
 
 	return {
