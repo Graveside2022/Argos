@@ -634,13 +634,15 @@ fi
 # --- 14. EarlyOOM Configuration ---
 echo "[14/24] Configure EarlyOOM..."
 if [[ -f /etc/default/earlyoom ]]; then
-  # Memory threshold: 2.5% RAM free (97.5% used), 50% swap, check every 60s
+  # Memory threshold: 2.5% RAM free (97.5% used), 50% swap, check every 10s
   # This is the last-resort killer — other guards (Claude hook at 90%, tmux guard
   # at 90%, cgroup soft limit) intervene earlier. EarlyOOM only fires when ~200 MB free.
+  # Polling at 10s (not 60s) because with only ~200MB headroom, a fast allocation spike
+  # could trigger the kernel OOM killer before earlyoom notices at 60s intervals.
   # Avoid list: system-critical + development tools + headless browser
   # Prefer list: ollama (large model) and bun (claude-mem daemon workers)
   cat > /etc/default/earlyoom << 'EARLYOOM'
-EARLYOOM_ARGS="-m 2 -s 50 -r 60 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
+EARLYOOM_ARGS="-m 2 -s 50 -r 10 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
 EARLYOOM
   systemctl restart earlyoom
   echo "  EarlyOOM configured (trigger: 2.5% free, protect: system + dev tools, prefer kill: ollama + bun)."
