@@ -15,6 +15,12 @@
 
 ---
 
+## Phase 0: Prerequisites
+
+- [ ] T000 **GATE — Obtain user approval for `mqtt.js` npm dependency** (Article VI.3). The MQTT-to-WebSocket bridge in SvelteKit requires `mqtt.js` (~30 KB gzipped, server-side only). No existing MQTT client exists in the codebase. Approval must be granted before any SvelteKit MQTT work (T011-T013) begins.
+
+---
+
 ## Phase 1: Docker Infrastructure + MQTT Bus (Foundation)
 
 **Purpose**: Container infrastructure, MQTT message bus, base pipeline class, health monitoring, and SvelteKit MQTT bridge. No media processing yet — just plumbing.
@@ -29,9 +35,11 @@
 - [ ] T008 Create health monitor at `media-service/src/health/monitor.py` — `HealthMonitor` class: collects `get_health()` from all registered pipelines, collects system metrics via `psutil` (cpu_percent, virtual_memory, disk_usage), publishes `HealthReport` JSON to `argos/media/health` every `health_interval_s` seconds with retain=true
 - [ ] T009 Create main entry point at `media-service/src/main.py` — initialize GStreamer (`Gst.init()`), load config from YAML, create `MqttClient`, create `HealthMonitor`, register MQTT command handlers for pipeline start/stop/restart (`argos/media/pipeline/command`), start GLib main loop, handle SIGTERM for clean shutdown
 - [ ] T010 Write unit tests for base pipeline at `media-service/tests/test_base_pipeline.py` — test health reporting, test auto-restart scheduling, test error handling on bus messages, test clean shutdown
-- [ ] T011 [US6] Create SvelteKit MQTT types at `src/lib/server/services/media/mqtt-types.ts` — TypeScript interfaces matching data-model.md: `TranscriptionResult`, `DetectionEvent`, `HealthReport`, `PipelineState`, `SystemMetrics`, `RecordingStatus`, MQTT topic constants
-- [ ] T012 [US6] Create SvelteKit MQTT bridge at `src/lib/server/services/media/mqtt-bridge.ts` — `MediaMqttBridge` class: connects to Mosquitto via `mqtt.js`, subscribes to `argos/media/#`, parses payloads against TypeScript types, re-broadcasts to WebSocket via existing `WebSocketManager.broadcast()` pattern, publishes UI commands (recording, toggle, source select) to MQTT on behalf of browser clients
-- [ ] T013 [US6] Add media event types to WebSocket handlers in `src/lib/server/websocket-handlers.ts` — register `media_transcription`, `media_detection`, `media_health`, `media_recording`, `media_error` message types for WebSocket broadcast
+- [ ] T011 Create SvelteKit MQTT types at `src/lib/server/services/media/mqtt-types.ts` — TypeScript interfaces matching data-model.md: `TranscriptionResult`, `DetectionEvent`, `HealthReport`, `PipelineState`, `SystemMetrics`, `RecordingStatus`, MQTT topic constants
+- [ ] T012 Create SvelteKit MQTT bridge at `src/lib/server/services/media/mqtt-bridge.ts` — `MediaMqttBridge` class: connects to Mosquitto via `mqtt.js`, subscribes to `argos/media/#`, parses payloads against TypeScript types, re-broadcasts to WebSocket via existing `WebSocketManager.broadcast()` pattern, publishes UI commands (recording, toggle, source select) to MQTT on behalf of browser clients
+- [ ] T013 Add media event types to WebSocket handlers in `src/lib/server/websocket-handlers.ts` — register `media_transcription`, `media_detection`, `media_health`, `media_recording`, `media_error` message types for WebSocket broadcast
+- [ ] T013a [P] Add ALSA loopback provisioning to `scripts/ops/setup-host.sh` — add `snd-aloop` kernel module loading (`modprobe snd-aloop`), persist via `/etc/modules-load.d/snd-aloop.conf`, verify with `aplay -l` showing Loopback device
+- [ ] T013b [P] Create model download script at `media-service/scripts/download-models.sh` — download Whisper base (~142 MB), YOLOX nano ONNX (~4 MB), and optionally Demucs (~80 MB) to `media-service/models/`. Verify checksums. Skip if files already exist. Document manual download alternative in quickstart.md.
 
 **Checkpoint**: `docker compose -f docker/docker-compose.media.yml up` — Mosquitto starts on 1883/9001, media-service starts and publishes health to MQTT every 5s. SvelteKit server subscribes to MQTT, health messages visible in browser dev console via WebSocket. `pytest media-service/tests/test_base_pipeline.py` passes.
 
@@ -47,55 +55,58 @@
 - [ ] T015 [US1] Create radio audio pipeline at `media-service/src/pipelines/radio_audio.py` — `RadioAudioPipeline(BasePipeline)`: builds pipeline `alsasrc → audioconvert → audioresample → whisper_transcribe → appsink`, `appsink` callback extracts transcription text/timestamp/confidence, publishes `TranscriptionResult` to `argos/media/transcription` via MQTT, handles ALSA loopback unavailability by falling back to `audiotestsrc` (silence) with warning
 - [ ] T016 [US1] Write unit tests for radio pipeline at `media-service/tests/test_radio_pipeline.py` — test pipeline construction, test transcription callback with mock appsink data, test ALSA fallback behavior, test MQTT publish on transcription
 - [ ] T017 [US1] Create SQLite migration for media tables at `src/lib/server/db/migrations/20260226_create_media_tables.ts` — create `media_transcriptions` table (id, text, timestamp, duration_ms, confidence, language, source_pipeline, cleanup_applied, created_at) and `media_detections` table (id, class_label, confidence, bbox coords, frame_timestamp, camera_id, tracking_id, created_at) with indexes per data-model.md
-- [ ] T018 [US1] Create transcription store at `src/lib/stores/dashboard/transcription-store.ts` — reactive Svelte store: bounded ring buffer (500 entries), `addTranscription(result)`, `searchTranscriptions(query)` for text search, `clearTranscriptions()`, subscribes to `media_transcription` WebSocket events
+- [ ] T018 [US1] Create transcription store at `src/lib/stores/dashboard/transcription-store.ts` — reactive Svelte store: bounded ring buffer (500 entries), `addTranscription(result)`, `searchTranscriptions(query)` for in-memory text search, `clearTranscriptions()`, subscribes to `media_transcription` WebSocket events. **Note**: P1 search is in-memory (ring buffer). Full SQLite search via REST endpoint (`GET /api/media/transcriptions?q=`) deferred to post-MVP.
 - [ ] T019 [US1] Create TranscriptionFeed component at `src/lib/components/dashboard/panels/media/TranscriptionFeed.svelte` — scrolling list of transcription entries with timestamps, auto-scroll to bottom on new entries, search input at top filters displayed transcripts, empty state: "No transcriptions — waiting for audio", Lunaris dark theme styling with `--foreground` / `--text-secondary` tokens
+- [ ] T019a [US1] Write Vitest tests for transcription store at `src/lib/stores/dashboard/transcription-store.test.ts` — test addTranscription adds to ring buffer, test buffer caps at 500 entries (oldest evicted), test searchTranscriptions filters by keyword, test clearTranscriptions empties buffer, test WebSocket event subscription wiring
 
 **Checkpoint**: Feed audio through ALSA loopback (or test tone). Transcribed text appears in `argos/media/transcription` MQTT topic within 5 seconds. TranscriptionFeed.svelte displays transcript in browser. Search returns matching entries. `npm run build` succeeds.
 
 ---
 
-## Phase 3: Streaming + Recording (US-4)
+## Phase 3: Streaming + Recording (US-2)
 
 **Goal**: Audio streams to browser via WebRTC. Recording toggles dynamically.
 
 **CRITICAL**: Depends on Phase 2 radio audio pipeline.
 
-- [ ] T020 [US4] Extend radio audio pipeline for WebRTC streaming — modify `media-service/src/pipelines/radio_audio.py`: add `tee` element after audioconvert, one branch to Whisper (existing), one branch to `webrtcsink` with WHEP signaling endpoint on configurable port (default 8443)
-- [ ] T021 [US4] Create recording pipeline at `media-service/src/pipelines/recording.py` — `RecordingPipeline` class: dynamically adds/removes recording bin (`queue ! audioconvert ! vorbisenc ! oggmux ! filesink`) to/from the tee element. `start_recording()` creates timestamped filename, adds bin, sets to PLAYING. `stop_recording()` sends EOS to recording bin, waits for flush, unlinks, removes. Publishes `RecordingStatus` to `argos/media/recording/status` on state changes
-- [ ] T022 [US4] Add recording command handler to `media-service/src/main.py` — subscribe to `argos/media/recording/command`, parse `{ action: "start" | "stop" }`, delegate to RecordingPipeline
-- [ ] T023 [US4] Write unit tests for recording toggle at `media-service/tests/test_recording_toggle.py` — test start creates file, test stop sends EOS and finalizes, test rapid start/stop doesn't crash, test filename format matches `argos-radio-YYYYMMDD-HHmmss.ogg`
-- [ ] T024 [US4] Create AudioPlayer component at `src/lib/components/dashboard/panels/media/AudioPlayer.svelte` — creates `RTCPeerConnection`, connects to `webrtcsink` WHEP endpoint, attaches incoming audio stream to `<audio>` element, handles connection/disconnection states, shows "Connecting..." / "Playing" / "No audio source" states
-- [ ] T025 [US4] Create media store at `src/lib/stores/dashboard/media-store.ts` — reactive Svelte store: `pipelineStates` (map of pipeline name → PipelineState), `recordingStatus` (RecordingStatus), `isRecording` derived, `pipelineHealth` derived from WebSocket `media_health` events, convenience actions: `toggleRecording()`, `toggleTranscription()`, `toggleCleanup()`, `toggleDetection()` — each publishes MQTT command via bridge
-- [ ] T026 [US4] Create MediaControls component at `src/lib/components/dashboard/panels/media/MediaControls.svelte` — toggle buttons: Record (red when active), Transcription (on/off), Cleanup (on/off), Detection (on/off). Each toggle calls media store action. Uses existing toggle switch component pattern from Lunaris design system.
-- [ ] T027 [US4] Create RecordingIndicator component at `src/lib/components/dashboard/panels/media/RecordingIndicator.svelte` — red pulsing dot + recording duration (MM:SS) + file size (auto-formatted KB/MB) when `isRecording` is true. Hidden when not recording. Matches existing status indicator patterns.
-- [ ] T028 [US4] Add disk usage monitoring to health monitor in `media-service/src/health/monitor.py` — check `disk_usage(recording_dir)`. If free < `disk_warning_threshold_mb`, set `disk_warning: true` in health report. If free < 50 MB, auto-stop recording and publish error.
+- [ ] T020 [US2] Extend radio audio pipeline for WebRTC streaming — modify `media-service/src/pipelines/radio_audio.py`: add `tee` element after audioconvert, one branch to Whisper (existing), one branch to `webrtcsink` with WHEP signaling endpoint on configurable port (default 8443)
+- [ ] T021 [US2] Create recording pipeline at `media-service/src/pipelines/recording.py` — `RecordingPipeline` class: dynamically adds/removes recording bin (`queue ! audioconvert ! vorbisenc ! oggmux ! filesink`) to/from the tee element. `start_recording()` creates timestamped filename, adds bin, sets to PLAYING. `stop_recording()` sends EOS to recording bin, waits for flush, unlinks, removes. Publishes `RecordingStatus` to `argos/media/recording/status` on state changes
+- [ ] T022 [US2] Add recording command handler to `media-service/src/main.py` — subscribe to `argos/media/recording/command`, parse `{ action: "start" | "stop" }`, delegate to RecordingPipeline
+- [ ] T023 [US2] Write unit tests for recording toggle at `media-service/tests/test_recording_toggle.py` — test start creates file, test stop sends EOS and finalizes, test rapid start/stop doesn't crash, test filename format matches `argos-radio-YYYYMMDD-HHmmss.ogg`
+- [ ] T024 [US2] Create AudioPlayer component at `src/lib/components/dashboard/panels/media/AudioPlayer.svelte` — creates `RTCPeerConnection`, connects to `webrtcsink` WHEP endpoint, attaches incoming audio stream to `<audio>` element, handles connection/disconnection states, shows "Connecting..." / "Playing" / "No audio source" states
+- [ ] T025 [US2] Create media store at `src/lib/stores/dashboard/media-store.ts` — reactive Svelte store: `pipelineStates` (map of pipeline name → PipelineState), `recordingStatus` (RecordingStatus), `isRecording` derived, `pipelineHealth` derived from WebSocket `media_health` events, convenience actions: `toggleRecording()`, `toggleTranscription()`, `toggleCleanup()`, `toggleDetection()` — each publishes MQTT command via bridge
+- [ ] T026 [US2] Create MediaControls component at `src/lib/components/dashboard/panels/media/MediaControls.svelte` — toggle buttons: Record (red when active), Transcription (on/off), Cleanup (on/off), Detection (on/off). Each toggle calls media store action. Uses existing toggle switch component pattern from Lunaris design system.
+- [ ] T027 [US2] Create RecordingIndicator component at `src/lib/components/dashboard/panels/media/RecordingIndicator.svelte` — red pulsing dot + recording duration (MM:SS) + file size (auto-formatted KB/MB) when `isRecording` is true. Hidden when not recording. Matches existing status indicator patterns.
+- [ ] T028 [US2] Add disk usage monitoring to health monitor in `media-service/src/health/monitor.py` — check `disk_usage(recording_dir)`. If free < `disk_warning_threshold_mb`, set `disk_warning: true` in health report. If free < 50 MB, auto-stop recording and publish error.
+- [ ] T028a [US2] Write Vitest tests for media store at `src/lib/stores/dashboard/media-store.test.ts` — test pipelineStates updates from WebSocket health events, test recordingStatus tracks state changes, test isRecording derived value, test toggleRecording/toggleTranscription actions publish correct MQTT commands via bridge
+- [ ] T028b [US2] Write Vitest tests for media MQTT bridge at `src/lib/server/services/media/mqtt-bridge.test.ts` — test MQTT message parsing against TypeScript types, test WebSocket re-broadcast on valid messages, test malformed payload rejection, test reconnection behavior
 
 **Checkpoint**: Open browser, audio plays via WebRTC. Toggle recording ON — RecordingIndicator appears with duration counting. Toggle OFF — file finalized. Audio stream uninterrupted during both transitions. File exists at `/data/recordings/argos-radio-YYYYMMDD-HHmmss.ogg`.
 
 ---
 
-## Phase 4: Audio Cleanup (US-2)
+## Phase 4: Audio Cleanup (US-4)
 
 **Goal**: Optional Demucs source separation or lightweight fallback.
 
-- [ ] T029 [US2] Benchmark Demucs on Pi 5 — create `media-service/tests/benchmark_demucs.py`: load Demucs element, process 30-second test audio, measure CPU (psutil), RAM (psutil), processing time. Log results. Determine if Demucs is viable (< 40% CPU, < 300 MB RAM, < 2x real-time).
-- [ ] T030 [US2] Create audio cleanup pipeline at `media-service/src/pipelines/audio_cleanup.py` — `AudioCleanupPipeline(BasePipeline)`: if Demucs viable, builds `demucs_separate (voice stem)` element. If not, builds `webrtcdsp` noise suppression. Toggle-able via MQTT: when enabled, audio routes through cleanup element before downstream (Whisper, WebRTC). When disabled, bypass valve passes raw audio. Publishes cleanup state to health report.
-- [ ] T031 [US2] Add cleanup toggle handler to `media-service/src/main.py` — subscribe to `argos/media/cleanup/toggle`, parse `{ enabled: bool }`, enable/disable cleanup element in pipeline
+- [ ] T029 [US4] Benchmark Demucs on Pi 5 — create `media-service/tests/benchmark_demucs.py`: load Demucs element, process 30-second test audio, measure CPU (psutil), RAM (psutil), processing time. Log results. Determine if Demucs is viable (< 40% CPU, < 300 MB RAM, < 2x real-time).
+- [ ] T030 [US4] Create audio cleanup pipeline at `media-service/src/pipelines/audio_cleanup.py` — `AudioCleanupPipeline(BasePipeline)`: if Demucs viable, builds `demucs_separate (voice stem)` element. If not, builds `webrtcdsp` noise suppression. Toggle-able via MQTT: when enabled, audio routes through cleanup element before downstream (Whisper, WebRTC). When disabled, bypass valve passes raw audio. Publishes cleanup state to health report.
+- [ ] T031 [US4] Add cleanup toggle handler to `media-service/src/main.py` — subscribe to `argos/media/cleanup/toggle`, parse `{ enabled: bool }`, enable/disable cleanup element in pipeline
 
 **Checkpoint**: Play noisy audio. Toggle cleanup ON — verify cleaner output in WebRTC stream. Check CPU < 40%. Toggle OFF — raw audio passes through. If Demucs fails benchmark, webrtcdsp fallback is active.
 
 ---
 
-## Phase 5: Video Intelligence (US-3)
+## Phase 5: Video Intelligence (US-5)
 
 **Goal**: Camera ingest, YOLOX detection, bounding box overlay, video WebRTC streaming.
 
 **Note**: Can run in parallel with Phase 4 (independent pipeline).
 
-- [ ] T032 [P] [US3] Create video detection pipeline at `media-service/src/pipelines/video_detection.py` — `VideoDetectionPipeline(BasePipeline)`: builds `v4l2src → videoconvert → videoscale (640x480) → tee → [branch 1: rsyolox_infer → objectdetectionoverlay → webrtcsink] [branch 2: appsink for detection event extraction]`. Detection events extracted from GStreamer analytics meta, published as `DetectionEvent` to `argos/media/detections`. Supports source switching via pipeline rebuild (v4l2src ↔ rtspsrc).
-- [ ] T033 [P] [US3] Add video pipeline command handlers to `media-service/src/main.py` — subscribe to `argos/media/detection/toggle` (enable/disable detection), `argos/media/source/select` (switch camera source — requires pipeline stop/rebuild/start)
-- [ ] T034 [US3] Create VideoFeed component at `src/lib/components/dashboard/panels/media/VideoFeed.svelte` — WebRTC video player connecting to `webrtcsink` WHEP endpoint for video. `<video>` element with detection event overlay (bounding boxes rendered via `<canvas>` overlay or native WebRTC video). Opens as modal/overlay from Media panel. Shows "No camera" / "Connecting..." / "Streaming" states. FPS counter display.
-- [ ] T035 [US3] Add detection events to transcription store — extend `src/lib/stores/dashboard/media-store.ts` with `detectionEvents` ring buffer (100 entries), `addDetection(event)` from WebSocket `media_detection` events, `latestDetections` derived for overlay rendering
+- [ ] T032 [P] [US5] Create video detection pipeline at `media-service/src/pipelines/video_detection.py` — `VideoDetectionPipeline(BasePipeline)`: builds `v4l2src → videoconvert → videoscale (640x480) → tee → [branch 1: rsyolox_infer → objectdetectionoverlay → webrtcsink] [branch 2: appsink for detection event extraction]`. Detection events extracted from GStreamer analytics meta, published as `DetectionEvent` to `argos/media/detections`. Supports source switching via pipeline rebuild (v4l2src ↔ rtspsrc).
+- [ ] T033 [P] [US5] Add video pipeline command handlers to `media-service/src/main.py` — subscribe to `argos/media/detection/toggle` (enable/disable detection), `argos/media/source/select` (switch camera source — requires pipeline stop/rebuild/start)
+- [ ] T034 [US5] Create VideoFeed component at `src/lib/components/dashboard/panels/media/VideoFeed.svelte` — WebRTC video player connecting to `webrtcsink` WHEP endpoint for video. `<video>` element with detection event overlay (bounding boxes rendered via `<canvas>` overlay or native WebRTC video). Opens as modal/overlay from Media panel. Shows "No camera" / "Connecting..." / "Streaming" states. FPS counter display.
+- [ ] T035 [US5] Add detection events to transcription store — extend `src/lib/stores/dashboard/media-store.ts` with `detectionEvents` ring buffer (100 entries), `addDetection(event)` from WebSocket `media_detection` events, `latestDetections` derived for overlay rendering
 
 **Checkpoint**: Connect USB camera. Video feed in browser with bounding boxes. Detection events in MQTT. FPS >= 10. Disable detection — boxes disappear, video continues.
 
@@ -105,23 +116,24 @@
 
 **Goal**: Full Media panel in the Argos dashboard with transcript feed, controls, health, and video.
 
-- [ ] T036 [US6] Create MediaHealth component at `src/lib/components/dashboard/panels/media/MediaHealth.svelte` — pipeline status cards showing state (running=green, paused=yellow, error=red, stopped=gray) for each pipeline (radio-audio, video-detection, recording). CPU, RAM, disk metrics. Matches existing hardware health indicator patterns in TopStatusBar.
-- [ ] T037 [US6] Add Media panel to PanelContainer in `src/lib/components/dashboard/PanelContainer.svelte` — add `{:else if $activePanel === 'media'}` case, render Media panel composed of: TranscriptionFeed (top), MediaControls (middle), RecordingIndicator (inline with controls), MediaHealth (bottom). VideoFeed launched as overlay from a "Open Camera" button in controls.
-- [ ] T038 [US6] Add Media button to IconRail in `src/lib/components/dashboard/IconRail.svelte` — new button: `title="Media"`, icon `Radio` or `Activity` from Lucide, `onclick={() => handleClick('media')}`, positioned after existing buttons
-- [ ] T039 [US6] Add media health indicator to TopStatusBar in `src/lib/components/dashboard/TopStatusBar.svelte` — small status dot (green/yellow/red) representing aggregate media pipeline health, next to existing HackRF/WiFi/GPS indicators. Tooltip shows pipeline states. Hidden when media-service is not connected.
+- [ ] T036 [US3] Create MediaHealth component at `src/lib/components/dashboard/panels/media/MediaHealth.svelte` — pipeline status cards showing state (running=green, paused=yellow, error=red, stopped=gray) for each pipeline (radio-audio, video-detection, recording). CPU, RAM, disk metrics. Matches existing hardware health indicator patterns in TopStatusBar.
+- [ ] T037 Add Media panel to PanelContainer in `src/lib/components/dashboard/PanelContainer.svelte` — add `{:else if $activePanel === 'media'}` case, render Media panel composed of: TranscriptionFeed (top), MediaControls (middle), RecordingIndicator (inline with controls), MediaHealth (bottom). VideoFeed launched as overlay from a "Open Camera" button in controls.
+- [ ] T038 Add Media button to IconRail in `src/lib/components/dashboard/IconRail.svelte` — new button: `title="Media"`, icon `Radio` or `Activity` from Lucide, `onclick={() => handleClick('media')}`, positioned after existing buttons
+- [ ] T039 [US3] Add media health indicator to TopStatusBar in `src/lib/components/dashboard/TopStatusBar.svelte` — small status dot (green/yellow/red) representing aggregate media pipeline health, next to existing HackRF/WiFi/GPS indicators. Tooltip shows pipeline states. Hidden when media-service is not connected.
+- [ ] T039a Add mode selection to MediaControls — implement "Comms Mode" (audio + transcription + recording), "Surveillance Mode" (video + detection + recording), and "Full Mode" (reduced quality) selector in MediaControls.svelte. Mode selection auto-enables/disables pipelines via MQTT toggle commands and prevents resource-incompatible combinations from running simultaneously.
 - [ ] T040 Run full SvelteKit verification: `npx tsc --noEmit`, `npx eslint --config config/eslint.config.js` on new files, `npx vitest run` on new test files, `npm run build`
 
 **Checkpoint**: Media icon in rail. Panel opens with transcript feed, controls, health. Pipeline status shows green/red correctly. TopStatusBar shows media health dot. `npm run build` succeeds.
 
 ---
 
-## Phase 7: TAK Media Export (US-5)
+## Phase 7: TAK Media Export (US-6)
 
 **Goal**: RTSP server for TAK video, audio/image clip export for TAK attachments.
 
-- [ ] T041 [US5] Create RTSP server pipeline at `media-service/src/pipelines/rtsp_server.py` — `RtspServerPipeline`: uses `gst-rtsp-server` library to create a mount point (`/live`) serving H.264-encoded video from the detection pipeline. Configurable port (default 8554). Starts on demand via MQTT command.
-- [ ] T042 [US5] Create TAK export pipeline at `media-service/src/pipelines/tak_export.py` — `TakExportPipeline`: audio clip export (`valve → audioconvert → avenc_aac → mp4mux → filesink`), video snapshot export (`valve → jpegenc → filesink`). Triggered by MQTT command `argos/media/export/command` with `{ type, duration_s, output_path }`. Publishes `argos/media/export/ready` when file is written.
-- [ ] T043 [US5] Add export command handler to `media-service/src/main.py` — subscribe to `argos/media/export/command`, delegate to TakExportPipeline, publish completion event
+- [ ] T041 [US6] Create RTSP server pipeline at `media-service/src/pipelines/rtsp_server.py` — `RtspServerPipeline`: uses `gst-rtsp-server` library to create a mount point (`/live`) serving H.264-encoded video from the detection pipeline. Configurable port (default 8554). Starts on demand via MQTT command.
+- [ ] T042 [US6] Create TAK export pipeline at `media-service/src/pipelines/tak_export.py` — `TakExportPipeline`: audio clip export (`valve → audioconvert → avenc_aac → mp4mux → filesink`), video snapshot export (`valve → jpegenc → filesink`). Triggered by MQTT command `argos/media/export/command` with `{ type, duration_s, output_path }`. Publishes `argos/media/export/ready` when file is written.
+- [ ] T043 [US6] Add export command handler to `media-service/src/main.py` — subscribe to `argos/media/export/command`, delegate to TakExportPipeline, publish completion event
 
 **Checkpoint**: Trigger audio export — AAC file written. Trigger snapshot — JPEG file written. Start RTSP server — `ffplay rtsp://localhost:8554/live` shows video. Export ready events publish to MQTT.
 
@@ -142,13 +154,13 @@
 ### Parallel Opportunities
 
 ```
-Phase 1: T001 ║ T002 ║ T003 ║ T004 ║ T005   (all different files, zero deps)
+Phase 1: T001 ║ T002 ║ T003 ║ T004 ║ T005 ║ T013a ║ T013b  (all different files, zero deps)
 Phase 1: T011 ║ T012 ║ T013                  (TypeScript, parallel with Python T006-T009)
-Phase 2: T014-T016 (Python) ║ T017-T019 (TypeScript)
-Phase 3: T020-T023 (Python) ║ T024-T028 (TypeScript)
+Phase 2: T014-T016 (Python) ║ T017-T019a (TypeScript + tests)
+Phase 3: T020-T023 (Python) ║ T024-T028b (TypeScript + tests)
 Phase 4 ║ Phase 5                             (independent pipelines)
 Phase 5: T032 ║ T033 (Python) ║ T034-T035 (TypeScript)
-Phase 6: T036 ║ T037 ║ T038 ║ T039          (different UI components)
+Phase 6: T036 ║ T037 ║ T038 ║ T039 ║ T039a  (different UI components)
 ```
 
 ---
@@ -178,7 +190,13 @@ Each increment adds value without breaking previous functionality.
 ## Notes
 
 - [P] tasks = different files, no dependencies between them
-- [Story] label maps task to specific user story for traceability
+- [Story] label maps task to specific user story for traceability:
+  - **US1** = Live Radio Transcription (P1)
+  - **US2** = Media Streaming & Recording (P1)
+  - **US3** = Pipeline Health Monitoring (P1)
+  - **US4** = Audio Cleanup / Source Separation (P2)
+  - **US5** = Video Intelligence (P2)
+  - **US6** = TAK Media Export (P3)
 - Python media-service code uses snake_case (PEP 8). SvelteKit code uses kebab-case files / camelCase variables.
 - The media-service container has its own Dockerfile and codebase — separate from the SvelteKit `docker/Dockerfile`
 - All MQTT payloads are JSON. Schemas defined in `data-model.md` and enforced in `mqtt-types.ts`.

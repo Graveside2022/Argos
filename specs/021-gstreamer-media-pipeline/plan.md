@@ -207,7 +207,7 @@ src/lib/components/dashboard/
 
 ---
 
-### Phase 3: Streaming + Recording (US-4)
+### Phase 3: Streaming + Recording (US-2)
 
 **Goal**: Audio streams to the browser via WebRTC. Recording starts/stops dynamically from the UI without interrupting the stream.
 
@@ -236,7 +236,7 @@ src/lib/components/dashboard/
 
 ---
 
-### Phase 4: Audio Cleanup (US-2)
+### Phase 4: Audio Cleanup (US-4)
 
 **Goal**: Optional Demucs source separation isolates voice from noise. Falls back to lightweight noise suppression if too resource-intensive.
 
@@ -260,7 +260,7 @@ src/lib/components/dashboard/
 
 ---
 
-### Phase 5: Video Intelligence (US-3)
+### Phase 5: Video Intelligence (US-5)
 
 **Goal**: Camera feed ingested, YOLOX detects objects, bounding boxes overlay on video, video streams to browser via WebRTC.
 
@@ -313,7 +313,7 @@ src/lib/components/dashboard/
 
 ---
 
-### Phase 7: TAK Media Export (US-5)
+### Phase 7: TAK Media Export (US-6)
 
 **Goal**: Audio clips, video snapshots, and live RTSP streams exported in TAK-compatible formats.
 
