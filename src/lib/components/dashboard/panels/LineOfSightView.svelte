@@ -47,6 +47,19 @@
 			: `${Math.round(computedRange.displayRange)} m`
 	);
 
+	// RF cap: effective viewshed radius is min(user radius, Friis range)
+	let rfRangeM = $derived(
+		calculateFriisRange(
+			activeFrequencyMHz * 1e6,
+			activeProfile.txPowerDbm,
+			activeProfile.antennaGainDbi,
+			activeProfile.rxAntennaGainDbi,
+			activeProfile.sensitivityDbm
+		)
+	);
+	let isRfCapped = $derived($viewshedStore.radiusM > rfRangeM);
+	let effectiveRadiusM = $derived(Math.min($viewshedStore.radiusM, rfRangeM));
+
 	function handlePresetChange(e: Event) {
 		setActivePreset((e.target as HTMLSelectElement).value);
 	}
@@ -72,7 +85,7 @@
 	{#if $viewshedStore.isEnabled}
 		<DTEDStatus />
 
-		<ViewshedControls />
+		<ViewshedControls {isRfCapped} {effectiveRadiusM} />
 
 		<!-- Hardware preset -->
 		<section class="panel-section">

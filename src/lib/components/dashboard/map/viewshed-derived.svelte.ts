@@ -1,36 +1,22 @@
-/**
- * Viewshed derived reactive state for the dashboard map.
- *
- * Watches GPS position + viewshed store parameters. When enabled and
- * GPS is available, fetches /api/viewshed/compute and exposes the
- * resulting PNG data URI + bounds for the MapLibre ImageSource overlay.
- *
- * Replaces rf-range-derived.svelte.ts (Friis concentric rings).
- */
+/** Viewshed derived reactive state — watches GPS + store params, fetches viewshed API. */
 import { fromStore } from 'svelte/store';
 
+import { rfRangeStore } from '$lib/stores/dashboard/rf-range-store';
 import { viewshedStore } from '$lib/stores/dashboard/viewshed-store';
 import { type GPSState, gpsStore } from '$lib/stores/tactical-map/gps-store';
+import { hackrfStore } from '$lib/stores/tactical-map/hackrf-store';
+import { getPresetById } from '$lib/types/rf-range';
 import type { ViewshedBounds, ViewshedResult } from '$lib/types/viewshed';
 import { haversineMeters } from '$lib/utils/geo';
 import { logger } from '$lib/utils/logger';
-import { GPS_STALE_TIMEOUT_MS } from '$lib/utils/rf-propagation';
+import { calculateFriisRange, GPS_STALE_TIMEOUT_MS } from '$lib/utils/rf-propagation';
 
-// ── Constants ────────────────────────────────────────────────────────
-
-/** Minimum position delta (meters) to trigger a refetch */
 const POSITION_DELTA_M = 50;
-
-/** Debounce delay after parameter changes (ms) */
 const DEBOUNCE_MS = 500;
-
-// ── Helpers ──────────────────────────────────────────────────────────
 
 function hasValidGPSFix(gps: GPSState): boolean {
 	return gps.status.hasGPSFix && !(gps.position.lat === 0 && gps.position.lon === 0);
 }
-
-// ── Exported state factory ───────────────────────────────────────────
 
 export interface ViewshedDerivedState {
 	readonly viewshedImageUrl: string | null;
@@ -38,18 +24,48 @@ export interface ViewshedDerivedState {
 	readonly viewshedActive: boolean;
 	readonly viewshedInactiveReason: string | null;
 	readonly isComputing: boolean;
+	readonly isRfCapped: boolean;
+	readonly effectiveRadiusM: number;
 }
 
 /** Create all viewshed-derived reactive state. Call once from createMapState(). */
 export function createViewshedDerivedState(): ViewshedDerivedState {
 	const gps$ = fromStore(gpsStore);
 	const vs$ = fromStore(viewshedStore);
+	const rf$ = fromStore(rfRangeStore);
+	const hrf$ = fromStore(hackrfStore);
 
 	let viewshedImageUrl: string | null = $state(null);
 	let viewshedBounds: ViewshedBounds | null = $state(null);
 	let viewshedActive = $state(false);
 	let viewshedInactiveReason: string | null = $state('Overlay disabled');
 	let isComputing = $state(false);
+
+	// ── RF range cap derivation ──────────────────────────────────────
+	const activeProfile = $derived(
+		rf$.current.activePresetId === 'custom'
+			? rf$.current.customProfile
+			: (getPresetById(rf$.current.activePresetId) ?? rf$.current.customProfile)
+	);
+
+	const activeFrequencyHz = $derived(
+		(rf$.current.frequencySource === 'auto'
+			? hrf$.current.targetFrequency
+			: rf$.current.manualFrequencyMHz) * 1e6
+	);
+
+	const rfRangeM = $derived(
+		calculateFriisRange(
+			activeFrequencyHz,
+			activeProfile.txPowerDbm,
+			activeProfile.antennaGainDbi,
+			activeProfile.rxAntennaGainDbi,
+			activeProfile.sensitivityDbm
+		)
+	);
+
+	const effectiveRadiusM = $derived(Math.min(vs$.current.radiusM, rfRangeM));
+	const isRfCapped = $derived(vs$.current.radiusM > rfRangeM);
 
 	// Memoization: track last fetch inputs to skip redundant calls
 	let prevLat = Infinity;
@@ -224,8 +240,11 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			return;
 		}
 
-		const { heightAglM, radiusM, greenOpacity, redOpacity } = vs;
-		if (!hasParamsChanged(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity)) {
+		const { heightAglM, greenOpacity, redOpacity } = vs;
+		const cappedRadius = effectiveRadiusM;
+		if (
+			!hasParamsChanged(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity)
+		) {
 			return;
 		}
 
@@ -234,8 +253,8 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		if (debounceId !== null) clearTimeout(debounceId);
 		debounceId = setTimeout(() => {
 			debounceId = null;
-			saveMemoState(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity);
-			fetchViewshed(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity);
+			saveMemoState(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity);
+			fetchViewshed(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity);
 		}, DEBOUNCE_MS);
 
 		return () => {
@@ -259,6 +278,12 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		},
 		get isComputing() {
 			return isComputing;
+		},
+		get isRfCapped() {
+			return isRfCapped;
+		},
+		get effectiveRadiusM() {
+			return effectiveRadiusM;
 		}
 	};
 }

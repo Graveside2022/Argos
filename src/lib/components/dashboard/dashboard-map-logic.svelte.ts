@@ -267,6 +267,12 @@ export function createMapState() {
 		get viewshedInactiveReason() {
 			return viewshedDerived.viewshedInactiveReason;
 		},
+		get isRfCapped() {
+			return viewshedDerived.isRfCapped;
+		},
+		get effectiveRadiusM() {
+			return viewshedDerived.effectiveRadiusM;
+		},
 		get deviceGeoJSON() {
 			return deviceGeoJSON;
 		},
