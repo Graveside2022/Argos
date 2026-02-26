@@ -20,7 +20,6 @@ set -euo pipefail
 # --- Configuration ---
 THRESHOLD="${MEM_GUARD_THRESHOLD:-85}"
 LOCKFILE="/tmp/argos-heavy-cmd.lock"
-LOCK_MAX_AGE=600  # 10 minutes — stale lock protection
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -49,7 +48,7 @@ cleanup_if_tight() {
     echo -e "${YELLOW}Memory at ${pct}%. Running pre-flight cleanup...${RESET}"
 
     # Kill stale bun workers (claude-mem daemon orphans)
-    local killed=0
+    local killed=0 freed_mb=0
     while read -r pid; do
         local ppid parent_comm
         ppid=$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null) || continue
@@ -58,7 +57,7 @@ cleanup_if_tight() {
             local rss_mb
             rss_mb=$(awk '{printf "%d", $2*4/1024}' "/proc/$pid/statm" 2>/dev/null) || continue
             if [ "$rss_mb" -gt 30 ]; then
-                kill "$pid" 2>/dev/null && killed=$((killed + 1))
+                kill "$pid" 2>/dev/null && killed=$((killed + 1)) && freed_mb=$((freed_mb + rss_mb))
                 echo -e "  ${DIM}Killed orphan bun worker PID $pid (${rss_mb}MB)${RESET}"
             fi
         fi
@@ -66,35 +65,37 @@ cleanup_if_tight() {
 
     if [ "$killed" -gt 0 ]; then
         sleep 1  # Let memory reclaim
-        echo -e "  ${GREEN}Freed ~$((killed * 100))MB (killed $killed orphan workers)${RESET}"
+        echo -e "  ${GREEN}Freed ~${freed_mb}MB (killed $killed orphan workers)${RESET}"
     fi
 }
 
 acquire_lock() {
-    # Check for stale lock
-    if [ -f "$LOCKFILE" ]; then
-        local lock_pid lock_age
-        lock_pid=$(cat "$LOCKFILE" 2>/dev/null || echo "0")
-        lock_age=$(( $(date +%s) - $(stat -c %Y "$LOCKFILE" 2>/dev/null || echo 0) ))
-
-        if [ "$lock_age" -gt "$LOCK_MAX_AGE" ]; then
-            echo -e "${YELLOW}Stale lock (${lock_age}s old, PID $lock_pid). Removing.${RESET}"
-            rm -f "$LOCKFILE"
-        elif kill -0 "$lock_pid" 2>/dev/null; then
-            local lock_cmd
-            lock_cmd=$(ps -p "$lock_pid" -o args= 2>/dev/null | head -c 60)
+    # Use flock(1) for kernel-guaranteed atomic locking.
+    # The lock is held on file descriptor 9 for the lifetime of this script.
+    # On process exit (including SIGKILL), the kernel auto-releases the fd.
+    # No stale lock files, no PID checking, no TOCTOU race conditions.
+    #
+    # The PID file (.pid) is a separate diagnostic file — not the lock itself.
+    # It's written after the lock is acquired and read by blocked processes.
+    exec 9>"$LOCKFILE"
+    if ! flock -n 9; then
+        # Another process holds the lock — read its PID from the sidecar file
+        local lock_pid lock_cmd
+        lock_pid=$(cat "${LOCKFILE}.pid" 2>/dev/null | tr -cd '0-9')
+        if [ -n "$lock_pid" ]; then
+            lock_cmd=$(ps -p "$lock_pid" -o args= 2>/dev/null | head -c 60) || lock_cmd="unknown"
             echo -e "${RED}Another heavy command is running:${RESET}"
             echo -e "  ${DIM}PID $lock_pid: $lock_cmd${RESET}"
-            echo -e "${RED}Wait for it to finish or kill it: kill $lock_pid${RESET}"
-            return 1
+            echo -e "${RED}Wait for it to finish, or: kill $lock_pid${RESET}"
         else
-            # PID is dead, remove stale lock
-            rm -f "$LOCKFILE"
+            echo -e "${RED}Another heavy command is running (PID unknown).${RESET}"
+            echo -e "${RED}Check: ps aux | grep mem-guard${RESET}"
         fi
+        return 1
     fi
-
-    echo $$ > "$LOCKFILE"
-    trap 'rm -f "$LOCKFILE"' EXIT
+    # Lock acquired — write PID to sidecar file for diagnostics
+    echo $$ > "${LOCKFILE}.pid"
+    trap 'rm -f "${LOCKFILE}.pid"' EXIT
     return 0
 }
 
