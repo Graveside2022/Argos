@@ -24,6 +24,10 @@ CIRCUIT_OPEN=false
 CIRCUIT_OPEN_SINCE=0
 CIRCUIT_RESET_INTERVAL=300  # 5 minutes — try again after this long
 
+# Memory pressure threshold (percentage used). Skip restarts above this.
+# Matches the system-wide guard ladder: warn 80% → deny 90% → earlyoom 97.5%
+MEM_DANGER_THRESHOLD=85
+
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
@@ -56,6 +60,20 @@ in_cooldown() {
     local elapsed=$(( now - LAST_RESTART ))
     if [ "$elapsed" -lt "$RESTART_COOLDOWN" ]; then
         return 0  # still in cooldown
+    fi
+    return 1
+}
+
+mem_usage_pct() {
+    awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%d", (t-a)*100/t}' /proc/meminfo 2>/dev/null
+}
+
+mem_too_high() {
+    local pct
+    pct=$(mem_usage_pct)
+    if [ "$pct" -ge "$MEM_DANGER_THRESHOLD" ]; then
+        warn "Memory at ${pct}% (>=${MEM_DANGER_THRESHOLD}%). Skipping restart to avoid OOM."
+        return 0
     fi
     return 1
 }
@@ -102,6 +120,9 @@ check_vite() {
         log "Cooldown active ($(( $(date +%s) - LAST_RESTART ))s/${RESTART_COOLDOWN}s). Skipping."
         return
     fi
+
+    # Memory pressure gate: don't start Vite if system is stressed
+    if mem_too_high; then return; fi
 
     warn "Vite server (port 5173) is DOWN. Attempting restart (try $((CONSECUTIVE_FAILURES + 1))/${MAX_CONSECUTIVE_FAILURES})..."
     LAST_RESTART=$(date +%s)
@@ -155,15 +176,18 @@ check_socat() {
 
 check_chromium() {
     if ! lsof -ti:9224 > /dev/null; then
+        # Memory pressure gate: Chromium uses ~400-570 MB
+        if mem_too_high; then return; fi
+
         warn "Chromium debugger (port 9224) is DOWN. Checking Xvfb..."
-        
+
         # Check Xvfb (Display :99)
         if ! pgrep -f "Xvfb.*:99" > /dev/null; then
             warn "Xvfb :99 is DOWN. Restarting..."
             Xvfb :99 -screen 0 1280x1024x24 >> "$LOG_DIR/xvfb.log" 2>&1 &
             sleep 2
         fi
-        
+
         export DISPLAY=:99
         warn "Restarting Chromium in headless debug mode..."
         # Launch Chromium with remote debugging on 9224
@@ -186,6 +210,17 @@ check_claude_mem() {
 
 log "Starting Argos Dev Keepalive Monitor..."
 log "Monitoring Vite (5173), Chromium (9224), Proxy (99), and Claude Mem."
+
+# Boot delay: wait for system to stabilize before starting heavy processes.
+# On cold boot, systemd starts dozens of services simultaneously. Launching
+# Vite + Chromium (~750 MB combined) during this window causes OOM crashes.
+UPTIME_SECS=$(awk '{printf "%d", $1}' /proc/uptime)
+BOOT_DELAY=45  # seconds — enough for systemd, network, chroma to settle
+if [ "$UPTIME_SECS" -lt "$BOOT_DELAY" ]; then
+    WAIT=$(( BOOT_DELAY - UPTIME_SECS ))
+    log "System booted ${UPTIME_SECS}s ago. Waiting ${WAIT}s for services to stabilize..."
+    sleep "$WAIT"
+fi
 
 LOOP_COUNT=0
 while true; do
