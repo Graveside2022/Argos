@@ -10,14 +10,23 @@
 	} from '$lib/stores/dashboard/rf-range-store';
 	import { hackrfStore } from '$lib/stores/tactical-map/hackrf-store';
 	import { getPresetById, RF_PROFILE_LIMITS, RF_RANGE_PRESETS } from '$lib/types/rf-range';
-	import { calculateFriisRange, clampDisplayRange } from '$lib/utils/rf-propagation';
+	import {
+		calculateFriisRange,
+		clampDisplayRange,
+		RF_BAND_COLORS
+	} from '$lib/utils/rf-propagation';
 
-	// Band legend definitions (label + fallback hex for swatches)
+	// Band legend definitions sourced from RF_BAND_COLORS for single-source-of-truth
 	const BAND_LEGEND = [
-		{ key: 'strong', label: 'Strong', color: '#8bbfa0', fraction: 0.25 },
-		{ key: 'usable', label: 'Usable', color: '#809ad0', fraction: 0.5 },
-		{ key: 'marginal', label: 'Marginal', color: '#d4a054', fraction: 0.75 },
-		{ key: 'maximum', label: 'Maximum', color: '#c45b4a', fraction: 1.0 }
+		{ key: 'strong', label: 'Strong', color: RF_BAND_COLORS.strong.fallback, fraction: 0.25 },
+		{ key: 'usable', label: 'Usable', color: RF_BAND_COLORS.usable.fallback, fraction: 0.5 },
+		{
+			key: 'marginal',
+			label: 'Marginal',
+			color: RF_BAND_COLORS.marginal.fallback,
+			fraction: 0.75
+		},
+		{ key: 'maximum', label: 'Maximum', color: RF_BAND_COLORS.maximum.fallback, fraction: 1.0 }
 	] as const;
 
 	// Derived state from store

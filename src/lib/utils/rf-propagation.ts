@@ -37,34 +37,48 @@ interface BandDef {
 	colorEntry: { var: string; fallback: string };
 }
 
+/**
+ * RF band color mapping — aliases SIGNAL_COLORS to RF coverage semantics.
+ *
+ * The SIGNAL_COLORS keys reflect WiFi signal quality (critical=strongest),
+ * while RF bands use coverage semantics (strong=closest). The visual result
+ * is: green (strong) → blue (usable) → gold (marginal) → red (maximum).
+ */
+export const RF_BAND_COLORS = {
+	strong: SIGNAL_COLORS.fair, // sage green #8bbfa0 — best coverage
+	usable: SIGNAL_COLORS.weak, // blue #809ad0 — reliable coverage
+	marginal: SIGNAL_COLORS.strong, // gold #d4a054 — degraded coverage
+	maximum: SIGNAL_COLORS.critical // red #c45b4a — theoretical maximum
+} as const;
+
 const BAND_DEFS: readonly BandDef[] = [
 	{
 		key: 'strong',
 		outerFraction: 0.25,
 		innerFraction: 0,
 		marginLabel: '> 12 dB margin',
-		colorEntry: SIGNAL_COLORS.fair // sage green
+		colorEntry: RF_BAND_COLORS.strong
 	},
 	{
 		key: 'usable',
 		outerFraction: 0.5,
 		innerFraction: 0.25,
 		marginLabel: '6-12 dB margin',
-		colorEntry: SIGNAL_COLORS.weak // blue
+		colorEntry: RF_BAND_COLORS.usable
 	},
 	{
 		key: 'marginal',
 		outerFraction: 0.75,
 		innerFraction: 0.5,
 		marginLabel: '3-6 dB margin',
-		colorEntry: SIGNAL_COLORS.strong // gold
+		colorEntry: RF_BAND_COLORS.marginal
 	},
 	{
 		key: 'maximum',
 		outerFraction: 1.0,
 		innerFraction: 0.75,
 		marginLabel: '0-3 dB margin',
-		colorEntry: SIGNAL_COLORS.critical // red
+		colorEntry: RF_BAND_COLORS.maximum
 	}
 ] as const;
 
