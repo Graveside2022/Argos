@@ -137,7 +137,7 @@
 		border: none;
 		border-radius: var(--radius-sm);
 		color: var(--foreground-muted);
-		font-size: var(--text-sm);
+		font-size: var(--text-brand);
 		cursor: pointer;
 		white-space: nowrap;
 		transition:

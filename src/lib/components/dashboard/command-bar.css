@@ -14,16 +14,23 @@
 .left-group {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 16px;
 	flex-shrink: 0;
 }
 
 .brand-mark {
 	font-family: var(--font-mono);
-	font-size: 14px;
-	font-weight: 600;
-	letter-spacing: 2px;
+	font-size: 16px;
+	font-weight: 700;
+	letter-spacing: 2.5px;
 	color: var(--primary);
+}
+
+.rec-indicator {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
 }
 
 .collection-dot {
@@ -36,11 +43,11 @@
 
 .callsign {
 	font-family: var(--font-mono);
-	font-size: 12px;
-	font-weight: 500;
-	letter-spacing: 1px;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
 	color: var(--foreground);
-	max-width: 160px;
+	max-width: 180px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -49,9 +56,9 @@
 .rec-badge {
 	color: var(--destructive);
 	font-family: var(--font-mono);
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 1px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 1.2px;
 	text-transform: uppercase;
 }
 
@@ -155,12 +162,14 @@
 
 .segment-date {
 	color: var(--muted-foreground);
+	font-size: 11px;
 	letter-spacing: 0.5px;
 }
 
 .segment-zulu {
-	font-weight: 600;
-	letter-spacing: 1px;
+	font-size: 14px;
+	font-weight: 700;
+	letter-spacing: 1.5px;
 }
 
 .device-wrapper {
@@ -176,7 +185,7 @@
 		gap: 8px;
 	}
 	.brand-mark {
-		font-size: 13px;
+		font-size: 14px;
 	}
 	.segment-coords,
 	.segment-date {
