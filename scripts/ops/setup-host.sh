@@ -1122,11 +1122,22 @@ if [[ -f "$ZSHRC" ]] && ! grep -qF "$TMUX_MARKER" "$ZSHRC"; then
 # Tmux auto-attach for SSH sessions
 # ========================================
 # Must run BEFORE Powerlevel10k instant prompt (tmux needs raw TTY access).
-# Guards: skip if already in tmux, non-interactive, or VS Code Remote SSH.
+# Guards: skip if already in tmux, non-interactive, VS Code Remote SSH,
+# or high memory pressure (>80% used). Prevents OOM loop on SSH reconnect.
 if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]] && [[ $- == *i* ]] \
    && [[ -z "$VSCODE_INJECTION" ]] && [[ -z "$VSCODE_GIT_ASKPASS_NODE" ]]; then
-    exec tmux attach-session -t dev1 2>/dev/null || \
-        exec tmux new-session -s dev1 -c "$HOME/Documents/Argos/Argos"
+    # Memory pressure guard: skip tmux if >80% RAM used
+    _mem_pct=$(awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%d", (t-a)*100/t}' /proc/meminfo 2>/dev/null)
+    if (( _mem_pct < 80 )); then
+        if tmux has-session -t dev1 2>/dev/null; then
+            exec tmux attach-session -t dev1
+        else
+            exec tmux new-session -s dev1 -c "$HOME/Documents/Argos/Argos"
+        fi
+    else
+        echo "[tmux skip] Memory at ${_mem_pct}% — attaching to tmux skipped to avoid OOM"
+    fi
+    unset _mem_pct
 fi
 
 TMUX_EOF
