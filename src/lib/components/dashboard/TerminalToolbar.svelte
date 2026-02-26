@@ -200,7 +200,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		cursor: pointer;
 		transition:
 			background 0.1s ease,
@@ -208,8 +208,8 @@
 	}
 
 	.toolbar-btn:hover {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-		color: var(--palantir-text-primary);
+		background: var(--surface-elevated);
+		color: var(--foreground);
 	}
 
 	.more-menu-wrapper {
@@ -221,8 +221,8 @@
 	.dropdown-menu {
 		position: absolute;
 		top: calc(100% + 4px);
-		background: var(--palantir-bg-panel);
-		border: 1px solid var(--palantir-border-default);
+		background: var(--card);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		padding: var(--space-2);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -244,7 +244,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-size: var(--text-sm);
 		text-align: left;
 		cursor: pointer;
@@ -253,18 +253,18 @@
 	}
 
 	.dropdown-item:hover {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-		color: var(--palantir-text-primary);
+		background: var(--surface-elevated);
+		color: var(--foreground);
 	}
 
 	.dropdown-item.danger:hover {
-		background: color-mix(in srgb, var(--palantir-error) 10%, transparent);
-		color: var(--palantir-error, #f87171);
+		background: color-mix(in srgb, var(--destructive) 10%, transparent);
+		color: var(--destructive);
 	}
 
 	.dropdown-divider {
 		height: 1px;
-		background: var(--palantir-border-subtle);
+		background: var(--border);
 		margin: var(--space-1) 0;
 	}
 </style>

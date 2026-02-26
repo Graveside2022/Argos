@@ -129,7 +129,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		padding: var(--space-2) var(--space-3);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 		flex-shrink: 0;
 	}
 
@@ -144,14 +144,14 @@
 	.device-count {
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
-		color: var(--palantir-accent);
+		color: var(--primary);
 		font-variant-numeric: tabular-nums;
 	}
 
 	.cap-badge {
 		font-family: var(--font-mono);
 		font-size: var(--text-section);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		letter-spacing: 0.5px;
 	}
 
@@ -160,9 +160,9 @@
 		align-items: center;
 		gap: 2px;
 		background: var(--hover-tint);
-		border: 1px solid var(--palantir-border-subtle);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
-		color: var(--palantir-accent);
+		color: var(--primary);
 		font-size: var(--text-status);
 		font-weight: var(--font-weight-semibold);
 		padding: 2px 6px;
@@ -177,7 +177,7 @@
 	.toolbar-separator {
 		width: 1px;
 		height: 16px;
-		background: var(--palantir-border-subtle);
+		background: var(--border);
 		flex-shrink: 0;
 	}
 
@@ -194,7 +194,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid var(--palantir-border-subtle);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		background: transparent;
 		cursor: pointer;
@@ -218,7 +218,7 @@
 	.no-signal-label {
 		font-size: var(--text-status);
 		font-weight: var(--font-weight-semibold);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		line-height: 1;
 	}
 
@@ -227,20 +227,20 @@
 		width: auto;
 		padding: 0 4px;
 		gap: 2px;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 
 	.multi-client-chip.active-filter {
 		opacity: 1;
-		border-color: var(--palantir-accent);
-		color: var(--palantir-accent);
-		background: color-mix(in srgb, var(--palantir-accent) 10%, transparent);
+		border-color: var(--primary);
+		color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 10%, transparent);
 	}
 
 	.filter-badge {
 		font-family: var(--font-mono);
 		font-size: 8px;
-		color: var(--palantir-accent);
+		color: var(--primary);
 		line-height: 1;
 	}
 </style>

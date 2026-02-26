@@ -87,25 +87,25 @@
 		cursor: pointer;
 		padding: 2px 6px;
 		border-radius: 4px;
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-size: 11px;
 	}
 	.tak-indicator:hover {
-		background: var(--palantir-bg-hover, rgba(255, 255, 255, 0.04));
+		background: var(--surface-hover);
 	}
 	.tak-dot {
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: var(--palantir-text-tertiary);
+		background: var(--foreground-secondary);
 		flex-shrink: 0;
 	}
 	.tak-dot.connected {
-		background: var(--palantir-success, #10b981);
-		box-shadow: 0 0 5px var(--palantir-success, #10b981);
+		background: var(--success);
+		box-shadow: 0 0 5px var(--success);
 	}
 	.tak-dot.error {
-		background: var(--palantir-error, #ef4444);
+		background: var(--destructive);
 	}
 	.tak-label {
 		font-weight: 600;
@@ -116,8 +116,8 @@
 		top: calc(100% + 4px);
 		right: 0;
 		width: 200px;
-		background: var(--palantir-bg-surface);
-		border: 1px solid var(--palantir-border-default);
+		background: var(--card);
+		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 8px 0;
 		z-index: 50;
@@ -127,7 +127,7 @@
 		font-size: var(--text-status);
 		font-weight: 600;
 		letter-spacing: 0.1em;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		padding: 4px 12px 8px;
 	}
 	.dropdown-row {
@@ -137,14 +137,14 @@
 		font-size: 11px;
 	}
 	.dropdown-key {
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 	.dropdown-val {
-		color: var(--palantir-text-primary);
+		color: var(--foreground);
 		font-weight: 500;
 	}
 	.dropdown-val.dim {
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		font-style: italic;
 	}
 	:global(.configure-btn) {

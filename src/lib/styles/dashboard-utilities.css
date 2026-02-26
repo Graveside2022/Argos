@@ -1,0 +1,197 @@
+/* ============================================================
+   DASHBOARD UTILITIES
+   Shared utility classes for the Argos dashboard.
+   
+   All CSS variables are defined in app.css :root.
+   This file provides reusable utility classes only.
+   ============================================================ */
+
+/* ---- Map Popup ---- */
+.map-popup {
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	padding: var(--space-3);
+	color: var(--foreground);
+	font-size: var(--text-sm);
+	box-shadow: 0 4px 16px #00000066;
+}
+
+.popup-title {
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+	color: var(--foreground);
+	margin-bottom: var(--space-2);
+	padding-bottom: var(--space-2);
+	border-bottom: 1px solid var(--border);
+}
+
+.popup-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-1) 0;
+}
+
+.popup-label {
+	font-size: var(--text-xs);
+	color: var(--foreground-secondary);
+	text-transform: uppercase;
+	letter-spacing: var(--letter-spacing-wider);
+}
+
+.popup-value {
+	font-size: var(--text-sm);
+	color: var(--foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- Signal Indicator ---- */
+.signal-indicator {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.signal-critical {
+	background: var(--signal-very-strong);
+}
+
+.signal-strong {
+	background: var(--signal-strong);
+}
+
+.signal-good {
+	background: var(--signal-good);
+}
+
+.signal-fair {
+	background: var(--signal-fair);
+}
+
+.signal-weak {
+	background: var(--signal-weak);
+}
+
+/* ---- Status dot ---- */
+.status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.status-dot-online {
+	background: var(--success);
+}
+
+.status-dot-offline {
+	background: var(--destructive);
+}
+
+.status-dot-warning {
+	background: var(--warning);
+}
+
+/* ---- Utility Classes ---- */
+.bg-surface {
+	background: var(--card);
+}
+.bg-elevated {
+	background: var(--surface-elevated);
+}
+.bg-app {
+	background: var(--background);
+}
+
+.text-tertiary {
+	color: var(--foreground-secondary);
+}
+.text-brand {
+	color: var(--signal-strong);
+}
+
+.border-subtle {
+	border-color: var(--border);
+}
+.border-strong {
+	border-color: var(--border);
+}
+
+/* Status color utilities */
+.text-success {
+	color: var(--success);
+}
+.text-error {
+	color: var(--destructive);
+}
+.text-warning {
+	color: var(--warning);
+}
+.text-info {
+	color: var(--info);
+}
+
+.bg-success-muted {
+	background: var(--success-bg);
+}
+.bg-error-muted {
+	background: var(--error-bg);
+}
+.bg-warning-muted {
+	background: var(--warning-bg);
+}
+.bg-info-muted {
+	background: var(--info-bg);
+}
+
+/* Feature category utilities */
+.text-feature-rf {
+	color: var(--feature-rf);
+}
+.text-feature-drone {
+	color: var(--feature-drone);
+}
+.text-feature-radio {
+	color: var(--feature-radio);
+}
+
+/* ---- Metric Layout Patterns ---- */
+.metric-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.metric-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: var(--space-2);
+}
+
+/* ---- Sidebar Layout Patterns ---- */
+.tactical-sidebar {
+	width: 280px;
+	background: var(--card);
+	border-right: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	scroll-behavior: smooth;
+}
+
+.tactical-sidebar-section {
+	padding: var(--space-4);
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.tactical-sidebar-section-scrollable {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 200px;
+}

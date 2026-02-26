@@ -45,7 +45,7 @@
 <style>
 	.panel-section {
 		padding: var(--space-4);
-		border-bottom: 1px solid var(--palantir-border-subtle);
+		border-bottom: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
@@ -75,13 +75,13 @@
 
 	.info-label {
 		font-size: var(--text-xs);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		letter-spacing: var(--letter-spacing-wider);
 	}
 
 	.info-value {
 		font-size: var(--text-sm);
-		color: var(--palantir-text-primary);
+		color: var(--foreground);
 	}
 
 	.info-value.mono {
@@ -91,7 +91,7 @@
 
 	.no-data {
 		font-size: var(--text-sm);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		font-style: italic;
 	}
 </style>

@@ -157,7 +157,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-size: var(--text-sm);
 		cursor: pointer;
 		white-space: nowrap;
@@ -168,14 +168,14 @@
 
 	.terminal-tab:hover,
 	.terminal-tab.active {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-		color: var(--palantir-text-primary);
+		background: var(--surface-elevated);
+		color: var(--foreground);
 	}
 
 	.tab-icon {
 		display: flex;
 		align-items: center;
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 
 	.tab-title {
@@ -194,7 +194,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		cursor: pointer;
 		opacity: 0;
 		transition:
@@ -208,8 +208,8 @@
 	}
 
 	.tab-close:hover {
-		background: var(--palantir-bg-panel);
-		color: var(--palantir-text-primary);
+		background: var(--card);
+		color: var(--foreground);
 	}
 
 	.toolbar-btn {
@@ -222,7 +222,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		cursor: pointer;
 		transition:
 			background 0.1s ease,
@@ -230,8 +230,8 @@
 	}
 
 	.toolbar-btn:hover {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-		color: var(--palantir-text-primary);
+		background: var(--surface-elevated);
+		color: var(--foreground);
 	}
 
 	.add-btn {
@@ -241,7 +241,7 @@
 	.dropdown-toggle {
 		width: 16px;
 		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-		border-left: 1px solid var(--palantir-border-subtle);
+		border-left: 1px solid var(--border);
 	}
 
 	.shell-dropdown-wrapper {
@@ -250,15 +250,15 @@
 		align-items: center;
 		margin-left: var(--space-1);
 		padding-left: var(--space-2);
-		border-left: 1px solid var(--palantir-border-subtle);
+		border-left: 1px solid var(--border);
 	}
 
 	.dropdown-menu {
 		position: absolute;
 		top: calc(100% + 4px);
 		left: 0;
-		background: var(--palantir-bg-panel);
-		border: 1px solid var(--palantir-border-default);
+		background: var(--card);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		padding: var(--space-2);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -276,7 +276,7 @@
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-size: var(--text-sm);
 		text-align: left;
 		cursor: pointer;
@@ -285,15 +285,15 @@
 	}
 
 	.dropdown-item:hover {
-		background: var(--palantir-bg-elevated, #2e2e2e);
-		color: var(--palantir-text-primary);
+		background: var(--surface-elevated);
+		color: var(--foreground);
 	}
 
 	.default-badge {
 		font-size: var(--text-status);
 		padding: 1px 4px;
-		background: var(--palantir-bg-elevated);
+		background: var(--surface-elevated);
 		border-radius: var(--radius-sm);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 	}
 </style>

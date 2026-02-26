@@ -175,7 +175,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: var(--palantir-bg-panel, #1a1a1a);
+		background: var(--card);
 	}
 
 	.terminal-panel.maximized {
@@ -191,8 +191,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 var(--space-2);
-		background: var(--palantir-bg-surface, #1a1a1a);
-		border-bottom: 1px solid var(--palantir-border-subtle, #2e2e2e);
+		background: var(--card);
+		border-bottom: 1px solid var(--border);
 		gap: var(--space-2);
 	}
 
@@ -210,13 +210,13 @@
 		align-items: center;
 		justify-content: center;
 		gap: var(--space-3);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		font-size: var(--text-sm);
 	}
 
 	.create-btn {
 		padding: var(--space-2) var(--space-4);
-		background: var(--palantir-accent, #a8b8e0);
+		background: var(--primary);
 		border: none;
 		border-radius: var(--radius-md);
 		color: white;
@@ -226,7 +226,7 @@
 	}
 
 	.create-btn:hover {
-		background: var(--palantir-accent-hover, #666666);
+		background: var(--ring);
 	}
 
 	.split-container {
@@ -244,13 +244,13 @@
 
 	.split-divider {
 		width: 4px;
-		background: var(--palantir-border-subtle, #2e2e2e);
+		background: var(--border);
 		cursor: col-resize;
 		flex-shrink: 0;
 		transition: background 0.15s ease;
 	}
 
 	.split-divider:hover {
-		background: var(--palantir-accent, #a8b8e0);
+		background: var(--primary);
 	}
 </style>

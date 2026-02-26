@@ -45,7 +45,7 @@
 		justify-content: center;
 		height: 100%;
 		gap: var(--space-3);
-		color: var(--palantir-text-tertiary);
+		color: var(--foreground-secondary);
 		text-align: center;
 		padding: var(--space-6);
 	}
@@ -57,7 +57,7 @@
 	.unavailable h3 {
 		margin: 0;
 		font-size: var(--text-base);
-		color: var(--palantir-text-secondary);
+		color: var(--foreground-muted);
 		font-weight: var(--font-weight-semibold);
 	}
 
