@@ -2,7 +2,7 @@
 
 **Diagnostic Model Context Protocol servers for tactical RF intelligence**
 
-Argos ships with 7 specialized diagnostic MCP servers that expose system diagnostics, hardware debugging, and RF/network analysis capabilities to Claude Code. Each server is purpose-aligned, independently deployable, and production-ready.
+Argos ships with 7 specialized diagnostic MCP servers (11 server + helper files total) that expose system diagnostics, hardware debugging, and RF/network analysis capabilities to Claude Code. Each server is purpose-aligned, independently deployable, and production-ready.
 
 ## Architecture
 
@@ -162,7 +162,7 @@ Argos ships with 7 specialized diagnostic MCP servers that expose system diagnos
 **Tools (3):**
 
 - `test_api_endpoint` - Test specific endpoint connectivity and auth, response time measurement
-- `list_api_endpoints` - List all 58+ API endpoints organized by category with descriptions
+- `list_api_endpoints` - List all 68 API endpoints organized by category with descriptions
 - `diagnose_api_issues` - Common API issues (auth failures, connectivity, CORS, rate limiting)
 
 **API Categories:**

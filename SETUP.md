@@ -139,33 +139,52 @@ docker compose -f docker/docker-compose.portainer-dev.yml --profile tools up -d 
 ### Essential
 
 ```bash
-npm run dev           # Development server (port 5173)
-npm run dev:clean     # Kill existing processes and start fresh
-npm run build         # Production build
+npm run dev              # Development server in tmux (port 5173, oom_score_adj=-500)
+npm run dev:simple       # Direct vite start (no tmux)
+npm run dev:clean        # Kill existing processes and start fresh
+npm run dev:logs         # Tail dev server output
+npm run build            # Production build
 ```
 
 ### Code Quality
 
 ```bash
-npm run lint          # ESLint check
-npm run lint:fix      # Auto-fix lint errors
-npm run typecheck     # TypeScript validation
+npm run lint             # ESLint check (config/eslint.config.js)
+npm run lint:fix         # Auto-fix lint errors
+npm run typecheck        # svelte-check + tsc (~650MB RAM — never run concurrent instances)
 ```
 
 ### Testing
 
 ```bash
-npm run test          # All tests
-npm run test:unit     # Unit tests only
-npm run test:security # Security tests
-npm run test:e2e      # Playwright E2E tests
+npx vitest run src/path/to/file.test.ts  # Single test file
+npm run test:unit                         # Unit tests (src/ + tests/unit/)
+npm run test:integration                  # tests/integration/
+npm run test:security                     # tests/security/
+npm run test:visual                       # Visual regression tests
+npm run test:performance                  # Performance tests
+npm run test:e2e                          # Playwright E2E tests
+npm run test:all                          # unit + integration + visual + performance
 ```
 
 ### Database
 
 ```bash
-npm run db:migrate    # Run migrations
-npm run db:rollback   # Rollback migration
+npm run db:migrate       # Run SQLite migrations
+npm run db:rollback      # Rollback last migration
+```
+
+### MCP Servers (Claude Code Integration)
+
+```bash
+npm run mcp:start        # Start dynamic MCP server
+npm run mcp:hardware     # Hardware debugger
+npm run mcp:gsm-evil     # GSM Evil diagnostic server
+npm run mcp:system       # System inspector
+npm run mcp:streaming    # Streaming inspector
+npm run mcp:database     # Database inspector
+npm run mcp:api          # API debugger
+npm run mcp:test         # Test runner
 ```
 
 ## Production Deployment

@@ -250,7 +250,13 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		const gpsAlt = resolveGpsAltitude(vs, gps);
 		const { heightAglM, radiusM, greenOpacity, redOpacity } = vs;
 		const changeKind = memo.classifyChange(
-			pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity, gpsAlt
+			pos.lat,
+			pos.lon,
+			heightAglM,
+			radiusM,
+			greenOpacity,
+			redOpacity,
+			gpsAlt
 		);
 		if (changeKind === 'none') return;
 
