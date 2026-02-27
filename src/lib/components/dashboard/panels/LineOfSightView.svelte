@@ -17,6 +17,7 @@
 
 	import DTEDStatus from './viewshed/DTEDStatus.svelte';
 	import OpacityControls from './viewshed/OpacityControls.svelte';
+	import TxParameterControls from './viewshed/TxParameterControls.svelte';
 	import ViewshedControls from './viewshed/ViewshedControls.svelte';
 
 	// Derived: active RF profile for range readout
@@ -84,7 +85,11 @@
 			<button
 				class="toggle-switch"
 				class:on={$viewshedStore.isEnabled}
-				onclick={() => setViewshedEnabled(!$viewshedStore.isEnabled)}
+				onclick={() => {
+					const next = !$viewshedStore.isEnabled;
+					setViewshedEnabled(next);
+					if (next) layerVisibility.update((v) => ({ ...v, viewshed: true }));
+				}}
 				role="switch"
 				aria-checked={$viewshedStore.isEnabled}
 			>
@@ -112,6 +117,8 @@
 				<option value="custom">Custom</option>
 			</select>
 		</section>
+
+		<TxParameterControls />
 
 		<!-- Frequency source -->
 		<section class="panel-section">
