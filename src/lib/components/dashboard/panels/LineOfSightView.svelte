@@ -6,7 +6,11 @@
 		setFrequencySource,
 		setManualFrequency
 	} from '$lib/stores/dashboard/rf-range-store';
-	import { setViewshedEnabled, viewshedStore } from '$lib/stores/dashboard/viewshed-store';
+	import {
+		setViewshedEnabled,
+		viewshedComputing,
+		viewshedStore
+	} from '$lib/stores/dashboard/viewshed-store';
 	import { hackrfStore } from '$lib/stores/tactical-map/hackrf-store';
 	import { getPresetById, RF_PROFILE_LIMITS, RF_RANGE_PRESETS } from '$lib/types/rf-range';
 	import { calculateFriisRange, clampDisplayRange } from '$lib/utils/rf-propagation';
@@ -69,7 +73,14 @@
 	<!-- Enable toggle -->
 	<section class="panel-section">
 		<label class="toggle-row">
-			<span class="toggle-label">Enable Line of Sight</span>
+			<span class="toggle-label">
+				Enable Line of Sight
+				{#if $viewshedComputing}
+					<span class="computing-indicator" aria-label="Computing viewshed">
+						<span class="spinner"></span>
+					</span>
+				{/if}
+			</span>
 			<button
 				class="toggle-switch"
 				class:on={$viewshedStore.isEnabled}

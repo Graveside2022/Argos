@@ -5,11 +5,15 @@
  * Preset and frequency stay in rfRangeStore — no duplication.
  * State persists to localStorage via persistedWritable.
  */
+import { writable } from 'svelte/store';
 import { z } from 'zod';
 
 import { VIEWSHED_DEFAULTS, VIEWSHED_LIMITS, type ViewshedStoreState } from '$lib/types/viewshed';
 
 import { persistedWritable } from '../persisted-writable';
+
+/** Transient computing state — NOT persisted. Written by viewshed-derived, read by panels. */
+export const viewshedComputing = writable(false);
 
 // ── Zod schema for localStorage validation ───────────────────────────
 

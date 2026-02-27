@@ -347,3 +347,26 @@
 	color: var(--foreground-tertiary, #666666);
 	margin-top: 2px;
 }
+
+/* Computing indicator spinner */
+.computing-indicator {
+	display: inline-flex;
+	align-items: center;
+	margin-left: var(--space-2);
+	vertical-align: middle;
+}
+
+.spinner {
+	width: 10px;
+	height: 10px;
+	border: 1.5px solid var(--border);
+	border-top-color: var(--primary);
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}

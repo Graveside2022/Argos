@@ -1677,6 +1677,22 @@ echo "  Switch sessions: Ctrl-b then :switch-client -t dev2"
 
 fi  # end Tmux Sessions prompt
 
+# --- DTED Elevation Tiles ---
+DTED_ZIP="$PROJECT_DIR/docs/dtedlevel0.zip"
+DTED_DIR="$PROJECT_DIR/data/dted"
+
+if [[ -f "$DTED_ZIP" ]] && [[ -z "$(ls -A "$DTED_DIR" 2>/dev/null)" ]]; then
+  echo ""
+  echo "Extracting DTED Level 0 elevation tiles..."
+  mkdir -p "$DTED_DIR"
+  unzip -qo "$DTED_ZIP" -d "$DTED_DIR/"
+  TILE_COUNT=$(find "$DTED_DIR" -name '*.dt0' | wc -l)
+  echo "  Extracted ${TILE_COUNT} DTED tiles to data/dted/"
+elif [[ -d "$DTED_DIR" ]] && [[ -n "$(ls -A "$DTED_DIR" 2>/dev/null)" ]]; then
+  TILE_COUNT=$(find "$DTED_DIR" -name '*.dt0' | wc -l)
+  echo "  DTED tiles already present: ${TILE_COUNT} tiles"
+fi
+
 echo ""
 echo "==========================================="
 echo "  Provisioning Complete!"

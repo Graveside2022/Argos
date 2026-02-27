@@ -2,7 +2,7 @@
 import { fromStore } from 'svelte/store';
 
 import { rfRangeStore } from '$lib/stores/dashboard/rf-range-store';
-import { viewshedStore } from '$lib/stores/dashboard/viewshed-store';
+import { viewshedComputing, viewshedStore } from '$lib/stores/dashboard/viewshed-store';
 import { type GPSState, gpsStore } from '$lib/stores/tactical-map/gps-store';
 import { hackrfStore } from '$lib/stores/tactical-map/hackrf-store';
 import { getPresetById } from '$lib/types/rf-range';
@@ -109,15 +109,19 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		viewshedActive = false;
 	}
 
+	/** Track whether GPS was ever acquired (for stale vs never-had-fix messaging) */
+	let hadGPSFix = false;
+
 	function resolvePosition(gps: GPSState): { lat: number; lon: number } | null {
 		if (hasValidGPSFix(gps)) {
 			lastGPSFixTime = Date.now();
 			lastKnownLat = gps.position.lat;
 			lastKnownLon = gps.position.lon;
+			hadGPSFix = true;
 			clearStaleTimer();
 			return { lat: gps.position.lat, lon: gps.position.lon };
 		}
-		// Stale fallback
+		// Stale fallback — freeze overlay at last known position for 30s
 		if (lastGPSFixTime > 0) {
 			const elapsed = Date.now() - lastGPSFixTime;
 			if (elapsed < GPS_STALE_TIMEOUT_MS) {
@@ -163,6 +167,11 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		prevRedOpacity = redOp;
 	}
 
+	function handleNoPosition(): void {
+		clearOverlay();
+		viewshedInactiveReason = hadGPSFix ? 'GPS signal lost' : 'No GPS fix';
+	}
+
 	function handleFetchError(err: unknown): void {
 		if (err instanceof DOMException && err.name === 'AbortError') return;
 		logger.error('Viewshed fetch failed', { err }, 'viewshed-fetch-error');
@@ -182,6 +191,7 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		abortController = new AbortController();
 
 		isComputing = true;
+		viewshedComputing.set(true);
 		try {
 			const res = await fetch('/api/viewshed/compute', {
 				method: 'POST',
@@ -200,6 +210,7 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			handleFetchError(err);
 		} finally {
 			isComputing = false;
+			viewshedComputing.set(false);
 		}
 	}
 
@@ -235,8 +246,7 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 
 		const pos = resolvePosition(gps);
 		if (!pos) {
-			clearOverlay();
-			viewshedInactiveReason = 'No GPS fix';
+			handleNoPosition();
 			return;
 		}
 
