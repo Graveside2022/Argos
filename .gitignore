@@ -182,6 +182,10 @@ core.[0-9]*
 # ── Docker ───────────────────────────────────────────────────
 docker-images/
 
+# ── Media Service ────────────────────────────────────────────
+media-service/models/
+media-service/recordings/
+
 # ── Runtime Data Directories ────────────────────────────────
 /data/
 database/

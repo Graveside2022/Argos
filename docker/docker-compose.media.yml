@@ -1,0 +1,80 @@
+# Argos Media Pipeline — GStreamer + Mosquitto MQTT
+# Separate from main Argos app (runs natively on host).
+#
+# Usage:
+#   docker compose -f docker/docker-compose.media.yml up --build
+#   docker compose -f docker/docker-compose.media.yml down
+
+services:
+
+  # ── Mosquitto MQTT Broker ─────────────────────────────
+  # Internal message bus between media-service and SvelteKit.
+  # Ports exposed to host for SvelteKit mqtt.js bridge.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: argos-mosquitto
+    mem_limit: 64m
+    memswap_limit: 96m
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Media Service (GStreamer + Python) ────────────────
+  # Audio transcription, video detection, streaming, recording.
+  media-service:
+    build:
+      context: ../media-service
+      dockerfile: Dockerfile
+    container_name: argos-media-service
+    mem_limit: 512m
+    memswap_limit: 768m
+    depends_on:
+      mosquitto:
+        condition: service_started
+    environment:
+      - MEDIA_SERVICE_MQTT_BROKER=mosquitto
+      - MEDIA_SERVICE_MQTT_PORT=1883
+    volumes:
+      # Model files — download separately via scripts/download-models.sh
+      - ../media-service/models:/models:ro
+      # Recordings persist on host
+      - media-recordings:/data/recordings
+      # Exports for TAK integration
+      - media-exports:/data/exports
+    devices:
+      # ALSA loopback for DSD-FME audio ingest
+      - "/dev/snd:/dev/snd"
+    # Camera access (uncomment when video pipeline is enabled)
+    # - "/dev/video0:/dev/video0"
+    ports:
+      # WebRTC WHEP signaling endpoint
+      - "8443:8443"
+      # RTSP server for TAK (uncomment when enabled)
+      # - "8554:8554"
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+networks:
+  argos-dev-network:
+    external: true
+    name: argos-dev-network
+
+volumes:
+  media-recordings:
+  media-exports:

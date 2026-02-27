@@ -503,6 +503,23 @@ else
   fi
 fi
 
+# --- 8c. ALSA Loopback Module (for media-service audio ingest) ---
+echo ""
+echo "[8c/$TOTAL_SECTIONS] ALSA Loopback Module"
+echo "  Virtual audio device for routing decoded radio audio to the GStreamer media pipeline."
+ALOOP_CONF="/etc/modules-load.d/snd-aloop.conf"
+if lsmod | grep -q snd_aloop; then
+  echo "  snd-aloop kernel module already loaded"
+elif [[ -f "$ALOOP_CONF" ]]; then
+  echo "  snd-aloop configured for boot — loading now..."
+  modprobe snd-aloop 2>/dev/null || echo "  WARNING: snd-aloop module not available on this kernel"
+else
+  echo "  Configuring snd-aloop kernel module..."
+  echo "snd-aloop" > "$ALOOP_CONF"
+  modprobe snd-aloop 2>/dev/null || echo "  WARNING: snd-aloop module not available on this kernel"
+  echo "  snd-aloop will load automatically on boot"
+fi
+
 # --- 9. GSM Evil (gr-gsm + kalibrate-rtl + GsmEvil2) ---
 echo ""
 echo "[9/$TOTAL_SECTIONS] GSM Evil"

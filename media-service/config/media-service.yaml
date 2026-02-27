@@ -1,0 +1,61 @@
+# media-service default configuration
+# Override via environment variables prefixed with MEDIA_SERVICE_
+# e.g. MEDIA_SERVICE_MQTT_BROKER=localhost
+
+mqtt:
+  broker: "mosquitto"
+  port: 1883
+
+models:
+  whisper: "/models/whisper-base.bin"
+  yolox: "/models/yolox-nano.onnx"
+  demucs: null  # Optional — set path to enable
+
+recording:
+  directory: "/data/recordings"
+  disk_warning_threshold_mb: 500
+
+rtsp:
+  port: 8554
+
+health:
+  interval_s: 5
+
+restart:
+  max_delay_s: 30
+
+pipelines:
+  radio-audio:
+    enabled: true
+    source_type: "alsa"
+    source_device: "hw:Loopback,1,0"
+    sample_rate: 16000
+    channels: 1
+
+  audio-cleanup:
+    enabled: false
+    source_type: "internal"
+    source_device: ""
+    sample_rate: 16000
+    channels: 1
+
+  video-detection:
+    enabled: false
+    source_type: "v4l2"
+    source_device: "/dev/video0"
+    resolution: [640, 480]
+    framerate: 15
+
+  recording:
+    enabled: false
+    source_type: "internal"
+    source_device: ""
+    sample_rate: 16000
+    channels: 1
+
+  rtsp-server:
+    enabled: false
+    source_type: "internal"
+    source_device: ""
+    resolution: [640, 480]
+    framerate: 15

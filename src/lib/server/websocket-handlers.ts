@@ -1,10 +1,29 @@
 /**
- * WebSocket message handlers for HackRF and Kismet endpoints
+ * WebSocket message handlers for HackRF, Kismet, and Media endpoints.
  * Extracted from websocket-server.ts to keep the main file under 300 lines.
+ *
+ * Media events (media_transcription, media_detection, media_health,
+ * media_recording, media_error) are broadcast-only via WebSocketManager —
+ * they do not have per-endpoint handlers here. The MQTT bridge in
+ * src/lib/server/services/media/mqtt-bridge.ts publishes them.
  */
 
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
+
+/**
+ * Media pipeline WebSocket broadcast event types.
+ * These are published by the MQTT bridge, consumed by client-side Svelte stores.
+ */
+export const MEDIA_EVENT_TYPES = [
+	'media_transcription',
+	'media_detection',
+	'media_health',
+	'media_recording',
+	'media_error'
+] as const;
+
+export type MediaEventType = (typeof MEDIA_EVENT_TYPES)[number];
 
 // WebSocket message interface (legacy -- for backward compatibility)
 export interface WebSocketMessage {
