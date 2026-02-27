@@ -251,7 +251,7 @@ EOF
   # resolution. This fallback ensures NM always includes public DNS servers.
   local NM_DNS_CONF="/etc/NetworkManager/conf.d/01-argos-dns-fallback.conf"
   local NM_DNS_MODE
-  NM_DNS_MODE=$(grep -s 'dns=' /etc/NetworkManager/NetworkManager.conf | head -1)
+  NM_DNS_MODE=$(grep -s 'dns=' /etc/NetworkManager/NetworkManager.conf | head -1 || true)
   echo "  NM DNS plugin: ${NM_DNS_MODE:-default}"
   if [[ ! -f "$NM_DNS_CONF" ]]; then
     echo "  Installing NetworkManager DNS fallback (8.8.8.8, 1.1.1.1)..."
