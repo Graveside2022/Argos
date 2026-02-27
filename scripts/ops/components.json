@@ -1,0 +1,187 @@
+[
+	{
+		"id": "network",
+		"desc": "Network config (WiFi + DNS)",
+		"core": true,
+		"func": "install_network",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "system_packages",
+		"desc": "System packages (build tools, SDR drivers)",
+		"core": true,
+		"func": "install_system_packages",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "nodejs",
+		"desc": "Node.js 22 (app runtime)",
+		"core": true,
+		"func": "install_nodejs",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "gpsd",
+		"desc": "gpsd (GPS daemon)",
+		"core": true,
+		"func": "install_gpsd",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "openssh",
+		"desc": "OpenSSH server (remote access)",
+		"core": true,
+		"func": "install_openssh",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "udev_sdr",
+		"desc": "SDR udev rules (HackRF, RTL-SDR, USRP)",
+		"core": true,
+		"func": "install_udev_sdr",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "sdr_infra",
+		"desc": "SDR infrastructure (SoapySDR + UHD)",
+		"core": true,
+		"func": "install_sdr_infra",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "npm_deps",
+		"desc": "npm dependencies (JS libraries)",
+		"core": true,
+		"func": "install_npm_deps",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "env_file",
+		"desc": "Environment file (.env + API keys)",
+		"core": true,
+		"func": "install_env_file",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "earlyoom",
+		"desc": "EarlyOOM (prevents system freezes)",
+		"core": true,
+		"func": "install_earlyoom",
+		"group": "Core Infrastructure"
+	},
+	{
+		"id": "cgroup_mem",
+		"desc": "cgroup memory limits (runaway process defense)",
+		"core": true,
+		"func": "install_cgroup_mem",
+		"group": "Core Infrastructure"
+	},
+
+	{
+		"id": "gsm_evil",
+		"desc": "GSM Evil (cell tower monitoring)",
+		"core": false,
+		"func": "install_gsm_evil",
+		"group": "SDR & Signal Tools"
+	},
+
+	{
+		"id": "dev_monitor",
+		"desc": "Dev monitor (auto-restart dev server)",
+		"core": false,
+		"func": "install_dev_monitor",
+		"group": "Development Tools"
+	},
+	{
+		"id": "claude_code",
+		"desc": "Claude Code (AI coding assistant)",
+		"core": false,
+		"func": "install_claude_code",
+		"group": "Development Tools"
+	},
+	{
+		"id": "gemini_cli",
+		"desc": "Gemini CLI (Google AI assistant)",
+		"core": false,
+		"func": "install_gemini_cli",
+		"group": "Development Tools"
+	},
+	{
+		"id": "agent_browser",
+		"desc": "Agent Browser (browser automation)",
+		"core": false,
+		"func": "install_agent_browser",
+		"group": "Development Tools"
+	},
+	{
+		"id": "chromadb",
+		"desc": "ChromaDB (AI memory backend)",
+		"core": false,
+		"func": "install_chromadb",
+		"group": "Development Tools"
+	},
+	{
+		"id": "headless_debug",
+		"desc": "Headless debug service (Chromium)",
+		"core": false,
+		"func": "install_headless_debug",
+		"group": "Development Tools"
+	},
+
+	{
+		"id": "docker",
+		"desc": "Docker (OpenWebRX + Bettercap containers)",
+		"core": false,
+		"func": "install_docker",
+		"group": "System Services"
+	},
+	{
+		"id": "zram",
+		"desc": "zram compressed swap (4 GB)",
+		"core": false,
+		"func": "install_zram",
+		"group": "System Services"
+	},
+	{
+		"id": "textmode",
+		"desc": "Text-mode boot (disable desktop)",
+		"core": false,
+		"func": "install_textmode",
+		"group": "System Services"
+	},
+	{
+		"id": "vnc",
+		"desc": "On-demand VNC (remote desktop)",
+		"core": false,
+		"func": "install_vnc",
+		"group": "System Services"
+	},
+	{
+		"id": "tailscale",
+		"desc": "Tailscale (secure remote access)",
+		"core": false,
+		"func": "install_tailscale",
+		"group": "System Services"
+	},
+	{
+		"id": "zsh_dotfiles",
+		"desc": "Zsh + dotfiles (shell environment)",
+		"core": false,
+		"func": "install_zsh_dotfiles",
+		"group": "System Services"
+	},
+	{
+		"id": "zsh_default",
+		"desc": "Set Zsh as default shell",
+		"core": false,
+		"func": "install_zsh_default",
+		"group": "System Services"
+	},
+	{
+		"id": "tmux_sessions",
+		"desc": "Persistent tmux sessions",
+		"core": false,
+		"func": "install_tmux_sessions",
+		"group": "System Services"
+	}
+]
