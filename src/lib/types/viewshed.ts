@@ -49,7 +49,7 @@ export interface ViewshedParams {
 	lat: number;
 	/** Observer longitude in decimal degrees */
 	lon: number;
-	/** Observer height above ground level in meters */
+	/** Observer height above ground level in meters (used when gpsMslAltitude is absent) */
 	heightAgl: number;
 	/** Maximum viewshed radius in meters */
 	radiusM: number;
@@ -57,6 +57,8 @@ export interface ViewshedParams {
 	greenOpacity: number;
 	/** Opacity for obstructed (red) areas: 0.0 to 1.0 */
 	redOpacity: number;
+	/** GPS-reported altitude MSL in meters. When provided, server computes AGL = gpsMslAltitude - terrainElevation */
+	gpsMslAltitude?: number;
 }
 
 /** Output of a viewshed computation */
@@ -91,14 +93,23 @@ export interface ViewshedMeta {
 	imageHeight: number;
 	/** Whether the result was served from cache */
 	cached: boolean;
+	/** Terrain elevation MSL at observer position (meters), when gpsMslAltitude was provided */
+	terrainElevationM?: number;
+	/** Computed AGL used for the viewshed (meters), when gpsMslAltitude was provided */
+	computedAglM?: number;
 }
+
+/** Height AGL mode: 'auto' computes from GPS MSL minus DTED terrain, 'custom' uses manual slider */
+export type HeightAglMode = 'auto' | 'custom';
 
 /** Client-side persisted store state for viewshed settings */
 export interface ViewshedStoreState {
 	/** Whether the viewshed overlay is enabled */
 	isEnabled: boolean;
-	/** Observer height above ground level in meters */
+	/** Observer height above ground level in meters (used in 'custom' mode) */
 	heightAglM: number;
+	/** Height AGL mode: 'auto' derives from GPS altitude, 'custom' uses manual slider */
+	heightAglMode: HeightAglMode;
 	/** Viewshed radius in meters */
 	radiusM: number;
 	/** Visible (green) area opacity: 0.0 to 1.0 */
@@ -126,6 +137,7 @@ export const VIEWSHED_LIMITS = {
 export const VIEWSHED_DEFAULTS: ViewshedStoreState = {
 	isEnabled: false,
 	heightAglM: 2.0,
+	heightAglMode: 'auto',
 	radiusM: 5000,
 	greenOpacity: 0.37,
 	redOpacity: 0.92,

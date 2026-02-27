@@ -1,6 +1,6 @@
 ---
 last_mapped: 2026-02-26T20:53:58Z
-total_files: 928
+total_files: 945
 total_tokens: 1283647
 ---
 
@@ -55,7 +55,7 @@ graph TB
     end
 
     subgraph "Client (Browser)"
-        Stores[Svelte Stores<br/>17 reactive stores]
+        Stores[Svelte Stores<br/>20 reactive stores]
         BaseWS[BaseWebSocket<br/>exponential backoff]
         Components[UI Components<br/>Lunaris design system]
         Map[MapLibre GL<br/>MIL-STD-2525C symbols]
@@ -102,7 +102,7 @@ graph TB
 Argos/
 ├── src/                           # Application source (475k tokens)
 │   ├── routes/                    # SvelteKit file-based routing
-│   │   ├── api/                   # 19 REST API domains, 66 route files (43k tokens)
+│   │   ├── api/                   # 20 REST API domains, 68 route files (43k tokens)
 │   │   │   ├── hackrf/            # HackRF sweep control + SSE data stream
 │   │   │   ├── rf/                # RF signal CRUD (shares sweepManager singleton)
 │   │   │   ├── kismet/            # Kismet WiFi proxy (devices, networks, alerts, channels)
@@ -121,6 +121,7 @@ Argos/
 │   │   │   ├── map-tiles/         # Map tile proxy
 │   │   │   ├── openwebrx/         # OpenWebRX proxy
 │   │   │   ├── streaming/         # Stream status
+│   │   │   ├── viewshed/          # Terrain viewshed analysis + DTED visualization
 │   │   │   └── health/            # Unauthenticated health check
 │   │   ├── dashboard/             # Main dashboard page (DashboardShell snippet-slot pattern)
 │   │   ├── gsm-evil/              # GSM monitoring page (standalone + iframe target)
@@ -139,7 +140,8 @@ Argos/
 │   │   │   ├── db/                # RFDatabase singleton (better-sqlite3, 14 files)
 │   │   │   ├── kismet/            # WebSocketManager (Kismet polling → client fan-out)
 │   │   │   ├── tak/               # TakService + TakBroadcast (CoT over TLS)
-│   │   │   ├── mcp/               # 7 MCP diagnostic servers (HTTP API client)
+│   │   │   ├── terrain/           # Terrain/DTED services (viewshed compute, tile indexing, parsing)
+│   │   │   ├── mcp/               # 7 MCP diagnostic servers + 4 utility server tools (HTTP API client)
 │   │   │   ├── middleware/         # Rate limiting, security headers, WS connection handler (3 files)
 │   │   │   ├── api/               # createHandler() factory + errMsg() utilities
 │   │   │   ├── agent/             # AI agent runtime (Claude Sonnet 4) + tool definitions
@@ -148,7 +150,7 @@ Argos/
 │   │   │   ├── result.ts          # safe()/safeSync() Result tuple pattern
 │   │   │   ├── retry.ts           # withRetry() higher-order function
 │   │   │   └── timeout.ts         # withTimeout() higher-order function
-│   │   ├── components/            # Svelte 5 components (142 files)
+│   │   ├── components/            # Svelte 5 components (113 Svelte files)
 │   │   │   ├── dashboard/         # Dashboard UI — DashboardShell, map, panels, status, widgets
 │   │   │   │   ├── map/           # MapLibre GL integration, GeoJSON, cell towers, GPS derived state
 │   │   │   │   ├── panels/        # Overview, Tools, Layers, Settings, Hardware, OnnetTools, Captures
@@ -163,7 +165,7 @@ Argos/
 │   │   │   ├── gsm-evil/          # GSM monitoring (6 components)
 │   │   │   ├── status/            # TAKIndicator.svelte
 │   │   │   └── ui/                # 8 shadcn-svelte component families (35 files)
-│   │   ├── stores/                # 18 Svelte store files
+│   │   ├── stores/                # 20 Svelte store files
 │   │   │   ├── dashboard/         # dashboard-store, terminal-store, tools-store, map-settings, agent-context
 │   │   │   ├── tactical-map/      # gps-store, kismet-store, hackrf-store, map-store
 │   │   │   ├── gsm-evil-store.ts  # GSM towers, ARFCN data, scan state (232 lines)
@@ -317,7 +319,7 @@ Repositories: signal, network, spatial, device, geo. Plus: cleanup, optimizer, h
 
 ### API Layer (`src/routes/api/`)
 
-**Purpose**: 19 REST API domains behind auth + rate limiting.
+**Purpose**: 20 REST API domains behind auth + rate limiting.
 
 | Domain      | Routes | Transport  | Notes                                              |
 | ----------- | ------ | ---------- | -------------------------------------------------- |
@@ -343,7 +345,7 @@ Repositories: signal, network, spatial, device, geo. Plus: cleanup, optimizer, h
 
 **Route handler patterns**:
 
-- `createHandler()` factory used in **53 of 66 routes** (migrated in spec-016 Phase 18). Provides: automatic try-catch, structured logging, JSON wrapping, optional Zod body validation.
+- `createHandler()` factory used in **59 of 68 routes** (migrated in spec-016 Phase 18). Provides: automatic try-catch, structured logging, JSON wrapping, optional Zod body validation.
 - 9 routes use manual handlers: SSE streams (4), WebSocket proxy (1), health check (1), tile proxy (1), streaming status (1), RF data-stream (1) — all require custom Response handling.
 
 ### Svelte Stores (`src/lib/stores/`)
@@ -375,7 +377,7 @@ Repositories: signal, network, spatial, device, geo. Plus: cleanup, optimizer, h
 
 ### UI Components (`src/lib/components/`)
 
-**Purpose**: Svelte 5 component library following Lunaris design system. 142 files.
+**Purpose**: Svelte 5 component library following Lunaris design system. 113 Svelte files.
 
 **Layout hierarchy** (spec-018 DashboardShell snippet-slot architecture):
 
@@ -647,7 +649,7 @@ src/routes/dashboard/+page.svelte
 | File                | Exports                        | Purpose                                       |
 | ------------------- | ------------------------------ | --------------------------------------------- |
 | `error-utils.ts`    | `errMsg()`, `normalizeError()` | Error message extraction, error normalization |
-| `create-handler.ts` | `createHandler()`              | Route handler factory (used by 53/66 routes)  |
+| `create-handler.ts` | `createHandler()`              | Route handler factory (used by 59/68 routes)  |
 
 **`src/lib/server/agent/`**:
 
@@ -697,25 +699,29 @@ src/routes/dashboard/+page.svelte
 
 ### Infrastructure & Operations (`scripts/`)
 
-**`scripts/ops/`** — Provisioning and runtime management (8 files):
+**`scripts/ops/`** — Provisioning and runtime management (12 files):
 
-| File                   | Purpose                                                                                                             |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `setup-host.sh`        | Interactive provisioning (27 sections). Installs deps, configures tmux, systemd services, dotfiles                  |
-| `install-services.sh`  | Installs systemd service files from `deployment/`                                                                   |
-| `keepalive-dev.sh`     | Dev server monitor — auto-restarts Vite (port 5173), Chromium (9224), socat (99). Circuit breaker after 10 failures |
-| `mem-guard.sh`         | Pre-flight memory check + concurrency lock wrapper for heavy processes                                              |
-| `fix-claude-mem.sh`    | Claude-mem plugin repair script (daemon cleanup, hook fixes)                                                        |
-| `import-celltowers.sh` | OpenCelliD cell tower database import                                                                               |
-| `mcp-config.ts`        | MCP server configuration generator                                                                                  |
-| `mcp-install.ts`       | MCP server installation script                                                                                      |
+| File                      | Purpose                                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup-host.sh`           | Bootstrap script (128 lines). Installs Node.js 22, prepares @clack/prompts, launches Node.js UI                                                                                 |
+| `setup-host-ui.mjs`       | Interactive installer (371 lines). @clack/prompts CLI with Express/Customize modes. Handles component selection, API key prompts, runs install functions, extracts bundled data |
+| `setup-host-functions.sh` | Install function library (1209 lines). 26 `install_*` functions covering 26 components across 4 groups (Core, SDR, Development, System)                                         |
+| `components.json`         | Component registry (26 items, 4 groups). Defines id, description, core status, function name for each installable component                                                     |
+| `install-services.sh`     | Installs systemd service files from `deployment/`                                                                                                                               |
+| `keepalive-dev.sh`        | Dev server monitor — auto-restarts Vite (port 5173), Chromium (9224), socat (99). Circuit breaker after 10 failures                                                             |
+| `mem-guard.sh`            | Pre-flight memory check + concurrency lock wrapper for heavy processes                                                                                                          |
+| `fix-claude-mem.sh`       | Claude-mem plugin repair script (daemon cleanup, hook fixes)                                                                                                                    |
+| `import-celltowers.sh`    | OpenCelliD cell tower database import                                                                                                                                           |
+| `extract-dted.sh`         | DTED terrain data extraction and processing                                                                                                                                     |
+| `mcp-config.ts`           | MCP server configuration generator                                                                                                                                              |
+| `mcp-install.ts`          | MCP server installation script                                                                                                                                                  |
 
 **`scripts/tmux/`** — Tmux configuration and session management:
 
 | File                      | Purpose                                                                                                                                                                                                                                                     |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tmux.conf`               | Lunaris-themed tmux config (gold/amber on dark chrome). Installed to `~/.tmux.conf` by setup-host.sh section 24. Includes TPM, resurrect (`@resurrect-processes 'false'` for OOM safety), continuum (`@continuum-boot 'off'` — custom service handles boot) |
-| `tmux.service`            | Systemd user unit — creates `dev1`/`dev2`/`dev3`/`argos-logs` sessions on boot. Installed to `~/.config/systemd/user/tmux.service` by setup-host.sh section 27                                                                                              |
+| `tmux.conf`               | Lunaris-themed tmux config (gold/amber on dark chrome). Installed to `~/.tmux.conf` by `install_zsh_dotfiles()`. Includes TPM, resurrect (`@resurrect-processes 'false'` for OOM safety), continuum (`@continuum-boot 'off'` — custom service handles boot) |
+| `tmux.service`            | Systemd user unit — creates `dev1`/`dev2`/`dev3`/`argos-logs` sessions on boot. Installed to `~/.config/systemd/user/tmux.service` by `install_tmux_sessions()`                                                                                             |
 | `tmux-zsh-wrapper.sh`     | Zsh wrapper for terminal store default shell                                                                                                                                                                                                                |
 | `tmux-0.sh` … `tmux-3.sh` | Web terminal session launch scripts (used by Vite terminal plugin)                                                                                                                                                                                          |
 | `tmux-logs.sh`            | Argos logs session launch script                                                                                                                                                                                                                            |
@@ -870,7 +876,7 @@ Used by: SweepManager, WebSocketManager, RateLimiter, RFDatabase
 
 Two patterns in use (consolidated from three):
 
-1. **`createHandler()`** — Route handler factory with built-in try-catch, logging, and optional Zod validation. **Primary pattern** (53/66 routes).
+1. **`createHandler()`** — Route handler factory with built-in try-catch, logging, and optional Zod validation. **Primary pattern** (59/68 routes).
 2. **`safe()`/`safeSync()`** — Result tuple: `[data, null] | [null, error]` (used in service-layer code).
 
 Legacy `errMsg()` utility is still exported but rarely used directly — `createHandler()` calls it internally.

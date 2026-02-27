@@ -1,17 +1,16 @@
 <script lang="ts">
 	import {
 		setHeightAgl,
+		setHeightAglMode,
 		setViewshedRadius,
+		viewshedComputedAgl,
 		viewshedStore
 	} from '$lib/stores/dashboard/viewshed-store';
+	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { VIEWSHED_LIMITS } from '$lib/types/viewshed';
 
-	interface Props {
-		isRfCapped?: boolean;
-		effectiveRadiusM?: number | null;
-	}
-
-	let { isRfCapped = false, effectiveRadiusM = null }: Props = $props();
+	let isAuto = $derived($viewshedStore.heightAglMode === 'auto');
+	let hasGpsAltitude = $derived($gpsStore.status.altitude !== null);
 
 	// Logarithmic mapping for radius slider
 	const LOG_MIN = Math.log10(VIEWSHED_LIMITS.RADIUS_MIN_M);
@@ -27,15 +26,46 @@
 	function formatRadius(m: number): string {
 		return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
 	}
+
+	function aglSuffix(): string {
+		if (!isAuto) return '';
+		return hasGpsAltitude ? ' (GPS)' : ' (no GPS)';
+	}
+
+	function formatAglReadout(): string {
+		const value =
+			isAuto && hasGpsAltitude && $viewshedComputedAgl !== null
+				? $viewshedComputedAgl
+				: $viewshedStore.heightAglM;
+		return `${value.toFixed(1)} m${aglSuffix()}`;
+	}
 </script>
 
 <section class="panel-section">
 	<div class="section-label">VIEWSHED PARAMETERS</div>
 
+	<!-- Height AGL mode toggle -->
+	<div class="viewshed-param">
+		<div class="param-name">Height AGL Source</div>
+		<div class="freq-source-row">
+			<button class="freq-btn" class:active={isAuto} onclick={() => setHeightAglMode('auto')}>
+				Auto (GPS)
+			</button>
+			<button
+				class="freq-btn"
+				class:active={!isAuto}
+				onclick={() => setHeightAglMode('custom')}
+			>
+				Custom
+			</button>
+		</div>
+	</div>
+
+	<!-- Height AGL slider -->
 	<div class="viewshed-param">
 		<div class="param-header">
 			<span class="param-name">Height AGL</span>
-			<span class="param-readout">{$viewshedStore.heightAglM.toFixed(1)} m</span>
+			<span class="param-readout">{formatAglReadout()}</span>
 		</div>
 		<input
 			type="range"
@@ -45,16 +75,17 @@
 			step="0.5"
 			value={$viewshedStore.heightAglM}
 			oninput={(e) => setHeightAgl(Number((e.target as HTMLInputElement).value))}
+			disabled={isAuto && hasGpsAltitude}
 		/>
+		{#if isAuto && !hasGpsAltitude}
+			<div class="fallback-hint">No GPS altitude — using manual</div>
+		{/if}
 	</div>
 
 	<div class="viewshed-param">
 		<div class="param-header">
 			<span class="param-name">Radius</span>
-			<span class="param-readout">
-				{formatRadius(effectiveRadiusM ?? $viewshedStore.radiusM)}
-				{#if isRfCapped}<span class="rf-capped-badge">RF CAPPED</span>{/if}
-			</span>
+			<span class="param-readout">{formatRadius($viewshedStore.radiusM)}</span>
 		</div>
 		<input
 			type="range"
@@ -99,14 +130,14 @@
 		accent-color: var(--primary);
 		cursor: pointer;
 	}
-	.rf-capped-badge {
+	.viewshed-slider:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+	.fallback-hint {
+		font-family: var(--font-mono, 'Fira Code', monospace);
 		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		color: var(--warning);
-		padding: 1px 4px;
-		border: 1px solid var(--warning);
-		border-radius: 2px;
-		margin-left: 4px;
+		color: var(--warning, #d4a054);
+		font-style: italic;
 	}
 </style>

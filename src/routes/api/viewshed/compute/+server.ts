@@ -15,6 +15,7 @@ const viewshedRequestSchema = z.object({
 	radiusM: z.number().min(100).max(50000).default(5000),
 	greenOpacity: z.number().min(0).max(1).default(0.37),
 	redOpacity: z.number().min(0).max(1).default(0.92),
+	gpsMslAltitude: z.number().optional(),
 	noCache: z.boolean().optional()
 });
 
@@ -34,11 +35,14 @@ function buildCacheKey(params: {
 	radiusM: number;
 	greenOpacity: number;
 	redOpacity: number;
+	gpsMslAltitude?: number;
 }): string {
+	// Include all params — the compute engine has its own internal terrain cache
+	// that skips the expensive ray sweep when only opacity changes.
 	return [
 		Math.floor(params.lat * 1000),
 		Math.floor(params.lon * 1000),
-		params.heightAgl,
+		params.gpsMslAltitude ?? params.heightAgl,
 		params.radiusM,
 		params.greenOpacity,
 		params.redOpacity

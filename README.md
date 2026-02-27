@@ -47,7 +47,13 @@ cd Argos
 sudo bash scripts/ops/setup-host.sh
 ```
 
-The setup script installs Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB (with systemd service), agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
+The interactive setup script guides you through provisioning:
+
+- **Express mode**: Install all 26 components with one keypress
+- **Customize mode**: Choose individual components from groups (Core Infrastructure, SDR & Signal Tools, Development Tools, System Services)
+- **Unattended mode**: Use `--yes` flag to skip prompts
+
+It installs Node.js 22, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB (with systemd service), agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
 
 ## Tailscale (Remote Access)
 

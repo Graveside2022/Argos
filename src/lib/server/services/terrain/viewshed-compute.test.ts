@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ViewshedParams } from '$lib/types/viewshed';
 
 import { DTEDTileIndex } from './dted-tile-index';
-import { computeViewshed } from './viewshed-compute';
+import { computeViewshed, resetTerrainCache } from './viewshed-compute';
 
 const DTED_DIR = 'data/dted';
 
@@ -19,6 +19,10 @@ const NTC_PARAMS: ViewshedParams = {
 
 describe('Viewshed Compute', () => {
 	const tileIndex = new DTEDTileIndex(DTED_DIR);
+
+	beforeEach(() => {
+		resetTerrainCache();
+	});
 
 	describe('basic computation', () => {
 		it('should return a valid PNG data URI', () => {
@@ -100,6 +104,45 @@ describe('Viewshed Compute', () => {
 			expect(result.imageDataUri).toBeNull();
 			expect(result.meta.tilesUsed).toBe(0);
 			expect(result.meta.cellCount).toBe(0);
+		});
+	});
+
+	describe('GPS MSL altitude (auto AGL)', () => {
+		it('should compute AGL from gpsMslAltitude and return terrain/AGL meta', () => {
+			// NTC terrain is ~700-900m MSL; GPS at 710m means ~10m AGL
+			const gpsParams: ViewshedParams = {
+				...NTC_PARAMS,
+				gpsMslAltitude: 710
+			};
+			const result = computeViewshed(gpsParams, tileIndex);
+
+			expect(result.imageDataUri).not.toBeNull();
+			expect(result.meta.terrainElevationM).toBeDefined();
+			expect(result.meta.computedAglM).toBeDefined();
+			// Terrain at NTC should be reasonable (not 0, not 5000)
+			expect(result.meta.terrainElevationM!).toBeGreaterThan(500);
+			expect(result.meta.terrainElevationM!).toBeLessThan(1500);
+			// AGL = 710 - terrain (~700) should be positive and reasonable
+			expect(result.meta.computedAglM!).toBeGreaterThanOrEqual(0.5);
+			expect(result.meta.computedAglM!).toBeLessThan(300);
+		});
+
+		it('should clamp AGL to minimum 0.5m when GPS altitude is below terrain', () => {
+			// GPS reports altitude below terrain (bad fix or indoor)
+			const lowGpsParams: ViewshedParams = {
+				...NTC_PARAMS,
+				gpsMslAltitude: 100 // way below NTC terrain (~700m)
+			};
+			const result = computeViewshed(lowGpsParams, tileIndex);
+
+			expect(result.meta.computedAglM).toBe(0.5);
+		});
+
+		it('should not include GPS meta fields when gpsMslAltitude is absent', () => {
+			const result = computeViewshed(NTC_PARAMS, tileIndex);
+
+			expect(result.meta.terrainElevationM).toBeUndefined();
+			expect(result.meta.computedAglM).toBeUndefined();
 		});
 	});
 

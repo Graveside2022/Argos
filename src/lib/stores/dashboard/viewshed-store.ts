@@ -8,12 +8,20 @@
 import { writable } from 'svelte/store';
 import { z } from 'zod';
 
-import { VIEWSHED_DEFAULTS, VIEWSHED_LIMITS, type ViewshedStoreState } from '$lib/types/viewshed';
+import {
+	type HeightAglMode,
+	VIEWSHED_DEFAULTS,
+	VIEWSHED_LIMITS,
+	type ViewshedStoreState
+} from '$lib/types/viewshed';
 
 import { persistedWritable } from '../persisted-writable';
 
 /** Transient computing state — NOT persisted. Written by viewshed-derived, read by panels. */
 export const viewshedComputing = writable(false);
+
+/** Transient computed AGL — NOT persisted. Written by viewshed-derived when in auto mode. */
+export const viewshedComputedAgl = writable<number | null>(null);
 
 // ── Zod schema for localStorage validation ───────────────────────────
 
@@ -23,6 +31,7 @@ const ViewshedStoreSchema = z.object({
 		.number()
 		.min(VIEWSHED_LIMITS.HEIGHT_AGL_MIN_M)
 		.max(VIEWSHED_LIMITS.HEIGHT_AGL_MAX_M),
+	heightAglMode: z.enum(['auto', 'custom']).default('auto'),
 	radiusM: z.number().min(VIEWSHED_LIMITS.RADIUS_MIN_M).max(VIEWSHED_LIMITS.RADIUS_MAX_M),
 	greenOpacity: z.number().min(VIEWSHED_LIMITS.OPACITY_MIN).max(VIEWSHED_LIMITS.OPACITY_MAX),
 	redOpacity: z.number().min(VIEWSHED_LIMITS.OPACITY_MIN).max(VIEWSHED_LIMITS.OPACITY_MAX),
@@ -96,4 +105,8 @@ export function setRedOpacity(value: number): void {
 
 export function setAdjustTogether(linked: boolean): void {
 	viewshedStore.update((s) => ({ ...s, adjustTogether: linked }));
+}
+
+export function setHeightAglMode(mode: HeightAglMode): void {
+	viewshedStore.update((s) => ({ ...s, heightAglMode: mode }));
 }

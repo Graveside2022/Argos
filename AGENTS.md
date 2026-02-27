@@ -8,14 +8,16 @@ Argos is a SvelteKit SDR & Network Analysis Console for Army EW training, deploy
 
 **Stack**: SvelteKit 2, Svelte 5 runes, TypeScript strict, Tailwind CSS 4, better-sqlite3, MapLibre GL, ws (WebSocket), node-pty
 
+**Structure**: 945 tracked files across 20 API domains (68 routes, 59 using createHandler), 20 stores, 113 Svelte components, 7 MCP servers
+
 For the detailed architecture map, see `docs/CODEBASE_MAP.md` — read it before starting any non-trivial work.
 
 ## Commands
 
 ```bash
 # Dev server (runs in tmux with OOM protection)
-npm run dev
-npm run dev:simple       # Direct vite start (no tmux)
+npm run dev              # Start in tmux session with oom_score_adj=-500
+npm run dev:simple       # Direct vite start (no tmux, lower memory limit)
 npm run dev:clean        # Kill existing + restart fresh
 npm run dev:logs         # Tail dev server output
 
@@ -53,10 +55,10 @@ npm run db:rollback      # Rollback last migration
 Hardware (HackRF/Alfa/GPS)
   → src/lib/server/services/        # CLI wrappers (hackrf_sweep, gpsd, Kismet, grgsm)
   → src/lib/server/hardware/        # Hardware detection & monitoring
-  → src/routes/api/*/+server.ts     # 19 REST API domains (66 routes, 53 use createHandler)
+  → src/routes/api/*/+server.ts     # 20 REST API domains (68 routes, 59 use createHandler)
   → WebSocket / SSE                 # Real-time push (hooks.server.ts + SSE endpoints)
-  → src/lib/stores/                 # 17 client-side Svelte stores
-  → src/lib/components/             # Svelte 5 UI components (Lunaris design system)
+  → src/lib/stores/                 # 20 client-side Svelte stores
+  → src/lib/components/             # 113 Svelte 5 UI components (Lunaris design system)
 ```
 
 ### Key Patterns
@@ -83,11 +85,12 @@ Auth gate → Rate limiter (200/min API, 30/min hardware, 60/min Tailscale) → 
 
 ```
 src/
-├── routes/api/                # 19 API domains (hackrf, kismet, gsm-evil, gps, tak, etc.)
+├── routes/api/                # 20 API domains (hackrf, kismet, gsm-evil, gps, tak, viewshed, etc.)
 ├── routes/dashboard/          # Dashboard page (DashboardShell snippet-slot architecture)
+├── routes/gsm-evil/           # GSM Evil page
 ├── lib/server/                # Server-only: services/, auth/, db/, hardware/, security/, mcp/
-├── lib/components/            # Svelte 5 components (Lunaris design system)
-├── lib/stores/                # 17 reactive stores
+├── lib/components/            # 113 Svelte 5 components (Lunaris design system)
+├── lib/stores/                # 20 reactive stores
 ├── lib/schemas/               # 7 Zod validation schemas
 ├── lib/types/                 # TypeScript type definitions
 ├── lib/websocket/             # Client-side WebSocket (BaseWebSocket + decomposed modules)
@@ -95,7 +98,7 @@ src/
 ├── hooks.server.ts            # Security middleware + WebSocket upgrade
 config/                        # Vite, ESLint, Playwright configs
 tests/                         # unit/, integration/, security/, e2e/, visual/, performance/
-scripts/ops/                   # setup-host.sh, install-services.sh
+scripts/ops/                   # setup-host.sh, setup-host-ui.mjs, setup-host-functions.sh, components.json, install-services.sh
 deployment/                    # Systemd service files
 ```
 

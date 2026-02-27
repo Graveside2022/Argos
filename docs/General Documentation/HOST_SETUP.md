@@ -4,67 +4,87 @@ This guide documents all host system (Kali Linux) dependencies required for Argo
 
 ## Overview
 
-Argos runs in Docker containers, but **hardware access requires host system configuration**:
+Argos runs **natively on Raspberry Pi 5** (Kali Linux), not in Docker. Hardware access requires host system configuration:
 
 - USB device permissions (udev rules)
 - Hardware drivers (HackRF, USRP, GPS, WiFi adapters)
 - SDR tools (gr-gsm, gr-osmosdr, kalibrate, SoapySDR)
-- System packages (libusb, fftw, Node.js, etc.)
-- Python Flask ecosystem for backend services
+- System packages (libusb, fftw, Node.js 22, etc.)
+- Node.js runtime and npm dependencies
 - System monitoring and diagnostic tools
-- Complete kernel parameter tuning
+- System optimizations (kernel parameters, zram swap, earlyoom)
 
 ## Quick Start
 
-Run the master setup script (requires sudo):
+Run the interactive setup script (requires sudo):
 
 ```bash
-sudo ./scripts/setup-host-complete.sh
+sudo bash scripts/ops/setup-host.sh
 ```
 
-This installs **EVERYTHING** discovered during troubleshooting (14 installation phases):
+This launches an interactive installer that guides you through component selection:
 
-**Core Infrastructure:**
+- **Express mode**: Install all 26 components with one keypress
+- **Customize mode**: Choose individual optional components by group
+- **Unattended mode**: Use `--yes` flag to skip prompts and install everything
 
-- Node.js 20 with npm
-- Docker & Docker Compose
-- Portainer container management
+The installation includes 4 groups of components:
 
-**SDR Hardware:**
+**Core Infrastructure (11 components — always installed):**
 
-- HackRF One (hackrf, libhackrf, SoapySDR)
-- USRP (optional: libuhd, uhd-host, python3-uhd)
-- Extended radio tools (rtl-sdr, multimon-ng, gqrx-sdr)
+- Network config (WiFi + DNS fallback)
+- System packages (build tools, SDR drivers)
+- Node.js 22 (app runtime)
+- gpsd (GPS daemon)
+- OpenSSH server (remote access)
+- SDR udev rules (HackRF, RTL-SDR, USRP)
+- SDR infrastructure (SoapySDR + UHD)
+- npm dependencies (JavaScript libraries)
+- Environment file (.env + API keys)
+- EarlyOOM (prevents system freezes)
+- cgroup memory limits (runaway process defense)
 
-**GSM Evil (COMPLETE):**
+**SDR & Signal Tools (1 optional component):**
 
-- gnuradio, gr-gsm, gr-osmosdr (required)
-- kalibrate-hackrf, kalibrate-rtl (frequency calibration)
-- libosmocore-dev, libosmo-dsp-dev (Osmocom libraries)
-- Python Flask, Flask-SocketIO, Flask-CORS (backend)
+- GSM Evil (cell tower monitoring with gr-gsm)
 
-**Other Hardware:**
+**Development Tools (6 optional components):**
 
-- GPS devices (gpsd with USB auto-detection)
-- Kismet WiFi scanning (with user group setup)
+- Dev monitor (auto-restart dev server)
+- Claude Code (AI coding assistant)
+- Gemini CLI (Google AI assistant)
+- Agent Browser (browser automation)
+- ChromaDB (AI memory backend)
+- Headless debug service (Chromium remote debugging)
 
-**System Tools:**
+**System Services (8 optional components):**
 
-- Monitoring: iotop, nethogs, iftop, tcpdump, wireshark, aircrack-ng
-- Development: ripgrep, fd-find, bat, exa, fzf, ncdu, btop
-- Python: numpy, scipy, pyserial, psutil, requests, pyyaml
+- Docker (OpenWebRX + Bettercap containers)
+- zram compressed swap (4 GB)
+- Text-mode boot (disable desktop)
+- On-demand VNC (remote desktop)
+- Tailscale (secure remote access)
+- Zsh + dotfiles (shell environment)
+- Set Zsh as default shell
+- Persistent tmux sessions
 
-**System Optimizations:**
+## Installation Methods
 
-- Complete kernel parameter tuning (USB buffers, network buffers, memory)
-- File descriptor limits (65536)
-- SystemD limits configuration
-- USB power optimization (udev rules)
-- Bluetooth disable on Raspberry Pi (free USB power)
+### Automatic Installation (Recommended)
 
-## Manual Setup by Component
+The interactive setup script is the recommended approach. It handles all 26 components, environment configuration, and systemd services:
 
-### 1. Docker & Container Runtime
+```bash
+sudo bash scripts/ops/setup-host.sh          # Express or Customize mode
+sudo bash scripts/ops/setup-host.sh --yes    # Unattended mode (install all)
+sudo bash scripts/ops/setup-host.sh -v       # Verbose mode (show raw output)
+```
+
+### Manual Setup by Component
+
+For isolated troubleshooting or custom installations, individual components can be installed manually.
+
+### 1. Docker & Container Runtime (Optional — System Services group)
 
 ```bash
 # Install Docker
@@ -119,11 +139,11 @@ hackrf_info
 - If permission denied: Logout and login after adding to plugdev group
 - Check device: `lsusb | grep HackRF`
 
-### 3. Node.js Runtime
+### 3. Node.js Runtime (Core Infrastructure group)
 
 ```bash
-# Install Node.js 20.x
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+# Install Node.js 22.x
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
 sudo apt install -y nodejs
 
 # Verify installation
@@ -131,7 +151,7 @@ node --version
 npm --version
 ```
 
-**Why needed**: Argos application requires Node.js runtime for building and running the frontend.
+**Why needed**: Argos application requires Node.js 22+ runtime. The setup script installs this automatically.
 
 ### 4. Docker Compose
 
@@ -148,7 +168,7 @@ docker-compose --version
 
 **Why needed**: Multi-container orchestration for Argos services.
 
-### 5. GSM Evil (gr-gsm Tools) - COMPLETE
+### 5. GSM Evil (Optional — SDR & Signal Tools group)
 
 ```bash
 # Install GNU Radio, gr-gsm, and gr-osmosdr - ALL REQUIRED
@@ -384,31 +404,16 @@ fi
 - USB power: Keep SDR devices from power-saving modes
 - Bluetooth disable: Free USB power budget on Raspberry Pi
 
-### 13. Argos Auto-Start Service
+### 13. Argos Systemd Services (Automated)
 
-```bash
-# Install startup check service
-sudo tee /etc/systemd/system/argos-startup.service <<EOF
-[Unit]
-Description=Argos Startup Check
-After=network-online.target docker.service
-Wants=network-online.target docker.service
+Systemd service files are installed automatically by the setup script (located in `deployment/`). They include:
 
-[Service]
-Type=oneshot
-ExecStart=/home/$USER/Documents/Argos/Argos/scripts/startup-check.sh
-RemainAfterExit=yes
+- `argos-final` — Main Argos application service
+- `argos-headless` — Headless debug service (port 9224)
+- `chroma-server` — ChromaDB vector database (if Claude Code selected)
+- `argos-dev-monitor` — Dev server auto-restart monitor (if Dev Monitor selected)
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Enable service
-sudo systemctl daemon-reload
-sudo systemctl enable argos-startup.service
-```
-
-**Why needed**: Auto-starts containers and checks services after system reboot.
+**Why needed**: Auto-starts services after system reboot with proper resource limits and dependencies.
 
 ## Hardware Dependencies Summary
 
@@ -543,16 +548,41 @@ groups                            # Should show: docker, plugdev, kismet, dialou
 
 ## Next Steps
 
-After host setup is complete:
+After `setup-host.sh` completes:
 
-1. **Deploy Containers**: Run `./scripts/deploy-containers.sh`
-2. **Start Application**: Containers auto-start via systemd service
-3. **Access Dashboard**: `http://localhost:5173`
-4. **Configure Tools**: Each tool in Dashboard → Tools panel
+1. **Edit .env**: Configure API keys (optional):
+
+    ```bash
+    nano .env
+    ```
+
+    - `STADIA_MAPS_API_KEY` — Vector map tiles (stadiamaps.com)
+    - `OPENCELLID_API_KEY` — Cell tower database (opencellid.org)
+
+2. **Start Application**:
+
+    ```bash
+    npm run dev
+    ```
+
+3. **Access Dashboard**: Open `http://<pi-ip>:5173` in your browser
+
+4. **Optional: Download Cell Tower Database**:
+    ```bash
+    bash scripts/ops/import-celltowers.sh
+    ```
+
+## Troubleshooting
+
+If the setup script fails:
+
+1. Check error messages — most failures are due to missing dependencies
+2. Run with verbose mode: `sudo bash scripts/ops/setup-host.sh -v`
+3. Install Node.js manually: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -`
+4. Verify OS: Kali Linux or Parrot OS recommended (Raspberry Pi 5 or x86)
 
 ## See Also
 
-- [Container Deployment](../config/openwebrx/README.md)
-- [OpenWebRX Configuration](../config/openwebrx/README.md)
-- ~~Troubleshooting Guide~~ (TODO: not yet created)
-- Automated Setup: `scripts/setup-host-complete.sh`
+- [README.md](../../README.md) — Installation quick start
+- [CODEBASE_MAP.md](../CODEBASE_MAP.md) — Project structure and architecture
+- [API Authentication](./security-architecture.md) — API key and auth details

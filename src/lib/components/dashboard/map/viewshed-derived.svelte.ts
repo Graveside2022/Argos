@@ -1,21 +1,33 @@
 /** Viewshed derived reactive state — watches GPS + store params, fetches viewshed API. */
 import { fromStore } from 'svelte/store';
 
-import { rfRangeStore } from '$lib/stores/dashboard/rf-range-store';
-import { viewshedComputing, viewshedStore } from '$lib/stores/dashboard/viewshed-store';
+import {
+	viewshedComputedAgl,
+	viewshedComputing,
+	viewshedStore
+} from '$lib/stores/dashboard/viewshed-store';
 import { type GPSState, gpsStore } from '$lib/stores/tactical-map/gps-store';
-import { hackrfStore } from '$lib/stores/tactical-map/hackrf-store';
-import { getPresetById } from '$lib/types/rf-range';
 import type { ViewshedBounds, ViewshedResult } from '$lib/types/viewshed';
-import { haversineMeters } from '$lib/utils/geo';
 import { logger } from '$lib/utils/logger';
-import { calculateFriisRange, GPS_STALE_TIMEOUT_MS } from '$lib/utils/rf-propagation';
+import { GPS_STALE_TIMEOUT_MS } from '$lib/utils/rf-propagation';
 
-const POSITION_DELTA_M = 50;
+import { ParamsMemo } from './viewshed-memo';
+
 const DEBOUNCE_MS = 500;
+const DEBOUNCE_OPACITY_MS = 150;
 
 function hasValidGPSFix(gps: GPSState): boolean {
 	return gps.status.hasGPSFix && !(gps.position.lat === 0 && gps.position.lon === 0);
+}
+
+/** Convert a data:image/png;base64,... URI to a blob: URL that MapLibre can fetch. */
+function dataUriToBlobUrl(dataUri: string): string {
+	const [header, b64] = dataUri.split(',');
+	const mime = header.match(/:(.*?);/)?.[1] ?? 'image/png';
+	const bytes = atob(b64);
+	const buf = new Uint8Array(bytes.length);
+	for (let i = 0; i < bytes.length; i++) buf[i] = bytes.charCodeAt(i);
+	return URL.createObjectURL(new Blob([buf], { type: mime }));
 }
 
 export interface ViewshedDerivedState {
@@ -24,56 +36,24 @@ export interface ViewshedDerivedState {
 	readonly viewshedActive: boolean;
 	readonly viewshedInactiveReason: string | null;
 	readonly isComputing: boolean;
-	readonly isRfCapped: boolean;
-	readonly effectiveRadiusM: number;
+	/** Last computed AGL from server (meters), only set when heightAglMode is 'auto' */
+	readonly computedAglM: number | null;
 }
 
 /** Create all viewshed-derived reactive state. Call once from createMapState(). */
 export function createViewshedDerivedState(): ViewshedDerivedState {
 	const gps$ = fromStore(gpsStore);
 	const vs$ = fromStore(viewshedStore);
-	const rf$ = fromStore(rfRangeStore);
-	const hrf$ = fromStore(hackrfStore);
 
 	let viewshedImageUrl: string | null = $state(null);
 	let viewshedBounds: ViewshedBounds | null = $state(null);
 	let viewshedActive = $state(false);
 	let viewshedInactiveReason: string | null = $state('Overlay disabled');
 	let isComputing = $state(false);
-
-	// ── RF range cap derivation ──────────────────────────────────────
-	const activeProfile = $derived(
-		rf$.current.activePresetId === 'custom'
-			? rf$.current.customProfile
-			: (getPresetById(rf$.current.activePresetId) ?? rf$.current.customProfile)
-	);
-
-	const activeFrequencyHz = $derived(
-		(rf$.current.frequencySource === 'auto'
-			? hrf$.current.targetFrequency
-			: rf$.current.manualFrequencyMHz) * 1e6
-	);
-
-	const rfRangeM = $derived(
-		calculateFriisRange(
-			activeFrequencyHz,
-			activeProfile.txPowerDbm,
-			activeProfile.antennaGainDbi,
-			activeProfile.rxAntennaGainDbi,
-			activeProfile.sensitivityDbm
-		)
-	);
-
-	const effectiveRadiusM = $derived(Math.min(vs$.current.radiusM, rfRangeM));
-	const isRfCapped = $derived(vs$.current.radiusM > rfRangeM);
+	let computedAglM: number | null = $state(null);
 
 	// Memoization: track last fetch inputs to skip redundant calls
-	let prevLat = Infinity;
-	let prevLon = Infinity;
-	let prevHeightAgl = 0;
-	let prevRadiusM = 0;
-	let prevGreenOpacity = 0;
-	let prevRedOpacity = 0;
+	const memo = new ParamsMemo();
 
 	// GPS stale tracking
 	let lastGPSFixTime = 0;
@@ -87,6 +67,9 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 
 	// In-flight abort
 	let abortController: AbortController | null = null;
+
+	// Track current blob URL for cleanup
+	let currentBlobUrl: string | null = null;
 
 	function scheduleStaleExpiry(remainingMs: number): void {
 		if (staleTimeoutId !== null) return;
@@ -104,6 +87,10 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 	}
 
 	function clearOverlay(): void {
+		if (currentBlobUrl) {
+			URL.revokeObjectURL(currentBlobUrl);
+			currentBlobUrl = null;
+		}
 		viewshedImageUrl = null;
 		viewshedBounds = null;
 		viewshedActive = false;
@@ -133,40 +120,6 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		return null;
 	}
 
-	function hasParamsChanged(
-		lat: number,
-		lon: number,
-		heightAgl: number,
-		radiusM: number,
-		greenOp: number,
-		redOp: number
-	): boolean {
-		const posDelta = haversineMeters(prevLat, prevLon, lat, lon);
-		if (posDelta >= POSITION_DELTA_M) return true;
-		return (
-			heightAgl !== prevHeightAgl ||
-			radiusM !== prevRadiusM ||
-			greenOp !== prevGreenOpacity ||
-			redOp !== prevRedOpacity
-		);
-	}
-
-	function saveMemoState(
-		lat: number,
-		lon: number,
-		heightAgl: number,
-		radiusM: number,
-		greenOp: number,
-		redOp: number
-	): void {
-		prevLat = lat;
-		prevLon = lon;
-		prevHeightAgl = heightAgl;
-		prevRadiusM = radiusM;
-		prevGreenOpacity = greenOp;
-		prevRedOpacity = redOp;
-	}
-
 	function handleNoPosition(): void {
 		clearOverlay();
 		viewshedInactiveReason = hadGPSFix ? 'GPS signal lost' : 'No GPS fix';
@@ -185,10 +138,21 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		heightAgl: number,
 		radiusM: number,
 		greenOpacity: number,
-		redOpacity: number
+		redOpacity: number,
+		gpsMslAltitude?: number
 	): Promise<void> {
 		abortController?.abort();
 		abortController = new AbortController();
+
+		const payload: Record<string, number | boolean> = {
+			lat,
+			lon,
+			heightAgl,
+			radiusM,
+			greenOpacity,
+			redOpacity
+		};
+		if (gpsMslAltitude !== undefined) payload.gpsMslAltitude = gpsMslAltitude;
 
 		isComputing = true;
 		viewshedComputing.set(true);
@@ -196,7 +160,7 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			const res = await fetch('/api/viewshed/compute', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ lat, lon, heightAgl, radiusM, greenOpacity, redOpacity }),
+				body: JSON.stringify(payload),
 				signal: abortController.signal
 			});
 			if (!res.ok) {
@@ -216,7 +180,11 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 
 	function applyResult(result: ViewshedResult): void {
 		if (result.imageDataUri) {
-			viewshedImageUrl = result.imageDataUri;
+			// Revoke previous blob URL to prevent memory leaks
+			if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+			// MapLibre cannot fetch data: URIs — convert to blob: URL
+			currentBlobUrl = dataUriToBlobUrl(result.imageDataUri);
+			viewshedImageUrl = currentBlobUrl;
 			viewshedBounds = result.bounds;
 			viewshedActive = true;
 			viewshedInactiveReason = null;
@@ -225,10 +193,39 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			viewshedInactiveReason =
 				(result as ViewshedResult & { reason?: string }).reason ?? 'No DTED coverage';
 		}
+		// Capture server-computed AGL for UI display (null when in custom mode)
+		computedAglM = result.meta.computedAglM ?? null;
+		viewshedComputedAgl.set(computedAglM);
 		logger.info(`Viewshed computed in ${result.meta.computeTimeMs}ms`, {
 			cells: result.meta.cellCount,
 			tiles: result.meta.tilesUsed
 		});
+	}
+
+	// ── Helpers for the main effect ──────────────────────────────────
+
+	function resolveGpsAltitude(
+		vs: typeof vs$.current,
+		gps: typeof gps$.current
+	): number | undefined {
+		return vs.heightAglMode === 'auto' && gps.status.altitude !== null
+			? gps.status.altitude
+			: undefined;
+	}
+
+	function scheduleFetch(
+		vs: typeof vs$.current,
+		pos: { lat: number; lon: number },
+		gpsAlt: number | undefined,
+		delay: number
+	): void {
+		if (debounceId !== null) clearTimeout(debounceId);
+		const { heightAglM, radiusM, greenOpacity, redOpacity } = vs;
+		debounceId = setTimeout(() => {
+			debounceId = null;
+			memo.save(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity, gpsAlt);
+			fetchViewshed(pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity, gpsAlt);
+		}, delay);
 	}
 
 	// ── Main reactive effect ─────────────────────────────────────────
@@ -250,22 +247,15 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 			return;
 		}
 
-		const { heightAglM, greenOpacity, redOpacity } = vs;
-		const cappedRadius = effectiveRadiusM;
-		if (
-			!hasParamsChanged(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity)
-		) {
-			return;
-		}
+		const gpsAlt = resolveGpsAltitude(vs, gps);
+		const { heightAglM, radiusM, greenOpacity, redOpacity } = vs;
+		const changeKind = memo.classifyChange(
+			pos.lat, pos.lon, heightAglM, radiusM, greenOpacity, redOpacity, gpsAlt
+		);
+		if (changeKind === 'none') return;
 
-		// Debounce to avoid rapid API calls during slider changes.
-		// Memo is saved inside the callback so rapid changes aren't dropped.
-		if (debounceId !== null) clearTimeout(debounceId);
-		debounceId = setTimeout(() => {
-			debounceId = null;
-			saveMemoState(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity);
-			fetchViewshed(pos.lat, pos.lon, heightAglM, cappedRadius, greenOpacity, redOpacity);
-		}, DEBOUNCE_MS);
+		const delay = changeKind === 'opacity' ? DEBOUNCE_OPACITY_MS : DEBOUNCE_MS;
+		scheduleFetch(vs, pos, gpsAlt, delay);
 
 		return () => {
 			if (debounceId !== null) clearTimeout(debounceId);
@@ -289,11 +279,8 @@ export function createViewshedDerivedState(): ViewshedDerivedState {
 		get isComputing() {
 			return isComputing;
 		},
-		get isRfCapped() {
-			return isRfCapped;
-		},
-		get effectiveRadiusM() {
-			return effectiveRadiusM;
+		get computedAglM() {
+			return computedAglM;
 		}
 	};
 }

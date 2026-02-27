@@ -20,7 +20,7 @@ export function applySecurityHeaders(response: Response): void {
 			"script-src 'self' 'unsafe-inline'",
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob: https://*.tile.openstreetmap.org https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com",
-			"connect-src 'self' ws: wss: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com https://demotiles.maplibre.org",
+			"connect-src 'self' blob: ws: wss: https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com https://demotiles.maplibre.org",
 			"worker-src 'self' blob:",
 			"child-src 'self' blob:",
 			"frame-src 'self' http://*:2501 http://*:8073 http://*:80",
