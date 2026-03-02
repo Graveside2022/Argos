@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Globe, Layers, Radio } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, Globe, Layers } from '@lucide/svelte';
 
 	import {
 		activeMapSettingsView,
@@ -7,7 +7,6 @@
 		navigateToMapSettingsView
 	} from '$lib/stores/dashboard/map-settings-store';
 
-	import LineOfSightView from './LineOfSightView.svelte';
 	import MapLayersView from './MapLayersView.svelte';
 	import MapProviderView from './MapProviderView.svelte';
 </script>
@@ -36,15 +35,6 @@
 				</div>
 				<ChevronRight size={14} class="hub-chevron" />
 			</button>
-
-			<button class="hub-card" onclick={() => navigateToMapSettingsView('line-of-sight')}>
-				<div class="hub-card-icon"><Radio size={16} /></div>
-				<div class="hub-card-content">
-					<span class="hub-card-name">Line of Sight</span>
-					<span class="hub-card-desc">RF range overlay</span>
-				</div>
-				<ChevronRight size={14} class="hub-chevron" />
-			</button>
 		</div>
 	{:else}
 		<header class="panel-header subview-header">
@@ -54,7 +44,6 @@
 			<span class="panel-title">
 				{#if $activeMapSettingsView === 'provider'}MAP PROVIDER
 				{:else if $activeMapSettingsView === 'layers'}MAP LAYERS
-				{:else if $activeMapSettingsView === 'line-of-sight'}LINE OF SIGHT
 				{/if}
 			</span>
 		</header>
@@ -64,8 +53,6 @@
 				<MapProviderView />
 			{:else if $activeMapSettingsView === 'layers'}
 				<MapLayersView />
-			{:else if $activeMapSettingsView === 'line-of-sight'}
-				<LineOfSightView />
 			{/if}
 		</div>
 	{/if}
