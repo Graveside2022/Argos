@@ -8,17 +8,23 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = resolve(__dirname, '../..');
 
-// Dynamic import of @clack/prompts — installed to .setup-cache by bootstrap
+// Dynamic import of @clack/prompts — installed to .setup-cache by bootstrap.
+// ESM bare imports ignore NODE_PATH, so use createRequire to resolve the path
+// (it respects NODE_PATH), then dynamic import() on the resolved file URL.
 let p, pc;
 try {
-  p = await import('@clack/prompts');
-  pc = (await import('picocolors')).default;
+  const require = createRequire(import.meta.url);
+  const clackPath = pathToFileURL(require.resolve('@clack/prompts'));
+  const pcPath = pathToFileURL(require.resolve('picocolors'));
+  p = await import(clackPath);
+  pc = (await import(pcPath)).default;
 } catch {
   console.error('Error: @clack/prompts not found. Run via setup-host.sh (not directly).');
   process.exit(1);
