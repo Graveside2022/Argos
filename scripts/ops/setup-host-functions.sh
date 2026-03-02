@@ -7,7 +7,7 @@
 #   OS_ID, NON_INTERACTIVE
 #
 # Optional env vars (for install_env_file):
-#   STADIA_KEY, OCID_KEY, DOWNLOAD_TOWERS
+#   STADIA_KEY
 #
 # Optional env var (for _is_selected):
 #   SELECTED_COMPONENTS — comma-separated list of selected component IDs
@@ -62,16 +62,29 @@ _user_has_cmd() {
   sudo -u "$SETUP_USER" bash -c 'command -v "$1"' -- "$1" &>/dev/null
 }
 
-# Enable and start a systemd user service for SETUP_USER
+# Enable and start a systemd user service for SETUP_USER.
+# When running under sudo, the user's D-Bus session bus isn't available.
+# We must pass both XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS so that
+# `systemctl --user` can connect to the user's systemd instance.
 _enable_user_service() {
   local service="$1"
   local user_id
   user_id=$(id -u "$SETUP_USER")
   loginctl enable-linger "$SETUP_USER" 2>/dev/null || true
-  export XDG_RUNTIME_DIR="/run/user/$user_id"
-  sudo -u "$SETUP_USER" systemctl --user daemon-reload
-  sudo -u "$SETUP_USER" systemctl --user enable "$service"
-  sudo -u "$SETUP_USER" systemctl --user restart "$service"
+  local runtime_dir="/run/user/$user_id"
+  local bus_addr="unix:path=${runtime_dir}/bus"
+  sudo -u "$SETUP_USER" \
+    XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$bus_addr" \
+    systemctl --user daemon-reload
+  sudo -u "$SETUP_USER" \
+    XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$bus_addr" \
+    systemctl --user enable "$service"
+  sudo -u "$SETUP_USER" \
+    XDG_RUNTIME_DIR="$runtime_dir" \
+    DBUS_SESSION_BUS_ADDRESS="$bus_addr" \
+    systemctl --user restart "$service"
 }
 
 # Read/write JSON settings via python3 (avoids jq dependency)
@@ -148,6 +161,45 @@ _clone_or_pull() {
 # Check if a component was selected (reads SELECTED_COMPONENTS env var)
 _is_selected() {
   [[ ",${SELECTED_COMPONENTS:-}," == *",$1,"* ]]
+}
+
+# Pre-flight check: returns 0 if a component appears to be already installed.
+# Used by the Node.js UI to show "already present" vs "freshly installed".
+# This is a quick heuristic — the actual install functions are idempotent and
+# will still verify/update configuration even if this returns 0.
+check_component() {
+  local id="$1"
+  case "$id" in
+    network)        nmcli -t -f RUNNING general 2>/dev/null | grep -q running ;;
+    system_packages) dpkg -s build-essential &>/dev/null ;;
+    nodejs)         command -v node &>/dev/null && command -v npm &>/dev/null ;;
+    gpsd)           command -v gpsd &>/dev/null ;;
+    kismet)         command -v kismet &>/dev/null ;;
+    kismet_gps)     grep -q '^gps=gpsd:' /etc/kismet/kismet.conf 2>/dev/null ;;
+    openssh)        dpkg -s openssh-server &>/dev/null ;;
+    udev_sdr)       [[ -f /etc/udev/rules.d/99-hackrf.rules ]] ;;
+    sdr_infra)      command -v SoapySDRUtil &>/dev/null ;;
+    npm_deps)       [[ -d "$PROJECT_DIR/node_modules" ]] ;;
+    env_file)       [[ -f "$PROJECT_DIR/.env" ]] ;;
+    earlyoom)       command -v earlyoom &>/dev/null ;;
+    cgroup_mem)     [[ -f /etc/systemd/system/user-1000.slice.d/memory-limit.conf ]] ;;
+    gsm_evil)       command -v grgsm_livemon_headless &>/dev/null ;;
+    dev_monitor)    [[ -f "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service" ]] ;;
+    docker)         command -v docker &>/dev/null ;;
+    zram)           [[ -f /etc/systemd/system/zram-swap.service ]] ;;
+    textmode)       [[ "$(systemctl get-default 2>/dev/null)" == "multi-user.target" ]] ;;
+    vnc)            [[ -f "$SETUP_HOME/.config/systemd/user/vnc-ondemand.socket" ]] ;;
+    tailscale)      command -v tailscale &>/dev/null ;;
+    claude_code)    sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null ;;
+    gemini_cli)     sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null ;;
+    agent_browser)  sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null ;;
+    chromadb)       sudo -u "$SETUP_USER" bash -c 'command -v bun' &>/dev/null ;;
+    headless_debug) [[ -f /etc/systemd/system/argos-headless.service ]] ;;
+    zsh_dotfiles)   command -v zsh &>/dev/null && [[ -d "$SETUP_HOME/.oh-my-zsh" ]] ;;
+    zsh_default)    [[ "$(getent passwd "$SETUP_USER" | cut -d: -f7)" == *zsh ]] ;;
+    tmux_sessions)  command -v tmux &>/dev/null ;;
+    *)              return 1 ;;
+  esac
 }
 
 # =============================================
@@ -851,7 +903,8 @@ install_gemini_cli() {
     echo "  Gemini CLI already installed"
   else
     echo "  Installing Gemini CLI..."
-    sudo -u "$SETUP_USER" npm install -g @google/gemini-cli
+    # Install as root (script runs via sudo) so binary lands in /usr/bin
+    npm install -g @google/gemini-cli
     echo "  Gemini CLI installed. Run 'gemini' to authenticate."
   fi
 }
@@ -861,7 +914,8 @@ install_agent_browser() {
     echo "  agent-browser already installed"
   else
     echo "  Installing agent-browser..."
-    sudo -u "$SETUP_USER" npm install -g agent-browser
+    # Install as root so binary lands in /usr/bin
+    npm install -g agent-browser
   fi
   # Always ensure Chromium is available (handles partial installs)
   echo "  Ensuring Chromium for agent-browser..."
@@ -934,7 +988,13 @@ _propagate_chroma_ssl() {
   local ENVD_DIR="$SETUP_HOME/.config/environment.d"
   sudo -u "$SETUP_USER" mkdir -p "$ENVD_DIR"
   sudo -u "$SETUP_USER" tee "$ENVD_DIR/chroma.conf" > /dev/null <<< 'CHROMA_SSL=false'
-  sudo -u "$SETUP_USER" bash -c "CHROMA_SSL=false systemctl --user import-environment CHROMA_SSL" 2>/dev/null || true
+  local chroma_uid
+  chroma_uid=$(id -u "$SETUP_USER")
+  sudo -u "$SETUP_USER" \
+    XDG_RUNTIME_DIR="/run/user/$chroma_uid" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$chroma_uid/bus" \
+    CHROMA_SSL=false \
+    systemctl --user import-environment CHROMA_SSL 2>/dev/null || true
 
   # Layer 3: .zshenv (interactive shells)
   local ZSHENV="$SETUP_HOME/.zshenv"
@@ -1182,7 +1242,10 @@ install_headless_debug() {
 install_tmux_sessions() {
   local user_id
   user_id=$(id -u "$SETUP_USER")
+  # tmux itself doesn't need DBUS, but we export XDG_RUNTIME_DIR so
+  # the _enable_user_service call later works correctly
   export XDG_RUNTIME_DIR="/run/user/$user_id"
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_id/bus"
   for sess in dev1 dev2 dev3 argos-logs; do
     if sudo -u "$SETUP_USER" tmux has-session -t "$sess" 2>/dev/null; then
       echo "  $sess — already running"

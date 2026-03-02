@@ -6,7 +6,7 @@
 // Usage (called by setup-host.sh, not directly):
 //   NODE_PATH=.setup-cache/node_modules node scripts/ops/setup-host-ui.mjs [--yes] [--verbose]
 
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
@@ -49,6 +49,29 @@ const {
 } = process.env;
 
 // =============================================
+// HELPERS
+// =============================================
+
+/** Run a bash command asynchronously (allows spinner animation) */
+function execAsync(cmd, env, timeout = 600_000) {
+  return new Promise((resolve, reject) => {
+    execFile('bash', ['-c', cmd], {
+      env,
+      timeout,
+      maxBuffer: 10 * 1024 * 1024,
+    }, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
+
+// =============================================
 // LOAD COMPONENT REGISTRY
 // =============================================
 
@@ -65,10 +88,40 @@ try {
 // INTRO
 // =============================================
 
+// Get version from git or package.json
+let version = 'dev';
+try {
+  version = execFileSync('git', ['-C', PROJECT_DIR, 'describe', '--tags', '--always'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 5_000,
+  }).toString().trim();
+} catch {
+  try {
+    const pkg = JSON.parse(readFileSync(resolve(PROJECT_DIR, 'package.json'), 'utf8'));
+    version = pkg.version || 'dev';
+  } catch { /* keep 'dev' */ }
+}
+
 console.log('');
+console.log(pc.cyan([
+  '   ╔════════════════════════════════════════════════════╗',
+  '   ║                                                    ║',
+  '   ║     █████  ██████   ██████   ██████  ███████       ║',
+  '   ║    ██   ██ ██   ██ ██       ██    ██ ██            ║',
+  '   ║    ███████ ██████  ██   ███ ██    ██ ███████       ║',
+  '   ║    ██   ██ ██   ██ ██    ██ ██    ██      ██       ║',
+  '   ║    ██   ██ ██   ██  ██████   ██████  ███████       ║',
+  '   ║                                                    ║',
+  '   ╚════════════════════════════════════════════════════╝',
+].join('\n')));
+console.log('');
+
 p.intro(pc.bgCyan(pc.black(' Argos Host Provisioning ')));
 
 p.log.info([
+  `${pc.dim('SDR & Network Analysis Console for EW Training')}`,
+  '',
+  `Version: ${pc.cyan(version)}`,
   `OS:      ${pc.cyan(OS_NAME)}`,
   `User:    ${pc.cyan(SETUP_USER)}`,
   `Project: ${pc.dim(PROJECT_DIR)}`,
@@ -159,20 +212,18 @@ const idOrder = new Map(components.map((c, i) => [c.id, i]));
 selectedIds.sort((a, b) => (idOrder.get(a) ?? 99) - (idOrder.get(b) ?? 99));
 
 // =============================================
-// API KEY PROMPTS
+// API KEY PROMPT (Stadia Maps only — cell tower data ships with repo)
 // =============================================
 
 let stadiaKey = '';
-let ocidKey = '';
-let downloadTowers = false;
 
 const envFileExists = existsSync(resolve(PROJECT_DIR, '.env'));
 
 if (selectedIds.includes('env_file') && !envFileExists) {
   if (NON_INTERACTIVE) {
-    p.log.info('Skipping API key prompts (--yes mode). Edit .env manually.');
+    p.log.info('Skipping API key prompt (--yes mode). Edit .env manually.');
   } else {
-    p.log.step('API keys configure map tiles and cell tower data.');
+    p.log.step('Optional API key for vector map tiles.');
 
     const stadiaResult = await p.text({
       message: 'Stadia Maps API key (vector map tiles)',
@@ -189,43 +240,55 @@ if (selectedIds.includes('env_file') && !envFileExists) {
     } else {
       p.log.info('Skipped — map will use Google satellite fallback.');
     }
-
-    const ocidResult = await p.text({
-      message: 'OpenCellID API key (global cell tower database)',
-      placeholder: 'Press Enter to skip — get free key at opencellid.org',
-      validate: () => undefined,
-    });
-    if (p.isCancel(ocidResult)) {
-      p.cancel('Setup cancelled.');
-      process.exit(0);
-    }
-    ocidKey = ocidResult?.trim() || '';
-
-    if (ocidKey) {
-      p.log.success('OpenCellID key saved.');
-      const dlResult = await p.confirm({
-        message: 'Download global cell tower database now? (~500MB, takes a few minutes)',
-        initialValue: true,
-      });
-      if (p.isCancel(dlResult)) {
-        p.cancel('Setup cancelled.');
-        process.exit(0);
-      }
-      downloadTowers = dlResult === true;
-    } else {
-      p.log.info('Skipped — cell tower overlay disabled.');
-    }
   }
 } else if (envFileExists) {
-  p.log.info('.env already exists — skipping API key prompts.');
+  p.log.info('.env already exists — skipping API key prompt.');
+}
+
+// =============================================
+// PRE-FLIGHT: DETECT ALREADY-INSTALLED
+// =============================================
+
+const s = p.spinner();
+s.start('Scanning system for existing components...');
+
+/** @type {Set<string>} */
+const alreadyInstalled = new Set();
+const checkEnv = {
+  ...process.env,
+  SETUP_USER,
+  SETUP_HOME,
+  PROJECT_DIR,
+  SCRIPT_DIR: __dirname,
+  OS_ID,
+};
+
+for (const id of selectedIds) {
+  try {
+    execFileSync('bash', ['-c', `source "${FUNCTIONS_SH}" && check_component "${id}"`], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: checkEnv,
+      timeout: 10_000,
+    });
+    alreadyInstalled.add(id);
+  } catch {
+    // Not installed — will be installed
+  }
+}
+
+const freshCount = selectedIds.length - alreadyInstalled.size;
+if (alreadyInstalled.size > 0) {
+  s.stop(`${pc.cyan(`${alreadyInstalled.size} already present`)}, ${freshCount} to install`);
+} else {
+  s.stop(`${freshCount} components to install (fresh system)`);
 }
 
 // =============================================
 // INSTALL COMPONENTS
 // =============================================
 
-const s = p.spinner();
 let installed = 0;
+let alreadyCount = 0;
 let failed = 0;
 let skipped = 0;
 const failedNames = [];
@@ -258,33 +321,41 @@ for (let i = 0; i < total; i++) {
     OS_ID,
     NON_INTERACTIVE: NON_INTERACTIVE ? 'true' : 'false',
     STADIA_KEY: stadiaKey,
-    OCID_KEY: ocidKey,
-    DOWNLOAD_TOWERS: downloadTowers ? 'true' : 'false',
     SELECTED_COMPONENTS: selectedCsv,
   };
+
+  const wasPresent = alreadyInstalled.has(id);
+  const verb = wasPresent ? 'Verifying' : 'Installing';
 
   try {
     if (VERBOSE) {
       // Verbose: show raw output, no spinner (avoids tty interleaving)
-      p.log.step(`${progress} Installing ${comp.desc}...`);
+      p.log.step(`${progress} ${verb} ${comp.desc}...`);
       execFileSync('bash', ['-c', bashCmd], {
         stdio: 'inherit',
         env: childEnv,
         timeout: 600_000,
       });
-      p.log.success(`${pc.green('✓')} ${comp.desc}`);
+      if (wasPresent) {
+        p.log.success(`${pc.blue('●')} ${comp.desc} ${pc.dim('(already installed)')}`);
+      } else {
+        p.log.success(`${pc.green('✓')} ${comp.desc}`);
+      }
     } else {
-      // Normal: spinner hides child output
-      s.start(`${progress} Installing ${comp.desc}...`);
-      execFileSync('bash', ['-c', bashCmd], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: childEnv,
-        timeout: 600_000,
-        maxBuffer: 10 * 1024 * 1024,
-      });
-      s.stop(`${pc.green('✓')} ${comp.desc}`);
+      // Normal: async exec so the spinner animation runs on the main thread
+      s.start(`${progress} ${verb} ${comp.desc}...`);
+      await execAsync(bashCmd, childEnv);
+      if (wasPresent) {
+        s.stop(`${pc.blue('●')} ${comp.desc} ${pc.dim('(already installed)')}`);
+      } else {
+        s.stop(`${pc.green('✓')} ${comp.desc}`);
+      }
     }
-    installed++;
+    if (wasPresent) {
+      alreadyCount++;
+    } else {
+      installed++;
+    }
   } catch (err) {
     if (VERBOSE) {
       p.log.error(`${pc.red('✗')} ${comp.desc} — failed`);
@@ -312,21 +383,17 @@ skipped = components.length - total;
 // Extract DTED tiles and cell tower database from bundled zips
 for (const extractFn of ['extract_dted', 'extract_celltowers']) {
   try {
-    const output = execFileSync('bash', ['-c',
+    s.start(`Extracting ${extractFn === 'extract_dted' ? 'DTED elevation tiles' : 'cell tower database'}...`);
+    const { stdout } = await execAsync(
       `source "${FUNCTIONS_SH}" && ${extractFn}`,
-    ], {
-      stdio: VERBOSE ? 'inherit' : ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PROJECT_DIR, SCRIPT_DIR: __dirname },
-      timeout: 120_000, // 2 min (celltowers.zip is ~219MB)
-      maxBuffer: 10 * 1024 * 1024,
-    });
-    if (!VERBOSE && output) {
-      const msg = output.toString().trim();
-      if (msg) p.log.info(msg);
-    }
+      { ...process.env, PROJECT_DIR, SCRIPT_DIR: __dirname },
+      120_000,
+    );
+    const msg = stdout?.toString().trim();
+    s.stop(`${pc.green('✓')} ${msg || extractFn}`);
   } catch (err) {
     const msg = err.stderr?.toString().trim().split('\n').pop() || err.message || 'unknown error';
-    p.log.warn(`${extractFn}: ${msg} (non-fatal)`);
+    s.stop(`${pc.yellow('!')} ${extractFn}: ${msg} (non-fatal)`);
   }
 }
 
@@ -334,11 +401,11 @@ for (const extractFn of ['extract_dted', 'extract_celltowers']) {
 // SUMMARY
 // =============================================
 
-const summaryLines = [
-  `${pc.green(`${installed} installed`)}`,
-];
+const summaryLines = [];
+if (installed > 0) summaryLines.push(pc.green(`${installed} freshly installed`));
+if (alreadyCount > 0) summaryLines.push(pc.blue(`${alreadyCount} already present`));
 if (failed > 0) {
-  summaryLines.push(`${pc.red(`${failed} failed`)}`);
+  summaryLines.push(pc.red(`${failed} failed`));
   summaryLines.push('');
   summaryLines.push(pc.dim('Failed:'));
   for (const name of failedNames) {
@@ -346,7 +413,7 @@ if (failed > 0) {
   }
 }
 if (skipped > 0) {
-  summaryLines.push(`${pc.dim(`${skipped} skipped`)}`);
+  summaryLines.push(pc.dim(`${skipped} skipped`));
 }
 
 p.note(summaryLines.join('\n'), 'Setup Complete');
@@ -366,12 +433,8 @@ p.log.step([
   `  2. ${pc.cyan('npm run dev')} — start development server`,
   `  3. ${pc.dim('Open http://<pi-ip>:5173 in your browser')}`,
   '',
-  'API keys (can be set later in .env):',
+  'Optional API key (can be set later in .env):',
   `  ${pc.dim('STADIA_MAPS_API_KEY')}  — vector map tiles (stadiamaps.com)`,
-  `  ${pc.dim('OPENCELLID_API_KEY')}   — cell tower database (opencellid.org)`,
-  '',
-  'Cell tower database:',
-  `  ${pc.dim('bash scripts/ops/import-celltowers.sh')}`,
 ].join('\n'));
 
 p.outro(pc.green('Provisioning complete.'));
