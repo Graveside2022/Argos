@@ -37,7 +37,6 @@ import {
 	updateSymbolLayer
 } from './map/map-handlers';
 import { setupMap } from './map/map-setup';
-import { createRFRangeDerivedState } from './map/rf-range-derived.svelte';
 
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
@@ -72,9 +71,6 @@ export function createMapState() {
 			return cssReady;
 		}
 	});
-
-	// RF range overlay — derived from GPS + HackRF frequency + RF profile
-	const rfRangeDerived = createRFRangeDerivedState();
 
 	// HackRF SSE data service — populates hackrfStore.targetFrequency
 	const hackrfService = new HackRFDataService();
@@ -251,21 +247,6 @@ export function createMapState() {
 		},
 		get detectionRangeGeoJSON() {
 			return gpsDerived.detectionRangeGeoJSON;
-		},
-		get rfRangeGeoJSON() {
-			return rfRangeDerived.rfRangeGeoJSON;
-		},
-		get rfRangeLabelGeoJSON() {
-			return rfRangeDerived.rfRangeLabelGeoJSON;
-		},
-		get rfRangeActive() {
-			return rfRangeDerived.rfRangeActive;
-		},
-		get rfRangeDisplayRange() {
-			return rfRangeDerived.displayRangeMeters;
-		},
-		get rfRangeIsCapped() {
-			return rfRangeDerived.isCapped;
 		},
 		get deviceGeoJSON() {
 			return deviceGeoJSON;
