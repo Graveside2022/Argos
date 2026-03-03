@@ -12,6 +12,21 @@ import { z } from 'zod';
 /** CloudRF colormap identifiers (verified against live API) */
 const CloudRFColormapSchema = z.enum(['RAINBOW45.dBm', 'LTE.dBm', 'HF.dBm']);
 
+/** CloudRF propagation model IDs */
+const PropagationModelSchema = z.union([
+	z.literal(1),
+	z.literal(3),
+	z.literal(6),
+	z.literal(9),
+	z.literal(11)
+]);
+
+/** Clutter/environment profile filenames */
+const ClutterProfileSchema = z.enum(['Minimal.clt', 'Temperate.clt', 'Jungle.clt']);
+
+/** Reliability percentage options */
+const ReliabilitySchema = z.union([z.literal(50), z.literal(75), z.literal(90), z.literal(95)]);
+
 /** Latitude range: -90 to 90 decimal degrees */
 const LatSchema = z.number().min(-90).max(90);
 
@@ -38,7 +53,12 @@ export const CoverageRequestSchema = z.object({
 	rxHeight: HeightSchema,
 	radius: z.number().min(0.1).max(100),
 	resolution: z.number().min(5).max(300).default(10),
-	colormap: CloudRFColormapSchema.default('RAINBOW45.dBm')
+	colormap: CloudRFColormapSchema.default('RAINBOW45.dBm'),
+	txPower: z.number().min(0.001).max(100).optional(),
+	rxSensitivity: z.number().min(-150).max(0).optional(),
+	clutterProfile: ClutterProfileSchema.optional(),
+	propagationModel: PropagationModelSchema.nullable().optional(),
+	reliability: ReliabilitySchema.optional()
 });
 
 // ── Point-to-Point ──────────────────────────────────────────────────

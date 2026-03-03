@@ -9,6 +9,49 @@ export type PropagationMode = 'coverage' | 'p2p' | 'route';
 /** CloudRF colormap identifiers (verified against live API) */
 export type CloudRFColormapName = 'RAINBOW45.dBm' | 'LTE.dBm' | 'HF.dBm';
 
+/** CloudRF propagation model IDs (verified against API docs) */
+export type PropagationModelId = 1 | 3 | 6 | 9 | 11;
+
+/** CloudRF clutter/environment profile filenames */
+export type ClutterProfile = 'Minimal.clt' | 'Temperate.clt' | 'Jungle.clt';
+
+/** Reliability percentage options (CloudRF rel parameter) */
+export type ReliabilityPercent = 50 | 75 | 90 | 95;
+
+/** UI display constants for propagation models */
+export const PROPAGATION_MODELS: { id: PropagationModelId; label: string; band: string }[] = [
+	{ id: 1, label: 'ITM (Longley-Rice)', band: 'HF–UHF' },
+	{ id: 3, label: 'Hata', band: 'VHF/UHF' },
+	{ id: 6, label: 'COST-Hata', band: 'UHF/SHF' },
+	{ id: 9, label: 'Free Space', band: 'Any' },
+	{ id: 11, label: 'Egli', band: 'VHF/UHF' }
+];
+
+/** UI display constants for clutter profiles */
+export const CLUTTER_PROFILES: { id: ClutterProfile; label: string }[] = [
+	{ id: 'Minimal.clt', label: 'Minimal (open/desert)' },
+	{ id: 'Temperate.clt', label: 'Temperate (forest)' },
+	{ id: 'Jungle.clt', label: 'Jungle (tropical)' }
+];
+
+/** UI display constants for reliability options */
+export const RELIABILITY_OPTIONS: { value: ReliabilityPercent; label: string }[] = [
+	{ value: 50, label: '50%' },
+	{ value: 75, label: '75%' },
+	{ value: 90, label: '90%' },
+	{ value: 95, label: '95% (default)' }
+];
+
+/**
+ * Auto-select the best propagation model based on frequency.
+ * HF (1–30 MHz) → ITM, VHF/UHF (30–1000 MHz) → Egli, SHF (>1 GHz) → COST-Hata
+ */
+export function autoSelectPropModel(freqMHz: number): PropagationModelId {
+	if (freqMHz < 30) return 1; // ITM — best for HF
+	if (freqMHz <= 1000) return 11; // Egli — best for VHF/UHF
+	return 6; // COST-Hata — best for SHF/microwave
+}
+
 // ── Coverage ────────────────────────────────────────────────────────
 
 /** Input parameters for a coverage computation */
@@ -31,6 +74,16 @@ export interface CoverageRequest {
 	resolution: number;
 	/** CloudRF colormap for the output image */
 	colormap: CloudRFColormapName;
+	/** Transmitter power in watts (CloudRF txw, default 5) */
+	txPower?: number;
+	/** Receiver sensitivity in dBm (CloudRF rxs, default -90) */
+	rxSensitivity?: number;
+	/** Clutter/environment profile (CloudRF clt, default 'Minimal.clt') */
+	clutterProfile?: ClutterProfile;
+	/** Propagation model ID (CloudRF pm, null = auto-select by frequency) */
+	propagationModel?: PropagationModelId | null;
+	/** Reliability percentage (CloudRF rel, default 95) */
+	reliability?: ReliabilityPercent;
 	/** Optional site name for CloudRF */
 	site?: string;
 	/** Optional network name for CloudRF */
