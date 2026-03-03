@@ -1,11 +1,4 @@
-/**
- * CloudRF Cloud API client — server-side only.
- *
- * Handles coverage area computation, point-to-point path loss,
- * and status checks against the CloudRF cloud API.
- *
- * @module
- */
+/** CloudRF Cloud API client — coverage area, P2P path loss, status checks. @module */
 
 import { env } from '$lib/server/env';
 import type {
@@ -16,15 +9,13 @@ import type {
 	P2PResult,
 	PropagationBounds
 } from '$lib/types/rf-propagation';
+import { autoSelectPropModel } from '$lib/types/rf-propagation';
 import { logger } from '$lib/utils/logger';
 
 const CLOUDRF_BASE = 'https://api.cloudrf.com';
-
 const TIMEOUT_AREA_MS = 60_000;
 const TIMEOUT_PATH_MS = 30_000;
 const TIMEOUT_STATUS_MS = 10_000;
-
-// ── Error class ────────────────────────────────────────────────────
 
 export class CloudRFError extends Error {
 	constructor(
@@ -46,18 +37,52 @@ function getApiKey(): string {
 	return key;
 }
 
+/** Build the shared antenna config object */
+function buildAntenna(polarization: number): Record<string, string> {
+	return {
+		txg: '2.15',
+		txl: '0',
+		ant: '1',
+		azi: '0',
+		tlt: '0',
+		hbw: '360',
+		vbw: '90',
+		fbr: '0',
+		pol: polarization === 0 ? 'h' : 'v'
+	};
+}
+
+/** Resolve TX/RX power params to API string values */
+function resolveRadioParams(params: CoverageRequest) {
+	return {
+		txw: String(params.txPower ?? 5),
+		rxs: String(params.rxSensitivity ?? -90)
+	};
+}
+
+/** Resolve model/environment params to API string values */
+function resolveModelParams(params: CoverageRequest) {
+	return {
+		pm: String(params.propagationModel ?? autoSelectPropModel(params.frequency)),
+		rel: String(params.reliability ?? 95),
+		clt: params.clutterProfile ?? 'Minimal.clt'
+	};
+}
+
 /** Build CloudRF /area request body from Argos coverage params */
 function buildAreaBody(params: CoverageRequest): Record<string, unknown> {
+	const radio = resolveRadioParams(params);
+	const mdl = resolveModelParams(params);
 	return {
 		site: params.site ?? 'Argos',
 		network: params.network ?? 'Argos',
-		engine: '2',
+		engine: '1',
 		transmitter: {
 			lat: params.lat,
 			lon: params.lon,
 			alt: String(params.txHeight),
 			frq: String(params.frequency),
-			txw: '5',
+			txw: radio.txw,
 			bwi: '0.1'
 		},
 		receiver: {
@@ -65,31 +90,11 @@ function buildAreaBody(params: CoverageRequest): Record<string, unknown> {
 			lon: 0,
 			alt: String(params.rxHeight),
 			rxg: '2.15',
-			rxs: '-90'
+			rxs: radio.rxs
 		},
-		antenna: {
-			txg: '2.15',
-			txl: '0',
-			ant: '1',
-			azi: '0',
-			tlt: '0',
-			hbw: '360',
-			vbw: '90',
-			fbr: '0',
-			pol: params.polarization === 0 ? 'h' : 'v'
-		},
-		model: {
-			pm: '11',
-			pe: '2',
-			ked: '1',
-			rel: '95'
-		},
-		environment: {
-			elevation: '2',
-			landcover: '1',
-			buildings: '1',
-			clt: 'Minimal.clt'
-		},
+		antenna: buildAntenna(params.polarization),
+		model: { pm: mdl.pm, pe: '2', ked: '1', rel: mdl.rel },
+		environment: { elevation: '2', landcover: '1', buildings: '1', clt: mdl.clt },
 		output: {
 			units: 'm',
 			col: params.colormap,
@@ -155,7 +160,7 @@ function buildPathBody(params: P2PRequest): Record<string, unknown> {
 	return {
 		site: params.site ?? 'Argos',
 		network: params.network ?? 'Argos',
-		engine: '2',
+		engine: '1',
 		transmitter: {
 			lat: params.txLat,
 			lon: params.txLon,
@@ -171,17 +176,7 @@ function buildPathBody(params: P2PRequest): Record<string, unknown> {
 			rxg: '2.15',
 			rxs: '-90'
 		},
-		antenna: {
-			txg: '2.15',
-			txl: '0',
-			ant: '1',
-			azi: '0',
-			tlt: '0',
-			hbw: '360',
-			vbw: '90',
-			fbr: '0',
-			pol: params.polarization === 0 ? 'h' : 'v'
-		},
+		antenna: buildAntenna(params.polarization),
 		model: { pm: '11', pe: '2', ked: '1', rel: '95' },
 		environment: { elevation: '2', landcover: '1', buildings: '1', clt: 'Minimal.clt' }
 	};
@@ -217,36 +212,31 @@ function arr(data: Record<string, unknown>, key: string): number[] {
 	return (data[key] as number[] | undefined) ?? [];
 }
 
-/**
- * Extract the first Transmitter record from a /path response.
- * Returns null if the response structure is not as expected.
- */
+/** Extract the first Transmitter record from a /path response, or null */
 function extractTransmitter(data: Record<string, unknown>): Record<string, unknown> | null {
-	const transmitters = data['Transmitters'];
-	if (!Array.isArray(transmitters) || transmitters.length === 0) {
-		return null;
-	}
-	const first: unknown = transmitters[0];
-	if (typeof first !== 'object' || first === null) {
-		return null;
-	}
-	return first as Record<string, unknown>;
+	const txs = data['Transmitters'];
+	if (!Array.isArray(txs) || txs.length === 0) return null;
+	const first: unknown = txs[0];
+	return typeof first === 'object' && first !== null ? (first as Record<string, unknown>) : null;
 }
+
+/** Empty P2P result for missing transmitter data */
+const EMPTY_P2P: P2PResult = {
+	lossAtRx: 0,
+	distanceM: 0,
+	bearingDeg: 0,
+	elevationProfile: [],
+	lossProfile: [],
+	distances: [],
+	error: 1
+};
 
 /** Parse a raw /path response into a P2PResult */
 function parsePathResponse(data: Record<string, unknown>): P2PResult {
 	const tx = extractTransmitter(data);
 	if (!tx) {
 		logger.warn('CloudRF /path: missing or empty Transmitters array in response');
-		return {
-			lossAtRx: 0,
-			distanceM: 0,
-			bearingDeg: 0,
-			elevationProfile: [],
-			lossProfile: [],
-			distances: [],
-			error: 1
-		};
+		return { ...EMPTY_P2P };
 	}
 	return {
 		lossAtRx: num(tx, 'Computed path loss dB'),

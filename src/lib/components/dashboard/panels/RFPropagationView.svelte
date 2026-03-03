@@ -23,6 +23,7 @@
 
 	import CloudRFColormapSelector from './rf-propagation/CloudRFColormapSelector.svelte';
 	import OverlayControls from './rf-propagation/OverlayControls.svelte';
+	import RFAdvancedControls from './rf-propagation/RFAdvancedControls.svelte';
 	import RFPropagationControls from './rf-propagation/RFPropagationControls.svelte';
 	import RFPropagationStatus from './rf-propagation/RFPropagationStatus.svelte';
 
@@ -82,24 +83,14 @@
 
 	/** Fetch the compute endpoint and return parsed response; throws on error */
 	async function fetchCompute(signal: AbortSignal): Promise<ComputeResponse> {
-		const params = get(rfParams);
+		const { mode: _, ...params } = get(rfParams);
 		const position = requireGPSPosition();
 
 		const res = await fetch('/api/rf-propagation/compute', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			signal,
-			body: JSON.stringify({
-				lat: position.lat,
-				lon: position.lon,
-				frequency: params.frequency,
-				polarization: params.polarization,
-				txHeight: params.txHeight,
-				rxHeight: params.rxHeight,
-				radius: params.radius,
-				resolution: params.resolution,
-				colormap: params.colormap
-			})
+			body: JSON.stringify({ lat: position.lat, lon: position.lon, ...params })
 		});
 
 		if (!res.ok) {
@@ -167,6 +158,7 @@
 	<RFPropagationStatus />
 
 	<RFPropagationControls />
+	<RFAdvancedControls />
 
 	<section class="panel-section">
 		<CloudRFColormapSelector

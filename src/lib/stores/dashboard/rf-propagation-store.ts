@@ -10,7 +10,13 @@
 import { derived, writable } from 'svelte/store';
 
 import { persistedWritable } from '$lib/stores/persisted-writable';
-import type { CloudRFColormapName, PropagationMode } from '$lib/types/rf-propagation';
+import type {
+	CloudRFColormapName,
+	ClutterProfile,
+	PropagationMode,
+	PropagationModelId,
+	ReliabilityPercent
+} from '$lib/types/rf-propagation';
 
 // ── Persisted parameters ────────────────────────────────────────────
 
@@ -23,6 +29,11 @@ export interface RFPropagationParams {
 	radius: number;
 	resolution: number;
 	colormap: CloudRFColormapName;
+	txPower: number;
+	rxSensitivity: number;
+	clutterProfile: ClutterProfile;
+	propagationModel: PropagationModelId | null;
+	reliability: ReliabilityPercent;
 }
 
 const DEFAULT_PARAMS: RFPropagationParams = {
@@ -33,12 +44,18 @@ const DEFAULT_PARAMS: RFPropagationParams = {
 	rxHeight: 2,
 	radius: 5,
 	resolution: 10,
-	colormap: 'RAINBOW45.dBm'
+	colormap: 'RAINBOW45.dBm',
+	txPower: 5,
+	rxSensitivity: -90,
+	clutterProfile: 'Minimal.clt',
+	propagationModel: null,
+	reliability: 95
 };
 
 export const rfParams = persistedWritable<RFPropagationParams>(
 	'rfPropagationParams',
-	DEFAULT_PARAMS
+	DEFAULT_PARAMS,
+	{ validate: (stored) => ({ ...DEFAULT_PARAMS, ...stored }) }
 );
 
 /** Update a single parameter */
