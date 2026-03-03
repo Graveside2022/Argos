@@ -1,0 +1,7 @@
+# Default SQL credentials — extracted from Artemis common_sql_credentials.py
+# Format: username:password
+root:
+admin:admin
+root:root
+example:example
+sql:sql

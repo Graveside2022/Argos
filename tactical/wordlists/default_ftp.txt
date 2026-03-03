@@ -1,0 +1,10 @@
+# Default FTP credentials — extracted from Artemis ftp_bruter.py
+# Format: username:password
+anonymous:
+anonymous:anonymous
+ftp:ftp
+admin:admin
+root:root
+user:user
+test:test
+guest:guest
