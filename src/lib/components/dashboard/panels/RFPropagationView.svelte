@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 
+	import { overlayError } from '$lib/components/dashboard/map/rf-propagation-overlay.svelte';
 	import { layerVisibility } from '$lib/stores/dashboard/dashboard-store';
 	import { addOverlay } from '$lib/stores/dashboard/rf-overlay-store';
 	import {
@@ -70,10 +71,19 @@
 		};
 	});
 
+	/** Return validated GPS position or throw if no fix is available */
+	function requireGPSPosition(): { lat: number; lon: number } {
+		const { position, status } = get(gpsStore);
+		if (!status.hasGPSFix || (position.lat === 0 && position.lon === 0)) {
+			throw new Error('No GPS fix — cannot compute coverage without a valid position');
+		}
+		return position;
+	}
+
 	/** Fetch the compute endpoint and return parsed response; throws on error */
 	async function fetchCompute(signal: AbortSignal): Promise<ComputeResponse> {
 		const params = get(rfParams);
-		const { position } = get(gpsStore);
+		const position = requireGPSPosition();
 
 		const res = await fetch('/api/rf-propagation/compute', {
 			method: 'POST',
@@ -127,6 +137,12 @@
 		failCompute(message);
 	}
 
+	/** True when GPS has no valid fix — blocks compute to prevent Gulf-of-Guinea renders */
+	const noGpsFix = $derived(
+		!$gpsStore.status.hasGPSFix ||
+			($gpsStore.position.lat === 0 && $gpsStore.position.lon === 0)
+	);
+
 	async function handleCompute(): Promise<void> {
 		startCompute('Computing coverage...');
 		startElapsedTimer();
@@ -162,7 +178,7 @@
 	<section class="compute-section">
 		<button
 			class="compute-btn"
-			disabled={$isComputing}
+			disabled={$isComputing || noGpsFix}
 			class:computing={$isComputing}
 			onclick={handleCompute}
 		>
@@ -171,8 +187,12 @@
 		{#if $isComputing}
 			<div class="compute-elapsed">{elapsedSeconds}s elapsed</div>
 			<div class="compute-hint">CloudRF cloud — typically &lt;10s</div>
+		{:else if noGpsFix}
+			<div class="compute-hint compute-hint--warn">Awaiting GPS fix...</div>
 		{:else if $computeError}
 			<div class="compute-error">{$computeError}</div>
+		{:else if $overlayError}
+			<div class="compute-error">{$overlayError}</div>
 		{:else}
 			<div class="compute-hint">
 				{$rfParams.radius}km @ {$rfParams.resolution}m resolution
@@ -248,6 +268,10 @@
 		color: var(--foreground-secondary, #888888);
 		text-align: center;
 		letter-spacing: 0.5px;
+	}
+
+	.compute-hint--warn {
+		color: var(--warning, #d4a054);
 	}
 
 	.compute-error {

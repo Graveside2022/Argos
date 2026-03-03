@@ -32,8 +32,8 @@ const DEFAULT_PARAMS: RFPropagationParams = {
 	txHeight: 5,
 	rxHeight: 2,
 	radius: 5,
-	resolution: 30,
-	colormap: 'RAINBOW.dBm'
+	resolution: 10,
+	colormap: 'RAINBOW45.dBm'
 };
 
 export const rfParams = persistedWritable<RFPropagationParams>(

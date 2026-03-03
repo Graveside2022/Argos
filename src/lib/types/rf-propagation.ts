@@ -6,15 +6,8 @@
 /** Propagation computation mode */
 export type PropagationMode = 'coverage' | 'p2p' | 'route';
 
-/** CloudRF colormap identifiers */
-export type CloudRFColormapName =
-	| 'RAINBOW.dBm'
-	| 'GREYSCALE.dBm'
-	| 'HEAT.dBm'
-	| 'LTE.dBm'
-	| 'MBPS.dBm'
-	| 'RdYlGn_r.dBm'
-	| 'CLOUD_35.dBm';
+/** CloudRF colormap identifiers (verified against live API) */
+export type CloudRFColormapName = 'RAINBOW45.dBm' | 'LTE.dBm' | 'HF.dBm';
 
 // ── Coverage ────────────────────────────────────────────────────────
 
@@ -76,12 +69,13 @@ export interface CoverageMeta {
 	calculationId: number;
 }
 
-/** A single legend entry from CloudRF */
+/** A single legend entry from CloudRF (field `l` is the dBm label) */
 export interface CoverageLegendEntry {
 	r: number;
 	g: number;
 	b: number;
-	label: string;
+	/** Signal level label, e.g. "-20dBm" */
+	l: string;
 }
 
 // ── Point-to-Point ──────────────────────────────────────────────────
@@ -104,6 +98,10 @@ export interface P2PRequest {
 	txHeight: number;
 	/** Receiver height above ground in meters */
 	rxHeight: number;
+	/** CloudRF site name (optional, defaults to 'Argos') */
+	site?: string;
+	/** CloudRF network name (optional, defaults to 'Argos') */
+	network?: string;
 }
 
 /** Result of a P2P computation */

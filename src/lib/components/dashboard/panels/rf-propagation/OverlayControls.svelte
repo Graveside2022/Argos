@@ -4,12 +4,16 @@
 		clearOverlays,
 		globalOpacity,
 		overlayMode,
-		rfOverlayCount
+		rfOverlayCount,
+		setAllOverlaysOpacity
 	} from '$lib/stores/dashboard/rf-overlay-store';
 
 	function handleOpacity(e: Event) {
 		const val = parseFloat((e.target as HTMLInputElement).value);
-		if (!Number.isNaN(val)) globalOpacity.set(val);
+		if (!Number.isNaN(val)) {
+			globalOpacity.set(val);
+			setAllOverlaysOpacity(val);
+		}
 	}
 </script>
 

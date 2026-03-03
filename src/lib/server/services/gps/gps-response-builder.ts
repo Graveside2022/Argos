@@ -25,9 +25,9 @@ function buildEmptyPositionData(
 	};
 }
 
-/** Extract accuracy from TPV data (prefer epx, fallback to epy, default 10) */
+/** Extract horizontal accuracy from TPV data (prefer eph, fallback to epx/epy, default 10) */
 function extractAccuracy(tpvData: TPVData): number {
-	return tpvData.epx ?? tpvData.epy ?? 10;
+	return tpvData.eph ?? tpvData.epx ?? tpvData.epy ?? 10;
 }
 
 /** Coalesce an optional number/string to null */

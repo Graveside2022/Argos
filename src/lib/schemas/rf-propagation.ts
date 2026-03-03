@@ -9,16 +9,8 @@
 
 import { z } from 'zod';
 
-/** CloudRF colormap identifiers */
-const CloudRFColormapSchema = z.enum([
-	'RAINBOW.dBm',
-	'GREYSCALE.dBm',
-	'HEAT.dBm',
-	'LTE.dBm',
-	'MBPS.dBm',
-	'RdYlGn_r.dBm',
-	'CLOUD_35.dBm'
-]);
+/** CloudRF colormap identifiers (verified against live API) */
+const CloudRFColormapSchema = z.enum(['RAINBOW45.dBm', 'LTE.dBm', 'HF.dBm']);
 
 /** Latitude range: -90 to 90 decimal degrees */
 const LatSchema = z.number().min(-90).max(90);
@@ -45,8 +37,8 @@ export const CoverageRequestSchema = z.object({
 	txHeight: HeightSchema,
 	rxHeight: HeightSchema,
 	radius: z.number().min(0.1).max(100),
-	resolution: z.number().min(5).max(300).default(30),
-	colormap: CloudRFColormapSchema.default('RAINBOW.dBm')
+	resolution: z.number().min(5).max(300).default(10),
+	colormap: CloudRFColormapSchema.default('RAINBOW45.dBm')
 });
 
 // ── Point-to-Point ──────────────────────────────────────────────────
