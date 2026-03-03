@@ -1,0 +1,11 @@
+# Default SSH credentials — extracted from Artemis ssh_bruter.py
+# Format: username:password
+user:password
+user:user
+root:
+root:root
+root:password
+root:admin
+admin:admin
+test:test
+ppp:ppp
