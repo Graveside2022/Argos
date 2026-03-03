@@ -20,6 +20,7 @@ export const GpsdMessageSchema = z
 		track: z.number().optional(),
 		epx: z.number().optional(),
 		epy: z.number().optional(),
+		eph: z.number().optional(),
 		time: z.string().optional(),
 		satellites: z
 			.array(
@@ -45,6 +46,7 @@ export interface TPVData {
 	track?: number;
 	epx?: number;
 	epy?: number;
+	eph?: number;
 	time?: string;
 }
 
@@ -108,6 +110,7 @@ export function parseTPVData(data: unknown): TPVData | null {
 		track: numField(obj, 'track'),
 		epx: numField(obj, 'epx'),
 		epy: numField(obj, 'epy'),
+		eph: numField(obj, 'eph'),
 		time: strField(obj, 'time')
 	};
 }

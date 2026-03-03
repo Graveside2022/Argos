@@ -51,55 +51,52 @@ function buildAreaBody(params: CoverageRequest): Record<string, unknown> {
 	return {
 		site: params.site ?? 'Argos',
 		network: params.network ?? 'Argos',
+		engine: '2',
 		transmitter: {
 			lat: params.lat,
 			lon: params.lon,
-			alt: params.txHeight,
-			frq: params.frequency,
-			txw: 5,
-			bwi: 0.1
+			alt: String(params.txHeight),
+			frq: String(params.frequency),
+			txw: '5',
+			bwi: '0.1'
 		},
 		receiver: {
 			lat: 0,
 			lon: 0,
-			alt: params.rxHeight,
-			rxg: 2.15,
-			rxs: -90
+			alt: String(params.rxHeight),
+			rxg: '2.15',
+			rxs: '-90'
 		},
 		antenna: {
-			txg: 2.15,
-			txl: 0,
-			ant: 0,
-			azi: 0,
-			tlt: 0,
-			hbw: 360,
-			vbw: 90,
-			fbr: 0,
+			txg: '2.15',
+			txl: '0',
+			ant: '1',
+			azi: '0',
+			tlt: '0',
+			hbw: '360',
+			vbw: '90',
+			fbr: '0',
 			pol: params.polarization === 0 ? 'h' : 'v'
 		},
 		model: {
-			pm: 11,
-			pe: 2,
-			cli: 6,
-			ked: 0,
-			rel: 95,
-			ter: 4
+			pm: '11',
+			pe: '2',
+			ked: '1',
+			rel: '95'
 		},
 		environment: {
-			elevation: 2,
-			landcover: 0,
-			buildings: 0,
+			elevation: '2',
+			landcover: '1',
+			buildings: '1',
 			clt: 'Minimal.clt'
 		},
 		output: {
-			units: 'metric',
+			units: 'm',
 			col: params.colormap,
-			out: 2,
-			ber: 2,
-			mod: 7,
-			nf: -114,
-			res: params.resolution,
-			rad: params.radius
+			out: '2',
+			nf: '-114',
+			res: String(params.resolution),
+			rad: String(params.radius)
 		}
 	};
 }
@@ -156,34 +153,37 @@ async function cloudRFPost(
 /** Build CloudRF /path request body from Argos P2P params */
 function buildPathBody(params: P2PRequest): Record<string, unknown> {
 	return {
+		site: params.site ?? 'Argos',
+		network: params.network ?? 'Argos',
+		engine: '2',
 		transmitter: {
 			lat: params.txLat,
 			lon: params.txLon,
-			alt: params.txHeight,
-			frq: params.frequency,
-			txw: 5,
-			bwi: 0.1
+			alt: String(params.txHeight),
+			frq: String(params.frequency),
+			txw: '5',
+			bwi: '0.1'
 		},
 		receiver: {
 			lat: params.rxLat,
 			lon: params.rxLon,
-			alt: params.rxHeight,
-			rxg: 2.15,
-			rxs: -90
+			alt: String(params.rxHeight),
+			rxg: '2.15',
+			rxs: '-90'
 		},
 		antenna: {
-			txg: 2.15,
-			txl: 0,
-			ant: 0,
-			azi: 0,
-			tlt: 0,
-			hbw: 360,
-			vbw: 90,
-			fbr: 0,
+			txg: '2.15',
+			txl: '0',
+			ant: '1',
+			azi: '0',
+			tlt: '0',
+			hbw: '360',
+			vbw: '90',
+			fbr: '0',
 			pol: params.polarization === 0 ? 'h' : 'v'
 		},
-		model: { pm: 11, pe: 2, cli: 6, ked: 0, rel: 95, ter: 4 },
-		environment: { elevation: 2, landcover: 0, buildings: 0, clt: 'Minimal.clt' }
+		model: { pm: '11', pe: '2', ked: '1', rel: '95' },
+		environment: { elevation: '2', landcover: '1', buildings: '1', clt: 'Minimal.clt' }
 	};
 }
 
@@ -192,7 +192,7 @@ async function parseAreaResponse(
 	data: Record<string, unknown>,
 	elapsed: number
 ): Promise<CoverageResult> {
-	const imageDataUri = await downloadPng(data.PNG_Mercator as string);
+	const imageDataUri = await downloadPng(data.PNG_WGS84 as string);
 	const bounds = parseBounds(data.bounds as number[]);
 	return {
 		imageDataUri,
@@ -217,16 +217,44 @@ function arr(data: Record<string, unknown>, key: string): number[] {
 	return (data[key] as number[] | undefined) ?? [];
 }
 
+/**
+ * Extract the first Transmitter record from a /path response.
+ * Returns null if the response structure is not as expected.
+ */
+function extractTransmitter(data: Record<string, unknown>): Record<string, unknown> | null {
+	const transmitters = data['Transmitters'];
+	if (!Array.isArray(transmitters) || transmitters.length === 0) {
+		return null;
+	}
+	const first: unknown = transmitters[0];
+	if (typeof first !== 'object' || first === null) {
+		return null;
+	}
+	return first as Record<string, unknown>;
+}
+
 /** Parse a raw /path response into a P2PResult */
 function parsePathResponse(data: Record<string, unknown>): P2PResult {
-	const lossAtRx = num(data, 'Loss_at_receiver_dB') || num(data, 'received_power_dBm');
+	const tx = extractTransmitter(data);
+	if (!tx) {
+		logger.warn('CloudRF /path: missing or empty Transmitters array in response');
+		return {
+			lossAtRx: 0,
+			distanceM: 0,
+			bearingDeg: 0,
+			elevationProfile: [],
+			lossProfile: [],
+			distances: [],
+			error: 1
+		};
+	}
 	return {
-		lossAtRx,
-		distanceM: num(data, 'distance_km') * 1000,
-		bearingDeg: num(data, 'bearing_deg'),
-		elevationProfile: arr(data, 'elevation_profile'),
-		lossProfile: arr(data, 'path_loss_profile'),
-		distances: arr(data, 'distance_profile'),
+		lossAtRx: num(tx, 'Computed path loss dB'),
+		distanceM: num(tx, 'Distance to receiver km') * 1000,
+		bearingDeg: num(tx, 'Azimuth to receiver deg'),
+		elevationProfile: arr(tx, 'Terrain_AMSL'),
+		lossProfile: arr(tx, 'dB'),
+		distances: arr(tx, 'Distance'),
 		error: 0
 	};
 }

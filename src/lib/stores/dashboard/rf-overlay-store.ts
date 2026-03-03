@@ -66,6 +66,11 @@ export function setOverlayOpacity(id: string, opacity: number): void {
 	overlayEntries.update((entries) => entries.map((e) => (e.id === id ? { ...e, opacity } : e)));
 }
 
+/** Update opacity on ALL overlay entries (used by the global opacity slider) */
+export function setAllOverlaysOpacity(opacity: number): void {
+	overlayEntries.update((entries) => entries.map((e) => ({ ...e, opacity })));
+}
+
 // ── Display settings ────────────────────────────────────────────────
 
 export type OverlayMode = 'single' | 'multi';

@@ -13,9 +13,16 @@
  */
 
 import type maplibregl from 'maplibre-gl';
+import { writable } from 'svelte/store';
 
 import type { RFOverlayEntry } from '$lib/stores/dashboard/rf-overlay-store';
 import type { PropagationBounds } from '$lib/types/rf-propagation';
+
+/**
+ * Overlay error store — set when MapLibre rejects a source or layer add.
+ * Cleared at the start of each sync cycle. Subscribe in UI to surface failures.
+ */
+export const overlayError = writable<string | null>(null);
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -80,7 +87,9 @@ function addImageSource(
 		});
 		return true;
 	} catch (err) {
+		const msg = `Failed to add RF overlay source: ${String(err)}`;
 		console.error('RF overlay: failed to add source', sourceId, err);
+		overlayError.set(msg);
 		URL.revokeObjectURL(blobUrl);
 		blobUrls.delete(entry.id);
 		return false;
@@ -102,13 +111,18 @@ function addRasterLayer(
 				id: layerId,
 				type: 'raster',
 				source: sourceId,
-				paint: { 'raster-opacity': entry.opacity, 'raster-fade-duration': 0 }
+				paint: {
+					'raster-opacity': entry.opacity,
+					'raster-fade-duration': 0
+				}
 			},
 			beforeId
 		);
 		return true;
 	} catch (err) {
+		const msg = `Failed to add RF overlay layer: ${String(err)}`;
 		console.error('RF overlay: failed to add layer', layerId, err);
+		overlayError.set(msg);
 		return false;
 	}
 }
@@ -210,6 +224,7 @@ function syncEntryLayer(map: maplibregl.Map, entry: RFOverlayEntry, globalVisibl
 }
 
 function applySync(map: maplibregl.Map, entries: RFOverlayEntry[], globalVisible: boolean): void {
+	overlayError.set(null);
 	const entryIds = new Set(entries.map((e) => e.id));
 	removeStaleOverlays(map, entryIds);
 	for (const entry of entries) syncEntryLayer(map, entry, globalVisible);
