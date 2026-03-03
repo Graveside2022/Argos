@@ -1,0 +1,6 @@
+# Build artifacts
+*.o
+apm-runner
+
+# Native libraries (too large for git, not portable across architectures)
+lib/*.so
