@@ -75,7 +75,7 @@ export const mapSettings = createMapSettingsStore();
 
 // ── Map Settings panel navigation ────────────────────────────────────
 
-export type MapSettingsView = 'hub' | 'provider' | 'layers';
+export type MapSettingsView = 'hub' | 'provider' | 'layers' | 'rf-propagation';
 
 export const activeMapSettingsView = writable<MapSettingsView>('hub');
 

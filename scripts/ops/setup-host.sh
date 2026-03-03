@@ -108,21 +108,25 @@ if ! dpkg -s build-essential &>/dev/null 2>&1; then
 fi
 
 # =============================================
-# Phase 2: Install @clack/prompts to temp cache
+# Phase 2: Ensure gum (Charmbracelet TUI toolkit)
 # =============================================
-SETUP_CACHE="$PROJECT_DIR/.setup-cache"
-if [[ ! -d "$SETUP_CACHE/node_modules/@clack" ]]; then
-  echo "[Bootstrap] Preparing installer UI..."
-  if ! sudo -u "$SETUP_USER" npm install --prefix "$SETUP_CACHE" @clack/prompts picocolors 2>&1 | tail -5; then
-    echo "Error: Failed to install installer UI dependencies" >&2
-    exit 1
-  fi
+if ! command -v gum &>/dev/null; then
+  echo "[Bootstrap] Installing gum (CLI toolkit)..."
+  # Add Charm's apt repository
+  mkdir -p /etc/apt/keyrings
+  curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
+  echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
+    > /etc/apt/sources.list.d/charm.list
+  apt-get update -q
+  apt-get install -y -q gum
+  echo "[Bootstrap] gum $(gum --version 2>/dev/null || echo '') installed."
+else
+  echo "[Bootstrap] gum OK."
 fi
 
 # =============================================
-# Phase 3: Launch Node.js interactive installer
+# Phase 3: Launch interactive installer
 # =============================================
 export SETUP_USER SETUP_HOME PROJECT_DIR SCRIPT_DIR OS_ID OS_NAME
-export NODE_PATH="$SETUP_CACHE/node_modules"
 
-exec node "$PROJECT_DIR/scripts/ops/setup-host-ui.mjs" "${PASSTHROUGH_ARGS[@]}"
+exec bash "$PROJECT_DIR/scripts/ops/setup-host-ui.sh" "${PASSTHROUGH_ARGS[@]}"

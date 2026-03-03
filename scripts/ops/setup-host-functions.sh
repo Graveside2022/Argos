@@ -170,35 +170,38 @@ _is_selected() {
 check_component() {
   local id="$1"
   case "$id" in
-    network)        nmcli -t -f RUNNING general 2>/dev/null | grep -q running ;;
+    network)         nmcli -t -f RUNNING general 2>/dev/null | grep -q running ;;
     system_packages) dpkg -s build-essential &>/dev/null ;;
-    nodejs)         command -v node &>/dev/null && command -v npm &>/dev/null ;;
-    gpsd)           command -v gpsd &>/dev/null ;;
-    kismet)         command -v kismet &>/dev/null ;;
-    kismet_gps)     grep -q '^gps=gpsd:' /etc/kismet/kismet.conf 2>/dev/null ;;
-    openssh)        dpkg -s openssh-server &>/dev/null ;;
-    udev_sdr)       [[ -f /etc/udev/rules.d/99-hackrf.rules ]] ;;
-    sdr_infra)      command -v SoapySDRUtil &>/dev/null ;;
-    npm_deps)       [[ -d "$PROJECT_DIR/node_modules" ]] ;;
-    env_file)       [[ -f "$PROJECT_DIR/.env" ]] ;;
-    earlyoom)       command -v earlyoom &>/dev/null ;;
-    cgroup_mem)     [[ -f /etc/systemd/system/user-1000.slice.d/memory-limit.conf ]] ;;
-    gsm_evil)       command -v grgsm_livemon_headless &>/dev/null ;;
-    dev_monitor)    [[ -f "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service" ]] ;;
-    docker)         command -v docker &>/dev/null ;;
-    zram)           [[ -f /etc/systemd/system/zram-swap.service ]] ;;
-    textmode)       [[ "$(systemctl get-default 2>/dev/null)" == "multi-user.target" ]] ;;
-    vnc)            [[ -f "$SETUP_HOME/.config/systemd/user/vnc-ondemand.socket" ]] ;;
-    tailscale)      command -v tailscale &>/dev/null ;;
-    claude_code)    sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null ;;
-    gemini_cli)     sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null ;;
-    agent_browser)  sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null ;;
-    chromadb)       sudo -u "$SETUP_USER" bash -c 'command -v bun' &>/dev/null ;;
-    headless_debug) [[ -f /etc/systemd/system/argos-headless.service ]] ;;
-    zsh_dotfiles)   command -v zsh &>/dev/null && [[ -d "$SETUP_HOME/.oh-my-zsh" ]] ;;
-    zsh_default)    [[ "$(getent passwd "$SETUP_USER" | cut -d: -f7)" == *zsh ]] ;;
-    tmux_sessions)  command -v tmux &>/dev/null ;;
-    *)              return 1 ;;
+    nodejs)          command -v node &>/dev/null && command -v npm &>/dev/null ;;
+    gpsd)            command -v gpsd &>/dev/null ;;
+    kismet)          command -v kismet &>/dev/null && getent group kismet | grep -q "$SETUP_USER" ;;
+    kismet_gps)      grep -q '^gps=gpsd:' /etc/kismet/kismet.conf 2>/dev/null ;;
+    openssh)         dpkg -s openssh-server &>/dev/null && systemctl is-active --quiet ssh 2>/dev/null ;;
+    udev_sdr)        [[ -f /etc/udev/rules.d/99-sdr.rules ]] ;;
+    sdr_infra)       command -v SoapySDRUtil &>/dev/null ;;
+    npm_deps)        [[ -d "$PROJECT_DIR/node_modules" ]] ;;
+    env_file)        [[ -f "$PROJECT_DIR/.env" ]] ;;
+    earlyoom)        command -v earlyoom &>/dev/null ;;
+    cgroup_mem)      [[ -f /etc/systemd/system/user-1000.slice.d/memory-limit.conf ]] ;;
+    bluetooth_disable) grep -q 'dtoverlay=disable-bt' /boot/firmware/config.txt 2>/dev/null || \
+                       ! systemctl is-enabled --quiet bluetooth 2>/dev/null ;;
+    gsm_evil)        [[ -d "$SETUP_HOME/gsmevil2/venv" ]] && \
+                       "$SETUP_HOME/gsmevil2/venv/bin/python" -c 'import flask' 2>/dev/null ;;
+    dev_monitor)     [[ -f "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service" ]] ;;
+    docker)          command -v docker &>/dev/null ;;
+    zram)            [[ -f /etc/systemd/system/zram-swap.service ]] ;;
+    textmode)        [[ "$(systemctl get-default 2>/dev/null)" == "multi-user.target" ]] ;;
+    vnc)             [[ -f "$SETUP_HOME/.config/systemd/user/vnc-ondemand.socket" ]] ;;
+    tailscale)       command -v tailscale &>/dev/null ;;
+    claude_code)     sudo -u "$SETUP_USER" bash -c 'command -v claude' &>/dev/null ;;
+    gemini_cli)      sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null ;;
+    agent_browser)   sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null ;;
+    chromadb)        sudo -u "$SETUP_USER" bash -c 'command -v bun' &>/dev/null ;;
+    headless_debug)  [[ -f /etc/systemd/system/argos-headless.service ]] ;;
+    zsh_dotfiles)    command -v zsh &>/dev/null && [[ -d "$SETUP_HOME/.oh-my-zsh" ]] ;;
+    zsh_default)     [[ "$(getent passwd "$SETUP_USER" | cut -d: -f7)" == *zsh ]] ;;
+    tmux_sessions)   command -v tmux &>/dev/null ;;
+    *)               return 1 ;;
   esac
 }
 
@@ -343,13 +346,35 @@ install_kismet() {
       local DEBIAN_CODENAME
       DEBIAN_CODENAME="$(resolve_debian_codename)"
       echo "  Using Debian codename: $DEBIAN_CODENAME"
-      wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key \
-        | gpg --dearmor -o /usr/share/keyrings/kismet-archive-keyring.gpg
-      echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release.$DEBIAN_CODENAME $DEBIAN_CODENAME main" \
+      # Refresh GPG key (Kismet updated their signing key in Feb 2026)
+      rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
+      wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key --quiet \
+        | gpg --dearmor | tee /usr/share/keyrings/kismet-archive-keyring.gpg >/dev/null
+      echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/kali kali-rolling main" \
         > /etc/apt/sources.list.d/kismet.list
       apt-get update -q
       apt-get install -y -q kismet
     fi
+  fi
+
+  # Ensure user is in the 'kismet' group for non-root capture
+  if getent group kismet &>/dev/null; then
+    if ! getent group kismet | grep -q "$SETUP_USER"; then
+      echo "  Adding $SETUP_USER to kismet group (non-root capture)..."
+      usermod -aG kismet "$SETUP_USER"
+    else
+      echo "  $SETUP_USER already in kismet group"
+    fi
+  else
+    echo "  WARNING: kismet group not created by package — non-root capture may fail"
+  fi
+
+  # Verify Kismet can run
+  if command -v kismet &>/dev/null; then
+    echo "  Kismet OK: $(kismet --version 2>&1 | head -1)"
+  else
+    echo "  ERROR: Kismet binary not found after install"
+    return 1
   fi
 }
 
@@ -367,14 +392,99 @@ install_kismet_gps() {
   fi
 }
 
+install_bluetooth_disable() {
+  # Disable Bluetooth on Raspberry Pi to prevent USB power interference.
+  # On RPi, BT and USB share a power rail — BT can starve USB devices
+  # (HackRF, Alfa WiFi adapters, GPS) of current, causing dropouts.
+  # Safe to skip on non-RPi systems.
+
+  local BOOT_CONFIG="/boot/firmware/config.txt"
+  local CHANGED=false
+
+  # RPi-specific: add dtoverlay to boot config
+  if [[ -f "$BOOT_CONFIG" ]]; then
+    if grep -q 'dtoverlay=disable-bt' "$BOOT_CONFIG"; then
+      echo "  Bluetooth already disabled in $BOOT_CONFIG"
+    else
+      echo "  Disabling Bluetooth in $BOOT_CONFIG..."
+      echo "" >> "$BOOT_CONFIG"
+      echo "# Argos: disable Bluetooth to avoid USB power issues with RF hardware" >> "$BOOT_CONFIG"
+      echo "dtoverlay=disable-bt" >> "$BOOT_CONFIG"
+      CHANGED=true
+    fi
+  elif [[ -f "/boot/config.txt" ]]; then
+    # Older RPi OS uses /boot/config.txt
+    local OLD_CONFIG="/boot/config.txt"
+    if grep -q 'dtoverlay=disable-bt' "$OLD_CONFIG"; then
+      echo "  Bluetooth already disabled in $OLD_CONFIG"
+    else
+      echo "  Disabling Bluetooth in $OLD_CONFIG..."
+      echo "" >> "$OLD_CONFIG"
+      echo "# Argos: disable Bluetooth to avoid USB power issues with RF hardware" >> "$OLD_CONFIG"
+      echo "dtoverlay=disable-bt" >> "$OLD_CONFIG"
+      CHANGED=true
+    fi
+  else
+    echo "  No RPi boot config found — skipping dtoverlay (non-RPi system)"
+  fi
+
+  # Stop and disable Bluetooth services on all systems
+  if systemctl is-enabled --quiet bluetooth 2>/dev/null; then
+    echo "  Disabling bluetooth.service..."
+    systemctl stop bluetooth 2>/dev/null || true
+    systemctl disable bluetooth 2>/dev/null || true
+    CHANGED=true
+  else
+    echo "  bluetooth.service already disabled"
+  fi
+
+  if systemctl is-enabled --quiet hciuart 2>/dev/null; then
+    echo "  Disabling hciuart.service..."
+    systemctl stop hciuart 2>/dev/null || true
+    systemctl disable hciuart 2>/dev/null || true
+    CHANGED=true
+  fi
+
+  if $CHANGED; then
+    echo "  Bluetooth disabled (reboot required for full effect on RPi)"
+  else
+    echo "  Bluetooth already fully disabled"
+  fi
+}
+
 install_openssh() {
-  _ensure_pkg openssh-server
+  # Pre-check: is openssh-server already installed and running?
+  if dpkg -s openssh-server &>/dev/null && systemctl is-active --quiet ssh 2>/dev/null; then
+    echo "  OpenSSH server already installed and running"
+    return 0
+  fi
+
+  # Install if missing
+  if ! dpkg -s openssh-server &>/dev/null; then
+    echo "  Installing openssh-server..."
+    apt-get install -y -q openssh-server
+    if ! dpkg -s openssh-server &>/dev/null; then
+      echo "  ERROR: openssh-server failed to install"
+      return 1
+    fi
+  else
+    echo "  openssh-server package present"
+  fi
+
+  # Enable and start
   systemctl is-enabled --quiet ssh 2>/dev/null || systemctl enable ssh
   if systemctl is-active --quiet ssh 2>/dev/null; then
     echo "  SSH server running"
   else
+    echo "  Starting SSH server..."
     systemctl start ssh
-    echo "  SSH server started"
+    # Verify it actually started
+    sleep 1
+    if systemctl is-active --quiet ssh 2>/dev/null; then
+      echo "  SSH server started"
+    else
+      echo "  WARNING: SSH service failed to start — check: systemctl status ssh"
+    fi
   fi
 }
 
@@ -653,14 +763,34 @@ _install_kalibrate() {
 install_gsm_evil() {
   local GSMEVIL_DIR="$SETUP_HOME/gsmevil2"
 
+  # Pre-check: is GsmEvil2 already fully installed?
+  if [[ -d "$GSMEVIL_DIR/venv" ]] && \
+     "$GSMEVIL_DIR/venv/bin/python" -c 'import flask, pyshark' 2>/dev/null && \
+     [[ -f "$GSMEVIL_DIR/GsmEvil.py" ]]; then
+    echo "  GsmEvil2 already installed at $GSMEVIL_DIR"
+    # Still verify dependencies are present
+    command -v grgsm_livemon_headless &>/dev/null && echo "  gr-gsm OK" || echo "  WARNING: gr-gsm not installed (GSM capture won't work)"
+    command -v kal &>/dev/null && echo "  kalibrate-rtl OK" || echo "  WARNING: kalibrate-rtl not installed (use manual frequency entry)"
+    return 0
+  fi
+
+  # Install gr-gsm (required for GSM packet capture)
   _install_grgsm || true
+  # Install kalibrate-rtl (required for frequency scanning)
   _install_kalibrate || true
 
+  # Clone or update GsmEvil2 repo
   _clone_or_pull "https://github.com/ninjhacks/gsmevil2.git" "$GSMEVIL_DIR"
+
+  # Verify the main script exists
+  if [[ ! -f "$GSMEVIL_DIR/GsmEvil.py" ]]; then
+    echo "  ERROR: GsmEvil.py not found in $GSMEVIL_DIR — repo may have changed"
+    return 1
+  fi
 
   # Python virtual environment + dependencies
   local GSMEVIL_VENV="$GSMEVIL_DIR/venv"
-  if [[ -d "$GSMEVIL_VENV" ]] && "$GSMEVIL_VENV/bin/python" -c "import flask, pyshark" 2>/dev/null; then
+  if [[ -d "$GSMEVIL_VENV" ]] && "$GSMEVIL_VENV/bin/python" -c 'import flask, pyshark' 2>/dev/null; then
     echo "  GsmEvil2 venv OK"
   else
     echo "  Creating Python venv and installing dependencies..."
@@ -668,7 +798,15 @@ install_gsm_evil() {
     if [[ -f "$GSMEVIL_DIR/requirements.txt" ]]; then
       sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet -r "$GSMEVIL_DIR/requirements.txt"
     else
-      sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet "flask==2.2.2" "flask_socketio==5.3.2" "pyshark==0.5.3"
+      # Fallback: install known dependencies from GsmEvil2 README
+      sudo -u "$SETUP_USER" "$GSMEVIL_VENV/bin/pip" install --quiet \
+        "flask==2.2.2" "flask_socketio==5.3.2" "pyshark==0.5.3"
+    fi
+    # Verify venv works
+    if "$GSMEVIL_VENV/bin/python" -c 'import flask, pyshark' 2>/dev/null; then
+      echo "  GsmEvil2 Python dependencies installed"
+    else
+      echo "  WARNING: GsmEvil2 venv creation succeeded but imports failed"
     fi
   fi
 

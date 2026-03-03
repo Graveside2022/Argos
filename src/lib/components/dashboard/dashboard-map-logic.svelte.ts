@@ -15,6 +15,7 @@ import {
 	layerVisibility
 } from '$lib/stores/dashboard/dashboard-store';
 import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
+import { rfOverlays } from '$lib/stores/dashboard/rf-overlay-store';
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 import { takCotMessages } from '$lib/stores/tak-store';
 import { themeStore } from '$lib/stores/theme-store.svelte';
@@ -37,6 +38,7 @@ import {
 	updateSymbolLayer
 } from './map/map-handlers';
 import { setupMap } from './map/map-setup';
+import { clearAllOverlays, syncRFOverlays } from './map/rf-propagation-overlay.svelte';
 
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
@@ -51,6 +53,7 @@ export function createMapState() {
 	const promoted$ = fromStore(promotedDevices);
 	const layerVis$ = fromStore(layerVisibility);
 	const mapS$ = fromStore(mapSettings);
+	const rfOverlays$ = fromStore(rfOverlays);
 
 	let map: maplibregl.Map | undefined = $state();
 	let symbolLayer: SymbolLayer | undefined = $state();
@@ -165,6 +168,19 @@ export function createMapState() {
 	$effect(() => {
 		const _p = themeStore.palette;
 		if (map) syncThemePaint(map);
+	});
+	$effect(() => {
+		const overlays = rfOverlays$.current;
+		const rfVis = layerVis$.current.rfPropagation !== false;
+		if (map) syncRFOverlays(map, overlays, rfVis);
+	});
+	// Teardown: clear RF overlays only when the map instance is destroyed.
+	// NOT inside the above $effect — Svelte 5 cleanup runs before every re-run,
+	// which would wipe overlays immediately after syncRFOverlays adds them.
+	$effect(() => {
+		const m = map;
+		if (!m) return;
+		return () => clearAllOverlays(m);
 	});
 
 	function applyDeviceClick(m: maplibregl.Map, ev: maplibregl.MapMouseEvent) {

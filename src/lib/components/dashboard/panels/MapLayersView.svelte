@@ -116,6 +116,19 @@
 				<span class="toggle-knob"></span>
 			</button>
 		</label>
+
+		<label class="toggle-row">
+			<span class="toggle-label">RF Propagation</span>
+			<button
+				class="toggle-switch"
+				class:on={$layerVisibility.rfPropagation}
+				onclick={() => toggleLayerVisibility('rfPropagation')}
+				role="switch"
+				aria-checked={$layerVisibility.rfPropagation}
+			>
+				<span class="toggle-knob"></span>
+			</button>
+		</label>
 	</section>
 
 	<!-- Signal Strength Filter -->
