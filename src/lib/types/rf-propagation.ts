@@ -1,0 +1,179 @@
+/**
+ * Type definitions for RF propagation analysis using CloudRF cloud API.
+ * Pure types + constants — no side effects, no imports.
+ */
+
+/** Propagation computation mode */
+export type PropagationMode = 'coverage' | 'p2p' | 'route';
+
+/** CloudRF colormap identifiers */
+export type CloudRFColormapName =
+	| 'RAINBOW.dBm'
+	| 'GREYSCALE.dBm'
+	| 'HEAT.dBm'
+	| 'LTE.dBm'
+	| 'MBPS.dBm'
+	| 'RdYlGn_r.dBm'
+	| 'CLOUD_35.dBm';
+
+// ── Coverage ────────────────────────────────────────────────────────
+
+/** Input parameters for a coverage computation */
+export interface CoverageRequest {
+	/** Transmitter latitude (decimal degrees) */
+	lat: number;
+	/** Transmitter longitude (decimal degrees) */
+	lon: number;
+	/** RF frequency in MHz */
+	frequency: number;
+	/** Antenna polarization: 0=horizontal, 1=vertical */
+	polarization: number;
+	/** Transmitter height above ground in meters */
+	txHeight: number;
+	/** Receiver height above ground in meters */
+	rxHeight: number;
+	/** Coverage radius in km (0.1–100) */
+	radius: number;
+	/** Resolution in meters per pixel (5–300) */
+	resolution: number;
+	/** CloudRF colormap for the output image */
+	colormap: CloudRFColormapName;
+	/** Optional site name for CloudRF */
+	site?: string;
+	/** Optional network name for CloudRF */
+	network?: string;
+}
+
+/** Result of a coverage computation */
+export interface CoverageResult {
+	/** PNG image as a base64 data URI */
+	imageDataUri: string;
+	/** Geographic bounding box for the image overlay */
+	bounds: PropagationBounds;
+	/** Computation metadata */
+	meta: CoverageMeta;
+	/** Color legend from CloudRF */
+	legend: CoverageLegendEntry[];
+}
+
+/** Geographic bounding box for overlay positioning */
+export interface PropagationBounds {
+	north: number;
+	south: number;
+	east: number;
+	west: number;
+}
+
+/** Coverage computation metadata */
+export interface CoverageMeta {
+	/** Wall-clock computation time in milliseconds */
+	elapsed: number;
+	/** Coverage area in sq km */
+	area: number;
+	/** Coverage percentage */
+	coverage: number;
+	/** CloudRF calculation ID */
+	calculationId: number;
+}
+
+/** A single legend entry from CloudRF */
+export interface CoverageLegendEntry {
+	r: number;
+	g: number;
+	b: number;
+	label: string;
+}
+
+// ── Point-to-Point ──────────────────────────────────────────────────
+
+/** Input parameters for a P2P computation */
+export interface P2PRequest {
+	/** Transmitter latitude */
+	txLat: number;
+	/** Transmitter longitude */
+	txLon: number;
+	/** Receiver latitude */
+	rxLat: number;
+	/** Receiver longitude */
+	rxLon: number;
+	/** RF frequency in MHz */
+	frequency: number;
+	/** Antenna polarization: 0=horizontal, 1=vertical */
+	polarization: number;
+	/** Transmitter height above ground in meters */
+	txHeight: number;
+	/** Receiver height above ground in meters */
+	rxHeight: number;
+}
+
+/** Result of a P2P computation */
+export interface P2PResult {
+	/** Path loss at receiver in dB */
+	lossAtRx: number;
+	/** Distance between TX and RX in meters */
+	distanceM: number;
+	/** Bearing from TX to RX in degrees */
+	bearingDeg: number;
+	/** Loss profile along the path */
+	lossProfile: number[];
+	/** Elevation profile along the path */
+	elevationProfile: number[];
+	/** Distances for each step */
+	distances: number[];
+	/** Error code (0 = success) */
+	error: number;
+}
+
+// ── Route ───────────────────────────────────────────────────────────
+
+/** Input parameters for a route computation */
+export interface RouteRequest {
+	/** Transmitter latitude */
+	txLat: number;
+	/** Transmitter longitude */
+	txLon: number;
+	/** RF frequency in MHz */
+	frequency: number;
+	/** Antenna polarization */
+	polarization: number;
+	/** Transmitter height above ground in meters */
+	txHeight: number;
+	/** Receiver height above ground in meters */
+	rxHeight: number;
+	/** Route waypoints as [lat, lon] pairs */
+	waypoints: [number, number][];
+}
+
+/** Result of a route computation */
+export interface RouteResult {
+	/** Loss at each waypoint */
+	segments: RouteSegment[];
+	/** Total route distance in meters */
+	totalDistanceM: number;
+}
+
+/** One segment of a route result */
+export interface RouteSegment {
+	/** Waypoint latitude */
+	lat: number;
+	/** Waypoint longitude */
+	lon: number;
+	/** Distance from TX in meters */
+	distanceFromTx: number;
+	/** Path loss at this waypoint in dB */
+	loss: number;
+	/** Ground elevation at this waypoint in meters */
+	elevation: number;
+	/** Error code for this segment */
+	error: number;
+}
+
+// ── Status ──────────────────────────────────────────────────────────
+
+/** CloudRF engine status */
+export interface CloudRFStatus {
+	/** Whether the CloudRF API is reachable and key is valid */
+	available: boolean;
+	/** Engine identifier */
+	engine: 'cloudrf';
+}
