@@ -41,7 +41,7 @@
 				<div class="hub-card-icon"><Radio size={16} /></div>
 				<div class="hub-card-content">
 					<span class="hub-card-name">RF Propagation</span>
-					<span class="hub-card-desc">APM coverage & path loss</span>
+					<span class="hub-card-desc">CloudRF coverage & path loss</span>
 				</div>
 				<ChevronRight size={14} class="hub-chevron" />
 			</button>
