@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Globe, Layers } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, Globe, Layers, Radio } from '@lucide/svelte';
 
 	import {
 		activeMapSettingsView,
@@ -9,6 +9,7 @@
 
 	import MapLayersView from './MapLayersView.svelte';
 	import MapProviderView from './MapProviderView.svelte';
+	import RFPropagationView from './RFPropagationView.svelte';
 </script>
 
 <div class="map-settings-panel">
@@ -35,6 +36,15 @@
 				</div>
 				<ChevronRight size={14} class="hub-chevron" />
 			</button>
+
+			<button class="hub-card" onclick={() => navigateToMapSettingsView('rf-propagation')}>
+				<div class="hub-card-icon"><Radio size={16} /></div>
+				<div class="hub-card-content">
+					<span class="hub-card-name">RF Propagation</span>
+					<span class="hub-card-desc">APM coverage & path loss</span>
+				</div>
+				<ChevronRight size={14} class="hub-chevron" />
+			</button>
 		</div>
 	{:else}
 		<header class="panel-header subview-header">
@@ -44,6 +54,7 @@
 			<span class="panel-title">
 				{#if $activeMapSettingsView === 'provider'}MAP PROVIDER
 				{:else if $activeMapSettingsView === 'layers'}MAP LAYERS
+				{:else if $activeMapSettingsView === 'rf-propagation'}RF PROPAGATION
 				{/if}
 			</span>
 		</header>
@@ -53,6 +64,8 @@
 				<MapProviderView />
 			{:else if $activeMapSettingsView === 'layers'}
 				<MapLayersView />
+			{:else if $activeMapSettingsView === 'rf-propagation'}
+				<RFPropagationView />
 			{/if}
 		</div>
 	{/if}
