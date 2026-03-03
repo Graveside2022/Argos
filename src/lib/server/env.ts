@@ -30,6 +30,7 @@ const envSchema = z.object({
 	ANTHROPIC_API_KEY: z.string().optional(),
 	OPENCELLID_API_KEY: z.string().optional(),
 	STADIA_MAPS_API_KEY: z.string().optional(),
+	CLOUDRF_API_KEY: z.string().min(1).optional(),
 
 	// Public-facing URLs (FR-023)
 	PUBLIC_KISMET_API_URL: z.string().url().default('http://localhost:2501'),
