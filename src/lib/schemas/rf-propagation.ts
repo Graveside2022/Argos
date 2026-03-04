@@ -21,8 +21,8 @@ const PropagationModelSchema = z.union([
 	z.literal(11)
 ]);
 
-/** Clutter/environment profile filenames */
-const ClutterProfileSchema = z.enum(['Minimal.clt', 'Temperate.clt', 'Tropical.clt', 'Jungle.clt']);
+/** Clutter/environment profile filenames (validated against live API 2026-03-04) */
+const ClutterProfileSchema = z.enum(['Minimal.clt', 'Temperate.clt', 'Tropical.clt', 'Urban.clt']);
 
 /** Reliability percentage options */
 const ReliabilitySchema = z.union([z.literal(50), z.literal(75), z.literal(90), z.literal(95)]);
