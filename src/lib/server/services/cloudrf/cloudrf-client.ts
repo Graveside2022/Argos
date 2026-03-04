@@ -37,34 +37,38 @@ function getApiKey(): string {
 	return key;
 }
 
-/** Build the shared antenna config object */
-function buildAntenna(polarization: number): Record<string, string> {
+/** Build the shared antenna config object (mode "template" = use built-in patterns) */
+function buildAntenna(polarization: number): Record<string, string | number> {
 	return {
-		txg: '2.15',
-		txl: '0',
-		ant: '1',
-		azi: '0',
-		tlt: '0',
-		hbw: '360',
-		vbw: '90',
-		fbr: '0',
+		mode: 'template',
+		txg: 2.15,
+		txl: 0,
+		ant: 1,
+		azi: 0,
+		tlt: 0,
+		hbw: 360,
+		vbw: 90,
+		fbr: 0,
 		pol: polarization === 0 ? 'h' : 'v'
 	};
 }
 
-/** Resolve TX/RX power params to API string values */
+/** Standard feeder/cable loss — no loss (direct connection) */
+const FEEDER = { flt: 1, fll: 0, fcc: 0 } as const;
+
+/** Resolve TX/RX power params to API numeric values */
 function resolveRadioParams(params: CoverageRequest) {
 	return {
-		txw: String(params.txPower ?? 5),
-		rxs: String(params.rxSensitivity ?? -90)
+		txw: params.txPower ?? 5,
+		rxs: params.rxSensitivity ?? -90
 	};
 }
 
-/** Resolve model/environment params to API string values */
+/** Resolve model/environment params to API numeric values (clt stays string) */
 function resolveModelParams(params: CoverageRequest) {
 	return {
-		pm: String(params.propagationModel ?? autoSelectPropModel(params.frequency)),
-		rel: String(params.reliability ?? 95),
+		pm: params.propagationModel ?? autoSelectPropModel(params.frequency),
+		rel: params.reliability ?? 95,
 		clt: params.clutterProfile ?? 'Minimal.clt'
 	};
 }
@@ -76,32 +80,34 @@ function buildAreaBody(params: CoverageRequest): Record<string, unknown> {
 	return {
 		site: params.site ?? 'Argos',
 		network: params.network ?? 'Argos',
-		engine: '1',
+		engine: 2,
+		coordinates: 1,
 		transmitter: {
 			lat: params.lat,
 			lon: params.lon,
-			alt: String(params.txHeight),
-			frq: String(params.frequency),
+			alt: params.txHeight,
+			frq: params.frequency,
 			txw: radio.txw,
-			bwi: '0.1'
+			bwi: 0.1
 		},
 		receiver: {
 			lat: 0,
 			lon: 0,
-			alt: String(params.rxHeight),
-			rxg: '2.15',
+			alt: params.rxHeight,
+			rxg: 2.15,
 			rxs: radio.rxs
 		},
+		feeder: FEEDER,
 		antenna: buildAntenna(params.polarization),
-		model: { pm: mdl.pm, pe: '2', ked: '1', rel: mdl.rel },
-		environment: { elevation: '2', landcover: '1', buildings: '1', clt: mdl.clt },
+		model: { pm: mdl.pm, pe: 2, ked: 1, rel: mdl.rel },
+		environment: { elevation: 2, landcover: 1, buildings: 1, obstacles: 0, clt: mdl.clt },
 		output: {
 			units: 'm',
 			col: params.colormap,
-			out: '2',
-			nf: '-114',
-			res: String(params.resolution),
-			rad: String(params.radius)
+			out: 2,
+			nf: -114,
+			res: params.resolution,
+			rad: params.radius
 		}
 	};
 }
@@ -160,25 +166,27 @@ function buildPathBody(params: P2PRequest): Record<string, unknown> {
 	return {
 		site: params.site ?? 'Argos',
 		network: params.network ?? 'Argos',
-		engine: '1',
+		engine: 2,
+		coordinates: 1,
 		transmitter: {
 			lat: params.txLat,
 			lon: params.txLon,
-			alt: String(params.txHeight),
-			frq: String(params.frequency),
-			txw: '5',
-			bwi: '0.1'
+			alt: params.txHeight,
+			frq: params.frequency,
+			txw: 5,
+			bwi: 0.1
 		},
 		receiver: {
 			lat: params.rxLat,
 			lon: params.rxLon,
-			alt: String(params.rxHeight),
-			rxg: '2.15',
-			rxs: '-90'
+			alt: params.rxHeight,
+			rxg: 2.15,
+			rxs: -90
 		},
+		feeder: FEEDER,
 		antenna: buildAntenna(params.polarization),
-		model: { pm: '11', pe: '2', ked: '1', rel: '95' },
-		environment: { elevation: '2', landcover: '1', buildings: '1', clt: 'Minimal.clt' }
+		model: { pm: 11, pe: 2, ked: 1, rel: 95 },
+		environment: { elevation: 2, landcover: 1, buildings: 1, obstacles: 0, clt: 'Minimal.clt' }
 	};
 }
 
@@ -187,7 +195,7 @@ async function parseAreaResponse(
 	data: Record<string, unknown>,
 	elapsed: number
 ): Promise<CoverageResult> {
-	const imageDataUri = await downloadPng(data.PNG_WGS84 as string);
+	const imageDataUri = await downloadPng(data.PNG_Mercator as string);
 	const bounds = parseBounds(data.bounds as number[]);
 	return {
 		imageDataUri,

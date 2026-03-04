@@ -16,7 +16,7 @@
 	let expanded = $state(false);
 
 	/** Label for the auto-selected propagation model based on current frequency */
-	const autoModelLabel = $derived(() => {
+	const autoModelLabel = $derived.by(() => {
 		const autoId = autoSelectPropModel($rfParams.frequency);
 		const model = PROPAGATION_MODELS.find((m) => m.id === autoId);
 		return model ? model.label : 'Auto';
@@ -132,7 +132,7 @@
 							: String($rfParams.propagationModel)}
 						onchange={handlePropModel}
 					>
-						<option value="auto">Auto ({autoModelLabel()})</option>
+						<option value="auto">Auto ({autoModelLabel})</option>
 						{#each PROPAGATION_MODELS as model}
 							<option value={String(model.id)}>{model.label} ({model.band})</option>
 						{/each}
@@ -239,6 +239,9 @@
 		appearance: none;
 		cursor: pointer;
 		padding-right: 20px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
 		background-repeat: no-repeat;
 		background-position: right 6px center;
