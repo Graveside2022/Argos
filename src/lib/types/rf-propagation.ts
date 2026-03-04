@@ -12,8 +12,8 @@ export type CloudRFColormapName = 'RAINBOW45.dBm' | 'LTE.dBm' | 'HF.dBm';
 /** CloudRF propagation model IDs (verified against API docs) */
 export type PropagationModelId = 1 | 3 | 6 | 7 | 11;
 
-/** CloudRF clutter/environment profile filenames */
-export type ClutterProfile = 'Minimal.clt' | 'Temperate.clt' | 'Tropical.clt' | 'Jungle.clt';
+/** CloudRF clutter/environment profile filenames (validated against live API 2026-03-04) */
+export type ClutterProfile = 'Minimal.clt' | 'Temperate.clt' | 'Tropical.clt' | 'Urban.clt';
 
 /** Reliability percentage options (CloudRF rel parameter) */
 export type ReliabilityPercent = 50 | 75 | 90 | 95;
@@ -27,12 +27,12 @@ export const PROPAGATION_MODELS: { id: PropagationModelId; label: string; band: 
 	{ id: 11, label: 'Egli', band: 'VHF/UHF' }
 ];
 
-/** UI display constants for clutter profiles */
+/** UI display constants for clutter profiles (validated against live API 2026-03-04) */
 export const CLUTTER_PROFILES: { id: ClutterProfile; label: string }[] = [
 	{ id: 'Minimal.clt', label: 'Minimal' },
 	{ id: 'Temperate.clt', label: 'Temperate' },
 	{ id: 'Tropical.clt', label: 'Tropical' },
-	{ id: 'Jungle.clt', label: 'Jungle' }
+	{ id: 'Urban.clt', label: 'Urban' }
 ];
 
 /** UI display constants for reliability options */

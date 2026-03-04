@@ -12,7 +12,10 @@ import { expect, test } from '@playwright/test';
 
 /** Navigate from dashboard root into the RF Propagation subview */
 async function navigateToRFPropagation(page: import('@playwright/test').Page) {
-	await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+	await page.goto('/dashboard', { waitUntil: 'load' });
+
+	// Wait for initial async renders (hardware scan, system status) to settle
+	await page.waitForLoadState('networkidle');
 
 	// 1. Click "Map Settings" in the icon rail and wait for the hub to appear
 	const mapSettingsBtn = page.locator('button.rail-btn[aria-label="Map Settings"]');
@@ -22,15 +25,23 @@ async function navigateToRFPropagation(page: import('@playwright/test').Page) {
 		timeout: 10_000
 	});
 
-	// 2. Click the "RF Propagation" hub card
-	const rfCard = page.locator('button.hub-card:has-text("RF Propagation")');
-	await expect(rfCard).toBeVisible({ timeout: 5_000 });
-	await rfCard.click();
+	// 2. Click the "RF Propagation" hub card — retry on DOM detachment from Svelte re-renders
+	const rfPanelTitle = page.locator('.panel-title:has-text("RF PROPAGATION")');
+	for (let attempt = 0; attempt < 3; attempt++) {
+		const rfCard = page.locator('button.hub-card:has-text("RF Propagation")');
+		await expect(rfCard).toBeVisible({ timeout: 5_000 });
+		await rfCard.click();
+		try {
+			await expect(rfPanelTitle).toBeVisible({ timeout: 5_000 });
+			return; // Success — subview loaded
+		} catch {
+			// Hub card was detached mid-click; wait briefly and retry
+			await page.waitForTimeout(500);
+		}
+	}
 
-	// 3. Wait for the RF Propagation subview header
-	await expect(page.locator('.panel-title:has-text("RF PROPAGATION")')).toBeVisible({
-		timeout: 5_000
-	});
+	// Final attempt — let it throw if still failing
+	await expect(rfPanelTitle).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe('RF Propagation — Advanced Controls', () => {
@@ -173,7 +184,7 @@ test.describe('RF Propagation — Advanced Controls', () => {
 		await txPowerInput.dispatchEvent('change');
 
 		const envSelect = advancedBody.locator('select').first();
-		await envSelect.selectOption('Jungle.clt');
+		await envSelect.selectOption('Urban.clt');
 
 		// Collapse and re-expand (re-query toggle each time)
 		await getToggle().click();

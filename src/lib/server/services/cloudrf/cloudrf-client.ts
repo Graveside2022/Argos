@@ -37,18 +37,18 @@ function getApiKey(): string {
 	return key;
 }
 
-/** Build the shared antenna config object (mode "template" = use built-in patterns) */
+/** Build the shared antenna config (mode "template", ant 39 = DIPOLE.ANT omnidirectional) */
 function buildAntenna(polarization: number): Record<string, string | number> {
 	return {
 		mode: 'template',
 		txg: 2.15,
 		txl: 0,
-		ant: 1,
+		ant: 39,
 		azi: 0,
 		tlt: 0,
-		hbw: 360,
+		hbw: 120,
 		vbw: 90,
-		fbr: 0,
+		fbr: 2,
 		pol: polarization === 0 ? 'h' : 'v'
 	};
 }
@@ -100,12 +100,12 @@ function buildAreaBody(params: CoverageRequest): Record<string, unknown> {
 		feeder: FEEDER,
 		antenna: buildAntenna(params.polarization),
 		model: { pm: mdl.pm, pe: 2, ked: 1, rel: mdl.rel },
-		environment: { elevation: 2, landcover: 1, buildings: 1, obstacles: 0, clt: mdl.clt },
+		environment: { elevation: 1, landcover: 1, buildings: 1, obstacles: 0, clt: mdl.clt },
 		output: {
 			units: 'm',
 			col: params.colormap,
 			out: 2,
-			nf: -114,
+			nf: -124,
 			res: params.resolution,
 			rad: params.radius
 		}
@@ -185,8 +185,8 @@ function buildPathBody(params: P2PRequest): Record<string, unknown> {
 		},
 		feeder: FEEDER,
 		antenna: buildAntenna(params.polarization),
-		model: { pm: 11, pe: 2, ked: 1, rel: 95 },
-		environment: { elevation: 2, landcover: 1, buildings: 1, obstacles: 0, clt: 'Minimal.clt' }
+		model: { pm: autoSelectPropModel(params.frequency), pe: 2, ked: 1, rel: 95 },
+		environment: { elevation: 1, landcover: 1, buildings: 1, obstacles: 0, clt: 'Minimal.clt' }
 	};
 }
 
