@@ -17,12 +17,12 @@ const PropagationModelSchema = z.union([
 	z.literal(1),
 	z.literal(3),
 	z.literal(6),
-	z.literal(9),
+	z.literal(7),
 	z.literal(11)
 ]);
 
 /** Clutter/environment profile filenames */
-const ClutterProfileSchema = z.enum(['Minimal.clt', 'Temperate.clt', 'Jungle.clt']);
+const ClutterProfileSchema = z.enum(['Minimal.clt', 'Temperate.clt', 'Tropical.clt', 'Jungle.clt']);
 
 /** Reliability percentage options */
 const ReliabilitySchema = z.union([z.literal(50), z.literal(75), z.literal(90), z.literal(95)]);

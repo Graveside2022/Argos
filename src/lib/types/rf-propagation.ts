@@ -10,10 +10,10 @@ export type PropagationMode = 'coverage' | 'p2p' | 'route';
 export type CloudRFColormapName = 'RAINBOW45.dBm' | 'LTE.dBm' | 'HF.dBm';
 
 /** CloudRF propagation model IDs (verified against API docs) */
-export type PropagationModelId = 1 | 3 | 6 | 9 | 11;
+export type PropagationModelId = 1 | 3 | 6 | 7 | 11;
 
 /** CloudRF clutter/environment profile filenames */
-export type ClutterProfile = 'Minimal.clt' | 'Temperate.clt' | 'Jungle.clt';
+export type ClutterProfile = 'Minimal.clt' | 'Temperate.clt' | 'Tropical.clt' | 'Jungle.clt';
 
 /** Reliability percentage options (CloudRF rel parameter) */
 export type ReliabilityPercent = 50 | 75 | 90 | 95;
@@ -23,15 +23,16 @@ export const PROPAGATION_MODELS: { id: PropagationModelId; label: string; band: 
 	{ id: 1, label: 'ITM (Longley-Rice)', band: 'HF–UHF' },
 	{ id: 3, label: 'Hata', band: 'VHF/UHF' },
 	{ id: 6, label: 'COST-Hata', band: 'UHF/SHF' },
-	{ id: 9, label: 'Free Space', band: 'Any' },
+	{ id: 7, label: 'Free Space (ITU-R P.525)', band: 'Any' },
 	{ id: 11, label: 'Egli', band: 'VHF/UHF' }
 ];
 
 /** UI display constants for clutter profiles */
 export const CLUTTER_PROFILES: { id: ClutterProfile; label: string }[] = [
-	{ id: 'Minimal.clt', label: 'Minimal (open/desert)' },
-	{ id: 'Temperate.clt', label: 'Temperate (forest)' },
-	{ id: 'Jungle.clt', label: 'Jungle (tropical)' }
+	{ id: 'Minimal.clt', label: 'Minimal' },
+	{ id: 'Temperate.clt', label: 'Temperate' },
+	{ id: 'Tropical.clt', label: 'Tropical' },
+	{ id: 'Jungle.clt', label: 'Jungle' }
 ];
 
 /** UI display constants for reliability options */
@@ -39,7 +40,7 @@ export const RELIABILITY_OPTIONS: { value: ReliabilityPercent; label: string }[]
 	{ value: 50, label: '50%' },
 	{ value: 75, label: '75%' },
 	{ value: 90, label: '90%' },
-	{ value: 95, label: '95% (default)' }
+	{ value: 95, label: '95%' }
 ];
 
 /**
