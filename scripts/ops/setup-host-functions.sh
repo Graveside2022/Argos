@@ -28,23 +28,27 @@ fi
 # Resolve the upstream Debian codename for rolling-release distros (Kali, Parrot).
 # Docker, NodeSource, and Kismetwireless repos don't have kali-rolling/parrot-rolling
 # entries — they need the actual Debian codename (e.g. bookworm, trixie).
+# Parrot 7.x sets ID=debian, VERSION_CODENAME=echo — neither maps to upstream repos.
 resolve_debian_codename() {
-  local codename
+  local codename pretty_name
   codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+  pretty_name="$(. /etc/os-release && echo "${PRETTY_NAME:-}")"
   case "$codename" in
     kali-rolling)
       # Kali is based on Debian Testing but Docker/NodeSource repos work with bookworm
       echo "bookworm"
       ;;
-    parrot-rolling)
-      # Parrot 7.x is based on Debian 13 "trixie" (not bookworm)
-      echo "trixie"
-      ;;
     "")
       echo "bookworm"
       ;;
     *)
-      echo "$codename"
+      # Parrot 7.x uses VERSION_CODENAME=echo and ID=debian — detect via PRETTY_NAME
+      if [[ "$pretty_name" == *"Parrot"* ]]; then
+        # Parrot 7.x is based on Debian 13 "trixie"
+        echo "trixie"
+      else
+        echo "$codename"
+      fi
       ;;
   esac
 }
