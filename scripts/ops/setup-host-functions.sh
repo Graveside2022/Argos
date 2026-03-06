@@ -332,7 +332,11 @@ DNSCONF
 }
 
 install_system_packages() {
-  apt-get update -q
+  # --allow-releaseinfo-change tolerates repo metadata changes;
+  # || true prevents broken third-party .list files from aborting the entire install
+  apt-get update -q --allow-releaseinfo-change || {
+    echo "  WARNING: apt-get update had errors (broken repo entries?) — continuing anyway"
+  }
   _ensure_pkgs \
     wireless-tools iw ethtool usbutils tmux zsh build-essential \
     python3 python3-venv python3-pip \
