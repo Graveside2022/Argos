@@ -22,6 +22,22 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 # =============================================
+# PRE-FLIGHT: Clean up stale repo entries from previous failed runs
+# =============================================
+# A failed install_docker or install_kismet may leave broken .list files
+# that cause 404 errors on every subsequent apt-get update.
+_cleanup_stale_repo_entries() {
+  for list_file in /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/kismet.list; do
+    if [[ -f "$list_file" ]] && grep -q "echo" "$list_file" 2>/dev/null; then
+      echo "  Removing stale repo entry: $list_file (contains invalid codename 'echo')"
+      rm -f "$list_file"
+    fi
+  done
+}
+# Run cleanup when this library is sourced
+_cleanup_stale_repo_entries 2>/dev/null || true
+
+# =============================================
 # HELPERS
 # =============================================
 
@@ -347,16 +363,29 @@ install_gpsd() {
 
 # Add Kismet from the official kismetwireless.net repo
 # Args: $1=distro (e.g. "kali", "bookworm"), $2=codename (e.g. "kali-rolling", "bookworm")
+# Cleans up .list file on failure to prevent poisoning future apt-get runs.
 _install_kismet_from_repo() {
   local distro="$1" codename="$2"
   echo "  Using Kismet repo: release/$distro $codename"
+  # Remove stale entries from previous failed runs
+  rm -f /etc/apt/sources.list.d/kismet.list
   rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
   wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key --quiet \
     | gpg --dearmor | tee /usr/share/keyrings/kismet-archive-keyring.gpg >/dev/null
   echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/$distro $codename main" \
     > /etc/apt/sources.list.d/kismet.list
-  apt-get update -q
-  apt-get install -y -q kismet
+  if ! apt-get update -q; then
+    echo "  WARNING: Kismet repo at release/$distro $codename not reachable — removing broken entry"
+    rm -f /etc/apt/sources.list.d/kismet.list
+    rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
+    return 1
+  fi
+  if ! apt-get install -y -q kismet; then
+    echo "  WARNING: Kismet install from repo failed — removing repo entry"
+    rm -f /etc/apt/sources.list.d/kismet.list
+    rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
+    return 1
+  fi
 }
 
 install_kismet() {
@@ -711,13 +740,25 @@ install_docker() {
     DEBIAN_CODENAME="$(resolve_debian_codename)"
     ARCH="$(dpkg --print-architecture)"
     echo "  Using Debian codename: $DEBIAN_CODENAME, arch: $ARCH"
+    # Remove stale entries from previous failed runs
+    rm -f /etc/apt/sources.list.d/docker.list
     apt-get install -y -q ca-certificates curl gnupg
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL "https://download.docker.com/linux/debian/gpg" -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
     echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $DEBIAN_CODENAME stable" > /etc/apt/sources.list.d/docker.list
-    apt-get update -q
-    apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    if ! apt-get update -q; then
+      echo "  WARNING: Docker repo for $DEBIAN_CODENAME not reachable — removing broken entry"
+      rm -f /etc/apt/sources.list.d/docker.list
+      rm -f /etc/apt/keyrings/docker.asc
+      return 1
+    fi
+    if ! apt-get install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+      echo "  WARNING: Docker install failed — removing repo entry"
+      rm -f /etc/apt/sources.list.d/docker.list
+      rm -f /etc/apt/keyrings/docker.asc
+      return 1
+    fi
     usermod -aG docker "$SETUP_USER"
     echo "  Docker installed. User $SETUP_USER added to docker group."
   fi
