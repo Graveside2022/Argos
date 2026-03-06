@@ -140,6 +140,13 @@
 		"group": "Development Tools"
 	},
 	{
+		"id": "claude_mem",
+		"desc": "claude-mem (AI persistent memory)",
+		"core": false,
+		"func": "install_claude_mem",
+		"group": "Development Tools"
+	},
+	{
 		"id": "headless_debug",
 		"desc": "Headless debug service (Chromium)",
 		"core": false,
