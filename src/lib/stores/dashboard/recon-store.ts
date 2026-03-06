@@ -170,7 +170,7 @@ function reconParamEntries(params: ReconParams): Array<[string, string]> {
 		type: String(params.type ?? ''),
 		sort: String(params.sort ?? ''),
 		showClients: boolToStr(params.showClients),
-		alerts: boolToStr(params.alerts, true),
+		alerts: boolToStr(params.alerts),
 		minSignal: params.minSignal != null ? String(params.minSignal) : ''
 	}).filter(([, v]) => v !== '') as Array<[string, string]>;
 }
