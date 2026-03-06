@@ -225,6 +225,8 @@ check_component() {
     gemini_cli)      sudo -u "$SETUP_USER" bash -c 'command -v gemini' &>/dev/null ;;
     agent_browser)   sudo -u "$SETUP_USER" bash -c 'command -v agent-browser' &>/dev/null ;;
     chromadb)        sudo -u "$SETUP_USER" bash -c 'command -v bun' &>/dev/null ;;
+    claude_mem)      [[ -d "$SETUP_HOME/.claude/plugins/cache/thedotmack/claude-mem" ]] && \
+                       [[ -f "$SETUP_HOME/.claude-mem/settings.json" ]] ;;
     headless_debug)  [[ -f /etc/systemd/system/argos-headless.service ]] ;;
     zsh_dotfiles)    command -v zsh &>/dev/null && [[ -d "$SETUP_HOME/.oh-my-zsh" ]] ;;
     zsh_default)     [[ "$(getent passwd "$SETUP_USER" | cut -d: -f7)" == *zsh ]] ;;
@@ -1133,6 +1135,138 @@ install_claude_code() {
     echo "  Creating Claude Code settings with ccstatusline..."
     sudo -u "$SETUP_USER" tee "$CLAUDE_SETTINGS" > /dev/null <<< "{\"statusLine\": $STATUSLINE_VAL}"
   fi
+}
+
+install_claude_mem() {
+  # Requires: Claude Code installed + ChromaDB component
+  if ! _user_has_cmd claude; then
+    echo "  Skipping — Claude Code not installed (required for claude-mem)"
+    return 0
+  fi
+
+  local CLAUDE_DIR="$SETUP_HOME/.claude"
+  local CLAUDE_MEM_DIR="$SETUP_HOME/.claude-mem"
+  local CLAUDE_SETTINGS="$CLAUDE_DIR/settings.json"
+  local HOOKS_DIR="$CLAUDE_DIR/hooks"
+
+  # 1. Install claude-mem plugin (if not already installed)
+  local PLUGIN_CACHE="$CLAUDE_DIR/plugins/cache/thedotmack/claude-mem"
+  if [[ -d "$PLUGIN_CACHE" ]]; then
+    echo "  claude-mem plugin already installed"
+  else
+    echo "  Installing claude-mem plugin..."
+    if sudo -u "$SETUP_USER" bash -c 'claude plugin install claude-mem@thedotmack' 2>/dev/null; then
+      echo "  claude-mem plugin installed"
+    else
+      echo "  WARNING: claude-mem install requires authenticated Claude Code."
+      echo "  Run manually after authenticating: claude plugin install claude-mem@thedotmack"
+      return 0
+    fi
+  fi
+
+  # 2. Write claude-mem settings.json (remote chroma mode)
+  sudo -u "$SETUP_USER" mkdir -p "$CLAUDE_MEM_DIR"
+  local MEM_SETTINGS="$CLAUDE_MEM_DIR/settings.json"
+  if [[ -f "$MEM_SETTINGS" ]]; then
+    echo "  claude-mem settings already exist"
+  else
+    echo "  Writing claude-mem settings (remote chroma, claude-opus-4-6)..."
+    sudo -u "$SETUP_USER" tee "$MEM_SETTINGS" > /dev/null << 'MEMSETTINGS'
+{
+  "CLAUDE_MEM_MODEL": "claude-opus-4-6",
+  "CLAUDE_MEM_CONTEXT_OBSERVATIONS": "50",
+  "CLAUDE_MEM_WORKER_PORT": "37777",
+  "CLAUDE_MEM_WORKER_HOST": "0.0.0.0",
+  "CLAUDE_MEM_SKIP_TOOLS": "ListMcpResourcesTool,SlashCommand,Skill,TodoWrite,AskUserQuestion",
+  "CLAUDE_MEM_PROVIDER": "claude",
+  "CLAUDE_MEM_CLAUDE_AUTH_METHOD": "cli",
+  "CLAUDE_MEM_DATA_DIR": "",
+  "CLAUDE_MEM_LOG_LEVEL": "INFO",
+  "CLAUDE_MEM_MODE": "code",
+  "CLAUDE_MEM_CONTEXT_SHOW_READ_TOKENS": "true",
+  "CLAUDE_MEM_CONTEXT_SHOW_WORK_TOKENS": "true",
+  "CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_AMOUNT": "true",
+  "CLAUDE_MEM_CONTEXT_SHOW_SAVINGS_PERCENT": "true",
+  "CLAUDE_MEM_CONTEXT_OBSERVATION_TYPES": "bugfix,feature,refactor,discovery,decision,change",
+  "CLAUDE_MEM_CONTEXT_OBSERVATION_CONCEPTS": "how-it-works,why-it-exists,what-changed,problem-solution,gotcha,pattern,trade-off",
+  "CLAUDE_MEM_CONTEXT_FULL_COUNT": "5",
+  "CLAUDE_MEM_CONTEXT_FULL_FIELD": "narrative",
+  "CLAUDE_MEM_CONTEXT_SESSION_COUNT": "10",
+  "CLAUDE_MEM_CONTEXT_SHOW_LAST_SUMMARY": "true",
+  "CLAUDE_MEM_CONTEXT_SHOW_LAST_MESSAGE": "false",
+  "CLAUDE_MEM_FOLDER_CLAUDEMD_ENABLED": "false",
+  "CLAUDE_MEM_EXCLUDED_PROJECTS": "",
+  "CLAUDE_MEM_FOLDER_MD_EXCLUDE": "[]",
+  "CLAUDE_MEM_CHROMA_MODE": "remote",
+  "CLAUDE_MEM_CHROMA_HOST": "127.0.0.1",
+  "CLAUDE_MEM_CHROMA_PORT": "8000",
+  "CLAUDE_MEM_CHROMA_SSL": "false",
+  "CLAUDE_MEM_CHROMA_API_KEY": "",
+  "CLAUDE_MEM_CHROMA_TENANT": "default_tenant",
+  "CLAUDE_MEM_CHROMA_DATABASE": "default_database"
+}
+MEMSETTINGS
+    # Patch DATA_DIR with actual home path
+    sed -i "s|\"CLAUDE_MEM_DATA_DIR\": \"\"|\"CLAUDE_MEM_DATA_DIR\": \"$CLAUDE_MEM_DIR\"|" "$MEM_SETTINGS"
+  fi
+
+  # 3. Enable claude-mem in global settings.json
+  if [[ -f "$CLAUDE_SETTINGS" ]]; then
+    if _json_deep_has "$CLAUDE_SETTINGS" "enabledPlugins.claude-mem@thedotmack" "true" 2>/dev/null; then
+      echo "  claude-mem already enabled in settings"
+    else
+      echo "  Enabling claude-mem plugin in settings..."
+      _json_deep_set "$CLAUDE_SETTINGS" "enabledPlugins.claude-mem@thedotmack" "true"
+      chown "$SETUP_USER":"$SETUP_USER" "$CLAUDE_SETTINGS"
+    fi
+  fi
+
+  # 4. Install ensure-chroma-env.sh global hook
+  sudo -u "$SETUP_USER" mkdir -p "$HOOKS_DIR"
+  local HOOK_SCRIPT="$HOOKS_DIR/ensure-chroma-env.sh"
+  if [[ -f "$HOOK_SCRIPT" ]]; then
+    echo "  ensure-chroma-env hook already installed"
+  else
+    echo "  Installing ensure-chroma-env hook..."
+    sudo -u "$SETUP_USER" tee "$HOOK_SCRIPT" > /dev/null << 'HOOKEOF'
+#!/usr/bin/env bash
+set -u
+# Ensure running claude-mem worker has CHROMA_SSL=false.
+# Restarts any worker spawned before the env fix was in place.
+WORKER_PID=$(pgrep -f 'worker-service.cjs --daemon' 2>/dev/null | head -1)
+if [ -n "${WORKER_PID:-}" ]; then
+    if ! tr '\0' '\n' < "/proc/$WORKER_PID/environ" 2>/dev/null | grep -q '^CHROMA_SSL=false$'; then
+        kill "$WORKER_PID" 2>/dev/null
+    fi
+fi
+exit 0
+HOOKEOF
+    chmod +x "$HOOK_SCRIPT"
+  fi
+
+  # 5. Register SessionStart hook in global settings (if not already present)
+  if [[ -f "$CLAUDE_SETTINGS" ]]; then
+    if grep -q "ensure-chroma-env" "$CLAUDE_SETTINGS" 2>/dev/null; then
+      echo "  SessionStart hook already registered"
+    else
+      echo "  Registering SessionStart hook in global settings..."
+      python3 - "$CLAUDE_SETTINGS" "$HOOK_SCRIPT" << 'PYEOF'
+import json, sys
+fpath, hook_cmd = sys.argv[1], sys.argv[2]
+with open(fpath) as f:
+    s = json.load(f)
+hooks = s.setdefault("hooks", {})
+ss = hooks.setdefault("SessionStart", [])
+ss.append({"hooks": [{"type": "command", "command": hook_cmd, "timeout": 10}]})
+with open(fpath, "w") as f:
+    json.dump(s, f, indent=2)
+    f.write("\n")
+PYEOF
+      chown "$SETUP_USER":"$SETUP_USER" "$CLAUDE_SETTINGS"
+    fi
+  fi
+
+  echo "  claude-mem configured (remote chroma on port 8000)"
 }
 
 install_gemini_cli() {
