@@ -359,15 +359,15 @@ for i in "${!SELECTED_IDS[@]}"; do
     if eval "export $CHILD_ENV && $BASH_CMD" 2>&1; then
       if [[ -n "$WAS_PRESENT" ]]; then
         gum style --foreground "$C_INFO" "  ● $DESC $(gum style --foreground "$C_DIM" "(already installed)")"
-        (( ALREADY_COUNT++ ))
+        ALREADY_COUNT=$(( ALREADY_COUNT + 1 ))
       else
         gum style --foreground "$C_SUCCESS" "  ✓ $DESC"
-        (( INSTALLED++ ))
+        INSTALLED=$(( INSTALLED + 1 ))
       fi
     else
       gum style --foreground "$C_ERROR" "  ✗ $DESC — failed"
       FAILED_NAMES+=("$DESC")
-      (( FAILED++ ))
+      FAILED=$(( FAILED + 1 ))
     fi
   else
     # Normal: spinner
@@ -378,15 +378,15 @@ for i in "${!SELECTED_IDS[@]}"; do
         -- bash -c "export $CHILD_ENV && $BASH_CMD" 2>&1; then
       if [[ -n "$WAS_PRESENT" ]]; then
         gum style --foreground "$C_INFO" "  ● $DESC $(gum style --foreground "$C_DIM" "(already installed)")"
-        (( ALREADY_COUNT++ ))
+        ALREADY_COUNT=$(( ALREADY_COUNT + 1 ))
       else
         gum style --foreground "$C_SUCCESS" "  ✓ $DESC"
-        (( INSTALLED++ ))
+        INSTALLED=$(( INSTALLED + 1 ))
       fi
     else
       gum style --foreground "$C_ERROR" "  ✗ $DESC — failed"
       FAILED_NAMES+=("$DESC")
-      (( FAILED++ ))
+      FAILED=$(( FAILED + 1 ))
     fi
   fi
 done
