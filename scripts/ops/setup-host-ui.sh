@@ -353,8 +353,8 @@ for i in "${!SELECTED_IDS[@]}"; do
   BASH_CMD="source '$FUNCTIONS_SH' && $FUNC"
   CHILD_ENV="SETUP_USER='$SETUP_USER' SETUP_HOME='$SETUP_HOME' PROJECT_DIR='$PROJECT_DIR' SCRIPT_DIR='$SCRIPT_DIR' OS_ID='$OS_ID' NON_INTERACTIVE='$NON_INTERACTIVE' STADIA_KEY='$STADIA_KEY' SELECTED_COMPONENTS='$SELECTED_CSV'"
 
-  if [[ "$VERBOSE" == "true" ]]; then
-    # Verbose: show raw output
+  if [[ "$VERBOSE" == "true" ]] || [[ -z "$WAS_PRESENT" ]]; then
+    # Verbose mode OR fresh installs: show raw output so user sees progress
     gum log --level info "$PROGRESS $VERB $DESC..."
     if eval "export $CHILD_ENV && $BASH_CMD" 2>&1; then
       if [[ -n "$WAS_PRESENT" ]]; then
@@ -370,19 +370,14 @@ for i in "${!SELECTED_IDS[@]}"; do
       FAILED=$(( FAILED + 1 ))
     fi
   else
-    # Normal: spinner
+    # Already-installed: use spinner (quick verification, no output needed)
     if gum spin \
         --spinner dot \
         --spinner.foreground "$C_BRAND" \
         --title "$PROGRESS $VERB $DESC..." \
         -- bash -c "export $CHILD_ENV && $BASH_CMD" 2>&1; then
-      if [[ -n "$WAS_PRESENT" ]]; then
-        gum style --foreground "$C_INFO" "  ● $DESC $(gum style --foreground "$C_DIM" "(already installed)")"
-        ALREADY_COUNT=$(( ALREADY_COUNT + 1 ))
-      else
-        gum style --foreground "$C_SUCCESS" "  ✓ $DESC"
-        INSTALLED=$(( INSTALLED + 1 ))
-      fi
+      gum style --foreground "$C_INFO" "  ● $DESC $(gum style --foreground "$C_DIM" "(already installed)")"
+      ALREADY_COUNT=$(( ALREADY_COUNT + 1 ))
     else
       gum style --foreground "$C_ERROR" "  ✗ $DESC — failed"
       FAILED_NAMES+=("$DESC")
