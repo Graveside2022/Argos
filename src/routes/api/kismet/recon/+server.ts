@@ -87,6 +87,8 @@ function runRecon(args: string[]): Promise<ReconResult> {
 	return new Promise((resolvePromise, reject) => {
 		const chunks: Buffer[] = [];
 		let totalBytes = 0;
+		let stdoutEnded = false;
+		let exitCode: number | null = null;
 
 		const child = spawn('npx', ['tsx', MODULE_RUNNER, ...args], {
 			stdio: ['ignore', 'pipe', 'pipe'],
@@ -101,30 +103,44 @@ function runRecon(args: string[]): Promise<ReconResult> {
 
 		child.stdout.on('data', (chunk: Buffer) => {
 			totalBytes += chunk.length;
-			if (totalBytes <= MAX_OUTPUT_BYTES) {
-				chunks.push(chunk);
-			}
+			if (totalBytes <= MAX_OUTPUT_BYTES) chunks.push(chunk);
 		});
 
 		child.stderr.on('data', (chunk: Buffer) => {
 			logger.debug(`[recon] ${chunk.toString().trim()}`);
 		});
 
-		child.on('close', (code) => {
-			clearTimeout(timer);
-			const stdout = Buffer.concat(chunks).toString('utf-8').trim();
+		function parseStdout(raw: string): ReconResult {
+			const jsonStart = raw.indexOf('{');
+			if (jsonStart === -1) throw new Error('wifi_recon returned no JSON object');
+			return JSON.parse(raw.slice(jsonStart)) as ReconResult;
+		}
 
+		function tryResolve(): void {
+			if (!stdoutEnded || exitCode === null) return;
+			clearTimeout(timer);
+
+			const stdout = Buffer.concat(chunks).toString('utf-8').trim();
 			if (!stdout) {
-				reject(new Error(`wifi_recon exited ${code} with no output`));
+				reject(new Error(`wifi_recon exited ${exitCode} with no output`));
 				return;
 			}
 
 			try {
-				const parsed = JSON.parse(stdout) as ReconResult;
-				resolvePromise(parsed);
+				resolvePromise(parseStdout(stdout));
 			} catch {
 				reject(new Error('wifi_recon returned non-JSON output'));
 			}
+		}
+
+		child.stdout.on('end', () => {
+			stdoutEnded = true;
+			tryResolve();
+		});
+
+		child.on('close', (code) => {
+			exitCode = code ?? 1;
+			tryResolve();
 		});
 
 		child.on('error', (err) => {

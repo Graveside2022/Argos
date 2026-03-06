@@ -130,7 +130,7 @@
 	}
 
 	function triggerRecon() {
-		fetchReconData({ type: 'all', sort: 'signal', showClients: true, alerts: true });
+		fetchReconData({ type: 'all', sort: 'signal' });
 	}
 
 	/* ── Device filtering for ALL tab ───────────────── */
