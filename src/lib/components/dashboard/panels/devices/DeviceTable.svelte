@@ -160,8 +160,7 @@
 	}
 
 	table {
-		width: max-content;
-		min-width: 100%;
+		width: 100%;
 		border-collapse: collapse;
 	}
 
@@ -179,13 +178,13 @@
 		letter-spacing: var(--letter-spacing-wider);
 		color: var(--foreground-secondary, #888888);
 		text-align: left;
-		padding: var(--space-2) var(--space-2);
+		padding: var(--space-2) var(--space-3);
 		border-bottom: 1px solid var(--border);
 		white-space: nowrap;
 	}
 
 	td {
-		padding: var(--space-1) var(--space-2);
+		padding: var(--space-1) var(--space-3);
 		border-bottom: 1px solid var(--border);
 	}
 
