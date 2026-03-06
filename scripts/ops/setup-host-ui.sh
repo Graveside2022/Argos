@@ -139,8 +139,7 @@ echo ""
 # =============================================
 
 if [[ "$OS_ID" == "parrot" ]] && ! command -v kismet &>/dev/null; then
-  gum log --level warn "Parrot OS detected but Kismet not found."
-  gum log --level warn "Install first: sudo apt install parrot-tools-full"
+  gum log --level info "Parrot OS detected — Kismet will be installed from kismetwireless.net repo."
 fi
 
 # =============================================

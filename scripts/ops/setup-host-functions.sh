@@ -397,10 +397,16 @@ install_kismet() {
       # Kali carries Kismet in its own repos
       apt-get install -y -q kismet
     elif [[ "$OS_ID" == "parrot" ]]; then
-      # Parrot may carry Kismet; try native repos first, fall back to Kali repo
-      if ! apt-get install -y -q kismet 2>/dev/null; then
-        echo "  Kismet not in Parrot repos — trying Kali Kismet repo..."
-        _install_kismet_from_repo "kali" "kali-rolling"
+      # Parrot may carry Kismet; try native repos first
+      if apt-get install -y -q kismet 2>/dev/null; then
+        echo "  Kismet installed from Parrot repos"
+      else
+        # Parrot 7.x is Debian 13 (trixie) — use trixie repo, fall back to kali repo
+        echo "  Kismet not in Parrot repos — trying Kismet trixie repo..."
+        if ! _install_kismet_from_repo "trixie" "trixie"; then
+          echo "  Trixie repo failed — trying Kali Kismet repo..."
+          _install_kismet_from_repo "kali" "kali"
+        fi
       fi
     else
       # Add kismetwireless repo for other Debian-based distros
