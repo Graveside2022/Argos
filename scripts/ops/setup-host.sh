@@ -58,6 +58,11 @@ if [[ -f /etc/os-release ]]; then
   . /etc/os-release
   OS_ID="${ID:-unknown}"
   OS_NAME="${PRETTY_NAME:-Unknown}"
+  # Parrot OS sets ID=debian — detect via PRETTY_NAME so install functions
+  # can branch correctly for Parrot-specific package handling
+  if [[ "$OS_NAME" == *"Parrot"* ]]; then
+    OS_ID="parrot"
+  fi
 else
   echo "Error: Cannot detect OS (no /etc/os-release)" >&2
   exit 1
