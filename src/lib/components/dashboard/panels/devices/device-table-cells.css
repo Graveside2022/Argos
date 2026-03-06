@@ -1,50 +1,53 @@
-/* Shared cell styles for DeviceTable and DeviceSubRows */
+/* Shared cell styles for DeviceTable, DevicePriorityTable, DeviceSubRows */
+
+/* Column sizing — no width/table-layout on the table itself;
+   columns are only as wide as their content + padding. */
 .col-mac {
-	min-width: 160px;
+	white-space: nowrap;
 }
 .col-rssi {
-	min-width: 62px;
 	white-space: nowrap;
 }
 .col-type {
-	min-width: 52px;
 	white-space: nowrap;
 }
 .col-vendor {
-	min-width: 80px;
 	max-width: 140px;
 }
 .col-ch {
-	min-width: 30px;
 	text-align: center;
 	white-space: nowrap;
 }
 .col-freq {
-	min-width: 44px;
 	white-space: nowrap;
 }
 .col-enc {
-	min-width: 50px;
 	white-space: nowrap;
 }
 .col-pkts {
-	min-width: 44px;
 	text-align: right;
 	white-space: nowrap;
 }
 .col-data {
-	min-width: 44px;
 	text-align: right;
 	white-space: nowrap;
 }
 .col-first {
-	min-width: 40px;
 	text-align: right;
 	white-space: nowrap;
 }
 .col-seen {
-	min-width: 40px;
 	text-align: right;
+	white-space: nowrap;
+}
+.col-reason {
+	white-space: nowrap;
+}
+.col-clients {
+	text-align: center;
+	white-space: nowrap;
+}
+.col-extra {
 	white-space: nowrap;
 }
 
@@ -105,7 +108,7 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	display: block;
-	max-width: 160px;
+	max-width: 140px;
 }
 
 .mono-value {
