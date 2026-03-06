@@ -10,7 +10,19 @@ export default defineConfig({
 		host: '0.0.0.0',
 		port: 5173,
 		watch: {
-			ignored: ['**/*.db', '**/*.db-wal', '**/*.db-shm', '**/*.sqlite']
+			ignored: [
+				'**/*.db',
+				'**/*.db-wal',
+				'**/*.db-shm',
+				'**/*.sqlite',
+				'**/*.log',
+				'**/logs/**',
+				'**/coverage/**',
+				'**/test-results/**',
+				'**/tmp/**',
+				'**/data/**',
+				'**/.svelte-kit/output/**'
+			]
 		}
 	},
 	build: {
