@@ -27,12 +27,20 @@ fi
 
 # Resolve the upstream Debian codename for rolling-release distros (Kali, Parrot).
 # Docker, NodeSource, and Kismetwireless repos don't have kali-rolling/parrot-rolling
-# entries — they need the actual Debian codename (e.g. bookworm).
+# entries — they need the actual Debian codename (e.g. bookworm, trixie).
 resolve_debian_codename() {
   local codename
   codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
   case "$codename" in
-    kali-rolling|parrot-rolling|"")
+    kali-rolling)
+      # Kali is based on Debian Testing but Docker/NodeSource repos work with bookworm
+      echo "bookworm"
+      ;;
+    parrot-rolling)
+      # Parrot 7.x is based on Debian 13 "trixie" (not bookworm)
+      echo "trixie"
+      ;;
+    "")
       echo "bookworm"
       ;;
     *)
@@ -333,27 +341,39 @@ install_gpsd() {
   _ensure_pkgs gpsd gpsd-clients
 }
 
+# Add Kismet from the official kismetwireless.net repo
+# Args: $1=distro (e.g. "kali", "bookworm"), $2=codename (e.g. "kali-rolling", "bookworm")
+_install_kismet_from_repo() {
+  local distro="$1" codename="$2"
+  echo "  Using Kismet repo: release/$distro $codename"
+  rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
+  wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key --quiet \
+    | gpg --dearmor | tee /usr/share/keyrings/kismet-archive-keyring.gpg >/dev/null
+  echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/$distro $codename main" \
+    > /etc/apt/sources.list.d/kismet.list
+  apt-get update -q
+  apt-get install -y -q kismet
+}
+
 install_kismet() {
   if command -v kismet &>/dev/null; then
     echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
   else
     echo "  Installing Kismet..."
-    if [[ "$OS_ID" == "kali" || "$OS_ID" == "parrot" ]]; then
-      # Kali and Parrot carry Kismet in their own repos
+    if [[ "$OS_ID" == "kali" ]]; then
+      # Kali carries Kismet in its own repos
       apt-get install -y -q kismet
+    elif [[ "$OS_ID" == "parrot" ]]; then
+      # Parrot may carry Kismet; try native repos first, fall back to Kali repo
+      if ! apt-get install -y -q kismet 2>/dev/null; then
+        echo "  Kismet not in Parrot repos — trying Kali Kismet repo..."
+        _install_kismet_from_repo "kali" "kali-rolling"
+      fi
     else
       # Add kismetwireless repo for other Debian-based distros
       local DEBIAN_CODENAME
       DEBIAN_CODENAME="$(resolve_debian_codename)"
-      echo "  Using Debian codename: $DEBIAN_CODENAME"
-      # Refresh GPG key (Kismet updated their signing key in Feb 2026)
-      rm -f /usr/share/keyrings/kismet-archive-keyring.gpg
-      wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key --quiet \
-        | gpg --dearmor | tee /usr/share/keyrings/kismet-archive-keyring.gpg >/dev/null
-      echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/kali kali-rolling main" \
-        > /etc/apt/sources.list.d/kismet.list
-      apt-get update -q
-      apt-get install -y -q kismet
+      _install_kismet_from_repo "$DEBIAN_CODENAME" "$DEBIAN_CODENAME"
     fi
   fi
 
