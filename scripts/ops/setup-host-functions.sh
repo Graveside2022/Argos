@@ -392,6 +392,29 @@ _install_kismet_from_repo() {
   fi
 }
 
+_install_kismet_from_source() {
+  echo "  Building Kismet from source (this takes several minutes on ARM)..."
+  _ensure_pkgs build-essential git libmicrohttpd-dev pkg-config zlib1g-dev \
+    libpcap-dev libsqlite3-dev libprotobuf-dev libprotobuf-c-dev protobuf-compiler \
+    protobuf-c-compiler libsensors-dev libusb-1.0-0-dev python3-setuptools \
+    python3-protobuf python3-numpy librtlsdr-dev libubertooth-dev libbtbb-dev \
+    libwebsockets-dev libcap-dev
+  local BUILD_DIR="/tmp/kismet-build"
+  rm -rf "$BUILD_DIR"
+  git clone --depth 1 https://github.com/kismetwireless/kismet.git "$BUILD_DIR"
+  cd "$BUILD_DIR"
+  ./configure --prefix=/usr/local
+  make -j"$(nproc)"
+  make install
+  make suidinstall
+  cd /
+  rm -rf "$BUILD_DIR"
+  # Create kismet group if it doesn't exist
+  if ! getent group kismet &>/dev/null; then
+    groupadd kismet
+  fi
+}
+
 install_kismet() {
   if command -v kismet &>/dev/null; then
     echo "  Kismet already installed: $(kismet --version 2>&1 | head -1)"
@@ -405,18 +428,19 @@ install_kismet() {
       if apt-get install -y -q kismet 2>/dev/null; then
         echo "  Kismet installed from Parrot repos"
       else
-        # Parrot 7.x is Debian 13 (trixie) — use trixie repo, fall back to kali repo
-        echo "  Kismet not in Parrot repos — trying Kismet trixie repo..."
-        if ! _install_kismet_from_repo "trixie" "trixie"; then
-          echo "  Trixie repo failed — trying Kali Kismet repo..."
-          _install_kismet_from_repo "kali" "kali"
-        fi
+        # Prebuilt packages require libwebsockets17 which Parrot 7.x doesn't have
+        # (ships libwebsockets19). Build from source instead.
+        echo "  Kismet packages have unmet deps (libwebsockets17) — building from source..."
+        _install_kismet_from_source
       fi
     else
       # Add kismetwireless repo for other Debian-based distros
       local DEBIAN_CODENAME
       DEBIAN_CODENAME="$(resolve_debian_codename)"
-      _install_kismet_from_repo "$DEBIAN_CODENAME" "$DEBIAN_CODENAME"
+      if ! _install_kismet_from_repo "$DEBIAN_CODENAME" "$DEBIAN_CODENAME"; then
+        echo "  Repo install failed — building from source..."
+        _install_kismet_from_source
+      fi
     fi
   fi
 
@@ -1336,10 +1360,12 @@ _install_firacode_font() {
     return 0
   fi
   echo "  Installing FiraCode Nerd Font..."
-  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.local/share/fonts"
+  sudo -u "$SETUP_USER" mkdir -p "$FONT_DIR"
   local FIRA_ZIP
   FIRA_ZIP="$(mktemp /tmp/FiraCode.XXXXXX.zip)"
   curl -fsSL -o "$FIRA_ZIP" https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip
+  # mktemp creates root-owned file; make it readable for the unzip as SETUP_USER
+  chmod a+r "$FIRA_ZIP"
   sudo -u "$SETUP_USER" unzip -o "$FIRA_ZIP" -d "$FONT_DIR"
   rm -f "$FIRA_ZIP"
   sudo -u "$SETUP_USER" fc-cache -f "$SETUP_HOME/.local/share/fonts"
