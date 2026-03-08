@@ -34,9 +34,10 @@
 	let wsRetryTimer: ReturnType<typeof setTimeout> | null = null;
 	let destroyed = false;
 
-	// Focus terminal when becoming active
+	// Focus terminal when becoming active; connect if not yet connected
 	$effect(() => {
 		if (isActive && terminal) {
+			if (!ws && !destroyed) connectWebSocket(0);
 			requestAnimationFrame(() => {
 				terminal?.focus();
 				fitAddon?.fit();
@@ -227,10 +228,10 @@
 			}
 		});
 
-		// Connect WebSocket with auto-retry
-		connectWebSocket(0);
-
+		// Only connect WebSocket for the active tab — inactive tabs connect lazily
+		// when the user switches to them (via the $effect above)
 		if (isActive) {
+			connectWebSocket(0);
 			terminal.focus();
 		}
 	});
