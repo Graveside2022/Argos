@@ -204,8 +204,8 @@
 						<CapturesPanel />
 					</div>
 				{/if}
-				{#if mountedTabs.has('devices')}
-					<div class="tab-pane" class:tab-active={$activeBottomTab === 'devices'}>
+				{#if mountedTabs.has('dashboard')}
+					<div class="tab-pane" class:tab-active={$activeBottomTab === 'dashboard'}>
 						<DevicesPanel />
 					</div>
 				{/if}

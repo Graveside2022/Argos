@@ -12,8 +12,8 @@
 	import { themeStore } from '$lib/stores/theme-store.svelte';
 
 	function handleClick(id: string) {
-		if (id === 'devices') {
-			toggleBottomTab('devices');
+		if (id === 'dashboard') {
+			toggleBottomTab('dashboard');
 		} else {
 			togglePanel(id);
 		}
@@ -33,14 +33,14 @@
 		>
 			<House size={18} />
 		</button>
-		<!-- Devices (list) -->
+		<!-- Dashboard (list) -->
 		<button
 			class="rail-btn"
-			class:active={$activeBottomTab === 'devices'}
-			title="Devices"
-			aria-label="Devices"
-			aria-pressed={$activeBottomTab === 'devices'}
-			onclick={() => handleClick('devices')}
+			class:active={$activeBottomTab === 'dashboard'}
+			title="Dashboard"
+			aria-label="Dashboard"
+			aria-pressed={$activeBottomTab === 'dashboard'}
+			onclick={() => handleClick('dashboard')}
 		>
 			<List size={18} />
 		</button>

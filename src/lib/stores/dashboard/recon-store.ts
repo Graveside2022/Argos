@@ -143,10 +143,6 @@ export const retryAnalysis = derived(reconData, ($d) =>
 		.sort((a, b) => (b.retry_bytes ?? 0) - (a.retry_bytes ?? 0))
 );
 
-export const gpsMovement = derived(reconData, ($d) =>
-	$d.targets.filter((t) => t.gps_bounds != null)
-);
-
 export const multiFreqDevices = derived(reconData, ($d) =>
 	$d.targets.filter((t) => t.freq_map_khz && Object.keys(t.freq_map_khz).length > 1)
 );
@@ -194,7 +190,7 @@ function parseReconResponse(data: Record<string, unknown>): ReconData {
 }
 
 async function doReconFetch(url: string, signal: AbortSignal): Promise<void> {
-	const response = await fetch(url, { signal });
+	const response = await fetch(url, { signal, credentials: 'same-origin' });
 	const data = await response.json();
 	if (!response.ok || !data.success) {
 		reconStatus.set('error');

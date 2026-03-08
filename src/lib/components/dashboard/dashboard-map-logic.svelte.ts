@@ -61,7 +61,17 @@ export function createMapState() {
 	let initialViewSet = false;
 	let layersInitialized = false;
 	let cssReady = $state(false);
-	let mapStyle: maplibregl.StyleSpecification | string = $state(GOOGLE_SATELLITE_STYLE);
+	let stadiaChecked = $state(false);
+	let stadiaOk = $state(false);
+	let mapStyle: maplibregl.StyleSpecification | string = $derived.by(() => {
+		const settings = mapS$.current;
+		if (settings.type === 'satellite') {
+			return GOOGLE_SATELLITE_STYLE;
+		}
+		// Vector/tactical: use Stadia if available, otherwise fall back to satellite tiles
+		if (!stadiaChecked) return GOOGLE_SATELLITE_STYLE; // loading — show satellite briefly
+		return stadiaOk ? '/api/map-tiles/styles/alidade_smooth_dark.json' : GOOGLE_SATELLITE_STYLE;
+	});
 	let cellTowerGeoJSON: FeatureCollection = $state({ type: 'FeatureCollection', features: [] });
 	const towerFetchState: CellTowerFetchState = { lastLat: 0, lastLon: 0 };
 	let _popupLngLat: LngLatLike | null = $state(null);
@@ -106,12 +116,15 @@ export function createMapState() {
 	$effect(() => {
 		fetch('/api/map-tiles/styles/alidade_smooth_dark.json', { method: 'HEAD' })
 			.then((res) => {
-				mapStyle = res.ok
-					? '/api/map-tiles/styles/alidade_smooth_dark.json'
-					: GOOGLE_SATELLITE_STYLE;
+				stadiaOk = res.ok;
+				stadiaChecked = true;
 				mapSettings.stadiaAvailable.set(res.ok);
 			})
-			.catch(() => mapSettings.stadiaAvailable.set(false));
+			.catch(() => {
+				stadiaOk = false;
+				stadiaChecked = true;
+				mapSettings.stadiaAvailable.set(false);
+			});
 	});
 	$effect(() => {
 		queueMicrotask(() => {

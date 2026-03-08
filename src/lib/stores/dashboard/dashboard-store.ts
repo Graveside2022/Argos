@@ -3,13 +3,13 @@ import { derived, writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { persistedWritable } from '$lib/stores/persisted-writable';
 
-/** Which panel is open in the icon rail ('overview' by default per Lunaris design) */
-export const activePanel = writable<string | null>('overview');
+/** Which panel is open in the icon rail (null by default — user must explicitly open) */
+export const activePanel = writable<string | null>(null);
 
 /** Bottom panel tab type — gsm-evil removed (full-screen view), captures added */
-type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'devices' | null;
+type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | null;
 
-const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'devices'];
+const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'dashboard'];
 
 export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', 'terminal', {
 	serialize: (tab) => (tab === null ? 'null' : tab),
@@ -39,7 +39,9 @@ export const bottomPanelHeight = persistedWritable<number>(
 export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== null);
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
-export function toggleBottomTab(tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'devices'): void {
+export function toggleBottomTab(
+	tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard'
+): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }
 
@@ -113,7 +115,7 @@ export function isolateDevice(mac: string | null): void {
 	isolatedDeviceMAC.set(mac);
 	// Auto-open devices tab when isolating from map
 	if (mac !== null) {
-		activeBottomTab.update((current) => (current === 'devices' ? current : 'devices'));
+		activeBottomTab.update((current) => (current === 'dashboard' ? current : 'dashboard'));
 	}
 }
 
