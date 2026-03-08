@@ -13,7 +13,7 @@ import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilStopResult } from './gsm-evil-types';
 
-/** Gracefully kill GSM Evil processes and free port 8080 */
+/** Gracefully kill GSM Evil processes, orphaned tshark, and free port 8080 */
 export async function gracefulStopGsmProcesses(): Promise<void> {
 	try {
 		await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'grgsm_livemon_headless']);
@@ -28,6 +28,11 @@ export async function gracefulStopGsmProcesses(): Promise<void> {
 		logger.warn('[gsm-evil] Cleanup: pkill GsmEvil failed', { error: String(error) });
 	}
 	try {
+		await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'tshark.*4729']);
+	} catch {
+		/* no match is fine — tshark may not be running */
+	}
+	try {
 		await execFileAsync('/usr/bin/sudo', ['/usr/bin/fuser', '-k', '8080/tcp']);
 	} catch (error: unknown) {
 		logger.warn('[gsm-evil] Cleanup: fuser kill port 8080 failed', {
@@ -40,12 +45,12 @@ export async function gracefulStopGsmProcesses(): Promise<void> {
 /** Check if any GSM Evil processes remain after graceful stop */
 export async function checkRemainingGsmProcesses(): Promise<string> {
 	const [result] = await safe(() =>
-		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless|GsmEvil'])
+		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon_headless|GsmEvil|tshark.*4729'])
 	);
 	return result?.stdout ?? '';
 }
 
-/** Force-kill remaining GSM Evil processes with SIGKILL */
+/** Force-kill remaining GSM Evil processes and orphaned tshark with SIGKILL */
 export async function forceKillGsmProcesses(): Promise<void> {
 	try {
 		await execFileAsync('/usr/bin/sudo', [
@@ -65,6 +70,11 @@ export async function forceKillGsmProcesses(): Promise<void> {
 		logger.warn('[gsm-evil] Cleanup: pkill -9 GsmEvil failed', {
 			error: String(error)
 		});
+	}
+	try {
+		await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-9', '-f', 'tshark.*4729']);
+	} catch {
+		/* no match is fine */
 	}
 	await delay(500);
 }
