@@ -89,25 +89,40 @@ async function fetchFusionDevices(): Promise<Record<string, unknown>> {
 	};
 }
 
-/** Fallback to KismetService, returning error payload on failure. */
-async function fetchKismetFallback(): Promise<unknown> {
-	try {
-		return await KismetService.getDevices();
-	} catch (fallbackError: unknown) {
-		return {
-			devices: [],
-			error: (fallbackError as { message?: string }).message || 'Unknown error',
-			source: 'fallback' as const
-		};
-	}
+const DEVICE_FETCH_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(err: unknown) => {
+				clearTimeout(timer);
+				reject(err);
+			}
+		);
+	});
 }
 
 export const GET = createHandler(async () => {
 	try {
-		if (fusionKismetController.isReady()) return await fetchFusionDevices();
-		return await KismetService.getDevices();
+		if (fusionKismetController.isReady()) {
+			return await withTimeout(fetchFusionDevices(), DEVICE_FETCH_TIMEOUT_MS, 'Fusion fetch');
+		}
+		return await withTimeout(
+			KismetService.getDevices(),
+			DEVICE_FETCH_TIMEOUT_MS,
+			'Kismet fetch'
+		);
 	} catch (error: unknown) {
 		logger.error('Error in Kismet devices endpoint', { error: errMsg(error) });
-		return await fetchKismetFallback();
+		const source =
+			error instanceof Error && error.message.includes('timed out')
+				? ('timeout' as const)
+				: ('error' as const);
+		return { devices: [], error: errMsg(error), source };
 	}
 });

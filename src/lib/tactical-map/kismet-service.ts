@@ -142,18 +142,30 @@ export class KismetService {
 		return data.devices as unknown as KismetDevice[];
 	}
 
+	/** Fetch with a 15s abort timeout to prevent WebKit "Load failed" hangs. */
+	private async fetchWithTimeout(url: string): Promise<Response> {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 15_000);
+		try {
+			return await fetch(url, { signal: controller.signal });
+		} finally {
+			clearTimeout(timer);
+		}
+	}
+
 	async fetchKismetDevices(): Promise<KismetDevice[]> {
 		const currentState = get(kismetStore);
-		if (currentState?.status !== 'running') return [];
+		if (currentState.status !== 'running') return [];
 
 		try {
-			const response = await fetch('/api/kismet/devices');
-			const devices = await this.parseDevicesResponse(response);
-			if (!devices) return [];
+			const response = await this.fetchWithTimeout('/api/kismet/devices');
+			const devices = (await this.parseDevicesResponse(response)) ?? [];
 			batchUpdateDevices(devices, currentState.devices);
 			return devices;
-		} catch (error) {
-			logger.error('Error fetching Kismet devices', { error });
+		} catch (error: unknown) {
+			logger.error('Error fetching Kismet devices', {
+				error: error instanceof Error ? error.message : String(error)
+			});
 			return [];
 		}
 	}
