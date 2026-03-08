@@ -39,7 +39,7 @@ export async function checkPrerequisites(gsmDir: string): Promise<GsmEvilStartRe
 	return null;
 }
 
-/** Kill any running grgsm_livemon_headless and GsmEvil processes */
+/** Kill any running grgsm_livemon_headless, GsmEvil, and orphaned tshark processes */
 export async function killExistingGsmProcesses(): Promise<void> {
 	try {
 		await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'grgsm_livemon_headless']);
@@ -51,13 +51,18 @@ export async function killExistingGsmProcesses(): Promise<void> {
 	} catch {
 		/* no match is fine */
 	}
+	try {
+		await execFileAsync('/usr/bin/sudo', ['/usr/bin/pkill', '-f', 'tshark.*4729']);
+	} catch {
+		/* no match is fine */
+	}
 	await delay(1000);
 }
 
 /** Check if GSM processes are actively running via pgrep */
 async function findActiveGsmProcesses(): Promise<string> {
 	const [result] = await safe(() =>
-		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon|GsmEvil'])
+		execFileAsync('/usr/bin/pgrep', ['-f', 'grgsm_livemon|GsmEvil|tshark.*4729'])
 	);
 	return result?.stdout ?? '';
 }
