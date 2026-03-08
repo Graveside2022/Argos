@@ -103,6 +103,8 @@
 
 	{#if reconStatus === 'loading'}
 		<div class="loading-state">Scanning WiFi environment...</div>
+	{:else if reconStatus === 'error'}
+		<div class="error-state">Scan failed — click SCAN to retry</div>
 	{:else if targets.length === 0}
 		<div class="empty-state">No devices match this category</div>
 	{:else}
@@ -240,95 +242,7 @@
 
 <style>
 	@import './device-table-cells.css';
-
-	.intel-view {
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-	}
-
-	.intel-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 4px var(--space-3);
-		border-bottom: 1px solid var(--border);
-		flex-shrink: 0;
-	}
-
-	.intel-header-left {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-
-	.intel-title {
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		color: var(--primary);
-		text-transform: uppercase;
-	}
-
-	.intel-count {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		font-weight: 600;
-		padding: 0 5px;
-		border-radius: 3px;
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
-	}
-
-	.intel-desc {
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
-		color: var(--foreground-secondary);
-		padding: 4px var(--space-3);
-		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-		flex-shrink: 0;
-		line-height: 1.4;
-	}
-
-	.refresh-btn {
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		padding: 2px 8px;
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
-		border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-		border-radius: 3px;
-		cursor: pointer;
-	}
-
-	.refresh-btn:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 25%, transparent);
-	}
-
-	.refresh-btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-
-	.loading-state,
-	.empty-state {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 11px;
-		color: var(--foreground-secondary);
-		font-style: italic;
-	}
-
-	.table-scroll {
-		flex: 1;
-		overflow: auto;
-	}
+	@import './intel-category-view.css';
 
 	table {
 		width: 100%;
@@ -370,90 +284,5 @@
 
 	tbody tr:hover {
 		background: var(--surface-hover, #1e1e1e);
-	}
-
-	.detail-tags {
-		display: flex;
-		gap: 3px;
-		flex-wrap: wrap;
-	}
-
-	.detail-tag {
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 0.5px;
-		padding: 1px 4px;
-		border-radius: 3px;
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
-		cursor: help;
-	}
-
-	.detail-tag.critical {
-		background: color-mix(in srgb, var(--destructive, #ff5c33) 20%, transparent);
-		color: var(--destructive, #ff5c33);
-	}
-
-	.detail-tag.warning {
-		background: color-mix(in srgb, var(--warning, #d4a054) 20%, transparent);
-		color: var(--warning, #d4a054);
-	}
-
-	.detail-tag.dim {
-		background: color-mix(in srgb, var(--foreground-secondary) 10%, transparent);
-		color: var(--foreground-secondary);
-	}
-
-	/* ── Alerts ──────────────────────────────────── */
-
-	.alerts-section {
-		border-top: 1px solid var(--border);
-		flex-shrink: 0;
-		max-height: 120px;
-		overflow: auto;
-	}
-
-	.alerts-header {
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		color: var(--warning, #d4a054);
-		padding: 4px var(--space-3);
-		background: var(--surface-header, #181818);
-		border-bottom: 1px solid var(--border);
-		position: sticky;
-		top: 0;
-	}
-
-	.alerts-list {
-		padding: 0;
-	}
-
-	.alert-row {
-		display: flex;
-		gap: var(--space-2);
-		padding: 2px var(--space-3);
-		border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
-		color: var(--foreground-secondary);
-	}
-
-	.alert-row.alert-high {
-		color: var(--destructive, #ff5c33);
-	}
-
-	.alert-type {
-		font-weight: 600;
-		min-width: 120px;
-		flex-shrink: 0;
-	}
-
-	.alert-text {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 </style>

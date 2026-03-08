@@ -1,6 +1,6 @@
 <!--
   Bottom panel tab bar for the dashboard.
-  Tab order: Terminal (+), Chat, Logs, IMSI Captures, Devices.
+  Tab order: Terminal (+), Chat, Logs, IMSI Captures, Dashboard.
   Always visible — chevron toggles collapse/expand (panel never fully disappears).
 -->
 <script lang="ts">
@@ -16,7 +16,7 @@
 
 	let { activeTab }: Props = $props();
 
-	type TabId = 'terminal' | 'chat' | 'logs' | 'captures' | 'devices';
+	type TabId = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard';
 
 	// Lucide path data for tab icons — only Terminal keeps the >_ icon; others are text-only
 	const tabs: { id: TabId; label: string; icon: string | null }[] = [
@@ -24,7 +24,7 @@
 		{ id: 'chat', label: 'Chat', icon: null },
 		{ id: 'logs', label: 'Logs', icon: null },
 		{ id: 'captures', label: 'IMSI Captures', icon: null },
-		{ id: 'devices', label: 'Devices', icon: null }
+		{ id: 'dashboard', label: 'Dashboard', icon: null }
 	];
 
 	// Toggle: if panel is open, collapse it; if collapsed, reopen to terminal tab
