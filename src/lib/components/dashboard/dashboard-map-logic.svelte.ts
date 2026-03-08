@@ -59,7 +59,6 @@ export function createMapState() {
 	let symbolLayer: SymbolLayer | undefined = $state();
 	let satLayer: SatelliteLayer | undefined = $state();
 	let initialViewSet = false;
-	let layersInitialized = false;
 	let cssReady = $state(false);
 	let stadiaChecked = $state(false);
 	let stadiaOk = $state(false);
@@ -69,7 +68,6 @@ export function createMapState() {
 			return GOOGLE_SATELLITE_STYLE;
 		}
 		// Vector/tactical: use Stadia if available, otherwise fall back to satellite tiles
-		if (!stadiaChecked) return GOOGLE_SATELLITE_STYLE; // loading — show satellite briefly
 		return stadiaOk ? '/api/map-tiles/styles/alidade_smooth_dark.json' : GOOGLE_SATELLITE_STYLE;
 	});
 	let cellTowerGeoJSON: FeatureCollection = $state({ type: 'FeatureCollection', features: [] });
@@ -130,12 +128,6 @@ export function createMapState() {
 		queueMicrotask(() => {
 			cssReady = true;
 		});
-	});
-	$effect(() => {
-		if (map && !layersInitialized) {
-			handleMapLoad();
-			layersInitialized = true;
-		}
 	});
 	$effect(() => {
 		if (!satLayer) return;
@@ -207,7 +199,7 @@ export function createMapState() {
 		else isolateDevice(null);
 	}
 	function handleMapLoad() {
-		if (!map) return;
+		if (!map || satLayer) return;
 		const m = map;
 		const init = () => {
 			const r = setupMap(
@@ -255,6 +247,9 @@ export function createMapState() {
 		},
 		get mapStyle() {
 			return mapStyle;
+		},
+		get mapReady() {
+			return stadiaChecked;
 		},
 		get cellTowerGeoJSON() {
 			return cellTowerGeoJSON;
