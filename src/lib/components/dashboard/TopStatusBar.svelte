@@ -5,13 +5,11 @@
 	import { onMount } from 'svelte';
 
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import type { PingResult, TailscalePeer, TakServer } from '$lib/types/network';
+	import type { PingResult, TakServer } from '$lib/types/network';
 	import { fetchJSON } from '$lib/utils/fetch-json';
 
 	interface MeshStatusResponse {
 		takServers: TakServer[];
-		peers: TailscalePeer[];
-		selfHostname: string;
 	}
 
 	import LatencyDropdown from './status/LatencyDropdown.svelte';
@@ -70,10 +68,11 @@
 	let currentGpsLon = 0;
 
 	// Mesh data from Tailscale + TAK
-	let meshData: MeshStatusResponse = $state({ takServers: [], peers: [], selfHostname: '' });
+	let meshData: MeshStatusResponse = $state({ takServers: [] });
 	let meshLoading = $state(false);
-	let takConnected = $derived(meshData.takServers.some((s) => s.connected));
-	let meshDisplay = $derived(takConnected ? 'TAK' : '\u2014');
+	let takConnectedCount = $derived(meshData.takServers.filter((s) => s.connected).length);
+	let takTotal = $derived(meshData.takServers.length);
+	let meshDisplay = $derived(takTotal > 0 ? `${takConnectedCount}/${takTotal}` : '\u2014/\u2014');
 
 	const MONTHS = [
 		'JAN',
@@ -258,8 +257,6 @@
 			{#if openDropdown === 'mesh'}
 				<MeshDropdown
 					takServers={meshData.takServers}
-					peers={meshData.peers}
-					selfHostname={meshData.selfHostname}
 					loading={meshLoading}
 					onrefresh={fetchMeshStatus}
 				/>
