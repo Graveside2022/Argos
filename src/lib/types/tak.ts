@@ -23,5 +23,8 @@ export interface TakStatus {
 	serverHost?: string;
 	uptime?: number;
 	messageCount?: number;
+	lastActivityAt?: string | null;
+	staleSinceMs?: number | null;
+	connectionHealth?: 'healthy' | 'stale' | 'disconnected';
 	lastError?: string;
 }
