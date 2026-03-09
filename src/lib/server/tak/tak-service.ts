@@ -10,6 +10,7 @@ import type { TakServerConfig, TakStatus } from '../../types/tak';
 import { RFDatabase } from '../db/database';
 import { broadcastTakCot, broadcastTakStatus } from './tak-broadcast';
 import { loadTakConfig, saveTakConfig } from './tak-db';
+import { TakSaBroadcaster } from './tak-sa-broadcaster';
 
 const COT_THROTTLE_MS = 1000;
 const RECONNECT_BASE_MS = 1000;
@@ -34,10 +35,12 @@ export class TakService extends EventEmitter {
 	private lastActivityAt: number | null = null;
 	private reconnectAttempt = 0;
 	private reconnectTimeout: NodeJS.Timeout | null = null;
+	private saBroadcaster: TakSaBroadcaster;
 
 	private constructor() {
 		super();
 		this.db = new RFDatabase();
+		this.saBroadcaster = new TakSaBroadcaster(this);
 	}
 
 	public static getInstance(): TakService {
@@ -92,7 +95,8 @@ export class TakService extends EventEmitter {
 			serverHost: this.config?.hostname,
 			uptime: this.getUptime(),
 			messageCount: this.messageCount,
-			...this.getConnectionHealth(isOpen)
+			...this.getConnectionHealth(isOpen),
+			saBroadcast: this.saBroadcaster.getStatus()
 		};
 	}
 
@@ -184,6 +188,7 @@ export class TakService extends EventEmitter {
 			this.lastActivityAt = Date.now();
 			this.emit('status', 'connected');
 			broadcastTakStatus(this.broadcastState(), 'connected');
+			this.saBroadcaster.start();
 		});
 
 		this.tak.on('cot', (cot: CoT) => {
@@ -195,6 +200,7 @@ export class TakService extends EventEmitter {
 
 		this.tak.on('end', () => {
 			logger.info('[TakService] Connection ended');
+			this.saBroadcaster.stop();
 			this.connectedAt = null;
 			this.lastActivityAt = null;
 			this.emit('status', 'disconnected');
@@ -208,6 +214,7 @@ export class TakService extends EventEmitter {
 			logger.error('[TakService] TAK socket error', { error: err.message });
 			// We don't use this.emit('error', err) because Node.js crashes on unhandled 'error' events
 			this.emit('tak-socket-error', err);
+			this.saBroadcaster.stop();
 			broadcastTakStatus(this.broadcastState(), 'error', err.message);
 
 			this.connectedAt = null;
@@ -243,6 +250,7 @@ export class TakService extends EventEmitter {
 
 	public disconnect() {
 		this.shouldConnect = false;
+		this.saBroadcaster.stop();
 		if (this.tak) {
 			this.tak.destroy();
 			this.tak = null;
@@ -318,7 +326,8 @@ export class TakService extends EventEmitter {
 		return {
 			config: this.config,
 			connectedAt: this.connectedAt,
-			messageCount: this.messageCount
+			messageCount: this.messageCount,
+			saBroadcast: this.saBroadcaster.getStatus()
 		};
 	}
 }

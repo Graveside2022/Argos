@@ -27,4 +27,9 @@ export interface TakStatus {
 	staleSinceMs?: number | null;
 	connectionHealth?: 'healthy' | 'stale' | 'disconnected';
 	lastError?: string;
+	saBroadcast?: {
+		broadcasting: boolean;
+		lastBroadcastAt: string | null;
+		broadcastCount: number;
+	};
 }

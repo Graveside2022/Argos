@@ -88,4 +88,32 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if $takStatus.status === 'connected' && $takStatus.saBroadcast?.broadcasting}
+		<div class="mt-2 flex items-center gap-2 border-t border-border/40 pt-2">
+			<span class="relative flex size-2">
+				<span
+					class="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75"
+				></span>
+				<span class="relative inline-flex size-2 rounded-full bg-green-500"></span>
+			</span>
+			<span class="font-mono text-[10px] text-green-400">BROADCASTING TO NETWORK</span>
+			<span class="ml-auto font-mono text-[10px] text-muted-foreground">
+				{#if $takStatus.saBroadcast.lastBroadcastAt}
+					Last: {new Date($takStatus.saBroadcast.lastBroadcastAt).toLocaleTimeString(
+						'en-US',
+						{
+							hour12: false,
+							timeZone: 'UTC'
+						}
+					)}Z
+				{:else}
+					Waiting for GPS...
+				{/if}
+				{#if $takStatus.saBroadcast.broadcastCount > 0}
+					&middot; {$takStatus.saBroadcast.broadcastCount} sent
+				{/if}
+			</span>
+		</div>
+	{/if}
 </div>
