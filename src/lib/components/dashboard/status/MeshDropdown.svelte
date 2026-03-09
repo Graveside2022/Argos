@@ -1,21 +1,13 @@
 <script lang="ts">
-	import type { TailscalePeer, TakServer } from '$lib/types/network';
+	import type { TakServer } from '$lib/types/network';
 
 	interface Props {
 		takServers: TakServer[];
-		peers: TailscalePeer[];
-		selfHostname: string;
 		loading: boolean;
 		onrefresh: () => void;
 	}
 
-	let { takServers, peers, selfHostname, loading, onrefresh }: Props = $props();
-
-	let onlinePeers = $derived(peers.filter((p) => p.online).length);
-	let totalPeers = $derived(peers.length);
-	let hasTakConnection = $derived(takServers.some((s) => s.connected));
-	let meshOk = $derived(onlinePeers > 0 || hasTakConnection);
-	let nowUtc = $derived(new Date().toISOString().slice(11, 16) + 'Z');
+	let { takServers, loading, onrefresh }: Props = $props();
 
 	function formatUptime(ms: number | undefined): string {
 		if (!ms) return '\u2014';
@@ -31,14 +23,13 @@
 <div class="popup">
 	<div class="popup-header">
 		<span class="popup-title">NODE MESH</span>
-		<span class="count-badge">{onlinePeers} / {totalPeers}</span>
-		<button class="popup-close" onclick={() => {}}>×</button>
+		<button class="refresh-btn" onclick={onrefresh} disabled={loading}>
+			{loading ? '...' : '\u21BA'}
+		</button>
 	</div>
 
-	<div class="section-label">TAK SERVERS</div>
-
 	{#if takServers.length === 0}
-		<div class="empty-text">No TAK servers configured</div>
+		<div class="empty-text">No TAK server configured</div>
 	{/if}
 
 	{#each takServers as server}
@@ -50,61 +41,21 @@
 					class:inactive={!server.connected}
 				></span>
 				<span class="server-name">{server.name}</span>
-				<span class="server-port">:{server.port}</span>
 			</div>
-			<div class="server-meta">
-				<span class="meta-val">{formatUptime(server.uptime)}</span>
-				<span class="meta-sep">·</span>
-				<span class="meta-val">{server.messageCount ?? 0} msgs</span>
-				{#if server.tls}
-					<span class="meta-sep">·</span>
-					<span class="meta-tag">TLS</span>
-				{/if}
-				{#if server.connectionHealth}
-					<span class="meta-sep">·</span>
-					<span class="meta-val">{server.connectionHealth}</span>
-				{/if}
+			<div class="detail-grid">
+				<span class="key">Host</span>
+				<span class="val">{server.host}:{server.port}</span>
+				<span class="key">Status</span>
+				<span class="val" class:val-ok={server.connected} class:val-err={!server.connected}>
+					{server.connected ? 'CONNECTED' : 'DISCONNECTED'}
+				</span>
+				<span class="key">Uptime</span>
+				<span class="val">{formatUptime(server.uptime)}</span>
+				<span class="key">CoT Msgs</span>
+				<span class="val">{server.messageCount ?? 0}</span>
 			</div>
 		</div>
 	{/each}
-
-	<div class="divider"></div>
-
-	<div class="section-label">PEER MESH</div>
-
-	{#if peers.length === 0}
-		<div class="empty-text">No Tailscale peers found</div>
-	{/if}
-
-	{#each peers as peer}
-		<div class="peer-row" class:muted={!peer.online}>
-			<span class="peer-dot" class:active={peer.online} class:inactive={!peer.online}></span>
-			<span
-				class="peer-name"
-				class:self-host={peer.name.toLowerCase() === selfHostname.toLowerCase()}
-			>
-				{peer.name.toUpperCase()}
-			</span>
-			<span
-				class="peer-status"
-				class:status-online={peer.online}
-				class:status-offline={!peer.online}
-			>
-				{peer.online ? 'ONLINE' : 'OFFLINE'}
-			</span>
-		</div>
-	{/each}
-
-	<div class="divider"></div>
-
-	<div class="footer">
-		<span class="mesh-status-dot" class:active={meshOk}></span>
-		<span class="footer-label">{meshOk ? 'Mesh OK' : 'Mesh Down'}</span>
-		<span class="footer-time">· {nowUtc}</span>
-		<button class="action-btn" onclick={onrefresh} disabled={loading}>
-			{loading ? '...' : 'Refresh'}
-		</button>
-	</div>
 </div>
 
 <style>
@@ -112,7 +63,7 @@
 		position: absolute;
 		top: calc(100% + 6px);
 		right: 0;
-		min-width: 260px;
+		min-width: 240px;
 		background: var(--card);
 		border: 1px solid var(--border);
 		border-radius: 6px;
@@ -126,8 +77,8 @@
 
 	.popup-header {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 8px;
 		margin-bottom: 4px;
 	}
 
@@ -139,31 +90,25 @@
 		color: var(--muted-foreground);
 	}
 
-	.count-badge {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		color: var(--foreground);
-		margin-left: 4px;
-	}
-
-	.popup-close {
+	.refresh-btn {
 		background: none;
-		border: none;
-		color: var(--muted-foreground);
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		color: var(--foreground);
+		font-family: var(--font-mono);
+		font-size: 12px;
+		padding: 1px 6px;
 		cursor: pointer;
-		font-size: 14px;
-		padding: 0;
 		line-height: 1;
-		margin-left: auto;
 	}
 
-	.section-label {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		font-weight: 600;
-		letter-spacing: 1.2px;
-		color: var(--muted-foreground);
-		text-transform: uppercase;
+	.refresh-btn:hover {
+		background: var(--surface-hover);
+	}
+
+	.refresh-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.empty-text {
@@ -176,7 +121,7 @@
 	.server-block {
 		display: flex;
 		flex-direction: column;
-		gap: 3px;
+		gap: 6px;
 		padding: 4px 0;
 	}
 
@@ -198,7 +143,7 @@
 	}
 
 	.server-dot.inactive {
-		background: var(--text-inactive);
+		background: var(--destructive);
 	}
 
 	.server-name {
@@ -208,145 +153,30 @@
 		color: var(--foreground);
 	}
 
-	.server-port {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		color: var(--muted-foreground);
-		margin-left: auto;
-	}
-
-	.server-meta {
-		display: flex;
-		align-items: center;
-		gap: 4px;
+	.detail-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 3px 12px;
 		padding-left: 12px;
 	}
 
-	.meta-val {
+	.key {
 		font-family: var(--font-mono);
 		font-size: 10px;
 		color: var(--muted-foreground);
 	}
 
-	.meta-sep {
-		color: var(--text-inactive);
+	.val {
+		font-family: var(--font-mono);
 		font-size: 10px;
-	}
-
-	.meta-tag {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		color: var(--primary);
-		letter-spacing: 0.5px;
-	}
-
-	.divider {
-		height: 1px;
-		background: var(--border);
-		margin: 2px 0;
-	}
-
-	.peer-row {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 2px 0;
-	}
-
-	.peer-row.muted {
-		opacity: 0.6;
-	}
-
-	.peer-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.peer-dot.active {
-		background: var(--success);
-	}
-
-	.peer-dot.inactive {
-		background: var(--text-inactive);
-	}
-
-	.peer-name {
-		font-family: var(--font-mono);
-		font-size: 11px;
 		color: var(--foreground);
 	}
 
-	.peer-name.self-host {
-		color: var(--primary);
-		font-weight: 600;
-	}
-
-	.peer-status {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		margin-left: auto;
-	}
-
-	.peer-status.status-online {
+	.val-ok {
 		color: var(--success);
 	}
 
-	.peer-status.status-offline {
+	.val-err {
 		color: var(--destructive);
-		font-weight: 600;
-	}
-
-	.footer {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		margin-top: 2px;
-	}
-
-	.mesh-status-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		background: var(--text-inactive);
-	}
-
-	.mesh-status-dot.active {
-		background: var(--success);
-	}
-
-	.footer-label {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		color: var(--foreground);
-	}
-
-	.footer-time {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		color: var(--muted-foreground);
-		margin-left: auto;
-	}
-
-	.action-btn {
-		background: none;
-		border: 1px solid var(--border);
-		border-radius: 4px;
-		color: var(--foreground);
-		font-family: var(--font-mono);
-		font-size: 10px;
-		padding: 2px 8px;
-		cursor: pointer;
-	}
-
-	.action-btn:hover {
-		background: var(--surface-hover);
-	}
-
-	.action-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 </style>
