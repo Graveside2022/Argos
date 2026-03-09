@@ -5,8 +5,14 @@
 	import { onMount } from 'svelte';
 
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
-	import { takStatus } from '$lib/stores/tak-store';
+	import type { PingResult, TailscalePeer, TakServer } from '$lib/types/network';
 	import { fetchJSON } from '$lib/utils/fetch-json';
+
+	interface MeshStatusResponse {
+		takServers: TakServer[];
+		peers: TailscalePeer[];
+		selfHostname: string;
+	}
 
 	import LatencyDropdown from './status/LatencyDropdown.svelte';
 	import MeshDropdown from './status/MeshDropdown.svelte';
@@ -25,15 +31,6 @@
 		type WeatherData
 	} from './status/weather-helpers';
 	import WeatherDropdown from './status/WeatherDropdown.svelte';
-
-	interface PingResult {
-		target: string;
-		label: string;
-		latencyMs: number | null;
-		packetLoss: number;
-		jitterMs: number | null;
-		status: 'ok' | 'timeout' | 'error';
-	}
 
 	let wifiState = $state<DeviceState>('offline');
 	let sdrState = $state<DeviceState>('offline');
@@ -72,8 +69,11 @@
 	let currentGpsLat = 0;
 	let currentGpsLon = 0;
 
-	// Mesh count — TAK store has status but no node counts yet; show fallback
-	let meshDisplay = $derived($takStatus.status === 'connected' ? '1/1' : '\u2014/\u2014');
+	// Mesh data from Tailscale + TAK
+	let meshData: MeshStatusResponse = $state({ takServers: [], peers: [], selfHostname: '' });
+	let meshLoading = $state(false);
+	let takConnected = $derived(meshData.takServers.some((s) => s.connected));
+	let meshDisplay = $derived(takConnected ? 'TAK' : '\u2014');
 
 	const MONTHS = [
 		'JAN',
@@ -170,12 +170,24 @@
 		}
 	}
 
+	async function fetchMeshStatus() {
+		meshLoading = true;
+		try {
+			const data = await fetchJSON<MeshStatusResponse>('/api/system/mesh-status');
+			if (data) meshData = data;
+		} finally {
+			meshLoading = false;
+		}
+	}
+
 	onMount(() => {
 		void fetchHardwareState();
 		void fetchNetworkLatency();
+		void fetchMeshStatus();
 		void fetchHardwareDetails().then((d) => applyHardwareDetails(d));
 		const statusInterval = setInterval(() => void fetchHardwareState(), 5000);
 		const latencyInterval = setInterval(() => void fetchNetworkLatency(), 30000);
+		const meshInterval = setInterval(() => void fetchMeshStatus(), 30000);
 		const clockInterval = setInterval(updateClock, 1000);
 		const weatherInterval = setInterval(() => {
 			if (currentGpsLat && currentGpsLon) {
@@ -193,6 +205,7 @@
 		return () => {
 			clearInterval(statusInterval);
 			clearInterval(latencyInterval);
+			clearInterval(meshInterval);
 			clearInterval(clockInterval);
 			clearInterval(weatherInterval);
 		};
@@ -243,7 +256,13 @@
 				{meshDisplay}
 			</button>
 			{#if openDropdown === 'mesh'}
-				<MeshDropdown takStatus={$takStatus} />
+				<MeshDropdown
+					takServers={meshData.takServers}
+					peers={meshData.peers}
+					selfHostname={meshData.selfHostname}
+					loading={meshLoading}
+					onrefresh={fetchMeshStatus}
+				/>
 			{/if}
 		</div>
 		{#if weather}
