@@ -6,6 +6,7 @@
 
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import { takStatus } from '$lib/stores/tak-store';
+	import { fetchJSON } from '$lib/utils/fetch-json';
 
 	import LatencyDropdown from './status/LatencyDropdown.svelte';
 	import MeshDropdown from './status/MeshDropdown.svelte';
@@ -25,6 +26,15 @@
 	} from './status/weather-helpers';
 	import WeatherDropdown from './status/WeatherDropdown.svelte';
 
+	interface PingResult {
+		target: string;
+		label: string;
+		latencyMs: number | null;
+		packetLoss: number;
+		jitterMs: number | null;
+		status: 'ok' | 'timeout' | 'error';
+	}
+
 	let wifiState = $state<DeviceState>('offline');
 	let sdrState = $state<DeviceState>('offline');
 	let gpsState = $state<DeviceState>('offline');
@@ -34,8 +44,15 @@
 		wifiState === 'active' || sdrState === 'active' || gpsState === 'active'
 	);
 
-	// Network latency — measured from fetchHardwareStatus() RTT
-	let latencyMs: number | null = $state(null);
+	// Network latency — real Pi-to-target ping measurements
+	let pingResults: PingResult[] = $state([]);
+	let pingLoading = $state(false);
+	let latencyMs = $derived(
+		pingResults.reduce<number | null>((best, r) => {
+			if (r.latencyMs === null) return best;
+			return best === null ? r.latencyMs : Math.min(best, r.latencyMs);
+		}, null)
+	);
 
 	let wifiInfo: WifiInfo = $state({});
 	let sdrInfo: SdrInfo = $state({});
@@ -133,10 +150,8 @@
 		resetGpsState(gps.status.gpsStatus.includes('Error') ? 'offline' : 'standby');
 	});
 
-	async function fetchStatusWithLatency() {
-		const start = Date.now();
+	async function fetchHardwareState() {
 		const r = await fetchHardwareStatus();
-		latencyMs = Date.now() - start;
 		if (r) {
 			wifiState = r.wifiState;
 			sdrState = r.sdrState;
@@ -145,10 +160,22 @@
 		}
 	}
 
+	async function fetchNetworkLatency() {
+		pingLoading = true;
+		try {
+			const data = await fetchJSON<{ results: PingResult[] }>('/api/system/network-latency');
+			if (data?.results) pingResults = data.results;
+		} finally {
+			pingLoading = false;
+		}
+	}
+
 	onMount(() => {
-		void fetchStatusWithLatency();
+		void fetchHardwareState();
+		void fetchNetworkLatency();
 		void fetchHardwareDetails().then((d) => applyHardwareDetails(d));
-		const statusInterval = setInterval(() => void fetchStatusWithLatency(), 5000);
+		const statusInterval = setInterval(() => void fetchHardwareState(), 5000);
+		const latencyInterval = setInterval(() => void fetchNetworkLatency(), 30000);
 		const clockInterval = setInterval(updateClock, 1000);
 		const weatherInterval = setInterval(() => {
 			if (currentGpsLat && currentGpsLon) {
@@ -165,6 +192,7 @@
 		}, 600000);
 		return () => {
 			clearInterval(statusInterval);
+			clearInterval(latencyInterval);
 			clearInterval(clockInterval);
 			clearInterval(weatherInterval);
 		};
@@ -202,7 +230,11 @@
 				{latencyMs ?? '--'}ms
 			</button>
 			{#if openDropdown === 'latency'}
-				<LatencyDropdown {latencyMs} />
+				<LatencyDropdown
+					results={pingResults}
+					loading={pingLoading}
+					onping={fetchNetworkLatency}
+				/>
 			{/if}
 		</div>
 		<div class="device-wrapper">
