@@ -1,12 +1,5 @@
 <script lang="ts">
-	interface PingResult {
-		target: string;
-		label: string;
-		latencyMs: number | null;
-		packetLoss: number;
-		jitterMs: number | null;
-		status: 'ok' | 'timeout' | 'error';
-	}
+	import type { PingResult } from '$lib/types/network';
 
 	interface Props {
 		results: PingResult[];

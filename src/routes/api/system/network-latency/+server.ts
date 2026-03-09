@@ -2,16 +2,8 @@ import { createHandler } from '$lib/server/api/create-handler';
 import { errMsg } from '$lib/server/api/error-utils';
 import { execFileAsync } from '$lib/server/exec';
 import { TakService } from '$lib/server/tak/tak-service';
+import type { PingResult } from '$lib/types/network';
 import { logger } from '$lib/utils/logger';
-
-interface PingResult {
-	target: string;
-	label: string;
-	latencyMs: number | null;
-	packetLoss: number;
-	jitterMs: number | null;
-	status: 'ok' | 'timeout' | 'error';
-}
 
 /** Parse the summary stats line: "rtt min/avg/max/mdev = 1.2/3.4/5.6/0.8 ms" */
 function parseRttLine(stdout: string): { latencyMs: number; jitterMs: number } | null {

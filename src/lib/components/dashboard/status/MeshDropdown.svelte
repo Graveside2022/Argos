@@ -1,113 +1,109 @@
 <script lang="ts">
-	import type { TakStatus } from '$lib/types/tak';
+	import type { TailscalePeer, TakServer } from '$lib/types/network';
 
 	interface Props {
-		takStatus: TakStatus;
+		takServers: TakServer[];
+		peers: TailscalePeer[];
+		selfHostname: string;
+		loading: boolean;
+		onrefresh: () => void;
 	}
 
-	let { takStatus }: Props = $props();
+	let { takServers, peers, selfHostname, loading, onrefresh }: Props = $props();
 
-	const nowUtc = new Date().toISOString().slice(11, 16) + 'Z';
-
-	let isConnected = $derived(takStatus.status === 'connected');
-	let serverName = $derived(takStatus.serverName ?? 'TAK PRIMARY');
-	let serverHost = $derived(takStatus.serverHost ?? '—');
-	let serverPort = $derived(serverHost.includes(':') ? serverHost.split(':')[1] : '8089');
-	let clientCount = $derived(takStatus.messageCount ?? 0);
-	let uptimeMs = $derived(takStatus.uptime ? Math.round(takStatus.uptime / 1000) : null);
-
-	// Peer mesh nodes — derive from TAK status or show defaults
-	interface PeerNode {
-		name: string;
-		latency: string;
-		status: 'active' | 'warning' | 'offline';
-	}
-
-	let peers = $derived<PeerNode[]>(
-		isConnected
-			? [
-					{ name: 'VIPER-6', latency: '12ms', status: 'active' },
-					{ name: 'REAPER-2', latency: '45ms', status: 'active' },
-					{ name: 'SHADOW-9', latency: '89ms', status: 'warning' },
-					{ name: 'GHOST-1', latency: 'OFFLINE', status: 'offline' }
-				]
-			: [{ name: 'No peers', latency: 'OFFLINE', status: 'offline' }]
-	);
-
-	let activePeers = $derived(peers.filter((p) => p.status !== 'offline').length);
+	let onlinePeers = $derived(peers.filter((p) => p.online).length);
 	let totalPeers = $derived(peers.length);
+	let hasTakConnection = $derived(takServers.some((s) => s.connected));
+	let meshOk = $derived(onlinePeers > 0 || hasTakConnection);
+	let nowUtc = $derived(new Date().toISOString().slice(11, 16) + 'Z');
+
+	function formatUptime(ms: number | undefined): string {
+		if (!ms) return '\u2014';
+		const totalSec = Math.round(ms / 1000);
+		if (totalSec < 60) return `${totalSec}s`;
+		const mins = Math.round(totalSec / 60);
+		if (mins < 60) return `${mins}m`;
+		const hours = Math.round(mins / 60);
+		return `${hours}h`;
+	}
 </script>
 
 <div class="popup">
 	<div class="popup-header">
 		<span class="popup-title">NODE MESH</span>
-		<span class="count-badge">{activePeers} / {totalPeers}</span>
+		<span class="count-badge">{onlinePeers} / {totalPeers}</span>
 		<button class="popup-close" onclick={() => {}}>×</button>
 	</div>
 
-	<div class="section-label">⟡ TAK SERVERS</div>
+	<div class="section-label">TAK SERVERS</div>
 
-	<div class="server-block">
-		<div class="server-row">
-			<span class="server-dot" class:active={isConnected} class:inactive={!isConnected}
-			></span>
-			<span class="server-name">{serverName}</span>
-			<span class="server-port">:{serverPort}</span>
-		</div>
-		<div class="server-meta">
-			<span class="meta-val">{uptimeMs ? `${uptimeMs}ms` : '—'}</span>
-			<span class="meta-sep">·</span>
-			<span class="meta-val">{clientCount} clients</span>
-			<span class="meta-sep">·</span>
-			<span class="meta-tag">TLS</span>
-		</div>
-	</div>
+	{#if takServers.length === 0}
+		<div class="empty-text">No TAK servers configured</div>
+	{/if}
 
-	{#if isConnected}
+	{#each takServers as server}
 		<div class="server-block">
 			<div class="server-row">
-				<span class="server-dot active"></span>
-				<span class="server-name">TAK BACKUP</span>
-				<span class="server-port">:8443</span>
+				<span
+					class="server-dot"
+					class:active={server.connected}
+					class:inactive={!server.connected}
+				></span>
+				<span class="server-name">{server.name}</span>
+				<span class="server-port">:{server.port}</span>
 			</div>
 			<div class="server-meta">
-				<span class="meta-val">89ms</span>
+				<span class="meta-val">{formatUptime(server.uptime)}</span>
 				<span class="meta-sep">·</span>
-				<span class="meta-val">1 client</span>
-				<span class="meta-sep">·</span>
-				<span class="meta-tag">TLS</span>
+				<span class="meta-val">{server.messageCount ?? 0} msgs</span>
+				{#if server.tls}
+					<span class="meta-sep">·</span>
+					<span class="meta-tag">TLS</span>
+				{/if}
+				{#if server.connectionHealth}
+					<span class="meta-sep">·</span>
+					<span class="meta-val">{server.connectionHealth}</span>
+				{/if}
 			</div>
 		</div>
-	{/if}
+	{/each}
 
 	<div class="divider"></div>
 
-	<div class="section-label">⟡ PEER MESH</div>
+	<div class="section-label">PEER MESH</div>
+
+	{#if peers.length === 0}
+		<div class="empty-text">No Tailscale peers found</div>
+	{/if}
 
 	{#each peers as peer}
-		<div class="peer-row" class:muted={peer.status === 'offline'}>
+		<div class="peer-row" class:muted={!peer.online}>
+			<span class="peer-dot" class:active={peer.online} class:inactive={!peer.online}></span>
 			<span
-				class="peer-dot"
-				class:active={peer.status === 'active'}
-				class:warning={peer.status === 'warning'}
-				class:inactive={peer.status === 'offline'}
-			></span>
-			<span class="peer-name">{peer.name}</span>
-			<span
-				class="peer-latency"
-				class:latency-warn={peer.status === 'warning'}
-				class:latency-offline={peer.status === 'offline'}>{peer.latency}</span
+				class="peer-name"
+				class:self-host={peer.name.toLowerCase() === selfHostname.toLowerCase()}
 			>
+				{peer.name.toUpperCase()}
+			</span>
+			<span
+				class="peer-status"
+				class:status-online={peer.online}
+				class:status-offline={!peer.online}
+			>
+				{peer.online ? 'ONLINE' : 'OFFLINE'}
+			</span>
 		</div>
 	{/each}
 
 	<div class="divider"></div>
 
 	<div class="footer">
-		<span class="mesh-status-dot" class:active={isConnected}></span>
-		<span class="footer-label">{isConnected ? 'Mesh OK' : 'Mesh Down'}</span>
+		<span class="mesh-status-dot" class:active={meshOk}></span>
+		<span class="footer-label">{meshOk ? 'Mesh OK' : 'Mesh Down'}</span>
 		<span class="footer-time">· {nowUtc}</span>
-		<button class="action-btn">↺ Refresh</button>
+		<button class="action-btn" onclick={onrefresh} disabled={loading}>
+			{loading ? '...' : 'Refresh'}
+		</button>
 	</div>
 </div>
 
@@ -168,6 +164,13 @@
 		letter-spacing: 1.2px;
 		color: var(--muted-foreground);
 		text-transform: uppercase;
+	}
+
+	.empty-text {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--text-inactive);
+		padding: 2px 0;
 	}
 
 	.server-block {
@@ -265,10 +268,6 @@
 		background: var(--success);
 	}
 
-	.peer-dot.warning {
-		background: var(--warning);
-	}
-
 	.peer-dot.inactive {
 		background: var(--text-inactive);
 	}
@@ -279,18 +278,22 @@
 		color: var(--foreground);
 	}
 
-	.peer-latency {
+	.peer-name.self-host {
+		color: var(--primary);
+		font-weight: 600;
+	}
+
+	.peer-status {
 		font-family: var(--font-mono);
 		font-size: 10px;
-		color: var(--muted-foreground);
 		margin-left: auto;
 	}
 
-	.peer-latency.latency-warn {
-		color: var(--warning);
+	.peer-status.status-online {
+		color: var(--success);
 	}
 
-	.peer-latency.latency-offline {
+	.peer-status.status-offline {
 		color: var(--destructive);
 		font-weight: 600;
 	}
@@ -340,5 +343,10 @@
 
 	.action-btn:hover {
 		background: var(--surface-hover);
+	}
+
+	.action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>
