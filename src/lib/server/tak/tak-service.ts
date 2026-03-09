@@ -14,6 +14,7 @@ import { loadTakConfig, saveTakConfig } from './tak-db';
 const COT_THROTTLE_MS = 1000;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
+const STALE_THRESHOLD_MS = 120_000;
 
 interface ThrottleEntry {
 	lastSent: number;
@@ -30,6 +31,7 @@ export class TakService extends EventEmitter {
 	private throttleMap = new Map<string, ThrottleEntry>();
 	private messageCount = 0;
 	private connectedAt: number | null = null;
+	private lastActivityAt: number | null = null;
 	private reconnectAttempt = 0;
 	private reconnectTimeout: NodeJS.Timeout | null = null;
 
@@ -65,13 +67,32 @@ export class TakService extends EventEmitter {
 		return Math.floor((Date.now() - this.connectedAt) / 1000);
 	}
 
-	public getStatus(): TakStatus {
+	/** Derive connection health from activity timestamp */
+	private getConnectionHealth(
+		isOpen: boolean
+	): Pick<TakStatus, 'lastActivityAt' | 'staleSinceMs' | 'connectionHealth'> {
+		if (!isOpen)
+			return { lastActivityAt: null, staleSinceMs: null, connectionHealth: 'disconnected' };
+		if (!this.lastActivityAt)
+			return { lastActivityAt: null, staleSinceMs: null, connectionHealth: 'healthy' };
+		const staleMs = Date.now() - this.lastActivityAt;
+		const iso = new Date(this.lastActivityAt).toISOString();
 		return {
-			status: this.tak?.open ? 'connected' : 'disconnected',
+			lastActivityAt: iso,
+			staleSinceMs: staleMs,
+			connectionHealth: staleMs > STALE_THRESHOLD_MS ? 'stale' : 'healthy'
+		};
+	}
+
+	public getStatus(): TakStatus {
+		const isOpen = !!this.tak?.open;
+		return {
+			status: isOpen ? 'connected' : 'disconnected',
 			serverName: this.config?.name,
 			serverHost: this.config?.hostname,
 			uptime: this.getUptime(),
-			messageCount: this.messageCount
+			messageCount: this.messageCount,
+			...this.getConnectionHealth(isOpen)
 		};
 	}
 
@@ -160,12 +181,14 @@ export class TakService extends EventEmitter {
 		this.tak.on('secureConnect', () => {
 			logger.info('[TakService] Securely connected');
 			this.connectedAt = Date.now();
+			this.lastActivityAt = Date.now();
 			this.emit('status', 'connected');
 			broadcastTakStatus(this.broadcastState(), 'connected');
 		});
 
 		this.tak.on('cot', (cot: CoT) => {
 			this.messageCount++;
+			this.lastActivityAt = Date.now();
 			this.emit('cot', cot);
 			broadcastTakCot(CoTParser.to_xml(cot));
 		});
@@ -173,6 +196,7 @@ export class TakService extends EventEmitter {
 		this.tak.on('end', () => {
 			logger.info('[TakService] Connection ended');
 			this.connectedAt = null;
+			this.lastActivityAt = null;
 			this.emit('status', 'disconnected');
 			broadcastTakStatus(this.broadcastState(), 'disconnected');
 			if (this.shouldConnect) this.scheduleReconnect();
@@ -187,10 +211,12 @@ export class TakService extends EventEmitter {
 			broadcastTakStatus(this.broadcastState(), 'error', err.message);
 
 			this.connectedAt = null;
+			this.lastActivityAt = null;
 			if (this.shouldConnect) this.scheduleReconnect();
 		});
 
 		this.tak.on('ping', () => {
+			this.lastActivityAt = Date.now();
 			if (!this.connectedAt) this.connectedAt = Date.now();
 		});
 	}
