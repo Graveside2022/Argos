@@ -4,6 +4,11 @@ export interface TakBroadcastState {
 	config: TakServerConfig | null;
 	connectedAt: number | null;
 	messageCount: number;
+	saBroadcast?: {
+		broadcasting: boolean;
+		lastBroadcastAt: string | null;
+		broadcastCount: number;
+	};
 }
 
 /** Broadcast TAK connection status to all WebSocket clients */
@@ -23,7 +28,8 @@ export function broadcastTakStatus(
 					? Math.floor((Date.now() - state.connectedAt) / 1000)
 					: undefined,
 				messageCount: state.messageCount,
-				lastError
+				lastError,
+				saBroadcast: state.saBroadcast
 			},
 			timestamp: new Date().toISOString()
 		});
