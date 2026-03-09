@@ -1,33 +1,57 @@
 <script lang="ts">
-	interface Props {
+	interface PingResult {
+		target: string;
+		label: string;
 		latencyMs: number | null;
+		packetLoss: number;
+		jitterMs: number | null;
+		status: 'ok' | 'timeout' | 'error';
 	}
 
-	let { latencyMs }: Props = $props();
+	interface Props {
+		results: PingResult[];
+		loading: boolean;
+		onping: () => void;
+	}
 
-	let jitterMs = $derived(latencyMs !== null ? (latencyMs * 0.07).toFixed(1) : null);
+	let { results, loading, onping }: Props = $props();
+
+	let bestLatency = $derived(
+		results.reduce<number | null>((best, r) => {
+			if (r.latencyMs === null) return best;
+			return best === null ? r.latencyMs : Math.min(best, r.latencyMs);
+		}, null)
+	);
+
 	let qualityLabel = $derived(
-		latencyMs === null
+		bestLatency === null
 			? 'Unknown'
-			: latencyMs < 50
+			: bestLatency < 50
 				? 'Excellent'
-				: latencyMs < 120
+				: bestLatency < 120
 					? 'Good'
-					: latencyMs < 300
+					: bestLatency < 300
 						? 'Fair'
 						: 'Poor'
 	);
+
 	let qualityClass = $derived(
-		latencyMs === null
+		bestLatency === null
 			? 'muted'
-			: latencyMs < 50
+			: bestLatency < 50
 				? 'success'
-				: latencyMs < 120
+				: bestLatency < 120
 					? 'warn-low'
-					: latencyMs < 300
+					: bestLatency < 300
 						? 'warn'
 						: 'error'
 	);
+
+	function statusDotClass(status: PingResult['status']): string {
+		if (status === 'ok') return 'success';
+		if (status === 'timeout') return 'warn';
+		return 'error';
+	}
 
 	const nowUtc =
 		new Date().getUTCHours().toString().padStart(2, '0') +
@@ -44,32 +68,47 @@
 
 	<div class="status-row">
 		<span class="signal-bars">
-			<span class="bar bar-1" class:active={latencyMs !== null}></span>
-			<span class="bar bar-2" class:active={latencyMs !== null && latencyMs < 300}></span>
-			<span class="bar bar-3" class:active={latencyMs !== null && latencyMs < 120}></span>
-			<span class="bar bar-4" class:active={latencyMs !== null && latencyMs < 50}></span>
+			<span class="bar bar-1" class:active={bestLatency !== null}></span>
+			<span class="bar bar-2" class:active={bestLatency !== null && bestLatency < 300}></span>
+			<span class="bar bar-3" class:active={bestLatency !== null && bestLatency < 120}></span>
+			<span class="bar bar-4" class:active={bestLatency !== null && bestLatency < 50}></span>
 		</span>
-		<span class="status-label">Connected</span>
-		{#if latencyMs !== null}
-			<span class="status-value">— {latencyMs}ms</span>
+		<span class="status-label">{bestLatency !== null ? 'Connected' : 'No Response'}</span>
+		{#if bestLatency !== null}
+			<span class="status-value">— {bestLatency}ms</span>
 		{/if}
-	</div>
-
-	<div class="metric-header">
-		<span class="metric-label">⟡ LATENCY</span>
-		<span class="metric-value">{latencyMs !== null ? `${latencyMs} ms` : '-- ms'}</span>
 	</div>
 
 	<div class="divider"></div>
 
-	<div class="row">
-		<span class="key">Jitter</span>
-		<span class="val">{jitterMs !== null ? `${jitterMs} ms` : '--'}</span>
-	</div>
-	<div class="row">
-		<span class="key">Packet Loss</span>
-		<span class="val">0.0%</span>
-	</div>
+	{#each results as result}
+		<div class="target-section">
+			<div class="target-header">
+				<span class="quality-dot {statusDotClass(result.status)}"></span>
+				<span class="target-label">{result.label}</span>
+				<span class="target-host">{result.target}</span>
+			</div>
+			<div class="row">
+				<span class="key">Latency</span>
+				<span class="val"
+					>{result.latencyMs !== null ? `${result.latencyMs} ms` : '--'}</span
+				>
+			</div>
+			<div class="row">
+				<span class="key">Jitter</span>
+				<span class="val">{result.jitterMs !== null ? `${result.jitterMs} ms` : '--'}</span>
+			</div>
+			<div class="row">
+				<span class="key">Packet Loss</span>
+				<span class="val">{result.packetLoss}%</span>
+			</div>
+		</div>
+	{:else}
+		<div class="row">
+			<span class="key">No targets</span>
+			<span class="val">--</span>
+		</div>
+	{/each}
 
 	<div class="divider"></div>
 
@@ -77,7 +116,9 @@
 		<span class="quality-dot {qualityClass}"></span>
 		<span class="quality-label">{qualityLabel}</span>
 		<span class="footer-time">· {nowUtc}</span>
-		<button class="action-btn">↺ Ping</button>
+		<button class="action-btn" onclick={onping} disabled={loading}>
+			{loading ? '⟳ Pinging...' : '↺ Ping'}
+		</button>
 	</div>
 </div>
 
@@ -86,7 +127,7 @@
 		position: absolute;
 		top: calc(100% + 6px);
 		right: 0;
-		min-width: 240px;
+		min-width: 260px;
 		background: var(--card);
 		border: 1px solid var(--border);
 		border-radius: 6px;
@@ -148,15 +189,12 @@
 	.bar-1 {
 		height: 4px;
 	}
-
 	.bar-2 {
 		height: 6px;
 	}
-
 	.bar-3 {
 		height: 9px;
 	}
-
 	.bar-4 {
 		height: 12px;
 	}
@@ -174,37 +212,45 @@
 		margin-left: auto;
 	}
 
-	.metric-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 4px 0;
-	}
-
-	.metric-label {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		color: var(--primary);
-		letter-spacing: 0.5px;
-	}
-
-	.metric-value {
-		font-family: var(--font-mono);
-		font-size: 14px;
-		font-weight: 600;
-		color: var(--foreground);
-	}
-
 	.divider {
 		height: 1px;
 		background: var(--border);
 		margin: 2px 0;
 	}
 
+	.target-section {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		padding: 4px 0;
+	}
+
+	.target-header {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-bottom: 2px;
+	}
+
+	.target-label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--foreground);
+	}
+
+	.target-host {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted-foreground);
+		margin-left: auto;
+	}
+
 	.row {
 		display: flex;
 		justify-content: space-between;
 		gap: 12px;
+		padding-left: 12px;
 	}
 
 	.key {
@@ -236,19 +282,15 @@
 	.quality-dot.success {
 		background: var(--success);
 	}
-
 	.quality-dot.warn-low {
 		background: var(--warning);
 	}
-
 	.quality-dot.warn {
 		background: var(--warning);
 	}
-
 	.quality-dot.error {
 		background: var(--destructive);
 	}
-
 	.quality-dot.muted {
 		background: var(--text-inactive);
 	}
@@ -279,5 +321,10 @@
 
 	.action-btn:hover {
 		background: var(--surface-hover);
+	}
+
+	.action-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>
