@@ -59,14 +59,8 @@ export function loadCSS(href: string, options: CSSLoadOptions = {}): Promise<voi
  */
 export function isCriticalCSSLoaded(): boolean {
 	if (typeof window === 'undefined') return false;
-
-	const testElement = document.createElement('div');
-	testElement.style.display = 'none';
-	document.body.appendChild(testElement);
-
-	const background = getComputedStyle(testElement).getPropertyValue('--background');
-	document.body.removeChild(testElement);
-
+	// Read from :root instead of appending/removing a test element — avoids forced reflow
+	const background = getComputedStyle(document.documentElement).getPropertyValue('--background');
 	return background.trim().length > 0;
 }
 
@@ -93,15 +87,14 @@ export function waitForCriticalCSS(maxWaitTime: number = 100): Promise<void> {
 
 /**
  * Adds css-loaded class to body when all stylesheets are ready
- * Should be called from the main layout component
+ * Should be called from the main layout component's onMount — CSS is already
+ * applied at that point, so no polling loop is needed.
  */
 export function markCSSLoaded(): void {
 	if (typeof window === 'undefined') return;
-
-	// Wait for critical CSS and then mark as loaded
-	waitForCriticalCSS().then(() => {
-		requestAnimationFrame(() => {
-			document.body.classList.add('css-loaded');
-		});
+	// onMount guarantees styles are applied — schedule the class add one rAF
+	// later to ensure the class is set after the first paint, not before.
+	requestAnimationFrame(() => {
+		document.body.classList.add('css-loaded');
 	});
 }

@@ -12,10 +12,12 @@ import type { SignalMarker } from '$lib/types/signals';
 import { logger } from '$lib/utils/logger';
 
 import { DatabaseCleanupService } from './cleanup-service';
+import { DatabaseOptimizer } from './db-optimizer';
 import { runMigrations } from './migrations/run-migrations';
 import * as networkRepo from './network-repository';
 import * as signalRepo from './signal-repository';
 import * as spatialRepo from './spatial-repository';
+import { wrapStatement } from './statement-timer';
 
 // ── Time duration constants (ms) ────────────────────────────────────
 const ONE_HOUR = 60 * 60 * 1000;
@@ -31,6 +33,7 @@ export class RFDatabase {
 	private db: Database.Database;
 	private statements: Map<string, Database.Statement> = new Map();
 	private cleanupService: DatabaseCleanupService | null = null;
+	private optimizer: DatabaseOptimizer;
 
 	constructor(dbPath: string = './rf_signals.db') {
 		this.db = new Database(dbPath);
@@ -40,6 +43,7 @@ export class RFDatabase {
 		this.db.pragma('mmap_size = 134217728'); // 128MB
 		this.db.pragma('temp_store = memory');
 		this.db.pragma('page_size = 4096');
+		this.optimizer = new DatabaseOptimizer(this.db, { shouldAnalyzeOnStart: false });
 
 		try {
 			const schemaPath = join(process.cwd(), 'src/lib/server/db/schema.sql');
@@ -109,7 +113,19 @@ export class RFDatabase {
 	}
 
 	private prepareStatements() {
-		const p = (name: string, sql: string) => this.statements.set(name, this.db.prepare(sql));
+		const p = (name: string, sql: string) => {
+			const raw = this.db.prepare(sql);
+			this.statements.set(
+				name,
+				wrapStatement(raw, name, (label, ms) => {
+					this.optimizer.trackQuery(label, ms);
+					if (this.optimizer.shouldExplain(label)) {
+						const plan = this.optimizer.explainQuery(label, []);
+						logger.warn('Slow query detected', { label, plan }, 'db-slow-query');
+					}
+				})
+			);
+		};
 
 		p(
 			'insertSignal',
@@ -155,6 +171,23 @@ export class RFDatabase {
 			latitude = @latitude, longitude = @longitude, power = @power
 			WHERE signal_id = @signal_id`
 		);
+
+		p(
+			'getAreaStatistics',
+			`SELECT
+				COUNT(DISTINCT signal_id) as total_signals,
+				COUNT(DISTINCT device_id) as unique_devices,
+				AVG(power) as avg_power,
+				MIN(power) as min_power,
+				MAX(power) as max_power,
+				MIN(frequency) as min_freq,
+				MAX(frequency) as max_freq,
+				CAST((MAX(frequency) - MIN(frequency)) / 100 AS INTEGER) + 1 as freq_bands
+			FROM signals
+			WHERE latitude BETWEEN @minLat AND @maxLat
+				AND longitude BETWEEN @minLon AND @maxLon
+				AND timestamp > @since`
+		);
 	}
 
 	// ── Signal operations (delegated to signalRepository) ──────────────
@@ -183,7 +216,7 @@ export class RFDatabase {
 		bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number },
 		timeWindow: number = ONE_HOUR
 	) {
-		return spatialRepo.getAreaStatistics(this.db, bounds, timeWindow);
+		return spatialRepo.getAreaStatistics(this.db, this.statements, bounds, timeWindow);
 	}
 
 	// ── Network operations (delegated to networkRepository) ────────────
@@ -225,6 +258,10 @@ export class RFDatabase {
 
 	getCleanupService(): DatabaseCleanupService | null {
 		return this.cleanupService;
+	}
+
+	getOptimizer(): DatabaseOptimizer {
+		return this.optimizer;
 	}
 
 	get rawDb(): Database.Database {

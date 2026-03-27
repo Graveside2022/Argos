@@ -236,11 +236,12 @@ export async function maybeFetchCellTowers(
 	state: CellTowerFetchState
 ): Promise<FeatureCollection | null> {
 	if (!shouldFetchTowers(lat, lon, state)) return null;
+	// Update state optimistically before the fetch resolves so that concurrent
+	// effect re-runs (e.g. triggered by cssReady flipping) see the updated
+	// coords and bail out via shouldFetchTowers, preventing duplicate requests.
+	state.lastLat = lat;
+	state.lastLon = lon;
 	const result = await fetchCellTowers(lat, lon);
-	if (result) {
-		state.lastLat = lat;
-		state.lastLon = lon;
-	}
 	return result;
 }
 

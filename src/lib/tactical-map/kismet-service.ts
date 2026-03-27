@@ -24,6 +24,7 @@ export interface KismetControlResponse {
 export class KismetService {
 	private statusCheckInterval: ReturnType<typeof setInterval> | null = null;
 	private deviceFetchInterval: ReturnType<typeof setInterval> | null = null;
+	private _earlyCheckHandle: ReturnType<typeof setTimeout> | null = null;
 
 	/** Reconcile Kismet running state with the store */
 	private reconcileStatus(isRunning: boolean): void {
@@ -174,19 +175,17 @@ export class KismetService {
 		// Initial check
 		void this.checkKismetStatus();
 
-		// Set up more frequent initial status checks, then slower periodic checks
-		let initialCheckCount = 0;
-		const initialCheckInterval = setInterval(() => {
+		// One follow-up check after 5s to confirm startup state, then settle into
+		// the steady-state 10s interval. Avoids the 1s burst hammering the Pi.
+		const earlyCheck = setTimeout(() => {
 			void this.checkKismetStatus();
-			initialCheckCount++;
-			if (initialCheckCount >= 3) {
-				clearInterval(initialCheckInterval);
-				// Set up slower periodic status checks
-				this.statusCheckInterval = setInterval(() => {
-					void this.checkKismetStatus();
-				}, 5000);
-			}
-		}, 1000);
+			this.statusCheckInterval = setInterval(() => {
+				void this.checkKismetStatus();
+			}, 10_000);
+		}, 5000);
+
+		// Store the early-check handle so stopPeriodicChecks can cancel it
+		this._earlyCheckHandle = earlyCheck;
 	}
 
 	startPeriodicDeviceFetch(): void {
@@ -197,6 +196,11 @@ export class KismetService {
 	}
 
 	stopPeriodicChecks(): void {
+		if (this._earlyCheckHandle) {
+			clearTimeout(this._earlyCheckHandle);
+			this._earlyCheckHandle = null;
+		}
+
 		if (this.statusCheckInterval) {
 			clearInterval(this.statusCheckInterval);
 			this.statusCheckInterval = null;

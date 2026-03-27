@@ -45,6 +45,7 @@
 			autoloadGlobalCss={false}
 			class="map-container"
 			onload={ms.handleMapLoad}
+			onerror={(e) => console.error('[MapLibre] map error', e.error ?? e)}
 		>
 			<GeoJSONSource id="detection-range-src" data={ms.detectionRangeGeoJSON}>
 				<FillLayer

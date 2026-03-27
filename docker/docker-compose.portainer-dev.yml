@@ -67,6 +67,32 @@ services:
         max-size: "100m"
         max-file: "3"
 
+  # ============================================
+  # JAEGER - Distributed tracing backend
+  # Always-on: receives OTel traces from Argos
+  # UI: http://localhost:16686
+  # OTLP ingest: localhost:4318
+  # ============================================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    profiles: ["observability"]
+    mem_limit: 256m
+    memswap_limit: 384m
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "2"
+
 networks:
   argos-dev-network:
     driver: bridge

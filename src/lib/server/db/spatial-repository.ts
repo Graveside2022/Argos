@@ -12,7 +12,7 @@ import type { DbDevice, SpatialQuery, TimeQuery } from './types';
  * Returns device records enriched with average position and signal count.
  */
 export function findDevicesNearby(
-	db: Database.Database,
+	_db: Database.Database,
 	statements: Map<string, Database.Statement>,
 	query: SpatialQuery & TimeQuery
 ): Array<DbDevice & { avg_lat: number; avg_lon: number; signal_count: number }> {
@@ -36,25 +36,13 @@ export function findDevicesNearby(
  * Aggregate statistics for signals within a bounding box and time window.
  */
 export function getAreaStatistics(
-	db: Database.Database,
+	_db: Database.Database,
+	statements: Map<string, Database.Statement>,
 	bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number },
 	timeWindow: number = 3600000
 ): unknown {
-	const stmt = db.prepare(`
-      SELECT
-        COUNT(DISTINCT signal_id) as total_signals,
-        COUNT(DISTINCT device_id) as unique_devices,
-        AVG(power) as avg_power,
-        MIN(power) as min_power,
-        MAX(power) as max_power,
-        MIN(frequency) as min_freq,
-        MAX(frequency) as max_freq,
-        COUNT(DISTINCT ROUND(frequency/100)*100) as freq_bands
-      FROM signals
-      WHERE latitude BETWEEN @minLat AND @maxLat
-        AND longitude BETWEEN @minLon AND @maxLon
-        AND timestamp > @since
-    `);
+	const stmt = statements.get('getAreaStatistics');
+	if (!stmt) throw new Error('getAreaStatistics statement not found');
 
 	return stmt.get({
 		minLat: bounds.minLat,

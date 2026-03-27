@@ -40,7 +40,7 @@
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Tab buttons use custom styling tightly coupled to panel layout; shadcn Tabs component incompatible with split tab-bar/panel-content architecture -->
 <div class="bottom-panel-tabs">
 	<div class="tab-list">
-		{#each tabs as tab}
+		{#each tabs as tab (tab.id)}
 			<button
 				class="panel-tab"
 				class:active={activeTab === tab.id}
@@ -64,7 +64,11 @@
 			</button>
 			<!-- "+" new session button sits immediately after Terminal tab -->
 			{#if tab.id === 'terminal'}
-				<button class="tab-new-btn" title="New terminal session">
+				<button
+					class="tab-new-btn"
+					aria-label="New terminal session"
+					title="New terminal session"
+				>
 					<svg
 						width="12"
 						height="12"
@@ -94,6 +98,7 @@
 	<button
 		class="tab-collapse-btn"
 		class:collapsed={!$isBottomPanelOpen}
+		aria-label={$isBottomPanelOpen ? 'Collapse panel' : 'Expand panel'}
 		title={$isBottomPanelOpen ? 'Collapse panel' : 'Expand panel'}
 		onclick={toggleCollapse}
 	>

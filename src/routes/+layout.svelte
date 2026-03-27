@@ -14,10 +14,17 @@
 
 	// CSS loading detection to prevent FOUC
 	onMount(() => {
-		// Use the CSS loader utility for better loading detection
 		markCSSLoaded();
 	});
 </script>
+
+<svelte:head>
+	<title>Argos — SDR & Network Analysis Console</title>
+	<meta
+		name="description"
+		content="Army EW training console for SDR signal analysis, network reconnaissance, GPS tracking, and tactical communications."
+	/>
+</svelte:head>
 
 <Toaster
 	theme="dark"
@@ -27,6 +34,6 @@
 	}}
 />
 
-<div class="page-loading">
+<main class="page-loading">
 	{@render children()}
-</div>
+</main>
