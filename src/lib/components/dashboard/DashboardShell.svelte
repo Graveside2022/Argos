@@ -96,6 +96,8 @@
 
 	.full-width {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
 		overflow: auto;
 		min-width: 0;
 	}
