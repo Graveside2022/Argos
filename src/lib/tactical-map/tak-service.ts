@@ -4,6 +4,7 @@ import { fetchJSON } from '$lib/utils/fetch-json';
 
 export class TakService {
 	private statusCheckInterval: ReturnType<typeof setInterval> | null = null;
+	private _earlyCheckHandle: ReturnType<typeof setTimeout> | null = null;
 
 	async checkTakStatus(): Promise<void> {
 		const data = await fetchJSON<{ success: boolean; status?: string } & TakStatus>(
@@ -16,25 +17,25 @@ export class TakService {
 	}
 
 	startPeriodicStatusCheck(): void {
-		// Initial check
+		// Initial check immediately on mount
 		void this.checkTakStatus();
 
-		// Set up more frequent initial status checks, then slower periodic checks
-		let initialCheckCount = 0;
-		const initialCheckInterval = setInterval(() => {
+		// One follow-up at 5s to confirm connection state, then steady 10s polling.
+		// Replaces the old 3 × 1s burst that hammered the Pi on every page load.
+		this._earlyCheckHandle = setTimeout(() => {
 			void this.checkTakStatus();
-			initialCheckCount++;
-			if (initialCheckCount >= 3) {
-				clearInterval(initialCheckInterval);
-				// Set up slower periodic status checks
-				this.statusCheckInterval = setInterval(() => {
-					void this.checkTakStatus();
-				}, 5000);
-			}
-		}, 1000);
+			this.statusCheckInterval = setInterval(() => {
+				void this.checkTakStatus();
+			}, 10_000);
+		}, 5000);
 	}
 
 	stopPeriodicChecks(): void {
+		if (this._earlyCheckHandle) {
+			clearTimeout(this._earlyCheckHandle);
+			this._earlyCheckHandle = null;
+		}
+
 		if (this.statusCheckInterval) {
 			clearInterval(this.statusCheckInterval);
 			this.statusCheckInterval = null;

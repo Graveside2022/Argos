@@ -2,7 +2,7 @@
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
 	import { Network, Signal } from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import type { PingResult, TakServer } from '$lib/types/network';
@@ -64,8 +64,14 @@
 	let weather: WeatherData | null = $state(null);
 	let lastWeatherLat = 0;
 	let lastWeatherLon = 0;
+	// Prevents a second fetch firing while the first is still in-flight.
+	// Not $state — only read inside applyGpsFix, never in the template.
+	let isFetchingWeather = false;
 	let currentGpsLat = 0;
 	let currentGpsLon = 0;
+	// Guard: do not fire weather/geocode fetches until after first paint.
+	// Set to true inside onMount after tick() yields to the browser paint frame.
+	let isAfterPaint = $state(false);
 
 	// Mesh data from Tailscale + TAK
 	let meshData: MeshStatusResponse = $state({ takServers: [] });
@@ -119,19 +125,30 @@
 		_gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
 		currentGpsLat = gps.position.lat;
 		currentGpsLon = gps.position.lon;
-		void fetchWeather(
-			gps.position.lat,
-			gps.position.lon,
-			lastWeatherLat,
-			lastWeatherLon,
-			!!weather
-		).then((w) => {
-			if (w) {
-				weather = w;
-				lastWeatherLat = gps.position.lat;
-				lastWeatherLon = gps.position.lon;
-			}
-		});
+		// Guard: skip if a fetch is already in-flight. Without this, a second
+		// $gpsStore tick during the fetch window passes hasExistingData=false
+		// (weather is still null) and bypasses the hasMoved guard, firing a
+		// duplicate request.
+		if (!isFetchingWeather) {
+			const prevLat = lastWeatherLat;
+			const prevLon = lastWeatherLon;
+			lastWeatherLat = gps.position.lat;
+			lastWeatherLon = gps.position.lon;
+			isFetchingWeather = true;
+			void fetchWeather(gps.position.lat, gps.position.lon, prevLat, prevLon, !!weather).then(
+				(w) => {
+					isFetchingWeather = false;
+					if (w) {
+						weather = w;
+					} else {
+						// Fetch was skipped (no movement) — restore previous coords so a
+						// future position change will still trigger a refresh.
+						lastWeatherLat = prevLat;
+						lastWeatherLon = prevLon;
+					}
+				}
+			);
+		}
 	}
 
 	function applyHardwareDetails(
@@ -143,8 +160,31 @@
 		if (d.gps) _gpsInfo = { ...d.gps };
 	}
 
+	function applyGpsFields(gps: typeof $gpsStore): void {
+		const s = gps.status;
+		gpsState = 'active';
+		_gpsSats = s.satellites;
+		_gpsSpeed = s.speed;
+		_gpsAccuracy = s.accuracy || null;
+		_gpsFix = FIX_TYPE_MAP[s.fixType] ?? 0;
+		currentGpsLat = gps.position.lat;
+		currentGpsLon = gps.position.lon;
+	}
+
+	function applyGpsStateOnly(gps: typeof $gpsStore): void {
+		if (gps.status.hasGPSFix) applyGpsFields(gps);
+		else resetGpsState(gps.status.gpsStatus.includes('Error') ? 'offline' : 'standby');
+	}
+
 	$effect(() => {
 		const gps = $gpsStore;
+		// Defer weather/geocode API calls until after first paint to keep them
+		// off the LCP critical path. UI state (gpsState, sats) still updates
+		// immediately — only the network fetch is deferred.
+		if (!isAfterPaint) {
+			applyGpsStateOnly(gps);
+			return;
+		}
 		if (gps.status.hasGPSFix) return applyGpsFix(gps);
 		resetGpsState(gps.status.gpsStatus.includes('Error') ? 'offline' : 'standby');
 	});
@@ -180,6 +220,10 @@
 	}
 
 	onMount(() => {
+		// Yield to the browser paint frame before enabling API-fetching effects.
+		void tick().then(() => {
+			isAfterPaint = true;
+		});
 		void fetchHardwareState();
 		void fetchNetworkLatency();
 		void fetchMeshStatus();

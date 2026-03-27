@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import Database from 'better-sqlite3';
 import { z } from 'zod';
 
 import { createHandler } from '$lib/server/api/create-handler';
+import { getRFDatabase } from '$lib/server/db/database';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
 
 const CleanupRequestSchema = z.object({
@@ -22,38 +22,32 @@ export const POST = createHandler(async ({ request }) => {
 	}
 	const { maxAge } = validated;
 
-	// Open database directly for cleanup operation
-	const db = new Database('./rf_signals.db');
-	db.pragma('journal_mode = WAL');
+	const db = getRFDatabase().rawDb;
 
-	try {
-		// Delete old signals
-		const cutoff = Date.now() - (maxAge || 3600000); // Default 1 hour
+	// Delete old signals
+	const cutoff = Date.now() - (maxAge || 3600000); // Default 1 hour
 
-		const result = db
-			.prepare(
-				`
+	const result = db
+		.prepare(
+			`
         DELETE FROM signals
         WHERE timestamp < ?
       `
-			)
-			.run(cutoff);
+		)
+		.run(cutoff);
 
-		// Also clean up orphaned devices
-		db.prepare(
-			`
+	// Also clean up orphaned devices
+	db.prepare(
+		`
         DELETE FROM devices
         WHERE device_id NOT IN (
           SELECT DISTINCT device_id FROM signals WHERE device_id IS NOT NULL
         )
       `
-		).run();
+	).run();
 
-		return {
-			success: true,
-			deleted: result.changes
-		};
-	} finally {
-		db.close();
-	}
+	return {
+		success: true,
+		deleted: result.changes
+	};
 });

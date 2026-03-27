@@ -1,6 +1,8 @@
+import '$lib/server/instrumentation';
 import '$lib/server/env';
 
 import type { Handle, HandleServerError } from '@sveltejs/kit';
+import { monitorEventLoopDelay } from 'perf_hooks';
 import type { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 
@@ -29,6 +31,21 @@ const HARDWARE_BODY_LIMIT = 64 * 1024; // 64KB for hardware control endpoints
 // Hardware endpoint path pattern -- these control physical RF hardware
 const HARDWARE_PATH_PATTERN =
 	/^\/api\/(hackrf|kismet|gsm-evil|rf|droneid|openwebrx|bettercap|wifite)\//;
+
+// Event loop lag monitor — guarded via globalThis to prevent HMR accumulation.
+// globalThis.__argos_eld_monitor_started is typed in src/app.d.ts.
+if (!globalThis.__argos_eld_monitor_started) {
+	globalThis.__argos_eld_monitor_started = true;
+	const eldHistogram = monitorEventLoopDelay({ resolution: 20 });
+	eldHistogram.enable();
+	setInterval(() => {
+		const maxMs = eldHistogram.max / 1e6; // nanoseconds → ms
+		if (maxMs > 100) {
+			logger.warn('Event loop lag detected', { maxMs: maxMs.toFixed(1) }, 'event-loop-lag');
+		}
+		eldHistogram.reset();
+	}, 5000).unref(); // .unref() prevents timer from blocking clean process exit
+}
 
 // FAIL-CLOSED: Halt startup if ARGOS_API_KEY is not configured or too short.
 validateSecurityConfig();

@@ -18,7 +18,7 @@ VITE_PORT="${VITE_PORT:-5173}"
 # WARNING: Do NOT wrap with strace here. strace -f ptrace-attaches to all
 # child processes, stripping SUID bits from sudo and capture helpers
 # (Kismet, GSM Evil). See: Feb 2026 debugging incident.
-CI=true NODE_OPTIONS='--max-old-space-size=2048' \
+CI=true NODE_OPTIONS='--max-old-space-size=2048 --inspect=127.0.0.1:9229' \
   npx vite dev --port "$VITE_PORT" --host 0.0.0.0 --strictPort &
 VITE_PID=$!
 

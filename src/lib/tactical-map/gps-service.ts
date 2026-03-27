@@ -2,6 +2,7 @@ import { reverseGeocode } from '$lib/components/dashboard/status/status-bar-data
 import { GPSApiResponseSchema } from '$lib/schemas/rf';
 import { gpsStore, updateGPSPosition, updateGPSStatus } from '$lib/stores/tactical-map/gps-store';
 import { detectCountry, formatCoordinates } from '$lib/utils/country-detector';
+import { haversineMeters } from '$lib/utils/geo';
 import { logger } from '$lib/utils/logger';
 import { latLonToMGRS } from '$lib/utils/mgrs-converter';
 import { safeParseWithHandling } from '$lib/utils/validation-error';
@@ -9,11 +10,16 @@ import { safeParseWithHandling } from '$lib/utils/validation-error';
 // Re-export for backward compatibility (barrel and consumers that import from this module)
 export type { GPSApiResponse, GPSPositionData } from '$lib/gps/types';
 
+/** Minimum movement in meters before triggering a full store update. */
+const MIN_POSITION_DELTA_METERS = 5;
+
 export class GPSService {
 	private positionInterval: NodeJS.Timeout | null = null;
-	private readonly UPDATE_INTERVAL = 2000; // 2 seconds
+	private readonly UPDATE_INTERVAL = 3000; // 3 s — fast enough for a moving vehicle
 	private lastGeoLat = 0;
 	private lastGeoLon = 0;
+	private lastAppliedLat = 0;
+	private lastAppliedLon = 0;
 	private cachedLocationName = '';
 
 	/** Convert fix code to human-readable fix type */
@@ -49,6 +55,15 @@ export class GPSService {
 		speed: null as number | null
 	};
 
+	/** Returns true if position has moved at least MIN_POSITION_DELTA_METERS since last store update. */
+	private hasSufficientPositionChange(lat: number, lon: number): boolean {
+		if (this.lastAppliedLat === 0 && this.lastAppliedLon === 0) return true;
+		return (
+			haversineMeters(lat, lon, this.lastAppliedLat, this.lastAppliedLon) >=
+			MIN_POSITION_DELTA_METERS
+		);
+	}
+
 	/** Process a valid GPS fix into store updates */
 	private applyGPSFix(data: {
 		latitude: number;
@@ -61,6 +76,11 @@ export class GPSService {
 		speed?: number | null;
 	}): void {
 		const position = { lat: data.latitude, lon: data.longitude };
+
+		if (!this.hasSufficientPositionChange(position.lat, position.lon)) return;
+		this.lastAppliedLat = position.lat;
+		this.lastAppliedLon = position.lon;
+
 		const d = { ...GPSService.GPS_FIELD_DEFAULTS, ...data };
 		const fixType = GPSService.resolveFixType(d.fix);
 
@@ -132,8 +152,8 @@ export class GPSService {
 	startPositionUpdates(): void {
 		if (this.positionInterval) return;
 
-		// Initial update
-		void this.updateGPSPosition();
+		// Defer the initial fetch past first paint so it does not block LCP.
+		setTimeout(() => void this.updateGPSPosition(), 0);
 
 		// Set up interval
 		this.positionInterval = setInterval(() => {

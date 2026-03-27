@@ -219,6 +219,11 @@ export class DatabaseOptimizer {
 		this.queryStats.set(query, stats);
 	}
 
+	/** Returns true if the named query's average execution time exceeds thresholdMs. */
+	shouldExplain(label: string, thresholdMs = 50): boolean {
+		return (this.queryStats.get(label)?.avgTime ?? 0) > thresholdMs;
+	}
+
 	/** Get slow queries */
 	getSlowQueries(threshold: number = 100) {
 		return Array.from(this.queryStats.values())

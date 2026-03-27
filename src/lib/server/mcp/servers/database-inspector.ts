@@ -187,6 +187,23 @@ class DatabaseInspector extends BaseMCPServer {
 			}
 		},
 		{
+			name: 'get_slow_queries',
+			description:
+				'Returns queries slower than threshold avg ms tracked by the database optimizer. Use to identify performance bottlenecks.',
+			inputSchema: {
+				type: 'object' as const,
+				properties: {
+					threshold: { type: 'number', description: 'Avg ms threshold, default 50' }
+				}
+			},
+			execute: async (args: Record<string, unknown>) => {
+				const threshold = typeof args.threshold === 'number' ? args.threshold : 50;
+				const resp = await apiFetch(`/api/database/slow-queries?threshold=${threshold}`);
+				const data = (await resp.json()) as { slowQueries: unknown[] };
+				return { status: 'SUCCESS', slow_queries: data.slowQueries };
+			}
+		},
+		{
 			name: 'debug_spatial_index',
 			description:
 				'Debug R-tree spatial index for location-based queries. Tests spatial query performance.',

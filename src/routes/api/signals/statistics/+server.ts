@@ -1,3 +1,5 @@
+import { json } from '@sveltejs/kit';
+
 import { createHandler } from '$lib/server/api/create-handler';
 import { getRFDatabase } from '$lib/server/db/database';
 
@@ -52,10 +54,24 @@ function formatStatisticsResponse(stats: RawAreaStatistics, timeWindow: number) 
 	};
 }
 
+const GLOBAL_BOUNDS = { minLat: -90, maxLat: 90, minLon: -180, maxLon: 180 };
+
 export const GET = createHandler(({ url }) => {
 	const db = getRFDatabase();
 	const timeWindow = intParam(url.searchParams, 'timeWindow', '3600000');
 	const bounds = parseBoundsParams(url.searchParams);
+
+	if (
+		bounds.minLat === GLOBAL_BOUNDS.minLat &&
+		bounds.maxLat === GLOBAL_BOUNDS.maxLat &&
+		bounds.minLon === GLOBAL_BOUNDS.minLon &&
+		bounds.maxLon === GLOBAL_BOUNDS.maxLon
+	) {
+		return json(
+			{ success: false, error: 'Explicit bounds required for area statistics' },
+			{ status: 400 }
+		);
+	}
 
 	const stats = db.getAreaStatistics(bounds, timeWindow);
 	return formatStatisticsResponse(stats as RawAreaStatistics, timeWindow);

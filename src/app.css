@@ -20,7 +20,7 @@
 	--secondary: #2e2e2e;
 	--secondary-foreground: #ffffff;
 	--muted: #2e2e2e;
-	--muted-foreground: #666666;
+	--muted-foreground: #8a8a8a;
 	--accent: #2e2e2e;
 	--accent-foreground: #ffffff;
 	--sidebar: #18181b;
@@ -53,7 +53,7 @@
 	--inactive: #555555;
 	--info: #a8b8e0;
 	--info-foreground: #111111;
-	--text-muted: #666666;
+	--text-muted: #8a8a8a;
 
 	/* Status backgrounds */
 	--success-bg: #222924;

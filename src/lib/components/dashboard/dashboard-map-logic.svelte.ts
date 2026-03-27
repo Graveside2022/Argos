@@ -154,6 +154,10 @@ export function createMapState() {
 		initialViewSet = true;
 	});
 	$effect(() => {
+		// cssReady is set via queueMicrotask after the component mounts, which
+		// yields past the first paint frame. Gating here ensures the cell tower
+		// fetch (/api/cell-towers/nearby) does not fire on the LCP critical path.
+		if (!cssReady) return;
 		const { lat, lon } = gpsDerived.gps$.current.position;
 		maybeFetchCellTowers(lat, lon, towerFetchState).then((r) => {
 			if (r) cellTowerGeoJSON = r;
