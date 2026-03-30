@@ -63,6 +63,17 @@ export const wifiBtDiscovery: ToolCategory = {
 	children: [
 		createTool(
 			{
+				id: 'bettercap-recon',
+				name: 'Bettercap',
+				description:
+					'Active WiFi AP scanning, client probe capture, and BLE device enumeration without joining any network',
+				icon: toolIcons.bettercap,
+				deployment: 'native'
+			},
+			{ isInstalled: true, viewName: 'bettercap', canOpen: true }
+		),
+		createTool(
+			{
 				id: 'kismet-wifi',
 				name: 'Kismet WiFi',
 				description:
@@ -74,14 +85,14 @@ export const wifiBtDiscovery: ToolCategory = {
 		),
 		createTool(
 			{
-				id: 'btle-scanner',
-				name: 'BTLE Scanner',
+				id: 'bluehood',
+				name: 'BlueHood',
 				description:
-					'Passive BLE device discovery monitoring advertisement packets with RSSI and geolocation',
+					'Passive BLE & Classic Bluetooth presence tracker with 30-day device timeline, RSSI history, activity heatmaps, and device correlation analysis',
 				icon: toolIcons.btle,
 				deployment: 'native'
 			},
-			{ isInstalled: true, viewName: 'btle', canOpen: true }
+			{ isInstalled: true, viewName: 'bluehood', canOpen: true, shouldShowControls: true }
 		),
 		createTool({
 			id: 'sparrow-wifi',
@@ -107,7 +118,7 @@ export const wifiBtDiscovery: ToolCategory = {
 				icon: toolIcons.wigletotak,
 				deployment: 'native'
 			},
-			{ isInstalled: true, viewName: 'wigletotak', canOpen: true }
+			{ isInstalled: true, viewName: 'wigletotak', canOpen: true, shouldShowControls: true }
 		)
 	]
 };

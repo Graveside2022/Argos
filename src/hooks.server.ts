@@ -30,7 +30,7 @@ const HARDWARE_BODY_LIMIT = 64 * 1024; // 64KB for hardware control endpoints
 
 // Hardware endpoint path pattern -- these control physical RF hardware
 const HARDWARE_PATH_PATTERN =
-	/^\/api\/(hackrf|kismet|gsm-evil|rf|droneid|openwebrx|bettercap|wifite)\//;
+	/^\/api\/(hackrf|kismet|gsm-evil|bluehood|rf|droneid|openwebrx|bettercap|wifite)\//;
 
 // Event loop lag monitor — guarded via globalThis to prevent HMR accumulation.
 // globalThis.__argos_eld_monitor_started is typed in src/app.d.ts.

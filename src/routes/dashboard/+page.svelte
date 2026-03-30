@@ -15,11 +15,13 @@
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
 	import TakConfigView from '$lib/components/dashboard/tak/TakConfigView.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
+	import BluehoodView from '$lib/components/dashboard/views/BluehoodView.svelte';
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
 	import LogsAnalyticsView from '$lib/components/dashboard/views/LogsAnalyticsView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
+	import WigleToTAKView from '$lib/components/dashboard/views/WigleToTAKView.svelte';
 	import {
 		activeBottomTab,
 		activePanel,
@@ -147,7 +149,9 @@
 			{:else if $activeView === 'wifite'}
 				<ToolUnavailableView title="Wifite2" />
 			{:else if $activeView === 'wigletotak'}
-				<ToolUnavailableView title="WigleToTAK" />
+				<WigleToTAKView />
+			{:else if $activeView === 'bluehood'}
+				<BluehoodView />
 			{:else if $activeView === 'logs-analytics'}
 				<LogsAnalyticsView />
 			{:else}
