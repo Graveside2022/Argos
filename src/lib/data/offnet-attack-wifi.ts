@@ -25,6 +25,17 @@ export const wifiDisruption: ToolCategory = {
 			collapsible: true,
 			defaultExpanded: false,
 			children: [
+				createTool(
+					{
+						id: 'bettercap-deauth',
+						name: 'Bettercap',
+						description:
+							'WiFi deauthentication, client probing, BLE disruption, and PMKID capture without joining the target network',
+						icon: toolIcons.bettercap,
+						deployment: 'native'
+					},
+					{ isInstalled: true, viewName: 'bettercap', canOpen: true }
+				),
 				createTool({
 					id: 'aireplay-ng',
 					name: 'Aireplay-NG',

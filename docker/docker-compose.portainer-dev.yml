@@ -77,13 +77,16 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
     profiles: ["observability"]
-    mem_limit: 256m
-    memswap_limit: 384m
+    mem_limit: 384m
+    memswap_limit: 448m
+    mem_reservation: 128m
+    oom_score_adj: 800
     ports:
       - "16686:16686"
       - "4318:4318"
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+      - MEMORY_MAX_TRACES=5000
     networks:
       - argos-dev-network
     restart: unless-stopped

@@ -80,6 +80,7 @@ export type ActiveView =
 	| 'rf-emitter'
 	| 'wifite'
 	| 'wigletotak'
+	| 'bluehood'
 	| 'tak-config'
 	| 'logs-analytics';
 

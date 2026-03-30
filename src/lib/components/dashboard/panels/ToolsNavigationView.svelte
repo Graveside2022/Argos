@@ -25,7 +25,9 @@
 	const toolEndpoints: Record<string, ToolEndpoint> = {
 		'kismet-wifi': { controlUrl: '/api/kismet/control' },
 		'gsm-evil': { controlUrl: '/api/gsm-evil/control' },
-		openwebrx: { controlUrl: '/api/openwebrx/control' }
+		openwebrx: { controlUrl: '/api/openwebrx/control' },
+		bluehood: { controlUrl: '/api/bluehood/control' },
+		wigletotak: { controlUrl: '/api/wigletotak/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */
@@ -172,6 +174,22 @@
 			.then((r) => r.json())
 			.then((data) => {
 				if (data.status === 'running') setLocalStatus('gsm-evil', 'running');
+			})
+			.catch(() => {});
+
+		// Check BlueHood service status
+		fetch('/api/bluehood/status')
+			.then((r) => r.json())
+			.then((data) => {
+				if (data.isRunning) setLocalStatus('bluehood', 'running');
+			})
+			.catch(() => {});
+
+		// Check WigleToTAK process status
+		fetch('/api/wigletotak/status')
+			.then((r) => r.json())
+			.then((data) => {
+				if (data.isRunning) setLocalStatus('wigletotak', 'running');
 			})
 			.catch(() => {});
 	});
