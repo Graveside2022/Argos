@@ -214,7 +214,9 @@ check_component() {
     mem_hardening)   [[ -f /etc/sysctl.d/99-memory.conf ]] && \
                        [[ -f /etc/systemd/system/tmp.mount.d/size-limit.conf ]] && \
                        [[ -f /etc/tmpfiles.d/argos-cleanup.conf ]] && \
-                       [[ -f /etc/cron.d/argos-tmp-cleanup ]] ;;
+                       [[ -f /etc/cron.d/argos-tmp-cleanup ]] && \
+                       systemctl is-enabled --quiet argos-startup 2>/dev/null && \
+                       grep -q 'psi=1' /boot/firmware/cmdline.txt 2>/dev/null ;;
     bluetooth_disable) grep -q 'dtoverlay=disable-bt' /boot/firmware/config.txt 2>/dev/null || \
                        ! systemctl is-enabled --quiet bluetooth 2>/dev/null ;;
     gsm_evil)        [[ -d "$SETUP_HOME/gsmevil2/venv" ]] && \
@@ -840,6 +842,7 @@ Wants=earlyoom.service
 
 [Service]
 Type=oneshot
+RemainAfterExit=yes
 ExecStart=$STARTUP_SCRIPT
 User=$SETUP_USER
 StandardOutput=journal
@@ -887,9 +890,8 @@ EOF
   local WS_RECENT="$SETUP_HOME/.config/wireshark/recent"
   sudo -u "$SETUP_USER" mkdir -p "$(dirname "$WS_RECENT")"
   cat > "$WS_RECENT" << EOF
-# Argos: redirect captures to NVMe
-gui.fileopen_remembered_dir: $CAPTURES_DIR
-capture.save_directory: $CAPTURES_DIR
+recent.gui.fileopen_dir: $CAPTURES_DIR
+recent.capture_file_save_dir: $CAPTURES_DIR
 EOF
   chown "$SETUP_USER":"$SETUP_USER" "$WS_RECENT"
   echo "  Wireshark capture directory set to $CAPTURES_DIR."
