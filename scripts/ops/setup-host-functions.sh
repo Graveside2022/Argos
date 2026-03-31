@@ -211,6 +211,10 @@ check_component() {
     env_file)        [[ -f "$PROJECT_DIR/.env" ]] ;;
     earlyoom)        command -v earlyoom &>/dev/null ;;
     cgroup_mem)      [[ -f /etc/systemd/system/user-1000.slice.d/memory-limit.conf ]] ;;
+    mem_hardening)   [[ -f /etc/sysctl.d/99-memory.conf ]] && \
+                       [[ -f /etc/systemd/system/tmp.mount.d/size-limit.conf ]] && \
+                       [[ -f /etc/tmpfiles.d/argos-cleanup.conf ]] && \
+                       [[ -f /etc/cron.d/argos-tmp-cleanup ]] ;;
     bluetooth_disable) grep -q 'dtoverlay=disable-bt' /boot/firmware/config.txt 2>/dev/null || \
                        ! systemctl is-enabled --quiet bluetooth 2>/dev/null ;;
     gsm_evil)        [[ -d "$SETUP_HOME/gsmevil2/venv" ]] && \
@@ -714,19 +718,17 @@ PYEOF
 
 install_earlyoom() {
   _ensure_pkg earlyoom
-  # Create config file if the package didn't provide one
   [[ -f /etc/default/earlyoom ]] || touch /etc/default/earlyoom
-  # Memory threshold: 2% RAM free (98% used), 50% swap, check every 10s.
-  # This is the last-resort killer — other guards (Claude hook at 90%, tmux guard
-  # at 90%, cgroup soft limit) intervene earlier. EarlyOOM only fires when ~160 MB free.
-  # Polling at 10s (not 60s) because with only ~160MB headroom, a fast allocation spike
-  # could trigger the kernel OOM killer before earlyoom notices at 60s intervals.
+  # Memory threshold: 5% RAM free (~400 MB on 8 GB), 20% swap, check every 10s.
+  # Debug logging (-g) writes to journal for post-mortem analysis.
+  # Avoid: system-critical + dev tools. Prefer: expendable heavy processes.
+  # Xvfb/chromium removed from avoid — they're expendable and recoverable.
   cat > /etc/default/earlyoom << 'EARLYOOM'
-EARLYOOM_ARGS="-m 2 -s 50 -r 10 --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma|Xvfb|chromium)$' --prefer '(^|/)(ollama|bun)$'"
+EARLYOOM_ARGS="-m 5 -s 20 -r 10 -g --avoid '(^|/)(init|sshd|tailscaled|NetworkManager|dockerd|systemd|node.*vscode|vite|chroma)$' --prefer '(^|/)(ollama|bun|svelte-check|tshark|wireshark|jaeger|puppeteer)$'"
 EARLYOOM
   systemctl enable earlyoom
   systemctl restart earlyoom
-  echo "  EarlyOOM configured (trigger: 2% free, poll: 10s, protect: system + dev tools, prefer kill: ollama + bun)."
+  echo "  EarlyOOM configured (trigger: 5% free, poll: 10s, debug log, prefer kill: ollama+bun+svelte-check+tshark+jaeger)."
 }
 
 install_cgroup_mem() {
@@ -766,6 +768,133 @@ EOF
     systemctl daemon-reload
     echo "  cgroup memory limit installed. Active for new user sessions."
   fi
+}
+
+install_mem_hardening() {
+  # ── 1. sysctl tuning ──
+  cat > /etc/sysctl.d/99-memory.conf << 'SYSCTL'
+# Argos memory hardening — RPi 5 (8 GB)
+vm.swappiness = 80
+vm.min_free_kbytes = 131072
+vm.dirty_ratio = 5
+vm.dirty_background_ratio = 2
+vm.overcommit_memory = 0
+vm.panic_on_oom = 0
+vm.vfs_cache_pressure = 150
+vm.zone_reclaim_mode = 0
+SYSCTL
+  sysctl -p /etc/sysctl.d/99-memory.conf > /dev/null 2>&1
+  echo "  sysctl tuning applied (swappiness=80, min_free=128MB, vfs_pressure=150)."
+
+  # ── 2. /tmp size cap (512 MB) ──
+  local TMP_DROPIN_DIR="/etc/systemd/system/tmp.mount.d"
+  mkdir -p "$TMP_DROPIN_DIR"
+  cat > "$TMP_DROPIN_DIR/size-limit.conf" << 'TMPMOUNT'
+[Mount]
+Options=mode=1777,strictatime,nosuid,nodev,size=512m
+TMPMOUNT
+  echo "  /tmp capped at 512 MB via systemd drop-in."
+
+  # ── 3. tmpfiles.d auto-cleanup rules ──
+  cat > /etc/tmpfiles.d/argos-cleanup.conf << 'TMPFILES'
+# Argos tmpfiles.d cleanup rules
+# Type 'e': adjust/clean existing files/dirs matching path (supports globs)
+# Format: type path mode uid gid age
+
+# pcap/capture files — age out after 30 minutes
+e /tmp/*.pcap     - - - 30m
+e /tmp/*.pcapng   - - - 30m
+e /tmp/*.cap      - - - 30m
+
+# puppeteer Chrome profiles — age out after 2 hours
+e /tmp/puppeteer_*  - - - 2h
+
+# Chromium temp dirs — age out after 2 hours
+e /tmp/.org.chromium.Chromium*  - - - 2h
+
+# Argos lock files — age out after 1 hour
+e /tmp/argos-*.lock  - - - 1h
+
+# npm temp dirs — age out after 6 hours
+e /tmp/npm-*  - - - 6h
+TMPFILES
+  echo "  tmpfiles.d cleanup rules installed."
+
+  # ── 4. tmpreaper + 15-min cron ──
+  _ensure_pkg tmpreaper
+  cat > /etc/cron.d/argos-tmp-cleanup << 'CRON'
+# Argos: clean stale pcap/chromium temps every 15 minutes
+*/15 * * * * root find /tmp \( -name '*.pcap' -o -name '*.pcapng' -o -name '*.cap' \) -mmin +30 -delete 2>/dev/null; true
+*/15 * * * * root find /tmp -maxdepth 2 -name 'puppeteer_*' -mmin +120 -exec rm -rf {} + 2>/dev/null; true
+CRON
+  echo "  tmpreaper installed, 15-min cron cleanup active."
+
+  # ── 5. argos-startup.service (boot health check) ──
+  local STARTUP_SCRIPT="$PROJECT_DIR/scripts/startup-check.sh"
+  if [[ -f "$STARTUP_SCRIPT" ]]; then
+    cat > /etc/systemd/system/argos-startup.service << EOF
+[Unit]
+Description=Argos Startup Check
+After=local-fs.target tmp.mount earlyoom.service
+Wants=earlyoom.service
+
+[Service]
+Type=oneshot
+ExecStart=$STARTUP_SCRIPT
+User=$SETUP_USER
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    chmod +x "$STARTUP_SCRIPT"
+    systemctl daemon-reload
+    systemctl enable argos-startup.service
+    echo "  argos-startup.service installed and enabled."
+  else
+    echo "  Warning: scripts/startup-check.sh not found. Skipping startup service."
+  fi
+
+  # ── 6. PSI boot parameter ──
+  local CMDLINE="/boot/firmware/cmdline.txt"
+  if [[ -f "$CMDLINE" ]] && ! grep -q 'psi=1' "$CMDLINE"; then
+    sed -i 's/$/ psi=1/' "$CMDLINE"
+    echo "  psi=1 added to kernel cmdline (active after next reboot)."
+  else
+    echo "  psi=1 already in kernel cmdline."
+  fi
+
+  # ── 7. NODE_COMPILE_CACHE on NVMe ──
+  local CACHE_DIR="$SETUP_HOME/.cache/node-compile-cache"
+  sudo -u "$SETUP_USER" mkdir -p "$CACHE_DIR"
+
+  local ENVD_DIR="$SETUP_HOME/.config/environment.d"
+  sudo -u "$SETUP_USER" mkdir -p "$ENVD_DIR"
+  echo "NODE_COMPILE_CACHE=$CACHE_DIR" > "$ENVD_DIR/argos-node.conf"
+  chown "$SETUP_USER":"$SETUP_USER" "$ENVD_DIR/argos-node.conf"
+
+  local ZSHENV="$SETUP_HOME/.zshenv"
+  if ! grep -q 'NODE_COMPILE_CACHE' "$ZSHENV" 2>/dev/null; then
+    echo "export NODE_COMPILE_CACHE=$CACHE_DIR" >> "$ZSHENV"
+    chown "$SETUP_USER":"$SETUP_USER" "$ZSHENV"
+  fi
+  echo "  NODE_COMPILE_CACHE redirected to NVMe ($CACHE_DIR)."
+
+  # ── 8. Wireshark capture directory ──
+  local CAPTURES_DIR="$SETUP_HOME/captures"
+  sudo -u "$SETUP_USER" mkdir -p "$CAPTURES_DIR"
+  local WS_RECENT="$SETUP_HOME/.config/wireshark/recent"
+  sudo -u "$SETUP_USER" mkdir -p "$(dirname "$WS_RECENT")"
+  cat > "$WS_RECENT" << EOF
+# Argos: redirect captures to NVMe
+gui.fileopen_remembered_dir: $CAPTURES_DIR
+capture.save_directory: $CAPTURES_DIR
+EOF
+  chown "$SETUP_USER":"$SETUP_USER" "$WS_RECENT"
+  echo "  Wireshark capture directory set to $CAPTURES_DIR."
+
+  echo "  Memory hardening complete (8 layers installed)."
 }
 
 install_docker() {
@@ -926,6 +1055,19 @@ install_dev_monitor() {
       "$PROJECT_DIR/deployment/argos-dev-monitor.service" \
       > "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service"
     chown "$SETUP_USER":"$SETUP_USER" "$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service"
+
+    # cgroup memory limits for Vite dev server (soft 1228M, hard 1536M)
+    local DROPIN_DIR="$SETUP_HOME/.config/systemd/user/argos-dev-monitor.service.d"
+    sudo -u "$SETUP_USER" mkdir -p "$DROPIN_DIR"
+    cat > "$DROPIN_DIR/memory.conf" << 'DEVMEM'
+[Service]
+MemoryHigh=1228M
+MemoryMax=1536M
+MemorySwapMax=256M
+DEVMEM
+    chown -R "$SETUP_USER":"$SETUP_USER" "$DROPIN_DIR"
+    echo "  Dev monitor cgroup limits: MemoryHigh=1228M, MemoryMax=1536M."
+
     _enable_user_service argos-dev-monitor
     echo "  Dev monitor service installed and started."
   else
@@ -1342,6 +1484,19 @@ OOMScoreAdjust=-200
 WantedBy=default.target
 EOF
   chown "$SETUP_USER":"$SETUP_USER" "$CHROMA_SERVICE"
+
+  # cgroup memory limits for ChromaDB (soft 400M, hard 512M)
+  local CHROMA_DROPIN_DIR="$SETUP_HOME/.config/systemd/user/chroma-server.service.d"
+  sudo -u "$SETUP_USER" mkdir -p "$CHROMA_DROPIN_DIR"
+  cat > "$CHROMA_DROPIN_DIR/memory.conf" << 'CHROMAMEM'
+[Service]
+MemoryHigh=400M
+MemoryMax=512M
+MemorySwapMax=64M
+CHROMAMEM
+  chown -R "$SETUP_USER":"$SETUP_USER" "$CHROMA_DROPIN_DIR"
+  echo "  ChromaDB cgroup limits: MemoryHigh=400M, MemoryMax=512M."
+
   _enable_user_service chroma-server
 }
 
