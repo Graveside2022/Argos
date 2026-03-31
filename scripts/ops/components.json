@@ -98,6 +98,13 @@
 		"group": "Core Infrastructure"
 	},
 	{
+		"id": "mem_hardening",
+		"desc": "Memory defense stack (sysctl, /tmp cap, cleanup, startup check, PSI)",
+		"core": true,
+		"func": "install_mem_hardening",
+		"group": "Core Infrastructure"
+	},
+	{
 		"id": "gsm_evil",
 		"desc": "GSM Evil (cell tower monitoring)",
 		"core": false,
