@@ -194,6 +194,8 @@ completed/
 .gemini/
 .agent/
 .development-archive/
+_bmad/
+_bmad-output/
 CLAUDE.local.md
 # ── Claude Code ──────────────────────────────────────────────
 # CLAUDE.md is tracked — it's the primary AI context file for the project.
