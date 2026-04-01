@@ -21,7 +21,7 @@
 		isOpen,
 		height,
 		minHeight = 120,
-		maxHeightPercent = 0.8,
+		maxHeightPercent = 0.95,
 		onHeightChange,
 		onOpen,
 		children

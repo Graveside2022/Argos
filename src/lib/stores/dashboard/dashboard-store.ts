@@ -23,7 +23,7 @@ export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', '
 /** Shared bottom panel height (persisted to localStorage) */
 const DEFAULT_BOTTOM_HEIGHT = 240;
 const MIN_BOTTOM_HEIGHT = 100;
-const MAX_BOTTOM_HEIGHT_PERCENT = 0.8;
+const MAX_BOTTOM_HEIGHT_PERCENT = 0.95;
 
 export const bottomPanelHeight = persistedWritable<number>(
 	'bottomPanelHeight',

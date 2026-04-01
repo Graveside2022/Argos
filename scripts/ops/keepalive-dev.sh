@@ -174,33 +174,8 @@ check_socat() {
     fi
 }
 
-check_chromium() {
-    if ! lsof -ti:9224 > /dev/null; then
-        # Memory pressure gate: Chromium uses ~400-570 MB
-        if mem_too_high; then return; fi
-
-        warn "Chromium debugger (port 9224) is DOWN. Checking Xvfb..."
-
-        # Check Xvfb (Display :99)
-        if ! pgrep -f "Xvfb.*:99" > /dev/null; then
-            warn "Xvfb :99 is DOWN. Restarting..."
-            Xvfb :99 -screen 0 1280x1024x24 >> "$LOG_DIR/xvfb.log" 2>&1 &
-            sleep 2
-        fi
-
-        export DISPLAY=:99
-        warn "Restarting Chromium in headless debug mode..."
-        # Launch Chromium with remote debugging on 9224
-        nohup chromium --no-sandbox --remote-debugging-port=9224 http://localhost:5173/dashboard >> "$LOG_DIR/chromium.log" 2>&1 &
-        sleep 5
-        
-        if lsof -ti:9224 > /dev/null; then
-            log "Chromium restarted successfully."
-        else
-            warn "Failed to restart Chromium."
-        fi
-    fi
-}
+# check_chromium() removed — Chrome DevTools MCP handles all browser debugging on demand.
+# Keepalive Chromium was redundant and locked the user's default profile.
 
 check_claude_mem() {
     # Run the fix script which checks for updates/patches and applies them if needed.
@@ -209,7 +184,7 @@ check_claude_mem() {
 }
 
 log "Starting Argos Dev Keepalive Monitor..."
-log "Monitoring Vite (5173), Chromium (9224), Proxy (99), and Claude Mem."
+log "Monitoring Vite (5173), Proxy (99), and Claude Mem."
 
 # Boot delay: wait for system to stabilize before starting heavy processes.
 # On cold boot, systemd starts dozens of services simultaneously. Launching
@@ -225,7 +200,6 @@ fi
 LOOP_COUNT=0
 while true; do
     check_vite
-    check_chromium
     check_socat
 
     # Check claude-mem every 6 iterations (approx 60 seconds)
