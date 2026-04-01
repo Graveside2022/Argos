@@ -195,13 +195,9 @@ completed/
 .agent/
 .development-archive/
 CLAUDE.local.md
-CLAUDE.md
-*/CLAUDE.md
-**/CLAUDE.md
-
 # ── Claude Code ──────────────────────────────────────────────
-# Users generate their own CLAUDE.md via `claude /init` after cloning.
-# .claude/ contains local settings — never shared.
+# CLAUDE.md is tracked — it's the primary AI context file for the project.
+# .claude/ contains local settings (API keys, permissions) — never shared.
 .claude/
 
 # ── SpecifyKit ───────────────────────────────────────────────

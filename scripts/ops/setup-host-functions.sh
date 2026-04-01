@@ -371,6 +371,26 @@ install_nodejs() {
 
 install_gpsd() {
   _ensure_pkgs gpsd gpsd-clients
+
+  # Configure gpsd to use stable /dev/gps0 symlink (created by udev rule below)
+  cat > /etc/default/gpsd <<'GPSD_CONF'
+# GPS daemon configuration — managed by setup-host
+DEVICES="/dev/gps0"
+GPSD_OPTIONS="-n"
+USBAUTO="true"
+GPSD_CONF
+
+  # Udev rule: create /dev/gps0 symlink for Prolific USB-to-Serial GPS adapter
+  # Matches the common PL2303-based GPS puck (067b:23a3)
+  cat > /etc/udev/rules.d/99-gps.rules <<'GPS_UDEV'
+# Stable symlink for Prolific USB-to-Serial GPS adapter
+# Creates /dev/gps0 regardless of USB enumeration order
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23a3", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
+GPS_UDEV
+
+  udevadm control --reload-rules 2>/dev/null || true
+  systemctl enable gpsd.socket 2>/dev/null || true
+  _ok "gpsd configured with /dev/gps0 symlink and udev rule"
 }
 
 # Add Kismet from the official kismetwireless.net repo

@@ -154,28 +154,8 @@ check_vite() {
     fi
 }
 
-check_socat() {
-    if ! lsof -ti:99 > /dev/null; then
-        warn "Debug proxy (port 99) is DOWN. Attempting restart..."
-        
-        # Check if Chromium is actually running on 9224 first
-        if lsof -ti:9224 > /dev/null; then
-            # Start socat in background
-            nohup socat TCP-LISTEN:99,fork TCP:127.0.0.1:9224 >> "$LOG_DIR/keepalive_socat.log" 2>&1 &
-            sleep 1
-            if lsof -ti:99 > /dev/null; then
-                log "Debug proxy (socat) restarted successfully."
-            else
-                warn "Failed to start socat on port 99."
-            fi
-        else
-            warn "Cannot start proxy: Chromium debugger (port 9224) is not running."
-        fi
-    fi
-}
-
+# check_socat() removed — depended on keepalive Chromium (port 9224) which was removed.
 # check_chromium() removed — Chrome DevTools MCP handles all browser debugging on demand.
-# Keepalive Chromium was redundant and locked the user's default profile.
 
 check_claude_mem() {
     # Run the fix script which checks for updates/patches and applies them if needed.
@@ -184,7 +164,7 @@ check_claude_mem() {
 }
 
 log "Starting Argos Dev Keepalive Monitor..."
-log "Monitoring Vite (5173), Proxy (99), and Claude Mem."
+log "Monitoring Vite (5173) and Claude Mem."
 
 # Boot delay: wait for system to stabilize before starting heavy processes.
 # On cold boot, systemd starts dozens of services simultaneously. Launching
@@ -200,7 +180,6 @@ fi
 LOOP_COUNT=0
 while true; do
     check_vite
-    check_socat
 
     # Check claude-mem every 6 iterations (approx 60 seconds)
     if [ $((LOOP_COUNT % 6)) -eq 0 ]; then
