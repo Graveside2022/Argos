@@ -30,7 +30,7 @@ export const osintGeoint: ToolCategory = {
 			{
 				isInstalled: true,
 				canOpen: true,
-				shouldShowControls: true,
+				shouldShowControls: false,
 				externalUrl: 'http://localhost:3001'
 			}
 		)
