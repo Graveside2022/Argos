@@ -5,6 +5,7 @@
 # Usage: sudo bash scripts/ops/setup-host.sh [--yes] [--verbose]
 #   --yes, -y       Install all components without interactive prompts
 #   --verbose, -v   Show raw output from each install step
+#   --dry-run       Show what would be installed without changing the system
 #   --version, -V   Show version
 #   --help, -h      Show this help
 set -euo pipefail
@@ -25,6 +26,7 @@ for arg in "$@"; do
       echo "Options:"
       echo "  --yes, -y       Install all components without interactive prompts"
       echo "  --verbose, -v   Show raw output from each install step"
+      echo "  --dry-run       Show what would be installed without changing the system"
       echo "  --version, -V   Show version"
       echo "  --help, -h      Show this help"
       echo ""
@@ -32,7 +34,7 @@ for arg in "$@"; do
       echo "[CORE] items are required and always installed."
       exit 0
       ;;
-    --yes|-y|--verbose|-v)
+    --yes|-y|--verbose|-v|--dry-run)
       PASSTHROUGH_ARGS+=("$arg")
       ;;
     *)
@@ -90,6 +92,19 @@ if [[ "$PREFLIGHT_FAIL" == true ]]; then
   exit 1
 fi
 
+# --- Detect dry-run mode ---
+DRY_RUN=false
+for arg in "$@"; do
+  [[ "$arg" == "--dry-run" ]] && DRY_RUN=true
+done
+export DRY_RUN
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo ""
+  echo "=== DRY-RUN MODE — no changes will be made ==="
+  echo ""
+fi
+
 # --- Path setup ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -131,15 +146,23 @@ echo ""
 # Phase 1: Ensure Node.js is available
 # =============================================
 if ! command -v node &>/dev/null; then
-  echo "[Bootstrap] Installing Node.js 22..."
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y -q nodejs
-  echo "[Bootstrap] Node.js $(node --version) installed."
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "[Bootstrap] [DRY-RUN] Would install Node.js 22"
+  else
+    echo "[Bootstrap] Installing Node.js 22..."
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    apt-get install -y -q nodejs
+    echo "[Bootstrap] Node.js $(node --version) installed."
+  fi
 elif [[ "$(node --version | cut -d. -f1 | tr -d v)" -lt 18 ]]; then
-  echo "[Bootstrap] Node.js $(node --version) is too old. Installing v22..."
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y -q nodejs
-  echo "[Bootstrap] Upgraded to Node.js $(node --version)."
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "[Bootstrap] [DRY-RUN] Would upgrade Node.js from $(node --version) to v22"
+  else
+    echo "[Bootstrap] Node.js $(node --version) is too old. Installing v22..."
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    apt-get install -y -q nodejs
+    echo "[Bootstrap] Upgraded to Node.js $(node --version)."
+  fi
 else
   echo "[Bootstrap] Node.js $(node --version) OK."
 fi
@@ -148,24 +171,31 @@ fi
 # Phase 1b: Ensure build-essential for native npm modules
 # =============================================
 if ! dpkg -s build-essential &>/dev/null 2>&1; then
-  echo "[Bootstrap] Installing build-essential..."
-  apt-get update -q
-  apt-get install -y -q build-essential python3
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "[Bootstrap] [DRY-RUN] Would install build-essential + python3"
+  else
+    echo "[Bootstrap] Installing build-essential..."
+    apt-get update -q
+    apt-get install -y -q build-essential python3
+  fi
 fi
 
 # =============================================
 # Phase 2: Ensure gum (Charmbracelet TUI toolkit)
 # =============================================
 if ! command -v gum &>/dev/null; then
-  echo "[Bootstrap] Installing gum (CLI toolkit)..."
-  # Add Charm's apt repository
-  mkdir -p /etc/apt/keyrings
-  curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
-  echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
-    > /etc/apt/sources.list.d/charm.list
-  apt-get update -q
-  apt-get install -y -q gum
-  echo "[Bootstrap] gum $(gum --version 2>/dev/null || echo '') installed."
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "[Bootstrap] [DRY-RUN] Would install gum (Charmbracelet TUI toolkit)"
+  else
+    echo "[Bootstrap] Installing gum (CLI toolkit)..."
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
+      > /etc/apt/sources.list.d/charm.list
+    apt-get update -q
+    apt-get install -y -q gum
+    echo "[Bootstrap] gum $(gum --version 2>/dev/null || echo '') installed."
+  fi
 else
   echo "[Bootstrap] gum OK."
 fi

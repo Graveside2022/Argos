@@ -38,6 +38,30 @@ _cleanup_stale_repo_entries() {
 _cleanup_stale_repo_entries 2>/dev/null || true
 
 # =============================================
+# DRY-RUN SUPPORT
+# =============================================
+# When DRY_RUN=true, destructive commands are logged instead of executed.
+# Set by setup-host.sh --dry-run flag, passed through via CHILD_ENV.
+
+_run() {
+  if [[ "${DRY_RUN:-}" == "true" ]]; then
+    echo "  [DRY-RUN] $*"
+    return 0
+  fi
+  "$@"
+}
+
+_write_file() {
+  local dest="$1"
+  if [[ "${DRY_RUN:-}" == "true" ]]; then
+    echo "  [DRY-RUN] Would write: $dest"
+    cat > /dev/null  # consume stdin
+    return 0
+  fi
+  cat > "$dest"
+}
+
+# =============================================
 # HELPERS
 # =============================================
 
@@ -76,7 +100,7 @@ _ensure_pkg() {
     echo "  $pkg — already installed"
   else
     echo "  $pkg — installing..."
-    apt-get install -y -q "$pkg" || echo "  WARNING: $pkg not available in repos"
+    _run apt-get install -y -q "$pkg" || echo "  WARNING: $pkg not available in repos"
   fi
 }
 
@@ -96,6 +120,10 @@ _user_has_cmd() {
 # `systemctl --user` can connect to the user's systemd instance.
 _enable_user_service() {
   local service="$1"
+  if [[ "${DRY_RUN:-}" == "true" ]]; then
+    echo "  [DRY-RUN] Would enable user service: $service"
+    return 0
+  fi
   local user_id
   user_id=$(id -u "$SETUP_USER")
   loginctl enable-linger "$SETUP_USER" 2>/dev/null || true
@@ -904,6 +932,16 @@ EOF
 install_argos_services() {
   # Build the production app and install all systemd services.
   # This is the final core component — runs after npm_deps, env_file, and mem_hardening.
+  if [[ "${DRY_RUN:-}" == "true" ]]; then
+    echo "  [DRY-RUN] Would run: npm run build"
+    echo "  [DRY-RUN] Would run: npm run db:migrate"
+    echo "  [DRY-RUN] Would run: install-services.sh (installs 9 systemd services)"
+    echo "  [DRY-RUN] Would copy 3 monitor scripts to /usr/local/bin/"
+    echo "  [DRY-RUN] Would enable: argos-startup, argos-final, argos-kismet"
+    echo "  [DRY-RUN] Would enable: argos-cpu-protector, argos-wifi-resilience, argos-process-manager"
+    return 0
+  fi
+
   echo "  Building production app..."
   if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build" > /dev/null 2>&1; then
     echo "  Production build created (build/)."

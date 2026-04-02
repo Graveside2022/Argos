@@ -19,12 +19,15 @@ COMPONENTS_JSON="$SCRIPT_DIR/components.json"
 
 NON_INTERACTIVE=false
 VERBOSE=false
+DRY_RUN="${DRY_RUN:-false}"
 for arg in "$@"; do
   case "$arg" in
     --yes|-y) NON_INTERACTIVE=true ;;
     --verbose|-v) VERBOSE=true ;;
+    --dry-run) DRY_RUN=true ;;
   esac
 done
+export DRY_RUN
 
 # Env vars passed from bootstrap
 : "${SETUP_USER:=unknown}"
@@ -351,7 +354,19 @@ for i in "${!SELECTED_IDS[@]}"; do
   [[ -n "$WAS_PRESENT" ]] && VERB="Verifying"
 
   BASH_CMD="source '$FUNCTIONS_SH' && $FUNC"
-  CHILD_ENV="SETUP_USER='$SETUP_USER' SETUP_HOME='$SETUP_HOME' PROJECT_DIR='$PROJECT_DIR' SCRIPT_DIR='$SCRIPT_DIR' OS_ID='$OS_ID' NON_INTERACTIVE='$NON_INTERACTIVE' STADIA_KEY='$STADIA_KEY' SELECTED_COMPONENTS='$SELECTED_CSV'"
+  CHILD_ENV="SETUP_USER='$SETUP_USER' SETUP_HOME='$SETUP_HOME' PROJECT_DIR='$PROJECT_DIR' SCRIPT_DIR='$SCRIPT_DIR' OS_ID='$OS_ID' NON_INTERACTIVE='$NON_INTERACTIVE' DRY_RUN='$DRY_RUN' STADIA_KEY='$STADIA_KEY' SELECTED_COMPONENTS='$SELECTED_CSV'"
+
+  # Dry-run: skip execution entirely, report what would happen
+  if [[ "$DRY_RUN" == "true" ]]; then
+    if [[ -n "$WAS_PRESENT" ]]; then
+      gum style --foreground "$C_INFO" "  $PROGRESS ● $DESC $(gum style --foreground "$C_DIM" "(already installed — no action)")"
+      ALREADY_COUNT=$(( ALREADY_COUNT + 1 ))
+    else
+      gum style --foreground "$C_WARN" "  $PROGRESS ◆ $DESC $(gum style --foreground "$C_DIM" "(would install: $FUNC)")"
+      INSTALLED=$(( INSTALLED + 1 ))
+    fi
+    continue
+  fi
 
   if [[ "$VERBOSE" == "true" ]] || [[ -z "$WAS_PRESENT" ]]; then
     # Verbose mode OR fresh installs: show raw output so user sees progress
@@ -415,7 +430,7 @@ gum style \
   --border-foreground "$C_SUCCESS" \
   --padding "1 2" \
   --width 50 \
-  "$(gum style --bold --foreground "$C_BRAND" "  Setup Complete")" \
+  "$(if [[ "$DRY_RUN" == "true" ]]; then gum style --bold --foreground "$C_WARN" "  DRY-RUN Complete (no changes made)"; else gum style --bold --foreground "$C_BRAND" "  Setup Complete"; fi)" \
   "" \
   "$SUMMARY_TEXT"
 
