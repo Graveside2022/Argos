@@ -28,7 +28,9 @@ export const osintGeoint: ToolCategory = {
 				deployment: 'docker'
 			},
 			{
+				isInstalled: true,
 				canOpen: true,
+				shouldShowControls: true,
 				externalUrl: 'http://localhost:3001'
 			}
 		)
