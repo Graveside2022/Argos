@@ -1,0 +1,15 @@
+[Unit]
+Description=Argos Startup Health Check
+After=network-online.target earlyoom.service zram-swap.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=__PROJECT_DIR__/scripts/startup-check.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=argos-startup
+
+[Install]
+WantedBy=multi-user.target
