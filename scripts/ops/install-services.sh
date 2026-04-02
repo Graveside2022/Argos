@@ -27,25 +27,36 @@ echo "  User:      $SETUP_USER"
 echo "  DroneID:   $DRONEID_DIR"
 echo ""
 
+# Install operational monitor scripts to /usr/local/bin/
+echo "Installing operational scripts..."
+MONITOR_SCRIPTS=(argos-cpu-protector.sh argos-wifi-resilience.sh argos-process-manager.sh)
+for script in "${MONITOR_SCRIPTS[@]}"; do
+  src="$SCRIPT_DIR/$script"
+  if [[ -f "$src" ]]; then
+    cp "$src" "/usr/local/bin/$script"
+    chmod 755 "/usr/local/bin/$script"
+    echo "  Installed /usr/local/bin/$script"
+  else
+    echo "  [SKIP] $script (not found in $SCRIPT_DIR)"
+  fi
+done
+echo ""
+
 # Pre-flight checks
 echo "Running pre-flight checks..."
 if [[ ! -d "$PROJECT_DIR/build" ]]; then
   echo "  [WARN] build/ not found — run 'npm run build' before starting argos-final.service"
 fi
-for bin in argos-cpu-protector.sh argos-wifi-resilience.sh argos-process-manager.sh; do
-  if [[ ! -x "/usr/local/bin/$bin" ]]; then
-    echo "  [WARN] /usr/local/bin/$bin not found — ${bin%.sh}.service will not be enabled"
-  fi
-done
 echo ""
 
 # System-level services (installed to /etc/systemd/system/)
-# NOTE: argos-cpu-protector, argos-wifi-resilience, argos-process-manager are
-# excluded until their /usr/local/bin/*.sh binaries are created.
 SYSTEM_SERVICES=(
   argos-startup.service
   argos-final.service
   argos-kismet.service
+  argos-cpu-protector.service
+  argos-wifi-resilience.service
+  argos-process-manager.service
   argos-headless.service
   argos-droneid.service
   gsmevil-patch.service
@@ -99,9 +110,12 @@ echo "Enabling core services..."
 systemctl enable argos-startup.service 2>/dev/null || true
 systemctl enable argos-final.service 2>/dev/null || true
 systemctl enable argos-kismet.service 2>/dev/null || true
-# NOTE: argos-cpu-protector, argos-wifi-resilience, argos-process-manager
-# are NOT enabled — their /usr/local/bin/*.sh binaries do not exist yet.
-# Enable them manually after creating the scripts.
+# Enable monitor services only if their binaries were installed
+for bin in argos-cpu-protector argos-wifi-resilience argos-process-manager; do
+  if [[ -x "/usr/local/bin/${bin}.sh" ]]; then
+    systemctl enable "${bin}.service" 2>/dev/null || true
+  fi
+done
 
 echo ""
 echo "Done. Services installed and enabled."
