@@ -21,13 +21,10 @@ fail() { log "[FAIL] $*"; ((FAIL_COUNT++)) || true; }
 # --- 1. Environment file ---
 if [[ -f "$PROJECT_DIR/.env" ]]; then
   pass ".env exists"
-  # Source .env to check ARGOS_API_KEY
-  set -a
-  # shellcheck disable=SC1091
-  source "$PROJECT_DIR/.env" 2>/dev/null || true
-  set +a
-  if [[ -n "${ARGOS_API_KEY:-}" && ${#ARGOS_API_KEY} -ge 32 ]]; then
-    pass "ARGOS_API_KEY set (${#ARGOS_API_KEY} chars)"
+  # Read only ARGOS_API_KEY — avoid exporting all secrets via set -a
+  api_key=$(grep -E '^ARGOS_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+  if [[ -n "$api_key" && ${#api_key} -ge 32 ]]; then
+    pass "ARGOS_API_KEY set (${#api_key} chars)"
   else
     fail "ARGOS_API_KEY missing or < 32 chars — app will refuse to start"
   fi
@@ -43,7 +40,8 @@ else
 fi
 
 # --- 3. Database path writable ---
-DB_PATH="${DATABASE_PATH:-./rf_signals.db}"
+DB_PATH=$(grep -E '^DATABASE_PATH=' "$PROJECT_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "")
+DB_PATH="${DB_PATH:-./rf_signals.db}"
 # Resolve relative paths against project dir
 [[ "$DB_PATH" != /* ]] && DB_PATH="$PROJECT_DIR/$DB_PATH"
 DB_DIR="$(dirname "$DB_PATH")"
