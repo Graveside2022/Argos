@@ -105,6 +105,13 @@
 		"group": "Core Infrastructure"
 	},
 	{
+		"id": "argos_services",
+		"desc": "Build app + install systemd services (production, monitors, watchdogs)",
+		"core": true,
+		"func": "install_argos_services",
+		"group": "Core Infrastructure"
+	},
+	{
 		"id": "gsm_evil",
 		"desc": "GSM Evil (cell tower monitoring)",
 		"core": false,

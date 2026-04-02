@@ -851,32 +851,14 @@ TMPFILES
 CRON
   echo "  tmpreaper installed, 15-min cron cleanup active."
 
-  # ── 5. argos-startup.service (boot health check) ──
+  # ── 5. argos-startup.service ──
+  # NOTE: startup service is now installed by install-services.sh from
+  # deployment/argos-startup.service (templated). The install_argos_services
+  # component handles this. We just ensure the script is executable here.
   local STARTUP_SCRIPT="$PROJECT_DIR/scripts/startup-check.sh"
   if [[ -f "$STARTUP_SCRIPT" ]]; then
-    cat > /etc/systemd/system/argos-startup.service << EOF
-[Unit]
-Description=Argos Startup Check
-After=local-fs.target tmp.mount earlyoom.service
-Wants=earlyoom.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=$STARTUP_SCRIPT
-User=$SETUP_USER
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
     chmod +x "$STARTUP_SCRIPT"
-    systemctl daemon-reload
-    systemctl enable argos-startup.service
-    echo "  argos-startup.service installed and enabled."
-  else
-    echo "  Warning: scripts/startup-check.sh not found. Skipping startup service."
+    echo "  startup-check.sh marked executable (service installed by install_argos_services)."
   fi
 
   # ── 6. PSI boot parameter ──
@@ -917,6 +899,38 @@ EOF
   echo "  Wireshark capture directory set to $CAPTURES_DIR."
 
   echo "  Memory hardening complete (8 layers installed)."
+}
+
+install_argos_services() {
+  # Build the production app and install all systemd services.
+  # This is the final core component — runs after npm_deps, env_file, and mem_hardening.
+  echo "  Building production app..."
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build" > /dev/null 2>&1; then
+    echo "  Production build created (build/)."
+  else
+    echo "  [WARN] npm run build failed — argos-final.service will not work."
+    echo "  You can retry manually: cd $PROJECT_DIR && npm run build"
+  fi
+
+  # Run database migrations
+  echo "  Running database migrations..."
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run db:migrate" > /dev/null 2>&1; then
+    echo "  Database migrations applied."
+  else
+    echo "  [WARN] Database migration failed — will retry on first app start."
+  fi
+
+  # Install systemd services via the service installer
+  echo "  Installing systemd services..."
+  bash "$SCRIPT_DIR/install-services.sh"
+
+  echo "  Argos services installed. After reboot:"
+  echo "    - argos-startup (boot health check)"
+  echo "    - argos-final (production app on port 5173)"
+  echo "    - argos-kismet (WiFi scanner)"
+  echo "    - argos-cpu-protector (thermal monitor)"
+  echo "    - argos-wifi-resilience (WiFi watchdog)"
+  echo "    - argos-process-manager (process lifecycle)"
 }
 
 install_docker() {

@@ -432,12 +432,21 @@ fi
 gum style \
   --foreground "$C_DIM" \
   "  Next steps:" \
-  "    1. Edit .env to set service passwords" \
-  "    2. $(gum style --foreground "$C_BRAND" "npm run dev") — start development server" \
+  "    1. Edit .env to verify service passwords and API keys" \
+  "    2. $(gum style --foreground "$C_BRAND" "sudo reboot") — services start automatically" \
   "    3. Open http://<pi-ip>:5173 in your browser" \
   "" \
-  "  Optional API key (set later in .env):" \
-  "    STADIA_MAPS_API_KEY — vector map tiles (stadiamaps.com)"
+  "  Installed services (auto-start on boot):" \
+  "    argos-final (production app) · argos-kismet (WiFi)" \
+  "    argos-cpu-protector · argos-wifi-resilience · argos-process-manager" \
+  "" \
+  "  For development instead of production:" \
+  "    $(gum style --foreground "$C_BRAND" "npm run dev") — start dev server with HMR" \
+  "" \
+  "  Optional API keys (set in .env):" \
+  "    STADIA_MAPS_API_KEY — vector map tiles (stadiamaps.com)" \
+  "    CLOUDRF_API_KEY — RF propagation modeling" \
+  "    OPENCELLID_API_KEY — cell tower database"
 
 echo ""
 gum style --bold --foreground "$C_SUCCESS" "  ✓ Provisioning complete."
