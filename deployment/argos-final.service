@@ -1,7 +1,7 @@
 [Unit]
 Description=Argos SDR & Network Analysis Console
-After=network.target gpsd.service
-Wants=gpsd.service
+After=network.target gpsd.service earlyoom.service argos-startup.service
+Wants=gpsd.service earlyoom.service
 
 [Service]
 Type=simple

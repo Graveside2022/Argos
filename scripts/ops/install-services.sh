@@ -27,13 +27,25 @@ echo "  User:      $SETUP_USER"
 echo "  DroneID:   $DRONEID_DIR"
 echo ""
 
+# Pre-flight checks
+echo "Running pre-flight checks..."
+if [[ ! -d "$PROJECT_DIR/build" ]]; then
+  echo "  [WARN] build/ not found — run 'npm run build' before starting argos-final.service"
+fi
+for bin in argos-cpu-protector.sh argos-wifi-resilience.sh argos-process-manager.sh; do
+  if [[ ! -x "/usr/local/bin/$bin" ]]; then
+    echo "  [WARN] /usr/local/bin/$bin not found — ${bin%.sh}.service will not be enabled"
+  fi
+done
+echo ""
+
 # System-level services (installed to /etc/systemd/system/)
+# NOTE: argos-cpu-protector, argos-wifi-resilience, argos-process-manager are
+# excluded until their /usr/local/bin/*.sh binaries are created.
 SYSTEM_SERVICES=(
+  argos-startup.service
   argos-final.service
   argos-kismet.service
-  argos-cpu-protector.service
-  argos-wifi-resilience.service
-  argos-process-manager.service
   argos-headless.service
   argos-droneid.service
   gsmevil-patch.service
@@ -43,6 +55,11 @@ for name in "${SYSTEM_SERVICES[@]}"; do
   svc="$DEPLOY_DIR/$name"
   if [[ ! -f "$svc" ]]; then
     echo "  [SKIP] $name (not found)"
+    continue
+  fi
+  # Skip DroneID if sibling directory doesn't exist
+  if [[ "$name" == "argos-droneid.service" && ! -d "$DRONEID_DIR" ]]; then
+    echo "  [SKIP] $name (DRONEID_DIR not found: $DRONEID_DIR)"
     continue
   fi
   echo "  Installing $name"
@@ -79,11 +96,12 @@ echo "Reloading systemd daemon..."
 systemctl daemon-reload
 
 echo "Enabling core services..."
+systemctl enable argos-startup.service 2>/dev/null || true
 systemctl enable argos-final.service 2>/dev/null || true
 systemctl enable argos-kismet.service 2>/dev/null || true
-systemctl enable argos-cpu-protector.service 2>/dev/null || true
-systemctl enable argos-wifi-resilience.service 2>/dev/null || true
-systemctl enable argos-process-manager.service 2>/dev/null || true
+# NOTE: argos-cpu-protector, argos-wifi-resilience, argos-process-manager
+# are NOT enabled — their /usr/local/bin/*.sh binaries do not exist yet.
+# Enable them manually after creating the scripts.
 
 echo ""
 echo "Done. Services installed and enabled."

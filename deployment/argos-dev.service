@@ -9,9 +9,8 @@ Group=__SETUP_USER__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=__PROJECT_DIR__/.env
 Environment="NODE_ENV=development"
-Environment="NODE_OPTIONS=--max-old-space-size=1024"
-Environment="CI=true"
-ExecStart=/usr/bin/npm run dev
+Environment="NODE_OPTIONS=--max-old-space-size=2048"
+ExecStart=__PROJECT_DIR__/scripts/dev/vite-oom-protect.sh
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
