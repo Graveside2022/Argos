@@ -1003,7 +1003,7 @@ install_argos_services() {
   sudo -u "$SETUP_USER" mkdir -p "$LOG_DIR"
 
   echo "  Building production app (log: logs/setup-build.log)..."
-  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build" > "$LOG_DIR/setup-build.log" 2>&1; then
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build > '$LOG_DIR/setup-build.log' 2>&1"; then
     echo "  Production build created (build/)."
   else
     echo "  [ERROR] npm run build failed — see logs/setup-build.log"
@@ -1014,7 +1014,7 @@ install_argos_services() {
 
   # Run database migrations
   echo "  Running database migrations (log: logs/setup-migrate.log)..."
-  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run db:migrate" > "$LOG_DIR/setup-migrate.log" 2>&1; then
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run db:migrate > '$LOG_DIR/setup-migrate.log' 2>&1"; then
     echo "  Database migrations applied."
   else
     echo "  [WARN] Database migration failed — see logs/setup-migrate.log"

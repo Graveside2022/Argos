@@ -63,7 +63,7 @@ attempt_reconnect() {
   case "$level" in
     1)
       log "Level 1: nmcli reconnect $MANAGED_IFACE"
-      nmcli device connect "$MANAGED_IFACE" 2>/dev/null
+      sudo nmcli device connect "$MANAGED_IFACE" 2>/dev/null
       ;;
     2)
       log "Level 2: link bounce + nmcli reconnect"

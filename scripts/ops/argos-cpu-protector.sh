@@ -70,7 +70,7 @@ stop_optional_services() {
   for svc in "${services_to_stop[@]}"; do
     if systemctl is-active "$svc" >/dev/null 2>&1; then
       log "Stopping $svc due to $level thermal state"
-      systemctl stop "$svc" 2>/dev/null || true
+      sudo systemctl stop "$svc" 2>/dev/null || true
       STOPPED_SERVICES+=("$svc")
     fi
   done
@@ -85,7 +85,7 @@ resume_services() {
   fi
   for svc in "${STOPPED_SERVICES[@]}"; do
     log "Resuming $svc — temperature recovered"
-    systemctl start "$svc" 2>/dev/null || true
+    sudo systemctl start "$svc" 2>/dev/null || true
   done
   SERVICES_STOPPED=false
   STOPPED_SERVICES=()
