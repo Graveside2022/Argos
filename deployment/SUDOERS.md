@@ -27,6 +27,21 @@ kali ALL=(ALL) NOPASSWD: /usr/sbin/ip
 
 # HackRF — RF sweep
 kali ALL=(ALL) NOPASSWD: /usr/bin/hackrf_info
+
+# Argos process manager — restart critical services
+kali ALL=(ALL) NOPASSWD: /bin/systemctl restart earlyoom
+kali ALL=(ALL) NOPASSWD: /bin/systemctl restart gpsd
+kali ALL=(ALL) NOPASSWD: /bin/systemctl restart argos-final
+kali ALL=(ALL) NOPASSWD: /bin/systemctl restart argos-kismet
+
+# Argos WiFi resilience — interface recovery
+kali ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 *
+kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device reapply wlan0
+kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device disconnect wlan0
+kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device connect wlan0
+
+# Argos Vite OOM protection — set oom_score_adj
+kali ALL=(ALL) NOPASSWD: /usr/bin/sh -c echo * > /proc/*/oom_score_adj
 ```
 
 ## Why These Are Needed
@@ -41,8 +56,10 @@ kali ALL=(ALL) NOPASSWD: /usr/bin/hackrf_info
 | `lsof` / `fuser`         | Health + control      | Port and process checking          |
 | `python3`                | GSM Evil control      | Run GsmEvil2 web interface         |
 | `kismet`                 | Kismet control        | WiFi discovery service             |
-| `systemctl`              | Kismet control        | Service lifecycle management       |
-| `iw` / `ip`              | Kismet control        | Monitor interface cleanup          |
+| `systemctl`              | Kismet + process-mgr  | Service lifecycle management       |
+| `iw` / `ip`              | Kismet + WiFi resil.  | Monitor interface + link recovery  |
+| `nmcli`                  | WiFi resilience       | wlan0 reconnection escalation      |
+| `oom_score_adj`          | Vite OOM protect      | Set OOM score on Vite process tree |
 
 ## Installation
 

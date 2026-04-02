@@ -74,9 +74,13 @@ attempt_reconnect() {
       nmcli device connect "$MANAGED_IFACE" 2>/dev/null
       ;;
     3)
-      warn "Level 3: restarting NetworkManager"
-      sudo systemctl restart NetworkManager 2>/dev/null || true
+      warn "Level 3: reapplying wlan0 connection (targeted, not full NM restart)"
+      sudo nmcli device reapply "$MANAGED_IFACE" 2>/dev/null || true
       sleep 5
+      # If reapply fails, try disconnect + reconnect (still wlan0-scoped)
+      sudo nmcli device disconnect "$MANAGED_IFACE" 2>/dev/null || true
+      sleep 2
+      sudo nmcli device connect "$MANAGED_IFACE" 2>/dev/null || true
       ;;
   esac
 }

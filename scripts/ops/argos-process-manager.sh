@@ -60,7 +60,7 @@ restart_service() {
   fi
 
   log "Restarting $svc (failure #$((failures + 1)))"
-  if systemctl restart "$svc" 2>/dev/null; then
+  if sudo systemctl restart "$svc" 2>/dev/null; then
     log "$svc restarted successfully"
     CONSECUTIVE_FAILURES[$svc]=0
   else
