@@ -49,8 +49,7 @@ const reconWorkflow: ToolCategory = {
 		pagerAnalog,
 		iotSubghzCollection,
 		droneUasDetection,
-		rfFingerprintingGeo,
-		osintGeoint
+		rfFingerprintingGeo
 	]
 };
 
@@ -119,12 +118,21 @@ const offnetCategory: ToolCategory = {
 	children: [reconWorkflow, attackWorkflow, defenseWorkflow, utilitiesWorkflow]
 };
 
+/** OSINT top-level category */
+const osintCategory: ToolCategory = {
+	id: 'osint',
+	name: 'OSINT',
+	description: 'Open-source intelligence and geospatial reconnaissance',
+	icon: toolIcons.geolocation,
+	children: [osintGeoint]
+};
+
 /** Complete tool hierarchy assembled from all sub-modules */
 export const toolHierarchy: ToolHierarchy = {
 	root: {
 		id: 'tools-root',
 		name: 'TOOLS',
-		children: [offnetCategory, onnetCategory]
+		children: [offnetCategory, onnetCategory, osintCategory]
 	}
 };
 
