@@ -931,13 +931,27 @@ CRON
     echo "  startup-check.sh marked executable (service installed by install_argos_services)."
   fi
 
-  # ── 6. PSI boot parameter ──
+  # ── 6. Kernel boot parameters (PSI + cgroup memory controller) ──
   local CMDLINE="/boot/firmware/cmdline.txt"
-  if [[ -f "$CMDLINE" ]] && ! grep -q 'psi=1' "$CMDLINE"; then
-    sed -i 's/$/ psi=1/' "$CMDLINE"
-    echo "  psi=1 added to kernel cmdline (active after next reboot)."
-  else
-    echo "  psi=1 already in kernel cmdline."
+  if [[ -f "$CMDLINE" ]]; then
+    local cmdline_changed=false
+    # PSI (Pressure Stall Information) — needed for memory pressure monitoring
+    if ! grep -q 'psi=1' "$CMDLINE"; then
+      sed -i 's/$/ psi=1/' "$CMDLINE"
+      echo "  psi=1 added to kernel cmdline."
+      cmdline_changed=true
+    fi
+    # cgroup memory controller — required for cgroup_mem MemoryHigh/MemoryMax limits
+    if ! grep -q 'cgroup_enable=memory' "$CMDLINE"; then
+      sed -i 's/$/ cgroup_enable=memory cgroup_memory=1/' "$CMDLINE"
+      echo "  cgroup_enable=memory cgroup_memory=1 added to kernel cmdline."
+      cmdline_changed=true
+    fi
+    if [[ "$cmdline_changed" == true ]]; then
+      echo "  Kernel cmdline updated (active after next reboot)."
+    else
+      echo "  Kernel boot params already configured (psi=1, cgroup memory)."
+    fi
   fi
 
   # ── 7. NODE_COMPILE_CACHE on NVMe ──
