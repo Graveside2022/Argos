@@ -49,6 +49,47 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# --- Pre-flight: verify hard requirements ---
+PREFLIGHT_FAIL=false
+
+# Required commands and what package provides them
+declare -A REQUIRED_CMDS=(
+  [curl]="curl"
+  [apt-get]="apt (Debian/Ubuntu/Kali/Parrot only)"
+  [gpg]="gnupg"
+  [python3]="python3"
+  [getent]="libc-bin"
+)
+
+MISSING_CMDS=()
+for cmd in "${!REQUIRED_CMDS[@]}"; do
+  if ! command -v "$cmd" &>/dev/null; then
+    MISSING_CMDS+=("  - $cmd (install: apt-get install -y ${REQUIRED_CMDS[$cmd]})")
+  fi
+done
+
+if [[ ${#MISSING_CMDS[@]} -gt 0 ]]; then
+  echo "Error: Missing required commands:" >&2
+  printf '%s\n' "${MISSING_CMDS[@]}" >&2
+  echo "" >&2
+  echo "This installer requires a Debian-based OS (Kali, Parrot, Ubuntu, Debian)." >&2
+  PREFLIGHT_FAIL=true
+fi
+
+# Internet connectivity (only check if curl exists)
+if command -v curl &>/dev/null; then
+  if ! curl -fsS --connect-timeout 5 https://deb.nodesource.com > /dev/null 2>&1; then
+    echo "Error: No internet connectivity." >&2
+    echo "Setup requires network access to download packages and signing keys." >&2
+    echo "Verify your network connection and try again." >&2
+    PREFLIGHT_FAIL=true
+  fi
+fi
+
+if [[ "$PREFLIGHT_FAIL" == true ]]; then
+  exit 1
+fi
+
 # --- Path setup ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
