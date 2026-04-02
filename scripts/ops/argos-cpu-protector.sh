@@ -32,7 +32,12 @@ get_temp() {
   if [[ -r "$THERMAL_ZONE" ]]; then
     local millideg
     millideg=$(cat "$THERMAL_ZONE")
-    echo $((millideg / 1000))
+    # Validate numeric output — filesystem errors can produce garbage
+    if [[ "$millideg" =~ ^[0-9]+$ ]]; then
+      echo $((millideg / 1000))
+    else
+      echo "-1"
+    fi
   else
     echo "-1"
   fi

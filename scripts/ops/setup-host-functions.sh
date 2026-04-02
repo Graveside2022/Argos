@@ -345,13 +345,13 @@ EOF
 # Argos: auto-mark USB WiFi adapters as unmanaged by NetworkManager
 # Only wlan0 (RPi onboard Broadcom) is managed for internet connectivity.
 # All USB WiFi adapters are reserved for Kismet monitor mode.
-# Common Alfa/MediaTek/Realtek/Atheros USB WiFi vendor IDs:
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0e8d", ENV{NM_UNMANAGED}="1"
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0bda", ENV{NM_UNMANAGED}="1"
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="148f", ENV{NM_UNMANAGED}="1"
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0cf3", ENV{NM_UNMANAGED}="1"
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="2357", ENV{NM_UNMANAGED}="1"
-SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="7392", ENV{NM_UNMANAGED}="1"
+# DEVTYPE=="wlan" ensures only wireless interfaces are matched (not USB Ethernet).
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="0e8d", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="0bda", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="148f", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="0cf3", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="2357", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", DEVTYPE=="wlan", ATTRS{idVendor}=="7392", ENV{NM_UNMANAGED}="1"
 WIFI_UDEV
     udevadm control --reload-rules 2>/dev/null || true
     echo "  Installed udev rule to auto-unmanage USB WiFi adapters"
@@ -998,20 +998,27 @@ install_argos_services() {
     return 0
   fi
 
-  echo "  Building production app..."
-  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build" > /dev/null 2>&1; then
+  # Ensure log directory exists
+  local LOG_DIR="$PROJECT_DIR/logs"
+  sudo -u "$SETUP_USER" mkdir -p "$LOG_DIR"
+
+  echo "  Building production app (log: logs/setup-build.log)..."
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run build" > "$LOG_DIR/setup-build.log" 2>&1; then
     echo "  Production build created (build/)."
   else
-    echo "  [WARN] npm run build failed — argos-final.service will not work."
-    echo "  You can retry manually: cd $PROJECT_DIR && npm run build"
+    echo "  [ERROR] npm run build failed — see logs/setup-build.log"
+    echo "  Skipping service installation. Fix the build and re-run:"
+    echo "    cd $PROJECT_DIR && npm run build && sudo bash scripts/ops/install-services.sh"
+    return 1
   fi
 
   # Run database migrations
-  echo "  Running database migrations..."
-  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run db:migrate" > /dev/null 2>&1; then
+  echo "  Running database migrations (log: logs/setup-migrate.log)..."
+  if sudo -u "$SETUP_USER" bash -c "cd '$PROJECT_DIR' && npm run db:migrate" > "$LOG_DIR/setup-migrate.log" 2>&1; then
     echo "  Database migrations applied."
   else
-    echo "  [WARN] Database migration failed — will retry on first app start."
+    echo "  [WARN] Database migration failed — see logs/setup-migrate.log"
+    echo "  Will retry on first app start."
   fi
 
   # Install systemd services via the service installer

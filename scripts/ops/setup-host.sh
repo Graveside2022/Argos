@@ -51,6 +51,19 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# --- Detect dry-run mode (before pre-flight so --dry-run works air-gapped) ---
+DRY_RUN=false
+for arg in "$@"; do
+  [[ "$arg" == "--dry-run" ]] && DRY_RUN=true
+done
+export DRY_RUN
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo ""
+  echo "=== DRY-RUN MODE — no changes will be made ==="
+  echo ""
+fi
+
 # --- Pre-flight: verify hard requirements ---
 PREFLIGHT_FAIL=false
 
@@ -78,8 +91,8 @@ if [[ ${#MISSING_CMDS[@]} -gt 0 ]]; then
   PREFLIGHT_FAIL=true
 fi
 
-# Internet connectivity (only check if curl exists)
-if command -v curl &>/dev/null; then
+# Internet connectivity (skip in dry-run mode — air-gapped is fine for dry-run)
+if [[ "$DRY_RUN" != true ]] && command -v curl &>/dev/null; then
   if ! curl -fsS --connect-timeout 5 https://deb.nodesource.com > /dev/null 2>&1; then
     echo "Error: No internet connectivity." >&2
     echo "Setup requires network access to download packages and signing keys." >&2
@@ -90,19 +103,6 @@ fi
 
 if [[ "$PREFLIGHT_FAIL" == true ]]; then
   exit 1
-fi
-
-# --- Detect dry-run mode ---
-DRY_RUN=false
-for arg in "$@"; do
-  [[ "$arg" == "--dry-run" ]] && DRY_RUN=true
-done
-export DRY_RUN
-
-if [[ "$DRY_RUN" == true ]]; then
-  echo ""
-  echo "=== DRY-RUN MODE — no changes will be made ==="
-  echo ""
 fi
 
 # --- Path setup ---

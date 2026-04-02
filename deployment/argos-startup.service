@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+User=__SETUP_USER__
+Group=__SETUP_USER__
 ExecStart=__PROJECT_DIR__/scripts/startup-check.sh
 RemainAfterExit=yes
 StandardOutput=journal
