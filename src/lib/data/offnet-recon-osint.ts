@@ -29,7 +29,7 @@ export const osintGeoint: ToolCategory = {
 			},
 			{
 				canOpen: true,
-				externalUrl: 'http://localhost:3000'
+				externalUrl: 'http://localhost:3001'
 			}
 		)
 	]
