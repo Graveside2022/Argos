@@ -336,6 +336,28 @@ EOF
     echo "  No secondary WiFi adapters detected (plug in a USB WiFi for Kismet)"
   fi
 
+  # 1b-extra. Udev rule to auto-mark future USB WiFi adapters as NM-unmanaged
+  # This ensures Alfa cards plugged in AFTER setup still get excluded from NM.
+  # Only wlan0 (built-in RPi WiFi) should be managed by NetworkManager.
+  local NM_UDEV_RULE="/etc/udev/rules.d/99-argos-wifi-unmanaged.rules"
+  if [[ ! -f "$NM_UDEV_RULE" ]]; then
+    cat > "$NM_UDEV_RULE" << 'WIFI_UDEV'
+# Argos: auto-mark USB WiFi adapters as unmanaged by NetworkManager
+# Only wlan0 (RPi onboard Broadcom) is managed for internet connectivity.
+# All USB WiFi adapters are reserved for Kismet monitor mode.
+# Common Alfa/MediaTek/Realtek/Atheros USB WiFi vendor IDs:
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0e8d", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0bda", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="148f", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="0cf3", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="2357", ENV{NM_UNMANAGED}="1"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="1", ATTRS{idVendor}=="7392", ENV{NM_UNMANAGED}="1"
+WIFI_UDEV
+    udevadm control --reload-rules 2>/dev/null || true
+    echo "  Installed udev rule to auto-unmanage USB WiFi adapters"
+    changed=true
+  fi
+
   # 1c. DNS defense: NetworkManager fallback DNS
   local NM_DNS_CONF="/etc/NetworkManager/conf.d/01-argos-dns-fallback.conf"
   local NM_DNS_MODE
@@ -378,7 +400,10 @@ install_system_packages() {
     python3 python3-venv python3-pip \
     libsqlite3-dev pkg-config \
     curl wget git \
-    xvfb chromium earlyoom
+    xvfb chromium earlyoom \
+    aircrack-ng wifite \
+    firmware-linux-nonfree firmware-misc-nonfree \
+    firmware-mediatek firmware-realtek firmware-atheros
 }
 
 install_nodejs() {
@@ -398,7 +423,7 @@ install_nodejs() {
 }
 
 install_gpsd() {
-  _ensure_pkgs gpsd gpsd-clients
+  _ensure_pkgs gpsd gpsd-clients gpsd-tools
 
   # Configure gpsd to use stable /dev/gps0 symlink (created by udev rule below)
   cat > /etc/default/gpsd <<'GPSD_CONF'
@@ -408,12 +433,19 @@ GPSD_OPTIONS="-n"
 USBAUTO="true"
 GPSD_CONF
 
-  # Udev rule: create /dev/gps0 symlink for Prolific USB-to-Serial GPS adapter
-  # Matches the common PL2303-based GPS puck (067b:23a3)
+  # Udev rules: create /dev/gps0 symlink for common GPS USB adapters
   cat > /etc/udev/rules.d/99-gps.rules <<'GPS_UDEV'
-# Stable symlink for Prolific USB-to-Serial GPS adapter
-# Creates /dev/gps0 regardless of USB enumeration order
+# Stable symlink for USB GPS adapters — creates /dev/gps0 regardless of enumeration order
+# Prolific PL2303 (common GPS puck)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23a3", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
+# Silicon Labs CP210x (u-blox, Adafruit, SparkFun GPS)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
+# FTDI FT232R (many GPS adapters)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
+# CH340/CH341 (cheap USB-serial GPS adapters)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
+# u-blox direct USB (u-blox 7/8/9/10)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="gpsd.service"
 GPS_UDEV
 
   udevadm control --reload-rules 2>/dev/null || true
@@ -650,11 +682,21 @@ ATTR{idVendor}=="2500", ATTR{idProduct}=="0023", MODE="0666", GROUP="plugdev"'
     echo "$UDEV_CONTENT" > "$UDEV_FILE"
     udevadm control --reload-rules
     udevadm trigger
-    usermod -aG plugdev "$SETUP_USER" 2>/dev/null || true
   fi
+
+  # Ensure user is in all required hardware groups
+  for grp in plugdev dialout kismet; do
+    if getent group "$grp" >/dev/null 2>&1; then
+      usermod -aG "$grp" "$SETUP_USER" 2>/dev/null || true
+    fi
+  done
+  echo "  User $SETUP_USER added to hardware groups: plugdev, dialout, kismet"
 }
 
 install_sdr_infra() {
+  # HackRF CLI tools (hackrf_info, hackrf_sweep, hackrf_transfer) + dev library
+  _ensure_pkgs hackrf libhackrf-dev
+  # SoapySDR abstraction layer + device modules
   _ensure_pkgs soapysdr-tools uhd-host soapysdr-module-hackrf soapysdr-module-rtlsdr soapysdr0.8-module-uhd
 
   # Download UHD firmware images (required for B200-series USRPs)
