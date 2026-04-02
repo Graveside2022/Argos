@@ -11,6 +11,8 @@ import type { ToolCategory, ToolDefinition, ToolHierarchy } from '$lib/types/too
 import { droneDefeatGps, iotSubghzExploit, rfJamming, takExploit } from './offnet-attack-rf';
 // OFFNET > ATTACK subcategories
 import { btBleExploit, rogueAp, wifiDisruption } from './offnet-attack-wifi';
+// OFFNET > RECON > OSINT subcategories
+import { osintGeoint } from './offnet-recon-osint';
 // OFFNET > RECON subcategories
 import { cellularTrunked, spectrumAnalysis, wifiBtDiscovery } from './offnet-recon-signals';
 import {
@@ -47,7 +49,8 @@ const reconWorkflow: ToolCategory = {
 		pagerAnalog,
 		iotSubghzCollection,
 		droneUasDetection,
-		rfFingerprintingGeo
+		rfFingerprintingGeo,
+		osintGeoint
 	]
 };
 
