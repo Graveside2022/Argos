@@ -139,14 +139,20 @@
 		}
 	}
 
+	/** Apply stop result: update status and show appropriate toast. */
+	function applyStopResult(tool: ToolDefinition, data: Record<string, unknown>) {
+		setToolStatus(tool.id, data.success ? 'stopped' : 'running');
+		if (data.success) toast.success(`${tool.name} stopped`);
+		else toast.error(`Failed to stop ${tool.name}`);
+	}
+
 	async function handleStop(tool: ToolDefinition) {
 		const ep = toolEndpoints[tool.id];
 		if (!ep) return;
 		setToolStatus(tool.id, 'stopping');
 		try {
 			const data = await (await fetchStopAction(ep)).json();
-			setToolStatus(tool.id, data.success ? 'stopped' : 'running');
-			toast.success(`${tool.name} stopped`);
+			applyStopResult(tool, data);
 		} catch {
 			setToolStatus(tool.id, catchFallbackStatus(tool.id));
 			toast.error(`Failed to stop ${tool.name}`);

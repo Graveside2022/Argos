@@ -102,10 +102,28 @@ function killManagedProcess(): void {
 
 /** Kill all processes listening on the SpiderFoot port (handles orphaned process trees) */
 async function killProcessOnPort(): Promise<void> {
+	// Try fuser -k first (works when process is owned by same user)
 	try {
 		await execFileAsync('/usr/bin/fuser', ['-k', `${SPIDERFOOT_PORT}/tcp`]);
+		return;
 	} catch {
-		/* fuser exits non-zero when no process found */
+		/* fuser exits non-zero when no process found or lacks permissions */
+	}
+
+	// Fallback: find PID via ss/lsof and kill directly
+	try {
+		const { stdout } = await execFileAsync('/usr/bin/ss', [
+			'-tlnp',
+			`sport = :${SPIDERFOOT_PORT}`
+		]);
+		const pidMatch = stdout.match(/pid=(\d+)/);
+		if (pidMatch) {
+			const pid = parseInt(pidMatch[1], 10);
+			process.kill(pid, 'SIGTERM');
+			logger.info(`[spiderfoot] Killed orphaned process ${pid} via fallback`);
+		}
+	} catch {
+		logger.warn('[spiderfoot] Fallback kill also failed');
 	}
 }
 
