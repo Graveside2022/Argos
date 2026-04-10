@@ -1,6 +1,7 @@
 /**
  * OFFNET RECON OSINT & Geospatial Intelligence tool categories:
  * - Geospatial Infrastructure Intelligence (Sightline)
+ * - OSINT Automation (SpiderFoot)
  */
 
 import type { ToolCategory } from '$lib/types/tools';
@@ -32,6 +33,22 @@ export const osintGeoint: ToolCategory = {
 				canOpen: true,
 				shouldShowControls: true,
 				viewName: 'sightline'
+			}
+		),
+		createTool(
+			{
+				id: 'spiderfoot',
+				name: 'SpiderFoot',
+				description:
+					'OSINT automation — 200+ modules for threat intelligence, attack surface mapping, and target reconnaissance',
+				icon: toolIcons.geolocation,
+				deployment: 'native'
+			},
+			{
+				isInstalled: true,
+				canOpen: true,
+				shouldShowControls: true,
+				viewName: 'spiderfoot'
 			}
 		)
 	]

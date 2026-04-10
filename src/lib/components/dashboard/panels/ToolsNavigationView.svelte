@@ -28,7 +28,8 @@
 		openwebrx: { controlUrl: '/api/openwebrx/control' },
 		bluehood: { controlUrl: '/api/bluehood/control' },
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
-		sightline: { controlUrl: '/api/sightline/control' }
+		sightline: { controlUrl: '/api/sightline/control' },
+		spiderfoot: { controlUrl: '/api/spiderfoot/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */
@@ -152,25 +153,25 @@
 		}
 	}
 
+	/** Check a tool's status via its controlUrl endpoint */
+	function checkControlStatus(toolId: string): void {
+		const ep = toolEndpoints[toolId];
+		if (!ep?.controlUrl) return;
+		postControl(ep.controlUrl, 'status')
+			.then((r) => r.json())
+			.then((data) => {
+				if (data.isRunning) setLocalStatus(toolId, 'running');
+			})
+			.catch(() => {});
+	}
+
 	/** Check initial status of tools on mount */
 	onMount(() => {
-		// Check OpenWebRX container status
-		const openwebrxEp = toolEndpoints['openwebrx'];
-		if (openwebrxEp?.controlUrl) {
-			fetch(openwebrxEp.controlUrl, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'status' }),
-				credentials: 'same-origin'
-			})
-				.then((r) => r.json())
-				.then((data) => {
-					if (data.isRunning) setLocalStatus('openwebrx', 'running');
-				})
-				.catch(() => {});
-		}
+		checkControlStatus('openwebrx');
+		checkControlStatus('sightline');
+		checkControlStatus('spiderfoot');
 
-		// Check GSM Evil process status (uses dedicated GET endpoint)
+		// Tools with dedicated GET status endpoints
 		fetch('/api/gsm-evil/status')
 			.then((r) => r.json())
 			.then((data) => {
@@ -178,7 +179,6 @@
 			})
 			.catch(() => {});
 
-		// Check BlueHood service status
 		fetch('/api/bluehood/status')
 			.then((r) => r.json())
 			.then((data) => {
@@ -186,29 +186,12 @@
 			})
 			.catch(() => {});
 
-		// Check WigleToTAK process status
 		fetch('/api/wigletotak/status')
 			.then((r) => r.json())
 			.then((data) => {
 				if (data.isRunning) setLocalStatus('wigletotak', 'running');
 			})
 			.catch(() => {});
-
-		// Check Sightline container status
-		const sightlineEp = toolEndpoints['sightline'];
-		if (sightlineEp?.controlUrl) {
-			fetch(sightlineEp.controlUrl, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'status' }),
-				credentials: 'same-origin'
-			})
-				.then((r) => r.json())
-				.then((data) => {
-					if (data.isRunning) setLocalStatus('sightline', 'running');
-				})
-				.catch(() => {});
-		}
 	});
 </script>
 

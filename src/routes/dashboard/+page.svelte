@@ -20,6 +20,7 @@
 	import LogsAnalyticsView from '$lib/components/dashboard/views/LogsAnalyticsView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
+	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
 	import WigleToTAKView from '$lib/components/dashboard/views/WigleToTAKView.svelte';
@@ -157,6 +158,8 @@
 				<LogsAnalyticsView />
 			{:else if $activeView === 'sightline'}
 				<SightlineView />
+			{:else if $activeView === 'spiderfoot'}
+				<SpiderfootView />
 			{:else}
 				<ToolUnavailableView title={$activeView} />
 			{/if}
