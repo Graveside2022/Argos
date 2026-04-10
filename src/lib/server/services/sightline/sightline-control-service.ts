@@ -8,6 +8,7 @@ import { type ChildProcess, spawn } from 'child_process';
 import path from 'path';
 
 import { errMsg } from '$lib/server/api/error-utils';
+import { execFileAsync } from '$lib/server/exec';
 import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
@@ -130,6 +131,29 @@ function killManagedProcess(): void {
 	sightlineProcess = null;
 }
 
+/** Kill all processes listening on the Sightline port (handles orphaned process trees) */
+async function killProcessOnPort(): Promise<void> {
+	try {
+		await execFileAsync('/usr/bin/fuser', ['-k', `${SIGHTLINE_PORT}/tcp`]);
+	} catch {
+		/* fuser exits non-zero when no process found — that's fine */
+	}
+}
+
+/** Attempt all kill strategies and wait for shutdown */
+async function terminateSightline(): Promise<boolean> {
+	killManagedProcess();
+
+	// Fallback: kill orphaned process by port if managed ref was lost (e.g. after Vite restart)
+	if (await isSightlineResponding()) {
+		logger.info('[sightline] Managed process gone, killing by port');
+		await killProcessOnPort();
+	}
+
+	await delay(1000);
+	return !(await isSightlineResponding());
+}
+
 /** Stop the Sightline process */
 export async function stopSightline(): Promise<SightlineControlResult> {
 	try {
@@ -139,14 +163,12 @@ export async function stopSightline(): Promise<SightlineControlResult> {
 			return { success: true, message: 'Sightline is not running' };
 		}
 
-		killManagedProcess();
-		await delay(1000);
-
-		if (await isSightlineResponding()) {
+		const stopped = await terminateSightline();
+		if (!stopped) {
 			return {
 				success: false,
 				message: 'Sightline is still running after stop attempt',
-				error: 'Process may have been started externally'
+				error: 'Could not kill the process'
 			};
 		}
 
