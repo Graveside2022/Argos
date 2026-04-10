@@ -32,7 +32,12 @@ const ACTION_HANDLERS: Record<string, () => Promise<SightlineResult>> = {
  * Body: { action: "start" | "stop" | "status" }
  */
 export const POST = createHandler(async ({ request }) => {
-	const rawBody = await request.json();
+	let rawBody: unknown;
+	try {
+		rawBody = await request.json();
+	} catch {
+		return error(400, 'Invalid JSON in request body');
+	}
 	const validated = safeParseWithHandling(SightlineControlSchema, rawBody, 'user-action');
 	if (!validated) return error(400, 'Invalid Sightline control request');
 

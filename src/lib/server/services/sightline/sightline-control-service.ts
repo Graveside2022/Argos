@@ -25,7 +25,7 @@ export interface SightlineStatusResult {
 }
 
 const SIGHTLINE_PORT = 3001;
-const SIGHTLINE_DIR = path.resolve('/home/kali/Documents/Argos/sightline');
+const SIGHTLINE_DIR = process.env.SIGHTLINE_DIR || path.resolve(process.cwd(), '..', 'sightline');
 const HEALTH_URL = `http://localhost:${SIGHTLINE_PORT}`;
 
 /** Singleton process reference */
@@ -61,6 +61,32 @@ function isProcessAlive(): boolean {
 	}
 }
 
+/** Spawn the Sightline Next.js dev server process */
+function spawnSightlineProcess(): void {
+	sightlineProcess = spawn(
+		process.env.NPX_PATH || 'npx',
+		['next', 'dev', '-p', String(SIGHTLINE_PORT)],
+		{
+			cwd: SIGHTLINE_DIR,
+			stdio: 'ignore',
+			detached: true,
+			env: { ...process.env, NODE_ENV: 'development' }
+		}
+	);
+
+	sightlineProcess.unref();
+
+	sightlineProcess.on('error', (err) => {
+		logger.error('[sightline] Process error', { error: errMsg(err) });
+		sightlineProcess = null;
+	});
+
+	sightlineProcess.on('exit', (code) => {
+		logger.info('[sightline] Process exited', { code });
+		sightlineProcess = null;
+	});
+}
+
 /** Start the Sightline Next.js dev server */
 export async function startSightline(): Promise<SightlineControlResult> {
 	try {
@@ -71,29 +97,7 @@ export async function startSightline(): Promise<SightlineControlResult> {
 			return { success: true, message: 'Sightline is already running' };
 		}
 
-		sightlineProcess = spawn(
-			'/usr/local/bin/npx',
-			['next', 'dev', '-p', String(SIGHTLINE_PORT)],
-			{
-				cwd: SIGHTLINE_DIR,
-				stdio: 'ignore',
-				detached: true,
-				env: { ...process.env, NODE_ENV: 'development' }
-			}
-		);
-
-		sightlineProcess.unref();
-
-		sightlineProcess.on('error', (err) => {
-			logger.error('[sightline] Process error', { error: errMsg(err) });
-			sightlineProcess = null;
-		});
-
-		sightlineProcess.on('exit', (code) => {
-			logger.info('[sightline] Process exited', { code });
-			sightlineProcess = null;
-		});
-
+		spawnSightlineProcess();
 		logger.info('[sightline] Process spawned, waiting for ready...');
 
 		if (await waitForReady()) {
