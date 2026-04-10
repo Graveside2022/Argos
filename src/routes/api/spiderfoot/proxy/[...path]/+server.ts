@@ -85,7 +85,8 @@ async function buildRewrittenResponse(upstream: Response, headers: Headers): Pro
  * Protected by Argos's auth middleware in hooks.server.ts.
  */
 async function proxyToSpiderfoot(request: Request, path: string): Promise<Response> {
-	const upstream = await fetch(new URL(`${SPIDERFOOT_BASE}/${path}`).toString(), {
+	const normalizedPath = path.replace(/\.\.+/g, '').replace(/^\/+/, '');
+	const upstream = await fetch(new URL(`${SPIDERFOOT_BASE}/${normalizedPath}`).toString(), {
 		method: request.method,
 		headers: buildUpstreamHeaders(request),
 		body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,

@@ -12,6 +12,7 @@ import { logger } from '$lib/utils/logger';
 
 const execFileAsync = promisify(execFile);
 
+const SPIDERFOOT_PATH = process.env.SPIDERFOOT_PATH || '/usr/bin/spiderfoot';
 const SPIDERFOOT_PORT = 5002;
 const HEALTH_URL = `http://127.0.0.1:${SPIDERFOOT_PORT}`;
 
@@ -29,6 +30,17 @@ interface SpiderfootStatusResult {
 }
 
 let spiderfootProcess: ChildProcess | null = null;
+let operationLock: Promise<unknown> = Promise.resolve();
+
+/** Serialize access to process control operations to prevent race conditions */
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+	const prev = operationLock;
+	let release: () => void;
+	operationLock = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	return prev.then(fn).finally(() => release());
+}
 
 /** Check if SpiderFoot is responding on its port */
 async function isSpiderfootResponding(): Promise<boolean> {
@@ -62,7 +74,7 @@ async function waitForReady(maxAttempts = 30): Promise<boolean> {
 
 /** Spawn the SpiderFoot web server process */
 function spawnSpiderfootProcess(): void {
-	spiderfootProcess = spawn('/usr/bin/spiderfoot', ['-l', `127.0.0.1:${SPIDERFOOT_PORT}`], {
+	spiderfootProcess = spawn(SPIDERFOOT_PATH, ['-l', `127.0.0.1:${SPIDERFOOT_PORT}`], {
 		stdio: 'ignore',
 		detached: true,
 		env: { ...process.env }
@@ -112,54 +124,58 @@ async function terminateSpiderfoot(): Promise<boolean> {
 }
 
 /** Start the SpiderFoot process */
-export async function startSpiderfoot(): Promise<SpiderfootControlResult> {
-	try {
-		if (await isSpiderfootResponding()) {
-			return { success: true, message: 'SpiderFoot is already running' };
+export function startSpiderfoot(): Promise<SpiderfootControlResult> {
+	return withLock(async () => {
+		try {
+			if (await isSpiderfootResponding()) {
+				return { success: true, message: 'SpiderFoot is already running' };
+			}
+
+			logger.info('[spiderfoot] Starting SpiderFoot');
+			spawnSpiderfootProcess();
+
+			const ready = await waitForReady();
+			if (!ready) {
+				killManagedProcess();
+				return {
+					success: false,
+					message: 'SpiderFoot failed to start',
+					error: 'Timeout waiting for health check'
+				};
+			}
+
+			logger.info('[spiderfoot] SpiderFoot started successfully');
+			return { success: true, message: 'SpiderFoot started successfully' };
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error(`[spiderfoot] Start failed: ${msg}`);
+			return { success: false, message: 'Failed to start SpiderFoot', error: msg };
 		}
-
-		logger.info('[spiderfoot] Starting SpiderFoot');
-		spawnSpiderfootProcess();
-
-		const ready = await waitForReady();
-		if (!ready) {
-			killManagedProcess();
-			return {
-				success: false,
-				message: 'SpiderFoot failed to start',
-				error: 'Timeout waiting for health check'
-			};
-		}
-
-		logger.info('[spiderfoot] SpiderFoot started successfully');
-		return { success: true, message: 'SpiderFoot started successfully' };
-	} catch (err: unknown) {
-		const msg = err instanceof Error ? err.message : String(err);
-		logger.error(`[spiderfoot] Start failed: ${msg}`);
-		return { success: false, message: 'Failed to start SpiderFoot', error: msg };
-	}
+	});
 }
 
 /** Stop the SpiderFoot process */
-export async function stopSpiderfoot(): Promise<SpiderfootControlResult> {
-	try {
-		logger.info('[spiderfoot] Stopping SpiderFoot');
+export function stopSpiderfoot(): Promise<SpiderfootControlResult> {
+	return withLock(async () => {
+		try {
+			logger.info('[spiderfoot] Stopping SpiderFoot');
 
-		const stopped = await terminateSpiderfoot();
-		if (!stopped) {
-			return {
-				success: false,
-				message: 'Failed to stop SpiderFoot',
-				error: 'Process still responding after kill'
-			};
+			const stopped = await terminateSpiderfoot();
+			if (!stopped) {
+				return {
+					success: false,
+					message: 'Failed to stop SpiderFoot',
+					error: 'Process still responding after kill'
+				};
+			}
+
+			return { success: true, message: 'SpiderFoot stopped' };
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error(`[spiderfoot] Stop failed: ${msg}`);
+			return { success: false, message: 'Failed to stop SpiderFoot', error: msg };
 		}
-
-		return { success: true, message: 'SpiderFoot stopped' };
-	} catch (err: unknown) {
-		const msg = err instanceof Error ? err.message : String(err);
-		logger.error(`[spiderfoot] Stop failed: ${msg}`);
-		return { success: false, message: 'Failed to stop SpiderFoot', error: msg };
-	}
+	});
 }
 
 /** Get current SpiderFoot status */
