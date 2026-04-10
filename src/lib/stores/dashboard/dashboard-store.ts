@@ -81,6 +81,7 @@ export type ActiveView =
 	| 'wifite'
 	| 'wigletotak'
 	| 'bluehood'
+	| 'sightline'
 	| 'tak-config'
 	| 'logs-analytics';
 

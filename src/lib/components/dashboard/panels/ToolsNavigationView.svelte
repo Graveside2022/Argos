@@ -27,7 +27,8 @@
 		'gsm-evil': { controlUrl: '/api/gsm-evil/control' },
 		openwebrx: { controlUrl: '/api/openwebrx/control' },
 		bluehood: { controlUrl: '/api/bluehood/control' },
-		wigletotak: { controlUrl: '/api/wigletotak/control' }
+		wigletotak: { controlUrl: '/api/wigletotak/control' },
+		sightline: { controlUrl: '/api/sightline/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */
@@ -50,11 +51,11 @@
 	}
 
 	function handleOpen(tool: ToolDefinition) {
-		if (tool.externalUrl) {
-			window.open(tool.externalUrl, '_blank');
-		} else if (tool.viewName) {
+		if (tool.viewName) {
 			activeView.set(tool.viewName);
 			activePanel.set(null);
+		} else if (tool.externalUrl) {
+			window.open(tool.externalUrl, '_blank');
 		}
 	}
 
@@ -192,6 +193,22 @@
 				if (data.isRunning) setLocalStatus('wigletotak', 'running');
 			})
 			.catch(() => {});
+
+		// Check Sightline container status
+		const sightlineEp = toolEndpoints['sightline'];
+		if (sightlineEp?.controlUrl) {
+			fetch(sightlineEp.controlUrl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'status' }),
+				credentials: 'same-origin'
+			})
+				.then((r) => r.json())
+				.then((data) => {
+					if (data.isRunning) setLocalStatus('sightline', 'running');
+				})
+				.catch(() => {});
+		}
 	});
 </script>
 

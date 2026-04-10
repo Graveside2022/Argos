@@ -25,13 +25,13 @@ export const osintGeoint: ToolCategory = {
 				description:
 					'Geospatial infrastructure intelligence — discovers telecom towers, data centers, military installations, and 200+ facility types via OpenStreetMap',
 				icon: toolIcons.geolocation,
-				deployment: 'docker'
+				deployment: 'native'
 			},
 			{
 				isInstalled: true,
 				canOpen: true,
-				shouldShowControls: false,
-				externalUrl: 'http://localhost:3001'
+				shouldShowControls: true,
+				viewName: 'sightline'
 			}
 		)
 	]

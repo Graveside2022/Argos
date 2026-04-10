@@ -19,6 +19,7 @@
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
 	import LogsAnalyticsView from '$lib/components/dashboard/views/LogsAnalyticsView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
+	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
 	import WigleToTAKView from '$lib/components/dashboard/views/WigleToTAKView.svelte';
@@ -154,6 +155,8 @@
 				<BluehoodView />
 			{:else if $activeView === 'logs-analytics'}
 				<LogsAnalyticsView />
+			{:else if $activeView === 'sightline'}
+				<SightlineView />
 			{:else}
 				<ToolUnavailableView title={$activeView} />
 			{/if}

@@ -23,7 +23,7 @@ export function applySecurityHeaders(response: Response): void {
 			"connect-src 'self' blob: ws: wss: http://localhost:8085 http://localhost:8081 https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://server.arcgisonline.com https://services.arcgisonline.com https://demotiles.maplibre.org",
 			"worker-src 'self' blob:",
 			"child-src 'self' blob:",
-			"frame-src 'self' http://*:2501 http://*:8073 http://*:8085 http://*:8081 http://*:80",
+			"frame-src 'self' http://*:2501 http://*:3001 http://*:8073 http://*:8085 http://*:8081 http://*:80",
 			"font-src 'self'",
 			"object-src 'none'",
 			"frame-ancestors 'self'",
