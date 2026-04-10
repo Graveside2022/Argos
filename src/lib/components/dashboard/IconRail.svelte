@@ -1,11 +1,12 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
-	import { House, List, Map, Settings, Waypoints, Zap } from '@lucide/svelte';
+	import { House, List, Map, Radar, Settings, Waypoints, Zap } from '@lucide/svelte';
 
 	import {
 		activeBottomTab,
 		activePanel,
+		activeView,
 		toggleBottomTab,
 		togglePanel
 	} from '$lib/stores/dashboard/dashboard-store';
@@ -14,6 +15,9 @@
 	function handleClick(id: string) {
 		if (id === 'dashboard') {
 			toggleBottomTab('dashboard');
+		} else if (id === 'webtak') {
+			activeView.set($activeView === 'webtak' ? 'map' : 'webtak');
+			activePanel.set(null);
 		} else {
 			togglePanel(id);
 		}
@@ -60,6 +64,17 @@
 	<div class="rail-spacer"></div>
 
 	<div class="rail-bottom">
+		<!-- WebTAK -->
+		<button
+			class="rail-btn"
+			class:active={$activeView === 'webtak'}
+			title="WebTAK"
+			aria-label="WebTAK"
+			aria-pressed={$activeView === 'webtak'}
+			onclick={() => handleClick('webtak')}
+		>
+			<Radar size={18} />
+		</button>
 		<!-- Logo (waypoints) — brand mark, always white -->
 		<button
 			class="rail-btn rail-logo"

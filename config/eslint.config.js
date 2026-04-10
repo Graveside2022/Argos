@@ -29,7 +29,8 @@ export default [
 			'hackrfbackup.svelte',
 			'tests/reports/**',
 			'tests/reports/**/*.js',
-			'playwright-report/**'
+			'playwright-report/**',
+			'static/webtak/**'
 		]
 	},
 	{

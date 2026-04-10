@@ -23,6 +23,7 @@
 	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
+	import WebTAKView from '$lib/components/dashboard/views/WebTAKView.svelte';
 	import WigleToTAKView from '$lib/components/dashboard/views/WigleToTAKView.svelte';
 	import {
 		activeBottomTab,
@@ -160,6 +161,8 @@
 				<SightlineView />
 			{:else if $activeView === 'spiderfoot'}
 				<SpiderfootView />
+			{:else if $activeView === 'webtak'}
+				<WebTAKView />
 			{:else}
 				<ToolUnavailableView title={$activeView} />
 			{/if}

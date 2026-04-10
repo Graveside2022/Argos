@@ -1,0 +1,37 @@
+<iconset version="11" name="WASP Icons" defaultGroup="WASP Icons" skipResize="false" uid="771ba1a6-e1b6-475a-ba75-fea523d96e23">
+   <icon groupName="WASP Icons" name="blockage.png"/>
+   <icon groupName="WASP Icons" name="hazard_animal.png"/>
+   <icon groupName="WASP Icons" name="hazard_fire.png"/>
+   <icon groupName="WASP Icons" name="hazard_generic.png"/>
+   <icon groupName="WASP Icons" name="hazard_hazmat.png"/>
+   <icon groupName="WASP Icons" name="search_complete.png"/>
+   <icon groupName="WASP Icons" name="search_incomplete.png"/>
+   <icon groupName="WASP Icons" name="search_partial.png"/>
+   <icon groupName="WASP Icons" name="structure_destroyed.png"/>
+   <icon groupName="WASP Icons" name="structure_heavy_damage.png"/>
+   <icon groupName="WASP Icons" name="structure_light_damage.png"/>
+   <icon groupName="WASP Icons" name="structure_no_damage.png"/>
+   <icon groupName="WASP Icons" name="vehicle.png"/>
+   <icon groupName="WASP Icons" name="victim_confirmed.png"/>
+   <icon groupName="WASP Icons" name="victim_ftl_confirmed.png"/>
+   <icon groupName="WASP Icons" name="victim_ftl_pot.png"/>
+   <icon groupName="WASP Icons" name="victim_ftl_removed.png"/>
+   <icon groupName="WASP Icons" name="victim_potential.png"/>
+   <icon groupName="WASP Icons" name="victim_rescued.png"/>
+   <icon groupName="WASP Icons" name="extra_21.png"/>
+   <icon groupName="WASP Icons" name="extra_22.png"/>
+   <icon groupName="WASP Icons" name="extra_23.png"/>
+   <icon groupName="WASP Icons" name="extra_24.png"/>
+   <icon groupName="WASP Icons" name="shelter_in_place_unknown.png"/>
+   <icon groupName="WASP Icons" name="shelter_in_place_probable.png"/>
+   <icon groupName="WASP Icons" name="shelter_in_place_healthy.png"/>
+   <icon groupName="WASP Icons" name="shelter_in_place_critical.png"/>
+   <icon groupName="WASP Icons" name="shelter_in_place_confirmed.png"/>
+   <icon groupName="WASP Icons" name="helicopter.png"/>
+   <icon groupName="WASP Icons" name="flood_water_level.png"/>
+   <icon groupName="WASP Icons" name="targeted_search.png"/>
+   <icon groupName="WASP Icons" name="multi_residence_destroyed.png"/>
+   <icon groupName="WASP Icons" name="multi_residence_heavy_damage.png"/>
+   <icon groupName="WASP Icons" name="multi_residence_light_damage.png"/>
+   <icon groupName="WASP Icons" name="multi_residence_no_damage.png"/>
+</iconset>

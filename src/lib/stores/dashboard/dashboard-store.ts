@@ -83,6 +83,7 @@ export type ActiveView =
 	| 'bluehood'
 	| 'sightline'
 	| 'spiderfoot'
+	| 'webtak'
 	| 'tak-config'
 	| 'logs-analytics';
 

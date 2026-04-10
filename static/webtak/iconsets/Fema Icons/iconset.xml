@@ -1,0 +1,42 @@
+<iconset name="FEMA Icons" uid="f8f7f666-8b28-4b57-9fbb-e48e61d33b79" defaultGroup="Iron Sites" skipResize="false" version="6">
+    <icon name="Structure No Damage.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Structure Damaged.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Structure Failed.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Structure Destroyed.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Assisted.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Evacuated.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Rescued.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Follow-Up Form.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Victim Detected.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Confirmed Victim.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Human Remains.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Human Remains Removed.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Shelter in Place.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Animal Issue.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Fire Incident.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="HAZMAT.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Targeted Search.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Flood-Water Level.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Helo Landing Site.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Route Blocked.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Extra 21.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Extra 22.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Extra 23.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="Extra 24.png" type2525b="a-n-G" groupName="Iron Sites"/>
+    <icon name="ESF 1.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 2.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 3.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 4.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 5.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 6.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 7.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 8.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 9.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 10.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 11.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 12.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 13.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 14.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 15.png" groupName="ESF" type2525b="a-n-G"/>
+    <icon name="ESF 16.png" groupName="ESF" type2525b="a-n-G"/>
+</iconset>

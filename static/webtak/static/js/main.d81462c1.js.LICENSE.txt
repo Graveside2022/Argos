@@ -1,0 +1,690 @@
+/*
+    object-assign
+    (c) Sindre Sorhus
+    @license MIT
+    */
+
+/*
+object-assign
+(c) Sindre Sorhus
+@license MIT
+*/
+
+/*!
+
+JSZip v3.9.1 - A JavaScript class for generating and reading zip files
+<http://stuartk.com/jszip>
+
+(c) 2009-2016 Stuart Knightley <stuart [at] stuartk.com>
+Dual licenced under the MIT license or GPLv3. See https://raw.github.com/Stuk/jszip/master/LICENSE.markdown.
+
+JSZip uses the library pako released under the MIT license :
+https://github.com/nodeca/pako/blob/master/LICENSE
+*/
+
+/*!
+ * Programatically add the following
+ */
+
+/*! *****************************************************************************
+Copyright (C) Microsoft. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+
+/*! ../util */
+
+/*! ../validator */
+
+/*! ./DocTypeReader */
+
+/*! ./OptionsBuilder */
+
+/*! ./OrderedObjParser */
+
+/*! ./Service */
+
+/*! ./blob */
+
+/*! ./collections */
+
+/*! ./colorUtils */
+
+/*! ./constants */
+
+/*! ./coordinateUtils */
+
+/*! ./events */
+
+/*! ./fileUtils */
+
+/*! ./functional */
+
+/*! ./getRandomCallsign */
+
+/*! ./help */
+
+/*! ./helpers */
+
+/*! ./immutable */
+
+/*! ./latlong */
+
+/*! ./latlong/decimalToDegMinSec */
+
+/*! ./latlong/degMinSecToDecimal */
+
+/*! ./latlong/latlongToUtm */
+
+/*! ./latlong/translate */
+
+/*! ./levenshtein */
+
+/*! ./lib/convert */
+
+/*! ./mgrs */
+
+/*! ./mgrs/mgrsToUtm */
+
+/*! ./node2json */
+
+/*! ./orderedJs2Xml */
+
+/*! ./request */
+
+/*! ./safelyHandle */
+
+/*! ./sorting */
+
+/*! ./tasks */
+
+/*! ./usng */
+
+/*! ./usng/isUsng */
+
+/*! ./usng/parseUsng */
+
+/*! ./usng/usngToUtm */
+
+/*! ./util */
+
+/*! ./utils */
+
+/*! ./utm */
+
+/*! ./utm/utmToLatLong */
+
+/*! ./utm/utmToUsng */
+
+/*! ./uuid */
+
+/*! ./validate */
+
+/*! ./validation */
+
+/*! ./validator */
+
+/*! ./xml */
+
+/*! ./xmlNode */
+
+/*! ./xmlbuilder/json2xml */
+
+/*! ./xmlparser/XMLParser */
+
+/*! @name @videojs/http-streaming @version 2.10.2 @license Apache-2.0 */
+
+/*! @name aes-decrypter @version 3.1.2 @license Apache-2.0 */
+
+/*! @name m3u8-parser @version 4.7.0 @license Apache-2.0 */
+
+/*! @name pkcs7 @version 1.0.4 @license Apache-2.0 */
+
+/*! coordinator */
+
+/*! exports provided: default, version, Collection, Iterable, Seq, Map, OrderedMap, List, Stack, Set, OrderedSet, Record, Range, Repeat, is, fromJS, hash, isImmutable, isCollection, isKeyed, isIndexed, isAssociative, isOrdered, isValueObject, get, getIn, has, hasIn, merge, mergeDeep, mergeWith, mergeDeepWith, remove, removeIn, set, setIn, update, updateIn */
+
+/*! fast-xml-parser */
+
+/*! immutable */
+
+/*! no static exports found */
+
+/*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */
+
+/*! strnum */
+
+/*!**********************!*\
+          !*** ./src/index.ts ***!
+          \**********************/
+
+/*!**********************!*\
+        !*** ./src/index.ts ***!
+        \**********************/
+
+/*!**************************!*\
+          !*** ./src/utils/xml.ts ***!
+          \**************************/
+
+/*!**************************!*\
+        !*** ./src/utils/xml.ts ***!
+        \**************************/
+
+/*!***************************!*\
+          !*** ./src/utils/blob.ts ***!
+          \***************************/
+
+/*!***************************!*\
+          !*** ./src/utils/uuid.ts ***!
+          \***************************/
+
+/*!***************************!*\
+        !*** ./src/utils/blob.ts ***!
+        \***************************/
+
+/*!***************************!*\
+        !*** ./src/utils/uuid.ts ***!
+        \***************************/
+
+/*!****************************!*\
+          !*** ./src/utils/index.ts ***!
+          \****************************/
+
+/*!****************************!*\
+          !*** ./src/utils/tasks.ts ***!
+          \****************************/
+
+/*!****************************!*\
+        !*** ./src/utils/index.ts ***!
+        \****************************/
+
+/*!****************************!*\
+        !*** ./src/utils/tasks.ts ***!
+        \****************************/
+
+/*!*****************************!*\
+          !*** ./src/utils/events.ts ***!
+          \*****************************/
+
+/*!*****************************!*\
+        !*** ./src/utils/events.ts ***!
+        \*****************************/
+
+/*!******************************!*\
+          !*** ./src/utils/Service.ts ***!
+          \******************************/
+
+/*!******************************!*\
+          !*** ./src/utils/request.ts ***!
+          \******************************/
+
+/*!******************************!*\
+          !*** ./src/utils/sorting.ts ***!
+          \******************************/
+
+/*!******************************!*\
+        !*** ./src/utils/Service.ts ***!
+        \******************************/
+
+/*!******************************!*\
+        !*** ./src/utils/request.ts ***!
+        \******************************/
+
+/*!******************************!*\
+        !*** ./src/utils/sorting.ts ***!
+        \******************************/
+
+/*!*******************************!*\
+          !*** ./src/utils/validate.ts ***!
+          \*******************************/
+
+/*!*******************************!*\
+        !*** ./src/utils/validate.ts ***!
+        \*******************************/
+
+/*!********************************!*\
+          !*** ./src/utils/fileUtils.ts ***!
+          \********************************/
+
+/*!********************************!*\
+          !*** ./src/utils/immutable.ts ***!
+          \********************************/
+
+/*!********************************!*\
+        !*** ./src/utils/fileUtils.ts ***!
+        \********************************/
+
+/*!********************************!*\
+        !*** ./src/utils/immutable.ts ***!
+        \********************************/
+
+/*!*********************************!*\
+          !*** ./src/utils/colorUtils.ts ***!
+          \*********************************/
+
+/*!*********************************!*\
+          !*** ./src/utils/functional.ts ***!
+          \*********************************/
+
+/*!*********************************!*\
+          !*** ./src/utils/validation.ts ***!
+          \*********************************/
+
+/*!*********************************!*\
+        !*** ./src/utils/colorUtils.ts ***!
+        \*********************************/
+
+/*!*********************************!*\
+        !*** ./src/utils/functional.ts ***!
+        \*********************************/
+
+/*!*********************************!*\
+        !*** ./src/utils/validation.ts ***!
+        \*********************************/
+
+/*!**********************************!*\
+          !*** ./src/utils/collections.ts ***!
+          \**********************************/
+
+/*!**********************************!*\
+          !*** ./src/utils/levenshtein.ts ***!
+          \**********************************/
+
+/*!**********************************!*\
+        !*** ./src/utils/collections.ts ***!
+        \**********************************/
+
+/*!**********************************!*\
+        !*** ./src/utils/levenshtein.ts ***!
+        \**********************************/
+
+/*!***********************************!*\
+          !*** ./src/utils/safelyHandle.ts ***!
+          \***********************************/
+
+/*!***********************************!*\
+        !*** ./src/utils/safelyHandle.ts ***!
+        \***********************************/
+
+/*!**************************************!*\
+          !*** ./src/utils/coordinateUtils.ts ***!
+          \**************************************/
+
+/*!**************************************!*\
+        !*** ./src/utils/coordinateUtils.ts ***!
+        \**************************************/
+
+/*!****************************************!*\
+          !*** ./src/utils/getRandomCallsign.ts ***!
+          \****************************************/
+
+/*!****************************************!*\
+        !*** ./src/utils/getRandomCallsign.ts ***!
+        \****************************************/
+
+/*!*********************************************************!*\
+          !*** /builds/core/webtak/node_modules/strnum/strnum.js ***!
+          \*********************************************************/
+
+/*!*********************************************************!*\
+        !*** /builds/core/webtak/node_modules/strnum/strnum.js ***!
+        \*********************************************************/
+
+/*!***************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/utm.js ***!
+          \***************************************************************/
+
+/*!***************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/utm.js ***!
+        \***************************************************************/
+
+/*!****************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/mgrs.js ***!
+          \****************************************************************/
+
+/*!****************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/usng.js ***!
+          \****************************************************************/
+
+/*!****************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/mgrs.js ***!
+        \****************************************************************/
+
+/*!****************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/usng.js ***!
+        \****************************************************************/
+
+/*!*******************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/coordinator.js ***!
+          \*******************************************************************/
+
+/*!*******************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/convert.js ***!
+          \*******************************************************************/
+
+/*!*******************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong.js ***!
+          \*******************************************************************/
+
+/*!*******************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/fxp.js ***!
+          \*******************************************************************/
+
+/*!*******************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/coordinator.js ***!
+        \*******************************************************************/
+
+/*!*******************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/convert.js ***!
+        \*******************************************************************/
+
+/*!*******************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong.js ***!
+        \*******************************************************************/
+
+/*!*******************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/fxp.js ***!
+        \*******************************************************************/
+
+/*!********************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/utm/help.js ***!
+          \********************************************************************/
+
+/*!********************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/util.js ***!
+          \********************************************************************/
+
+/*!********************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/utm/help.js ***!
+        \********************************************************************/
+
+/*!********************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/util.js ***!
+        \********************************************************************/
+
+/*!*********************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/constants.js ***!
+          \*********************************************************************/
+
+/*!*********************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/constants.js ***!
+        \*********************************************************************/
+
+/*!***********************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/usng/isUsng.js ***!
+          \***********************************************************************/
+
+/*!***********************************************************************!*\
+          !*** /builds/core/webtak/node_modules/immutable/dist/immutable.es.js ***!
+          \***********************************************************************/
+
+/*!***********************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/usng/isUsng.js ***!
+        \***********************************************************************/
+
+/*!***********************************************************************!*\
+        !*** /builds/core/webtak/node_modules/immutable/dist/immutable.es.js ***!
+        \***********************************************************************/
+
+/*!*************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/utm/utmToUsng.js ***!
+          \*************************************************************************/
+
+/*!*************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/validator.js ***!
+          \*************************************************************************/
+
+/*!*************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/utm/utmToUsng.js ***!
+        \*************************************************************************/
+
+/*!*************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/validator.js ***!
+        \*************************************************************************/
+
+/*!**************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/mgrs/mgrsToUtm.js ***!
+          \**************************************************************************/
+
+/*!**************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/usng/parseUsng.js ***!
+          \**************************************************************************/
+
+/*!**************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/usng/usngToUtm.js ***!
+          \**************************************************************************/
+
+/*!**************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/mgrs/mgrsToUtm.js ***!
+        \**************************************************************************/
+
+/*!**************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/usng/parseUsng.js ***!
+        \**************************************************************************/
+
+/*!**************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/usng/usngToUtm.js ***!
+        \**************************************************************************/
+
+/*!***************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/helpers.js ***!
+          \***************************************************************************/
+
+/*!***************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/helpers.js ***!
+        \***************************************************************************/
+
+/*!****************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/utm/utmToLatLong.js ***!
+          \****************************************************************************/
+
+/*!****************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/utm/utmToLatLong.js ***!
+        \****************************************************************************/
+
+/*!*****************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/translate.js ***!
+          \*****************************************************************************/
+
+/*!*****************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/translate.js ***!
+        \*****************************************************************************/
+
+/*!********************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/latlongToUtm.js ***!
+          \********************************************************************************/
+
+/*!********************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/latlongToUtm.js ***!
+        \********************************************************************************/
+
+/*!*********************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js ***!
+          \*********************************************************************************/
+
+/*!*********************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/xmlNode.js ***!
+        \*********************************************************************************/
+
+/*!***********************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js ***!
+          \***********************************************************************************/
+
+/*!***********************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js ***!
+          \***********************************************************************************/
+
+/*!***********************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/node2json.js ***!
+          \***********************************************************************************/
+
+/*!***********************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlbuilder/json2xml.js ***!
+        \***********************************************************************************/
+
+/*!***********************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js ***!
+        \***********************************************************************************/
+
+/*!***********************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/node2json.js ***!
+        \***********************************************************************************/
+
+/*!**************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/decimalToDegMinSec.js ***!
+          \**************************************************************************************/
+
+/*!**************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/degMinSecToDecimal.js ***!
+          \**************************************************************************************/
+
+/*!**************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/decimalToDegMinSec.js ***!
+        \**************************************************************************************/
+
+/*!**************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/coordinator/lib/latlong/degMinSecToDecimal.js ***!
+        \**************************************************************************************/
+
+/*!***************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js ***!
+          \***************************************************************************************/
+
+/*!***************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/DocTypeReader.js ***!
+        \***************************************************************************************/
+
+/*!****************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js ***!
+          \****************************************************************************************/
+
+/*!****************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js ***!
+          \****************************************************************************************/
+
+/*!****************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlbuilder/orderedJs2Xml.js ***!
+        \****************************************************************************************/
+
+/*!****************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/OptionsBuilder.js ***!
+        \****************************************************************************************/
+
+/*!******************************************************************************************!*\
+          !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js ***!
+          \******************************************************************************************/
+
+/*!******************************************************************************************!*\
+        !*** /builds/core/webtak/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js ***!
+        \******************************************************************************************/
+
+/**
+ * @license
+ * Video.js 7.15.4 <http://videojs.com/>
+ * Copyright Brightcove, Inc. <https://www.brightcove.com/>
+ * Available under Apache License Version 2.0
+ * <https://github.com/videojs/video.js/blob/main/LICENSE>
+ *
+ * Includes vtt.js <https://github.com/mozilla/vtt.js>
+ * Available under Apache License Version 2.0
+ * <https://github.com/mozilla/vtt.js/blob/main/LICENSE>
+ */
+
+/** @license React v0.20.2
+ * scheduler.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** @license React v16.13.1
+ * react-is.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** @license React v17.0.1
+     * react-jsx-runtime.production.min.js
+     *
+     * Copyright (c) Facebook, Inc. and its affiliates.
+     *
+     * This source code is licensed under the MIT license found in the
+     * LICENSE file in the root directory of this source tree.
+     */
+
+/** @license React v17.0.1
+ * react-dom.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** @license React v17.0.1
+ * react-jsx-runtime.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** @license React v17.0.1
+ * react.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** @license React v17.0.2
+ * react-is.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**!
+* @license
+* The MIT License (MIT)
+* 
+* Copyright (c) 2017 Måns Beckman - www.spatialillusions.com
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+* 
+* More information can be found at www.spatialillusions.com 
+*/

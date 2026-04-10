@@ -1,0 +1,34 @@
+{
+	"plugins": [],
+	"iconSets": ["Fema Icons", "WASP", "Default", "Generic Icons", "OSM", "Google"],
+	"saSendInterval": 60000,
+	"saStaleDelay": 180000,
+	"pingInterval": 30000,
+	"defaultMapLayer": "ESRIWorldTopo",
+	"baseLayers": [
+		{
+			"title": "Google Satellite",
+			"type": "xyz",
+			"name": "GoogleSatellite",
+			"url": "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+		},
+		{
+			"title": "Google Road",
+			"type": "xyz",
+			"name": "GoogleRoad",
+			"url": "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+		},
+		{
+			"title": "Google Hybrid",
+			"type": "xyz",
+			"name": "GoogleHybrid",
+			"url": "http://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+		},
+		{
+			"title": "ESRI World Topo",
+			"type": "xyz",
+			"name": "ESRIWorldTopo",
+			"url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+		}
+	]
+}
