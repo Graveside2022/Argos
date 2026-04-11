@@ -17,21 +17,18 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 	return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-function isConnectionSuccess(lower: string): boolean {
-	return (
-		lower.includes('connected as') ||
-		lower.includes('esp tunnel connected') ||
-		lower.includes('tunnel connected')
-	);
+function parseConnectedIp(
+	line: string,
+	portal: string,
+	current: GlobalProtectStatus
+): GlobalProtectStatus {
+	const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+)/);
+	return { status: 'connected', portal, assignedIp: ipMatch?.[1], gateway: current.gateway };
 }
 
-function isConnectionError(lower: string): boolean {
-	return (
-		lower.includes('authentication failed') ||
-		lower.includes('failed to') ||
-		lower.includes('error:') ||
-		lower.includes('fatal:')
-	);
+function parseGateway(line: string, current: GlobalProtectStatus): GlobalProtectStatus {
+	const hostMatch = line.match(/on\s+(\S+)/);
+	return { ...current, gateway: hostMatch?.[1] };
 }
 
 function classifyOutputLine(
@@ -41,20 +38,13 @@ function classifyOutputLine(
 ): GlobalProtectStatus | null {
 	const lower = line.toLowerCase();
 
-	if (lower.includes('connected as')) {
-		const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+)/);
-		return { status: 'connected', portal, assignedIp: ipMatch?.[1], gateway: current.gateway };
-	}
-	if (isConnectionSuccess(lower) && current.status !== 'connected') {
-		return { ...current, status: 'connected', portal };
-	}
-	if (lower.includes('gateway address') || lower.includes('connected to https on')) {
-		const hostMatch = line.match(/on\s+(\S+)/);
-		return { ...current, gateway: hostMatch?.[1] };
-	}
-	if (isConnectionError(lower)) {
+	if (lower.includes('connected as')) return parseConnectedIp(line, portal, current);
+	if (lower.includes('esp tunnel connected')) return { ...current, status: 'connected', portal };
+	if (lower.includes('gateway address')) return parseGateway(line, current);
+	if (lower.includes('connected to https on')) return parseGateway(line, current);
+	if (lower.includes('authentication failed'))
 		return { status: 'error', portal, lastError: line.trim() };
-	}
+	if (lower.includes('failed to')) return { status: 'error', portal, lastError: line.trim() };
 	return null;
 }
 
@@ -119,6 +109,16 @@ export class GlobalProtectService {
 		if (this.ocProcess && !this.ocProcess.killed) {
 			return this.currentStatus;
 		}
+		// Detect externally-started openconnect (e.g. from terminal)
+		try {
+			const { stdout } = await execFileAsync('/sbin/ip', ['-brief', 'addr', 'show', 'tun0']);
+			const ipMatch = stdout.match(/(\d+\.\d+\.\d+\.\d+)/);
+			if (ipMatch) {
+				return { status: 'connected', assignedIp: ipMatch[1], portal: this.config?.portal };
+			}
+		} catch {
+			// No tun0 — not connected externally
+		}
 		return { status: 'disconnected' };
 	}
 
@@ -127,9 +127,7 @@ export class GlobalProtectService {
 		username: string,
 		password: string
 	): Promise<GlobalProtectStatus> {
-		if (this.ocProcess && !this.ocProcess.killed) {
-			return this.currentStatus;
-		}
+		await this.killAllOpenconnect();
 
 		this.currentStatus = { status: 'connecting', portal };
 		this.outputLines = [];
@@ -276,13 +274,20 @@ export class GlobalProtectService {
 
 	// -- Cleanup --
 
-	private async cleanupOrphanedProcess(): Promise<void> {
-		try {
-			await execFileAsync('/sbin/ip', ['link', 'show', 'gpd0']);
-			logger.warn('[GlobalProtect] Found orphaned gpd0 interface, cleaning up');
-			await execFileAsync('sudo', ['ip', 'link', 'delete', 'gpd0']).catch(() => {});
-		} catch {
-			// No gpd0 interface — nothing to clean up
+	private async killAllOpenconnect(): Promise<void> {
+		if (this.ocProcess && !this.ocProcess.killed) {
+			this.ocProcess.kill('SIGINT');
+			this.ocProcess = null;
 		}
+		try {
+			await execFileAsync('sudo', ['/usr/bin/killall', 'openconnect']);
+			logger.info('[GlobalProtect] Killed existing openconnect processes');
+		} catch {
+			// No openconnect processes running — expected
+		}
+	}
+
+	private async cleanupOrphanedProcess(): Promise<void> {
+		await this.killAllOpenconnect();
 	}
 }
