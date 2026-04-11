@@ -10,10 +10,14 @@
 
 	let { certificatePath = '', onpathchange }: Props = $props();
 
-	let certInput = $state(certificatePath ?? '');
+	let certInput = $state('');
 	let importMessage = $state('');
 	let importSuccess = $state(false);
 	let isImporting = $state(false);
+
+	$effect(() => {
+		certInput = certificatePath ?? '';
+	});
 
 	async function handleImport() {
 		if (!certInput.trim()) return;
