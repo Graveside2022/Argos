@@ -1,11 +1,10 @@
 <script lang="ts">
 	import './gp-config-view.css';
 
-	import { Save } from '@lucide/svelte';
+	import { Save, Unplug } from '@lucide/svelte';
 	import { untrack } from 'svelte';
 
-	import GpAuthMethodPicker from '$lib/components/dashboard/globalprotect/GpAuthMethodPicker.svelte';
-	import GpCertImport from '$lib/components/dashboard/globalprotect/GpCertImport.svelte';
+	import GpOutputConsole from '$lib/components/dashboard/globalprotect/GpOutputConsole.svelte';
 	import GpServerForm from '$lib/components/dashboard/globalprotect/GpServerForm.svelte';
 	import GpStatusSection from '$lib/components/dashboard/globalprotect/GpStatusSection.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
@@ -23,11 +22,14 @@
 	} from './gp-config-logic';
 
 	let config: GlobalProtectConfig = $state({ ...DEFAULT_CONFIG });
+	let password = $state('');
 	let isLoading = $state(true);
 	let isSaving = $state(false);
 	let isConnecting = $state(false);
 	let message = $state('');
 	let messageType: 'success' | 'error' = $state('success');
+	let leftWidth = $state(340);
+	let isDragging = $state(false);
 
 	$effect(() => {
 		untrack(() => initConfig());
@@ -55,7 +57,8 @@
 		isSaving = false;
 	}
 
-	async function handleConnect(password: string) {
+	async function handleConnect() {
+		if (!password.trim()) return;
 		isConnecting = true;
 		const status = await connectVpn(config.portal, config.username, password);
 		if (status.status === 'error') {
@@ -76,6 +79,25 @@
 		messageType = type;
 		setTimeout(() => (message = ''), 4000);
 	}
+
+	function onDragStart(e: MouseEvent) {
+		e.preventDefault();
+		isDragging = true;
+		const onMove = (ev: MouseEvent) => {
+			const container = (e.target as HTMLElement).parentElement;
+			if (!container) return;
+			const rect = container.getBoundingClientRect();
+			const x = ev.clientX - rect.left;
+			leftWidth = Math.max(280, Math.min(x, rect.width - 200));
+		};
+		const onUp = () => {
+			isDragging = false;
+			window.removeEventListener('mousemove', onMove);
+			window.removeEventListener('mouseup', onUp);
+		};
+		window.addEventListener('mousemove', onMove);
+		window.addEventListener('mouseup', onUp);
+	}
 </script>
 
 <ToolViewWrapper
@@ -83,54 +105,75 @@
 	status={$gpStatus.status === 'connected' ? 'Connected' : ''}
 	onBack={() => activeView.set('map')}
 >
-	<div class="gp-body">
+	{#snippet actions()}
+		{#if $gpStatus.status === 'connected'}
+			<button
+				class="inline-flex items-center gap-1.5 rounded-md border border-red-500/50 bg-red-600/20 px-3 py-1.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-600/30"
+				onclick={handleDisconnect}
+			>
+				<Unplug size={12} />
+				Disconnect
+			</button>
+		{/if}
+	{/snippet}
+	<div class="gp-split-layout">
 		{#if isLoading}
 			<p class="loading-text">Loading configuration...</p>
 		{:else}
-			<GpStatusSection
-				{isConnecting}
-				hasPortal={!!config.portal.trim() && !!config.username.trim()}
-				onconnect={handleConnect}
-				ondisconnect={handleDisconnect}
-			/>
+			<div class="gp-left-panel" style="width: {leftWidth}px">
+				<GpStatusSection
+					{isConnecting}
+					hasPortal={!!config.portal.trim() &&
+						!!config.username.trim() &&
+						!!password.trim()}
+					onconnect={handleConnect}
+				/>
 
-			<Separator />
-
-			<GpServerForm {config} onchange={(updated) => (config = updated)} />
-
-			<Separator />
-
-			<GpAuthMethodPicker
-				authMethod={config.authMethod}
-				onchange={(method) => (config = { ...config, authMethod: method })}
-			/>
-
-			{#if config.authMethod === 'certificate'}
 				<Separator />
 
-				<GpCertImport
-					certificatePath={config.certificatePath}
-					onpathchange={(path) => (config = { ...config, certificatePath: path })}
+				<GpServerForm
+					{config}
+					onchange={(updated) => (config = updated)}
+					{password}
+					onpassword={(p) => (password = p)}
 				/>
-			{/if}
 
-			<Separator />
+				<Separator />
 
-			<!-- SAVE -->
-			<div class="save-row">
-				<button onclick={handleSave} disabled={isSaving} class="save-btn">
-					<Save size={14} />
-					{isSaving ? 'Saving...' : 'Save Configuration'}
+				<div class="save-row">
+					<button onclick={handleSave} disabled={isSaving} class="save-btn">
+						<Save size={14} />
+						{isSaving ? 'Saving...' : 'Save Configuration'}
+					</button>
+					{#if message}
+						<span
+							class="save-message"
+							class:success={messageType === 'success'}
+							class:error={messageType === 'error'}
+						>
+							{message}
+						</span>
+					{/if}
+				</div>
+
+				<button
+					type="button"
+					class="startup-toggle"
+					onclick={() =>
+						(config = { ...config, connectOnStartup: !config.connectOnStartup })}
+				>
+					<div class="toggle-track" class:active={config.connectOnStartup}>
+						<div class="toggle-thumb" class:active={config.connectOnStartup}></div>
+					</div>
+					Connect on startup
 				</button>
-				{#if message}
-					<span
-						class="save-message"
-						class:success={messageType === 'success'}
-						class:error={messageType === 'error'}
-					>
-						{message}
-					</span>
-				{/if}
+			</div>
+
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="gp-drag-handle" class:dragging={isDragging} onmousedown={onDragStart}></div>
+
+			<div class="gp-right-panel">
+				<GpOutputConsole />
 			</div>
 		{/if}
 	</div>

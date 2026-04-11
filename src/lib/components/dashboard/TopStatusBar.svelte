@@ -1,10 +1,9 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
-	import { Network, Shield, Signal } from '@lucide/svelte';
+	import { Network, Signal } from '@lucide/svelte';
 	import { onMount, tick } from 'svelte';
 
-	import { gpStatus } from '$lib/stores/globalprotect-store';
 	import { gpsStore } from '$lib/stores/tactical-map/gps-store';
 	import type { PingResult, TakServer } from '$lib/types/network';
 	import { fetchJSON } from '$lib/utils/fetch-json';
@@ -293,17 +292,6 @@
 					onping={fetchNetworkLatency}
 				/>
 			{/if}
-		</div>
-		<div class="device-wrapper">
-			<span
-				class="segment"
-				style="color: {$gpStatus.status === 'connected'
-					? 'var(--status-healthy, #8bbfa0)'
-					: 'var(--muted-foreground)'}"
-			>
-				<Shield size={12} class="segment-icon" />
-				VPN
-			</span>
 		</div>
 		<div class="device-wrapper">
 			<button class="segment segment-mesh segment-btn" onclick={() => toggleDropdown('mesh')}>

@@ -4,9 +4,7 @@ export const DEFAULT_CONFIG: GlobalProtectConfig = {
 	id: '',
 	portal: '',
 	username: '',
-	connectOnStartup: false,
-	authMethod: 'password',
-	certificatePath: undefined
+	connectOnStartup: false
 };
 
 export async function loadConfig(): Promise<GlobalProtectConfig> {
@@ -25,9 +23,7 @@ export async function saveConfig(
 		body: JSON.stringify({
 			portal: config.portal,
 			username: config.username,
-			connectOnStartup: config.connectOnStartup,
-			authMethod: config.authMethod,
-			certificatePath: config.certificatePath
+			connectOnStartup: config.connectOnStartup
 		})
 	});
 	if (!res.ok) {
@@ -66,23 +62,4 @@ export async function disconnectVpn(): Promise<GlobalProtectStatus> {
 		gateway: data.gateway,
 		assignedIp: data.assignedIp
 	};
-}
-
-export async function importCertificate(
-	path: string
-): Promise<{ success: boolean; message: string }> {
-	try {
-		const res = await fetch('/api/globalprotect/certificate', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ path })
-		});
-		if (!res.ok) {
-			const err = await res.json().catch(() => ({ message: 'Import failed' }));
-			return { success: false, message: err.message ?? 'Import failed' };
-		}
-		return res.json();
-	} catch {
-		return { success: false, message: 'Network error during import' };
-	}
 }

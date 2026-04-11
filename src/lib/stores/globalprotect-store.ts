@@ -7,6 +7,7 @@ const POLL_INTERVAL_MS = 5_000;
 const DEFAULT_STATUS: GlobalProtectStatus = { status: 'disconnected' };
 
 export const gpStatus = writable<GlobalProtectStatus>(DEFAULT_STATUS);
+export const gpOutput = writable<string[]>([]);
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -24,6 +25,9 @@ async function fetchStatus(): Promise<void> {
 				uptime: data.uptime,
 				lastError: data.lastError
 			});
+		}
+		if (Array.isArray(data.output)) {
+			gpOutput.set(data.output);
 		}
 	} catch {
 		// Network error — keep last known status

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
 import { getRFDatabase } from '$lib/server/db/database';
@@ -8,41 +8,62 @@ import { logger } from '$lib/utils/logger';
 
 import { loadGpConfig, saveGpConfig } from './globalprotect-db';
 
-const GP_BIN = '/usr/bin/globalprotect';
+const OC_BIN = '/usr/sbin/openconnect';
 const CONNECT_TIMEOUT_MS = 30_000;
-
-const DEFAULT_GP_CONFIG: GlobalProtectConfig = {
-	id: '',
-	portal: '',
-	username: '',
-	connectOnStartup: false,
-	authMethod: 'password'
-};
+const DISCONNECT_TIMEOUT_MS = 5_000;
+const MAX_OUTPUT_LINES = 50;
 
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 	return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-function parseGpStatus(stdout: string): GlobalProtectStatus {
-	const lower = stdout.toLowerCase();
-	const connected = lower.includes('status: connected');
-	const connecting = lower.includes('status: connecting');
-	return {
-		status: connected ? 'connected' : connecting ? 'connecting' : 'disconnected',
-		portal: matchField(stdout, /^portal\s*:\s*(.+)/im),
-		gateway: matchField(stdout, /^gateway\s*:\s*(.+)/im),
-		assignedIp: matchField(stdout, /^assigned\s*.*:\s*(.+)/im)
-	};
+function isConnectionSuccess(lower: string): boolean {
+	return (
+		lower.includes('connected as') ||
+		lower.includes('esp tunnel connected') ||
+		lower.includes('tunnel connected')
+	);
 }
 
-function matchField(text: string, re: RegExp): string | undefined {
-	return re.exec(text)?.[1]?.trim();
+function isConnectionError(lower: string): boolean {
+	return (
+		lower.includes('authentication failed') ||
+		lower.includes('failed to') ||
+		lower.includes('error:') ||
+		lower.includes('fatal:')
+	);
+}
+
+function classifyOutputLine(
+	line: string,
+	portal: string,
+	current: GlobalProtectStatus
+): GlobalProtectStatus | null {
+	const lower = line.toLowerCase();
+
+	if (lower.includes('connected as')) {
+		const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+)/);
+		return { status: 'connected', portal, assignedIp: ipMatch?.[1], gateway: current.gateway };
+	}
+	if (isConnectionSuccess(lower) && current.status !== 'connected') {
+		return { ...current, status: 'connected', portal };
+	}
+	if (lower.includes('gateway address') || lower.includes('connected to https on')) {
+		const hostMatch = line.match(/on\s+(\S+)/);
+		return { ...current, gateway: hostMatch?.[1] };
+	}
+	if (isConnectionError(lower)) {
+		return { status: 'error', portal, lastError: line.trim() };
+	}
+	return null;
 }
 
 export class GlobalProtectService {
 	private static instance: GlobalProtectService;
 	private config: GlobalProtectConfig | null = null;
-	private cachedStatus: GlobalProtectStatus = { status: 'disconnected' };
+	private ocProcess: ChildProcess | null = null;
+	private currentStatus: GlobalProtectStatus = { status: 'disconnected' };
+	private outputLines: string[] = [];
 
 	private constructor() {}
 
@@ -55,10 +76,8 @@ export class GlobalProtectService {
 
 	async initialize(): Promise<void> {
 		this.loadConfig();
-		logger.info('[GlobalProtect] Service initialized', {
-			hasConfig: !!this.config,
-			connectOnStartup: this.config?.connectOnStartup ?? false
-		});
+		await this.cleanupOrphanedProcess();
+		logger.info('[GlobalProtect] Service initialized (openconnect backend)');
 	}
 
 	// -- Config Management --
@@ -74,9 +93,16 @@ export class GlobalProtectService {
 	}
 
 	persistConfig(config: Partial<GlobalProtectConfig>): GlobalProtectConfig {
-		const base = this.config ?? DEFAULT_GP_CONFIG;
-		const merged: GlobalProtectConfig = { ...base, ...stripUndefined(config) };
-		if (!merged.id) merged.id = randomUUID();
+		const current = this.config ?? {
+			id: randomUUID(),
+			portal: '',
+			username: '',
+			connectOnStartup: false
+		};
+		const merged = {
+			...current,
+			...stripUndefined(config as Record<string, unknown>)
+		} as GlobalProtectConfig;
 		const db = getRFDatabase().rawDb;
 		saveGpConfig(db, merged);
 		this.config = merged;
@@ -85,20 +111,15 @@ export class GlobalProtectService {
 
 	// -- Connection Management --
 
+	getOutput(): string[] {
+		return [...this.outputLines];
+	}
+
 	async getStatus(): Promise<GlobalProtectStatus> {
-		try {
-			const { stdout } = await execFileAsync(GP_BIN, ['show', '--status'], {
-				timeout: 5000
-			});
-			return this.parseStatusOutput(stdout);
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			if (msg.includes('ENOENT')) {
-				return { status: 'error', lastError: 'GlobalProtect CLI not installed' };
-			}
-			logger.warn('[GlobalProtect] Status check failed', { error: msg });
-			return { status: 'disconnected', lastError: msg };
+		if (this.ocProcess && !this.ocProcess.killed) {
+			return this.currentStatus;
 		}
+		return { status: 'disconnected' };
 	}
 
 	async connect(
@@ -106,100 +127,162 @@ export class GlobalProtectService {
 		username: string,
 		password: string
 	): Promise<GlobalProtectStatus> {
-		this.cachedStatus = { status: 'connecting', portal };
-		try {
-			const result = await this.spawnWithStdin(
-				GP_BIN,
-				['connect', '-p', portal, '-u', username],
-				password
-			);
-			logger.info('[GlobalProtect] Connect result', {
-				stdout: result.stdout.slice(0, 200)
-			});
-			const status = await this.getStatus();
-			this.cachedStatus = status;
-			return status;
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			logger.error('[GlobalProtect] Connect failed', { error: msg });
-			this.cachedStatus = { status: 'error', portal, lastError: msg };
-			return this.cachedStatus;
+		if (this.ocProcess && !this.ocProcess.killed) {
+			return this.currentStatus;
 		}
+
+		this.currentStatus = { status: 'connecting', portal };
+		this.outputLines = [];
+
+		return new Promise<GlobalProtectStatus>((resolve) => {
+			const timeout = setTimeout(() => {
+				if (this.currentStatus.status === 'connecting') {
+					this.currentStatus = {
+						status: 'error',
+						portal,
+						lastError: 'Connection timed out after 30s'
+					};
+				}
+				resolve(this.currentStatus);
+			}, CONNECT_TIMEOUT_MS);
+
+			this.spawnOpenconnect(portal, username, password, () => {
+				clearTimeout(timeout);
+				resolve(this.currentStatus);
+			});
+		});
 	}
 
 	async disconnect(): Promise<GlobalProtectStatus> {
-		try {
-			await execFileAsync(GP_BIN, ['disconnect'], { timeout: 10_000 });
-			logger.info('[GlobalProtect] Disconnected');
-		} catch (err: unknown) {
-			logger.warn('[GlobalProtect] Disconnect error', {
-				error: err instanceof Error ? err.message : String(err)
-			});
+		if (!this.ocProcess || this.ocProcess.killed) {
+			this.currentStatus = { status: 'disconnected' };
+			return this.currentStatus;
 		}
-		const status = await this.getStatus();
-		this.cachedStatus = status;
-		return status;
+
+		const proc = this.ocProcess;
+		this.ocProcess = null;
+
+		return new Promise<GlobalProtectStatus>((resolve) => {
+			const forceKill = setTimeout(() => {
+				try {
+					proc.kill('SIGKILL');
+				} catch {
+					/* already dead */
+				}
+			}, DISCONNECT_TIMEOUT_MS);
+
+			proc.once('exit', () => {
+				clearTimeout(forceKill);
+				this.currentStatus = { status: 'disconnected' };
+				resolve(this.currentStatus);
+			});
+
+			try {
+				proc.kill('SIGINT');
+			} catch {
+				/* already dead */
+			}
+		});
 	}
 
-	async importCertificate(certPath: string): Promise<{ success: boolean; message: string }> {
-		try {
-			const { stdout } = await execFileAsync(
-				GP_BIN,
-				['import-certificate', '--location', certPath],
-				{ timeout: 10_000 }
-			);
-			logger.info('[GlobalProtect] Certificate imported', { path: certPath });
-			return { success: true, message: stdout.trim() || 'Certificate imported' };
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			logger.error('[GlobalProtect] Certificate import failed', { error: msg });
-			return { success: false, message: msg };
-		}
+	// -- Process Management --
+
+	private spawnOpenconnect(
+		portal: string,
+		username: string,
+		password: string,
+		onSettled: () => void
+	): void {
+		let settled = false;
+		const settle = (): void => {
+			if (!settled) {
+				settled = true;
+				onSettled();
+			}
+		};
+
+		const proc = spawn(
+			'sudo',
+			[
+				OC_BIN,
+				'--protocol=gp',
+				`--user=${username}`,
+				'--passwd-on-stdin',
+				'--verbose',
+				portal
+			],
+			{ stdio: ['pipe', 'pipe', 'pipe'] }
+		);
+
+		this.ocProcess = proc;
+
+		proc.stdin?.write(password + '\n');
+		proc.stdin?.end();
+
+		const handleLine = (line: string): void => {
+			this.addOutputLine(line);
+			this.parseOutputLine(line, portal);
+			if (
+				this.currentStatus.status === 'connected' ||
+				this.currentStatus.status === 'error'
+			) {
+				settle();
+			}
+		};
+
+		proc.stdout?.on('data', (chunk: Buffer) => {
+			for (const line of chunk.toString().split('\n').filter(Boolean)) {
+				handleLine(line);
+			}
+		});
+
+		proc.stderr?.on('data', (chunk: Buffer) => {
+			for (const line of chunk.toString().split('\n').filter(Boolean)) {
+				handleLine(line);
+			}
+		});
+
+		proc.on('error', (err) => {
+			logger.error(`[GlobalProtect] openconnect spawn error: ${err.message}`);
+			this.currentStatus = { status: 'error', portal, lastError: err.message };
+			this.ocProcess = null;
+			settle();
+		});
+
+		proc.on('exit', (code) => {
+			logger.info(`[GlobalProtect] openconnect exited with code ${code}`);
+			this.ocProcess = null;
+			if (this.currentStatus.status !== 'error') {
+				this.currentStatus = { status: 'disconnected' };
+			}
+			settle();
+		});
 	}
 
 	// -- Output Parsing --
 
-	private parseStatusOutput(stdout: string): GlobalProtectStatus {
-		return parseGpStatus(stdout);
+	private parseOutputLine(line: string, portal: string): void {
+		const update = classifyOutputLine(line, portal, this.currentStatus);
+		if (update) this.currentStatus = update;
 	}
 
-	// -- Helpers --
+	private addOutputLine(line: string): void {
+		this.outputLines.push(line);
+		if (this.outputLines.length > MAX_OUTPUT_LINES) {
+			this.outputLines.shift();
+		}
+		logger.debug(`[GlobalProtect] ${line}`);
+	}
 
-	private spawnWithStdin(
-		file: string,
-		args: readonly string[],
-		stdinData: string
-	): Promise<{ stdout: string; stderr: string }> {
-		return new Promise((resolve, reject) => {
-			const proc = spawn(file, [...args], { stdio: ['pipe', 'pipe', 'pipe'] });
-			let stdout = '';
-			let stderr = '';
-			const timer = setTimeout(() => {
-				proc.kill('SIGTERM');
-				reject(new Error(`Command timed out after ${CONNECT_TIMEOUT_MS}ms`));
-			}, CONNECT_TIMEOUT_MS);
+	// -- Cleanup --
 
-			proc.stdout.on('data', (data: Buffer) => {
-				stdout += data.toString();
-			});
-			proc.stderr.on('data', (data: Buffer) => {
-				stderr += data.toString();
-			});
-			proc.on('close', (code) => {
-				clearTimeout(timer);
-				if (code === 0) {
-					resolve({ stdout, stderr });
-				} else {
-					reject(new Error(`Exit code ${code}: ${stderr || stdout}`));
-				}
-			});
-			proc.on('error', (err) => {
-				clearTimeout(timer);
-				reject(err);
-			});
-
-			proc.stdin.write(stdinData + '\n');
-			proc.stdin.end();
-		});
+	private async cleanupOrphanedProcess(): Promise<void> {
+		try {
+			await execFileAsync('/sbin/ip', ['link', 'show', 'gpd0']);
+			logger.warn('[GlobalProtect] Found orphaned gpd0 interface, cleaning up');
+			await execFileAsync('sudo', ['ip', 'link', 'delete', 'gpd0']).catch(() => {});
+		} catch {
+			// No gpd0 interface — nothing to clean up
+		}
 	}
 }

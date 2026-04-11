@@ -37,8 +37,15 @@
 					{/if}
 				</div>
 			{:else if fullWidth}
-				<div class="full-width">
-					{@render fullWidth()}
+				<div class="main-right">
+					<div class="full-width">
+						{@render fullWidth()}
+					</div>
+					{#if bottomPanel}
+						<div class="bottom-area">
+							{@render bottomPanel()}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>

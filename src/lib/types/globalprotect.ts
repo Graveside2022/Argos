@@ -4,11 +4,9 @@ export interface GlobalProtectConfig {
 	portal: string;
 	username: string;
 	connectOnStartup: boolean;
-	authMethod: 'password' | 'certificate';
-	certificatePath?: string;
 }
 
-/** Real-time status from the GlobalProtect CLI. */
+/** Real-time status from the openconnect process. */
 export interface GlobalProtectStatus {
 	status: 'connected' | 'disconnected' | 'connecting' | 'error';
 	portal?: string;

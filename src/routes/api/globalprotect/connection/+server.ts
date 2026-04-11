@@ -12,7 +12,8 @@ const ConnectSchema = z.object({
 export const GET = createHandler(async () => {
 	const service = GlobalProtectService.getInstance();
 	const status = await service.getStatus();
-	return { success: true, ...status };
+	const output = service.getOutput();
+	return { success: true, ...status, output };
 });
 
 export const POST = createHandler(

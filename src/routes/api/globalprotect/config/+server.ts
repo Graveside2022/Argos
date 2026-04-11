@@ -6,9 +6,7 @@ import { GlobalProtectService } from '$lib/server/services/globalprotect/globalp
 const ConfigSchema = z.object({
 	portal: z.string().max(253).optional(),
 	username: z.string().max(256).optional(),
-	connectOnStartup: z.boolean().optional(),
-	authMethod: z.enum(['password', 'certificate']).optional(),
-	certificatePath: z.string().max(512).optional()
+	connectOnStartup: z.boolean().optional()
 });
 
 export const GET = createHandler(async () => {

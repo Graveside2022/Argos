@@ -10,9 +10,10 @@
 		status?: string;
 		onBack: () => void;
 		children: Snippet;
+		actions?: Snippet;
 	}
 
-	let { title, status = '', onBack, children }: Props = $props();
+	let { title, status = '', onBack, children, actions }: Props = $props();
 </script>
 
 <div class="tool-view">
@@ -37,6 +38,11 @@
 			<Badge variant="default" class="bg-green-600/20 text-green-400 border-green-600/30"
 				>{status}</Badge
 			>
+		{/if}
+		{#if actions}
+			<div class="tool-view-actions">
+				{@render actions()}
+			</div>
 		{/if}
 	</div>
 	<div class="tool-view-content">
@@ -69,6 +75,10 @@
 		font-weight: 600;
 		color: var(--foreground);
 		letter-spacing: 1.5px;
+	}
+
+	.tool-view-actions {
+		margin-left: auto;
 	}
 
 	.tool-view-content {

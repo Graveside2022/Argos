@@ -3,14 +3,12 @@ import type { Database } from 'better-sqlite3';
 import type { GlobalProtectConfig } from '$lib/types/globalprotect';
 
 const UPSERT_SQL = `
-	INSERT INTO globalprotect_configs (id, portal, username, connect_on_startup, auth_method, certificate_path)
-	VALUES (?, ?, ?, ?, ?, ?)
+	INSERT INTO globalprotect_configs (id, portal, username, connect_on_startup)
+	VALUES (?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		portal = excluded.portal,
 		username = excluded.username,
-		connect_on_startup = excluded.connect_on_startup,
-		auth_method = excluded.auth_method,
-		certificate_path = excluded.certificate_path
+		connect_on_startup = excluded.connect_on_startup
 `;
 
 interface GpConfigRow {
@@ -18,8 +16,6 @@ interface GpConfigRow {
 	portal: string;
 	username: string;
 	connect_on_startup: number;
-	auth_method: string;
-	certificate_path: string | null;
 }
 
 function rowToConfig(row: GpConfigRow): GlobalProtectConfig {
@@ -27,9 +23,7 @@ function rowToConfig(row: GpConfigRow): GlobalProtectConfig {
 		id: row.id,
 		portal: row.portal,
 		username: row.username,
-		connectOnStartup: row.connect_on_startup === 1,
-		authMethod: row.auth_method as 'password' | 'certificate',
-		certificatePath: row.certificate_path ?? undefined
+		connectOnStartup: row.connect_on_startup === 1
 	};
 }
 
@@ -45,8 +39,6 @@ export function saveGpConfig(db: Database, config: GlobalProtectConfig): void {
 		config.id,
 		config.portal,
 		config.username,
-		config.connectOnStartup ? 1 : 0,
-		config.authMethod,
-		config.certificatePath ?? null
+		config.connectOnStartup ? 1 : 0
 	);
 }
