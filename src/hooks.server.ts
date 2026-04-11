@@ -83,6 +83,14 @@ TakService.getInstance()
 		logger.error('Failed to initialize TakService', { error: err });
 	});
 
+// Initialize GlobalProtect VPN service
+import { GlobalProtectService } from '$lib/server/services/globalprotect/globalprotect-service';
+GlobalProtectService.getInstance()
+	.initialize()
+	.catch((err) => {
+		logger.error('Failed to initialize GlobalProtectService', { error: err });
+	});
+
 // Handle WebSocket connections -- delegates to ws-connection-handler module
 wss.on('connection', (ws: WebSocket, request) => {
 	handleWsConnection(ws, request, wsManager);

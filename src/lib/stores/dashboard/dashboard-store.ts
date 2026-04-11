@@ -85,6 +85,7 @@ export type ActiveView =
 	| 'spiderfoot'
 	| 'webtak'
 	| 'tak-config'
+	| 'globalprotect'
 	| 'logs-analytics';
 
 export const activeView = writable<ActiveView>('map');

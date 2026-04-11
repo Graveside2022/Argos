@@ -37,7 +37,7 @@
 		}
 	}
 
-	function openView(view: 'tak-config' | 'logs-analytics') {
+	function openView(view: 'tak-config' | 'globalprotect' | 'logs-analytics') {
 		activeView.set(view);
 		activePanel.set(null);
 	}
@@ -136,6 +136,24 @@
 				<div class="setting-row">
 					<span class="setting-label">TAK Server</span>
 					<button class="open-btn" onclick={() => openView('tak-config')}>
+						Open
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<polyline points="9 18 15 12 9 6" />
+						</svg>
+					</button>
+				</div>
+				<div class="setting-row">
+					<span class="setting-label">GlobalProtect VPN</span>
+					<button class="open-btn" onclick={() => openView('globalprotect')}>
 						Open
 						<svg
 							width="14"

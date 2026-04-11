@@ -8,6 +8,7 @@
 	import AgentChatPanel from '$lib/components/dashboard/AgentChatPanel.svelte';
 	import DashboardMap from '$lib/components/dashboard/DashboardMap.svelte';
 	import DashboardShell from '$lib/components/dashboard/DashboardShell.svelte';
+	import GpConfigView from '$lib/components/dashboard/globalprotect/GpConfigView.svelte';
 	import LogsPanel from '$lib/components/dashboard/LogsPanel.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
 	import CapturesPanel from '$lib/components/dashboard/panels/CapturesPanel.svelte';
@@ -41,13 +42,14 @@
 		previousTab,
 		toggleTerminalPanel
 	} from '$lib/stores/dashboard/terminal-store';
+	import { startGpPolling, stopGpPolling } from '$lib/stores/globalprotect-store';
 	import { GPSService } from '$lib/tactical-map/gps-service';
 	import { KismetService } from '$lib/tactical-map/kismet-service';
 	import { TakService } from '$lib/tactical-map/tak-service';
 
 	import BottomPanelTabs from './BottomPanelTabs.svelte';
 
-	const FULL_WIDTH_VIEWS = new Set(['tak-config', 'gsm-evil']);
+	const FULL_WIDTH_VIEWS = new Set(['tak-config', 'globalprotect', 'gsm-evil']);
 	let shellMode = $derived(
 		FULL_WIDTH_VIEWS.has($activeView) ? ('full-width' as const) : ('sidebar' as const)
 	);
@@ -106,12 +108,14 @@
 		kismetService.startPeriodicDeviceFetch();
 		void kismetService.fetchKismetDevices();
 		takService.startPeriodicStatusCheck();
+		startGpPolling();
 	});
 
 	onDestroy(() => {
 		gpsService.stopPositionUpdates();
 		kismetService.stopPeriodicChecks();
 		takService.stopPeriodicChecks();
+		stopGpPolling();
 	});
 </script>
 
@@ -172,6 +176,8 @@
 	{#snippet fullWidth()}
 		{#if $activeView === 'tak-config'}
 			<TakConfigView />
+		{:else if $activeView === 'globalprotect'}
+			<GpConfigView />
 		{:else if $activeView === 'gsm-evil'}
 			<ToolViewWrapper title="GSM Evil" onBack={goBackToMap}>
 				<iframe src="/gsm-evil" title="GSM Evil" class="tool-iframe"></iframe>

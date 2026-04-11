@@ -1,0 +1,59 @@
+/* GpConfigView styles — mirrors tak-config-view.css */
+
+.gp-body {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 4px;
+	overflow-y: auto;
+	height: 100%;
+}
+
+.loading-text {
+	padding: 20px 0;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.save-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.save-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 16px;
+	font-size: 14px;
+	font-weight: 500;
+	color: white;
+	background: var(--primary);
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background 0.15s;
+	justify-content: center;
+}
+
+.save-btn:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--primary) 85%, white);
+}
+
+.save-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.save-message {
+	font-size: 10px;
+}
+
+.save-message.success {
+	color: var(--status-healthy, #8bbfa0);
+}
+
+.save-message.error {
+	color: var(--destructive);
+}
