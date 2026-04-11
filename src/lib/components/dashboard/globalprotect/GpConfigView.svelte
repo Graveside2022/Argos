@@ -158,6 +158,8 @@
 
 				<button
 					type="button"
+					role="switch"
+					aria-checked={config.connectOnStartup}
 					class="startup-toggle"
 					onclick={() =>
 						(config = { ...config, connectOnStartup: !config.connectOnStartup })}
@@ -169,8 +171,25 @@
 				</button>
 			</div>
 
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="gp-drag-handle" class:dragging={isDragging} onmousedown={onDragStart}></div>
+			<div
+				class="gp-drag-handle"
+				class:dragging={isDragging}
+				role="separator"
+				aria-orientation="vertical"
+				aria-valuenow={leftWidth}
+				tabindex="0"
+				onmousedown={onDragStart}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowLeft') {
+						leftWidth = Math.max(280, leftWidth - 20);
+						e.preventDefault();
+					}
+					if (e.key === 'ArrowRight') {
+						leftWidth = leftWidth + 20;
+						e.preventDefault();
+					}
+				}}
+			></div>
 
 			<div class="gp-right-panel">
 				<GpOutputConsole />
