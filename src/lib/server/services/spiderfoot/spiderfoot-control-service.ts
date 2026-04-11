@@ -101,6 +101,17 @@ function killManagedProcess(): void {
 }
 
 /** Kill all processes listening on the SpiderFoot port (handles orphaned process trees) */
+/** Send SIGTERM to a PID after validating it is in the safe range [2, 4194304]. */
+function killValidatedPid(pid: number): boolean {
+	if (pid < 2 || pid > 4194304) {
+		logger.warn(`[spiderfoot] Refusing to kill invalid PID ${pid}`);
+		return false;
+	}
+	process.kill(pid, 'SIGTERM');
+	logger.info(`[spiderfoot] Killed orphaned process ${pid} via fallback`);
+	return true;
+}
+
 async function killProcessOnPort(): Promise<void> {
 	// Try fuser -k first (works when process is owned by same user)
 	try {
@@ -110,18 +121,14 @@ async function killProcessOnPort(): Promise<void> {
 		/* fuser exits non-zero when no process found or lacks permissions */
 	}
 
-	// Fallback: find PID via ss/lsof and kill directly
+	// Fallback: find PID via ss and kill directly
 	try {
 		const { stdout } = await execFileAsync('/usr/bin/ss', [
 			'-tlnp',
 			`sport = :${SPIDERFOOT_PORT}`
 		]);
 		const pidMatch = stdout.match(/pid=(\d+)/);
-		if (pidMatch) {
-			const pid = parseInt(pidMatch[1], 10);
-			process.kill(pid, 'SIGTERM');
-			logger.info(`[spiderfoot] Killed orphaned process ${pid} via fallback`);
-		}
+		if (pidMatch) killValidatedPid(parseInt(pidMatch[1], 10));
 	} catch {
 		logger.warn('[spiderfoot] Fallback kill also failed');
 	}

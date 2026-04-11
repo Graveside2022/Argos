@@ -9,7 +9,12 @@
 </script>
 
 <ToolViewWrapper title="WebTAK — Team Awareness Kit" onBack={goBack}>
-	<iframe src="/webtak/index.html" title="WebTAK Team Awareness Kit" class="webtak-iframe" />
+	<iframe
+		src="/webtak/index.html"
+		title="WebTAK Team Awareness Kit"
+		class="webtak-iframe"
+		sandbox="allow-scripts allow-same-origin allow-forms"
+	/>
 </ToolViewWrapper>
 
 <style>
