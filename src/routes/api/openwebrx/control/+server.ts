@@ -64,6 +64,9 @@ async function runDockerAction(
 		await execFileAsync('docker', [action, CONTAINER_NAME]);
 		if (action === 'start') await delay(2000);
 		if (action === 'stop') await releaseHackRfForWebRx(TOOL_NAME);
+		// Force an on-demand ResourceManager refresh so the next status read
+		// returns fresh data without waiting for the 30s background poll.
+		await resourceManager.refreshNow(HardwareDevice.HACKRF);
 		return json({ success: true, action, message, ...extra });
 	} catch (err) {
 		// Release the claim so the HackRF isn't orphaned in the registry
