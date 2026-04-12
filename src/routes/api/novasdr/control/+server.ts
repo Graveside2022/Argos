@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { z } from 'zod';
 
 import { createHandler } from '$lib/server/api/create-handler';
 import { env } from '$lib/server/env';
@@ -7,6 +8,12 @@ import { delay } from '$lib/utils/delay';
 
 const CONTAINER_NAME = 'novasdr-hackrf';
 const PEER_CONTAINER = 'openwebrx-hackrf';
+
+const ControlActionSchema = z.object({
+	action: z.enum(['start', 'stop', 'restart', 'status'])
+});
+type ControlBody = z.infer<typeof ControlActionSchema>;
+type ControlAction = ControlBody['action'];
 
 /** Check container running status. */
 async function getContainerStatus(): Promise<Response> {
@@ -46,16 +53,23 @@ async function dockerLifecycle(
 	return json({ success: true, action, message, ...extra });
 }
 
-const VALID_ACTIONS = new Set(['start', 'stop', 'restart', 'status']);
+const LIFECYCLE_EXTRAS: Record<ControlAction, Record<string, unknown> | undefined> = {
+	start: { url: env.NOVASDR_URL },
+	stop: undefined,
+	restart: undefined,
+	status: undefined
+};
 
-const LIFECYCLE_EXTRAS: Record<string, Record<string, unknown> | undefined> = {
-	start: { url: env.NOVASDR_URL }
+const LIFECYCLE_MESSAGES: Record<Exclude<ControlAction, 'status'>, string> = {
+	start: 'NovaSDR started successfully',
+	stop: 'NovaSDR stopped successfully',
+	restart: 'NovaSDR restarted successfully'
 };
 
 /** Execute validated NovaSDR action. */
-function executeAction(action: string): Promise<Response> {
+function executeAction(action: ControlAction): Promise<Response> {
 	if (action === 'status') return getContainerStatus();
-	return dockerLifecycle(action, `NovaSDR ${action}ed successfully`, LIFECYCLE_EXTRAS[action]);
+	return dockerLifecycle(action, LIFECYCLE_MESSAGES[action], LIFECYCLE_EXTRAS[action]);
 }
 
 /**
@@ -64,10 +78,10 @@ function executeAction(action: string): Promise<Response> {
  * NovaSDR issues a best-effort stop of openwebrx-hackrf first (soft interlock).
  * Body: { action: 'start' | 'stop' | 'restart' | 'status' }
  */
-export const POST = createHandler(async ({ request }) => {
-	const { action } = await request.json();
-	if (!action || !VALID_ACTIONS.has(action)) {
-		return json({ success: false, error: 'Invalid action' }, { status: 400 });
-	}
-	return executeAction(action);
-});
+export const POST = createHandler(
+	async ({ request }) => {
+		const { action } = (await request.json()) as ControlBody;
+		return executeAction(action);
+	},
+	{ validateBody: ControlActionSchema }
+);

@@ -8,9 +8,11 @@
 		activeView.set('map');
 	}
 
-	// Build the NovaSDR URL using the current hostname
+	// Build the NovaSDR URL using the current page protocol + hostname so the
+	// iframe inherits http/https correctly and avoids mixed-content blocking
+	// when the dashboard is served over HTTPS.
 	const novasdrUrl = browser
-		? `http://${window.location.hostname}:9002`
+		? `${window.location.protocol}//${window.location.hostname}:9002`
 		: 'http://localhost:9002';
 </script>
 

@@ -99,7 +99,8 @@
 		}
 		const statusRes = await postControl(ep.controlUrl, 'status');
 		const statusData = await statusRes.json();
-		setLocalStatus(toolId, statusData.isRunning ? 'running' : 'stopped');
+		const running = statusData.isRunning || statusData.running;
+		setLocalStatus(toolId, running ? 'running' : 'stopped');
 	}
 
 	/** Handle start result for a non-Kismet tool. */
