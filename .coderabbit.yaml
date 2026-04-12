@@ -1,0 +1,55 @@
+# CodeRabbit configuration for Argos.
+#
+# Primary purpose: exclude vendored third-party code from review so the
+# signal stays focused on code we actually own and maintain.
+#
+# Docs: https://docs.coderabbit.ai/reference/yaml-template
+language: en
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  # Path-based exclusions. Anything matching these patterns is skipped —
+  # CodeRabbit will not generate findings against files here.
+  path_filters:
+    # Vendored noVNC library — upstream MPL-2.0 code served as static ESM
+    # assets for the WebTAK pixel-streaming viewer. Hundreds of thousands
+    # of production deployments depend on this library; we do not modify
+    # it and have no business reviewing it.
+    - "!static/webtak/novnc/**"
+
+    # Build outputs and generated files.
+    - "!**/.svelte-kit/**"
+    - "!**/build/**"
+    - "!**/dist/**"
+    - "!**/node_modules/**"
+
+    # Lockfiles — reviewed by dependency bots, not code review.
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/yarn.lock"
+
+    # Compiled / vendored native binaries and object files.
+    - "!native/apm-runner/*.o"
+    - "!native/apm-runner/lib/*.so"
+    - "!native/apm-runner/apm-runner"
+
+  # Auto-review pull requests from any branch into main/dev.
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - dev
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
