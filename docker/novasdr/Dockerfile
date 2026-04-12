@@ -118,6 +118,22 @@ COPY --from=frontend-builder /build/dist /app/frontend/dist
 COPY --from=source /src/crates/novasdr-server/resources/ /app/resources/
 
 WORKDIR /app
+
+# Create a non-root user matching the host kali user (UID 1000, GID 1002).
+# libhackrf udev rules set /dev/bus/usb devices to mode 660 root:plugdev,
+# so the in-container user must also be in group plugdev (GID 46) to open
+# the HackRF via libusb. `privileged: true` in the compose file elevates
+# only root-in-container, not arbitrary UIDs, so explicit group membership
+# is required even with privileged mode.
+#
+# Writing as UID 1000 GID 1002 means the bind-mounted /config files end up
+# owned by kali:kali on the host — no more root-owned files blocking git.
+RUN groupadd -g 1002 argos \
+	&& useradd -u 1000 -g 1002 -G plugdev -M -s /usr/sbin/nologin -d /app argos \
+	&& chown -R argos:argos /app
+
+USER 1000:1002
+
 EXPOSE 9002
 
 # Config is bind-mounted from the host at runtime under /config.
