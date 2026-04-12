@@ -136,6 +136,17 @@
 		return `Failed to start ${tool.name}`;
 	}
 
+	/**
+	 * Map of WebRX-family tools to their sibling. When a start auto-stops
+	 * the peer via ResourceManager.forceRelease, we also refresh the peer's
+	 * card so the UI reflects the new Stopped state without waiting for the
+	 * next onMount or the 30s background poll.
+	 */
+	const WEBRX_PEER_OF: Record<string, string> = {
+		openwebrx: 'novasdr',
+		novasdr: 'openwebrx'
+	};
+
 	/** Dispatch the start result to the Kismet-specific or generic path. Returns success. */
 	async function dispatchStartResult(
 		tool: ToolDefinition,
@@ -149,6 +160,23 @@
 		return applyStartResult(tool.id, data, ep);
 	}
 
+	/** Apply the ok/error toast + refresh the WebRX peer card when applicable. */
+	function finalizeStartResult(
+		tool: ToolDefinition,
+		data: Record<string, unknown>,
+		ok: boolean
+	): void {
+		if (!ok) {
+			toast.error(buildStartFailureMessage(tool, data));
+			return;
+		}
+		toast.success(`${tool.name} started`);
+		// If this tool has a WebRX peer, its server-side auto-stop may have
+		// just happened — refresh the peer's card so it flips to Stopped.
+		const peer = WEBRX_PEER_OF[tool.id];
+		if (peer) refreshPeerStatus(peer);
+	}
+
 	async function handleStart(tool: ToolDefinition) {
 		const ep = toolEndpoints[tool.id];
 		if (!ep) return;
@@ -156,8 +184,7 @@
 		try {
 			const data = await (await fetchStartAction(ep)).json();
 			const ok = await dispatchStartResult(tool, data, ep);
-			if (ok) toast.success(`${tool.name} started`);
-			else toast.error(buildStartFailureMessage(tool, data));
+			finalizeStartResult(tool, data, ok);
 		} catch {
 			setToolStatus(tool.id, catchFallbackStatus(tool.id));
 			toast.error(`Failed to start ${tool.name}`);
@@ -192,6 +219,24 @@
 			.then((r) => r.json())
 			.then((data) => {
 				if (data.isRunning || data.running) setLocalStatus(toolId, 'running');
+			})
+			.catch(() => {});
+	}
+
+	/**
+	 * Bidirectional status refresh — unlike checkControlStatus, this sets the
+	 * local state to either 'running' or 'stopped' based on the API response.
+	 * Used to flip a peer WebSDR card to Stopped after the other WebSDR's start
+	 * action auto-stopped it via ResourceManager.forceRelease.
+	 */
+	function refreshPeerStatus(toolId: string): void {
+		const ep = toolEndpoints[toolId];
+		if (!ep?.controlUrl) return;
+		postControl(ep.controlUrl, 'status')
+			.then((r) => r.json())
+			.then((data) => {
+				const running = data.isRunning || data.running;
+				setLocalStatus(toolId, running ? 'running' : 'stopped');
 			})
 			.catch(() => {});
 	}
