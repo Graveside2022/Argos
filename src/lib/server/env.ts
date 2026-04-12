@@ -43,6 +43,7 @@ const envSchema = z.object({
 	// Third-party service URLs (FR-025)
 	GSM_EVIL_URL: z.string().url().default('http://localhost:8080'),
 	OPENWEBRX_URL: z.string().url().default('http://localhost:8073'),
+	NOVASDR_URL: z.string().url().default('http://localhost:9002'),
 	BETTERCAP_URL: z.string().url().default('http://localhost:80'),
 	BLUEHOOD_PORT: z.coerce.number().int().min(1024).max(65535).default(8085),
 	WIGLETOTAK_PORT: z.coerce.number().int().min(1024).max(65535).default(8081),

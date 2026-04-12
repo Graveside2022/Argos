@@ -5,8 +5,8 @@ import { env } from '$lib/server/env';
 import { execFileAsync } from '$lib/server/exec';
 import { delay } from '$lib/utils/delay';
 
-const CONTAINER_NAME = 'openwebrx-hackrf';
-const PEER_CONTAINER = 'novasdr-hackrf';
+const CONTAINER_NAME = 'novasdr-hackrf';
+const PEER_CONTAINER = 'openwebrx-hackrf';
 
 /** Check container running status. */
 async function getContainerStatus(): Promise<Response> {
@@ -49,18 +49,19 @@ async function dockerLifecycle(
 const VALID_ACTIONS = new Set(['start', 'stop', 'restart', 'status']);
 
 const LIFECYCLE_EXTRAS: Record<string, Record<string, unknown> | undefined> = {
-	start: { url: env.OPENWEBRX_URL }
+	start: { url: env.NOVASDR_URL }
 };
 
-/** Execute validated OpenWebRX action. */
+/** Execute validated NovaSDR action. */
 function executeAction(action: string): Promise<Response> {
 	if (action === 'status') return getContainerStatus();
-	return dockerLifecycle(action, `OpenWebRX ${action}ed successfully`, LIFECYCLE_EXTRAS[action]);
+	return dockerLifecycle(action, `NovaSDR ${action}ed successfully`, LIFECYCLE_EXTRAS[action]);
 }
 
 /**
- * POST /api/openwebrx/control
- * Control OpenWebRX Docker container
+ * POST /api/novasdr/control
+ * Control NovaSDR Docker container. Shares a HackRF with OpenWebRX — starting
+ * NovaSDR issues a best-effort stop of openwebrx-hackrf first (soft interlock).
  * Body: { action: 'start' | 'stop' | 'restart' | 'status' }
  */
 export const POST = createHandler(async ({ request }) => {

@@ -26,6 +26,7 @@
 		'kismet-wifi': { controlUrl: '/api/kismet/control' },
 		'gsm-evil': { controlUrl: '/api/gsm-evil/control' },
 		openwebrx: { controlUrl: '/api/openwebrx/control' },
+		novasdr: { controlUrl: '/api/novasdr/control' },
 		bluehood: { controlUrl: '/api/bluehood/control' },
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
 		sightline: { controlUrl: '/api/sightline/control' },
@@ -174,6 +175,7 @@
 	/** Check initial status of tools on mount */
 	onMount(() => {
 		checkControlStatus('openwebrx');
+		checkControlStatus('novasdr');
 		checkControlStatus('sightline');
 		checkControlStatus('spiderfoot');
 

@@ -8,18 +8,18 @@
 		activeView.set('map');
 	}
 
-	// Build the OpenWebRX URL using the current hostname
-	const openwebrxUrl = browser
-		? `http://${window.location.hostname}:8073`
-		: 'http://localhost:8073';
+	// Build the NovaSDR URL using the current hostname
+	const novasdrUrl = browser
+		? `http://${window.location.hostname}:9002`
+		: 'http://localhost:9002';
 </script>
 
-<ToolViewWrapper title="OpenWebRX Spectrum Analyzer" onBack={goBack}>
-	<iframe src={openwebrxUrl} title="OpenWebRX Web Interface" class="openwebrx-iframe"></iframe>
+<ToolViewWrapper title="NovaSDR Spectrum Analyzer" onBack={goBack}>
+	<iframe src={novasdrUrl} title="NovaSDR Web Interface" class="novasdr-iframe"></iframe>
 </ToolViewWrapper>
 
 <style>
-	.openwebrx-iframe {
+	.novasdr-iframe {
 		width: 100%;
 		height: 100%;
 		border: none;

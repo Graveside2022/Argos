@@ -19,6 +19,7 @@
 	import BluehoodView from '$lib/components/dashboard/views/BluehoodView.svelte';
 	import KismetView from '$lib/components/dashboard/views/KismetView.svelte';
 	import LogsAnalyticsView from '$lib/components/dashboard/views/LogsAnalyticsView.svelte';
+	import NovaSDRView from '$lib/components/dashboard/views/NovaSDRView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
 	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
@@ -136,6 +137,8 @@
 				<KismetView />
 			{:else if $activeView === 'openwebrx'}
 				<OpenWebRXView />
+			{:else if $activeView === 'novasdr'}
+				<NovaSDRView />
 			{:else if $activeView === 'bettercap'}
 				<ToolViewWrapper title="Bettercap" onBack={goBackToMap}>
 					<iframe src="http://localhost:80" title="Bettercap" class="tool-iframe"

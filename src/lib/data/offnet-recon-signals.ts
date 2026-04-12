@@ -30,6 +30,17 @@ export const spectrumAnalysis: ToolCategory = {
 			},
 			{ isInstalled: true, viewName: 'openwebrx', canOpen: true, shouldShowControls: true }
 		),
+		createTool(
+			{
+				id: 'novasdr',
+				name: 'NovaSDR',
+				description:
+					'High-performance Rust WebSDR with SoapySDR backend. Alternative to OpenWebRX — starting this tool stops OpenWebRX automatically (shared HackRF).',
+				icon: toolIcons.external,
+				deployment: 'docker'
+			},
+			{ isInstalled: true, viewName: 'novasdr', canOpen: true, shouldShowControls: true }
+		),
 		createTool({
 			id: 'qspectrumanalyzer',
 			name: 'QSpectrumAnalyzer',

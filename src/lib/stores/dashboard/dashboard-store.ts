@@ -70,6 +70,7 @@ export type ActiveView =
 	| 'map'
 	| 'kismet'
 	| 'openwebrx'
+	| 'novasdr'
 	| 'bettercap'
 	| 'hackrf'
 	| 'gsm-evil'
