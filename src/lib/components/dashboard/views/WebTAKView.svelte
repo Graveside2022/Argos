@@ -87,6 +87,9 @@
 			const body = await postControlStart(url);
 			wsUrl = buildWsUrl(body);
 			currentUrl = url;
+			if (typeof window !== 'undefined') {
+				localStorage.setItem('argos-webtak-url', url);
+			}
 			mode = 'connected';
 		} catch (err) {
 			startError = err instanceof Error ? err.message : String(err);
