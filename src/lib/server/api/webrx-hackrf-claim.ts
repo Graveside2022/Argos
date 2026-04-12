@@ -29,6 +29,29 @@ import { logger } from '$lib/utils/logger';
 /** The two WebRX-family tool names that can legitimately auto-recover from each other. */
 const WEBRX_PEERS = new Set(['openwebrx', 'novasdr']);
 
+/**
+ * Container-name aliases for the two WebRX-family tools. The background
+ * `ResourceManager.refreshHackrf()` scan stamps ownership using the container
+ * name returned by `docker ps`, which differs from the canonical tool name
+ * passed to `acquire(toolName, ...)`. When the recorded owner is a container
+ * name, we still want peer-conflict detection to recognize it as a peer.
+ *
+ * This handles edge cases where a WebSDR container was started outside the
+ * Argos UI (`docker compose up`, Portainer, etc.) — the in-memory state will
+ * have the container-name owner, and without this alias map, attempting to
+ * start the sibling WebSDR via the UI would return a 409 conflict instead of
+ * triggering peer recovery.
+ */
+const WEBRX_CONTAINER_ALIASES: Record<string, string> = {
+	'openwebrx-hackrf': 'openwebrx',
+	'novasdr-hackrf': 'novasdr'
+};
+
+/** Resolve a possibly-container-name owner to its canonical tool name. */
+function canonicalizeOwner(owner: string): string {
+	return WEBRX_CONTAINER_ALIASES[owner] ?? owner;
+}
+
 /** Result of an acquire attempt. */
 export interface WebRxClaimResult {
 	success: boolean;
@@ -40,7 +63,8 @@ export interface WebRxClaimResult {
 
 /** True when `owner` is the sibling WebSDR of `toolName` (openwebrx ⇄ novasdr). */
 function isPeerConflict(toolName: string, owner: string): boolean {
-	return WEBRX_PEERS.has(owner) && owner !== toolName;
+	const canonical = canonicalizeOwner(owner);
+	return WEBRX_PEERS.has(canonical) && canonical !== toolName;
 }
 
 /** Force-release the peer WebSDR and retry the acquire. */
