@@ -1,266 +1,288 @@
 <script lang="ts">
+	/**
+	 * WebTAK panel — noVNC-backed.
+	 *
+	 * Replaces the old iframe embedding (which broke against TAK server's
+	 * `X-Frame-Options: DENY` + strict CSP). The operator enters a TAK URL,
+	 * Argos spawns a real Chromium browser on a virtual display, and streams
+	 * that Chromium back via VNC-over-WebSocket. All keyboard/mouse input is
+	 * forwarded to the real browser, so typing credentials and interacting
+	 * with WebTAK works exactly like using a laptop.
+	 *
+	 * Three UI modes: `form` (enter URL) → `starting` (spawning stack) →
+	 * `connected` (noVNC viewer).  The server-side stack is auto-stopped on
+	 * view unmount via a `keepalive: true` fetch so switching tabs doesn't
+	 * leak a Chromium process.
+	 */
+
 	import { activeView } from '$lib/stores/dashboard/dashboard-store';
 
 	import ToolViewWrapper from './ToolViewWrapper.svelte';
+	import WebtakUrlForm from './webtak/webtak-url-form.svelte';
+	import WebtakVncViewer from './webtak/webtak-vnc-viewer.svelte';
+
+	type Mode = 'form' | 'starting' | 'connected' | 'error';
+
+	const CONTROL_ENDPOINT = '/api/webtak-vnc/control';
 
 	const saved = typeof window !== 'undefined' ? localStorage.getItem('argos-webtak-url') : null;
-	let inputUrl = $state(saved || '');
-	let iframeSrc = $state('');
-	let loadFailed = $state(false);
+
+	let mode = $state<Mode>('form');
+	let wsUrl = $state('');
+	let currentUrl = $state(saved || '');
+	let startError = $state('');
+	let viewerKey = $state(0);
 
 	function goBack() {
 		activeView.set('map');
 	}
 
-	function loadPage() {
-		const trimmed = inputUrl.trim().replace(/\/+$/, '');
-		if (!trimmed) return;
-		localStorage.setItem('argos-webtak-url', trimmed);
-		loadFailed = false;
-		iframeSrc = trimmed;
+	function buildWsUrl(body: { wsPort?: number; wsPath?: string }): string {
+		const wsPort = body.wsPort ?? 6080;
+		const wsPath = body.wsPath ?? '/websockify';
+		return `ws://${window.location.hostname}:${wsPort}${wsPath}`;
 	}
 
-	function changeUrl() {
-		inputUrl = iframeSrc;
-		iframeSrc = '';
-		loadFailed = false;
+	async function restoreExistingSession(isCancelled: () => boolean): Promise<void> {
+		try {
+			const res = await fetch(CONTROL_ENDPOINT, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'status' })
+			});
+			if (isCancelled()) return;
+			const body = await res.json();
+			if (!body.isRunning || !body.currentUrl) return;
+			wsUrl = buildWsUrl(body);
+			currentUrl = body.currentUrl;
+			mode = 'connected';
+		} catch {
+			/* ignore — fall back to form */
+		}
+	}
+
+	async function postControlStart(url: string): Promise<{
+		wsPort?: number;
+		wsPath?: string;
+		success: boolean;
+		error?: string;
+		message?: string;
+	}> {
+		const res = await fetch(CONTROL_ENDPOINT, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ action: 'start', url })
+		});
+		const body = await res.json();
+		if (!res.ok || !body.success) {
+			throw new Error(body.error || body.message || `HTTP ${res.status}`);
+		}
+		return body;
+	}
+
+	async function handleConnect(url: string) {
+		mode = 'starting';
+		startError = '';
+		try {
+			const body = await postControlStart(url);
+			wsUrl = buildWsUrl(body);
+			currentUrl = url;
+			mode = 'connected';
+		} catch (err) {
+			startError = err instanceof Error ? err.message : String(err);
+			mode = 'error';
+		}
+	}
+
+	async function handleDisconnect() {
+		try {
+			await fetch(CONTROL_ENDPOINT, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'stop' })
+			});
+		} catch {
+			/* best-effort teardown */
+		}
+		wsUrl = '';
+		mode = 'form';
+	}
+
+	function refreshViewer() {
+		viewerKey++;
 	}
 
 	function openInNewTab() {
-		window.open(iframeSrc, '_blank');
+		if (currentUrl && typeof window !== 'undefined') {
+			window.open(currentUrl, '_blank', 'noopener,noreferrer');
+		}
 	}
 
-	function refreshIframe() {
-		const current = iframeSrc;
-		iframeSrc = '';
-		requestAnimationFrame(() => {
-			iframeSrc = current;
-		});
+	function onViewerDisconnect(reason: string) {
+		if (reason === 'unclean') {
+			startError = 'Remote browser session ended unexpectedly.';
+			mode = 'error';
+		}
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') loadPage();
+	function returnToForm() {
+		wsUrl = '';
+		startError = '';
+		mode = 'form';
 	}
 
-	function handleIframeError() {
-		loadFailed = true;
-	}
+	// On mount, ask the backend whether a VNC stack is already running. If so,
+	// skip the form and jump straight back into the existing session — this
+	// makes tab switching seamless for the operator. The stack is only torn
+	// down when the user explicitly clicks Disconnect.
+	$effect(() => {
+		if (typeof fetch === 'undefined') return;
+		let cancelled = false;
+		void restoreExistingSession(() => cancelled);
+		return () => {
+			cancelled = true;
+		};
+	});
 </script>
 
 <ToolViewWrapper title="WebTAK — Team Awareness Kit" onBack={goBack}>
 	{#snippet actions()}
-		{#if iframeSrc}
-			<button class="action-btn" onclick={refreshIframe}>Refresh</button>
+		{#if mode === 'connected'}
+			<button class="action-btn" onclick={refreshViewer}>Refresh</button>
 			<button class="action-btn" onclick={openInNewTab}>Open in Tab</button>
-			<button class="action-btn" onclick={changeUrl}>Change URL</button>
+			<button class="action-btn" onclick={handleDisconnect}>Disconnect</button>
+		{:else if mode === 'error'}
+			<button class="action-btn" onclick={returnToForm}>Change URL</button>
 		{/if}
 	{/snippet}
 
-	{#if !iframeSrc}
-		<div class="url-form">
-			<div class="url-form-card">
-				<h3 class="url-form-title">TAK Server Connection</h3>
-				<p class="url-form-desc">
-					Enter the URL of your TAK Server (e.g. https://10.3.1.5:8446)
-				</p>
-				<div class="url-input-row">
-					<input
-						type="text"
-						class="url-input"
-						bind:value={inputUrl}
-						onkeydown={handleKeydown}
-						placeholder="https://10.3.1.5:8446"
-					/>
-					<button class="go-btn" onclick={loadPage} disabled={!inputUrl.trim()}>Go</button
-					>
+	<div class="webtak-shell">
+		{#if mode === 'form'}
+			<WebtakUrlForm
+				initialUrl={currentUrl}
+				onConnect={handleConnect}
+				busy={false}
+				errorMessage=""
+			/>
+		{:else if mode === 'starting'}
+			<div class="status-panel">
+				<div class="status-card">
+					<div class="spinner" aria-hidden="true"></div>
+					<p class="status-title">STARTING BROWSER SESSION</p>
+					<p class="status-desc">
+						Spawning Xtigervnc, Chromium, and websockify on the Argos host…
+					</p>
 				</div>
 			</div>
-		</div>
-	{:else}
-		<div class="iframe-container">
-			<iframe
-				src={iframeSrc}
-				title="WebTAK Team Awareness Kit"
-				class="webtak-iframe"
-				allow="cross-origin-isolated"
-				onerror={handleIframeError}
-			></iframe>
-			{#if loadFailed}
-				<div class="cert-overlay">
-					<div class="cert-card">
-						<h3 class="cert-title">Page Failed to Load</h3>
-						<p class="cert-desc">
-							HTTPS sites with self-signed certificates cannot load inside an embedded
-							frame. Open the page in a new tab first to accept the certificate, then
-							return here.
-						</p>
-						<button class="go-btn" onclick={openInNewTab}>Open in New Tab</button>
-					</div>
+		{:else if mode === 'connected'}
+			{#key viewerKey}
+				<WebtakVncViewer {wsUrl} onDisconnect={onViewerDisconnect} />
+			{/key}
+		{:else if mode === 'error'}
+			<div class="status-panel">
+				<div class="status-card error">
+					<p class="status-title">CONNECTION FAILED</p>
+					<p class="status-desc">{startError || 'Unknown error'}</p>
+					<button class="retry-btn" onclick={returnToForm}>Change URL</button>
 				</div>
-			{/if}
-		</div>
-	{/if}
+			</div>
+		{/if}
+	</div>
 </ToolViewWrapper>
 
 <style>
-	.iframe-container {
+	.webtak-shell {
 		position: relative;
 		width: 100%;
 		height: 100%;
-	}
-
-	.webtak-iframe {
-		width: 100%;
-		height: 100%;
-		border: none;
 		background: var(--background);
 	}
 
-	.cert-overlay {
-		position: absolute;
-		inset: 0;
+	.status-panel {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--background);
+		width: 100%;
+		height: 100%;
 	}
 
-	.cert-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
-		padding: 32px;
+	.status-card {
 		background: var(--card);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		max-width: 480px;
-		width: 100%;
-	}
-
-	.cert-title {
+		padding: 28px 36px;
+		max-width: 460px;
 		font-family: 'Fira Code', monospace;
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--foreground);
-		margin: 0;
-		text-transform: uppercase;
-		letter-spacing: 1.2px;
-	}
-
-	.cert-desc {
-		font-family: 'Fira Code', monospace;
-		font-size: 11px;
-		color: var(--muted-foreground);
 		text-align: center;
-		margin: 0;
+	}
+
+	.status-card.error {
+		border-color: var(--destructive);
+	}
+
+	.status-title {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 1.2px;
+		color: var(--primary);
+		margin: 0 0 8px;
+		text-transform: uppercase;
+	}
+
+	.status-card.error .status-title {
+		color: var(--destructive);
+	}
+
+	.status-desc {
+		font-size: 10px;
+		color: var(--text-secondary);
 		line-height: 1.6;
-	}
-
-	.url-form {
-		width: 100%;
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--background);
-	}
-
-	.url-form-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
-		padding: 32px;
-		background: var(--card);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		max-width: 480px;
-		width: 100%;
-	}
-
-	.url-form-title {
-		font-family: 'Fira Code', monospace;
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--foreground);
-		margin: 0;
-		text-transform: uppercase;
-		letter-spacing: 1.2px;
-	}
-
-	.url-form-desc {
-		font-family: 'Fira Code', monospace;
-		font-size: 11px;
-		color: var(--muted-foreground);
-		text-align: center;
 		margin: 0;
 	}
 
-	.url-input-row {
-		display: flex;
-		gap: 8px;
-		width: 100%;
+	.spinner {
+		width: 28px;
+		height: 28px;
+		margin: 0 auto 16px;
+		border: 2px solid var(--border);
+		border-top-color: var(--primary);
+		border-radius: 50%;
+		animation: spin 0.9s linear infinite;
 	}
 
-	.url-input {
-		flex: 1;
-		padding: 8px 12px;
-		font-family: 'Fira Code', monospace;
-		font-size: 12px;
-		color: var(--foreground);
-		background: var(--background);
-		border: 1px solid var(--border);
-		border-radius: 4px;
-		outline: none;
-	}
-
-	.url-input:focus {
-		border-color: var(--primary);
-	}
-
-	.url-input::placeholder {
-		color: var(--muted-foreground);
-	}
-
-	.go-btn {
-		padding: 8px 16px;
-		font-family: 'Fira Code', monospace;
-		font-size: 11px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--primary-foreground);
-		background: var(--primary);
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-	}
-
-	.go-btn:hover {
-		opacity: 0.9;
-	}
-
-	.go-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.action-btn {
-		font-family: 'Fira Code', monospace;
-		font-size: 10px;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--muted-foreground);
 		background: transparent;
 		border: 1px solid var(--border);
-		border-radius: 4px;
-		padding: 4px 10px;
+		color: var(--text-secondary);
+		padding: 4px 12px;
+		font-family: 'Fira Code', monospace;
+		font-size: 10px;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
 		cursor: pointer;
 	}
 
 	.action-btn:hover {
 		color: var(--foreground);
 		border-color: var(--foreground);
+	}
+
+	.retry-btn {
+		margin-top: 16px;
+		padding: 6px 18px;
+		background: var(--primary);
+		color: var(--background);
+		border: none;
+		font-family: 'Fira Code', monospace;
+		font-size: 10px;
+		letter-spacing: 0.8px;
+		font-weight: 600;
+		text-transform: uppercase;
+		cursor: pointer;
 	}
 </style>
