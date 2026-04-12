@@ -1,0 +1,28 @@
+{
+  "server": {
+    "port": 9002,
+    "host": "[::]",
+    "html_root": "/app/frontend/dist/",
+    "otherusers": 1,
+    "threads": 0
+  },
+  "websdr": {
+    "register_online": false,
+    "name": "Argos NovaSDR (HackRF)",
+    "antenna": "HackRF One",
+    "grid_locator": "-",
+    "hostname": "",
+    "operator": "Argos",
+    "email": "",
+    "callsign_lookup_url": "https://www.qrz.com/db/",
+    "chat_enabled": false,
+    "public_port": null
+  },
+  "limits": {
+    "audio": 100,
+    "waterfall": 200,
+    "events": 200,
+    "ws_per_ip": 50
+  },
+  "active_receiver_id": "hackrf0"
+}

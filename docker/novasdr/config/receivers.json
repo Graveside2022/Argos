@@ -1,0 +1,32 @@
+{
+	"receivers": [
+		{
+			"id": "hackrf0",
+			"enabled": true,
+			"name": "HackRF One",
+			"input": {
+				"sps": 8000000,
+				"frequency": 98000000,
+				"signal": "iq",
+				"fft_size": 2048,
+				"audio_sps": 12000,
+				"driver": {
+					"kind": "soapysdr",
+					"device": "driver=hackrf",
+					"channel": 0,
+					"format": "cs16",
+					"gains": {
+						"LNA": 16.0,
+						"VGA": 20.0,
+						"AMP": 0.0
+					},
+					"settings": {}
+				},
+				"defaults": {
+					"frequency": 98000000,
+					"modulation": "WFM"
+				}
+			}
+		}
+	]
+}

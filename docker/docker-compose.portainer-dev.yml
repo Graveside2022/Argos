@@ -41,6 +41,44 @@ services:
         max-file: "3"
 
   # ============================================
+  # NOVASDR - Rust WebSDR (HackRF, CPU-only FFT)
+  # On-demand only: started by Argos Tools panel
+  # Shares HackRF with openwebrx-hackrf via soft
+  # interlock in /api/{novasdr,openwebrx}/control.
+  # ============================================
+  novasdr:
+    build:
+      context: ./novasdr
+      dockerfile: Dockerfile
+      args:
+        NOVASDR_REF: "0.3.7"
+    image: argos-novasdr:0.3.7
+    container_name: novasdr-hackrf
+    profiles: ["tools"]
+    mem_limit: 768m
+    memswap_limit: 1g
+    ports:
+      - "9002:9002"
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    privileged: true
+    volumes:
+      # Read-write: NovaSDR atomically persists a migrated config back to disk
+      # on every start-up (adds any fields added in newer schema versions).
+      # Bind-mounting rw means the host copy stays in sync and is git-trackable.
+      - ./novasdr/config:/config:rw
+    tmpfs:
+      - /tmp/novasdr:rw,noexec,nosuid,size=100m
+    networks:
+      - argos-dev-network
+    restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # ============================================
   # BETTERCAP - WiFi/BLE/Network Recon
   # On-demand only: started by Argos Tools panel
   # ============================================
