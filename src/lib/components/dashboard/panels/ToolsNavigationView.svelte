@@ -103,17 +103,18 @@
 		setLocalStatus(toolId, running ? 'running' : 'stopped');
 	}
 
-	/** Handle start result for a non-Kismet tool. */
+	/** Handle start result for a non-Kismet tool. Returns true on success. */
 	async function applyStartResult(
 		toolId: string,
 		data: Record<string, unknown>,
 		ep: (typeof toolEndpoints)[string]
-	) {
+	): Promise<boolean> {
 		if (data.success) {
 			setLocalStatus(toolId, 'running');
-			return;
+			return true;
 		}
 		await checkStatusFallback(toolId, ep);
+		return false;
 	}
 
 	/** Resolve the catch-block fallback status for a tool. Kismet assumes running on error. */
@@ -126,15 +127,37 @@
 		setKismetStatus(data.success ? 'running' : 'stopped');
 	}
 
+	/** Build the start-failure toast: prefer a HackRF conflict message, then server error, then generic. */
+	function buildStartFailureMessage(tool: ToolDefinition, data: Record<string, unknown>): string {
+		if (typeof data.conflictingService === 'string' && data.conflictingService.length > 0) {
+			return `HackRF is in use by ${data.conflictingService}. Stop it first.`;
+		}
+		if (typeof data.error === 'string' && data.error.length > 0) return data.error;
+		return `Failed to start ${tool.name}`;
+	}
+
+	/** Dispatch the start result to the Kismet-specific or generic path. Returns success. */
+	async function dispatchStartResult(
+		tool: ToolDefinition,
+		data: Record<string, unknown>,
+		ep: (typeof toolEndpoints)[string]
+	): Promise<boolean> {
+		if (tool.id === 'kismet-wifi') {
+			applyKismetStartResult(data);
+			return !!data.success;
+		}
+		return applyStartResult(tool.id, data, ep);
+	}
+
 	async function handleStart(tool: ToolDefinition) {
 		const ep = toolEndpoints[tool.id];
 		if (!ep) return;
 		setToolStatus(tool.id, 'starting');
 		try {
 			const data = await (await fetchStartAction(ep)).json();
-			if (tool.id === 'kismet-wifi') applyKismetStartResult(data);
-			else await applyStartResult(tool.id, data, ep);
-			toast.success(`${tool.name} started`);
+			const ok = await dispatchStartResult(tool, data, ep);
+			if (ok) toast.success(`${tool.name} started`);
+			else toast.error(buildStartFailureMessage(tool, data));
 		} catch {
 			setToolStatus(tool.id, catchFallbackStatus(tool.id));
 			toast.error(`Failed to start ${tool.name}`);

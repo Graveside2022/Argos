@@ -21,10 +21,10 @@ const HACKRF_PROCESS_CONFIGS: ProcessConfig[] = [
 ];
 
 // Tool containers that actively use HackRF (ownership candidates)
-const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
+const HACKRF_TOOL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'novasdr-hackrf', 'pagermon'];
 
 // All containers that may hold the HackRF USB device (for force-release cleanup)
-const HACKRF_ALL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'pagermon'];
+const HACKRF_ALL_CONTAINERS = ['openwebrx', 'openwebrx-hackrf', 'novasdr-hackrf', 'pagermon'];
 
 /** Detects whether a HackRF device is physically connected, falling back to lsusb if hackrf_info fails. */
 export async function detectHackRF(): Promise<boolean> {
