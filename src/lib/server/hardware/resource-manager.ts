@@ -8,6 +8,27 @@ import * as hackrfMgr from './hackrf-manager';
 import { scanForOrphans } from './resource-scan';
 import { HardwareDevice, type HardwareStatus, type ResourceState } from './types';
 
+/**
+ * Canonical tool names used when a service calls `acquire(toolName, device)`.
+ * When the background refresh scan detects a live process or container on the
+ * device, we compare the current owner against this set: if the owner is a
+ * known tool name (from an explicit acquire()), we preserve it instead of
+ * overwriting with the container/process name from the scan. This keeps the
+ * status endpoint's `owner` field stable as 'novasdr' / 'openwebrx' / etc.
+ * rather than drifting to 'novasdr-hackrf' / 'GSM Evil' / etc. on each tick.
+ */
+const KNOWN_TOOL_NAMES: ReadonlySet<string> = new Set([
+	'openwebrx',
+	'novasdr',
+	'gsm-evil',
+	'kismet',
+	'kismet-wifi',
+	'bluehood',
+	'spiderfoot',
+	'sightline',
+	'pagermon'
+]);
+
 class ResourceManager extends EventEmitter {
 	private state: Map<HardwareDevice, ResourceState> = new Map();
 	private mutex: Map<HardwareDevice, boolean> = new Map();
@@ -41,16 +62,42 @@ class ResourceManager extends EventEmitter {
 		}
 	}
 
+	/**
+	 * True when the current app-level owner should be preserved across a
+	 * refresh tick instead of being overwritten by the scanned process/
+	 * container name. See KNOWN_TOOL_NAMES for rationale.
+	 */
+	private shouldPreserveExplicitOwner(state: ResourceState, ownerName: string | null): boolean {
+		return (
+			ownerName !== null &&
+			state.owner !== null &&
+			state.owner !== ownerName &&
+			KNOWN_TOOL_NAMES.has(state.owner)
+		);
+	}
+
+	/** Mark the device as held; preserve existing connectedSince if set. */
+	private markOwned(state: ResourceState, ownerName: string): void {
+		state.owner = ownerName;
+		state.isAvailable = false;
+		if (!state.connectedSince) state.connectedSince = Date.now();
+	}
+
+	/** Clear all ownership fields on the device. */
+	private markFree(state: ResourceState): void {
+		state.owner = null;
+		state.isAvailable = true;
+		state.connectedSince = null;
+	}
+
 	private applyOwnership(state: ResourceState, ownerName: string | null): void {
-		if (ownerName) {
-			state.owner = ownerName;
+		if (this.shouldPreserveExplicitOwner(state, ownerName)) {
 			state.isAvailable = false;
 			if (!state.connectedSince) state.connectedSince = Date.now();
-		} else if (state.owner) {
-			state.owner = null;
-			state.isAvailable = true;
-			state.connectedSince = null;
+			return;
 		}
+		if (ownerName) this.markOwned(state, ownerName);
+		else if (state.owner) this.markFree(state);
 	}
 
 	private resolveHackrfOwner(
@@ -92,6 +139,27 @@ class ResourceManager extends EventEmitter {
 				'[ResourceManager] Hardware detection refresh failed',
 				{ error: msg, operation: 'hardware.detect' },
 				'resource-detect'
+			);
+		}
+	}
+
+	/**
+	 * On-demand refresh of a single device's detection state. Call this from
+	 * control endpoints immediately after a docker/process lifecycle command
+	 * so that the next status poll returns fresh data without waiting up to
+	 * 30 seconds for the scheduled background refresh. Errors are swallowed
+	 * and logged — a refresh failure must never break a control action.
+	 */
+	async refreshNow(device: HardwareDevice): Promise<void> {
+		try {
+			if (device === HardwareDevice.HACKRF) await this.refreshHackrf();
+			else if (device === HardwareDevice.ALFA) await this.refreshAlfa();
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			logger.warn(
+				'[ResourceManager] On-demand refresh failed',
+				{ device, error: msg, operation: 'hardware.refreshNow' },
+				'resource-refresh'
 			);
 		}
 	}
