@@ -21,17 +21,6 @@ export const spectrumAnalysis: ToolCategory = {
 	children: [
 		createTool(
 			{
-				id: 'hackrf-spectrum',
-				name: 'HackRF Spectrum',
-				description:
-					'Argos built-in wideband spectrum analyzer using hackrf_sweep (1 MHz\u20136 GHz)',
-				icon: toolIcons.hackrf,
-				deployment: 'native'
-			},
-			{ isInstalled: true, viewName: 'hackrf', canOpen: true }
-		),
-		createTool(
-			{
 				id: 'openwebrx',
 				name: 'OpenWebRX',
 				description:

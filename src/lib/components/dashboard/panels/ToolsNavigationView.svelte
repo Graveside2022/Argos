@@ -166,7 +166,7 @@
 		postControl(ep.controlUrl, 'status')
 			.then((r) => r.json())
 			.then((data) => {
-				if (data.isRunning) setLocalStatus(toolId, 'running');
+				if (data.isRunning || data.running) setLocalStatus(toolId, 'running');
 			})
 			.catch(() => {});
 	}
