@@ -372,36 +372,36 @@
 	}
 
 	.legend-gps-tag {
-		font-size: 10px;
+		font-size: 14px;
 		font-weight: 600;
 		color: var(--primary);
 		letter-spacing: 1px;
 	}
 
 	.legend-sep {
-		font-size: 10px;
+		font-size: 14px;
 		color: var(--muted-foreground);
 	}
 
 	.legend-location {
-		font-size: 10px;
+		font-size: 14px;
 		color: var(--foreground-muted);
 		letter-spacing: 0.5px;
 	}
 
 	.legend-coord {
-		font-size: 10px;
+		font-size: 14px;
 		color: var(--foreground-muted);
 	}
 
 	.legend-mgrs {
-		font-size: 10px;
+		font-size: 14px;
 		color: var(--muted-foreground);
 		letter-spacing: 0.5px;
 	}
 
 	.legend-asl {
-		font-size: 10px;
+		font-size: 14px;
 		color: var(--muted-foreground);
 		letter-spacing: 0.5px;
 	}
