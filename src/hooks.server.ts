@@ -251,7 +251,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
 
 	attachSessionCookie(event, response);
-	applySecurityHeaders(response);
+	applySecurityHeaders(response, event.url.pathname + event.url.search);
 
 	return response;
 };

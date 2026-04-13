@@ -12,7 +12,13 @@ import { dev } from '$app/environment';
  * as a Blob and calls new Worker(URL.createObjectURL(blob))). Without worker-src blob:,
  * the browser blocks Worker creation and the map renders an empty canvas.
  */
-export function applySecurityHeaders(response: Response): void {
+// Routes that embed PDFs via Chrome's internal viewer need object-src 'self'
+// because the built-in PDF handler is implemented with <embed>/<object>.
+const PDF_EMBED_PATH_RE = /^\/api\/reports\/[^/]+\/view(?:\?|$)/;
+
+export function applySecurityHeaders(response: Response, pathWithQuery?: string): void {
+	const isPdfEmbed = pathWithQuery ? PDF_EMBED_PATH_RE.test(pathWithQuery) : false;
+	const objectSrc = isPdfEmbed ? "object-src 'self'" : "object-src 'none'";
 	response.headers.set(
 		'Content-Security-Policy',
 		[
@@ -25,7 +31,7 @@ export function applySecurityHeaders(response: Response): void {
 			"child-src 'self' blob:",
 			"frame-src 'self' http: https: http://*:2501 http://*:3001 http://*:5002 http://*:8073 http://*:8085 http://*:8081 http://*:80 https://*:8443 https://*:8446",
 			"font-src 'self'",
-			"object-src 'none'",
+			objectSrc,
 			"frame-ancestors 'self'",
 			"base-uri 'self'",
 			"form-action 'self' https: http:"
