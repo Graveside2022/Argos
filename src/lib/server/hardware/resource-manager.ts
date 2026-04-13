@@ -5,6 +5,7 @@ import { logger } from '$lib/utils/logger';
 
 import * as alfaMgr from './alfa-manager';
 import * as hackrfMgr from './hackrf-manager';
+import { canonicalizeWebRxOwner } from './hackrf-owner-aliases';
 import { scanForOrphans } from './resource-scan';
 import { HardwareDevice, type HardwareStatus, type ResourceState } from './types';
 
@@ -104,9 +105,10 @@ class ResourceManager extends EventEmitter {
 		processes: { name: string }[],
 		containers: { isRunning: boolean; name: string }[]
 	): string | null {
-		if (processes.length > 0) return processes[0].name;
+		const raw = processes.length > 0 ? processes[0].name : null;
+		if (raw) return canonicalizeWebRxOwner(raw);
 		const running = containers.find((c) => c.isRunning);
-		return running ? running.name : null;
+		return running ? canonicalizeWebRxOwner(running.name) : null;
 	}
 
 	private async refreshHackrf(): Promise<void> {
@@ -179,6 +181,40 @@ class ResourceManager extends EventEmitter {
 		this.mutex.set(device, false);
 	}
 
+	private checkExistingOwnership(
+		toolName: string,
+		current: ResourceState
+	): { success: boolean; owner?: string } | null {
+		if (!current.isAvailable && current.owner === toolName) {
+			return { success: true, owner: toolName };
+		}
+		if (!current.isAvailable) {
+			return { success: false, owner: current.owner ?? 'unknown' };
+		}
+		return null;
+	}
+
+	private tryClaim(
+		toolName: string,
+		device: HardwareDevice
+	): { success: boolean; owner?: string } {
+		const current = this.state.get(device);
+		if (!current) {
+			return { success: false, owner: 'device-not-found' };
+		}
+		const existing = this.checkExistingOwnership(toolName, current);
+		if (existing) return existing;
+		this.state.set(device, {
+			device,
+			isAvailable: false,
+			owner: toolName,
+			connectedSince: Date.now(),
+			isDetected: current.isDetected
+		});
+		this.emit('acquired', { device, toolName });
+		return { success: true };
+	}
+
 	async acquire(
 		toolName: string,
 		device: HardwareDevice
@@ -187,26 +223,8 @@ class ResourceManager extends EventEmitter {
 		if (!gotMutex) {
 			return { success: false, owner: 'mutex-timeout' };
 		}
-
 		try {
-			const current = this.state.get(device);
-			if (!current) {
-				return { success: false, owner: 'device-not-found' };
-			}
-			if (!current.isAvailable) {
-				return { success: false, owner: current.owner ?? 'unknown' };
-			}
-
-			this.state.set(device, {
-				device,
-				isAvailable: false,
-				owner: toolName,
-				connectedSince: Date.now(),
-				isDetected: current.isDetected
-			});
-
-			this.emit('acquired', { device, toolName });
-			return { success: true };
+			return this.tryClaim(toolName, device);
 		} finally {
 			this.releaseMutex(device);
 		}

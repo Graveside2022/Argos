@@ -22,6 +22,7 @@
  * an identical recover-and-retry flow for native GSM processes.
  */
 
+import { canonicalizeWebRxOwner } from '$lib/server/hardware/hackrf-owner-aliases';
 import { resourceManager } from '$lib/server/hardware/resource-manager';
 import { HardwareDevice } from '$lib/server/hardware/types';
 import { logger } from '$lib/utils/logger';
@@ -42,14 +43,8 @@ const WEBRX_PEERS = new Set(['openwebrx', 'novasdr']);
  * start the sibling WebSDR via the UI would return a 409 conflict instead of
  * triggering peer recovery.
  */
-const WEBRX_CONTAINER_ALIASES: Record<string, string> = {
-	'openwebrx-hackrf': 'openwebrx',
-	'novasdr-hackrf': 'novasdr'
-};
-
-/** Resolve a possibly-container-name owner to its canonical tool name. */
 function canonicalizeOwner(owner: string): string {
-	return WEBRX_CONTAINER_ALIASES[owner] ?? owner;
+	return canonicalizeWebRxOwner(owner);
 }
 
 /** Result of an acquire attempt. */
