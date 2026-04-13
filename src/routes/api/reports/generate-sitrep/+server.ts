@@ -24,7 +24,7 @@ import {
 	listCapturesForMission
 } from '$lib/server/services/reports/mission-store';
 import { renderQuartoDoc } from '$lib/server/services/reports/quarto-runner';
-import { buildSitrepQmd } from '$lib/server/services/reports/sitrep-template';
+import { buildSitrepQmd, countByClass } from '$lib/server/services/reports/sitrep-template';
 import type {
 	CaptureEmitterRow,
 	CaptureRow,
@@ -130,14 +130,15 @@ async function persistSitrepReport(
 ): Promise<ReportRow> {
 	const render = await renderQuartoDoc(qmdPath);
 	const title = `SITREP — ${mission.name} — ${new Date(periodEnd).toISOString()}`;
+	const counts = countByClass(emitters);
 	return createReport(db, {
 		mission_id: missionId,
 		type: 'sitrep',
 		title,
 		capture_ids: [captureId],
 		emitter_count: emitters.length,
-		flagged_hostile: emitters.filter((e) => e.classification === 'hostile').length,
-		flagged_suspect: emitters.filter((e) => e.classification === 'suspect').length,
+		flagged_hostile: counts.hostile,
+		flagged_suspect: counts.suspect,
 		source_qmd_path: qmdPath,
 		html_path: render.htmlPath,
 		pdf_path: render.pdfPath,
@@ -195,9 +196,7 @@ interface RenderSitrepOptions {
 	spectrumCaption: string | undefined;
 }
 
-async function renderSitrep(
-	opts: RenderSitrepOptions
-): Promise<Response | { success: true; report: ReportRow }> {
+async function renderSitrep(opts: RenderSitrepOptions): Promise<Response> {
 	const { db, missionId, mission, periodStart, periodEnd } = opts;
 	const tickCapture = pickLatestTick(db, missionId, periodStart, periodEnd);
 	if (!tickCapture) {
@@ -228,5 +227,5 @@ async function renderSitrep(
 		qmdPath,
 		periodEnd
 	);
-	return { success: true, report };
+	return json({ success: true, report });
 }

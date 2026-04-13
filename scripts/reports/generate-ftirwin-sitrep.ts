@@ -102,16 +102,40 @@ interface ArgosClient {
 	post: <T>(path: string, body: unknown) => Promise<T>;
 }
 
+const DEFAULT_HTTP_TIMEOUT_MS = 120_000;
+
+async function fetchWithTimeout(
+	url: string,
+	init: Parameters<typeof fetch>[1],
+	method: string,
+	path: string
+): Promise<Response> {
+	try {
+		return await fetch(url, { ...init, signal: AbortSignal.timeout(DEFAULT_HTTP_TIMEOUT_MS) });
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		if (msg.includes('aborted') || msg.includes('timeout')) {
+			throw new Error(`${method} ${path} timed out after ${DEFAULT_HTTP_TIMEOUT_MS}ms`);
+		}
+		throw err;
+	}
+}
+
 function createArgosClient(baseUrl: string, apiKey: string): ArgosClient {
 	const call = async <T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> => {
-		const res = await fetch(`${baseUrl}${path}`, {
-			method,
-			headers: {
-				'Content-Type': 'application/json',
-				'X-API-Key': apiKey
+		const res = await fetchWithTimeout(
+			`${baseUrl}${path}`,
+			{
+				method,
+				headers: {
+					'Content-Type': 'application/json',
+					'X-API-Key': apiKey
+				},
+				body: body === undefined ? undefined : JSON.stringify(body)
 			},
-			body: body === undefined ? undefined : JSON.stringify(body)
-		});
+			method,
+			path
+		);
 		const text = await res.text();
 		let json: unknown = null;
 		try {
@@ -199,7 +223,7 @@ function channel5GhzToHz(n: number): number | null {
 }
 
 function channel6GhzToHz(n: number): number | null {
-	return n <= 233 ? (5950 + n * 5) * 1_000_000 : null;
+	return n > 0 && n <= 233 ? (5950 + n * 5) * 1_000_000 : null;
 }
 
 function parseChannelNumber(ch: number | string): number | null {

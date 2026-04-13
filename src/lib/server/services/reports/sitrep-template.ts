@@ -65,7 +65,10 @@ function classChip(c: string | null): string {
 	return '<span class="status-unknown">UNKNOWN</span>';
 }
 
-function countByClass(emitters: CaptureEmitterRow[]): { hostile: number; suspect: number } {
+export function countByClass(emitters: CaptureEmitterRow[]): {
+	hostile: number;
+	suspect: number;
+} {
 	let hostile = 0;
 	let suspect = 0;
 	for (const e of emitters) {
@@ -76,13 +79,20 @@ function countByClass(emitters: CaptureEmitterRow[]): { hostile: number; suspect
 	return { hostile, suspect };
 }
 
+function escapeYamlString(s: string): string {
+	return s
+		.replace(/\\/g, '\\\\')
+		.replace(/"/g, '\\"')
+		.replace(/[\r\n]+/g, ' ');
+}
+
 function renderFrontmatter(input: SitrepInput): string {
-	const title = `SITREP ${input.serial} — ${input.mission.name}`;
-	const dtg = dtgZulu(input.period_end);
+	const title = escapeYamlString(`SITREP ${input.serial} — ${input.mission.name}`);
+	const dtg = escapeYamlString(`DTG ${dtgZulu(input.period_end)}`);
 	return [
 		'---',
 		`title: "${title}"`,
-		`subtitle: "DTG ${dtg}"`,
+		`subtitle: "${dtg}"`,
 		`date: "${new Date(input.period_end).toISOString()}"`,
 		'format:',
 		'  argos-reports-html: default',
@@ -114,15 +124,17 @@ function renderSpectrumSection(input: SitrepInput): string {
 }
 
 function renderLoadout(capture: CaptureRow): string {
-	const rows = capture.loadout.sensors
+	const sensors = Array.isArray(capture.loadout?.sensors) ? capture.loadout.sensors : [];
+	const rows = sensors
 		.map((s) => `| ${s.tool} | ${s.interface ?? '—'} | ${s.gain ?? '—'} |`)
 		.join('\n');
+	const body = rows.length > 0 ? rows : '| — | — | — |';
 	return [
 		'## Collection Posture',
 		'',
 		'| TOOL | INTERFACE | GAIN |',
 		'|------|-----------|------|',
-		rows,
+		body,
 		''
 	].join('\n');
 }
