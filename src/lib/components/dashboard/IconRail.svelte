@@ -1,7 +1,7 @@
 <!-- @constitutional-exemption Article-IV-4.3 issue:#11 — Component state handling (loading/error/empty UI) deferred to UX improvement phase -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Button pattern extraction deferred to component library refactor -->
 <script lang="ts">
-	import { House, List, Map, Radar, Settings, Waypoints, Zap } from '@lucide/svelte';
+	import { FileText, House, List, Map, Radar, Settings, Waypoints, Zap } from '@lucide/svelte';
 
 	import {
 		activeBottomTab,
@@ -58,6 +58,17 @@
 			onclick={() => handleClick('tools')}
 		>
 			<Zap size={18} />
+		</button>
+		<!-- Reports -->
+		<button
+			class="rail-btn"
+			class:active={$activePanel === 'reports'}
+			title="Reports"
+			aria-label="Reports"
+			aria-pressed={$activePanel === 'reports'}
+			onclick={() => handleClick('reports')}
+		>
+			<FileText size={18} />
 		</button>
 	</div>
 
