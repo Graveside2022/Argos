@@ -14,6 +14,11 @@ import { logger } from '$lib/utils/logger';
 
 import type { GsmEvilPageState } from './gsm-evil-page-types';
 
+/** Track in-flight tower lookups to prevent duplicate requests across effect re-runs */
+const pendingLookups = new Set<string>();
+/** Max concurrent tower-location API requests */
+const MAX_CONCURRENT_LOOKUPS = 3;
+
 /** Scroll a DOM element to its bottom by CSS selector. */
 function scrollToBottom(selector: string) {
 	const el = document.querySelector(selector);
@@ -34,48 +39,75 @@ export async function fetchTowerLocation(
 	});
 }
 
-/** Fetch tower locations for captured IMSIs */
-export function fetchTowerLocationsForIMSIs(
-	capturedIMSIs: CapturedIMSI[],
-	towerLocations: Record<string, TowerLocation>,
-	towerLookupAttempted: Record<string, boolean>
-): void {
-	if (capturedIMSIs.length === 0) return;
-	const towers = groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations);
-	towers.forEach(async (tower) => {
-		const towerId = `${tower.mccMnc}-${tower.lac}-${tower.ci}`;
-		if (!towerLocations[towerId] && !towerLookupAttempted[towerId]) {
-			gsmEvilStore.markTowerLookupAttempted(towerId);
-			const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-			if (result && result.found) {
-				gsmEvilStore.updateTowerLocation(towerId, result.location);
-			}
+/** Look up a single tower, guarded by the in-flight set */
+async function lookupTower(
+	towerId: string,
+	mcc: string,
+	mnc: string,
+	lac: string,
+	ci: string
+): Promise<void> {
+	if (pendingLookups.has(towerId)) return;
+	pendingLookups.add(towerId);
+	try {
+		gsmEvilStore.markTowerLookupAttempted(towerId);
+		const result = await fetchTowerLocation(mcc, mnc, lac, ci);
+		if (result && result.found) {
+			gsmEvilStore.updateTowerLocation(towerId, result.location);
 		}
-	});
+	} finally {
+		pendingLookups.delete(towerId);
+	}
 }
 
-/** Fetch tower locations for scan-detected towers */
-export function fetchTowerLocationsForScanResults(
-	scanDetectedTowers: Array<{
-		towerId: string;
-		mcc: string;
-		mnc: string;
-		lac: string;
-		ci: string;
-	}>,
-	towerLocations: Record<string, TowerLocation>,
-	towerLookupAttempted: Record<string, boolean>
-): void {
+type TowerRef = { towerId: string; mcc: string; mnc: string; lac: string; ci: string };
+
+/** True if a tower needs a fresh lookup (not cached, not attempted, not in-flight). */
+function needsTowerLookup(
+	towerId: string,
+	towerLocations: Record<string, unknown>,
+	towerLookupAttempted: Record<string, unknown>
+): boolean {
+	return (
+		!towerLocations[towerId] && !towerLookupAttempted[towerId] && !pendingLookups.has(towerId)
+	);
+}
+
+/** Run tower lookups in batches of MAX_CONCURRENT_LOOKUPS, sequentially per batch. */
+async function runTowerLookupsInBatches(pending: TowerRef[]): Promise<void> {
+	for (let i = 0; i < pending.length; i += MAX_CONCURRENT_LOOKUPS) {
+		const batch = pending.slice(i, i + MAX_CONCURRENT_LOOKUPS);
+		await Promise.all(batch.map((t) => lookupTower(t.towerId, t.mcc, t.mnc, t.lac, t.ci)));
+	}
+}
+
+/** Fetch tower locations for captured IMSIs (batched, max 3 concurrent) */
+export async function fetchTowerLocationsForIMSIs(capturedIMSIs: CapturedIMSI[]): Promise<void> {
+	if (capturedIMSIs.length === 0) return;
+	const { towerLocations, towerLookupAttempted } = gsmEvilStore.getSnapshot();
+	const towers = groupIMSIsByTower(capturedIMSIs, mncToCarrier, mccToCountry, towerLocations);
+	const pending: TowerRef[] = towers
+		.map((tower) => ({
+			towerId: `${tower.mccMnc}-${tower.lac}-${tower.ci}`,
+			mcc: tower.mcc,
+			mnc: tower.mnc,
+			lac: tower.lac,
+			ci: tower.ci
+		}))
+		.filter((t) => needsTowerLookup(t.towerId, towerLocations, towerLookupAttempted));
+	await runTowerLookupsInBatches(pending);
+}
+
+/** Fetch tower locations for scan-detected towers (batched, max 3 concurrent) */
+export async function fetchTowerLocationsForScanResults(
+	scanDetectedTowers: TowerRef[]
+): Promise<void> {
 	if (scanDetectedTowers.length === 0) return;
-	scanDetectedTowers.forEach(async (tower) => {
-		if (!towerLocations[tower.towerId] && !towerLookupAttempted[tower.towerId]) {
-			gsmEvilStore.markTowerLookupAttempted(tower.towerId);
-			const result = await fetchTowerLocation(tower.mcc, tower.mnc, tower.lac, tower.ci);
-			if (result && result.found) {
-				gsmEvilStore.updateTowerLocation(tower.towerId, result.location);
-			}
-		}
-	});
+	const { towerLocations, towerLookupAttempted } = gsmEvilStore.getSnapshot();
+	const pending = scanDetectedTowers.filter((t) =>
+		needsTowerLookup(t.towerId, towerLocations, towerLookupAttempted)
+	);
+	await runTowerLookupsInBatches(pending);
 }
 
 /** Whether a frames response contains new frame data. */

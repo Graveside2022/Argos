@@ -7,8 +7,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { json } from '@sveltejs/kit';
 import type Database from 'better-sqlite3';
@@ -24,13 +24,16 @@ import {
 	listCapturesForMission
 } from '$lib/server/services/reports/mission-store';
 import { renderQuartoDoc } from '$lib/server/services/reports/quarto-runner';
-import { buildSitrepQmd, countByClass } from '$lib/server/services/reports/sitrep-template';
+import { countByClass } from '$lib/server/services/reports/sitrep-template';
 import type {
 	CaptureEmitterRow,
 	CaptureRow,
 	Mission,
 	ReportRow
 } from '$lib/server/services/reports/types';
+
+import { writeQmdSource } from './qmd-writer';
+import { resolveSpectrumAssets } from './spectrum-assets';
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
@@ -40,7 +43,10 @@ const GenerateSitrepSchema = z.object({
 	period_end: z.number().int().nonnegative().optional(),
 	narrative: z.string().max(10_000).optional(),
 	spectrum_image_path: z.string().max(500).optional(),
-	spectrum_caption: z.string().max(500).optional()
+	spectrum_caption: z.string().max(500).optional(),
+	spectrum_start_hz: z.number().positive().optional(),
+	spectrum_end_hz: z.number().positive().optional(),
+	spectrum_analysis: z.string().max(10_000).optional()
 });
 
 type SitrepBody = z.infer<typeof GenerateSitrepSchema>;
@@ -74,62 +80,6 @@ function pickLatestTick(
 		.filter((c) => c.role === 'tick' && c.start_dtg >= periodStart && c.start_dtg <= periodEnd)
 		.sort((a, b) => b.start_dtg - a.start_dtg);
 	return filtered[0] ?? null;
-}
-
-interface WriteQmdOptions {
-	reportId: string;
-	mission: Mission;
-	capture: CaptureRow;
-	emitters: CaptureEmitterRow[];
-	periodStart: number;
-	periodEnd: number;
-	narrative: string | undefined;
-	spectrumImagePath: string | undefined;
-	spectrumCaption: string | undefined;
-}
-
-// Allow-list directories the spectrum image may live in. Any absolute
-// path outside these roots is rejected to prevent path traversal via
-// the spectrum_image_path request body field.
-function isSafeSpectrumPath(p: string): boolean {
-	const resolved = resolve(p);
-	const dataRoot = resolve(process.cwd(), 'data');
-	const tmpRoot = resolve('/tmp');
-	const inData = resolved === dataRoot || resolved.startsWith(dataRoot + '/');
-	const inTmp = resolved === tmpRoot || resolved.startsWith(tmpRoot + '/');
-	if (!inData && !inTmp) return false;
-	return existsSync(resolved);
-}
-
-function writeQmdSource(opts: WriteQmdOptions): string {
-	const reportDir = join(process.cwd(), 'data', 'reports', opts.reportId);
-	if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
-	const qmdPath = join(reportDir, 'source.qmd');
-	const serial = opts.reportId.slice(0, 8).toUpperCase();
-
-	// Typst format rejects absolute image paths — copy the image next to the
-	// qmd and reference by filename so Quarto/Typst can resolve it relative
-	// to the report directory.
-	let spectrumRelPath: string | undefined;
-	if (opts.spectrumImagePath && isSafeSpectrumPath(opts.spectrumImagePath)) {
-		const fname = basename(opts.spectrumImagePath);
-		copyFileSync(opts.spectrumImagePath, join(reportDir, fname));
-		spectrumRelPath = fname;
-	}
-
-	const qmd = buildSitrepQmd({
-		mission: opts.mission,
-		capture: opts.capture,
-		period_start: opts.periodStart,
-		period_end: opts.periodEnd,
-		emitters: opts.emitters,
-		narrative: opts.narrative,
-		serial,
-		spectrum_image_path: spectrumRelPath,
-		spectrum_caption: opts.spectrumCaption
-	});
-	writeFileSync(qmdPath, qmd, 'utf-8');
-	return qmdPath;
 }
 
 async function persistSitrepReport(
@@ -194,7 +144,10 @@ export const POST = createHandler(async ({ request }) => {
 		periodEnd,
 		narrative: body.data.narrative,
 		spectrumImagePath: body.data.spectrum_image_path,
-		spectrumCaption: body.data.spectrum_caption
+		spectrumCaption: body.data.spectrum_caption,
+		spectrumAnalysis: body.data.spectrum_analysis,
+		spectrumStartHzOverride: body.data.spectrum_start_hz,
+		spectrumEndHzOverride: body.data.spectrum_end_hz
 	});
 });
 
@@ -207,6 +160,9 @@ interface RenderSitrepOptions {
 	narrative: string | undefined;
 	spectrumImagePath: string | undefined;
 	spectrumCaption: string | undefined;
+	spectrumAnalysis: string | undefined;
+	spectrumStartHzOverride?: number;
+	spectrumEndHzOverride?: number;
 }
 
 async function renderSitrep(opts: RenderSitrepOptions): Promise<Response> {
@@ -220,6 +176,14 @@ async function renderSitrep(opts: RenderSitrepOptions): Promise<Response> {
 	}
 	const emitters = getCaptureEmitters(db, tickCapture.id);
 	const reportId = randomUUID();
+	const reportDir = join(process.cwd(), 'data', 'reports', reportId);
+	if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
+	const { spectrumImagePath, spectrumCaption, spectrumAnalysis } = await resolveSpectrumAssets(
+		db,
+		tickCapture.id,
+		reportDir,
+		opts
+	);
 	const qmdPath = writeQmdSource({
 		reportId,
 		mission,
@@ -228,8 +192,9 @@ async function renderSitrep(opts: RenderSitrepOptions): Promise<Response> {
 		periodStart,
 		periodEnd,
 		narrative: opts.narrative,
-		spectrumImagePath: opts.spectrumImagePath,
-		spectrumCaption: opts.spectrumCaption
+		spectrumImagePath,
+		spectrumCaption,
+		spectrumAnalysis
 	});
 	const report = await persistSitrepReport(
 		db,

@@ -446,26 +446,6 @@
 								<FileText size={12} />
 							</button>
 							<button
-								class="icon-btn"
-								type="button"
-								aria-label="Open slides HTML"
-								title="Slides HTML"
-								disabled={!r.slides_html_path}
-								onclick={() => openExternal(r.id, 'revealjs')}
-							>
-								<Presentation size={12} />
-							</button>
-							<button
-								class="icon-btn"
-								type="button"
-								aria-label="Open slides PDF"
-								title="Slides PDF"
-								disabled={!r.slides_pdf_path}
-								onclick={() => openExternal(r.id, 'slides-pdf')}
-							>
-								<Presentation size={12} />
-							</button>
-							<button
 								class="icon-btn icon-btn-danger"
 								type="button"
 								aria-label="Delete report"
@@ -807,18 +787,12 @@
 	}
 
 	.col-title {
+		justify-content: flex-start;
+		text-align: left;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		display: block;
-		line-height: 1.6;
-		text-align: left;
-	}
-
-	.grid-head .col-title {
-		display: flex;
-		justify-content: flex-start;
-		text-align: left;
+		min-width: 0;
 	}
 
 	.col-host,

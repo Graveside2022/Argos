@@ -9,6 +9,7 @@ import { logger } from '$lib/utils/logger';
 import { loadGpConfig, saveGpConfig } from './globalprotect-db';
 
 const OC_BIN = '/usr/sbin/openconnect';
+const TUN_DEVICE = 'tun0';
 const CONNECT_TIMEOUT_MS = 30_000;
 const DISCONNECT_TIMEOUT_MS = 5_000;
 const MAX_OUTPUT_LINES = 50;
@@ -31,21 +32,35 @@ function parseGateway(line: string, current: GlobalProtectStatus): GlobalProtect
 	return { ...current, gateway: hostMatch?.[1] };
 }
 
+const OUTPUT_MATCHERS: Array<{
+	pattern: string;
+	handler: (line: string, portal: string, current: GlobalProtectStatus) => GlobalProtectStatus;
+}> = [
+	{ pattern: 'connected as', handler: parseConnectedIp },
+	{
+		pattern: 'esp tunnel connected',
+		handler: (_l, p, c) => ({ ...c, status: 'connected', portal: p })
+	},
+	{ pattern: 'gateway address', handler: (_l, _p, c) => parseGateway(_l, c) },
+	{ pattern: 'connected to https on', handler: (_l, _p, c) => parseGateway(_l, c) },
+	{
+		pattern: 'authentication failed',
+		handler: (l, p) => ({ status: 'error', portal: p, lastError: l.trim() })
+	},
+	{
+		pattern: 'failed to',
+		handler: (l, p) => ({ status: 'error', portal: p, lastError: l.trim() })
+	}
+];
+
 function classifyOutputLine(
 	line: string,
 	portal: string,
 	current: GlobalProtectStatus
 ): GlobalProtectStatus | null {
 	const lower = line.toLowerCase();
-
-	if (lower.includes('connected as')) return parseConnectedIp(line, portal, current);
-	if (lower.includes('esp tunnel connected')) return { ...current, status: 'connected', portal };
-	if (lower.includes('gateway address')) return parseGateway(line, current);
-	if (lower.includes('connected to https on')) return parseGateway(line, current);
-	if (lower.includes('authentication failed'))
-		return { status: 'error', portal, lastError: line.trim() };
-	if (lower.includes('failed to')) return { status: 'error', portal, lastError: line.trim() };
-	return null;
+	const match = OUTPUT_MATCHERS.find((m) => lower.includes(m.pattern));
+	return match ? match.handler(line, portal, current) : null;
 }
 
 export class GlobalProtectService {
@@ -109,17 +124,25 @@ export class GlobalProtectService {
 		if (this.ocProcess && !this.ocProcess.killed) {
 			return this.currentStatus;
 		}
-		// Detect externally-started openconnect (e.g. from terminal)
+		const externalStatus = await this.probeExternalTun();
+		return externalStatus ?? { status: 'disconnected' };
+	}
+
+	/** Detect externally-started openconnect (e.g. from terminal) via tun0 interface probe. */
+	private async probeExternalTun(): Promise<GlobalProtectStatus | null> {
 		try {
-			const { stdout } = await execFileAsync('/sbin/ip', ['-brief', 'addr', 'show', 'tun0']);
+			const { stdout } = await execFileAsync('/sbin/ip', [
+				'-brief',
+				'addr',
+				'show',
+				TUN_DEVICE
+			]);
 			const ipMatch = stdout.match(/(\d+\.\d+\.\d+\.\d+)/);
-			if (ipMatch) {
-				return { status: 'connected', assignedIp: ipMatch[1], portal: this.config?.portal };
-			}
+			if (!ipMatch) return null;
+			return { status: 'connected', assignedIp: ipMatch[1], portal: this.config?.portal };
 		} catch {
-			// No tun0 — not connected externally
+			return null;
 		}
-		return { status: 'disconnected' };
 	}
 
 	async connect(
@@ -288,6 +311,13 @@ export class GlobalProtectService {
 	}
 
 	private async cleanupOrphanedProcess(): Promise<void> {
-		await this.killAllOpenconnect();
+		// Only kill the process Argos spawned — never kill externally-started
+		// openconnect (e.g. from a terminal). The system-wide killall belongs
+		// in connect(), where the user explicitly requests a new connection.
+		if (this.ocProcess && !this.ocProcess.killed) {
+			this.ocProcess.kill('SIGINT');
+			this.ocProcess = null;
+			logger.info('[GlobalProtect] Cleaned up Argos-managed openconnect process');
+		}
 	}
 }

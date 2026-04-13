@@ -1,0 +1,31 @@
+// Lunaris design tokens — shared across HTML and revealjs
+$argos-bg: #111111;
+$argos-card: #1a1a1a;
+$argos-card-raised: #222222;
+$argos-border: #2e2e2e;
+$argos-fg: #ffffff;
+$argos-fg-muted: #a0a0a0;
+$argos-accent: #a8b8e0;
+
+// Semantic status
+$argos-status-healthy: #8BBFA0;
+$argos-status-notable: #D4A054;
+$argos-status-critical: #FF5C33;
+$argos-status-critical-card: #C45B4A;
+$argos-status-inactive: #555555;
+
+// Fonts
+$argos-mono: "Fira Code", "Menlo", monospace;
+$argos-sans: "Geist", system-ui, sans-serif;
+
+// Sizes
+$argos-size-hero: 24px;
+$argos-size-brand: 13px;
+$argos-size-body: 11px;
+$argos-size-secondary: 10px;
+$argos-size-section: 9px;
+$argos-size-bluf: 13px;
+
+// Spacing
+$argos-space-base: 8px;
+$argos-content-width: 840px;

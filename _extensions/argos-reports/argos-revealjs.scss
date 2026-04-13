@@ -1,0 +1,150 @@
+/*-- scss:defaults --*/
+@import "argos-tokens";
+
+$body-bg: $argos-bg;
+$body-color: $argos-fg;
+$presentation-font-size-root: 24px;
+$presentation-heading-font: $argos-mono;
+$presentation-heading-color: $argos-accent;
+$link-color: $argos-accent;
+
+/*-- scss:rules --*/
+@import "argos-tokens";
+
+.reveal {
+  background-color: $argos-bg;
+  color: $argos-fg;
+  font-family: $argos-mono;
+}
+
+.reveal .slides {
+  color: $argos-fg;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+  color: $argos-accent;
+  font-family: $argos-mono;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+}
+
+.reveal .slide {
+  color: $argos-fg;
+  background-color: $argos-bg;
+}
+
+.reveal .slide-title,
+.reveal .title-slide {
+  background-color: $argos-bg;
+}
+
+.reveal .title-slide::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 24px;
+  background-color: $argos-accent;
+}
+
+.reveal .title-slide .mission {
+  color: $argos-accent;
+  font-family: $argos-mono;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+}
+
+.reveal .bluf-slide {
+  font-family: $argos-sans;
+  font-size: 28px;
+  color: #ffffff;
+  padding: 24px;
+  border-left: 4px solid $argos-accent;
+  background-color: $argos-card;
+}
+
+.reveal .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.reveal .metrics-grid .metric-cell {
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  padding: 16px;
+  text-align: center;
+}
+
+.reveal .metrics-grid .value {
+  font-size: 48px;
+  color: $argos-accent;
+  font-weight: 700;
+}
+
+.reveal .metrics-grid .label {
+  font-size: 12px;
+  color: $argos-fg-muted;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.reveal table {
+  width: 100%;
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  border-collapse: collapse;
+  font-family: $argos-mono;
+  font-feature-settings: "tnum";
+}
+
+.reveal th {
+  background-color: $argos-card-raised;
+  color: $argos-fg-muted;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  padding: 8px;
+  border-bottom: 1px solid $argos-border;
+  text-align: left;
+}
+
+.reveal td {
+  padding: 8px;
+  border-bottom: 1px solid $argos-border;
+  color: $argos-fg;
+  font-size: 16px;
+}
+
+.reveal .status-hostile {
+  color: $argos-status-critical;
+  border: 1px solid $argos-status-critical;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.reveal .status-suspect {
+  color: $argos-status-notable;
+  border: 1px solid $argos-status-notable;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.reveal .argos-banner {
+  display: block;
+  width: 100%;
+  background-color: $argos-accent;
+  color: #000;
+  text-align: center;
+  font-family: $argos-mono;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1.5px;
+  padding: 4px 0;
+  text-transform: uppercase;
+}

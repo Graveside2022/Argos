@@ -63,6 +63,14 @@ export interface SpectrumData {
 	};
 }
 
+export interface SweepArgs {
+	startMHz: number;
+	endMHz: number;
+	binWidthHz: number;
+	lnaGain?: string;
+	vgaGain?: string;
+}
+
 export interface HackRFHealth {
 	connected: boolean;
 	serialNumber?: string;

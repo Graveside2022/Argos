@@ -1,0 +1,21 @@
+---
+title: "SITREP 0001 — Fixture Mission"
+subtitle: "DTG 121200ZAPR26"
+format:
+  argos-reports-html:
+    output-file: sitrep-fixture.html
+---
+
+## Executive Summary
+
+::: {.bluf}
+Fixture render. 3 emitters observed in 5-minute window. 1 hostile, 1 suspect.
+:::
+
+## Emitter Table
+
+| # | FREQ MHZ | PWR DBM | IDENTIFIER | MGRS | CLASS |
+|---|----------|---------|------------|------|-------|
+| 1 | 462.675 | -52.3 | FIXTURE-1 | 33UVT1234 | <span class="status-hostile">HOSTILE</span> |
+| 2 | 156.800 | -71.2 | FIXTURE-2 | 33UVT1235 | <span class="status-suspect">SUSPECT</span> |
+| 3 | 146.520 | -88.0 | FIXTURE-3 | 33UVT1236 | <span class="status-unknown">UNKNOWN</span> |

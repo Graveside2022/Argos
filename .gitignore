@@ -283,3 +283,6 @@ hackrfbackup.*
 
 # Large data files
 map-data/*.csv
+
+/.quarto/
+**/*.quarto_ipynb

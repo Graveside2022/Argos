@@ -1,0 +1,28 @@
+---
+title: "EMCON SURVEY 0001 — Fixture Mission"
+subtitle: "DTG 121200ZAPR26"
+format:
+  argos-reports-html:
+    output-file: emcon-fixture.html
+---
+
+## BLUF
+
+::: {.bluf}
+Fixture render. 2 new signatures, 1 critical power-up.
+:::
+
+## Headline Metrics
+
+<div class="metrics-grid">
+<div class="metric-cell"><span class="label">NEW</span><span class="value">2</span></div>
+<div class="metric-cell"><span class="label">MISSING</span><span class="value">0</span></div>
+<div class="metric-cell"><span class="label">CRITICAL</span><span class="value">1</span></div>
+</div>
+
+## New Emitters
+
+| # | FREQ MHZ | PWR DBM | IDENTIFIER | MGRS |
+|---|----------|---------|------------|------|
+| 1 | 462.675 | -52.3 | NEW-1 | 33UVT1234 |
+| 2 | 156.800 | -71.2 | NEW-2 | 33UVT1235 |
