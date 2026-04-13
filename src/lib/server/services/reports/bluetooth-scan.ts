@@ -11,7 +11,7 @@
  * shells out with interpolation.
  */
 
-import { execFileAsync } from '$lib/server/exec';
+import { execFileAsync } from '../../exec';
 
 export interface BluetoothDevice {
 	mac: string;

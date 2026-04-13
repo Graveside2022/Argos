@@ -8,7 +8,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 import { json } from '@sveltejs/kit';
 import type Database from 'better-sqlite3';
@@ -88,6 +88,19 @@ interface WriteQmdOptions {
 	spectrumCaption: string | undefined;
 }
 
+// Allow-list directories the spectrum image may live in. Any absolute
+// path outside these roots is rejected to prevent path traversal via
+// the spectrum_image_path request body field.
+function isSafeSpectrumPath(p: string): boolean {
+	const resolved = resolve(p);
+	const dataRoot = resolve(process.cwd(), 'data');
+	const tmpRoot = resolve('/tmp');
+	const inData = resolved === dataRoot || resolved.startsWith(dataRoot + '/');
+	const inTmp = resolved === tmpRoot || resolved.startsWith(tmpRoot + '/');
+	if (!inData && !inTmp) return false;
+	return existsSync(resolved);
+}
+
 function writeQmdSource(opts: WriteQmdOptions): string {
 	const reportDir = join(process.cwd(), 'data', 'reports', opts.reportId);
 	if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
@@ -98,7 +111,7 @@ function writeQmdSource(opts: WriteQmdOptions): string {
 	// qmd and reference by filename so Quarto/Typst can resolve it relative
 	// to the report directory.
 	let spectrumRelPath: string | undefined;
-	if (opts.spectrumImagePath && existsSync(opts.spectrumImagePath)) {
+	if (opts.spectrumImagePath && isSafeSpectrumPath(opts.spectrumImagePath)) {
 		const fname = basename(opts.spectrumImagePath);
 		copyFileSync(opts.spectrumImagePath, join(reportDir, fname));
 		spectrumRelPath = fname;
