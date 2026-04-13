@@ -286,3 +286,6 @@ map-data/*.csv
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Blue Dragon — third-party Rust BLE sniffer, see plans/linear-knitting-flute.md
+tactical/blue-dragon/
