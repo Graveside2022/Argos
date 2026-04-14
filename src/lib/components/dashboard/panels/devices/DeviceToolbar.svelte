@@ -72,7 +72,6 @@
 </script>
 
 <div class="panel-toolbar">
-	<span class="panel-title">WI-FI</span>
 	<span
 		class="status-chip"
 		class:chip-running={$kismetStore.status === 'running'}
