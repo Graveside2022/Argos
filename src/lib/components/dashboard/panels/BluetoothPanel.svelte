@@ -271,7 +271,7 @@
 	}
 
 	.title {
-		font-size: 12px;
+		font-size: 14px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 1.5px;
@@ -280,7 +280,7 @@
 	.chip {
 		padding: 2px 8px;
 		border-radius: 3px;
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 	}
@@ -301,7 +301,7 @@
 	}
 
 	.profile-tag {
-		font-size: 10px;
+		font-size: 12px;
 		color: var(--muted-foreground);
 		text-transform: uppercase;
 		letter-spacing: 0.8px;
@@ -313,12 +313,12 @@
 
 	.count,
 	.packets {
-		font-size: 12px;
+		font-size: 14px;
 		color: var(--muted-foreground);
 	}
 
 	.profile-select {
-		font-size: 11px;
+		font-size: 13px;
 		padding: 2px 6px;
 		background: var(--card);
 		border: 1px solid var(--border);
@@ -329,7 +329,7 @@
 	.btn-start,
 	.btn-stop {
 		padding: 4px 14px;
-		font-size: 11px;
+		font-size: 13px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);
@@ -401,7 +401,7 @@
 
 	th {
 		padding: 6px 10px;
-		font-size: 10px;
+		font-size: 13px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 0.8px;
@@ -422,7 +422,7 @@
 
 	td {
 		padding: 5px 10px;
-		font-size: 14px;
+		font-size: 16px;
 		color: var(--foreground);
 		border-bottom: 1px solid var(--border);
 		white-space: nowrap;

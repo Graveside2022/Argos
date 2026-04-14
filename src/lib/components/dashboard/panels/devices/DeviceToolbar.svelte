@@ -185,7 +185,7 @@
 
 	.panel-title {
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
+		font-size: 14px;
 		font-weight: 600;
 		letter-spacing: 1.5px;
 		color: var(--foreground-secondary, #888888);
@@ -298,7 +298,7 @@
 		padding: 2px 8px;
 		border-radius: 3px;
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: 12px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		background: var(--surface-hover);
@@ -318,7 +318,7 @@
 	.scan-btn {
 		padding: 3px 12px;
 		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);

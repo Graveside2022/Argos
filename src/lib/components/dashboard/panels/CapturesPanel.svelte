@@ -200,7 +200,7 @@
 	}
 
 	.captures-title {
-		font-size: 12px;
+		font-size: 14px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 1.5px;
@@ -211,7 +211,7 @@
 	}
 
 	.captures-count {
-		font-size: 12px;
+		font-size: 14px;
 		color: var(--muted-foreground);
 	}
 
@@ -251,7 +251,7 @@
 		padding: 6px 12px;
 		background: var(--surface-header);
 		border-bottom: 1px solid var(--border);
-		font-size: 11px;
+		font-size: 13px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 	}
@@ -266,7 +266,7 @@
 		display: flex;
 		align-items: center;
 		padding: 5px 12px;
-		font-size: 14px;
+		font-size: 16px;
 		color: var(--foreground);
 		border-bottom: 1px solid var(--border);
 	}
@@ -322,7 +322,7 @@
 		padding: 2px 8px;
 		border-radius: 3px;
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 9px;
+		font-size: 12px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		background: var(--surface-hover);
@@ -350,7 +350,7 @@
 	.scan-btn {
 		padding: 3px 12px;
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);
