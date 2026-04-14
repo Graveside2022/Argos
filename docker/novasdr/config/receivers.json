@@ -6,7 +6,7 @@
 			"name": "HackRF One",
 			"input": {
 				"sps": 8000000,
-				"frequency": 98000000,
+				"frequency": 2437000000,
 				"signal": "iq",
 				"fft_size": 2048,
 				"audio_sps": 12000,
@@ -16,15 +16,15 @@
 					"channel": 0,
 					"format": "cs16",
 					"gains": {
-						"LNA": 16.0,
-						"VGA": 20.0,
-						"AMP": 0.0
+						"LNA": 32.0,
+						"VGA": 30.0,
+						"AMP": 14.0
 					},
 					"settings": {}
 				},
 				"defaults": {
-					"frequency": 98000000,
-					"modulation": "WFM"
+					"frequency": 2437000000,
+					"modulation": "NFM"
 				}
 			}
 		}

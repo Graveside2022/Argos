@@ -1,6 +1,3 @@
-import type { ExecFileException } from 'child_process';
-import { execFile } from 'child_process';
-
 import type { BufferManager } from '$lib/hackrf/sweep-manager/buffer-manager';
 import type { ErrorTracker } from '$lib/hackrf/sweep-manager/error-tracker';
 import type { FrequencyCycler } from '$lib/hackrf/sweep-manager/frequency-cycler';
@@ -10,7 +7,8 @@ import { isCriticalError } from '$lib/hackrf/sweep-manager/sweep-utils';
 import { normalizeError } from '$lib/server/api/error-utils';
 import { logger } from '$lib/utils/logger';
 
-import type { SpectrumData } from './types';
+import { appendFrame } from './sweep-persistence';
+import type { SpectrumData, SweepArgs } from './types';
 
 /** Context passed to coordinator functions from SweepManager. */
 export interface SweepCoordinatorContext {
@@ -22,6 +20,7 @@ export interface SweepCoordinatorContext {
 	emitError: (message: string, type: string, error?: Error) => void;
 	updateCyclingHealth: (update: CyclingHealthUpdate) => void;
 	readonly isRunning: boolean;
+	activeCaptureId?: string | null;
 }
 
 export interface CyclingHealthUpdate {
@@ -29,91 +28,107 @@ export interface CyclingHealthUpdate {
 	processHealth?: string;
 }
 
+export function sweepArgsFromCenter(frequency: { value: number; unit: string }): SweepArgs {
+	const centerMHz = convertToMHz(frequency.value, frequency.unit);
+	return { startMHz: centerMHz - 10, endMHz: centerMHz + 10, binWidthHz: 20000 };
+}
+
+function buildHackrfArgs(sweepArgs: SweepArgs): string[] {
+	const { startMHz, endMHz, binWidthHz } = sweepArgs;
+	const centerFreqMHz = (startMHz + endMHz) / 2;
+	const gains = selectGains(centerFreqMHz);
+	const lnaGain = sweepArgs.lnaGain ?? gains.lnaGain;
+	const vgaGain = sweepArgs.vgaGain ?? gains.vgaGain;
+	return [
+		'-f',
+		`${Math.floor(startMHz)}:${Math.ceil(endMHz)}`,
+		'-g',
+		vgaGain,
+		'-l',
+		lnaGain,
+		'-w',
+		String(binWidthHz),
+		'-P',
+		'estimate',
+		'-n'
+	];
+}
+
+function makeStdoutHandler(
+	ctx: SweepCoordinatorContext,
+	frequency: { value: number; unit: string },
+	onSpectrumData: (data: SpectrumData, freq: { value: number; unit: string }) => void
+): (data: Buffer) => void {
+	return (data: Buffer) => {
+		ctx.bufferManager.processDataChunk(data, (parsedLine) => {
+			if (parsedLine.isValid && parsedLine.data) {
+				onSpectrumData(parsedLine.data, frequency);
+				return;
+			}
+			if (parsedLine.parseError) {
+				logger.warn(
+					'Failed to parse spectrum line',
+					{ error: parsedLine.parseError, line: parsedLine.rawLine.substring(0, 100) },
+					'sweep-parse-error'
+				);
+			}
+		});
+	};
+}
+
+function makeStderrHandler(
+	ctx: SweepCoordinatorContext,
+	frequency: { value: number; unit: string }
+): (data: Buffer) => void {
+	return (data: Buffer) => {
+		const message = data.toString().trim();
+		logger.warn('Process stderr', { message });
+		if (isCriticalError(message)) {
+			ctx.errorTracker.recordError(message, {
+				frequency: frequency.value,
+				operation: 'sweep_process'
+			});
+		}
+	};
+}
+
 /**
- * Starts a hackrf_sweep process for a given frequency.
+ * Starts a hackrf_sweep process for a given sweep-arg window.
  * Handles argument construction, gain selection, and process event wiring.
  */
 export async function startSweepProcess(
 	ctx: SweepCoordinatorContext,
+	sweepArgs: SweepArgs,
 	frequency: { value: number; unit: string },
 	onSpectrumData: (data: SpectrumData, freq: { value: number; unit: string }) => void,
 	onProcessExit: (code: number | null, signal: string | null) => void
 ): Promise<void> {
+	const { startMHz, endMHz, binWidthHz } = sweepArgs;
+	if (startMHz < 1 || endMHz > 7250) {
+		throw new Error(`Frequency window ${startMHz}-${endMHz} MHz out of range (1-7250 MHz)`);
+	}
 	try {
-		const centerFreqMHz = convertToMHz(frequency.value, frequency.unit);
-		const rangeMHz = 10;
-		const freqMinMHz = centerFreqMHz - rangeMHz;
-		const freqMaxMHz = centerFreqMHz + rangeMHz;
-
-		if (freqMinMHz < 1 || freqMaxMHz > 7250) {
-			throw new Error(`Frequency ${centerFreqMHz} MHz out of range (1-7250 MHz)`);
-		}
-
-		const { vgaGain, lnaGain } = selectGains(centerFreqMHz);
-
-		const args = [
-			'-f',
-			`${Math.floor(freqMinMHz)}:${Math.ceil(freqMaxMHz)}`,
-			'-g',
-			vgaGain,
-			'-l',
-			lnaGain,
-			'-w',
-			'20000',
-			'-n'
-		];
-
-		logger.info(`[START] Starting hackrf_sweep for ${centerFreqMHz} MHz`);
+		const args = buildHackrfArgs(sweepArgs);
+		logger.info(`[START] Starting hackrf_sweep for ${(startMHz + endMHz) / 2} MHz`);
 		logger.info(`[INFO] Command: hackrf_sweep ${args.join(' ')}`);
-
 		ctx.bufferManager.clearBuffer();
-
-		const handleStdout = (data: Buffer) => {
-			ctx.bufferManager.processDataChunk(data, (parsedLine) => {
-				if (parsedLine.isValid && parsedLine.data) {
-					onSpectrumData(parsedLine.data, frequency);
-				} else if (parsedLine.parseError) {
-					logger.warn(
-						'Failed to parse spectrum line',
-						{
-							error: parsedLine.parseError,
-							line: parsedLine.rawLine.substring(0, 100)
-						},
-						'sweep-parse-error'
-					);
-				}
-			});
-		};
-
-		const handleStderr = (data: Buffer) => {
-			const message = data.toString().trim();
-			logger.warn('Process stderr', { message });
-			if (isCriticalError(message)) {
-				ctx.errorTracker.recordError(message, {
-					frequency: frequency.value,
-					operation: 'sweep_process'
-				});
-			}
-		};
-
 		ctx.processManager.setEventHandlers({
-			onStdout: handleStdout,
-			onStderr: handleStderr,
+			onStdout: makeStdoutHandler(ctx, frequency, onSpectrumData),
+			onStderr: makeStderrHandler(ctx, frequency),
 			onExit: (code: number | null, signal: string | null) => {
 				logger.info('Process exited', { code, signal });
 				onProcessExit(code, signal);
 			}
 		});
-
 		await ctx.processManager.spawnSweepProcess(args, {
 			detached: false,
 			stdio: ['ignore', 'pipe', 'pipe'],
 			startupTimeoutMs: 5000
 		});
-
 		logger.info('[OK] HackRF sweep process started successfully', {
 			centerFreq: `${frequency.value} ${frequency.unit}`,
-			range: `${freqMinMHz} - ${freqMaxMHz} MHz`
+			range: `${startMHz} - ${endMHz} MHz`,
+			binWidthHz
 		});
 	} catch (error) {
 		const analysis = ctx.errorTracker.recordError(normalizeError(error), {
@@ -136,6 +151,59 @@ function selectGains(centerFreqMHz: number): { vgaGain: string; lnaGain: string 
 	return { vgaGain: '20', lnaGain: '32' };
 }
 
+interface FramePayload {
+	t: string;
+	f0: number;
+	f1: number;
+	bw: number;
+	bins: number[];
+}
+
+function extractBins(data: SpectrumData): ArrayLike<number> | null {
+	const bins = data.powerValues ?? data.binData;
+	if (!bins || bins.length === 0) return null;
+	return bins;
+}
+
+function extractFreqWindow(data: SpectrumData): { f0: number; f1: number } | null {
+	const { startFreq, endFreq } = data;
+	if (startFreq === undefined || endFreq === undefined) return null;
+	return { f0: startFreq * 1e6, f1: endFreq * 1e6 };
+}
+
+function extractTimestamp(data: SpectrumData): string {
+	return data.timestamp instanceof Date ? data.timestamp.toISOString() : new Date().toISOString();
+}
+
+function buildFramePayload(data: SpectrumData): FramePayload | null {
+	const bins = extractBins(data);
+	if (!bins) return null;
+	const window = extractFreqWindow(data);
+	if (!window) return null;
+	const bw = typeof data.metadata?.binWidth === 'number' ? data.metadata.binWidth : 0;
+	return { t: extractTimestamp(data), f0: window.f0, f1: window.f1, bw, bins: Array.from(bins) };
+}
+
+function persistFrame(captureId: string, data: SpectrumData): void {
+	const payload = buildFramePayload(data);
+	if (payload) appendFrame(captureId, payload);
+}
+
+function processValidatedSpectrum(
+	ctx: SweepCoordinatorContext,
+	data: SpectrumData,
+	frequency: { value: number; unit: string },
+	currentProcessHealth: string
+): void {
+	ctx.updateCyclingHealth({ lastDataReceived: new Date() });
+	if (ctx.activeCaptureId) persistFrame(ctx.activeCaptureId, data);
+	ctx.emitEvent('spectrum_data', { frequency, data, timestamp: data.timestamp });
+	if (currentProcessHealth !== 'running') {
+		ctx.updateCyclingHealth({ processHealth: 'running' });
+		ctx.emitEvent('status_change', { status: 'running' });
+	}
+}
+
 /** Handles validated spectrum data, updating health and emitting events. */
 export function handleSpectrumData(
 	ctx: SweepCoordinatorContext,
@@ -153,12 +221,7 @@ export function handleSpectrumData(
 			);
 			return;
 		}
-		ctx.updateCyclingHealth({ lastDataReceived: new Date() });
-		ctx.emitEvent('spectrum_data', { frequency, data, timestamp: data.timestamp });
-		if (currentProcessHealth !== 'running') {
-			ctx.updateCyclingHealth({ processHealth: 'running' });
-			ctx.emitEvent('status_change', { status: 'running' });
-		}
+		processValidatedSpectrum(ctx, data, frequency, currentProcessHealth);
 	} catch (error) {
 		logger.error('Error handling spectrum data', {
 			error: error instanceof Error ? error.message : String(error)
@@ -234,37 +297,4 @@ export async function handleSweepError(
 	}
 }
 
-interface HackrfAvailabilityResult {
-	available: boolean;
-	reason: string;
-	deviceInfo?: string;
-}
-
-/** Classify hackrf_info error into a user-friendly result. */
-function classifyHackrfError(error: ExecFileException): HackrfAvailabilityResult {
-	const reason =
-		error.code === 124 ? 'Device check timeout' : `Device check failed: ${error.message}`;
-	return { available: false, reason };
-}
-
-/** Classify hackrf_info stdout/stderr into an availability result. */
-function classifyHackrfOutput(stdout: string, stderr: string): HackrfAvailabilityResult {
-	if (stderr.includes('Resource busy')) return { available: false, reason: 'Device busy' };
-	if (stderr.includes('No HackRF boards found'))
-		return { available: false, reason: 'No HackRF found' };
-	if (!stdout.includes('Serial number')) return { available: false, reason: 'Unknown error' };
-	const deviceInfo = stdout
-		.split('\n')
-		.filter((line) => line.trim())
-		.join(', ');
-	return { available: true, reason: 'HackRF detected', deviceInfo };
-}
-
-/** Tests HackRF hardware availability by running hackrf_info. */
-export function testHackrfAvailability(): Promise<HackrfAvailabilityResult> {
-	return new Promise((resolve) => {
-		execFile('/usr/bin/timeout', ['3', 'hackrf_info'], (error, stdout, stderr) => {
-			resolve(error ? classifyHackrfError(error) : classifyHackrfOutput(stdout, stderr));
-		});
-	});
-}
+export { testHackrfAvailability } from './hackrf-availability';

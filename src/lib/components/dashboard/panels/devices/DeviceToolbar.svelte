@@ -1,6 +1,9 @@
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Band filter chips, back button use custom 24x20px sizing incompatible with shadcn Button -->
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import Input from '$lib/components/ui/input/input.svelte';
+	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
 	import { signalBands } from '$lib/utils/signal-utils';
 
 	interface Props {
@@ -34,10 +37,53 @@
 		onToggleNoSignal,
 		onToggleOnlyWithClients
 	}: Props = $props();
+
+	let kismetBusy = $state(false);
+
+	function handleKismetResult(
+		data: { success?: boolean; message?: string },
+		action: string
+	): void {
+		if (data.success) {
+			setKismetStatus(action === 'start' ? 'running' : 'stopped');
+		} else {
+			setKismetStatus('stopped');
+			toast.error(data.message ?? 'Kismet control failed');
+		}
+	}
+
+	async function sendKismetControl(action: 'start' | 'stop'): Promise<void> {
+		kismetBusy = true;
+		setKismetStatus(action === 'start' ? 'starting' : 'stopping');
+		try {
+			const res = await fetch('/api/kismet/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ action })
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				setKismetStatus('stopped');
+				toast.error(data.message ?? `Kismet ${action} failed (${res.status})`);
+				return;
+			}
+			handleKismetResult(await res.json(), action);
+		} catch {
+			setKismetStatus('stopped');
+		} finally {
+			kismetBusy = false;
+		}
+	}
 </script>
 
 <div class="panel-toolbar">
-	<span class="panel-title">DEVICES</span>
+	<span
+		class="status-chip"
+		class:chip-running={$kismetStore.status === 'running'}
+		class:chip-transition={$kismetStore.status === 'starting' ||
+			$kismetStore.status === 'stopping'}>{$kismetStore.status.toUpperCase()}</span
+	>
 	<span class="device-count">{deviceCount}</span>
 	{#if renderedCount !== undefined && renderedCount < deviceCount}
 		<span class="cap-badge">showing {renderedCount}</span>
@@ -121,6 +167,29 @@
 			{/if}
 		</button>
 	</div>
+
+	<div class="toolbar-separator"></div>
+
+	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear search">
+		Clear
+	</button>
+	{#if $kismetStore.status === 'running' || $kismetStore.status === 'stopping'}
+		<button
+			class="scan-btn scan-stop"
+			onclick={() => sendKismetControl('stop')}
+			disabled={kismetBusy}
+		>
+			{kismetBusy ? 'Stopping…' : 'Stop'}
+		</button>
+	{:else}
+		<button
+			class="scan-btn scan-start"
+			onclick={() => sendKismetControl('start')}
+			disabled={kismetBusy}
+		>
+			{kismetBusy ? 'Starting…' : 'Start'}
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -135,7 +204,7 @@
 
 	.panel-title {
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
+		font-size: 14px;
 		font-weight: 600;
 		letter-spacing: 1.5px;
 		color: var(--foreground-secondary, #888888);
@@ -143,7 +212,7 @@
 
 	.device-count {
 		font-family: var(--font-mono);
-		font-size: var(--text-xs);
+		font-size: 14px;
 		color: var(--primary);
 		font-variant-numeric: tabular-nums;
 	}
@@ -242,5 +311,73 @@
 		font-size: 8px;
 		color: var(--primary);
 		line-height: 1;
+	}
+
+	.status-chip {
+		padding: 2px 8px;
+		border-radius: 3px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		background: var(--surface-hover);
+		color: var(--muted-foreground);
+	}
+
+	.status-chip.chip-running {
+		background: var(--status-healthy, #8bbfa0);
+		color: var(--background);
+	}
+
+	.status-chip.chip-transition {
+		background: var(--status-warning, #d4a054);
+		color: var(--background);
+	}
+
+	.scan-btn {
+		padding: 4px 14px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.scan-start {
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 20%, var(--card));
+		color: var(--status-healthy, #8bbfa0);
+		border-color: color-mix(in srgb, var(--status-healthy, #8bbfa0) 40%, var(--border));
+	}
+
+	.scan-start:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 30%, var(--card));
+	}
+
+	.scan-stop {
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 20%, var(--card));
+		color: var(--status-error-panel, #c45b4a);
+		border-color: color-mix(in srgb, var(--status-error-panel, #c45b4a) 40%, var(--border));
+	}
+
+	.scan-stop:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 30%, var(--card));
+	}
+
+	.scan-clear {
+		background: var(--card);
+		color: var(--muted-foreground);
+	}
+
+	.scan-clear:hover {
+		background: var(--surface-hover);
+		color: var(--foreground);
+	}
+
+	.scan-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>

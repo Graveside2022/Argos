@@ -7,7 +7,6 @@ import { ProcessManager } from '$lib/hackrf/sweep-manager/process-manager';
 import {
 	type CyclingHealth,
 	forceCleanupExistingProcesses,
-	type HealthCheckContext,
 	performHealthCheck,
 	performRecovery
 } from '$lib/hackrf/sweep-manager/sweep-health-checker';
@@ -16,31 +15,27 @@ import { HardwareDevice } from '$lib/server/hardware/types';
 import { SystemStatus } from '$lib/types/enums';
 import { logger } from '$lib/utils/logger';
 
+import { sweepArgsFromCenter, testHackrfAvailability } from './sweep-coordinator';
+import { runNextFrequency, startCycle } from './sweep-cycle-init';
 import {
-	handleProcessExit,
-	handleSpectrumData,
-	startSweepProcess,
-	type SweepCoordinatorContext,
-	testHackrfAvailability
-} from './sweep-coordinator';
+	type NarrowBandSweepParams,
+	runCloseSweepLog,
+	runNarrowBandSweep,
+	runStartSweepProcessWithArgs
+} from './sweep-manager-capture';
 import {
-	type CycleInitContext,
-	type CycleRuntimeContext,
-	runNextFrequency,
-	startCycle
-} from './sweep-cycle-init';
+	buildCoordinatorContext,
+	buildCycleInitContext,
+	buildCycleRuntimeContext,
+	buildHealthContext,
+	type ManagerDeps
+} from './sweep-manager-contexts';
 import {
 	emitSweepError,
 	emitSweepEvent,
 	performStartupValidation
 } from './sweep-manager-lifecycle';
-import type {
-	HackRFHealth,
-	SpectrumData,
-	SweepConfig,
-	SweepMutableState,
-	SweepStatus
-} from './types';
+import type { HackRFHealth, SweepArgs, SweepConfig, SweepMutableState, SweepStatus } from './types';
 
 /** Manages HackRF sweep operations using modular service architecture. */
 export class SweepManager extends EventEmitter {
@@ -69,6 +64,7 @@ export class SweepManager extends EventEmitter {
 	};
 	private healthMonitorInterval: ReturnType<typeof setInterval>;
 	private sseEmitter: ((event: string, data: unknown) => void) | null = null;
+	private activeCaptureId: string | null = null;
 
 	constructor() {
 		super();
@@ -106,46 +102,40 @@ export class SweepManager extends EventEmitter {
 		});
 	}
 
-	private _getCoordinatorContext(): SweepCoordinatorContext {
+	private _deps(): ManagerDeps {
 		return {
+			mutableState: this.mutableState,
 			processManager: this.processManager,
 			frequencyCycler: this.frequencyCycler,
 			bufferManager: this.bufferManager,
 			errorTracker: this.errorTracker,
+			cyclingHealth: this.cyclingHealth,
+			getActiveCaptureId: () => this.activeCaptureId,
 			emitEvent: (event, data) => this._emitEvent(event, data),
 			emitError: (msg, type, err) => this._emitError(msg, type, err),
-			updateCyclingHealth: (update) => {
-				if (update.lastDataReceived !== undefined)
-					this.cyclingHealth.lastDataReceived = update.lastDataReceived;
-				if (update.processHealth !== undefined)
-					this.cyclingHealth.processHealth = update.processHealth;
-			},
-			isRunning: this.mutableState.isRunning
-		};
-	}
-
-	private _getHealthContext(): HealthCheckContext {
-		return {
-			...this._getCoordinatorContext(),
-			cyclingHealth: this.cyclingHealth,
+			runNextFrequency: () => this._runNextFrequency(),
 			startSweepProcess: (freq) => this._startSweepProcess(freq),
 			stopSweep: () => this.stopSweep()
 		};
 	}
 
+	setActiveCaptureId(id: string | null): void {
+		this.activeCaptureId = id;
+	}
+
 	private async _performHealthCheck(): Promise<void> {
-		await performHealthCheck(this._getHealthContext());
+		await performHealthCheck(buildHealthContext(this._deps()));
+	}
+
+	private _cycleInit() {
+		return buildCycleInitContext(this._deps(), () => this.errorTracker.resetErrorTracking());
 	}
 
 	async startSweep(config: SweepConfig): Promise<void> {
 		if (this.mutableState.status.state === SystemStatus.Running)
 			throw new Error('Sweep already in progress');
 		const frequencies = config.frequencies || [{ value: config.centerFrequency, unit: 'Hz' }];
-		const success = await startCycle(
-			this._getCycleInitContext(),
-			frequencies,
-			config.cycleTime || 10000
-		);
+		const success = await startCycle(this._cycleInit(), frequencies, config.cycleTime || 10000);
 		if (!success) throw new Error('Failed to start sweep');
 	}
 
@@ -153,19 +143,7 @@ export class SweepManager extends EventEmitter {
 		frequencies: Array<{ value: number; unit: string }>,
 		cycleTime: number
 	): Promise<boolean> {
-		return startCycle(this._getCycleInitContext(), frequencies, cycleTime);
-	}
-
-	private _getCycleInitContext(): CycleInitContext {
-		return {
-			state: this.mutableState,
-			processManager: this.processManager,
-			frequencyCycler: this.frequencyCycler,
-			emitEvent: (event: string, data: unknown) => this._emitEvent(event, data),
-			emitError: (msg: string, type: string, err?: Error) => this._emitError(msg, type, err),
-			resetErrorTracking: () => this.errorTracker.resetErrorTracking(),
-			runNextFrequency: () => this._runNextFrequency()
-		};
+		return startCycle(this._cycleInit(), frequencies, cycleTime);
 	}
 
 	async stopSweep(): Promise<void> {
@@ -227,41 +205,67 @@ export class SweepManager extends EventEmitter {
 		};
 	}
 
-	private _getCycleRuntimeContext(): CycleRuntimeContext {
-		return {
-			state: this.mutableState,
-			frequencyCycler: this.frequencyCycler,
-			processManager: this.processManager,
-			errorTracker: this.errorTracker,
-			emitEvent: (event, data) => this._emitEvent(event, data),
-			getCoordinatorContext: () => this._getCoordinatorContext(),
-			startSweepProcess: (freq) => this._startSweepProcess(freq),
-			stopSweep: () => this.stopSweep()
-		};
-	}
-
 	private async _runNextFrequency(): Promise<void> {
-		await runNextFrequency(this._getCycleRuntimeContext());
+		await runNextFrequency(buildCycleRuntimeContext(this._deps()));
 	}
 
 	private async _startSweepProcess(frequency: { value: number; unit: string }): Promise<void> {
-		const ctx = this._getCoordinatorContext();
-		await startSweepProcess(
-			ctx,
-			frequency,
-			(data: SpectrumData, freq: { value: number; unit: string }) => {
-				handleSpectrumData(ctx, data, freq, this.cyclingHealth.processHealth);
-			},
-			(code: number | null, signal: string | null) => {
-				handleProcessExit(ctx, code, signal, (reason: string) => {
-					performRecovery(this._getHealthContext(), reason).catch((error) => {
+		await this._startSweepProcessWithArgs(sweepArgsFromCenter(frequency), frequency);
+	}
+
+	private async _startSweepProcessWithArgs(
+		args: SweepArgs,
+		frequency: { value: number; unit: string }
+	): Promise<void> {
+		const deps = this._deps();
+		await runStartSweepProcessWithArgs(
+			{
+				getCoordinatorContext: () => buildCoordinatorContext(deps),
+				getProcessHealth: () => this.cyclingHealth.processHealth,
+				onRecovery: (reason) => {
+					performRecovery(buildHealthContext(deps), reason).catch((error) => {
 						logger.error('Error performing recovery', {
 							error: error instanceof Error ? error.message : String(error)
 						});
 					});
-				});
-				if (this.healthMonitorInterval) clearInterval(this.healthMonitorInterval);
-			}
+				},
+				clearHealthMonitor: () => {
+					if (this.healthMonitorInterval) clearInterval(this.healthMonitorInterval);
+				}
+			},
+			args,
+			frequency
+		);
+	}
+
+	async startNarrowBandSweep(params: NarrowBandSweepParams): Promise<void> {
+		await runNarrowBandSweep(
+			{
+				isRunning: () => this.mutableState.isRunning,
+				stopSweep: () => this.stopSweep(),
+				setActiveCaptureId: (id) => this.setActiveCaptureId(id),
+				startSweepProcessWithArgs: (args, freq) =>
+					this._startSweepProcessWithArgs(args, freq),
+				markRunning: () => {
+					this.mutableState.isRunning = true;
+					this.mutableState.status = {
+						state: SystemStatus.Running,
+						currentFrequency: (params.startHz + params.endHz) / 2
+					};
+				}
+			},
+			params
+		);
+	}
+
+	async closeSweepLogForCapture(captureId: string): Promise<void> {
+		await runCloseSweepLog(
+			{
+				getActiveCaptureId: () => this.activeCaptureId,
+				setActiveCaptureId: (id) => this.setActiveCaptureId(id),
+				stopSweep: () => this.stopSweep()
+			},
+			captureId
 		);
 	}
 
@@ -290,10 +294,7 @@ export class SweepManager extends EventEmitter {
 	}
 }
 
-// Singleton — persisted via globalThis to survive Vite HMR reloads.
-// globalThis.__argos_sweepManager is typed in src/app.d.ts.
+// Singleton persisted via globalThis to survive Vite HMR reloads.
 export const sweepManager: SweepManager =
 	globalThis.__argos_sweepManager ?? (globalThis.__argos_sweepManager = new SweepManager());
-export function getSweepManager(): SweepManager {
-	return sweepManager;
-}
+export const getSweepManager = (): SweepManager => sweepManager;

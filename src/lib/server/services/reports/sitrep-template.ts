@@ -18,6 +18,7 @@ export interface SitrepInput {
 	serial: string;
 	spectrum_image_path?: string;
 	spectrum_caption?: string;
+	spectrum_analysis?: string;
 }
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -123,6 +124,11 @@ function renderSpectrumSection(input: SitrepInput): string {
 	].join('\n');
 }
 
+function renderSpectrumAnalysis(input: SitrepInput): string {
+	if (!input.spectrum_analysis || input.spectrum_analysis.trim().length === 0) return '';
+	return ['## Spectrum Analysis', '', input.spectrum_analysis.trim(), ''].join('\n');
+}
+
 function renderLoadout(capture: CaptureRow): string {
 	const sensors = Array.isArray(capture.loadout?.sensors) ? capture.loadout.sensors : [];
 	const rows = sensors
@@ -200,6 +206,7 @@ export function buildSitrepQmd(input: SitrepInput): string {
 		'',
 		'None in this tick.',
 		'',
+		renderSpectrumAnalysis(input),
 		renderAssessment(input.emitters),
 		'## Recommended Actions',
 		'',

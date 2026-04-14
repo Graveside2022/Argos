@@ -11,6 +11,7 @@
 	import GpConfigView from '$lib/components/dashboard/globalprotect/GpConfigView.svelte';
 	import LogsPanel from '$lib/components/dashboard/LogsPanel.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
+	import BluetoothPanel from '$lib/components/dashboard/panels/BluetoothPanel.svelte';
 	import CapturesPanel from '$lib/components/dashboard/panels/CapturesPanel.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
@@ -21,6 +22,7 @@
 	import LogsAnalyticsView from '$lib/components/dashboard/views/LogsAnalyticsView.svelte';
 	import NovaSDRView from '$lib/components/dashboard/views/NovaSDRView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
+	import ReportsView from '$lib/components/dashboard/views/ReportsView.svelte';
 	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
 	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
@@ -52,7 +54,9 @@
 
 	const FULL_WIDTH_VIEWS = new Set(['tak-config', 'globalprotect', 'gsm-evil']);
 	let shellMode = $derived(
-		FULL_WIDTH_VIEWS.has($activeView) ? ('full-width' as const) : ('sidebar' as const)
+		$activePanel === 'reports' || FULL_WIDTH_VIEWS.has($activeView)
+			? ('full-width' as const)
+			: ('sidebar' as const)
 	);
 
 	const gpsService = new GPSService();
@@ -124,7 +128,7 @@
 
 <DashboardShell mode={shellMode}>
 	{#snippet sidebar()}
-		{#if $activeView === 'map'}
+		{#if $activeView === 'map' && $activePanel !== 'reports'}
 			<PanelContainer />
 		{/if}
 	{/snippet}
@@ -177,7 +181,9 @@
 	{/snippet}
 
 	{#snippet fullWidth()}
-		{#if $activeView === 'tak-config'}
+		{#if $activePanel === 'reports'}
+			<ReportsView />
+		{:else if $activeView === 'tak-config'}
 			<TakConfigView />
 		{:else if $activeView === 'globalprotect'}
 			<GpConfigView />
@@ -229,6 +235,11 @@
 				{#if mountedTabs.has('dashboard')}
 					<div class="tab-pane" class:tab-active={$activeBottomTab === 'dashboard'}>
 						<DevicesPanel />
+					</div>
+				{/if}
+				{#if mountedTabs.has('bluetooth')}
+					<div class="tab-pane" class:tab-active={$activeBottomTab === 'bluetooth'}>
+						<BluetoothPanel />
 					</div>
 				{/if}
 			</div>

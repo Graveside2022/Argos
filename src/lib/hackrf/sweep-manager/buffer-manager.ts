@@ -32,7 +32,7 @@ export class BufferManager {
 		totalBytesProcessed: 0
 	};
 
-	private readonly maxLineLength = 10000;
+	private readonly maxLineLength = 100000;
 	private readonly overflowThreshold = 5;
 
 	constructor(config: BufferConfig = {}) {

@@ -1,0 +1,320 @@
+/*-- scss:functions --*/
+
+/*-- scss:defaults --*/
+@import "argos-tokens";
+
+$body-bg: $argos-bg;
+$body-color: $argos-fg;
+$font-family-base: $argos-mono;
+$font-family-monospace: $argos-mono;
+$link-color: $argos-accent;
+$table-bg: $argos-card;
+$table-color: $argos-fg;
+$table-border-color: $argos-border;
+
+/*-- scss:rules --*/
+@import "argos-tokens";
+
+html, body {
+  background-color: $argos-bg !important;
+  color: $argos-fg;
+  font-family: $argos-mono;
+  font-size: $argos-size-body;
+  line-height: 1.55;
+  font-feature-settings: "tnum", "calt";
+}
+
+main, .content, #quarto-document-content, .quarto-title-block + * {
+  max-width: $argos-content-width;
+  margin: 0 auto;
+  padding: ($argos-space-base * 3) ($argos-space-base * 2);
+}
+
+// Classification banner (injected by banner.lua)
+.argos-banner {
+  display: block;
+  width: 100%;
+  background-color: $argos-accent;
+  color: #000000;
+  text-align: center;
+  font-family: $argos-mono;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 6px 0;
+  text-transform: uppercase;
+  border: none;
+  margin: 0;
+}
+
+body > .argos-banner:first-child,
+body > .argos-banner:last-child {
+  position: sticky;
+}
+
+// Quarto's own title banner — match our look
+.quarto-title-banner {
+  background-color: $argos-accent !important;
+  color: #000000 !important;
+  padding: $argos-space-base 0;
+  font-family: $argos-mono;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.quarto-title-banner h1,
+.quarto-title-banner .title {
+  color: #000000 !important;
+  font-family: $argos-mono;
+  font-weight: 700;
+  font-size: $argos-size-brand;
+  letter-spacing: 1.5px;
+}
+
+// Section headers
+section h1,
+section h2,
+section h3,
+h1, h2, h3 {
+  font-family: $argos-mono;
+  font-size: $argos-size-section;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: $argos-accent;
+  border-bottom: 1px solid $argos-border;
+  padding-bottom: 4px;
+  margin-top: ($argos-space-base * 3);
+  margin-bottom: ($argos-space-base * 1.5);
+}
+
+h4, h5, h6 {
+  font-family: $argos-mono;
+  color: $argos-fg-muted;
+  font-size: $argos-size-secondary;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+}
+
+p, li {
+  font-family: $argos-mono;
+  font-size: $argos-size-body;
+  color: $argos-fg;
+}
+
+code, pre {
+  background-color: $argos-card-raised;
+  color: $argos-fg;
+  border: 1px solid $argos-border;
+  font-family: $argos-mono;
+  font-size: $argos-size-secondary;
+}
+
+// BLUF callout
+.bluf {
+  display: block;
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  border-left: 4px solid $argos-accent;
+  padding: ($argos-space-base * 2);
+  margin: ($argos-space-base * 2) 0;
+  font-family: $argos-sans;
+  font-size: $argos-size-bluf;
+  color: $argos-fg;
+  line-height: 1.5;
+}
+
+// Tables
+table {
+  width: 100%;
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  border-radius: 0;
+  border-collapse: collapse;
+  font-family: $argos-mono;
+  font-feature-settings: "tnum";
+  margin: ($argos-space-base * 2) 0;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+th {
+  background-color: $argos-card-raised;
+  color: $argos-fg-muted;
+  font-size: $argos-size-section;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid $argos-border;
+}
+
+td {
+  font-family: $argos-mono;
+  font-size: $argos-size-body;
+  padding: 10px 12px;
+  border-bottom: 1px solid $argos-border;
+  color: $argos-fg;
+  font-feature-settings: "tnum";
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+// Status pills
+.status-hostile,
+.status-suspect,
+.status-neutral,
+.status-friend,
+.status-unknown {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid $argos-border;
+  border-radius: 2px;
+  font-family: $argos-mono;
+  font-size: $argos-size-section;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+}
+
+.status-hostile {
+  border-color: $argos-status-critical;
+  color: $argos-status-critical;
+}
+
+.status-suspect {
+  border-color: $argos-status-notable;
+  color: $argos-status-notable;
+}
+
+.status-neutral {
+  border-color: $argos-fg-muted;
+  color: $argos-fg-muted;
+}
+
+.status-friend {
+  border-color: $argos-status-healthy;
+  color: $argos-status-healthy;
+}
+
+.status-unknown {
+  border-color: $argos-status-inactive;
+  color: $argos-status-inactive;
+}
+
+// Power change row markers
+tr.power-critical td:first-child {
+  border-left: 3px solid $argos-status-critical;
+}
+
+tr.power-notable td:first-child {
+  border-left: 3px solid $argos-status-notable;
+}
+
+// MIJIFEEDER nested card
+.mijifeeder {
+  background-color: $argos-card-raised;
+  border: 1px solid $argos-status-critical;
+  padding: ($argos-space-base * 2);
+  margin: ($argos-space-base * 2) 0;
+  font-family: $argos-mono;
+  font-size: $argos-size-body;
+}
+
+.mijifeeder h4 {
+  color: $argos-status-critical;
+  margin-top: 0;
+}
+
+// Loadout warning
+.loadout-warning {
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  border-left: 4px solid $argos-status-notable;
+  padding: ($argos-space-base * 2);
+  margin: ($argos-space-base * 2) 0;
+  font-family: $argos-mono;
+  font-size: $argos-size-body;
+  color: $argos-status-notable;
+}
+
+// Metrics grid
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $argos-space-base;
+  margin: ($argos-space-base * 2) 0;
+}
+
+.metric-cell {
+  background-color: $argos-card;
+  border: 1px solid $argos-border;
+  padding: ($argos-space-base * 2);
+  font-family: $argos-mono;
+}
+
+.metric-cell .label {
+  font-size: $argos-size-section;
+  color: $argos-fg-muted;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.metric-cell .value {
+  font-size: $argos-size-hero;
+  color: $argos-accent;
+  font-weight: 700;
+  display: block;
+}
+
+// Tabular numerals globally on numeric cells
+td.num, th.num {
+  text-align: right;
+  font-feature-settings: "tnum";
+}
+
+@media print {
+  html, body {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+  }
+  .argos-banner {
+    background-color: #000000;
+    color: #ffffff;
+  }
+  table {
+    background-color: #f5f5f5;
+    border-color: #cccccc;
+  }
+  th {
+    background-color: #e5e5e5;
+    color: #111111;
+    border-color: #cccccc;
+  }
+  td {
+    color: #111111;
+    border-color: #cccccc;
+  }
+  .bluf,
+  .mijifeeder,
+  .loadout-warning,
+  .metric-cell {
+    background-color: #f5f5f5;
+    color: #111111;
+    border-color: #cccccc;
+  }
+  h1, h2, h3 {
+    color: #000000;
+    border-bottom-color: #cccccc;
+  }
+}

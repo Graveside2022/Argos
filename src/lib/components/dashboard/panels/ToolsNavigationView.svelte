@@ -28,6 +28,7 @@
 		openwebrx: { controlUrl: '/api/openwebrx/control' },
 		novasdr: { controlUrl: '/api/novasdr/control' },
 		bluehood: { controlUrl: '/api/bluehood/control' },
+		'blue-dragon': { controlUrl: '/api/bluedragon/control' },
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
 		sightline: { controlUrl: '/api/sightline/control' },
 		spiderfoot: { controlUrl: '/api/spiderfoot/control' }

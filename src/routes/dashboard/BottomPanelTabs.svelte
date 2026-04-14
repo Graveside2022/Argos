@@ -16,7 +16,7 @@
 
 	let { activeTab }: Props = $props();
 
-	type TabId = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard';
+	type TabId = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth';
 
 	// Lucide path data for tab icons — only Terminal keeps the >_ icon; others are text-only
 	const tabs: { id: TabId; label: string; icon: string | null }[] = [
@@ -24,7 +24,8 @@
 		{ id: 'chat', label: 'Chat', icon: null },
 		{ id: 'logs', label: 'Logs', icon: null },
 		{ id: 'captures', label: 'IMSI Captures', icon: null },
-		{ id: 'dashboard', label: 'Dashboard', icon: null }
+		{ id: 'dashboard', label: 'Wi-Fi', icon: null },
+		{ id: 'bluetooth', label: 'Bluetooth', icon: null }
 	];
 
 	// Toggle: if panel is open, collapse it; if collapsed, reopen to terminal tab

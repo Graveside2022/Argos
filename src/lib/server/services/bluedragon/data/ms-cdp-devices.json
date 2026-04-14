@@ -1,0 +1,22 @@
+{
+	"comment": "Microsoft CDP (Connected Devices Platform) device type byte from the Bluetooth advertising beacon. Source: learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cdp (MS-CDP §2.2.2.1 Bluetooth Advertising Beacon). Pinned 2026-04-14. The device-type byte is the second byte of the beacon payload after the Scenario Type and provides a stable device class indicator.",
+	"deviceTypes": {
+		"01": "Xbox One",
+		"06": "Apple iPhone",
+		"07": "Apple iPad",
+		"08": "Android device",
+		"09": "Windows 10 Desktop",
+		"0A": "Windows 10 Phone (legacy)",
+		"0B": "Linux device",
+		"0C": "Windows IoT",
+		"0D": "Surface Hub",
+		"0E": "Windows Laptop",
+		"0F": "Windows Tablet",
+		"10": "Windows Server",
+		"11": "HoloLens",
+		"12": "Windows Phone",
+		"13": "Xbox Series",
+		"14": "Surface Duo",
+		"15": "Surface Book"
+	}
+}

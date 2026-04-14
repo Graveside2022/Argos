@@ -94,6 +94,17 @@ export const wifiBtDiscovery: ToolCategory = {
 			},
 			{ isInstalled: true, viewName: 'bluehood', canOpen: true, shouldShowControls: true }
 		),
+		createTool(
+			{
+				id: 'blue-dragon',
+				name: 'Blue Dragon',
+				description:
+					'Wideband BLE 5 & Classic Bluetooth passive sniffer via USRP B205 mini SDR. Captures 2402-2480 MHz, decodes LE 1M/2M/Coded PHYs + Classic BT LAP/UAP, emits packets to Bluetooth tab in real-time.',
+				icon: toolIcons.btle,
+				deployment: 'native'
+			},
+			{ isInstalled: true, viewName: undefined, canOpen: false, shouldShowControls: true }
+		),
 		createTool({
 			id: 'sparrow-wifi',
 			name: 'Sparrow-WiFi',

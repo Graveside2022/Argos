@@ -34,6 +34,7 @@
 	let scanProgress = $derived($gsmEvilStore.scanProgress);
 	let towerLocations = $derived($gsmEvilStore.towerLocations);
 	let towerLookupAttempted = $derived($gsmEvilStore.towerLookupAttempted);
+
 	let scanButtonText = $derived($gsmEvilStore.scanButtonText);
 
 	// Button shows "Stop Scan" (red) when scanning OR when IMSI capture is running
@@ -90,21 +91,19 @@
 		scanResults.filter(hasCellInfo).map((r) => toDetectedTower(r, towerLocations))
 	);
 
-	// Fetch tower locations when new IMSIs are captured
+	// Fetch tower locations when new IMSIs are captured.
+	// Only depends on capturedIMSIs — tower state is read via getSnapshot() inside the function.
 	$effect(() => {
 		if (capturedIMSIs.length > 0) {
-			fetchTowerLocationsForIMSIs(capturedIMSIs, towerLocations, towerLookupAttempted);
+			fetchTowerLocationsForIMSIs(capturedIMSIs);
 		}
 	});
 
-	// Auto-fetch tower locations for scan-detected towers
+	// Auto-fetch tower locations for scan-detected towers.
+	// Only depends on scanDetectedTowers — tower state is read via getSnapshot() inside the function.
 	$effect(() => {
 		if (scanDetectedTowers.length > 0) {
-			fetchTowerLocationsForScanResults(
-				scanDetectedTowers,
-				towerLocations,
-				towerLookupAttempted
-			);
+			fetchTowerLocationsForScanResults(scanDetectedTowers);
 		}
 	});
 
