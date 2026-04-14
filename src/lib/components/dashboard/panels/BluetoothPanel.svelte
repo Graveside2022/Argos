@@ -142,6 +142,47 @@
 		if (status === 'starting' || status === 'stopping') return 'chip-transition';
 		return 'chip-stopped';
 	}
+
+	function initResize(e: MouseEvent): void {
+		e.stopPropagation();
+		e.preventDefault();
+		const handle = e.target as HTMLElement;
+		const th = handle.parentElement;
+		if (!th) return;
+		const startX = e.clientX;
+		const startWidth = th.offsetWidth;
+		const colIdx = Array.from(th.parentElement?.children ?? []).indexOf(th);
+		const table = th.closest('table');
+
+		function onMove(ev: MouseEvent): void {
+			const newWidth = `${Math.max(60, startWidth + ev.clientX - startX)}px`;
+			th.style.width = newWidth;
+			th.style.minWidth = newWidth;
+			th.style.maxWidth = newWidth;
+			applyColWidth(table, colIdx, newWidth);
+		}
+
+		function onUp(): void {
+			document.removeEventListener('mousemove', onMove);
+			document.removeEventListener('mouseup', onUp);
+		}
+
+		document.addEventListener('mousemove', onMove);
+		document.addEventListener('mouseup', onUp);
+	}
+
+	function applyColWidth(table: HTMLTableElement | null, idx: number, w: string): void {
+		if (!table) return;
+		const rows = table.querySelectorAll('tbody tr');
+		for (const row of rows) {
+			const td = row.children[idx] as HTMLElement | undefined;
+			if (td) {
+				td.style.width = w;
+				td.style.minWidth = w;
+				td.style.maxWidth = w;
+			}
+		}
+	}
 </script>
 
 <div class="bluetooth-panel">
@@ -193,34 +234,61 @@
 			<table>
 				<thead>
 					<tr>
-						<th onclick={() => handleSort('addr')} class="sortable col-addr"
-							>ADDRESS{sortIndicator('addr')}</th
+						<th onclick={() => handleSort('addr')} class="sortable"
+							>ADDRESS{sortIndicator('addr')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('vendor')} class="sortable col-vendor"
-							>VENDOR{sortIndicator('vendor')}</th
+						<th onclick={() => handleSort('vendor')} class="sortable"
+							>VENDOR{sortIndicator('vendor')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('product')} class="sortable col-product"
-							>PRODUCT{sortIndicator('product')}</th
+						<th onclick={() => handleSort('product')} class="sortable"
+							>PRODUCT{sortIndicator('product')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('category')} class="sortable col-cat"
-							>CATEGORY{sortIndicator('category')}</th
+						<th onclick={() => handleSort('category')} class="sortable"
+							>CATEGORY{sortIndicator('category')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('phy')} class="sortable col-phy"
-							>PHY{sortIndicator('phy')}</th
+						<th onclick={() => handleSort('phy')} class="sortable"
+							>PHY{sortIndicator('phy')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('rssi')} class="sortable col-rssi"
-							>RSSI{sortIndicator('rssi')}</th
+						<th onclick={() => handleSort('rssi')} class="sortable"
+							>RSSI{sortIndicator('rssi')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('pkts')} class="sortable col-pkts"
-							>PKTS{sortIndicator('pkts')}</th
+						<th onclick={() => handleSort('pkts')} class="sortable"
+							>PKTS{sortIndicator('pkts')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('first')} class="sortable col-time"
-							>FIRST{sortIndicator('first')}</th
+						<th onclick={() => handleSort('first')} class="sortable"
+							>FIRST{sortIndicator('first')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th onclick={() => handleSort('last')} class="sortable col-time"
-							>LAST{sortIndicator('last')}</th
+						<th onclick={() => handleSort('last')} class="sortable"
+							>LAST{sortIndicator('last')}<span
+								class="resize-handle"
+								onmousedown={initResize}
+							></span></th
 						>
-						<th class="col-flags">FLAGS</th>
+						<th>FLAGS</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -387,9 +455,8 @@
 	}
 
 	table {
-		width: 100%;
 		border-collapse: collapse;
-		table-layout: fixed;
+		width: max-content;
 	}
 
 	thead {
@@ -415,9 +482,28 @@
 		cursor: pointer;
 	}
 
+	th {
+		position: relative;
+	}
+
 	th.sortable:hover {
 		color: var(--foreground);
 		background: var(--surface-hover);
+	}
+
+	.resize-handle {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 5px;
+		cursor: col-resize;
+		background: transparent;
+	}
+
+	.resize-handle:hover {
+		background: var(--primary);
+		opacity: 0.4;
 	}
 
 	td {
@@ -428,50 +514,18 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		max-width: 250px;
 	}
 
 	tr:hover td {
 		background: var(--surface-hover);
 	}
 
-	.col-addr {
-		width: 160px;
-	}
-
-	.col-vendor {
-		width: 150px;
-	}
-
-	.col-product {
-		width: 200px;
-	}
-
-	.col-cat {
-		width: 120px;
-		color: var(--foreground-secondary);
-	}
-
-	.col-phy {
-		width: 80px;
-		color: var(--foreground-secondary);
-	}
-
-	.col-rssi {
-		width: 90px;
-	}
-
-	.col-pkts {
-		width: 70px;
-		color: var(--foreground-secondary);
-	}
-
+	.col-cat,
+	.col-phy,
+	.col-pkts,
 	.col-time {
-		width: 90px;
 		color: var(--foreground-secondary);
-	}
-
-	.col-flags {
-		width: auto;
 	}
 
 	.badge {
