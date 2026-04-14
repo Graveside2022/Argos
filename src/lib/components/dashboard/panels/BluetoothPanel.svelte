@@ -203,6 +203,7 @@
 		<span class="spacer"></span>
 		<span class="count">{$bluetoothStore.deviceCount} devices</span>
 		<span class="packets">{$bluetoothStore.packetCount} pkts</span>
+		<button class="btn-clear" onclick={onClear}>Clear</button>
 		{#if $bluetoothStore.status === 'stopped'}
 			<select class="profile-select" bind:value={profile} disabled={starting}>
 				<option value="clean">CLEAN (98% CRC)</option>
@@ -217,7 +218,6 @@
 				{stopping ? 'Stopping…' : 'Stop'}
 			</button>
 		{/if}
-		<button class="btn-clear" onclick={onClear}>Clear</button>
 	</div>
 
 	{#if $bluetoothStore.error}

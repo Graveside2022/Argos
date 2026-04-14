@@ -164,6 +164,9 @@
 
 	<div class="toolbar-separator"></div>
 
+	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear results">
+		Clear
+	</button>
 	{#if $kismetStore.status === 'running'}
 		<button
 			class="scan-btn scan-stop"
@@ -181,9 +184,6 @@
 			{kismetBusy ? 'Starting…' : 'Start'}
 		</button>
 	{/if}
-	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear results">
-		Clear
-	</button>
 </div>
 
 <style>
