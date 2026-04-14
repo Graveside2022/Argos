@@ -1,4 +1,5 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
+import { existsSync, unlinkSync } from 'node:fs';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
@@ -15,9 +16,9 @@ import { DeviceAggregator } from './device-aggregator';
 import { PcapStreamParser } from './pcap-stream-parser';
 
 const BD_BIN = '/home/kali/Documents/Argos/Argos/tactical/blue-dragon/target/release/blue-dragon';
-const BD_PCAP_PATH = '/tmp/bd-live.pcap';
+const BD_PCAP_PATH = '/tmp/bd-live.fifo';
 const BD_INTERFACE = 'usrp-B205mini-329F4D0';
-const PARSER_START_DELAY_MS = 2500;
+const PARSER_START_DELAY_MS = 1000;
 const SIGINT_GRACE_MS = 2000;
 const SIGKILL_GRACE_MS = 500;
 
@@ -44,6 +45,8 @@ interface RuntimeState {
 	profile: BluedragonProfile | null;
 	status: 'stopped' | 'starting' | 'running' | 'stopping';
 	parserStartTimer: ReturnType<typeof setTimeout> | null;
+	frozenDevices: BluetoothDevice[];
+	frozenPacketCount: number;
 }
 
 const state: RuntimeState = {
@@ -54,8 +57,23 @@ const state: RuntimeState = {
 	startedAt: null,
 	profile: null,
 	status: 'stopped',
-	parserStartTimer: null
+	parserStartTimer: null,
+	frozenDevices: [],
+	frozenPacketCount: 0
 };
+
+function ensureFifo(path: string): void {
+	if (existsSync(path)) unlinkSync(path);
+	spawnSync('/usr/bin/mkfifo', [path]);
+}
+
+function cleanupFifo(path: string): void {
+	try {
+		if (existsSync(path)) unlinkSync(path);
+	} catch {
+		/* ignore */
+	}
+}
 
 function buildArgs(profile: BluedragonProfile): string[] {
 	const p = PROFILES[profile];
@@ -164,6 +182,7 @@ function clearRuntimeState(): void {
 	state.startedAt = null;
 	state.profile = null;
 	state.status = 'stopped';
+	cleanupFifo(BD_PCAP_PATH);
 }
 
 export async function startBluedragon(
@@ -178,10 +197,13 @@ export async function startBluedragon(
 	}
 
 	state.status = 'starting';
+	state.frozenDevices = [];
+	state.frozenPacketCount = 0;
 	broadcastStatus();
 	logger.info('[bluedragon] Starting', { profile, bin: BD_BIN });
 
 	try {
+		ensureFifo(BD_PCAP_PATH);
 		const proc = spawn(BD_BIN, buildArgs(profile), { stdio: ['ignore', 'pipe', 'pipe'] });
 		attachProcessListeners(proc);
 		initRuntimeState(proc, profile);
@@ -214,6 +236,11 @@ async function terminateProcess(proc: ChildProcess): Promise<void> {
 	}
 }
 
+function freezeDeviceSnapshot(): void {
+	state.frozenDevices = state.aggregator?.getSnapshot() ?? [];
+	state.frozenPacketCount = state.aggregator?.getPacketCount() ?? 0;
+}
+
 async function performStop(): Promise<void> {
 	if (state.parserStartTimer) {
 		clearTimeout(state.parserStartTimer);
@@ -221,8 +248,8 @@ async function performStop(): Promise<void> {
 	}
 	state.parser?.stop();
 	state.parser = null;
+	freezeDeviceSnapshot();
 	if (state.process) await terminateProcess(state.process);
-	state.aggregator?.reset();
 	clearRuntimeState();
 }
 
@@ -258,6 +285,16 @@ function isBluedragonActive(): boolean {
 	return state.status === 'running' || state.status === 'starting';
 }
 
+function currentPacketCount(): number {
+	if (isBluedragonActive()) return state.aggregator?.getPacketCount() ?? 0;
+	return state.frozenPacketCount;
+}
+
+function currentDeviceCount(): number {
+	if (isBluedragonActive()) return state.aggregator?.getDeviceCount() ?? 0;
+	return state.frozenDevices.length;
+}
+
 export function getBluedragonStatusSync(): BluedragonStatusResult {
 	return {
 		success: true,
@@ -265,17 +302,20 @@ export function getBluedragonStatusSync(): BluedragonStatusResult {
 		status: state.status,
 		pid: state.pid,
 		startedAt: state.startedAt,
-		packetCount: state.aggregator?.getPacketCount() ?? 0,
-		deviceCount: state.aggregator?.getDeviceCount() ?? 0,
+		packetCount: currentPacketCount(),
+		deviceCount: currentDeviceCount(),
 		profile: state.profile
 	};
 }
 
 export function getBluedragonDevices(): BluetoothDevice[] {
-	return state.aggregator?.getSnapshot() ?? [];
+	if (state.aggregator) return state.aggregator.getSnapshot();
+	return state.frozenDevices;
 }
 
 export function resetBluedragonDevices(): void {
 	state.aggregator?.reset();
+	state.frozenDevices = [];
+	state.frozenPacketCount = 0;
 	broadcastStatus();
 }

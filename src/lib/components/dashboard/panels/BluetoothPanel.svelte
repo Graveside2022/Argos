@@ -197,15 +197,15 @@
 	.toolbar {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 4px 12px;
-		height: 32px;
-		min-height: 32px;
+		gap: 10px;
+		padding: 6px 12px;
+		height: 36px;
+		min-height: 36px;
 		border-bottom: 1px solid var(--border);
 	}
 
 	.title {
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 1.5px;
@@ -214,7 +214,7 @@
 	.chip {
 		padding: 2px 8px;
 		border-radius: 3px;
-		font-size: 9px;
+		font-size: 10px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 	}
@@ -235,7 +235,7 @@
 	}
 
 	.profile-tag {
-		font-size: 9px;
+		font-size: 10px;
 		color: var(--muted-foreground);
 		text-transform: uppercase;
 		letter-spacing: 0.8px;
@@ -247,12 +247,12 @@
 
 	.count,
 	.packets {
-		font-size: 10px;
+		font-size: 12px;
 		color: var(--muted-foreground);
 	}
 
 	.profile-select {
-		font-size: 10px;
+		font-size: 11px;
 		padding: 2px 6px;
 		background: var(--card);
 		border: 1px solid var(--border);
@@ -262,8 +262,8 @@
 
 	.btn-start,
 	.btn-stop {
-		padding: 3px 12px;
-		font-size: 10px;
+		padding: 4px 14px;
+		font-size: 11px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);
@@ -324,10 +324,10 @@
 	.table-header {
 		display: flex;
 		align-items: center;
-		padding: 4px 12px;
+		padding: 6px 12px;
 		background: var(--surface-header);
 		border-bottom: 1px solid var(--border);
-		font-size: 9px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 0.8px;
@@ -342,8 +342,8 @@
 	.table-row {
 		display: flex;
 		align-items: center;
-		padding: 3px 12px;
-		font-size: 11px;
+		padding: 5px 12px;
+		font-size: 13px;
 		color: var(--foreground);
 		border-bottom: 1px solid var(--border);
 	}
@@ -357,42 +357,42 @@
 	}
 
 	.col-addr {
-		width: 140px;
+		width: 155px;
 	}
 
 	.col-vendor {
-		width: 130px;
+		width: 145px;
 	}
 
 	.col-product {
-		width: 180px;
+		width: 200px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
 	.col-cat {
-		width: 100px;
+		width: 110px;
 		color: var(--foreground-secondary);
 	}
 
 	.col-phy {
-		width: 70px;
+		width: 80px;
 		color: var(--foreground-secondary);
 	}
 
 	.col-rssi {
-		width: 70px;
+		width: 80px;
 	}
 
 	.col-pkts {
-		width: 60px;
+		width: 65px;
 		color: var(--foreground-secondary);
 	}
 
 	.col-first,
 	.col-last {
-		width: 80px;
+		width: 85px;
 		color: var(--foreground-secondary);
 	}
 
@@ -403,8 +403,8 @@
 	}
 
 	.badge {
-		padding: 1px 5px;
-		font-size: 9px;
+		padding: 2px 6px;
+		font-size: 10px;
 		background: var(--surface-hover);
 		border: 1px solid var(--border);
 		border-radius: 2px;

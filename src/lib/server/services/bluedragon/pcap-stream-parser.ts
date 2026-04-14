@@ -51,7 +51,11 @@ export class PcapStreamParser {
 			'btle.advertising_address or btbredr_rf'
 		];
 
-		logger.info('[bluedragon-parser] Starting tshark', { tshark, args });
+		logger.info('[bluedragon-parser] Starting tshark on FIFO', {
+			tshark,
+			fifo: this.opts.pcapPath
+		});
+
 		this.process = spawn(tshark, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
 		const stdout = this.process.stdout;
