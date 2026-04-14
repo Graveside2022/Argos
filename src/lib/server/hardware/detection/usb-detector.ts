@@ -24,6 +24,7 @@ const _USB_DEVICE_DATABASE = {
 	'1d50:6089': { name: 'HackRF One', category: 'sdr' as HardwareCategory },
 	'2500:0020': { name: 'USRP B200', category: 'sdr' as HardwareCategory },
 	'2500:0021': { name: 'USRP B210', category: 'sdr' as HardwareCategory },
+	'2500:0022': { name: 'USRP B205 mini', category: 'sdr' as HardwareCategory },
 	'0bda:2832': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory },
 	'0bda:2838': { name: 'RTL-SDR', category: 'sdr' as HardwareCategory },
 	// WiFi Adapters
