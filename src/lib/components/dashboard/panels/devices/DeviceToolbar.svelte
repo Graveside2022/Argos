@@ -181,6 +181,9 @@
 			{kismetBusy ? 'Starting…' : 'Start'}
 		</button>
 	{/if}
+	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear results">
+		Clear
+	</button>
 </div>
 
 <style>
@@ -338,21 +341,33 @@
 	}
 
 	.scan-start {
-		background: var(--card);
-		color: var(--foreground);
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 20%, var(--card));
+		color: var(--status-healthy, #8bbfa0);
+		border-color: color-mix(in srgb, var(--status-healthy, #8bbfa0) 40%, var(--border));
 	}
 
 	.scan-start:hover:not(:disabled) {
-		background: var(--surface-hover);
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 30%, var(--card));
 	}
 
 	.scan-stop {
-		background: var(--card);
-		color: var(--foreground);
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 20%, var(--card));
+		color: var(--status-error-panel, #c45b4a);
+		border-color: color-mix(in srgb, var(--status-error-panel, #c45b4a) 40%, var(--border));
 	}
 
 	.scan-stop:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 30%, var(--card));
+	}
+
+	.scan-clear {
+		background: var(--card);
+		color: var(--muted-foreground);
+	}
+
+	.scan-clear:hover {
 		background: var(--surface-hover);
+		color: var(--foreground);
 	}
 
 	.scan-btn:disabled {

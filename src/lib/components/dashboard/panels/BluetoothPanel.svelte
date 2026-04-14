@@ -9,6 +9,7 @@
 
 	import { browser } from '$app/environment';
 	import {
+		applyBluetoothDevices,
 		bluetoothStore,
 		fetchBluetoothDevices,
 		fetchBluetoothStatus,
@@ -80,6 +81,14 @@
 		} finally {
 			stopping = false;
 		}
+	}
+
+	async function onClear(): Promise<void> {
+		await fetch('/api/bluedragon/devices/reset', {
+			method: 'POST',
+			credentials: 'same-origin'
+		});
+		applyBluetoothDevices([]);
 	}
 
 	function handleSort(col: SortKey): void {
@@ -208,6 +217,7 @@
 				{stopping ? 'Stopping…' : 'Stop'}
 			</button>
 		{/if}
+		<button class="btn-clear" onclick={onClear}>Clear</button>
 	</div>
 
 	{#if $bluetoothStore.error}
@@ -392,21 +402,45 @@
 	}
 
 	.btn-start,
-	.btn-stop {
+	.btn-stop,
+	.btn-clear {
 		padding: 4px 14px;
 		font-size: 13px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);
-		background: var(--card);
-		color: var(--foreground);
 		cursor: pointer;
 		font-family: inherit;
 	}
 
-	.btn-start:hover:not(:disabled),
+	.btn-start {
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 20%, var(--card));
+		color: var(--status-healthy, #8bbfa0);
+		border-color: color-mix(in srgb, var(--status-healthy, #8bbfa0) 40%, var(--border));
+	}
+
+	.btn-start:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--status-healthy, #8bbfa0) 30%, var(--card));
+	}
+
+	.btn-stop {
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 20%, var(--card));
+		color: var(--status-error-panel, #c45b4a);
+		border-color: color-mix(in srgb, var(--status-error-panel, #c45b4a) 40%, var(--border));
+	}
+
 	.btn-stop:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--status-error-panel, #c45b4a) 30%, var(--card));
+	}
+
+	.btn-clear {
+		background: var(--card);
+		color: var(--muted-foreground);
+	}
+
+	.btn-clear:hover {
 		background: var(--surface-hover);
+		color: var(--foreground);
 	}
 
 	.btn-start:disabled,
