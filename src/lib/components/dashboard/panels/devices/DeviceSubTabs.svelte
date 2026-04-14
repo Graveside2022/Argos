@@ -55,7 +55,7 @@
 		border-bottom: 2px solid transparent;
 		color: var(--foreground-secondary);
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
+		font-size: 13px;
 		font-weight: 500;
 		letter-spacing: 1px;
 		cursor: pointer;
@@ -79,7 +79,7 @@
 	}
 
 	.sub-tab-count {
-		font-size: 9px;
+		font-size: 12px;
 		font-variant-numeric: tabular-nums;
 		color: inherit;
 		opacity: 0.7;
