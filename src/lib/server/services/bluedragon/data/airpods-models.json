@@ -1,0 +1,28 @@
+{
+	"comment": "AirPods model IDs from Apple Continuity 0x07 Proximity Pairing messages. 2-byte model ID (big-endian). Sources: github.com/furiousMAC/continuity (messages/proximity_pairing.md + dissector) and hexway/apple_bleee. Pinned 2026-04-14.",
+	"models": {
+		"0220": "AirPods 1",
+		"0320": "Powerbeats 3",
+		"0520": "BeatsX",
+		"0620": "Beats Solo 3",
+		"0920": "Beats Studio 3",
+		"0A20": "AirPods Max",
+		"0B20": "Powerbeats Pro",
+		"0C20": "Beats Solo Pro",
+		"0E20": "AirPods Pro",
+		"0F20": "AirPods 2",
+		"1020": "Beats Flex",
+		"1120": "Beats Studio Buds",
+		"1220": "Beats Fit Pro",
+		"1320": "AirPods 3",
+		"1420": "AirPods Pro 2",
+		"1720": "Beats Studio Pro",
+		"1820": "Beats Solo 4",
+		"2420": "AirPods 4",
+		"2520": "AirPods 4 ANC",
+		"2620": "AirPods Max (USB-C)",
+		"2720": "AirPods Pro 2 USB-C",
+		"2820": "Beats Pill",
+		"2920": "AirPods Pro 3"
+	}
+}

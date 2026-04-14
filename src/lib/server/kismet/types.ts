@@ -85,7 +85,9 @@ export interface WebSocketMessage {
 		| 'status_change'
 		| 'error'
 		| 'tak_status'
-		| 'tak_cot';
+		| 'tak_cot'
+		| 'bluetooth_device_update'
+		| 'bluetooth_status_update';
 	data: Record<string, unknown>;
 	timestamp: string;
 }

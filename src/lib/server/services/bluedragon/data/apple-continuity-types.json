@@ -1,0 +1,86 @@
+{
+	"comment": "Apple Continuity manufacturer-specific data type bytes. Source: github.com/furiousMAC/continuity/messages/*.md. Pinned 2026-04-14. Each entry maps the first byte of Apple 0x004C manufacturer data (after the type prefix) to a message type name and a device category hint.",
+	"types": {
+		"01": {
+			"name": "iBeacon",
+			"category": "beacon",
+			"description": "Apple iBeacon broadcast, UUID+major+minor"
+		},
+		"02": { "name": "iBeacon (alt)", "category": "beacon", "description": "Alt iBeacon prefix" },
+		"03": { "name": "AirPrint", "category": "printer", "description": "AirPrint capability" },
+		"05": {
+			"name": "AirDrop",
+			"category": "phone_or_computer",
+			"description": "AirDrop discovery"
+		},
+		"06": { "name": "HomeKit", "category": "iot", "description": "HomeKit accessory" },
+		"07": {
+			"name": "Proximity Pairing",
+			"category": "audio_earbud",
+			"description": "AirPods/Beats pairing broadcast with model ID and battery"
+		},
+		"08": { "name": "Hey Siri", "category": "phone_or_computer", "description": "Siri nearby" },
+		"09": {
+			"name": "AirPlay Target",
+			"category": "media",
+			"description": "AirPlay receiver (AppleTV/HomePod)"
+		},
+		"0A": {
+			"name": "AirPlay Source",
+			"category": "phone_or_computer",
+			"description": "AirPlay sender"
+		},
+		"0B": {
+			"name": "Magic Switch",
+			"category": "peripheral",
+			"description": "Apple Magic Keyboard/Mouse/Trackpad"
+		},
+		"0C": {
+			"name": "Handoff",
+			"category": "phone_or_computer",
+			"description": "Handoff continuity"
+		},
+		"0D": {
+			"name": "Tethering Target",
+			"category": "phone",
+			"description": "Personal hotspot target"
+		},
+		"0E": {
+			"name": "Tethering Source",
+			"category": "phone",
+			"description": "Personal hotspot source"
+		},
+		"0F": {
+			"name": "Nearby Action",
+			"category": "phone",
+			"description": "Nearby Action (WiFi password share, iOS setup leaks device class)"
+		},
+		"10": {
+			"name": "Nearby Info",
+			"category": "phone_or_computer",
+			"description": "Always-on presence broadcast with lock state, WiFi state, iOS version hint"
+		},
+		"11": {
+			"name": "Find My Network",
+			"category": "tracker",
+			"description": "Find My network broadcast"
+		},
+		"12": {
+			"name": "Find My / AirTag",
+			"category": "tracker",
+			"description": "Find My separated or offline broadcast (AirTag, Find My enabled device)"
+		},
+		"13": { "name": "iCloud Backup", "category": "phone", "description": "iCloud backup status" },
+		"14": {
+			"name": "AirDrop Contacts",
+			"category": "phone",
+			"description": "AirDrop contacts-only"
+		},
+		"18": { "name": "Rental Beacon", "category": "beacon", "description": "Apple rental beacon" },
+		"19": {
+			"name": "Magic Switch v2",
+			"category": "peripheral",
+			"description": "iOS 17+ Magic Switch variant"
+		}
+	}
+}
