@@ -1,5 +1,7 @@
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Band filter chips, back button use custom 24x20px sizing incompatible with shadcn Button -->
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import Input from '$lib/components/ui/input/input.svelte';
 	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
 	import { signalBands } from '$lib/utils/signal-utils';
@@ -38,6 +40,18 @@
 
 	let kismetBusy = $state(false);
 
+	function handleKismetResult(
+		data: { success?: boolean; message?: string },
+		action: string
+	): void {
+		if (data.success) {
+			setKismetStatus(action === 'start' ? 'running' : 'stopped');
+		} else {
+			setKismetStatus('stopped');
+			toast.error(data.message ?? 'Kismet control failed');
+		}
+	}
+
 	async function sendKismetControl(action: 'start' | 'stop'): Promise<void> {
 		kismetBusy = true;
 		setKismetStatus(action === 'start' ? 'starting' : 'stopping');
@@ -48,10 +62,7 @@
 				credentials: 'same-origin',
 				body: JSON.stringify({ action })
 			});
-			const data = await res.json();
-			setKismetStatus(
-				data.success ? (action === 'start' ? 'running' : 'stopped') : 'stopped'
-			);
+			handleKismetResult(await res.json(), action);
 		} catch {
 			setKismetStatus('stopped');
 		} finally {
@@ -185,7 +196,7 @@
 
 	.panel-title {
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 14px;
+		font-size: 10px;
 		font-weight: 600;
 		letter-spacing: 1.5px;
 		color: var(--foreground-secondary, #888888);
@@ -295,10 +306,10 @@
 	}
 
 	.status-chip {
-		padding: 2px 8px;
+		padding: 2px 6px;
 		border-radius: 3px;
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: 9px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		background: var(--surface-hover);
@@ -316,9 +327,9 @@
 	}
 
 	.scan-btn {
-		padding: 3px 12px;
+		padding: 2px 10px;
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: 10px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);

@@ -143,23 +143,25 @@
 		return 'chip-stopped';
 	}
 
-	function initResize(e: MouseEvent): void {
-		e.stopPropagation();
-		e.preventDefault();
-		const handle = e.target as HTMLElement;
-		const th = handle.parentElement;
-		if (!th) return;
-		const startX = e.clientX;
-		const startWidth = th.offsetWidth;
-		const colIdx = Array.from(th.parentElement?.children ?? []).indexOf(th);
-		const table = th.closest('table');
+	function setElWidth(el: HTMLElement, w: string): void {
+		el.style.width = w;
+		el.style.minWidth = w;
+		el.style.maxWidth = w;
+	}
+
+	function startResizeDrag(col: HTMLElement, startX: number): void {
+		const startWidth = col.offsetWidth;
+		const colIdx = Array.from(col.parentElement?.children ?? []).indexOf(col);
+		const table = col.closest('table');
 
 		function onMove(ev: MouseEvent): void {
-			const newWidth = `${Math.max(60, startWidth + ev.clientX - startX)}px`;
-			th.style.width = newWidth;
-			th.style.minWidth = newWidth;
-			th.style.maxWidth = newWidth;
-			applyColWidth(table, colIdx, newWidth);
+			const w = `${Math.max(60, startWidth + ev.clientX - startX)}px`;
+			setElWidth(col, w);
+			if (!table) return;
+			for (const row of table.querySelectorAll('tbody tr')) {
+				const td = row.children[colIdx] as HTMLElement | undefined;
+				if (td) setElWidth(td, w);
+			}
 		}
 
 		function onUp(): void {
@@ -171,17 +173,12 @@
 		document.addEventListener('mouseup', onUp);
 	}
 
-	function applyColWidth(table: HTMLTableElement | null, idx: number, w: string): void {
-		if (!table) return;
-		const rows = table.querySelectorAll('tbody tr');
-		for (const row of rows) {
-			const td = row.children[idx] as HTMLElement | undefined;
-			if (td) {
-				td.style.width = w;
-				td.style.minWidth = w;
-				td.style.maxWidth = w;
-			}
-		}
+	function initResize(e: MouseEvent): void {
+		e.stopPropagation();
+		e.preventDefault();
+		const handle = e.target as HTMLElement;
+		const col = handle.parentElement;
+		if (col) startResizeDrag(col, e.clientX);
 	}
 </script>
 
@@ -258,6 +255,7 @@
 								onmousedown={initResize}
 							></span></th
 						>
+						<th>FLAGS<span class="resize-handle" onmousedown={initResize}></span></th>
 						<th onclick={() => handleSort('phy')} class="sortable"
 							>PHY{sortIndicator('phy')}<span
 								class="resize-handle"
@@ -288,7 +286,6 @@
 								onmousedown={initResize}
 							></span></th
 						>
-						<th>FLAGS</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -298,6 +295,12 @@
 							<td class="col-vendor">{device.vendor ?? '—'}</td>
 							<td class="col-product">{device.product ?? '—'}</td>
 							<td class="col-cat">{device.category}</td>
+							<td class="col-flags">
+								{#if device.isIbeacon}<span class="badge">iBeacon</span>{/if}
+								{#if device.isAirtag}<span class="badge badge-warn">AirTag</span
+									>{/if}
+								{#if device.bdClassic}<span class="badge">BR/EDR</span>{/if}
+							</td>
 							<td class="col-phy">{device.phy}</td>
 							<td class="col-rssi {rssiClass(device.rssiAvg)}"
 								>{formatRssi(device.rssiAvg)}</td
@@ -305,12 +308,6 @@
 							<td class="col-pkts">{device.packetCount}</td>
 							<td class="col-time">{formatTime(device.firstSeen)}</td>
 							<td class="col-time">{formatTime(device.lastSeen)}</td>
-							<td class="col-flags">
-								{#if device.isIbeacon}<span class="badge">iBeacon</span>{/if}
-								{#if device.isAirtag}<span class="badge badge-warn">AirTag</span
-									>{/if}
-								{#if device.bdClassic}<span class="badge">BR/EDR</span>{/if}
-							</td>
 						</tr>
 					{/each}
 				</tbody>
