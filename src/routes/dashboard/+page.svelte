@@ -24,6 +24,7 @@
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import ReportsView from '$lib/components/dashboard/views/ReportsView.svelte';
 	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
+	import SparrowView from '$lib/components/dashboard/views/SparrowView.svelte';
 	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
 	import ToolUnavailableView from '$lib/components/dashboard/views/ToolUnavailableView.svelte';
 	import ToolViewWrapper from '$lib/components/dashboard/views/ToolViewWrapper.svelte';
@@ -170,6 +171,8 @@
 				<LogsAnalyticsView />
 			{:else if $activeView === 'sightline'}
 				<SightlineView />
+			{:else if $activeView === 'sparrow-wifi'}
+				<SparrowView />
 			{:else if $activeView === 'spiderfoot'}
 				<SpiderfootView />
 			{:else if $activeView === 'webtak'}

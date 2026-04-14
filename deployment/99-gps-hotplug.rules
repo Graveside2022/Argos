@@ -1,0 +1,9 @@
+# Auto-add GPS serial dongles to gpsd on hotplug
+# Prolific PL2303 (common GPS USB-serial adapter)
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23a3", RUN+="/usr/bin/gpsdctl add /dev/%k"
+# FTDI-based GPS dongles
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", RUN+="/usr/bin/gpsdctl add /dev/%k"
+# CP2102/CP2104 (SiLabs) GPS dongles
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", RUN+="/usr/bin/gpsdctl add /dev/%k"
+# u-blox GPS receivers (direct USB, no serial bridge)
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", RUN+="/usr/bin/gpsdctl add /dev/%k"

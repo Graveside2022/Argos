@@ -87,7 +87,8 @@ export type ActiveView =
 	| 'webtak'
 	| 'tak-config'
 	| 'globalprotect'
-	| 'logs-analytics';
+	| 'logs-analytics'
+	| 'sparrow-wifi';
 
 export const activeView = writable<ActiveView>('map');
 

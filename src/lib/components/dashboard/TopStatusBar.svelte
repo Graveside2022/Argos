@@ -313,7 +313,7 @@
 					<span class="weather-icon"
 						>{@html getWeatherIcon(weather.weatherCode, weather.isDay)}</span
 					>
-					<span>{Math.round(weather.temperature)}°F</span>
+					<span>{Math.round((weather.temperature * 9) / 5 + 32)}°F</span>
 					<span class="weather-desc">{getWeatherCondition(weather.weatherCode)}</span>
 				</button>
 				{#if openDropdown === 'weather'}<WeatherDropdown {weather} />{/if}
