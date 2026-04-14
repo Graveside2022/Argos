@@ -7,9 +7,9 @@ import { persistedWritable } from '$lib/stores/persisted-writable';
 export const activePanel = writable<string | null>(null);
 
 /** Bottom panel tab type — gsm-evil removed (full-screen view), captures added */
-type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | null;
+type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth' | null;
 
-const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'dashboard'];
+const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'dashboard', 'bluetooth'];
 
 export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', 'terminal', {
 	serialize: (tab) => (tab === null ? 'null' : tab),
@@ -40,7 +40,7 @@ export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== nul
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
 export function toggleBottomTab(
-	tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard'
+	tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth'
 ): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }

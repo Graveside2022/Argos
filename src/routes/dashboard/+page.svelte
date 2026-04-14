@@ -11,6 +11,7 @@
 	import GpConfigView from '$lib/components/dashboard/globalprotect/GpConfigView.svelte';
 	import LogsPanel from '$lib/components/dashboard/LogsPanel.svelte';
 	import PanelContainer from '$lib/components/dashboard/PanelContainer.svelte';
+	import BluetoothPanel from '$lib/components/dashboard/panels/BluetoothPanel.svelte';
 	import CapturesPanel from '$lib/components/dashboard/panels/CapturesPanel.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
@@ -234,6 +235,11 @@
 				{#if mountedTabs.has('dashboard')}
 					<div class="tab-pane" class:tab-active={$activeBottomTab === 'dashboard'}>
 						<DevicesPanel />
+					</div>
+				{/if}
+				{#if mountedTabs.has('bluetooth')}
+					<div class="tab-pane" class:tab-active={$activeBottomTab === 'bluetooth'}>
+						<BluetoothPanel />
 					</div>
 				{/if}
 			</div>
