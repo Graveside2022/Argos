@@ -121,6 +121,20 @@ async function fetchWithTimeout(
 	}
 }
 
+function parseResponseJson(text: string, isOk: boolean, method: string, path: string): unknown {
+	if (!text) return null;
+	try {
+		return JSON.parse(text);
+	} catch (parseErr) {
+		if (isOk) {
+			throw new Error(
+				`${method} ${path} → 200 but invalid JSON: ${(parseErr as Error).message}`
+			);
+		}
+		return null;
+	}
+}
+
 function createArgosClient(baseUrl: string, apiKey: string): ArgosClient {
 	const call = async <T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> => {
 		const res = await fetchWithTimeout(
@@ -137,12 +151,7 @@ function createArgosClient(baseUrl: string, apiKey: string): ArgosClient {
 			path
 		);
 		const text = await res.text();
-		let json: unknown = null;
-		try {
-			json = text ? JSON.parse(text) : null;
-		} catch {
-			// leave null
-		}
+		const json = parseResponseJson(text, res.ok, method, path);
 		if (!res.ok) {
 			throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 300)}`);
 		}

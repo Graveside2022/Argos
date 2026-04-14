@@ -81,6 +81,20 @@
 		document.body.style.userSelect = '';
 	}
 
+	function onResizeKeydown(e: KeyboardEvent): void {
+		const step = e.shiftKey ? 50 : 10;
+		const max = window.innerHeight * MAX_PREVIEW_PCT;
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			previewHeight = Math.min(max, previewHeight + step);
+			reportsPreviewHeight.set(previewHeight);
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			previewHeight = Math.max(MIN_PREVIEW, previewHeight - step);
+			reportsPreviewHeight.set(previewHeight);
+		}
+	}
+
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 		window.addEventListener('mousemove', onResizeMove);
@@ -473,6 +487,7 @@
 			aria-valuemax={2000}
 			tabindex="0"
 			onmousedown={onResizeDown}
+			onkeydown={onResizeKeydown}
 		></div>
 		<div class="preview-pane" style="height: {previewHeight}px">
 			<div class="preview-toolbar">
@@ -519,9 +534,8 @@
 	{#if showNewMissionModal}
 		<div
 			class="modal-backdrop"
-			role="button"
+			role="presentation"
 			tabindex="-1"
-			aria-label="Close modal"
 			onclick={(e) => {
 				if (e.target === e.currentTarget) closeNewMissionModal();
 			}}

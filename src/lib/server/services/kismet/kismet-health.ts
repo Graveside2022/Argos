@@ -38,7 +38,7 @@ const DEVICES_TIMEOUT_MS = 5000;
 
 function kismetAuthHeader(): Record<string, string> {
 	if (!env.KISMET_PASSWORD) return {};
-	const raw = `${env.KISMET_USER}:${env.KISMET_PASSWORD}`;
+	const raw = `${env.KISMET_USER ?? 'kismet'}:${env.KISMET_PASSWORD}`;
 	return { Authorization: `Basic ${Buffer.from(raw).toString('base64')}` };
 }
 
