@@ -1,8 +1,12 @@
 import airpodsData from './data/airpods-models.json' with { type: 'json' };
 import appleContinuityData from './data/apple-continuity-types.json' with { type: 'json' };
 import companyIds from './data/company-ids.json' with { type: 'json' };
+import fastPairData from './data/fast-pair-models.json' with { type: 'json' };
+import ieeeOuiData from './data/ieee-oui.json' with { type: 'json' };
 import msCdpData from './data/ms-cdp-devices.json' with { type: 'json' };
+import samsungData from './data/samsung-device-types.json' with { type: 'json' };
 import serviceUuids from './data/service-uuids.json' with { type: 'json' };
+import xiaomiData from './data/xiaomi-device-types.json' with { type: 'json' };
 
 interface RawCompanyEntry {
 	code: number;
@@ -60,6 +64,22 @@ const msCdpMap: Map<string, string> = new Map(
 	Object.entries((msCdpData as MsCdpData).deviceTypes).map(([k, v]) => [k.toUpperCase(), v])
 );
 
+const ieeeOuiMap: Map<string, string> = new Map(
+	Object.entries(ieeeOuiData as Record<string, string>).map(([k, v]) => [k.toUpperCase(), v])
+);
+
+const xiaomiDeviceMap: Map<string, string> = new Map(
+	Object.entries(xiaomiData as Record<string, string>).map(([k, v]) => [k.toUpperCase(), v])
+);
+
+const samsungDeviceMap: Map<string, string> = new Map(
+	Object.entries(samsungData as Record<string, string>).map(([k, v]) => [k.toUpperCase(), v])
+);
+
+const fastPairMap: Map<string, string> = new Map(
+	Object.entries(fastPairData as Record<string, string>).map(([k, v]) => [k.toUpperCase(), v])
+);
+
 export function lookupVendor(companyId: number): string | null {
 	return companyIdMap.get(companyId) ?? null;
 }
@@ -80,18 +100,45 @@ export function lookupMsCdpDeviceType(typeByte: string): string | null {
 	return msCdpMap.get(typeByte.toUpperCase()) ?? null;
 }
 
-export function getLookupTableStats(): {
+export function lookupOuiVendor(mac: string): string | null {
+	const clean = mac.replace(/[:-]/g, '').toUpperCase().slice(0, 6);
+	return ieeeOuiMap.get(clean) ?? null;
+}
+
+export function lookupXiaomiDevice(typeHex: string): string | null {
+	return xiaomiDeviceMap.get(typeHex.toUpperCase()) ?? null;
+}
+
+export function lookupSamsungDevice(typeByte: string): string | null {
+	return samsungDeviceMap.get(typeByte.toUpperCase()) ?? null;
+}
+
+export function lookupFastPairModel(modelId: string): string | null {
+	return fastPairMap.get(modelId.toUpperCase()) ?? null;
+}
+
+interface LookupTableStats {
 	companyIds: number;
 	serviceUuids: number;
 	airpodsModels: number;
 	appleTypes: number;
 	msCdpTypes: number;
-} {
+	ieeeOui: number;
+	xiaomiDevices: number;
+	samsungDevices: number;
+	fastPairModels: number;
+}
+
+export function getLookupTableStats(): LookupTableStats {
 	return {
 		companyIds: companyIdMap.size,
 		serviceUuids: serviceUuidMap.size,
 		airpodsModels: airpodsModelMap.size,
 		appleTypes: appleContinuityMap.size,
-		msCdpTypes: msCdpMap.size
+		msCdpTypes: msCdpMap.size,
+		ieeeOui: ieeeOuiMap.size,
+		xiaomiDevices: xiaomiDeviceMap.size,
+		samsungDevices: samsungDeviceMap.size,
+		fastPairModels: fastPairMap.size
 	};
 }

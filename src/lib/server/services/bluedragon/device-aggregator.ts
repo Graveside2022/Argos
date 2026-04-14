@@ -42,6 +42,7 @@ function resolvePhy(frame: FrameObservation): BluetoothPhy {
 
 function buildIntelFromFrame(frame: FrameObservation): ReturnType<typeof decodeAdvertisement> {
 	return decodeAdvertisement({
+		addr: frame.addr,
 		localName: frame.localName,
 		manufacturerCompanyId: frame.manufacturerCompanyId,
 		manufacturerData: frame.manufacturerData,

@@ -3,9 +3,13 @@ import type { BluetoothAddrType, BluetoothCategory, BluetoothPhy } from '$lib/ty
 import {
 	lookupAirpodsModel,
 	lookupAppleContinuity,
+	lookupFastPairModel,
 	lookupMsCdpDeviceType,
+	lookupOuiVendor,
+	lookupSamsungDevice,
 	lookupServiceUuid16,
-	lookupVendor
+	lookupVendor,
+	lookupXiaomiDevice
 } from './lookup-tables';
 
 export interface DecodedIntel {
@@ -224,11 +228,13 @@ export function decodeFastPair(serviceDataBytes: Uint8Array): DecodedIntel {
 	const result: DecodedIntel = { ...EMPTY, vendor: 'Google', category: 'audio_earbud' };
 	if (serviceDataBytes.length < 3) return result;
 	const modelId = bytesToHex(serviceDataBytes.slice(0, 3));
-	result.product = `Fast Pair 0x${modelId}`;
+	const knownModel = lookupFastPairModel(modelId);
+	result.product = knownModel ?? `Fast Pair 0x${modelId}`;
 	return result;
 }
 
 export interface DecodeInput {
+	addr?: string | null;
 	localName?: string | null;
 	manufacturerCompanyId?: number | null;
 	manufacturerData?: Uint8Array | null;
@@ -242,15 +248,58 @@ function applyVendorLookup(best: DecodedIntel, companyId: number | null | undefi
 	if (vendor) best.vendor = vendor;
 }
 
+export function decodeXiaomiBeacon(msdBytes: Uint8Array): DecodedIntel {
+	const result: DecodedIntel = { ...EMPTY, vendor: 'Xiaomi' };
+	if (msdBytes.length < 5) return result;
+	const deviceType = ((msdBytes[3] << 8) | msdBytes[2])
+		.toString(16)
+		.toUpperCase()
+		.padStart(4, '0');
+	const model = lookupXiaomiDevice(deviceType);
+	if (model) result.product = model;
+	result.category = 'iot';
+	return result;
+}
+
+export function decodeSamsungBle(msdBytes: Uint8Array): DecodedIntel {
+	const result: DecodedIntel = { ...EMPTY, vendor: 'Samsung' };
+	if (msdBytes.length < 2) return result;
+	const typeByte = msdBytes[0].toString(16).toUpperCase().padStart(2, '0');
+	const model = lookupSamsungDevice(typeByte);
+	if (model) {
+		result.product = model;
+		result.category = inferSamsungCategory(model);
+	}
+	return result;
+}
+
+const SAMSUNG_CATEGORY_PATTERNS: [RegExp, BluetoothCategory][] = [
+	[/buds/i, 'audio_earbud'],
+	[/watch/i, 'wearable'],
+	[/tag/i, 'tracker'],
+	[/ring/i, 'wearable'],
+	[/fit/i, 'wearable']
+];
+
+function inferSamsungCategory(model: string): BluetoothCategory {
+	for (const [pattern, cat] of SAMSUNG_CATEGORY_PATTERNS) {
+		if (pattern.test(model)) return cat;
+	}
+	return 'phone_or_computer';
+}
+
+const MSD_DECODERS: Record<number, (data: Uint8Array) => DecodedIntel> = {
+	0x004c: decodeAppleContinuity,
+	0x0006: decodeMicrosoftCdp,
+	0x038f: decodeXiaomiBeacon,
+	0x0075: decodeSamsungBle
+};
+
 function applyManufacturerData(best: DecodedIntel, input: DecodeInput): DecodedIntel {
-	if (!input.manufacturerData) return best;
-	if (input.manufacturerCompanyId === 0x004c) {
-		return mergeIntel(best, decodeAppleContinuity(input.manufacturerData));
-	}
-	if (input.manufacturerCompanyId === 0x0006) {
-		return mergeIntel(best, decodeMicrosoftCdp(input.manufacturerData));
-	}
-	return best;
+	if (!input.manufacturerData || input.manufacturerCompanyId == null) return best;
+	const decoder = MSD_DECODERS[input.manufacturerCompanyId];
+	if (!decoder) return best;
+	return mergeIntel(best, decoder(input.manufacturerData));
 }
 
 function applyServiceUuidCategory(best: DecodedIntel, uuid: string): void {
@@ -297,6 +346,12 @@ function applyNameRuleHint(
 	if (best.category === 'unknown') best.category = hint.category;
 }
 
+function applyOuiVendorFallback(best: DecodedIntel, addr: string | null | undefined): void {
+	if (best.vendor || !addr) return;
+	const ouiVendor = lookupOuiVendor(addr);
+	if (ouiVendor) best.vendor = ouiVendor;
+}
+
 export function decodeAdvertisement(input: DecodeInput): DecodedIntel {
 	let best: DecodedIntel = { ...EMPTY };
 
@@ -309,6 +364,7 @@ export function decodeAdvertisement(input: DecodeInput): DecodedIntel {
 
 	applyServiceUuids(best, input.serviceUuids16);
 	applyLocalNameHint(best, input.localName);
+	applyOuiVendorFallback(best, input.addr);
 
 	return best;
 }
