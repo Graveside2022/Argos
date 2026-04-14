@@ -1,7 +1,7 @@
 <!--
   Bluetooth panel — bottom panel tab content showing Blue Dragon captured BLE/BT devices.
-  Mirrors CapturesPanel visual pattern. Polls /api/bluedragon/status + /devices every 2s
-  while Blue Dragon is running. Start/stop button triggers POST /api/bluedragon/control.
+  Uses proper HTML table with sortable column headers matching Wi-Fi tab pattern.
+  Polls /api/bluedragon/status + /devices every 2s while Blue Dragon is running.
 -->
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Custom table layout tightly coupled to BluetoothDevice shape; shadcn Table component incompatible with fixed-width column spec -->
 <script lang="ts">
@@ -17,10 +17,23 @@
 	} from '$lib/stores/bluedragon/bluetooth-store';
 	import type { BluedragonProfile, BluetoothDevice } from '$lib/types/bluedragon';
 
+	type SortKey =
+		| 'addr'
+		| 'vendor'
+		| 'product'
+		| 'category'
+		| 'phy'
+		| 'rssi'
+		| 'pkts'
+		| 'first'
+		| 'last';
+
 	let profile: BluedragonProfile = $state('volume');
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let starting = $state(false);
 	let stopping = $state(false);
+	let sortKey: SortKey = $state('last');
+	let sortDir: 'asc' | 'desc' = $state('desc');
 
 	function syncPollTimer(isRunning: boolean): void {
 		if (isRunning && !pollTimer) {
@@ -69,8 +82,42 @@
 		}
 	}
 
+	function handleSort(col: SortKey): void {
+		if (sortKey === col) {
+			sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+			return;
+		}
+		sortKey = col;
+		sortDir = col === 'addr' ? 'asc' : 'desc';
+	}
+
+	function sortIndicator(col: SortKey): string {
+		if (sortKey !== col) return '';
+		return sortDir === 'asc' ? ' ^' : ' v';
+	}
+
+	const SORT_ACCESSORS: Record<SortKey, (d: BluetoothDevice) => string | number> = {
+		addr: (d) => d.addr,
+		vendor: (d) => d.vendor ?? '',
+		product: (d) => d.product ?? '',
+		category: (d) => d.category,
+		phy: (d) => d.phy,
+		rssi: (d) => d.rssiAvg ?? -999,
+		pkts: (d) => d.packetCount,
+		first: (d) => d.firstSeen,
+		last: (d) => d.lastSeen
+	};
+
+	function compareDevices(a: BluetoothDevice, b: BluetoothDevice): number {
+		const accessor = SORT_ACCESSORS[sortKey];
+		const va = accessor(a);
+		const vb = accessor(b);
+		const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+		return sortDir === 'asc' ? cmp : -cmp;
+	}
+
 	function sortedDevices(map: Map<string, BluetoothDevice>): BluetoothDevice[] {
-		return Array.from(map.values()).sort((a, b) => b.lastSeen - a.lastSeen);
+		return Array.from(map.values()).sort(compareDevices);
 	}
 
 	function formatTime(ts: number): string {
@@ -90,10 +137,6 @@
 		return dbm == null ? '—' : `${dbm.toFixed(0)} dBm`;
 	}
 
-	function statusLabel(status: string): string {
-		return status.toUpperCase();
-	}
-
 	function statusClass(status: string): string {
 		if (status === 'running') return 'chip-running';
 		if (status === 'starting' || status === 'stopping') return 'chip-transition';
@@ -105,7 +148,7 @@
 	<div class="toolbar">
 		<span class="title">BLUETOOTH</span>
 		<span class="chip {statusClass($bluetoothStore.status)}"
-			>{statusLabel($bluetoothStore.status)}</span
+			>{$bluetoothStore.status.toUpperCase()}</span
 		>
 		{#if $bluetoothStore.status === 'running'}
 			<span class="profile-tag">{$bluetoothStore.profile ?? 'volume'}</span>
@@ -146,41 +189,64 @@
 			<p class="empty-sub">Waiting for first packets</p>
 		</div>
 	{:else}
-		<div class="table">
-			<div class="table-header">
-				<span class="col col-addr">ADDRESS</span>
-				<span class="col col-vendor">VENDOR</span>
-				<span class="col col-product">PRODUCT</span>
-				<span class="col col-cat">CATEGORY</span>
-				<span class="col col-phy">PHY</span>
-				<span class="col col-rssi">RSSI</span>
-				<span class="col col-pkts">PKTS</span>
-				<span class="col col-first">FIRST</span>
-				<span class="col col-last">LAST</span>
-				<span class="col col-flags">FLAGS</span>
-			</div>
-			<div class="table-body">
-				{#each sortedDevices($bluetoothStore.devices) as device (device.addr)}
-					<div class="table-row">
-						<span class="col col-addr">{device.addr}</span>
-						<span class="col col-vendor">{device.vendor ?? '—'}</span>
-						<span class="col col-product">{device.product ?? '—'}</span>
-						<span class="col col-cat">{device.category}</span>
-						<span class="col col-phy">{device.phy}</span>
-						<span class="col col-rssi {rssiClass(device.rssiAvg)}"
-							>{formatRssi(device.rssiAvg)}</span
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th onclick={() => handleSort('addr')} class="sortable col-addr"
+							>ADDRESS{sortIndicator('addr')}</th
 						>
-						<span class="col col-pkts">{device.packetCount}</span>
-						<span class="col col-first">{formatTime(device.firstSeen)}</span>
-						<span class="col col-last">{formatTime(device.lastSeen)}</span>
-						<span class="col col-flags">
-							{#if device.isIbeacon}<span class="badge">iBeacon</span>{/if}
-							{#if device.isAirtag}<span class="badge badge-warn">AirTag</span>{/if}
-							{#if device.bdClassic}<span class="badge">BR/EDR</span>{/if}
-						</span>
-					</div>
-				{/each}
-			</div>
+						<th onclick={() => handleSort('vendor')} class="sortable col-vendor"
+							>VENDOR{sortIndicator('vendor')}</th
+						>
+						<th onclick={() => handleSort('product')} class="sortable col-product"
+							>PRODUCT{sortIndicator('product')}</th
+						>
+						<th onclick={() => handleSort('category')} class="sortable col-cat"
+							>CATEGORY{sortIndicator('category')}</th
+						>
+						<th onclick={() => handleSort('phy')} class="sortable col-phy"
+							>PHY{sortIndicator('phy')}</th
+						>
+						<th onclick={() => handleSort('rssi')} class="sortable col-rssi"
+							>RSSI{sortIndicator('rssi')}</th
+						>
+						<th onclick={() => handleSort('pkts')} class="sortable col-pkts"
+							>PKTS{sortIndicator('pkts')}</th
+						>
+						<th onclick={() => handleSort('first')} class="sortable col-time"
+							>FIRST{sortIndicator('first')}</th
+						>
+						<th onclick={() => handleSort('last')} class="sortable col-time"
+							>LAST{sortIndicator('last')}</th
+						>
+						<th class="col-flags">FLAGS</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each sortedDevices($bluetoothStore.devices) as device (device.addr)}
+						<tr>
+							<td class="col-addr">{device.addr}</td>
+							<td class="col-vendor">{device.vendor ?? '—'}</td>
+							<td class="col-product">{device.product ?? '—'}</td>
+							<td class="col-cat">{device.category}</td>
+							<td class="col-phy">{device.phy}</td>
+							<td class="col-rssi {rssiClass(device.rssiAvg)}"
+								>{formatRssi(device.rssiAvg)}</td
+							>
+							<td class="col-pkts">{device.packetCount}</td>
+							<td class="col-time">{formatTime(device.firstSeen)}</td>
+							<td class="col-time">{formatTime(device.lastSeen)}</td>
+							<td class="col-flags">
+								{#if device.isIbeacon}<span class="badge">iBeacon</span>{/if}
+								{#if device.isAirtag}<span class="badge badge-warn">AirTag</span
+									>{/if}
+								{#if device.bdClassic}<span class="badge">BR/EDR</span>{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 	{/if}
 </div>
@@ -286,7 +352,7 @@
 
 	.error-banner {
 		padding: 4px 12px;
-		font-size: 10px;
+		font-size: 11px;
 		background: var(--status-error-panel, #c45b4a);
 		color: var(--background);
 	}
@@ -302,77 +368,86 @@
 
 	.empty-title {
 		font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
-		font-size: 14px;
+		font-size: 16px;
 		color: var(--foreground-secondary);
 		margin: 0;
 	}
 
 	.empty-sub {
 		font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
-		font-size: 12px;
+		font-size: 13px;
 		color: var(--muted-foreground);
 		margin: 0;
 	}
 
-	.table {
-		display: flex;
-		flex-direction: column;
+	.table-wrap {
 		flex: 1;
-		overflow: hidden;
+		overflow-y: auto;
+		overflow-x: auto;
 	}
 
-	.table-header {
-		display: flex;
-		align-items: center;
-		padding: 6px 12px;
-		background: var(--surface-header);
-		border-bottom: 1px solid var(--border);
-		font-size: 11px;
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+
+	thead {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: var(--surface-header, var(--card));
+	}
+
+	th {
+		padding: 6px 10px;
+		font-size: 10px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 0.8px;
-	}
-
-	.table-body {
-		flex: 1;
-		overflow-y: auto;
-		overflow-x: hidden;
-	}
-
-	.table-row {
-		display: flex;
-		align-items: center;
-		padding: 5px 12px;
-		font-size: 13px;
-		color: var(--foreground);
+		text-align: left;
 		border-bottom: 1px solid var(--border);
+		white-space: nowrap;
+		user-select: none;
 	}
 
-	.table-row:hover {
+	th.sortable {
+		cursor: pointer;
+	}
+
+	th.sortable:hover {
+		color: var(--foreground);
 		background: var(--surface-hover);
 	}
 
-	.col {
-		flex-shrink: 0;
-	}
-
-	.col-addr {
-		width: 155px;
-	}
-
-	.col-vendor {
-		width: 145px;
-	}
-
-	.col-product {
-		width: 200px;
+	td {
+		padding: 5px 10px;
+		font-size: 14px;
+		color: var(--foreground);
+		border-bottom: 1px solid var(--border);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
+	tr:hover td {
+		background: var(--surface-hover);
+	}
+
+	.col-addr {
+		width: 160px;
+	}
+
+	.col-vendor {
+		width: 150px;
+	}
+
+	.col-product {
+		width: 200px;
+	}
+
 	.col-cat {
-		width: 110px;
+		width: 120px;
 		color: var(--foreground-secondary);
 	}
 
@@ -382,33 +457,32 @@
 	}
 
 	.col-rssi {
-		width: 80px;
+		width: 90px;
 	}
 
 	.col-pkts {
-		width: 65px;
+		width: 70px;
 		color: var(--foreground-secondary);
 	}
 
-	.col-first,
-	.col-last {
-		width: 85px;
+	.col-time {
+		width: 90px;
 		color: var(--foreground-secondary);
 	}
 
 	.col-flags {
-		flex: 1;
-		display: flex;
-		gap: 4px;
+		width: auto;
 	}
 
 	.badge {
+		display: inline-block;
 		padding: 2px 6px;
 		font-size: 10px;
 		background: var(--surface-hover);
 		border: 1px solid var(--border);
 		border-radius: 2px;
 		color: var(--foreground-secondary);
+		margin-right: 4px;
 	}
 
 	.badge-warn {
