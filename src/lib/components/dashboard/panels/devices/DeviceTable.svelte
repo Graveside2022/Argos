@@ -173,7 +173,7 @@
 	th {
 		background: var(--surface-header, #181818);
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 600;
 		letter-spacing: var(--letter-spacing-wider);
 		color: var(--foreground-secondary, #888888);
@@ -185,6 +185,7 @@
 
 	td {
 		padding: var(--space-1) var(--space-3);
+		font-size: 14px;
 		border-bottom: 1px solid var(--border);
 	}
 

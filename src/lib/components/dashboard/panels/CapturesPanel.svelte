@@ -200,7 +200,7 @@
 	}
 
 	.captures-title {
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 		letter-spacing: 1.5px;
@@ -211,7 +211,7 @@
 	}
 
 	.captures-count {
-		font-size: 10px;
+		font-size: 12px;
 		color: var(--muted-foreground);
 	}
 
@@ -248,10 +248,10 @@
 	.table-header {
 		display: flex;
 		align-items: center;
-		padding: 4px 12px;
+		padding: 6px 12px;
 		background: var(--surface-header);
 		border-bottom: 1px solid var(--border);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--foreground-secondary);
 	}
@@ -265,8 +265,8 @@
 	.table-row {
 		display: flex;
 		align-items: center;
-		padding: 3px 12px;
-		font-size: 11px;
+		padding: 5px 12px;
+		font-size: 14px;
 		color: var(--foreground);
 		border-bottom: 1px solid var(--border);
 	}
