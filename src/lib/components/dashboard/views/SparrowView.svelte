@@ -13,6 +13,24 @@
 	let wsUrl = $state('');
 	let vncKey = $state(0);
 
+	function buildWsUrl(wsPort: number, wsPath: string): string {
+		const host = window.location.hostname;
+		const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+		return `${proto}://${host}:${wsPort}${wsPath}`;
+	}
+
+	function applyStatusData(data: Record<string, unknown>): void {
+		const vnc = data.vnc as
+			| { isRunning?: boolean; wsPort?: number; wsPath?: string }
+			| undefined;
+		if (vnc?.isRunning && vnc.wsPort && vnc.wsPath) {
+			wsUrl = buildWsUrl(vnc.wsPort, vnc.wsPath);
+			serviceStatus = 'running';
+		} else {
+			serviceStatus = 'stopped';
+		}
+	}
+
 	async function checkStatus(): Promise<void> {
 		try {
 			const res = await fetch('/api/sparrow/control', {
@@ -21,14 +39,12 @@
 				credentials: 'same-origin',
 				body: JSON.stringify({ action: 'status' })
 			});
-			const data = await res.json();
-			if (data.vnc?.isRunning) {
-				const host = window.location.hostname;
-				wsUrl = `ws://${host}:${data.vnc.wsPort}${data.vnc.wsPath}`;
-				serviceStatus = 'running';
-			} else {
-				serviceStatus = 'stopped';
+			if (!res.ok) {
+				serviceStatus = 'error';
+				errorMsg = `Status check failed: ${res.status}`;
+				return;
 			}
+			applyStatusData(await res.json());
 		} catch {
 			serviceStatus = 'error';
 			errorMsg = 'Failed to check Sparrow-WiFi status';

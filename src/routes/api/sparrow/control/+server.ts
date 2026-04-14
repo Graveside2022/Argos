@@ -80,9 +80,14 @@ const ACTION_HANDLERS: Record<string, () => Promise<Response>> = {
  * Body: { action: "start" | "stop" | "status" }
  */
 export const POST = createHandler(async ({ request, url }) => {
-	const rawBody = await request.json();
+	let rawBody: unknown;
+	try {
+		rawBody = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON body');
+	}
 	const validated = safeParseWithHandling(SparrowControlSchema, rawBody, 'user-action');
-	if (!validated) return error(400, 'Invalid Sparrow-WiFi control request');
+	if (!validated) throw error(400, 'Invalid Sparrow-WiFi control request');
 
 	const { action } = validated;
 	if (url.searchParams.get('mock') === 'true') return json(MOCK_RESPONSES[action]);

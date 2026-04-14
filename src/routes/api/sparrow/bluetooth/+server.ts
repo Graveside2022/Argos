@@ -33,18 +33,26 @@ export const GET = createHandler(async () => {
  * Start or stop Bluetooth scanning on the Sparrow agent.
  * Body: { action: "start" | "stop" }
  */
+async function parseBody(request: Request) {
+	try {
+		return await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON body');
+	}
+}
+
+function buildBtMessage(action: string, success: boolean): string {
+	const verb = action === 'start' ? 'started' : 'stopped';
+	return success ? `Bluetooth scan ${verb}` : `Failed to ${action} Bluetooth scan`;
+}
+
 export const POST = createHandler(async ({ request }) => {
-	const rawBody = await request.json();
+	const rawBody = await parseBody(request);
 	const validated = safeParseWithHandling(BluetoothControlSchema, rawBody, 'user-action');
-	if (!validated) return error(400, 'Invalid Bluetooth control request');
+	if (!validated) throw error(400, 'Invalid Bluetooth control request');
 
 	const success =
 		validated.action === 'start' ? await startBluetoothScan() : await stopBluetoothScan();
 
-	return json({
-		success,
-		message: success
-			? `Bluetooth scan ${validated.action === 'start' ? 'started' : 'stopped'}`
-			: `Failed to ${validated.action} Bluetooth scan`
-	});
+	return json({ success, message: buildBtMessage(validated.action, success) });
 });

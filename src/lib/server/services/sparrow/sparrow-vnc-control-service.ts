@@ -43,7 +43,6 @@ function registerShutdownHandler(): void {
 	};
 	process.once('SIGTERM', handler);
 	process.once('SIGINT', handler);
-	process.once('exit', handler);
 }
 
 // ─────────────────────────────── start ──────────────────────────────────
