@@ -81,7 +81,7 @@ describe('DeviceAggregator', () => {
 	});
 
 	it('classifies BLE advertising address type', () => {
-		agg.ingest(makeFrame({ addr: '7e:be:29:73:a9:b3' }));
+		agg.ingest(makeFrame({ addr: '9e:be:29:73:a9:b3' }));
 		expect(agg.getSnapshot()[0].addrType).toBe('random_resolvable');
 	});
 

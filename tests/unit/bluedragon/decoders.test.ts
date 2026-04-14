@@ -34,17 +34,17 @@ describe('hex helpers', () => {
 });
 
 describe('classifyBleAddress', () => {
-	it('detects random resolvable', () => {
-		expect(classifyBleAddress('7e:be:29:73:a9:b3')).toBe('random_resolvable');
+	it('detects random nonresolvable (MSB 01)', () => {
+		expect(classifyBleAddress('7e:be:29:73:a9:b3')).toBe('random_nonresolvable');
 	});
 	it('detects random static', () => {
 		expect(classifyBleAddress('f1:22:33:44:55:66')).toBe('random_static');
 	});
-	it('detects random nonresolvable', () => {
-		expect(classifyBleAddress('12:34:56:78:9a:bc')).toBe('random_nonresolvable');
+	it('detects public (MSB 00)', () => {
+		expect(classifyBleAddress('12:34:56:78:9a:bc')).toBe('public');
 	});
-	it('detects public (MSB 10)', () => {
-		expect(classifyBleAddress('84:fc:fe:12:34:56')).toBe('public');
+	it('detects random resolvable (MSB 10)', () => {
+		expect(classifyBleAddress('84:fc:fe:12:34:56')).toBe('random_resolvable');
 	});
 });
 

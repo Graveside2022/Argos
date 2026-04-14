@@ -47,15 +47,16 @@ export function bytesToHex(bytes: Uint8Array): string {
 
 const ADDR_TYPE_BY_TOP_BITS: Record<number, BluetoothAddrType> = {
 	0b11: 'random_static',
-	0b01: 'random_resolvable',
-	0b00: 'random_nonresolvable'
+	0b10: 'random_resolvable',
+	0b01: 'random_nonresolvable',
+	0b00: 'public'
 };
 
 export function classifyBleAddress(addr: string): BluetoothAddrType {
 	const first = parseInt(addr.slice(0, 2), 16);
 	if (Number.isNaN(first)) return 'unknown';
 	const topTwoBits = (first >> 6) & 0x03;
-	return ADDR_TYPE_BY_TOP_BITS[topTwoBits] ?? 'public';
+	return ADDR_TYPE_BY_TOP_BITS[topTwoBits] ?? 'unknown';
 }
 
 function stripToPrintable(raw: string): string {
@@ -346,8 +347,14 @@ function applyNameRuleHint(
 	if (best.category === 'unknown') best.category = hint.category;
 }
 
+function isPublicAddress(addr: string): boolean {
+	const first = parseInt(addr.slice(0, 2), 16);
+	return !Number.isNaN(first) && ((first >> 6) & 0x03) === 0;
+}
+
 function applyOuiVendorFallback(best: DecodedIntel, addr: string | null | undefined): void {
 	if (best.vendor || !addr) return;
+	if (!isPublicAddress(addr)) return;
 	const ouiVendor = lookupOuiVendor(addr);
 	if (ouiVendor) best.vendor = ouiVendor;
 }
