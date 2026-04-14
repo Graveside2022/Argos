@@ -193,9 +193,10 @@
 	.captures-toolbar {
 		display: flex;
 		align-items: center;
-		padding: 4px 12px;
-		height: 28px;
-		min-height: 28px;
+		gap: 10px;
+		padding: 6px 12px;
+		height: 36px;
+		min-height: 36px;
 		border-bottom: 1px solid var(--border);
 	}
 
@@ -341,16 +342,16 @@
 
 	.europe-tag {
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 9px;
+		font-size: 12px;
 		color: var(--muted-foreground);
 		letter-spacing: 0.5px;
 		opacity: 0.7;
 	}
 
 	.scan-btn {
-		padding: 3px 12px;
+		padding: 4px 14px;
 		font-family: var(--font-mono, 'Fira Code', monospace);
-		font-size: 12px;
+		font-size: 13px;
 		font-weight: 600;
 		letter-spacing: 0.8px;
 		border: 1px solid var(--border);
