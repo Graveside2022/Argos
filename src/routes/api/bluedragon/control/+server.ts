@@ -10,8 +10,16 @@ const BluedragonControlSchema = z.object({
 	profile: z.enum(['clean', 'volume', 'max']).optional().describe('Tuning profile')
 });
 
+async function parseJsonBody(request: Request): Promise<unknown> {
+	try {
+		return await request.json();
+	} catch {
+		return error(400, 'Invalid JSON body');
+	}
+}
+
 export const POST = createHandler(async ({ request }) => {
-	const rawBody = await request.json();
+	const rawBody = await parseJsonBody(request);
 	const validated = safeParseWithHandling(BluedragonControlSchema, rawBody, 'user-action');
 	if (!validated) return error(400, 'Invalid Blue Dragon control request');
 

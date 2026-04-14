@@ -160,12 +160,12 @@ export class DeviceAggregator {
 			const device = this.createDevice(addr, frame);
 			this.devices.set(addr, device);
 			this.broadcast('upsert', device);
-			this.throttles.set(addr, { lastBroadcast: frame.timestamp, dirty: false });
+			this.throttles.set(addr, { lastBroadcast: Date.now(), dirty: false });
 			return;
 		}
 
 		this.updateExisting(existing, frame);
-		this.maybeBroadcast(addr, frame.timestamp);
+		this.maybeBroadcast(addr);
 	}
 
 	private createDevice(addr: string, frame: FrameObservation): BluetoothDevice {
@@ -207,10 +207,11 @@ export class DeviceAggregator {
 		if (throttle) throttle.dirty = true;
 	}
 
-	private maybeBroadcast(addr: string, now: number): void {
+	private maybeBroadcast(addr: string): void {
 		const throttle = this.throttles.get(addr);
 		const device = this.devices.get(addr);
 		if (!throttle || !device || !throttle.dirty) return;
+		const now = Date.now();
 		if (now - throttle.lastBroadcast < MIN_BROADCAST_INTERVAL_MS) return;
 		this.broadcast('upsert', device);
 		throttle.lastBroadcast = now;

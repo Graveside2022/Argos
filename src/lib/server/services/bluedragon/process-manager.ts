@@ -15,9 +15,11 @@ import { logger } from '$lib/utils/logger';
 import { DeviceAggregator } from './device-aggregator';
 import { PcapStreamParser } from './pcap-stream-parser';
 
-const BD_BIN = '/home/kali/Documents/Argos/Argos/tactical/blue-dragon/target/release/blue-dragon';
-const BD_PCAP_PATH = '/tmp/bd-live.fifo';
-const BD_INTERFACE = 'usrp-B205mini-329F4D0';
+const BD_BIN =
+	process.env.BD_BIN ??
+	'/home/kali/Documents/Argos/Argos/tactical/blue-dragon/target/release/blue-dragon';
+const BD_PCAP_PATH = process.env.BD_PCAP_PATH ?? '/tmp/bd-live.fifo';
+const BD_INTERFACE = process.env.BD_INTERFACE ?? 'usrp-B205mini-329F4D0';
 const PARSER_START_DELAY_MS = 1000;
 const SIGINT_GRACE_MS = 2000;
 const SIGKILL_GRACE_MS = 500;
@@ -64,7 +66,9 @@ const state: RuntimeState = {
 
 function ensureFifo(path: string): void {
 	if (existsSync(path)) unlinkSync(path);
-	spawnSync('/usr/bin/mkfifo', [path]);
+	const result = spawnSync('/usr/bin/mkfifo', [path]);
+	if (result.status !== 0)
+		throw new Error(`mkfifo failed: ${result.stderr?.toString() ?? 'unknown'}`);
 }
 
 function cleanupFifo(path: string): void {

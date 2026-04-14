@@ -35,6 +35,7 @@
 	let stopping = $state(false);
 	let sortKey: SortKey = $state('last');
 	let sortDir: 'asc' | 'desc' = $state('desc');
+	let activeResizeCleanup: (() => void) | null = null;
 
 	function syncPollTimer(isRunning: boolean): void {
 		if (isRunning && !pollTimer) {
@@ -63,6 +64,7 @@
 
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer);
+		if (activeResizeCleanup) activeResizeCleanup();
 	});
 
 	async function onStart(): Promise<void> {
@@ -84,11 +86,15 @@
 	}
 
 	async function onClear(): Promise<void> {
-		await fetch('/api/bluedragon/devices/reset', {
-			method: 'POST',
-			credentials: 'same-origin'
-		});
-		applyBluetoothDevices([]);
+		try {
+			const res = await fetch('/api/bluedragon/devices/reset', {
+				method: 'POST',
+				credentials: 'same-origin'
+			});
+			if (res.ok) applyBluetoothDevices([]);
+		} catch {
+			/* ignore */
+		}
 	}
 
 	function handleSort(col: SortKey): void {
@@ -180,6 +186,7 @@
 
 		document.addEventListener('mousemove', onMove);
 		document.addEventListener('mouseup', onUp);
+		activeResizeCleanup = onUp;
 	}
 
 	function initResize(e: MouseEvent): void {

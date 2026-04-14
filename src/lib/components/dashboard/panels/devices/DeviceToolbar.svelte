@@ -62,6 +62,12 @@
 				credentials: 'same-origin',
 				body: JSON.stringify({ action })
 			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				setKismetStatus('stopped');
+				toast.error(data.message ?? `Kismet ${action} failed (${res.status})`);
+				return;
+			}
 			handleKismetResult(await res.json(), action);
 		} catch {
 			setKismetStatus('stopped');
@@ -164,10 +170,10 @@
 
 	<div class="toolbar-separator"></div>
 
-	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear results">
+	<button class="scan-btn scan-clear" onclick={() => onSearchChange('')} title="Clear search">
 		Clear
 	</button>
-	{#if $kismetStore.status === 'running'}
+	{#if $kismetStore.status === 'running' || $kismetStore.status === 'stopping'}
 		<button
 			class="scan-btn scan-stop"
 			onclick={() => sendKismetControl('stop')}
