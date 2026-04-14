@@ -1,6 +1,7 @@
 <!-- @constitutional-exemption Article-IV-4.2 issue:#12 — Band filter chips, back button use custom 24x20px sizing incompatible with shadcn Button -->
 <script lang="ts">
 	import Input from '$lib/components/ui/input/input.svelte';
+	import { kismetStore, setKismetStatus } from '$lib/stores/tactical-map/kismet-store';
 	import { signalBands } from '$lib/utils/signal-utils';
 
 	interface Props {
@@ -34,10 +35,39 @@
 		onToggleNoSignal,
 		onToggleOnlyWithClients
 	}: Props = $props();
+
+	let kismetBusy = $state(false);
+
+	async function sendKismetControl(action: 'start' | 'stop'): Promise<void> {
+		kismetBusy = true;
+		setKismetStatus(action === 'start' ? 'starting' : 'stopping');
+		try {
+			const res = await fetch('/api/kismet/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ action })
+			});
+			const data = await res.json();
+			setKismetStatus(
+				data.success ? (action === 'start' ? 'running' : 'stopped') : 'stopped'
+			);
+		} catch {
+			setKismetStatus('stopped');
+		} finally {
+			kismetBusy = false;
+		}
+	}
 </script>
 
 <div class="panel-toolbar">
-	<span class="panel-title">DEVICES</span>
+	<span class="panel-title">WI-FI</span>
+	<span
+		class="status-chip"
+		class:chip-running={$kismetStore.status === 'running'}
+		class:chip-transition={$kismetStore.status === 'starting' ||
+			$kismetStore.status === 'stopping'}>{$kismetStore.status.toUpperCase()}</span
+	>
 	<span class="device-count">{deviceCount}</span>
 	{#if renderedCount !== undefined && renderedCount < deviceCount}
 		<span class="cap-badge">showing {renderedCount}</span>
@@ -121,6 +151,26 @@
 			{/if}
 		</button>
 	</div>
+
+	<div class="toolbar-separator"></div>
+
+	{#if $kismetStore.status === 'running'}
+		<button
+			class="scan-btn scan-stop"
+			onclick={() => sendKismetControl('stop')}
+			disabled={kismetBusy}
+		>
+			{kismetBusy ? 'Stopping…' : 'Stop'}
+		</button>
+	{:else}
+		<button
+			class="scan-btn scan-start"
+			onclick={() => sendKismetControl('start')}
+			disabled={kismetBusy}
+		>
+			{kismetBusy ? 'Starting…' : 'Start'}
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -242,5 +292,61 @@
 		font-size: 8px;
 		color: var(--primary);
 		line-height: 1;
+	}
+
+	.status-chip {
+		padding: 2px 8px;
+		border-radius: 3px;
+		font-family: var(--font-mono);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		background: var(--surface-hover);
+		color: var(--muted-foreground);
+	}
+
+	.status-chip.chip-running {
+		background: var(--status-healthy, #8bbfa0);
+		color: var(--background);
+	}
+
+	.status-chip.chip-transition {
+		background: var(--status-warning, #d4a054);
+		color: var(--background);
+	}
+
+	.scan-btn {
+		padding: 3px 12px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.scan-start {
+		background: var(--card);
+		color: var(--foreground);
+	}
+
+	.scan-start:hover:not(:disabled) {
+		background: var(--surface-hover);
+	}
+
+	.scan-stop {
+		background: var(--card);
+		color: var(--foreground);
+	}
+
+	.scan-stop:hover:not(:disabled) {
+		background: var(--surface-hover);
+	}
+
+	.scan-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>

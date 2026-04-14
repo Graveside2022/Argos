@@ -9,6 +9,43 @@
 
 	import { browser } from '$app/environment';
 
+	let gsmStatus: 'stopped' | 'starting' | 'running' | 'stopping' = $state('stopped');
+	let gsmBusy = $state(false);
+
+	async function fetchGsmStatus(): Promise<void> {
+		try {
+			const res = await fetch('/api/gsm-evil/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ action: 'status' })
+			});
+			const data = await res.json();
+			gsmStatus = data.isRunning ? 'running' : 'stopped';
+		} catch {
+			gsmStatus = 'stopped';
+		}
+	}
+
+	async function sendGsmControl(action: 'start' | 'stop'): Promise<void> {
+		gsmBusy = true;
+		gsmStatus = action === 'start' ? 'starting' : 'stopping';
+		try {
+			const res = await fetch('/api/gsm-evil/control', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'same-origin',
+				body: JSON.stringify({ action })
+			});
+			const data = await res.json();
+			gsmStatus = data.success ? (action === 'start' ? 'running' : 'stopped') : 'stopped';
+		} catch {
+			gsmStatus = 'stopped';
+		} finally {
+			gsmBusy = false;
+		}
+	}
+
 	interface Signal {
 		id: string;
 		frequency: number;
@@ -67,6 +104,7 @@
 	onMount(() => {
 		if (!browser) return;
 		void fetchSignals();
+		void fetchGsmStatus();
 		const interval = setInterval(() => void fetchSignals(), 10_000);
 		return () => clearInterval(interval);
 	});
@@ -74,9 +112,33 @@
 
 <div class="captures-panel">
 	<div class="captures-toolbar">
-		<span class="captures-title">CAPTURES</span>
+		<span class="captures-title">IMSI CAPTURE</span>
+		<span
+			class="gsm-chip"
+			class:chip-running={gsmStatus === 'running'}
+			class:chip-transition={gsmStatus === 'starting' || gsmStatus === 'stopping'}
+			>{gsmStatus.toUpperCase()}</span
+		>
+		<span class="europe-tag">Europe only</span>
 		<span class="spacer"></span>
 		<span class="captures-count">{signals.length} signals</span>
+		{#if gsmStatus === 'running'}
+			<button
+				class="scan-btn scan-stop"
+				onclick={() => sendGsmControl('stop')}
+				disabled={gsmBusy}
+			>
+				{gsmBusy ? 'Stopping…' : 'Stop'}
+			</button>
+		{:else}
+			<button
+				class="scan-btn scan-start"
+				onclick={() => sendGsmControl('start')}
+				disabled={gsmBusy}
+			>
+				{gsmBusy ? 'Starting…' : 'Start'}
+			</button>
+		{/if}
 	</div>
 
 	{#if loading}
@@ -254,5 +316,57 @@
 
 	.power-none {
 		color: var(--foreground-tertiary);
+	}
+
+	.gsm-chip {
+		padding: 2px 8px;
+		border-radius: 3px;
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 9px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		background: var(--surface-hover);
+		color: var(--muted-foreground);
+	}
+
+	.gsm-chip.chip-running {
+		background: var(--status-healthy, #8bbfa0);
+		color: var(--background);
+	}
+
+	.gsm-chip.chip-transition {
+		background: var(--status-warning, #d4a054);
+		color: var(--background);
+	}
+
+	.europe-tag {
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 9px;
+		color: var(--muted-foreground);
+		letter-spacing: 0.5px;
+		opacity: 0.7;
+	}
+
+	.scan-btn {
+		padding: 3px 12px;
+		font-family: var(--font-mono, 'Fira Code', monospace);
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.8px;
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		cursor: pointer;
+		flex-shrink: 0;
+		background: var(--card);
+		color: var(--foreground);
+	}
+
+	.scan-btn:hover:not(:disabled) {
+		background: var(--surface-hover);
+	}
+
+	.scan-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>
