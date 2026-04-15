@@ -289,3 +289,15 @@ map-data/*.csv
 
 # Blue Dragon — third-party Rust BLE sniffer, see plans/linear-knitting-flute.md
 tactical/blue-dragon/
+
+# Security — IDE settings with secrets
+.vscode/settings.json
+
+# Generated output
+_bmad-output/
+
+# Dev tooling (not project code)
+claude-code-lsp-enforcement-kit/
+
+# Binary artifacts (distribute via releases)
+*.apk
