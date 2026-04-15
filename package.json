@@ -1,5 +1,6 @@
 {
 	"name": "argos",
+	"description": "Real-time SDR & Network Analysis Console for Army EW training on Raspberry Pi 5",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
