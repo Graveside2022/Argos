@@ -1,0 +1,16 @@
+[Unit]
+Description=Sparrow-WiFi Agent (headless REST API)
+Documentation=https://github.com/ghostop14/sparrow-wifi
+After=network.target gpsd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/sparrow-wifi/sparrowwifiagent.py --port 8020 --allowcors
+User=root
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/sparrow-wifi
+
+[Install]
+WantedBy=multi-user.target

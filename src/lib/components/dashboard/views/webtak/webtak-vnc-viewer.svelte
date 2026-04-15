@@ -15,9 +15,11 @@
 		wsUrl: string;
 		/** Fired when the RFB client reports an unclean disconnect. */
 		onDisconnect?: (reason: string) => void;
+		/** Request the VNC server to resize to match the container. Default false. */
+		resizeSession?: boolean;
 	}
 
-	let { wsUrl, onDisconnect }: Props = $props();
+	let { wsUrl, onDisconnect, resizeSession = false }: Props = $props();
 
 	type RfbLike = {
 		scaleViewport: boolean;
@@ -55,7 +57,7 @@
 	function configureRfb(instance: RfbLike): void {
 		instance.scaleViewport = true;
 		instance.clipViewport = true;
-		instance.resizeSession = false;
+		instance.resizeSession = resizeSession;
 		instance.viewOnly = false;
 		instance.focusOnClick = true;
 		instance.qualityLevel = 6;

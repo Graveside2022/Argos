@@ -31,7 +31,8 @@
 		'blue-dragon': { controlUrl: '/api/bluedragon/control' },
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
 		sightline: { controlUrl: '/api/sightline/control' },
-		spiderfoot: { controlUrl: '/api/spiderfoot/control' }
+		spiderfoot: { controlUrl: '/api/spiderfoot/control' },
+		'sparrow-wifi': { controlUrl: '/api/sparrow/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */

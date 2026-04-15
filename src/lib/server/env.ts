@@ -46,6 +46,7 @@ const envSchema = z.object({
 	NOVASDR_URL: z.string().url().default('http://localhost:9002'),
 	BETTERCAP_URL: z.string().url().default('http://localhost:80'),
 	BLUEHOOD_PORT: z.coerce.number().int().min(1024).max(65535).default(8085),
+	SPARROW_PORT: z.coerce.number().int().min(1024).max(65535).default(8020),
 	WIGLETOTAK_PORT: z.coerce.number().int().min(1024).max(65535).default(8081),
 
 	// GSM Evil data directory

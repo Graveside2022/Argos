@@ -105,13 +105,17 @@ export const wifiBtDiscovery: ToolCategory = {
 			},
 			{ isInstalled: true, viewName: undefined, canOpen: false, shouldShowControls: true }
 		),
-		createTool({
-			id: 'sparrow-wifi',
-			name: 'Sparrow-WiFi',
-			description: 'WiFi/Bluetooth spectrum analyzer with GPS hunt mode for field wardriving',
-			icon: toolIcons.wifi,
-			deployment: 'native'
-		}),
+		createTool(
+			{
+				id: 'sparrow-wifi',
+				name: 'Sparrow-WiFi',
+				description:
+					'WiFi/Bluetooth spectrum analyzer with GPS hunt mode for field wardriving',
+				icon: toolIcons.wifi,
+				deployment: 'native'
+			},
+			{ isInstalled: true, viewName: 'sparrow-wifi', canOpen: true, shouldShowControls: true }
+		),
 		createTool({
 			id: 'wigle',
 			name: 'WiGLE',
