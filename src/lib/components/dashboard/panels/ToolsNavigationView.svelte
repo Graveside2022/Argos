@@ -32,7 +32,8 @@
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
 		sightline: { controlUrl: '/api/sightline/control' },
 		spiderfoot: { controlUrl: '/api/spiderfoot/control' },
-		'sparrow-wifi': { controlUrl: '/api/sparrow/control' }
+		'sparrow-wifi': { controlUrl: '/api/sparrow/control' },
+		sdrpp: { controlUrl: '/api/sdrpp/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */
@@ -146,6 +147,7 @@
 	 */
 	const WEBRX_PEER_OF: Record<string, string> = {
 		openwebrx: 'novasdr',
+		sdrpp: 'novasdr',
 		novasdr: 'openwebrx'
 	};
 

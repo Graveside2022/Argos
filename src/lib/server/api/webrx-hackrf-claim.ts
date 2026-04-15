@@ -28,7 +28,7 @@ import { HardwareDevice } from '$lib/server/hardware/types';
 import { logger } from '$lib/utils/logger';
 
 /** The two WebRX-family tool names that can legitimately auto-recover from each other. */
-const WEBRX_PEERS = new Set(['openwebrx', 'novasdr']);
+const WEBRX_PEERS = new Set(['openwebrx', 'novasdr', 'sdrpp']);
 
 /**
  * Container-name aliases for the two WebRX-family tools. The background
