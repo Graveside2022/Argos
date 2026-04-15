@@ -1,5 +1,12 @@
 [
 	{
+		"id": "sudoers",
+		"desc": "Sudoers NOPASSWD rules (SDR, systemctl, network)",
+		"core": true,
+		"func": "install_sudoers",
+		"group": "Core Infrastructure"
+	},
+	{
 		"id": "network",
 		"desc": "Network config (WiFi + DNS)",
 		"core": true,
@@ -116,6 +123,13 @@
 		"desc": "GSM Evil (cell tower monitoring)",
 		"core": false,
 		"func": "install_gsm_evil",
+		"group": "SDR & Signal Tools"
+	},
+	{
+		"id": "sparrow",
+		"desc": "Sparrow-WiFi (WiFi analysis agent)",
+		"core": false,
+		"func": "install_sparrow",
 		"group": "SDR & Signal Tools"
 	},
 	{
