@@ -1285,11 +1285,23 @@ install_vnc() {
   _ensure_pkgs tigervnc-standalone-server tigervnc-tools socat
 
   # Ensure parent dirs are user-owned (not root)
-  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config"
-  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd"
   sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.config/systemd/user"
+  sudo -u "$SETUP_USER" mkdir -p "$SETUP_HOME/.vnc"
 
-  # VNC socket unit
+  # xstartup — launches XFCE4 desktop inside VNC
+  VNC_XSTARTUP="$SETUP_HOME/.vnc/xstartup"
+  cat > "$VNC_XSTARTUP" << 'VNC_XSTARTUP_SCRIPT'
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+export XDG_SESSION_TYPE=x11
+[ -r "$HOME/.Xresources" ] && xrdb "$HOME/.Xresources"
+exec startxfce4
+VNC_XSTARTUP_SCRIPT
+  chmod +x "$VNC_XSTARTUP"
+  chown "$SETUP_USER":"$SETUP_USER" "$VNC_XSTARTUP"
+
+  # Socket unit — listens on 5901, triggers the proxy on first connection
   VNC_SOCKET="$SETUP_HOME/.config/systemd/user/vnc-ondemand.socket"
   echo "  Installing vnc-ondemand.socket (port 5901)..."
   cat > "$VNC_SOCKET" << 'VNC_SOCKET_UNIT'
@@ -1307,7 +1319,7 @@ WantedBy=sockets.target
 VNC_SOCKET_UNIT
   chown "$SETUP_USER":"$SETUP_USER" "$VNC_SOCKET"
 
-  # VNC proxy service
+  # Proxy service — bridges socket FD to backend on internal port 5911
   VNC_SERVICE="$SETUP_HOME/.config/systemd/user/vnc-ondemand.service"
   cat > "$VNC_SERVICE" << 'VNC_SERVICE_UNIT'
 [Unit]
@@ -1325,7 +1337,7 @@ StandardError=journal
 VNC_SERVICE_UNIT
   chown "$SETUP_USER":"$SETUP_USER" "$VNC_SERVICE"
 
-  # VNC backend service
+  # Backend service — Xtigervnc + XFCE4 desktop (Type=simple, no PID file issues)
   VNC_BACKEND="$SETUP_HOME/.config/systemd/user/vnc-backend.service"
   cat > "$VNC_BACKEND" << 'VNC_BACKEND_UNIT'
 [Unit]
@@ -1333,10 +1345,11 @@ Description=TigerVNC Server (on-demand backend)
 After=syslog.target network.target
 
 [Service]
-Type=forking
-PIDFile=%h/.config/tigervnc/%H:11.pid
-ExecStart=/usr/bin/vncserver :11 -localhost -geometry 1920x1200 -depth 24 -rfbport 5911
-ExecStop=/usr/bin/vncserver -kill :11
+Type=simple
+Environment=HOME=%h
+Environment=DISPLAY=:11
+ExecStart=/bin/sh -c '/usr/bin/Xtigervnc :11 -localhost -geometry 1920x1200 -depth 24 -SecurityTypes None -rfbport 5911 & sleep 2 && %h/.vnc/xstartup'
+ExecStop=/bin/sh -c 'kill $(cat /tmp/.X11-lock 2>/dev/null) 2>/dev/null; true'
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
