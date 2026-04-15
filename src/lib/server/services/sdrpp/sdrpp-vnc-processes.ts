@@ -100,7 +100,7 @@ export function spawnSdrppGui(): void {
 		env: {
 			...process.env,
 			DISPLAY: SDRPP_VNC_DISPLAY,
-			PULSE_SERVER: 'unix:/run/user/1000/pulse/native'
+			PULSE_SERVER: `unix:/run/user/${process.getuid?.() ?? 1000}/pulse/native`
 		},
 		cwd: '/opt/sdrpp',
 		stdio: 'ignore',
