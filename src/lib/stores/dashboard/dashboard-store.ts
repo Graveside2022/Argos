@@ -88,9 +88,38 @@ export type ActiveView =
 	| 'tak-config'
 	| 'globalprotect'
 	| 'logs-analytics'
-	| 'sparrow-wifi';
+	| 'sparrow-wifi'
+	| 'sdrpp';
 
-export const activeView = writable<ActiveView>('map');
+const VALID_VIEWS: ReadonlySet<string> = new Set<ActiveView>([
+	'map',
+	'kismet',
+	'openwebrx',
+	'novasdr',
+	'bettercap',
+	'hackrf',
+	'gsm-evil',
+	'rtl-433',
+	'btle',
+	'droneid',
+	'pagermon',
+	'rf-emitter',
+	'wifite',
+	'wigletotak',
+	'bluehood',
+	'sightline',
+	'spiderfoot',
+	'webtak',
+	'tak-config',
+	'globalprotect',
+	'logs-analytics',
+	'sparrow-wifi',
+	'sdrpp'
+]);
+
+export const activeView = persistedWritable<ActiveView>('activeView', 'map', {
+	deserialize: (raw) => (VALID_VIEWS.has(raw) ? (raw as ActiveView) : 'map')
+});
 
 /** Toggle a panel: if already active, close it; otherwise open it */
 export function togglePanel(panel: string): void {

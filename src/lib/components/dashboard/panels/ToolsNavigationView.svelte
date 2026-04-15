@@ -32,7 +32,8 @@
 		wigletotak: { controlUrl: '/api/wigletotak/control' },
 		sightline: { controlUrl: '/api/sightline/control' },
 		spiderfoot: { controlUrl: '/api/spiderfoot/control' },
-		'sparrow-wifi': { controlUrl: '/api/sparrow/control' }
+		'sparrow-wifi': { controlUrl: '/api/sparrow/control' },
+		sdrpp: { controlUrl: '/api/sdrpp/control' }
 	};
 
 	/** Local status store for tools without their own dedicated store (e.g. Docker-based tools) */
@@ -144,9 +145,10 @@
 	 * card so the UI reflects the new Stopped state without waiting for the
 	 * next onMount or the 30s background poll.
 	 */
-	const WEBRX_PEER_OF: Record<string, string> = {
-		openwebrx: 'novasdr',
-		novasdr: 'openwebrx'
+	const WEBRX_PEER_OF: Record<string, string[]> = {
+		openwebrx: ['novasdr', 'sdrpp'],
+		novasdr: ['openwebrx', 'sdrpp'],
+		sdrpp: ['openwebrx', 'novasdr']
 	};
 
 	/** Dispatch the start result to the Kismet-specific or generic path. Returns success. */
@@ -175,8 +177,8 @@
 		toast.success(`${tool.name} started`);
 		// If this tool has a WebRX peer, its server-side auto-stop may have
 		// just happened — refresh the peer's card so it flips to Stopped.
-		const peer = WEBRX_PEER_OF[tool.id];
-		if (peer) refreshPeerStatus(peer);
+		const peers = WEBRX_PEER_OF[tool.id];
+		if (peers) peers.forEach((p) => refreshPeerStatus(p));
 	}
 
 	async function handleStart(tool: ToolDefinition) {

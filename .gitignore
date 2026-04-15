@@ -57,7 +57,6 @@ logs/
 # ── Editors & IDEs ───────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 .vscode-test/
@@ -289,3 +288,12 @@ map-data/*.csv
 
 # Blue Dragon — third-party Rust BLE sniffer, see plans/linear-knitting-flute.md
 tactical/blue-dragon/
+
+# Security — IDE settings with secrets
+.vscode/settings.json
+
+# Dev tooling (not project code)
+claude-code-lsp-enforcement-kit/
+
+# Binary artifacts (distribute via releases)
+*.apk

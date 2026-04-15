@@ -41,6 +41,17 @@ export const spectrumAnalysis: ToolCategory = {
 			},
 			{ isInstalled: true, viewName: 'novasdr', canOpen: true, shouldShowControls: true }
 		),
+		createTool(
+			{
+				id: 'sdrpp',
+				name: 'SDR++',
+				description:
+					'Native SDR receiver — ImGui waterfall, multi-VFO, demodulation. Shares HackRF with OpenWebRX/NovaSDR.',
+				icon: toolIcons.external,
+				deployment: 'native'
+			},
+			{ isInstalled: true, viewName: 'sdrpp', canOpen: true, shouldShowControls: true }
+		),
 		createTool({
 			id: 'qspectrumanalyzer',
 			name: 'QSpectrumAnalyzer',

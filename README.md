@@ -1,172 +1,115 @@
 # Argos -- SDR & Network Analysis Console
 
-Real-time spectrum analysis, WiFi intelligence, GSM monitoring, GPS tracking, and tactical mapping on a Raspberry Pi.
+![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%205-c51a4a)
+![OS](https://img.shields.io/badge/OS-Kali%20Linux-557C94)
+![Stack](https://img.shields.io/badge/stack-SvelteKit%202-FF3E00)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Hardware
+Argos is a SvelteKit-based SDR and network analysis console deployed natively on Raspberry Pi 5 (Kali Linux). It wraps native CLI tools (hackrf_sweep, Kismet, gpsd, grgsm_livemon) into a real-time web dashboard with WebSocket push, MapLibre GL mapping, and MIL-STD-2525C symbology. Built for Army EW training at NTC/JMRC.
 
-- Raspberry Pi 5 (8GB RAM recommended, 64GB+ SD card)
-- **USB 3.0 powered hub** (required -- the Pi cannot power all devices alone)
-- HackRF One
-- Alfa AWUS036AXML WiFi adapter
-- USB GPS dongle (BU-353S4 or similar)
-- Kali Linux installed on the Pi
+## Key Features
 
-## Additional Tools
+- Three spectrum analyzers: OpenWebRX, NovaSDR, SDR++ (via noVNC)
+- Sparrow-WiFi integration (VNC + REST agent)
+- Real-time spectrum waterfall + peak-hold
+- Kismet WiFi/BLE scanning
+- GSM monitoring (IMSI collection)
+- GPS tracking + MapLibre GL mapping
+- RF propagation modeling (Signal-Server + Navy APM)
+- TAK integration (SA broadcast, cert management)
+- AI agent (Claude Sonnet 4)
+- Tactical framework: 82 Python modules, 13 workflows
 
-### Claude Code / claude-mem
+## Hardware Requirements
 
-`claude-mem` uses ChromaDB for vector search (semantic memory retrieval). It requires **Bun** (worker daemon) and **uv** (spawns `chroma-mcp` subprocess). The setup script automatically:
+| Device                   | Role                                        | Required    |
+| ------------------------ | ------------------------------------------- | ----------- |
+| Raspberry Pi 5 (8GB RAM) | Compute platform                            | Yes         |
+| HackRF One               | Spectrum analysis                           | Yes         |
+| u-blox GPS dongle        | Positioning                                 | Yes         |
+| Alfa WiFi adapter        | WiFi scanning (wlan0 reserved for internet) | Yes         |
+| USB 3.0 powered hub      | Power delivery for peripherals              | Yes         |
+| 500GB+ NVMe SSD          | Storage                                     | Recommended |
 
-1. Installs **Bun** and **uv** if not present (claude-mem runtime dependencies)
-2. Installs ChromaDB via `pipx` and creates a systemd user service on port 8000
-3. Enables `loginctl linger` so the service survives headless reboots
-4. Sets `CHROMA_SSL=false` in three locations for reliable propagation:
-    - `/etc/environment` -- PAM-level, read on any login (SSH, Termius, local)
-    - `~/.config/environment.d/chroma.conf` -- systemd user services
-    - `~/.zshenv` -- interactive zsh sessions
-5. Switches claude-mem to `remote` mode (connects to the pre-running server instead of spawning ephemeral environments)
-
-6. Installs a `SessionStart` hook (`~/.claude/hooks/ensure-chroma-env.sh`) that cleans up orphaned workers (>30s old) and kills workers missing `CHROMA_SSL=false`
-
-The `CHROMA_SSL=false` variable is critical because `chroma-mcp` 0.2.6+ defaults `--ssl` to `true`. Without it, the MCP bridge tries HTTPS against the local HTTP server and fails silently.
-
-**Important:** The orphan cleanup hook uses a 30-second age check to avoid a race condition with claude-mem's own `SessionStart` hook. Without this guard, the cleanup kills the freshly-spawned worker before it can register the session, causing observations to silently stop recording for the entire Claude Code session.
-
-To verify ChromaDB is running:
-
-```bash
-systemctl --user status chroma-server
-curl -s http://127.0.0.1:8000/api/v2/heartbeat
-```
-
-## Install
+## Quick Start
 
 ```bash
-git clone https://github.com/Graveside2022/Argos.git
-cd Argos
+git clone https://github.com/Graveside2022/Argos.git && cd Argos
 sudo bash scripts/ops/setup-host.sh
+npm run dev
 ```
 
-The setup script installs Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB (with systemd service), agent-browser (Playwright-based browser automation), configures udev rules, GPS, npm dependencies, and generates `.env`. Argos itself runs natively on the host -- no Docker container.
+The setup script installs Node.js, Bun, uv, Kismet, gpsd, Docker (for third-party tools only), ChromaDB, configures udev rules, GPS, npm dependencies, and generates `.env`. Open `http://<your-pi-ip>:5173` in a browser.
 
-## Tailscale (Remote Access)
+## Architecture
 
-Tailscale is installed by the setup script. After running `setup-host.sh`:
-
-```bash
-# 1. Authenticate with your Tailscale account
-sudo tailscale up
-
-# 2. Enable Tailscale DNS (REQUIRED — prevents empty resolv.conf)
-sudo tailscale set --accept-dns=true
+```
+Hardware (HackRF/Alfa/GPS)
+  -> Services (native CLI wrappers)
+  -> REST API (66 routes, createHandler factory)
+  -> WebSocket (real-time push)
+  -> Svelte 5 Dashboard (runes, Tailwind v4)
 ```
 
-**Why `accept-dns` is required:** On Kali Linux / Raspberry Pi, `eth0` is managed by `ifupdown` while NetworkManager manages WiFi. When no NM-managed connection provides DNS, NetworkManager writes an empty `/etc/resolv.conf` — breaking all name resolution (git, npm, apt, everything). Tailscale DNS (`100.100.100.100`) handles both MagicDNS and public DNS resolution. The setup script also installs a NetworkManager fallback DNS config (`8.8.8.8`, `1.1.1.1`) as a safety net.
+**Stack**: SvelteKit 2 + Svelte 5, TypeScript strict, Tailwind CSS v4, better-sqlite3, MapLibre GL, ws, node-pty
+
+## SDR Options
+
+| Tool      | Type   | Access       | HackRF |
+| --------- | ------ | ------------ | ------ |
+| OpenWebRX | Docker | iframe :8073 | Shared |
+| NovaSDR   | Docker | iframe :9002 | Shared |
+| SDR++     | Native | noVNC :6082  | Shared |
 
 ## API Keys
 
 The setup script prompts for these during first run. All are stored in `.env`.
 
-| Key                   | Required | Source                                           | Purpose                                                     |
-| --------------------- | -------- | ------------------------------------------------ | ----------------------------------------------------------- |
-| `ARGOS_API_KEY`       | Yes      | Auto-generated                                   | API authentication (fail-closed)                            |
-| `STADIA_MAPS_API_KEY` | No       | [stadiamaps.com](https://stadiamaps.com/) (free) | Vector map tiles. Falls back to Google satellite without it |
-| `OPENCELLID_API_KEY`  | No       | [opencellid.org](https://opencellid.org/) (free) | Cell tower database download for map overlay                |
+| Key                   | Required | Source                                           | Purpose                          |
+| --------------------- | -------- | ------------------------------------------------ | -------------------------------- |
+| `ARGOS_API_KEY`       | Yes      | Auto-generated                                   | API authentication (fail-closed) |
+| `STADIA_MAPS_API_KEY` | No       | [stadiamaps.com](https://stadiamaps.com/) (free) | Vector map tiles                 |
+| `OPENCELLID_API_KEY`  | No       | [opencellid.org](https://opencellid.org/) (free) | Cell tower database              |
 
-To update keys after setup:
+## Tactical Framework
 
-```bash
-# Edit .env and set/change the key values
-nano .env
-
-# Restart to pick up changes
-npm run dev
-```
-
-## Cell Tower Database
-
-With an OpenCellID key, you can download the global cell tower database (~500MB) for offline tower lookups on the map:
+The `tactical/` directory contains an autonomous pentesting framework with 82 Python modules wrapping Kali Linux security tools and 13 workflow playbooks. See [tactical/CLAUDE.md](tactical/CLAUDE.md) for the complete module inventory and execution rules.
 
 ```bash
-bash scripts/ops/import-celltowers.sh
+npx tsx tactical/modules/module_runner.ts --runner-help
 ```
-
-The setup script offers to do this during first install. To refresh the data later:
-
-```bash
-rm data/celltowers/cell_towers.csv.gz
-bash scripts/ops/import-celltowers.sh
-```
-
-## Map Tiles
-
-Argos supports two map tile sources:
-
-- **Vector tiles (Stadia Maps)** -- detailed tactical view with building outlines, street names, and POI labels. Requires `STADIA_MAPS_API_KEY`.
-- **Satellite tiles (Google)** -- aerial imagery fallback when no Stadia key is set.
-
-The map automatically detects which source is available and switches accordingly.
-
-## Open Argos
-
-```bash
-npm run dev
-```
-
-Then open **http://\<your-pi-ip\>:5173** in a browser.
-
-## After Reboot
-
-If systemd services are installed, Argos starts automatically:
-
-```bash
-sudo systemctl status argos-final
-```
-
-Otherwise, start manually with `npm run dev`.
-
-## Hardware Setup
-
-Plug the Alfa adapter, HackRF, and GPS dongle into the powered USB hub, then connect the hub to the Pi. Argos detects hardware automatically. GPS needs 1--2 minutes for a first fix outdoors.
 
 ## Troubleshooting
 
-| Problem                          | Fix                                              |
-| -------------------------------- | ------------------------------------------------ |
-| No DNS / can't resolve hostnames | Run `sudo tailscale set --accept-dns=true`       |
-| No GPS fix                       | Go outside, wait 2 minutes                       |
-| Page is blank                    | Check `npm run dev` output for errors            |
-| Alfa not detected                | Unplug and replug the USB hub                    |
-| HackRF not detected              | Run `hackrf_info` on the Pi terminal             |
-| Port conflict                    | Run `sudo lsof -i :5173` to find what's using it |
+| Problem                          | Fix                                    |
+| -------------------------------- | -------------------------------------- |
+| No DNS / can't resolve hostnames | `sudo tailscale set --accept-dns=true` |
+| No GPS fix                       | Go outside, wait 2 minutes             |
+| Page is blank                    | Check `npm run dev` output for errors  |
+| Alfa not detected                | Unplug and replug the USB hub          |
+| HackRF not detected              | Run `hackrf_info` on the Pi terminal   |
+| Port conflict                    | `sudo lsof -i :5173`                   |
 
-### Headless Debugging (Parrot Core / Field Ops)
+### Headless Debugging
 
-When running on Parrot Core or in the field without a monitor, Argos includes tools for remote debugging:
+For field operations without a monitor:
 
-1.  **Service Status**: The debug service runs automatically on port `9224`.
-    ```bash
-    systemctl status argos-headless
-    ```
-2.  **Manual Start**:
-    ```bash
-    ./scripts/dev/debug-headless.sh
-    ```
-3.  **Connect from Laptop**:
-    Tunnel the remote debug port to your local machine:
-    ```bash
-    ssh -L 9224:localhost:9224 user@<pi-ip-address>
-    ```
-    Then open `chrome://inspect` in Chrome/Edge on your laptop to see the remote UI.
+```bash
+# Service status
+systemctl status argos-headless
 
-### Debugging
+# SSH tunnel from laptop
+ssh -L 9224:localhost:9224 user@<pi-ip>
+```
 
-The `vite-oom-protect.sh` script launches Vite with OOM protection (`oom_score_adj=-500`) on the entire process tree. Do **not** wrap Vite with `strace -f` — it ptrace-attaches to child processes, which strips SUID bits from `sudo` and capture helpers (breaking Kismet, GSM Evil, and any service requiring privilege escalation).
+Then open `chrome://inspect` in Chrome/Edge to see the remote UI.
 
-## More Info
+## Documentation
 
-See [SETUP.md](SETUP.md) for development commands, architecture, and project structure.
-See [Memory & Reliability](docs/operations/memory-reliability.md) for the self-healing monitor and performance tuning.
+- [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md) -- full architecture reference (1,011 files)
+- [SETUP.md](SETUP.md) -- development setup and commands
+- [tactical/CLAUDE.md](tactical/CLAUDE.md) -- tactical module guide
+- [docs/operations/memory-reliability.md](docs/operations/memory-reliability.md) -- self-healing monitor and performance tuning
 
 ## License
 

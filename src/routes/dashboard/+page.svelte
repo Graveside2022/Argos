@@ -23,6 +23,7 @@
 	import NovaSDRView from '$lib/components/dashboard/views/NovaSDRView.svelte';
 	import OpenWebRXView from '$lib/components/dashboard/views/OpenWebRXView.svelte';
 	import ReportsView from '$lib/components/dashboard/views/ReportsView.svelte';
+	import SDRppView from '$lib/components/dashboard/views/SDRppView.svelte';
 	import SightlineView from '$lib/components/dashboard/views/SightlineView.svelte';
 	import SparrowView from '$lib/components/dashboard/views/SparrowView.svelte';
 	import SpiderfootView from '$lib/components/dashboard/views/SpiderfootView.svelte';
@@ -144,6 +145,8 @@
 				<OpenWebRXView />
 			{:else if $activeView === 'novasdr'}
 				<NovaSDRView />
+			{:else if $activeView === 'sdrpp'}
+				<SDRppView />
 			{:else if $activeView === 'bettercap'}
 				<ToolViewWrapper title="Bettercap" onBack={goBackToMap}>
 					<iframe src="http://localhost:80" title="Bettercap" class="tool-iframe"

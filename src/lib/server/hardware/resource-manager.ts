@@ -27,7 +27,8 @@ const KNOWN_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'bluehood',
 	'spiderfoot',
 	'sightline',
-	'pagermon'
+	'pagermon',
+	'sdrpp'
 ]);
 
 class ResourceManager extends EventEmitter {
