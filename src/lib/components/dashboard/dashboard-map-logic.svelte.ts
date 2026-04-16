@@ -16,6 +16,7 @@ import {
 } from '$lib/stores/dashboard/dashboard-store';
 import { GOOGLE_SATELLITE_STYLE, mapSettings } from '$lib/stores/dashboard/map-settings-store';
 import { rfOverlays } from '$lib/stores/dashboard/rf-overlay-store';
+import { uasStore } from '$lib/stores/dragonsync/uas-store';
 import { kismetStore } from '$lib/stores/tactical-map/kismet-store';
 import { takCotMessages } from '$lib/stores/tak-store';
 import { themeStore } from '$lib/stores/theme-store.svelte';
@@ -39,6 +40,7 @@ import {
 } from './map/map-handlers';
 import { setupMap } from './map/map-setup';
 import { clearAllOverlays, syncRFOverlays } from './map/rf-propagation-overlay.svelte';
+import { buildUASConnectionLinesGeoJSON, buildUASGeoJSON } from './map/uas-geojson';
 
 export type { CellTowerFetchState, PopupState, TowerPopupState };
 export { MAP_UI_COLORS, onClusterClick, towerClickHandler };
@@ -109,6 +111,12 @@ export function createMapState() {
 			layerVis$.current.connectionLines,
 			visibleDeviceMACs
 		)
+	);
+
+	const uas$ = fromStore(uasStore);
+	const uasGeoJSON: FeatureCollection = $derived(buildUASGeoJSON(uas$.current));
+	const uasLinesGeoJSON: FeatureCollection = $derived(
+		buildUASConnectionLinesGeoJSON(uas$.current)
 	);
 
 	$effect(() => {
@@ -281,6 +289,12 @@ export function createMapState() {
 		},
 		get connectionLinesGeoJSON() {
 			return connectionLinesGeoJSON;
+		},
+		get uasGeoJSON() {
+			return uasGeoJSON;
+		},
+		get uasLinesGeoJSON() {
+			return uasLinesGeoJSON;
 		},
 		get gpsLngLat() {
 			return gpsDerived.gpsLngLat;

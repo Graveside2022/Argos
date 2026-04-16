@@ -7,9 +7,25 @@ import { persistedWritable } from '$lib/stores/persisted-writable';
 export const activePanel = writable<string | null>(null);
 
 /** Bottom panel tab type — gsm-evil removed (full-screen view), captures added */
-type BottomTab = 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth' | null;
+type BottomTab =
+	| 'terminal'
+	| 'chat'
+	| 'logs'
+	| 'captures'
+	| 'dashboard'
+	| 'bluetooth'
+	| 'uas'
+	| null;
 
-const VALID_TABS: BottomTab[] = ['terminal', 'chat', 'logs', 'captures', 'dashboard', 'bluetooth'];
+const VALID_TABS: BottomTab[] = [
+	'terminal',
+	'chat',
+	'logs',
+	'captures',
+	'dashboard',
+	'bluetooth',
+	'uas'
+];
 
 export const activeBottomTab = persistedWritable<BottomTab>('activeBottomTab', 'terminal', {
 	serialize: (tab) => (tab === null ? 'null' : tab),
@@ -40,7 +56,7 @@ export const isBottomPanelOpen = derived(activeBottomTab, ($tab) => $tab !== nul
 
 /** Toggle a bottom panel tab: if already active, close; otherwise open */
 export function toggleBottomTab(
-	tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth'
+	tab: 'terminal' | 'chat' | 'logs' | 'captures' | 'dashboard' | 'bluetooth' | 'uas'
 ): void {
 	activeBottomTab.update((current) => (current === tab ? null : tab));
 }
@@ -134,7 +150,8 @@ export const layerVisibility = writable<Record<string, boolean>>({
 	cellTowers: false,
 	signalMarkers: false,
 	accuracyCircle: true,
-	rfPropagation: false
+	rfPropagation: false,
+	uasMarkers: true
 });
 
 /** Toggle a single map layer on/off */
