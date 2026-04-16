@@ -131,7 +131,7 @@ export class GlobalProtectService {
 	/** Detect externally-started openconnect (e.g. from terminal) via tun0 interface probe. */
 	private async probeExternalTun(): Promise<GlobalProtectStatus | null> {
 		try {
-			const { stdout } = await execFileAsync('/sbin/ip', [
+			const { stdout } = await execFileAsync('/usr/sbin/ip', [
 				'-brief',
 				'addr',
 				'show',
