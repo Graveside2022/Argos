@@ -97,7 +97,7 @@ async function pollDragonSyncApi(): Promise<void> {
 
 async function checkApiReachable(): Promise<boolean> {
 	try {
-		const res = await fetch(`${DRAGONSYNC_API}/status`, {
+		const res = await fetch(`${DRAGONSYNC_API}/drones`, {
 			signal: AbortSignal.timeout(STATUS_TIMEOUT_MS)
 		});
 		return res.ok;
