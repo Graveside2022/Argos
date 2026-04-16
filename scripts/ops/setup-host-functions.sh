@@ -296,7 +296,9 @@ $SETUP_USER ALL=(ALL) NOPASSWD: /usr/sbin/tcpdump
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/tshark
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/lsof
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/fuser
-$SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/python3
+# Sparrow-WiFi — GUI launch (scoped to specific script)
+$SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/sparrow-wifi/sparrow-wifi.py
+$SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/sparrow-wifi/sparrowwifiagent.py *
 
 # Kismet — WiFi discovery service
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/kismet
@@ -320,7 +322,7 @@ $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-kismet
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-headless
 
 # Argos WiFi resilience — interface recovery
-$SETUP_USER ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 *
+$SETUP_USER ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan0 *
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli device reapply wlan0
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli device disconnect wlan0
 $SETUP_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli device connect wlan0
