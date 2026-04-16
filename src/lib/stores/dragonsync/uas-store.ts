@@ -2,10 +2,12 @@ import { writable } from 'svelte/store';
 
 import {
 	DragonSyncDronesResponseSchema,
+	DragonSyncFpvSignalsResponseSchema,
 	DragonSyncStatusResultSchema
 } from '$lib/schemas/dragonsync';
 import type {
 	DragonSyncDrone,
+	DragonSyncFpvSignal,
 	DragonSyncServiceStatus,
 	DragonSyncStatusResult
 } from '$lib/types/dragonsync';
@@ -14,10 +16,12 @@ export interface UASState {
 	status: DragonSyncServiceStatus;
 	droneCount: number;
 	drones: Map<string, DragonSyncDrone>;
+	fpvSignals: Map<string, DragonSyncFpvSignal>;
 	error: string | null;
 	lastUpdated: number | null;
 	droneidGoRunning: boolean;
 	dragonSyncRunning: boolean;
+	fpvScannerRunning: boolean;
 	apiReachable: boolean;
 }
 
@@ -25,14 +29,20 @@ const INITIAL_STATE: UASState = {
 	status: 'stopped',
 	droneCount: 0,
 	drones: new Map(),
+	fpvSignals: new Map(),
 	error: null,
 	lastUpdated: null,
 	droneidGoRunning: false,
 	dragonSyncRunning: false,
+	fpvScannerRunning: false,
 	apiReachable: false
 };
 
-export const uasStore = writable<UASState>({ ...INITIAL_STATE, drones: new Map() });
+export const uasStore = writable<UASState>({
+	...INITIAL_STATE,
+	drones: new Map(),
+	fpvSignals: new Map()
+});
 
 export function applyUASStatus(status: DragonSyncStatusResult): void {
 	uasStore.update((s) => ({
@@ -41,6 +51,7 @@ export function applyUASStatus(status: DragonSyncStatusResult): void {
 		droneCount: status.droneCount,
 		droneidGoRunning: status.droneidGoRunning,
 		dragonSyncRunning: status.dragonSyncRunning,
+		fpvScannerRunning: status.fpvScannerRunning,
 		apiReachable: status.apiReachable,
 		error: status.error ?? null,
 		lastUpdated: Date.now()
@@ -57,12 +68,22 @@ export function applyUASDrones(drones: DragonSyncDrone[]): void {
 	});
 }
 
+export function applyUASFpvSignals(signals: DragonSyncFpvSignal[]): void {
+	uasStore.update((s) => {
+		const map = new Map<string, DragonSyncFpvSignal>();
+		for (const sig of signals) {
+			map.set(sig.uid, sig);
+		}
+		return { ...s, fpvSignals: map, lastUpdated: Date.now() };
+	});
+}
+
 export function setUASError(err: string): void {
 	uasStore.update((s) => ({ ...s, error: err }));
 }
 
 export function resetUASStore(): void {
-	uasStore.set({ ...INITIAL_STATE, drones: new Map() });
+	uasStore.set({ ...INITIAL_STATE, drones: new Map(), fpvSignals: new Map() });
 }
 
 export async function fetchUASStatus(): Promise<void> {
@@ -78,17 +99,51 @@ export async function fetchUASStatus(): Promise<void> {
 	}
 }
 
-export async function fetchUASDrones(): Promise<void> {
+async function parseUASResponse<R>(
+	res: Response,
+	label: string,
+	schema: { safeParse: (d: unknown) => { success: true; data: R } | { success: false } }
+): Promise<R> {
+	if (!res.ok) throw new Error(`${label} ${res.status}`);
+	const parsed = schema.safeParse(await res.json());
+	if (!parsed.success) throw new Error(`invalid ${label} response`);
+	return parsed.data;
+}
+
+async function fetchUASList<T, R>(
+	url: string,
+	label: string,
+	schema: { safeParse: (d: unknown) => { success: true; data: R } | { success: false } },
+	extract: (data: R) => T[],
+	apply: (items: T[]) => void
+): Promise<void> {
 	try {
-		const res = await fetch('/api/dragonsync/devices', { credentials: 'same-origin' });
-		if (!res.ok) throw new Error(`devices ${res.status}`);
-		const raw: unknown = await res.json();
-		const parsed = DragonSyncDronesResponseSchema.safeParse(raw);
-		if (!parsed.success) throw new Error('invalid drones response');
-		applyUASDrones(parsed.data.drones as DragonSyncDrone[]);
+		const res = await fetch(url, { credentials: 'same-origin' });
+		if (res.status === 503) return apply([]);
+		apply(extract(await parseUASResponse(res, label, schema)));
 	} catch (err) {
-		setUASError(err instanceof Error ? err.message : 'devices fetch failed');
+		setUASError(err instanceof Error ? err.message : `${label} fetch failed`);
 	}
+}
+
+export async function fetchUASDrones(): Promise<void> {
+	await fetchUASList(
+		'/api/dragonsync/devices',
+		'devices',
+		DragonSyncDronesResponseSchema,
+		(d) => d.drones as DragonSyncDrone[],
+		applyUASDrones
+	);
+}
+
+export async function fetchUASFpvSignals(): Promise<void> {
+	await fetchUASList(
+		'/api/dragonsync/fpv',
+		'fpv',
+		DragonSyncFpvSignalsResponseSchema,
+		(d) => d.signals as DragonSyncFpvSignal[],
+		applyUASFpvSignals
+	);
 }
 
 interface ControlResponse {

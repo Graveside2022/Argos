@@ -9,12 +9,14 @@
 	import { browser } from '$app/environment';
 	import {
 		fetchUASDrones,
+		fetchUASFpvSignals,
 		fetchUASStatus,
 		startDragonSyncFromUi,
 		stopDragonSyncFromUi,
 		uasStore
 	} from '$lib/stores/dragonsync/uas-store';
-	import type { DragonSyncDrone } from '$lib/types/dragonsync';
+	import type { DragonSyncDrone, DragonSyncFpvSignal } from '$lib/types/dragonsync';
+	import { hzToChannel } from '$lib/utils/fpv-channels';
 
 	type SortKey =
 		| 'id'
@@ -74,6 +76,7 @@
 			pollTimer = setInterval(() => {
 				void fetchUASStatus();
 				void fetchUASDrones();
+				void fetchUASFpvSignals();
 			}, 2000);
 		} else if (!running && pollTimer) {
 			clearInterval(pollTimer);
@@ -89,6 +92,7 @@
 		if (!browser) return;
 		void fetchUASStatus();
 		void fetchUASDrones();
+		void fetchUASFpvSignals();
 	});
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer);
@@ -180,6 +184,48 @@
 	function cell(d: DragonSyncDrone, k: SortKey): string {
 		return FORMATTERS[k](d);
 	}
+
+	// --- FPV signal helpers ---
+
+	function fpvList(map: Map<string, DragonSyncFpvSignal>): DragonSyncFpvSignal[] {
+		return Array.from(map.values()).sort((a, b) => {
+			const ra = a.rssi ?? -999;
+			const rb = b.rssi ?? -999;
+			return rb - ra;
+		});
+	}
+
+	function fpvLastSeen(sig: DragonSyncFpvSignal): string {
+		const ts = sig.last_update_time ?? sig.expires_at;
+		if (!ts) return '--';
+		const ms = ts > 1e12 ? ts : ts * 1000;
+		return ago(ms);
+	}
+
+	function sourceCls(source: string): string {
+		return source === 'confirm' ? 'badge-confirm' : 'badge-energy';
+	}
+
+	function pickVideoWinner(
+		pal: number,
+		ntsc: number
+	): { conf: number; name: string; cls: string } {
+		return pal >= ntsc
+			? { conf: pal, name: 'PAL', cls: 'badge-pal' }
+			: { conf: ntsc, name: 'NTSC', cls: 'badge-ntsc' };
+	}
+
+	function palNtscBadge(sig: DragonSyncFpvSignal): { label: string; cls: string } {
+		const pal = sig.pal_conf ?? 0;
+		const ntsc = sig.ntsc_conf ?? 0;
+		if (pal === 0 && ntsc === 0) return { label: '—', cls: 'badge-dim' };
+		const w = pickVideoWinner(pal, ntsc);
+		return { label: `${w.conf.toFixed(0)}% ${w.name}`, cls: w.cls };
+	}
+
+	function fpvRssiCls(dbm: number | null): string {
+		return dbm == null ? 'rssi-none' : rssiCls(dbm);
+	}
 </script>
 
 <div class="panel">
@@ -191,6 +237,9 @@
 		>
 		<span class="svc"
 			>DragonSync <span class="dot" class:up={$uasStore.dragonSyncRunning}></span></span
+		>
+		<span class="svc"
+			>FPV Scanner <span class="dot" class:up={$uasStore.fpvScannerRunning}></span></span
 		>
 		<span class="spacer"></span>
 		<span class="count">{$uasStore.droneCount} drones</span>
@@ -207,40 +256,99 @@
 
 	{#if $uasStore.error}<div class="error-banner">{$uasStore.error}</div>{/if}
 
-	{#if $uasStore.drones.size === 0}
+	{#if $uasStore.drones.size === 0 && $uasStore.fpvSignals.size === 0}
 		<div class="empty">
-			<p class="empty-title">No drones detected</p>
+			<p class="empty-title">No drones or FPV signals detected</p>
 			<p class="empty-sub">
 				{$uasStore.status === 'stopped'
 					? 'Click Start to begin UAS detection via DragonSync'
-					: 'Listening for Remote ID broadcasts...'}
+					: 'Listening for Remote ID + FPV video broadcasts...'}
 			</p>
 		</div>
 	{:else}
-		<div class="table-wrap">
-			<table>
-				<thead
-					><tr>
-						{#each COLUMNS as [key, label] (key)}
-							<th class="sortable" onclick={() => handleSort(key)}
-								>{label}{sortInd(key)}</th
-							>
-						{/each}
-					</tr></thead
-				>
-				<tbody>
-					{#each sorted($uasStore.drones) as d (d.id)}
-						<tr>
-							{#each COLUMNS as [key] (key)}
-								<td class={key === 'rssi' ? rssiCls(d.rssi) : 'dim'}
-									>{cell(d, key)}</td
+		{#if $uasStore.drones.size > 0}
+			<div class="section-header">REMOTE ID DRONES ({$uasStore.drones.size})</div>
+			<div class="table-wrap">
+				<table>
+					<thead
+						><tr>
+							{#each COLUMNS as [key, label] (key)}
+								<th class="sortable" onclick={() => handleSort(key)}
+									>{label}{sortInd(key)}</th
 								>
 							{/each}
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+						</tr></thead
+					>
+					<tbody>
+						{#each sorted($uasStore.drones) as d (d.id)}
+							<tr>
+								{#each COLUMNS as [key] (key)}
+									<td class={key === 'rssi' ? rssiCls(d.rssi) : 'dim'}
+										>{cell(d, key)}</td
+									>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+
+		{#if $uasStore.fpvSignals.size > 0}
+			<div class="section-header">FPV VIDEO SIGNALS ({$uasStore.fpvSignals.size})</div>
+			<div class="table-wrap">
+				<table>
+					<thead
+						><tr>
+							<th>FREQ</th>
+							<th>BAND-CH</th>
+							<th>SOURCE</th>
+							<th>VIDEO</th>
+							<th>RSSI</th>
+							<th>BW</th>
+							<th>LAT</th>
+							<th>LON</th>
+							<th>LAST SEEN</th>
+						</tr></thead
+					>
+					<tbody>
+						{#each fpvList($uasStore.fpvSignals) as sig (sig.uid)}
+							{@const ch = hzToChannel(sig.center_hz)}
+							{@const vid = palNtscBadge(sig)}
+							<tr>
+								<td class="dim mono">{ch.mhz > 0 ? `${ch.mhz} MHz` : '--'}</td>
+								<td class="dim mono">
+									{#if ch.band}
+										<span class="badge-band">{ch.label}</span>
+									{:else}
+										{ch.label}
+									{/if}
+								</td>
+								<td>
+									<span class="badge {sourceCls(sig.source)}"
+										>{sig.source.toUpperCase()}</span
+									>
+								</td>
+								<td>
+									<span class="badge {vid.cls}">{vid.label}</span>
+								</td>
+								<td class={fpvRssiCls(sig.rssi)}
+									>{sig.rssi != null ? `${sig.rssi} dBm` : '--'}</td
+								>
+								<td class="dim mono"
+									>{sig.bandwidth_hz
+										? `${(sig.bandwidth_hz / 1e6).toFixed(1)} MHz`
+										: '--'}</td
+								>
+								<td class="dim mono">{sig.lat.toFixed(6)}</td>
+								<td class="dim mono">{sig.lon.toFixed(6)}</td>
+								<td class="dim">{fpvLastSeen(sig)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	{/if}
 </div>
 

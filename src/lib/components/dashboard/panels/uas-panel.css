@@ -183,3 +183,57 @@ tr:hover td {
 .rssi-none {
 	color: var(--foreground-tertiary);
 }
+
+/* FPV sub-table section header + badges */
+.section-header {
+	padding: 6px 12px;
+	font-size: 9px;
+	font-weight: 600;
+	color: var(--foreground-secondary);
+	letter-spacing: 1.5px;
+	text-transform: uppercase;
+	background: var(--surface-header, var(--card));
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+}
+.mono {
+	font-family: var(--font-mono, 'Fira Code', monospace);
+}
+.badge {
+	display: inline-block;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 9px;
+	font-weight: 600;
+	letter-spacing: 0.8px;
+	white-space: nowrap;
+}
+.badge-confirm {
+	background: var(--status-healthy, #8bbfa0);
+	color: var(--background);
+}
+.badge-energy {
+	background: var(--status-warning, #d4a054);
+	color: var(--background);
+}
+.badge-pal {
+	background: var(--primary);
+	color: var(--background);
+}
+.badge-ntsc {
+	background: var(--status-warning, #d4a054);
+	color: var(--background);
+}
+.badge-dim {
+	background: var(--muted, #2a2a2a);
+	color: var(--foreground-tertiary);
+}
+.badge-band {
+	display: inline-block;
+	padding: 1px 5px;
+	border-radius: 3px;
+	font-size: 10px;
+	font-weight: 600;
+	background: var(--primary);
+	color: var(--background);
+}

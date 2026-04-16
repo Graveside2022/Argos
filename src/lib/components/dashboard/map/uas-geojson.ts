@@ -1,9 +1,10 @@
 import type { Feature, FeatureCollection, Point } from 'geojson';
 
 import type { UASState } from '$lib/stores/dragonsync/uas-store';
-import type { DragonSyncDrone } from '$lib/types/dragonsync';
+import type { DragonSyncDrone, DragonSyncFpvSignal } from '$lib/types/dragonsync';
+import { hzToChannel } from '$lib/utils/fpv-channels';
 
-export type UASMarkerType = 'drone' | 'pilot' | 'home';
+export type UASMarkerType = 'drone' | 'pilot' | 'home' | 'fpv';
 
 interface UASFeatureProperties {
 	id: string;
@@ -16,6 +17,13 @@ interface UASFeatureProperties {
 	transport: string;
 	op_status: string;
 	label: string;
+	center_hz?: number | null;
+	bandwidth_hz?: number | null;
+	pal_conf?: number | null;
+	ntsc_conf?: number | null;
+	source?: string;
+	band_channel?: string;
+	radius_m?: number;
 }
 
 type UASPointFeature = Feature<Point, UASFeatureProperties>;
@@ -93,12 +101,44 @@ function collectDroneFeatures(id: string, drone: DragonSyncDrone): UASPointFeatu
 	return out;
 }
 
+function makeFpvFeature(sig: DragonSyncFpvSignal): UASPointFeature {
+	const ch = hzToChannel(sig.center_hz);
+	const label = ch.band ? `FPV ${ch.mhz} MHz (${ch.label})` : `FPV ${ch.label}`;
+	return {
+		type: 'Feature',
+		geometry: { type: 'Point', coordinates: [sig.lon, sig.lat] },
+		properties: {
+			id: sig.uid,
+			markerType: 'fpv',
+			ua_type_name: 'FPV VIDEO',
+			alt: sig.alt,
+			speed: 0,
+			direction: null,
+			rssi: sig.rssi ?? 0,
+			transport: 'analog',
+			op_status: sig.source.toUpperCase(),
+			label,
+			center_hz: sig.center_hz,
+			bandwidth_hz: sig.bandwidth_hz,
+			pal_conf: sig.pal_conf,
+			ntsc_conf: sig.ntsc_conf,
+			source: sig.source,
+			band_channel: ch.band ? ch.label : undefined,
+			radius_m: sig.radius_m
+		}
+	};
+}
+
 export function buildUASGeoJSON(state: UASState): FeatureCollection<Point, UASFeatureProperties> {
-	const features = [...state.drones.entries()]
+	const droneFeatures = [...state.drones.entries()]
 		.filter(([, d]) => hasPosition(d.lat, d.lon))
 		.flatMap(([id, d]) => collectDroneFeatures(id, d));
 
-	return { type: 'FeatureCollection', features };
+	const fpvFeatures = [...state.fpvSignals.values()]
+		.filter((sig) => hasPosition(sig.lat, sig.lon))
+		.map((sig) => makeFpvFeature(sig));
+
+	return { type: 'FeatureCollection', features: [...droneFeatures, ...fpvFeatures] };
 }
 
 function makePilotLine(id: string, drone: DragonSyncDrone): Feature {

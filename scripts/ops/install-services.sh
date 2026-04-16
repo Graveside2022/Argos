@@ -117,6 +117,54 @@ for bin in argos-cpu-protector argos-wifi-resilience argos-process-manager; do
   fi
 done
 
+# =============================================
+# Network boot optimizations
+# =============================================
+echo ""
+echo "Applying network boot optimizations..."
+
+# Mask systemd-networkd-wait-online — Argos uses NetworkManager, not systemd-networkd.
+# This service waits 2min then fails on every boot, blocking docker + argos-startup.
+if systemctl is-enabled systemd-networkd-wait-online.service &>/dev/null 2>&1; then
+  if [[ "$(systemctl is-enabled systemd-networkd-wait-online.service 2>/dev/null)" != "masked" ]]; then
+    systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
+    echo "  Masked systemd-networkd-wait-online.service (saves ~2min boot)"
+  else
+    echo "  systemd-networkd-wait-online.service already masked"
+  fi
+fi
+
+# Reduce NetworkManager-wait-online timeout from 30s to 10s
+NM_OVERRIDE_DIR="/etc/systemd/system/NetworkManager-wait-online.service.d"
+NM_OVERRIDE="$NM_OVERRIDE_DIR/timeout.conf"
+if [[ ! -f "$NM_OVERRIDE" ]]; then
+  mkdir -p "$NM_OVERRIDE_DIR"
+  cat > "$NM_OVERRIDE" <<'NMEOF'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/nm-online -s -q --timeout=10
+NMEOF
+  echo "  Reduced NetworkManager-wait-online timeout to 10s"
+else
+  echo "  NetworkManager-wait-online timeout override already exists"
+fi
+
+# Install WiFi power-save disable dispatcher (fixes brcmfmac latency spikes on RPi 5)
+NM_DISPATCH="/etc/NetworkManager/dispatcher.d/99-wifi-powersave-off"
+if [[ ! -f "$NM_DISPATCH" ]]; then
+  cat > "$NM_DISPATCH" <<'DISPEOF'
+#!/bin/bash
+# Disable WiFi power save on connect — fixes latency spikes on brcmfmac (RPi 5)
+if [ "$2" = "up" ] && [ "$(nmcli -t -f TYPE device show "$1" 2>/dev/null | grep -c wifi)" -gt 0 ]; then
+    iw dev "$1" set power_save off
+fi
+DISPEOF
+  chmod +x "$NM_DISPATCH"
+  echo "  Installed WiFi power-save disable dispatcher"
+else
+  echo "  WiFi power-save dispatcher already exists"
+fi
+
 echo ""
 echo "Done. Services installed and enabled."
 echo ""

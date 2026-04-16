@@ -49,6 +49,7 @@ export interface DragonSyncStatusResult {
 	success: boolean;
 	droneidGoRunning: boolean;
 	dragonSyncRunning: boolean;
+	fpvScannerRunning: boolean;
 	status: DragonSyncServiceStatus;
 	droneCount: number;
 	apiReachable: boolean;
@@ -59,4 +60,29 @@ export interface DragonSyncControlResult {
 	success: boolean;
 	message: string;
 	error?: string;
+}
+
+export interface DragonSyncFpvSignal {
+	uid: string;
+	signal_type: string;
+	source: 'energy' | 'confirm' | string;
+	alert_id: string;
+	callsign: string;
+	description: string | null;
+	self_id: string | null;
+	center_hz: number | null;
+	bandwidth_hz: number | null;
+	pal_conf: number | null;
+	ntsc_conf: number | null;
+	rssi: number | null;
+	sensor_lat: number;
+	sensor_lon: number;
+	sensor_alt: number;
+	lat: number;
+	lon: number;
+	alt: number;
+	radius_m: number;
+	seen_by: string | null;
+	expires_at?: number;
+	last_update_time?: number;
 }
