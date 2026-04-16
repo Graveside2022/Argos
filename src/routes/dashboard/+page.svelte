@@ -14,6 +14,7 @@
 	import BluetoothPanel from '$lib/components/dashboard/panels/BluetoothPanel.svelte';
 	import CapturesPanel from '$lib/components/dashboard/panels/CapturesPanel.svelte';
 	import DevicesPanel from '$lib/components/dashboard/panels/DevicesPanel.svelte';
+	import UASPanel from '$lib/components/dashboard/panels/UASPanel.svelte';
 	import ResizableBottomPanel from '$lib/components/dashboard/ResizableBottomPanel.svelte';
 	import TakConfigView from '$lib/components/dashboard/tak/TakConfigView.svelte';
 	import TerminalPanel from '$lib/components/dashboard/TerminalPanel.svelte';
@@ -246,6 +247,11 @@
 				{#if mountedTabs.has('bluetooth')}
 					<div class="tab-pane" class:tab-active={$activeBottomTab === 'bluetooth'}>
 						<BluetoothPanel />
+					</div>
+				{/if}
+				{#if mountedTabs.has('uas')}
+					<div class="tab-pane" class:tab-active={$activeBottomTab === 'uas'}>
+						<UASPanel />
 					</div>
 				{/if}
 			</div>

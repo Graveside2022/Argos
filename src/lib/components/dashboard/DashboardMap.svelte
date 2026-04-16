@@ -164,6 +164,60 @@
 				/>
 			</GeoJSONSource>
 
+			<GeoJSONSource id="uas-lines-src" data={ms.uasLinesGeoJSON}>
+				<LineLayer
+					id="uas-connection-lines"
+					paint={{
+						'line-color': [
+							'match',
+							['get', 'lineType'],
+							'pilot',
+							'#D4A054',
+							'home',
+							'#8BBFA0',
+							'#888'
+						],
+						'line-width': 1.5,
+						'line-opacity': 0.6,
+						'line-dasharray': [4, 2]
+					}}
+				/>
+			</GeoJSONSource>
+
+			<GeoJSONSource id="uas-src" data={ms.uasGeoJSON}>
+				<CircleLayer
+					id="uas-circles"
+					paint={{
+						'circle-radius': [
+							'match',
+							['get', 'markerType'],
+							'drone',
+							8,
+							'pilot',
+							6,
+							'home',
+							5,
+							6
+						],
+						'circle-color': [
+							'match',
+							['get', 'markerType'],
+							'drone',
+							'#FF6B35',
+							'pilot',
+							'#4A90D9',
+							'home',
+							'#8BBFA0',
+							'#888'
+						],
+						'circle-opacity': 0.9,
+						'circle-stroke-width': 2,
+						'circle-stroke-color': '#ffffff',
+						'circle-stroke-opacity': 0.7
+					}}
+				/>
+			</GeoJSONSource>
+
 			<GeoJSONSource
 				id="devices-src"
 				data={ms.deviceGeoJSON}

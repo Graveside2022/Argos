@@ -203,7 +203,8 @@ export const LAYER_MAP: Record<string, string[]> = {
 	connectionLines: ['device-connection-lines'],
 	cellTowers: ['cell-tower-circles', 'cell-tower-labels'],
 	signalMarkers: ['detection-range-fill'],
-	accuracyCircle: ['accuracy-fill']
+	accuracyCircle: ['accuracy-fill'],
+	uasMarkers: ['uas-circles', 'uas-connection-lines']
 };
 
 interface CellTowerData {
