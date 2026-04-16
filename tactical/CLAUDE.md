@@ -237,21 +237,22 @@ Wraps 68 Impacket scripts into functional groups with `--script` selectors:
 
 ## Workflow Inventory (13 workflows)
 
-| ID  | Name                 | Risk   | Description                                                |
-| --- | -------------------- | ------ | ---------------------------------------------------------- |
-| 00  | recon_only           | LOW    | Passive WiFi/network enumeration                           |
-| 01  | wifi_killchain       | HIGH   | WiFi deauth + handshake + WPS + PMKID                      |
-| 02  | network_survey       | MEDIUM | Full network discovery                                     |
-| 03  | service_exploitation | HIGH   | Credential brute-forcing (dedicated + hydra)               |
-| 04  | credential_harvest   | HIGH   | Responder + hash capture                                   |
-| 05  | web_app_pentest      | HIGH   | Tech ID → WAF → nikto → wapiti → sqlmap → commix → wfuzz   |
-| 06  | ad_attack_chain      | HIGH   | AD enum → Kerberoast → credential dump → lateral movement  |
-| 07  | osint_recon          | LOW    | amass → DNS → theHarvester → Shodan/Censys → recon-ng      |
-| 08  | wireless_full        | HIGH   | WiFi recon → WPS → PMKID → handshake → hash cracking       |
-| 09  | mitm_credential      | HIGH   | Passive capture → ARP poison → credential sniff → analysis |
-| 10  | exploitation_chain   | HIGH   | Exploit search → payload → handler → exploit               |
-| 11  | forensic_analysis    | LOW    | Disk analysis → binwalk → carving → reverse engineering    |
-| 12  | sdr_sigint           | MEDIUM | Spectrum sweep → capture → GSM decode → replay             |
+| ID  | Name                 | Risk   | Description                                                             |
+| --- | -------------------- | ------ | ----------------------------------------------------------------------- |
+| 00  | recon_only           | LOW    | Passive WiFi/network enumeration                                        |
+| 01  | wifi_killchain       | HIGH   | WiFi deauth + handshake + WPS + PMKID                                   |
+| 02  | network_survey       | MEDIUM | Full network discovery                                                  |
+| 03  | service_exploitation | HIGH   | Credential brute-forcing (dedicated + hydra)                            |
+| 04  | credential_harvest   | HIGH   | Responder + hash capture                                                |
+| 05  | web_app_pentest      | HIGH   | Tech ID → WAF → nikto → wapiti → sqlmap → commix → wfuzz                |
+| 06  | ad_attack_chain      | HIGH   | AD enum → Kerberoast → credential dump → lateral movement               |
+| 07  | osint_recon          | LOW    | amass → DNS → theHarvester → Shodan/Censys → recon-ng                   |
+| 08  | wireless_full        | HIGH   | WiFi recon → WPS → PMKID → handshake → hash cracking                    |
+| 09  | mitm_credential      | HIGH   | Passive capture → ARP poison → credential sniff → analysis              |
+| 10  | exploitation_chain   | HIGH   | Exploit search → payload → handler → exploit                            |
+| 11  | forensic_analysis    | LOW    | Disk analysis → binwalk → carving → reverse engineering                 |
+| 12  | sdr_sigint           | MEDIUM | Spectrum sweep → capture → GSM decode → replay                          |
+| 13  | counter_uas          | HIGH   | ASTRA kill chain: detect → identify → track → decide → engage → exploit |
 
 To execute a workflow: `cat tactical/workflows/<ID>_<name>.md` then follow its steps.
 
