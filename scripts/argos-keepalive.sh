@@ -61,7 +61,7 @@ check_service() {
     fi
 
     log "Restarting $ARGOS_SERVICE (failure $FAILURE_COUNT/$MAX_FAILURES)..."
-    sudo systemctl restart "$ARGOS_SERVICE" 2>/dev/null
+    sudo -n systemctl restart "$ARGOS_SERVICE" 2>/dev/null
     if systemctl is-active --quiet "$ARGOS_SERVICE" 2>/dev/null; then
       log "Service restarted successfully"
       FAILURE_COUNT=0
