@@ -101,6 +101,7 @@ async function pollSignalsEndpoint(): Promise<void> {
 		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
 	});
 	if (!res.ok) {
+		logger.debug(`[dragonsync] /signals returned HTTP ${res.status}`);
 		return;
 	}
 	const data: unknown = await res.json();
