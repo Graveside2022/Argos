@@ -166,6 +166,7 @@ export async function startDragonSync(): Promise<DragonSyncControlResult> {
 
 	const dsOk = await startService('dragonsync.service');
 	if (!dsOk) {
+		await stopService('zmq-decoder.service');
 		return {
 			success: false,
 			message: 'Failed to start dragonsync.service',
@@ -181,10 +182,15 @@ export async function stopDragonSync(): Promise<DragonSyncControlResult> {
 	logger.info('[dragonsync] Stopping dragonsync + zmq-decoder services');
 	stopDragonSyncPoller();
 
-	await stopService('dragonsync.service');
-	await stopService('zmq-decoder.service');
+	const dsOk = await stopService('dragonsync.service');
+	const droneidOk = await stopService('zmq-decoder.service');
 	cachedDrones = [];
 
+	const failed = [!dsOk && 'dragonsync', !droneidOk && 'zmq-decoder'].filter(Boolean);
+	if (failed.length > 0) {
+		logger.warn(`[dragonsync] Failed to stop: ${failed.join(', ')}`);
+		return { success: false, message: `Failed to stop: ${failed.join(', ')}` };
+	}
 	return { success: true, message: 'DragonSync services stopped' };
 }
 

@@ -71,7 +71,6 @@
 
 	function syncPollTimer(running: boolean): void {
 		if (running && !pollTimer) {
-			void fetchUASDrones();
 			pollTimer = setInterval(() => {
 				void fetchUASStatus();
 				void fetchUASDrones();
