@@ -17,7 +17,9 @@ kali ALL=(ALL) NOPASSWD: /usr/sbin/tcpdump
 kali ALL=(ALL) NOPASSWD: /usr/bin/tshark
 kali ALL=(ALL) NOPASSWD: /usr/bin/lsof
 kali ALL=(ALL) NOPASSWD: /usr/bin/fuser
-kali ALL=(ALL) NOPASSWD: /usr/bin/python3
+# Sparrow-WiFi — GUI launch (scoped to specific scripts)
+kali ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/sparrow-wifi/sparrow-wifi.py
+kali ALL=(ALL) NOPASSWD: /usr/bin/python3 /opt/sparrow-wifi/sparrowwifiagent.py *
 
 # Kismet — WiFi discovery service
 kali ALL=(ALL) NOPASSWD: /usr/bin/kismet
@@ -41,7 +43,7 @@ kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-kismet
 kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-headless
 
 # Argos WiFi resilience — interface recovery
-kali ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 *
+kali ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan0 *
 kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device reapply wlan0
 kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device disconnect wlan0
 kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device connect wlan0
