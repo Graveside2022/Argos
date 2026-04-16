@@ -47,15 +47,22 @@ pip3 install --break-system-packages -q -r "$INSTALL_DIR/requirements.txt"
 
 # ── DragonSync config.ini ──
 if [[ ! -f "$INSTALL_DIR/config.ini" ]]; then
-    warn "No config.ini found — copying default"
+    warn "No config.ini found — the repo ships a default, checking..."
+    if [[ -f "$INSTALL_DIR/config.ini.example" ]]; then
+        cp "$INSTALL_DIR/config.ini.example" "$INSTALL_DIR/config.ini"
+    fi
 fi
 
 # Ensure API is enabled in config
-if grep -q "api_enabled" "$INSTALL_DIR/config.ini" 2>/dev/null; then
+if [[ -f "$INSTALL_DIR/config.ini" ]]; then
     sed -i 's/^api_enabled\s*=.*/api_enabled = true/' "$INSTALL_DIR/config.ini"
     sed -i 's/^api_port\s*=.*/api_port = 8088/' "$INSTALL_DIR/config.ini"
+    if ! grep -q "^api_enabled" "$INSTALL_DIR/config.ini"; then
+        printf '\napi_enabled = true\napi_port = 8088\n' >> "$INSTALL_DIR/config.ini"
+    fi
+    info "config.ini: API enabled on port 8088"
 else
-    info "config.ini API settings look default (enabled on 8088)"
+    error "config.ini missing and no example found — check DragonSync repo"
 fi
 
 # ── zmq-decoder.service (droneid-go) ──
@@ -70,7 +77,7 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=$DRONEID_DIR
-ExecStart=$DRONEID_DIR/droneid -i $WIFI_IFACE -g -z -zmqsetting 0.0.0.0:4224
+ExecStart=$DRONEID_DIR/droneid -i $WIFI_IFACE -g -z -zmqsetting 127.0.0.1:4224
 Restart=on-failure
 RestartSec=5
 
