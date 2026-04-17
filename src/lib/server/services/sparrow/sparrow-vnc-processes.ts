@@ -9,6 +9,7 @@
  */
 
 import { type ChildProcess, spawn } from 'child_process';
+import { mkdirSync } from 'fs';
 import { connect as netConnect } from 'net';
 
 import { execFileAsync } from '$lib/server/exec';
@@ -91,15 +92,29 @@ export function centerSparrowWindow(): void {
 	proc.unref();
 }
 
+function ensureXdgRuntimeDir(): string {
+	const runtimeDir = process.env.XDG_RUNTIME_DIR ?? '/tmp/sparrow-runtime';
+	try {
+		mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
+	} catch (err) {
+		logger.warn('[sparrow-vnc] could not create XDG_RUNTIME_DIR', {
+			path: runtimeDir,
+			error: err instanceof Error ? err.message : String(err)
+		});
+	}
+	return runtimeDir;
+}
+
 /** Spawn the Sparrow-WiFi PyQt5 GUI rendering into the Xtigervnc display.
  *  Runs via sudo because iw scan requires root privileges.
  *  stdout/stderr piped to logger so errors like "Error 161" surface in argos logs. */
 export function spawnSparrowGui(): void {
+	const runtimeDir = ensureXdgRuntimeDir();
 	sparrowProcess = spawn('/usr/bin/sudo', ['-E', '/usr/bin/python3', SPARROW_GUI_PATH], {
 		env: {
 			...process.env,
 			DISPLAY: SPARROW_VNC_DISPLAY,
-			XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR ?? '/tmp/sparrow-runtime',
+			XDG_RUNTIME_DIR: runtimeDir,
 			QT_QPA_PLATFORM: 'xcb'
 		},
 		cwd: '/opt/sparrow-wifi',
