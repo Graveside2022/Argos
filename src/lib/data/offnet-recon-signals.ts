@@ -220,14 +220,22 @@ export const cellularTrunked: ToolCategory = {
 			collapsible: true,
 			defaultExpanded: false,
 			children: [
-				createTool({
-					id: 'trunk-recorder',
-					name: 'trunk-recorder',
-					description:
-						'Records and decodes calls from P25 & SmartNet trunked radio systems with multi-SDR support',
-					icon: toolIcons.cellular,
-					deployment: 'docker'
-				}),
+				createTool(
+					{
+						id: 'trunk-recorder',
+						name: 'Trunk Recorder',
+						description:
+							'Records and decodes calls from P25 & SmartNet trunked radio systems with multi-SDR support',
+						icon: toolIcons.cellular,
+						deployment: 'docker'
+					},
+					{
+						isInstalled: true,
+						viewName: 'trunk-recorder',
+						canOpen: true,
+						shouldShowControls: true
+					}
+				),
 				createTool({
 					id: 'dsd-neo',
 					name: 'dsd-neo',

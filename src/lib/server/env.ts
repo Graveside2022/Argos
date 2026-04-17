@@ -49,6 +49,13 @@ const envSchema = z.object({
 	SPARROW_PORT: z.coerce.number().int().min(1024).max(65535).default(8020),
 	WIGLETOTAK_PORT: z.coerce.number().int().min(1024).max(65535).default(8081),
 
+	// Trunk-recorder + rdio-scanner (Cellular & Trunked Radio Interception)
+	TRUNK_RECORDER_STATUS_URL: z.string().url().default('http://localhost:3005'),
+	RDIO_SCANNER_URL: z.string().url().default('http://localhost:3002'),
+	RDIO_SCANNER_ADMIN_PASSWORD: z.string().default(''),
+	TRUNK_RECORDER_CONFIG_DIR: z.string().default('/var/lib/argos/trunk-recorder'),
+	TRUNK_RECORDER_RECORDINGS_DIR: z.string().default('/var/lib/argos/recordings'),
+
 	// GSM Evil data directory
 	GSMEVIL_DIR: z.string().default(''),
 

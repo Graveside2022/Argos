@@ -105,7 +105,8 @@ export type ActiveView =
 	| 'globalprotect'
 	| 'logs-analytics'
 	| 'sparrow-wifi'
-	| 'sdrpp';
+	| 'sdrpp'
+	| 'trunk-recorder';
 
 const VALID_VIEWS: ReadonlySet<string> = new Set<ActiveView>([
 	'map',
