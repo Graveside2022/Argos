@@ -86,17 +86,13 @@ async function getDiskUsage() {
 
 async function getCPUTemperature(): Promise<number | undefined> {
 	try {
-		// Try Raspberry Pi temperature
-		const { stdout } = await execFileAsync('/usr/bin/vcgencmd', ['measure_temp']);
-		const match = stdout.match(/temp=(\d+\.?\d*)/);
-		if (match) {
-			return parseFloat(match[1]);
-		}
+		const temp = await fs.readFile('/sys/class/thermal/thermal_zone0/temp', 'utf-8');
+		return parseInt(temp) / 1000;
 	} catch (_error: unknown) {
 		try {
-			// Try thermal zone (works on many Linux systems)
-			const temp = await fs.readFile('/sys/class/thermal/thermal_zone0/temp', 'utf-8');
-			return parseInt(temp) / 1000;
+			const { stdout } = await execFileAsync('/usr/bin/vcgencmd', ['measure_temp']);
+			const match = stdout.match(/temp=(\d+\.?\d*)/);
+			return match ? parseFloat(match[1]) : undefined;
 		} catch (_error: unknown) {
 			return undefined;
 		}
