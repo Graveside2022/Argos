@@ -42,6 +42,22 @@ kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-droneid
 kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-kismet
 kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start argos-headless
 
+# SDR hardware arbiter — stop competing services to free B205/HackRF before
+# sparrow/kismet/bluehood start. See src/lib/server/hardware/b205-manager.ts
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop wardragon-fpv-detect
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop wardragon-fpv-detect.service
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl start sparrow-wifi-agent
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop sparrow-wifi-agent
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart sparrow-wifi-agent
+
+# Sparrow auto-reset wlan1 mode — prior monitor-mode tools leave Alfa in
+# type=monitor which breaks sparrow's iw scan (Error 161 / -95 EOPNOTSUPP)
+kali ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan1 *
+kali ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan2 *
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop zmq-decoder.service
+kali ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop zmq-decoder
+kali ALL=(ALL) NOPASSWD: /usr/bin/pkill -f /opt/droneid-go/droneid
+
 # Argos WiFi resilience — interface recovery
 kali ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan0 *
 kali ALL=(ALL) NOPASSWD: /usr/bin/nmcli device reapply wlan0

@@ -27,7 +27,7 @@ const MOCK_RESPONSES: Record<string, Record<string, unknown>> = {
 /** Combined status from agent + VNC stack. */
 async function handleStatus() {
 	const agentStatus = await getSparrowStatus();
-	const vncStatus = getSparrowVncStatus();
+	const vncStatus = await getSparrowVncStatus();
 	return json({
 		success: true,
 		isRunning: agentStatus.isRunning || vncStatus.isRunning,

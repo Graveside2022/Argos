@@ -92,15 +92,29 @@ export function centerSparrowWindow(): void {
 }
 
 /** Spawn the Sparrow-WiFi PyQt5 GUI rendering into the Xtigervnc display.
- *  Runs via sudo because iw scan requires root privileges. */
+ *  Runs via sudo because iw scan requires root privileges.
+ *  stdout/stderr piped to logger so errors like "Error 161" surface in argos logs. */
 export function spawnSparrowGui(): void {
 	sparrowProcess = spawn('/usr/bin/sudo', ['-E', '/usr/bin/python3', SPARROW_GUI_PATH], {
-		env: { ...process.env, DISPLAY: SPARROW_VNC_DISPLAY },
+		env: {
+			...process.env,
+			DISPLAY: SPARROW_VNC_DISPLAY,
+			XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR ?? '/tmp/sparrow-runtime',
+			QT_QPA_PLATFORM: 'xcb'
+		},
 		cwd: '/opt/sparrow-wifi',
-		stdio: 'ignore',
+		stdio: ['ignore', 'pipe', 'pipe'],
 		detached: true
 	});
 	sparrowProcess.unref();
+	sparrowProcess.stdout?.on('data', (buf: Buffer) => {
+		const line = buf.toString('utf-8').trimEnd();
+		if (line) logger.info('[sparrow-gui] ' + line);
+	});
+	sparrowProcess.stderr?.on('data', (buf: Buffer) => {
+		const line = buf.toString('utf-8').trimEnd();
+		if (line) logger.warn('[sparrow-gui] ' + line);
+	});
 	sparrowProcess.on('exit', (code, signal) => {
 		logger.info('[sparrow-vnc] sparrow-wifi.py exited', { code, signal });
 		sparrowProcess = null;
@@ -220,5 +234,15 @@ export async function killAllProcesses(): Promise<void> {
 // ─────────────────────────────── state ──────────────────────────────────
 
 export function isStackAlive(): boolean {
-	return xvncProcess !== null && sparrowProcess !== null && websockifyProcess !== null;
+	// In-memory refs reset on dev server reload but detached child procs survive.
+	// Fall back to tracked refs OR live TCP ports so UI doesn't show "unavailable"
+	// across a hot-restart.
+	if (xvncProcess !== null && sparrowProcess !== null && websockifyProcess !== null) return true;
+	return false;
+}
+
+/** True when VNC + websockify TCP ports are live, even across dev server restarts. */
+export async function isStackAliveByPort(): Promise<boolean> {
+	const [vncOk, wsOk] = await Promise.all([isVncPortOpen(), isWebsockifyResponding()]);
+	return vncOk && wsOk;
 }
