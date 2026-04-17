@@ -9,6 +9,8 @@
  */
 
 import { execFileAsync } from '$lib/server/exec';
+import { resourceManager } from '$lib/server/hardware/resource-manager';
+import { HardwareDevice } from '$lib/server/hardware/types';
 import type {
 	DragonSyncControlResult,
 	DragonSyncDrone,
@@ -17,6 +19,8 @@ import type {
 	DragonSyncStatusResult
 } from '$lib/types/dragonsync';
 import { logger } from '$lib/utils/logger';
+
+const FPV_OWNER = 'wardragon-fpv-detect';
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -187,20 +191,36 @@ export function getLastPollError(): string | null {
 // Public API — control
 // ---------------------------------------------------------------------------
 
+async function claimB205ForFpv(): Promise<DragonSyncControlResult | null> {
+	const claim = await resourceManager.acquire(FPV_OWNER, HardwareDevice.B205);
+	if (claim.success || claim.owner === FPV_OWNER) return null;
+	logger.info('[dragonsync] B205 held by competitor, force-releasing', { owner: claim.owner });
+	await resourceManager.forceRelease(HardwareDevice.B205);
+	const retry = await resourceManager.acquire(FPV_OWNER, HardwareDevice.B205);
+	if (retry.success) return null;
+	return {
+		success: false,
+		message: `B205 unavailable (held by ${retry.owner})`,
+		error: 'b205-locked'
+	};
+}
+
+async function rollbackDragonSyncPrereqs(): Promise<void> {
+	await stopService(DRAGONSYNC_SERVICE);
+	await stopService(ZMQ_DECODER_SERVICE);
+}
+
 export async function startDragonSync(): Promise<DragonSyncControlResult> {
 	logger.info('[dragonsync] Starting zmq-decoder + dragonsync + wardragon-fpv-detect');
 
-	const droneidOk = await startService(ZMQ_DECODER_SERVICE);
-	if (!droneidOk) {
+	if (!(await startService(ZMQ_DECODER_SERVICE))) {
 		return {
 			success: false,
 			message: `Failed to start ${ZMQ_DECODER_SERVICE}`,
 			error: 'systemctl start failed'
 		};
 	}
-
-	const dsOk = await startService(DRAGONSYNC_SERVICE);
-	if (!dsOk) {
+	if (!(await startService(DRAGONSYNC_SERVICE))) {
 		await stopService(ZMQ_DECODER_SERVICE);
 		return {
 			success: false,
@@ -209,10 +229,15 @@ export async function startDragonSync(): Promise<DragonSyncControlResult> {
 		};
 	}
 
-	const fpvOk = await startService(FPV_SERVICE);
-	if (!fpvOk) {
-		await stopService(DRAGONSYNC_SERVICE);
-		await stopService(ZMQ_DECODER_SERVICE);
+	const claimFailure = await claimB205ForFpv();
+	if (claimFailure) {
+		await rollbackDragonSyncPrereqs();
+		return claimFailure;
+	}
+
+	if (!(await startService(FPV_SERVICE))) {
+		await resourceManager.release(FPV_OWNER, HardwareDevice.B205).catch(() => undefined);
+		await rollbackDragonSyncPrereqs();
 		return {
 			success: false,
 			message: `Failed to start ${FPV_SERVICE}`,
@@ -229,6 +254,7 @@ export async function stopDragonSync(): Promise<DragonSyncControlResult> {
 	stopDragonSyncPoller();
 
 	const fpvOk = await stopService(FPV_SERVICE);
+	await resourceManager.release(FPV_OWNER, HardwareDevice.B205).catch(() => undefined);
 	const dsOk = await stopService(DRAGONSYNC_SERVICE);
 	const droneidOk = await stopService(ZMQ_DECODER_SERVICE);
 	cachedDrones = [];

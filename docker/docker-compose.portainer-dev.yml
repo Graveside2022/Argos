@@ -106,6 +106,68 @@ services:
         max-file: "3"
 
   # ============================================
+  # TRUNK-RECORDER - P25 / SmartNet trunked radio
+  # recorder (Cellular & Trunked Radio Interception)
+  # Spawned on-demand by Argos control endpoint.
+  # Exclusively holds the HackRF while running.
+  # ============================================
+  trunk-recorder:
+    image: robotastic/trunk-recorder:latest
+    container_name: trunk-recorder
+    profiles: ["tools"]
+    mem_limit: 768m
+    memswap_limit: 1g
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    privileged: true
+    working_dir: /app
+    volumes:
+      # Argos writes config.json + talkgroups.csv here from the active preset.
+      # Host bind — Argos service layer writes to TRUNK_RECORDER_CONFIG_DIR.
+      - /var/lib/argos/trunk-recorder:/app/config:rw
+      # Shared recordings volume — rdio-scanner reads the same WAV+JSON pairs.
+      - /var/lib/argos/recordings:/app/recordings:rw
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["trunk-recorder --config=/app/config/config.json"]
+    networks:
+      - argos-dev-network
+    restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # ============================================
+  # RDIO-SCANNER - Go web UI for trunked call
+  # playback. Ingests calls from trunk-recorder
+  # via its rdioscanner_uploader plugin. Persistent
+  # across trunk-recorder start/stop cycles so the
+  # operator can replay archived calls.
+  # ============================================
+  rdio-scanner:
+    image: chuot/rdio-scanner:latest
+    container_name: rdio-scanner
+    profiles: ["tools"]
+    mem_limit: 384m
+    memswap_limit: 512m
+    ports:
+      - "3002:3000"
+    volumes:
+      # Persistent SQLite DB with call metadata + admin config.
+      - rdio-scanner-data:/app/data:rw
+      # Shared recordings volume (read-only for rdio-scanner).
+      - /var/lib/argos/recordings:/app/recordings:ro
+    networks:
+      - argos-dev-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # ============================================
   # JAEGER - Distributed tracing backend
   # Always-on: receives OTel traces from Argos
   # UI: http://localhost:16686
@@ -141,3 +203,4 @@ networks:
 
 volumes:
   openwebrx-hackrf-settings:
+  rdio-scanner-data:

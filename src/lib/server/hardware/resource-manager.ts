@@ -4,6 +4,7 @@ import { delay } from '$lib/utils/delay';
 import { logger } from '$lib/utils/logger';
 
 import * as alfaMgr from './alfa-manager';
+import * as b205Mgr from './b205-manager';
 import * as hackrfMgr from './hackrf-manager';
 import { canonicalizeWebRxOwner } from './hackrf-owner-aliases';
 import { scanForOrphans } from './resource-scan';
@@ -28,7 +29,10 @@ const KNOWN_TOOL_NAMES: ReadonlySet<string> = new Set([
 	'spiderfoot',
 	'sightline',
 	'pagermon',
-	'sdrpp'
+	'sdrpp',
+	'sparrow-wifi',
+	'wardragon-fpv-detect',
+	'uas-scanner'
 ]);
 
 class ResourceManager extends EventEmitter {
@@ -132,10 +136,26 @@ class ResourceManager extends EventEmitter {
 		this.state.set(HardwareDevice.ALFA, current);
 	}
 
+	private async refreshB205(): Promise<void> {
+		const current = this.state.get(HardwareDevice.B205);
+		if (!current) return;
+		current.isDetected = await b205Mgr.detectB205();
+		const processes = await b205Mgr.getBlockingProcesses();
+		const services = await b205Mgr.getServiceStatus();
+		let owner: string | null = processes.length > 0 ? processes[0].name : null;
+		if (!owner) {
+			const activeSvc = services.find((s) => s.isActive);
+			owner = activeSvc ? activeSvc.name.replace(/\.service$/, '') : null;
+		}
+		this.applyOwnership(current, owner);
+		this.state.set(HardwareDevice.B205, current);
+	}
+
 	private async refreshDetection(): Promise<void> {
 		try {
 			await this.refreshHackrf();
 			await this.refreshAlfa();
+			await this.refreshB205();
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
 			logger.warn(
@@ -153,10 +173,31 @@ class ResourceManager extends EventEmitter {
 	 * 30 seconds for the scheduled background refresh. Errors are swallowed
 	 * and logged — a refresh failure must never break a control action.
 	 */
+	private async dispatchRefresh(device: HardwareDevice): Promise<void> {
+		if (device === HardwareDevice.HACKRF) return this.refreshHackrf();
+		if (device === HardwareDevice.ALFA) return this.refreshAlfa();
+		if (device === HardwareDevice.B205) return this.refreshB205();
+	}
+
+	private async killDeviceHolders(device: HardwareDevice): Promise<void> {
+		if (device === HardwareDevice.HACKRF) {
+			await hackrfMgr.killBlockingProcesses();
+			await hackrfMgr.stopContainers();
+			return;
+		}
+		if (device === HardwareDevice.ALFA) {
+			await alfaMgr.killBlockingProcesses();
+			return;
+		}
+		if (device === HardwareDevice.B205) {
+			await b205Mgr.stopServices();
+			await b205Mgr.killBlockingProcesses();
+		}
+	}
+
 	async refreshNow(device: HardwareDevice): Promise<void> {
 		try {
-			if (device === HardwareDevice.HACKRF) await this.refreshHackrf();
-			else if (device === HardwareDevice.ALFA) await this.refreshAlfa();
+			await this.dispatchRefresh(device);
 		} catch (error: unknown) {
 			const msg = error instanceof Error ? error.message : String(error);
 			logger.warn(
@@ -280,13 +321,7 @@ class ResourceManager extends EventEmitter {
 			}
 			const previousOwner = current.owner;
 
-			// Kill processes based on device type
-			if (device === HardwareDevice.HACKRF) {
-				await hackrfMgr.killBlockingProcesses();
-				await hackrfMgr.stopContainers();
-			} else if (device === HardwareDevice.ALFA) {
-				await alfaMgr.killBlockingProcesses();
-			}
+			await this.killDeviceHolders(device);
 
 			this.state.set(device, {
 				device,
@@ -307,15 +342,17 @@ class ResourceManager extends EventEmitter {
 		const hackrf = this.state.get(HardwareDevice.HACKRF);
 		const alfa = this.state.get(HardwareDevice.ALFA);
 		const bluetooth = this.state.get(HardwareDevice.BLUETOOTH);
+		const b205 = this.state.get(HardwareDevice.B205);
 
-		if (!hackrf || !alfa || !bluetooth) {
+		if (!hackrf || !alfa || !bluetooth || !b205) {
 			throw new Error('Hardware state not initialized');
 		}
 
 		return {
 			hackrf: { ...hackrf },
 			alfa: { ...alfa },
-			bluetooth: { ...bluetooth }
+			bluetooth: { ...bluetooth },
+			b205: { ...b205 }
 		};
 	}
 

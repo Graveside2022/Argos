@@ -22,6 +22,7 @@ import { checkRateLimit, getSafeClientAddress } from '$lib/server/middleware/rat
 import { applySecurityHeaders } from '$lib/server/middleware/security-headers';
 import { handleWsConnection } from '$lib/server/middleware/ws-connection-handler';
 import { logAuthEvent } from '$lib/server/security/auth-audit';
+import { handleRdioProxy } from '$lib/server/services/trunk-recorder/rdio-proxy';
 import { logger } from '$lib/utils/logger';
 
 // Request body size limits -- prevents DoS via oversized POST/PUT bodies (Phase 2.1.7)
@@ -234,25 +235,26 @@ function attachSessionCookie(event: Parameters<Handle>[0]['event'], response: Re
 	});
 }
 
+/** Run the security middleware chain. Returns short-circuit Response or null. */
+function runSecurityPipeline(event: Parameters<Handle>[0]['event']): Response | null {
+	return (
+		handleWsAuth(event) ?? handleApiAuth(event) ?? checkRateLimit(event) ?? checkBodySize(event)
+	);
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
-	// Security middleware pipeline — each returns Response to short-circuit or null to continue
-	const wsAuthResponse = handleWsAuth(event);
-	if (wsAuthResponse) return wsAuthResponse;
+	const shortCircuit = runSecurityPipeline(event);
+	if (shortCircuit) return shortCircuit;
 
-	const apiAuthResponse = handleApiAuth(event);
-	if (apiAuthResponse) return apiAuthResponse;
-
-	const rateLimitResponse = checkRateLimit(event);
-	if (rateLimitResponse) return rateLimitResponse;
-
-	const bodySizeResponse = checkBodySize(event);
-	if (bodySizeResponse) return bodySizeResponse;
+	// Reverse-proxy /rdio/* → rdio-scanner container. Runs after auth gate so
+	// the rdio-scanner UI inherits Argos session authentication.
+	if (event.url.pathname.startsWith('/rdio')) {
+		return handleRdioProxy({ event, resolve });
+	}
 
 	const response = await resolve(event);
-
 	attachSessionCookie(event, response);
 	applySecurityHeaders(response, event.url.pathname + event.url.search);
-
 	return response;
 };
 

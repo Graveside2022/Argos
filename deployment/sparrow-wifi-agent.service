@@ -2,6 +2,12 @@
 Description=Sparrow-WiFi Agent (headless REST API)
 Documentation=https://github.com/ghostop14/sparrow-wifi
 After=network.target gpsd.service
+# PSU headroom — RPi5 + B205 + HackRF on 27W cannot run wardragon-fpv-detect
+# concurrently with sparrow scans without brown-out. Systemd will auto-stop
+# fpv-detect when sparrow starts (and vice-versa via its drop-in).
+# zmq-decoder runs droneid-go -i wlan1 which pins wlan1 to monitor mode and
+# blocks sparrow's iw scan (Error 161 / -95 EOPNOTSUPP).
+Conflicts=wardragon-fpv-detect.service zmq-decoder.service
 
 [Service]
 Type=simple
