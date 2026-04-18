@@ -34,19 +34,24 @@ function validateTileRequest(params: { path?: string }): {
 	return { apiKey, path };
 }
 
-/** Rewrite Stadia Maps URLs to route through our proxy and strip leaked API keys. */
-function rewriteJsonBody(text: string, baseUrl: string): string {
+/** Rewrite Stadia Maps URLs to route through our proxy and strip leaked API keys.
+ *  Uses fully-qualified `http://host/path` URLs because MapLibre's style
+ *  validator rejects both relative and protocol-relative URLs for `sprite`.
+ *  Scheme is hardcoded to `http` because prod-server.ts runs plain HTTP;
+ *  if TLS is added in front, switch this to `https` (or honor a forwarded
+ *  X-Forwarded-Proto header explicitly). */
+function rewriteJsonBody(text: string, host: string): string {
 	const proxied = text.replace(
 		/https:\/\/tiles\.stadiamaps\.com\//g,
-		`${baseUrl}/api/map-tiles/`
+		`http://${host}/api/map-tiles/`
 	);
 	return proxied.replace(/([?&])api_key=[^"&\s]+/g, () => '');
 }
 
 /** Build a tile response, rewriting JSON bodies to proxy through our server. */
-function buildTileResponse(contentType: string, body: ArrayBuffer, baseUrl: string): Response {
+function buildTileResponse(contentType: string, body: ArrayBuffer, host: string): Response {
 	if (contentType.includes('json')) {
-		const rewritten = rewriteJsonBody(new TextDecoder().decode(body), baseUrl);
+		const rewritten = rewriteJsonBody(new TextDecoder().decode(body), host);
 		return new Response(rewritten, {
 			headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' }
 		});
@@ -57,12 +62,12 @@ function buildTileResponse(contentType: string, body: ArrayBuffer, baseUrl: stri
 }
 
 /** Fetch a tile from Stadia Maps upstream and build the proxied response. */
-async function fetchAndProxy(path: string, apiKey: string, baseUrl: string): Promise<Response> {
+async function fetchAndProxy(path: string, apiKey: string, host: string): Promise<Response> {
 	const sep = path.includes('?') ? '&' : '?';
 	const response = await fetch(`https://tiles.stadiamaps.com/${path}${sep}api_key=${apiKey}`);
 	if (!response.ok) return new Response(response.statusText, { status: response.status });
 	const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-	return buildTileResponse(contentType, await response.arrayBuffer(), baseUrl);
+	return buildTileResponse(contentType, await response.arrayBuffer(), host);
 }
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -70,11 +75,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	if (validated.error) return validated.error;
 
 	try {
-		return await fetchAndProxy(
-			validated.path!,
-			validated.apiKey!,
-			`${url.protocol}//${url.host}`
-		);
+		return await fetchAndProxy(validated.path!, validated.apiKey!, url.host);
 	} catch {
 		return new Response('Upstream error', { status: 502 });
 	}
