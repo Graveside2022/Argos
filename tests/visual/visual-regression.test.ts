@@ -62,6 +62,11 @@ describe.skipIf(arch().startsWith('arm'))('Visual Regression Tests', () => {
 		const screenshotBuffer = await fs.readFile(screenshotPath);
 		const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
 		const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));
+		// pixelmatch requires identical dimensions — fail fast with a clear message otherwise.
+		expect(
+			screenshot.width === baseline.width && screenshot.height === baseline.height,
+			`Image dimension mismatch: baseline=${baseline.width}x${baseline.height} vs screenshot=${screenshot.width}x${screenshot.height}`
+		).toBe(true);
 		const w = baseline.width;
 		const h = baseline.height;
 		const diff = new PNG({ width: w, height: h });

@@ -27,7 +27,9 @@ function assertNumericHeaderIfPresent(
 ): void {
 	const value = response.headers.get(name);
 	if (!value) return;
-	check(parseInt(value, 10));
+	const parsed = parseInt(value, 10);
+	expect(Number.isNaN(parsed), `${name} header "${value}" did not parse as a number`).toBe(false);
+	check(parsed);
 }
 
 function assertRateLimitHeaders(response: Response): void {
@@ -224,7 +226,8 @@ describe.runIf(canRun)('Rate Limiting Security', () => {
 				const response = await fetch(`${BASE_URL}${endpoint}`, {
 					headers: { 'X-API-Key': API_KEY }
 				});
-				if (response.status === 429) assertRateLimitHeaders(response);
+				expect(response.status, 'expected 429 after exhausting rate limit').toBe(429);
+				assertRateLimitHeaders(response);
 			},
 			{ timeout: 10000 }
 		);

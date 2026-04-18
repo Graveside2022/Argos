@@ -15,7 +15,8 @@ export function terminalPlugin(): Plugin {
 				handleTerminalUpgrade(req, socket, head);
 			});
 			console.warn('[argos-terminal] Terminal WebSocket attached at /terminal-ws');
-			if (process.env.ARGOS_TERMINAL_PRESPAWN !== '0') {
+			// Match prod-server.ts + env enum default '0': pre-spawn fires only when explicitly opted-in.
+			if (process.env.ARGOS_TERMINAL_PRESPAWN === '1') {
 				void preSpawnDefaultSession();
 			}
 		}

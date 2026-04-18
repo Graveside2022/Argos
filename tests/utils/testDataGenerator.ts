@@ -74,7 +74,10 @@ const DRONE_POSITION_HANDLERS: Record<
 	surveillance: surveillancePos,
 	delivery: deliveryPos,
 	racing: racingPos,
-	inspection: inspectionPos
+	inspection: inspectionPos,
+	// 'media' is declared in DroneOptions and exists in getDroneVelocity/Model/Mode tables;
+	// reuse the surveillance orbit (slow circular pan) as a sensible default for filming.
+	media: surveillancePos
 };
 
 export class TestDataGenerator {

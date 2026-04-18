@@ -311,8 +311,10 @@ type SessionAction = (ctx: SessionActionCtx) => Promise<void>;
 
 async function actionViewSignals(ctx: SessionActionCtx): Promise<void> {
 	const viewCount = Math.floor(Math.random() * 100) + 50;
-	const start = Math.floor(Math.random() * (ctx.signals.length - viewCount));
-	ctx.signals.slice(start, viewCount); // simulate read
+	const maxStart = Math.max(0, ctx.signals.length - viewCount);
+	const start = Math.floor(Math.random() * maxStart);
+	const end = Math.min(start + viewCount, ctx.signals.length);
+	ctx.signals.slice(start, end); // simulate read
 }
 
 async function actionSubmitSignal(ctx: SessionActionCtx): Promise<void> {
