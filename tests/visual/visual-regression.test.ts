@@ -53,6 +53,41 @@ describe.skipIf(arch().startsWith('arm'))('Visual Regression Tests', () => {
 		}
 	});
 
+	async function compareScreenshotToBaseline(
+		baselinePath: string,
+		screenshotPath: string,
+		diffPath: string
+	): Promise<void> {
+		const baselineBuffer = await fs.readFile(baselinePath);
+		const screenshotBuffer = await fs.readFile(screenshotPath);
+		const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
+		const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));
+		const w = baseline.width;
+		const h = baseline.height;
+		const diff = new PNG({ width: w, height: h });
+		const numDiffPixels = pixelmatch(baseline.data, screenshot.data, diff.data, w, h, {
+			threshold: VISUAL_REGRESSION_CONFIG.threshold
+		});
+		if (numDiffPixels === 0) return;
+		await fs.writeFile(diffPath, PNG.sync.write(diff));
+		const percentDiff = (numDiffPixels / (w * h)) * 100;
+		expect(percentDiff).toBeLessThan(0.1); // Less than 0.1% difference
+	}
+
+	async function createBaselineIfMissing(
+		error: unknown,
+		screenshotPath: string,
+		baselinePath: string,
+		label: string
+	): Promise<void> {
+		if ((error as { code?: string }).code === 'ENOENT') {
+			await fs.copyFile(screenshotPath, baselinePath);
+			console.warn(`Created baseline for ${label}`);
+			return;
+		}
+		throw error;
+	}
+
 	VISUAL_REGRESSION_CONFIG.pages.forEach(({ name: pageName, path: pagePath }) => {
 		VISUAL_REGRESSION_CONFIG.viewports.forEach(({ name: viewportName, width, height }) => {
 			it(`should match baseline for ${pageName} page on ${viewportName}`, async () => {
@@ -64,59 +99,21 @@ describe.skipIf(arch().startsWith('arm'))('Visual Regression Tests', () => {
 				await page.goto(`${VISUAL_REGRESSION_CONFIG.baseUrl}${pagePath}`, {
 					waitUntil: 'networkidle0'
 				});
-
-				// Wait for any animations to complete
 				await new Promise((resolve) => setTimeout(resolve, 1000));
-
-				// Take screenshot
 				const screenshotPath =
 					`tests/visual/screenshots/${pageName}-${viewportName}.png` as `${string}.png`;
 				await page.screenshot({ path: screenshotPath, fullPage: true });
-
-				// Compare with baseline
 				const baselinePath = `tests/visual/baselines/${pageName}-${viewportName}.png`;
 				const diffPath = `tests/visual/diffs/${pageName}-${viewportName}-diff.png`;
-
 				try {
-					const baselineBuffer = await fs.readFile(baselinePath);
-
-					const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
-					const screenshotBuffer = await fs.readFile(screenshotPath);
-
-					const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));
-
-					const w = baseline.width;
-
-					const h = baseline.height;
-
-					const diff = new PNG({ width: w, height: h });
-
-					const numDiffPixels = pixelmatch(
-						baseline.data,
-
-						screenshot.data,
-
-						diff.data,
-						w,
-						h,
-						{ threshold: VISUAL_REGRESSION_CONFIG.threshold }
-					);
-
-					if (numDiffPixels > 0) {
-						const diffBuffer = PNG.sync.write(diff);
-
-						await fs.writeFile(diffPath, diffBuffer);
-						const percentDiff = (numDiffPixels / (w * h)) * 100;
-						expect(percentDiff).toBeLessThan(0.1); // Less than 0.1% difference
-					}
+					await compareScreenshotToBaseline(baselinePath, screenshotPath, diffPath);
 				} catch (error) {
-					// If baseline doesn't exist, create it
-					if ((error as { code?: string }).code === 'ENOENT') {
-						await fs.copyFile(screenshotPath, baselinePath);
-						console.warn(`Created baseline for ${pageName}-${viewportName}`);
-					} else {
-						throw error;
-					}
+					await createBaselineIfMissing(
+						error,
+						screenshotPath,
+						baselinePath,
+						`${pageName}-${viewportName}`
+					);
 				}
 			});
 		});

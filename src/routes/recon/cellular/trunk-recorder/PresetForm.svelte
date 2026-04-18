@@ -61,13 +61,19 @@
 		return hz;
 	}
 
+	function tryAddChannel(channels: number[], mhz: string): { error: string } | null {
+		const parsed = parseOneControlChannel(mhz);
+		if (parsed === null) return null;
+		if (typeof parsed !== 'number') return parsed;
+		channels.push(parsed);
+		return null;
+	}
+
 	function parseControlChannels(): number[] | { error: string } {
 		const channels: number[] = [];
 		for (const mhz of controlChannelsMhz) {
-			const parsed = parseOneControlChannel(mhz);
-			if (parsed === null) continue;
-			if (typeof parsed !== 'number') return parsed;
-			channels.push(parsed);
+			const err = tryAddChannel(channels, mhz);
+			if (err) return err;
 		}
 		if (channels.length === 0) return { error: 'At least one control channel required' };
 		return channels;

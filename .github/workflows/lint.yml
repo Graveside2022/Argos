@@ -1,0 +1,40 @@
+name: 'Lint: Cognitive Complexity & Code Quality Gate'
+
+# Fast lint-only gate. Fires on every push and every PR (any branch).
+# Hard-blocks merging into main if ESLint reports any error.
+# The richer ci.yml (typecheck + tests + build) still runs on main.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+# Cancel in-progress runs of this workflow on the same ref when a new push lands
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint:
+    name: 'ESLint full-repo scan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      - name: 'Setup Node.js v22'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: 'Install dependencies'
+        run: npm ci
+
+      - name: 'ESLint full-repo scan (cognitive complexity ≤5)'
+        # Matches the local pre-commit gate: blocks any error including
+        # sonarjs/cognitive-complexity, complexity (cyclomatic), and unused vars.
+        run: npx eslint . --config config/eslint.config.js

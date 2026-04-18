@@ -76,11 +76,45 @@ test.describe('Accessibility - WCAG 2.1 AA Compliance', () => {
 	});
 });
 
+type FocusStyles = {
+	outline: string;
+	outlineWidth: string;
+	outlineStyle: string;
+	outlineColor: string;
+	boxShadow: string;
+};
+
+function readFocusStyles(el: Element): FocusStyles {
+	const c = window.getComputedStyle(el);
+	return {
+		outline: c.outline,
+		outlineWidth: c.outlineWidth,
+		outlineStyle: c.outlineStyle,
+		outlineColor: c.outlineColor,
+		boxShadow: c.boxShadow
+	};
+}
+
+function hasVisibleFocusRing(s: FocusStyles): boolean {
+	const outlineVisible = s.outlineWidth !== '0px' && s.outlineWidth !== 'none';
+	if (outlineVisible) return true;
+	return Boolean(s.boxShadow) && s.boxShadow !== 'none';
+}
+
+async function reportFocusRingForElement(
+	focusedElement: ReturnType<import('@playwright/test').Page['locator']>,
+	index: number
+): Promise<void> {
+	const styles = await focusedElement.evaluate(readFocusStyles).catch(() => null);
+	if (!styles || hasVisibleFocusRing(styles)) return;
+	const html = await focusedElement.evaluate((el: Element) => el.outerHTML.substring(0, 100));
+	console.warn(`⚠️  Element ${index + 1} may not have visible focus ring: ${html}`);
+}
+
 test.describe('Keyboard Navigation', () => {
 	test('Tab through all interactive elements', async ({ page }) => {
 		await page.goto('/');
 
-		// Get all focusable elements
 		const focusableSelector =
 			'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
 		const focusableElements = page.locator(focusableSelector);
@@ -88,45 +122,12 @@ test.describe('Keyboard Navigation', () => {
 
 		console.log(`\nFound ${count} focusable elements`);
 
-		// Tab through each element and verify focus ring is visible
 		for (let i = 0; i < Math.min(count, 20); i++) {
-			// Limit to first 20 elements
 			await page.keyboard.press('Tab');
 			await page.waitForTimeout(100);
-
-			// Get currently focused element
-			const focusedElement = page.locator(':focus');
-
-			// Verify element has visible focus indicator
-			const styles = await focusedElement
-				.evaluate((el) => {
-					const computed = window.getComputedStyle(el);
-					return {
-						outline: computed.outline,
-						outlineWidth: computed.outlineWidth,
-						outlineStyle: computed.outlineStyle,
-						outlineColor: computed.outlineColor,
-						boxShadow: computed.boxShadow
-					};
-				})
-				.catch(() => null);
-
-			if (styles) {
-				const hasFocusRing =
-					(styles.outlineWidth !== '0px' && styles.outlineWidth !== 'none') ||
-					(styles.boxShadow && styles.boxShadow !== 'none');
-
-				if (!hasFocusRing) {
-					const html = await focusedElement.evaluate((el) =>
-						el.outerHTML.substring(0, 100)
-					);
-					console.warn(`⚠️  Element ${i + 1} may not have visible focus ring: ${html}`);
-				}
-			}
+			await reportFocusRingForElement(page.locator(':focus'), i);
 		}
 
-		// Verify no keyboard traps
-		// User should be able to Tab through all elements and eventually wrap around
 		expect(count).toBeGreaterThan(0);
 	});
 

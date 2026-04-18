@@ -339,6 +339,90 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		});
 	});
 
+	type PngImage = { width: number; height: number; data: Buffer | Uint8Array };
+
+	async function loadBaselineAndScreenshot(
+		baselinePath: string,
+		screenshotPath: string
+	): Promise<{ baseline: PngImage; screenshot: PngImage }> {
+		const baselineBuffer = await fs.readFile(baselinePath);
+		const screenshotBuffer = await fs.readFile(screenshotPath);
+		if (!PNG || !pixelmatch) throw new Error('PNG or pixelmatch not available');
+		return {
+			baseline: PNG.sync.read(Buffer.from(baselineBuffer)),
+			screenshot: PNG.sync.read(Buffer.from(screenshotBuffer))
+		};
+	}
+
+	function logDimensionMismatch(baseline: PngImage, screenshot: PngImage, label: string): void {
+		const sameDims =
+			baseline.width === screenshot.width && baseline.height === screenshot.height;
+		if (sameDims) return;
+		console.warn(
+			`⚠️  Dimension mismatch for ${label}: baseline(${baseline.width}x${baseline.height}) vs screenshot(${screenshot.width}x${screenshot.height})`
+		);
+	}
+
+	function computeDiff(
+		baseline: PngImage,
+		screenshot: PngImage
+	): { diff: InstanceType<NonNullable<typeof PNG>>; numDiffPixels: number; percentDiff: number } {
+		const width = Math.min(baseline.width, screenshot.width);
+		const height = Math.min(baseline.height, screenshot.height);
+		const diff = new PNG!({ width, height });
+		const numDiffPixels = pixelmatch!(
+			baseline.data,
+			screenshot.data,
+			diff.data,
+			width,
+			height,
+			{
+				threshold: PI_VISUAL_CONFIG.threshold,
+				alpha: 0.1,
+				includeAA: true
+			}
+		);
+		const percentDiff = (numDiffPixels / (width * height)) * 100;
+		return { diff, numDiffPixels, percentDiff };
+	}
+
+	async function reportDiffOutcome(
+		numDiffPixels: number,
+		percentDiff: number,
+		diff: InstanceType<NonNullable<typeof PNG>>,
+		diffPath: string,
+		label: string
+	): Promise<void> {
+		console.error(
+			`📏 ${label}: ${numDiffPixels} different pixels (${percentDiff.toFixed(3)}%)`
+		);
+		if (percentDiff > PI_VISUAL_CONFIG.diffThreshold) {
+			await fs.writeFile(diffPath, PNG!.sync.write(diff));
+			throw new Error(
+				`Visual regression detected for ${label}: ${percentDiff.toFixed(3)}% difference exceeds Pi threshold of ${PI_VISUAL_CONFIG.diffThreshold}%`
+			);
+		}
+		if (numDiffPixels > 0) {
+			console.error(`✅ ${label}: Minor differences within Pi tolerance`);
+			return;
+		}
+		console.error(`💯 ${label}: Perfect match!`);
+	}
+
+	async function handleMissingPiBaseline(
+		error: unknown,
+		screenshotPath: string,
+		baselinePath: string,
+		label: string
+	): Promise<void> {
+		if ((error as { code?: string }).code === 'ENOENT') {
+			await fs.copyFile(screenshotPath, baselinePath);
+			console.error(`🎯 Created Pi baseline for ${label}`);
+			return;
+		}
+		throw error;
+	}
+
 	/**
 	 * Pi-specific baseline comparison with Grade A+ compliance
 	 */
@@ -349,73 +433,17 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		pageName: string,
 		viewportName: string
 	): Promise<void> {
+		const label = `${pageName}-${viewportName}`;
 		try {
-			const baselineBuffer = await fs.readFile(baselinePath);
-			const screenshotBuffer = await fs.readFile(screenshotPath);
-
-			if (!PNG || !pixelmatch) {
-				throw new Error('PNG or pixelmatch not available');
-			}
-
-			const baseline = PNG.sync.read(Buffer.from(baselineBuffer));
-			const screenshot = PNG.sync.read(Buffer.from(screenshotBuffer));
-
-			// Handle dimension mismatches (common on Pi)
-			const width = Math.min(baseline.width, screenshot.width);
-			const height = Math.min(baseline.height, screenshot.height);
-
-			if (baseline.width !== screenshot.width || baseline.height !== screenshot.height) {
-				console.warn(
-					`⚠️  Dimension mismatch for ${pageName}-${viewportName}: baseline(${baseline.width}x${baseline.height}) vs screenshot(${screenshot.width}x${screenshot.height})`
-				);
-			}
-
-			const diff = new PNG({ width, height });
-
-			const numDiffPixels = pixelmatch(
-				baseline.data,
-				screenshot.data,
-				diff.data,
-				width,
-				height,
-				{
-					threshold: PI_VISUAL_CONFIG.threshold,
-					alpha: 0.1,
-					includeAA: true // Important for Pi rendering
-				}
+			const { baseline, screenshot } = await loadBaselineAndScreenshot(
+				baselinePath,
+				screenshotPath
 			);
-
-			const totalPixels = width * height;
-			const percentDiff = (numDiffPixels / totalPixels) * 100;
-
-			console.error(
-				`📏 ${pageName}-${viewportName}: ${numDiffPixels} different pixels (${percentDiff.toFixed(3)}%)`
-			);
-
-			if (percentDiff > PI_VISUAL_CONFIG.diffThreshold) {
-				// Save diff for analysis
-				const diffBuffer = PNG.sync.write(diff);
-				await fs.writeFile(diffPath, diffBuffer);
-
-				throw new Error(
-					`Visual regression detected for ${pageName}-${viewportName}: ` +
-						`${percentDiff.toFixed(3)}% difference exceeds Pi threshold of ${PI_VISUAL_CONFIG.diffThreshold}%`
-				);
-			} else if (numDiffPixels > 0) {
-				console.error(
-					`✅ ${pageName}-${viewportName}: Minor differences within Pi tolerance`
-				);
-			} else {
-				console.error(`💯 ${pageName}-${viewportName}: Perfect match!`);
-			}
+			logDimensionMismatch(baseline, screenshot, label);
+			const { diff, numDiffPixels, percentDiff } = computeDiff(baseline, screenshot);
+			await reportDiffOutcome(numDiffPixels, percentDiff, diff, diffPath, label);
 		} catch (error) {
-			// Handle missing baseline (first run)
-			if ((error as { code?: string }).code === 'ENOENT') {
-				await fs.copyFile(screenshotPath, baselinePath);
-				console.error(`🎯 Created Pi baseline for ${pageName}-${viewportName}`);
-				return;
-			}
-			throw error;
+			await handleMissingPiBaseline(error, screenshotPath, baselinePath, label);
 		}
 	}
 });

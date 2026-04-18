@@ -77,6 +77,41 @@ function calculateBoundingBox(lat: number, radiusKm: number) {
 /**
  * Query local SQLite database for cell towers within bounding box
  */
+function tryQueryDb(
+	dbPath: string,
+	lat: number,
+	lon: number,
+	latDelta: number,
+	lonDelta: number
+): CellTowerResult | null {
+	if (!fs.existsSync(dbPath)) return null;
+	try {
+		const db = new Database(dbPath, { readonly: true });
+		const rows = db
+			.prepare(
+				`SELECT radio, mcc, net, area, cell, lat, lon, range, samples, updated, averageSignal
+				FROM towers
+				WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
+				ORDER BY samples DESC
+				LIMIT 500`
+			)
+			.all(lat - latDelta, lat + latDelta, lon - lonDelta, lon + lonDelta);
+		db.close();
+		return {
+			success: true,
+			source: 'database',
+			towers: (rows as TowerRow[]).map(rowToTower),
+			count: rows.length
+		};
+	} catch (dbErr) {
+		logger.warn('[cell-tower] Database query failed', {
+			dbPath,
+			error: dbErr instanceof Error ? dbErr.message : String(dbErr)
+		});
+		return null;
+	}
+}
+
 async function queryLocalDatabase(
 	lat: number,
 	lon: number,
@@ -84,39 +119,10 @@ async function queryLocalDatabase(
 	lonDelta: number
 ): Promise<CellTowerResult | null> {
 	const dbPaths = [path.join(process.cwd(), 'data', 'celltowers', 'towers.db')];
-
 	for (const dbPath of dbPaths) {
-		if (!fs.existsSync(dbPath)) continue;
-
-		try {
-			const db = new Database(dbPath, { readonly: true });
-
-			const rows = db
-				.prepare(
-					`SELECT radio, mcc, net, area, cell, lat, lon, range, samples, updated, averageSignal
-				FROM towers
-				WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
-				ORDER BY samples DESC
-				LIMIT 500`
-				)
-				.all(lat - latDelta, lat + latDelta, lon - lonDelta, lon + lonDelta);
-
-			db.close();
-
-			return {
-				success: true,
-				source: 'database',
-				towers: (rows as TowerRow[]).map(rowToTower),
-				count: rows.length
-			};
-		} catch (dbErr) {
-			logger.warn('[cell-tower] Database query failed', {
-				dbPath,
-				error: dbErr instanceof Error ? dbErr.message : String(dbErr)
-			});
-		}
+		const result = tryQueryDb(dbPath, lat, lon, latDelta, lonDelta);
+		if (result) return result;
 	}
-
 	return null;
 }
 

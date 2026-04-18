@@ -27,6 +27,56 @@ export interface DroneOptions {
 	timeOffset?: number;
 }
 
+type DronePos = { lat: number; lon: number; alt: number };
+
+function surveillancePos(startLat: number, startLon: number, progress: number): DronePos {
+	const radius = 0.001; // ~100m
+	const angle = progress * Math.PI * 2;
+	return {
+		lat: startLat + radius * Math.cos(angle),
+		lon: startLon + radius * Math.sin(angle),
+		alt: 100 + Math.sin(progress * Math.PI * 4) * 20
+	};
+}
+
+function deliveryPos(startLat: number, startLon: number, progress: number): DronePos {
+	return {
+		lat: startLat + progress * 0.01,
+		lon: startLon + progress * 0.005,
+		alt: 120 - progress * 100
+	};
+}
+
+function racingPos(startLat: number, startLon: number, progress: number): DronePos {
+	const t = progress * Math.PI * 2;
+	return {
+		lat: startLat + 0.002 * Math.sin(t),
+		lon: startLon + 0.001 * Math.sin(2 * t),
+		alt: 50 + Math.random() * 20
+	};
+}
+
+function inspectionPos(startLat: number, startLon: number, progress: number): DronePos {
+	const row = Math.floor(progress * 10);
+	const col = (progress * 10) % 1;
+	const colOffset = row % 2 === 0 ? col : 1 - col;
+	return {
+		lat: startLat + row * 0.0002,
+		lon: startLon + colOffset * 0.002,
+		alt: 75
+	};
+}
+
+const DRONE_POSITION_HANDLERS: Record<
+	string,
+	(startLat: number, startLon: number, progress: number) => DronePos
+> = {
+	surveillance: surveillancePos,
+	delivery: deliveryPos,
+	racing: racingPos,
+	inspection: inspectionPos
+};
+
 export class TestDataGenerator {
 	private seedCounter = 0;
 
@@ -124,53 +174,91 @@ export class TestDataGenerator {
 		return signals;
 	}
 
-	generateDroneSignals(count: number, options: DroneOptions = {}): DroneSignal[] {
-		const signals: DroneSignal[] = [];
-		const patterns = options.patterns || ['surveillance'];
-		const timeSpan = options.timeSpan || 3600000;
-		const timeOffset = options.timeOffset || 0;
-
-		// Generate multiple drone flights
-		const dronesCount = Math.max(1, Math.floor(count / 100)); // Assume ~100 signals per drone
-		const signalsPerDrone = Math.floor(count / dronesCount);
-
-		for (let d = 0; d < dronesCount; d++) {
-			const pattern = patterns[Math.floor(Math.random() * patterns.length)];
-			const droneId = `drone_${this.seedCounter++}`;
-			const startLat = 40.7128 + (Math.random() - 0.5) * 0.1;
-			const startLon = -74.006 + (Math.random() - 0.5) * 0.1;
-			const startTime = Date.now() - timeSpan + timeOffset + Math.random() * timeSpan * 0.8;
-			const flightDuration = Math.min(1800000, timeSpan * 0.5); // Max 30 min flight
-
-			for (let i = 0; i < signalsPerDrone; i++) {
-				const progress = i / signalsPerDrone;
-				const position = this.getDronePosition(startLat, startLon, pattern, progress);
-
-				signals.push({
-					id: `${droneId}_${i}`,
-					timestamp: startTime + progress * flightDuration,
-					latitude: position.lat,
-					longitude: position.lon,
-					strength: -35 - Math.random() * 30, // Drones typically have stronger signals
-					frequency: this.getDroneFrequency(),
-					metadata: {
-						type: 'drone',
-						droneId,
-						pattern,
-						altitude: position.alt,
-						velocity: JSON.stringify(this.getDroneVelocity(pattern)),
-						manufacturer: ['DJI', 'Parrot', 'Autel', 'Skydio'][
-							Math.floor(Math.random() * 4)
-						],
-						model: this.getDroneModel(pattern),
-						batteryLevel: 100 - progress * 80, // Battery drains during flight
-						gpsAccuracy: 3 + Math.random() * 12,
-						flightMode: this.getFlightMode(pattern)
-					}
-				});
+	private buildDroneSignal(
+		droneId: string,
+		pattern: string,
+		i: number,
+		signalsPerDrone: number,
+		startLat: number,
+		startLon: number,
+		startTime: number,
+		flightDuration: number
+	): DroneSignal {
+		const progress = i / signalsPerDrone;
+		const position = this.getDronePosition(startLat, startLon, pattern, progress);
+		const manufacturers = ['DJI', 'Parrot', 'Autel', 'Skydio'];
+		return {
+			id: `${droneId}_${i}`,
+			timestamp: startTime + progress * flightDuration,
+			latitude: position.lat,
+			longitude: position.lon,
+			strength: -35 - Math.random() * 30,
+			frequency: this.getDroneFrequency(),
+			metadata: {
+				type: 'drone',
+				droneId,
+				pattern,
+				altitude: position.alt,
+				velocity: JSON.stringify(this.getDroneVelocity(pattern)),
+				manufacturer: manufacturers[Math.floor(Math.random() * manufacturers.length)],
+				model: this.getDroneModel(pattern),
+				batteryLevel: 100 - progress * 80,
+				gpsAccuracy: 3 + Math.random() * 12,
+				flightMode: this.getFlightMode(pattern)
 			}
-		}
+		};
+	}
 
+	private buildDroneFlight(
+		patterns: string[],
+		timeSpan: number,
+		timeOffset: number,
+		signalsPerDrone: number
+	): DroneSignal[] {
+		const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+		const droneId = `drone_${this.seedCounter++}`;
+		const startLat = 40.7128 + (Math.random() - 0.5) * 0.1;
+		const startLon = -74.006 + (Math.random() - 0.5) * 0.1;
+		const startTime = Date.now() - timeSpan + timeOffset + Math.random() * timeSpan * 0.8;
+		const flightDuration = Math.min(1800000, timeSpan * 0.5);
+		const flight: DroneSignal[] = [];
+		for (let i = 0; i < signalsPerDrone; i++) {
+			flight.push(
+				this.buildDroneSignal(
+					droneId,
+					pattern,
+					i,
+					signalsPerDrone,
+					startLat,
+					startLon,
+					startTime,
+					flightDuration
+				)
+			);
+		}
+		return flight;
+	}
+
+	private resolveDroneOptions(options: DroneOptions): {
+		patterns: string[];
+		timeSpan: number;
+		timeOffset: number;
+	} {
+		return {
+			patterns: options.patterns || ['surveillance'],
+			timeSpan: options.timeSpan || 3600000,
+			timeOffset: options.timeOffset || 0
+		};
+	}
+
+	generateDroneSignals(count: number, options: DroneOptions = {}): DroneSignal[] {
+		const { patterns, timeSpan, timeOffset } = this.resolveDroneOptions(options);
+		const dronesCount = Math.max(1, Math.floor(count / 100));
+		const signalsPerDrone = Math.floor(count / dronesCount);
+		const signals: DroneSignal[] = [];
+		for (let d = 0; d < dronesCount; d++) {
+			signals.push(...this.buildDroneFlight(patterns, timeSpan, timeOffset, signalsPerDrone));
+		}
 		return signals;
 	}
 
@@ -275,50 +363,10 @@ export class TestDataGenerator {
 		pattern: string,
 		progress: number
 	): { lat: number; lon: number; alt: number } {
-		switch (pattern) {
-			case 'surveillance': {
-				// Circular orbit
-				const radius = 0.001; // ~100m
-				const angle = progress * Math.PI * 2;
-				return {
-					lat: startLat + radius * Math.cos(angle),
-					lon: startLon + radius * Math.sin(angle),
-					alt: 100 + Math.sin(progress * Math.PI * 4) * 20
-				};
-			}
-
-			case 'delivery':
-				// Point A to B with descent
-				return {
-					lat: startLat + progress * 0.01,
-					lon: startLon + progress * 0.005,
-					alt: 120 - progress * 100 // Descend from 120m to 20m
-				};
-
-			case 'racing': {
-				// Figure-8 pattern
-				const t = progress * Math.PI * 2;
-				return {
-					lat: startLat + 0.002 * Math.sin(t),
-					lon: startLon + 0.001 * Math.sin(2 * t),
-					alt: 50 + Math.random() * 20
-				};
-			}
-
-			case 'inspection': {
-				// Grid pattern
-				const row = Math.floor(progress * 10);
-				const col = (progress * 10) % 1;
-				return {
-					lat: startLat + row * 0.0002,
-					lon: startLon + (row % 2 === 0 ? col : 1 - col) * 0.002,
-					alt: 75
-				};
-			}
-
-			default:
-				return { lat: startLat, lon: startLon, alt: 100 };
-		}
+		const handler = DRONE_POSITION_HANDLERS[pattern];
+		return handler
+			? handler(startLat, startLon, progress)
+			: { lat: startLat, lon: startLon, alt: 100 };
 	}
 
 	private getDroneVelocity(pattern: string): { x: number; y: number; z: number } {

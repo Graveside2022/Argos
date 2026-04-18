@@ -3,7 +3,7 @@
 	import { countTools } from '$lib/data/tool-hierarchy';
 	import { uiIcons } from '$lib/data/tool-icons';
 	import { activePanel } from '$lib/stores/dashboard/dashboard-store';
-	import { navigateToCategory, toolNavigationPath } from '$lib/stores/dashboard/tools-store';
+	import { toolNavigationPath } from '$lib/stores/dashboard/tools-store';
 
 	function handleBack() {
 		activePanel.set('tools');

@@ -64,22 +64,48 @@ export const workflowGoal = writable<string>('');
 // Derived Context - Full Device Details
 // ============================================================================
 
-/** Build the full device details context for the agent. */
-function buildDeviceDetails(device: KismetDevice, mac: string) {
-	const signal = device.signal?.last_signal ?? null;
+function firstTruthy(...vals: (string | undefined | null)[]): string | undefined {
+	for (const v of vals) if (v) return v;
+	return undefined;
+}
+
+function buildIdentity(device: KismetDevice, mac: string) {
 	return {
 		mac: device.mac || mac,
 		ssid: device.ssid || 'Unknown',
 		type: device.type || 'unknown',
-		manufacturer: device.manufacturer || device.manuf || 'Unknown',
-		signal,
-		signalDbm: signal,
+		manufacturer: firstTruthy(device.manufacturer, device.manuf) ?? 'Unknown'
+	};
+}
+
+function buildSignal(device: KismetDevice) {
+	const signal = device.signal?.last_signal ?? null;
+	return { signal, signalDbm: signal };
+}
+
+function buildRadio(device: KismetDevice) {
+	return {
 		channel: device.channel ?? null,
 		frequency: device.frequency ?? null,
+		encryption: device.encryption?.[0] ?? null
+	};
+}
+
+function buildActivity(device: KismetDevice) {
+	return {
 		packets: device.packets ?? 0,
-		encryption: device.encryption?.[0] ?? null,
 		lastSeen: device.lastSeen ?? device.last_seen ?? null,
 		firstSeen: device.firstSeen ?? null
+	};
+}
+
+/** Build the full device details context for the agent. */
+function buildDeviceDetails(device: KismetDevice, mac: string) {
+	return {
+		...buildIdentity(device, mac),
+		...buildSignal(device),
+		...buildRadio(device),
+		...buildActivity(device)
 	};
 }
 

@@ -287,74 +287,72 @@ describe('Realistic Data Load Tests', () => {
 
 	it('Stress test - finding breaking point', async () => {
 		performanceMonitor.startMetrics();
-
-		let signalsPerSecond = 1000;
-		let breakingPoint = 0;
-		let lastSuccessfulRate = 0;
-
-		while (signalsPerSecond < 100000) {
-			try {
-				const testDuration = 10000; // 10 seconds per test
-				const totalSignals = signalsPerSecond * 10;
-
-				const signals = dataGenerator.generateMixedSignals(totalSignals, {
-					timeSpan: testDuration
-				});
-
-				const startTime = performance.now();
-				const batchSize = Math.min(1000, signalsPerSecond / 10);
-				let processed = 0;
-				let errors = 0;
-
-				for (let i = 0; i < signals.length; i += batchSize) {
-					const batch = signals.slice(i, i + batchSize);
-
-					try {
-						const batchStart = performance.now();
-						await mockIngestionService.ingestBatch(batch);
-						const batchTime = performance.now() - batchStart;
-
-						processed += batch.length;
-
-						// Check if we're keeping up
-						const expectedTime = (processed / signalsPerSecond) * 1000;
-						const actualTime = performance.now() - startTime;
-
-						if (actualTime > expectedTime * 1.5) {
-							// System is falling behind
-							throw new Error('System overloaded');
-						}
-
-						performanceMonitor.recordMetric(`stress_${signalsPerSecond}`, batchTime);
-					} catch {
-						// Batch processing error
-						errors++;
-						if (errors > 10) {
-							throw new Error('Too many errors');
-						}
-					}
-				}
-
-				lastSuccessfulRate = signalsPerSecond;
-				signalsPerSecond *= 1.5; // Increase load by 50%
-			} catch {
-				// Stress test error
-				breakingPoint = signalsPerSecond;
-				break;
-			}
-		}
-
+		const result = await runStressSearch(
+			dataGenerator,
+			mockIngestionService,
+			performanceMonitor
+		);
 		console.warn('Stress Test Results:', {
-			lastSuccessfulRate,
-			breakingPoint,
-			maxSustainedThroughput: lastSuccessfulRate * 0.8 // 80% of breaking point
+			lastSuccessfulRate: result.lastSuccessfulRate,
+			breakingPoint: result.breakingPoint,
+			maxSustainedThroughput: result.lastSuccessfulRate * 0.8
 		});
-
-		expect(lastSuccessfulRate).toBeGreaterThan(10000); // Should handle > 10k/s
+		expect(result.lastSuccessfulRate).toBeGreaterThan(10000); // Should handle > 10k/s
 	});
 });
 
 // Helper functions
+interface SessionActionCtx {
+	signals: Signal[];
+	ingestionService: MockSignalIngestionService;
+}
+
+type SessionAction = (ctx: SessionActionCtx) => Promise<void>;
+
+async function actionViewSignals(ctx: SessionActionCtx): Promise<void> {
+	const viewCount = Math.floor(Math.random() * 100) + 50;
+	const start = Math.floor(Math.random() * (ctx.signals.length - viewCount));
+	ctx.signals.slice(start, viewCount); // simulate read
+}
+
+async function actionSubmitSignal(ctx: SessionActionCtx): Promise<void> {
+	const randomIndex = Math.floor(Math.random() * ctx.signals.length);
+	const newSignal = ctx.signals[randomIndex];
+	if (newSignal) await ctx.ingestionService.ingestBatch([newSignal]);
+}
+
+async function actionSpatialQuery(_ctx: SessionActionCtx): Promise<void> {
+	// Simulated spatial query — values intentionally unused
+	void (40.7128 + (Math.random() - 0.5) * 0.1);
+	void (-74.006 + (Math.random() - 0.5) * 0.1);
+	void (Math.random() * 1000 + 100);
+}
+
+async function actionTimeRangeQuery(_ctx: SessionActionCtx): Promise<void> {
+	const endTime = Date.now();
+	void (endTime - Math.random() * 3600000); // Up to 1 hour ago
+}
+
+const SESSION_ACTIONS: SessionAction[] = [
+	actionViewSignals,
+	actionSubmitSignal,
+	actionSpatialQuery,
+	actionTimeRangeQuery
+];
+
+async function runOneAction(
+	userId: number,
+	i: number,
+	ctx: SessionActionCtx,
+	monitor: PerformanceMonitor
+): Promise<void> {
+	const actionStart = performance.now();
+	const action = SESSION_ACTIONS[Math.floor(Math.random() * SESSION_ACTIONS.length)];
+	await action(ctx);
+	monitor.recordMetric(`user_${userId}_action_${i}`, performance.now() - actionStart);
+	await new Promise((resolve) => setTimeout(resolve, Math.random() * 2000));
+}
+
 async function simulateUserSession(
 	userId: number,
 	signals: Signal[],
@@ -363,56 +361,99 @@ async function simulateUserSession(
 ): Promise<void> {
 	const sessionStart = performance.now();
 	const actions = Math.floor(Math.random() * 10) + 5; // 5-15 actions
-
+	const ctx: SessionActionCtx = { signals, ingestionService };
 	for (let i = 0; i < actions; i++) {
-		const actionStart = performance.now();
-
-		// Simulate different user actions
-		const action = Math.floor(Math.random() * 4);
-		switch (action) {
-			case 0: {
-				// View signals
-				const viewCount = Math.floor(Math.random() * 100) + 50;
-				const _viewSignals = signals.slice(
-					Math.floor(Math.random() * (signals.length - viewCount)),
-					viewCount
-				);
-				break;
-			}
-			case 1: {
-				// Submit new signal
-				const randomIndex = Math.floor(Math.random() * signals.length);
-				const newSignal = signals[randomIndex];
-				if (newSignal) {
-					await ingestionService.ingestBatch([newSignal]);
-				}
-				break;
-			}
-			case 2: {
-				// Query by area
-				// Simulate spatial query
-				const _centerLat = 40.7128 + (Math.random() - 0.5) * 0.1;
-				const _centerLon = -74.006 + (Math.random() - 0.5) * 0.1;
-				const _radius = Math.random() * 1000 + 100; // 100-1100m
-				break;
-			}
-			case 3: {
-				// Time range query
-				const endTime = Date.now();
-				const _startTime = endTime - Math.random() * 3600000; // Up to 1 hour
-				break;
-			}
-		}
-
-		const actionTime = performance.now() - actionStart;
-		monitor.recordMetric(`user_${userId}_action_${i}`, actionTime);
-
-		// Simulate think time
-		await new Promise((resolve) => setTimeout(resolve, Math.random() * 2000));
+		await runOneAction(userId, i, ctx, monitor);
 	}
+	monitor.recordMetric(`user_${userId}_session`, performance.now() - sessionStart);
+}
 
-	const sessionTime = performance.now() - sessionStart;
-	monitor.recordMetric(`user_${userId}_session`, sessionTime);
+// Stress-test helpers (extracted to keep cognitive complexity ≤5 per fn).
+
+interface StressBatchCtx {
+	batch: Signal[];
+	signalsPerSecond: number;
+	startTime: number;
+	processed: number;
+	monitor: PerformanceMonitor;
+	ingestionService: MockSignalIngestionService;
+}
+
+async function processStressBatch(ctx: StressBatchCtx): Promise<number> {
+	const batchStart = performance.now();
+	await ctx.ingestionService.ingestBatch(ctx.batch);
+	const batchTime = performance.now() - batchStart;
+	const newProcessed = ctx.processed + ctx.batch.length;
+	const expectedTime = (newProcessed / ctx.signalsPerSecond) * 1000;
+	const actualTime = performance.now() - ctx.startTime;
+	if (actualTime > expectedTime * 1.5) throw new Error('System overloaded');
+	ctx.monitor.recordMetric(`stress_${ctx.signalsPerSecond}`, batchTime);
+	return newProcessed;
+}
+
+function trackBatchError(state: { errors: number }): void {
+	state.errors++;
+	if (state.errors > 10) throw new Error('Too many errors');
+}
+
+async function processSignalsAtRate(
+	signals: Signal[],
+	signalsPerSecond: number,
+	batchSize: number,
+	monitor: PerformanceMonitor,
+	ingestionService: MockSignalIngestionService
+): Promise<void> {
+	const startTime = performance.now();
+	let processed = 0;
+	const errState = { errors: 0 };
+	for (let i = 0; i < signals.length; i += batchSize) {
+		try {
+			processed = await processStressBatch({
+				batch: signals.slice(i, i + batchSize),
+				signalsPerSecond,
+				startTime,
+				processed,
+				monitor,
+				ingestionService
+			});
+		} catch {
+			trackBatchError(errState);
+		}
+	}
+}
+
+async function runStressIteration(
+	signalsPerSecond: number,
+	dataGenerator: TestDataGenerator,
+	ingestionService: MockSignalIngestionService,
+	monitor: PerformanceMonitor
+): Promise<void> {
+	const testDuration = 10000;
+	const totalSignals = signalsPerSecond * 10;
+	const signals = dataGenerator.generateMixedSignals(totalSignals, { timeSpan: testDuration });
+	const batchSize = Math.min(1000, signalsPerSecond / 10);
+	await processSignalsAtRate(signals, signalsPerSecond, batchSize, monitor, ingestionService);
+}
+
+async function runStressSearch(
+	dataGenerator: TestDataGenerator,
+	ingestionService: MockSignalIngestionService,
+	monitor: PerformanceMonitor
+): Promise<{ lastSuccessfulRate: number; breakingPoint: number }> {
+	let signalsPerSecond = 1000;
+	let lastSuccessfulRate = 0;
+	let breakingPoint = 0;
+	while (signalsPerSecond < 100000) {
+		try {
+			await runStressIteration(signalsPerSecond, dataGenerator, ingestionService, monitor);
+			lastSuccessfulRate = signalsPerSecond;
+			signalsPerSecond *= 1.5;
+		} catch {
+			breakingPoint = signalsPerSecond;
+			break;
+		}
+	}
+	return { lastSuccessfulRate, breakingPoint };
 }
 
 function generateDayProfile(): number[] {

@@ -33,6 +33,11 @@ const envSchema = z.object({
 	CLOUDRF_API_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(1).optional()),
 
 	// Public-facing URLs (FR-023)
+	// Scheme used when rewriting upstream tile/sprite/glyph URLs in the
+	// map-tiles proxy. Set to 'https' if a TLS reverse proxy is in front
+	// of prod-server.ts; otherwise the default 'http' matches the plain
+	// node:http server and avoids mixed-content blocks.
+	ARGOS_PUBLIC_SCHEME: z.enum(['http', 'https']).default('http'),
 	PUBLIC_KISMET_API_URL: z.string().url().default('http://localhost:2501'),
 	PUBLIC_HACKRF_API_URL: z.string().url().default('http://localhost:8092'),
 
@@ -63,7 +68,11 @@ const envSchema = z.object({
 	ARGOS_TEMP_DIR: z.string().default(''),
 
 	// GPSD socket path (FR-040)
-	GPSD_SOCKET_PATH: z.string().default('/var/run/gpsd.sock')
+	GPSD_SOCKET_PATH: z.string().default('/var/run/gpsd.sock'),
+
+	// Terminal WS pre-spawn toggle — dashboard Terminal panel pre-creates tmux-0.
+	// Default off in prod; dev vite plugin flips it on unless set to '0'.
+	ARGOS_TERMINAL_PRESPAWN: z.enum(['0', '1']).default('0')
 });
 
 // Parse and validate environment variables at startup

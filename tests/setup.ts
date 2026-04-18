@@ -41,33 +41,31 @@ const localStorageMock = {
 global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock canvas — Proxy auto-stubs any property access (methods return vi.fn(), values return sensible defaults)
+const CANVAS_SPECIAL_GETTERS: Record<string, () => ReturnType<typeof vi.fn>> = {
+	measureText: () => vi.fn(() => ({ width: 0, actualBoundingBoxAscent: 0 })),
+	getImageData: () => vi.fn(() => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 })),
+	createImageData: () => vi.fn(() => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 }))
+};
+
 HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextId: string) => {
-	if (contextId === '2d') {
-		const fnCache = new Map<string | symbol, ReturnType<typeof vi.fn>>();
-		return new Proxy(
-			{ canvas: document.createElement('canvas') },
-			{
-				get(target, prop) {
-					if (prop in target) return (target as Record<string | symbol, unknown>)[prop];
-					if (prop === 'measureText')
-						return vi.fn(() => ({ width: 0, actualBoundingBoxAscent: 0 }));
-					if (prop === 'getImageData' || prop === 'createImageData')
-						return vi.fn(() => ({
-							data: new Uint8ClampedArray(4),
-							width: 1,
-							height: 1
-						}));
-					if (!fnCache.has(prop)) fnCache.set(prop, vi.fn());
-					return fnCache.get(prop);
-				},
-				set(target, prop, value) {
-					(target as Record<string | symbol, unknown>)[prop] = value;
-					return true;
-				}
+	if (contextId !== '2d') return null;
+	const fnCache = new Map<string | symbol, ReturnType<typeof vi.fn>>();
+	return new Proxy(
+		{ canvas: document.createElement('canvas') },
+		{
+			get(target, prop) {
+				if (prop in target) return (target as Record<string | symbol, unknown>)[prop];
+				const factory = typeof prop === 'string' ? CANVAS_SPECIAL_GETTERS[prop] : undefined;
+				if (factory) return factory();
+				if (!fnCache.has(prop)) fnCache.set(prop, vi.fn());
+				return fnCache.get(prop);
+			},
+			set(target, prop, value) {
+				(target as Record<string | symbol, unknown>)[prop] = value;
+				return true;
 			}
-		) as unknown as CanvasRenderingContext2D;
-	}
-	return null;
+		}
+	) as unknown as CanvasRenderingContext2D;
 });
 
 // Mock ResizeObserver

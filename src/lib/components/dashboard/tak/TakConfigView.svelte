@@ -65,22 +65,31 @@
 		isLoading = false;
 	}
 
-	async function handleSave() {
-		isSaving = true;
+	function runValidation(): boolean {
 		const validation = validateForm(TakServerConfigSchema, config);
-		if (!validation.isValid) {
-			const firstError = Object.values(validation.errors)[0] ?? 'Validation failed';
-			showMessage(firstError, 'error');
-			isSaving = false;
-			return;
-		}
+		if (validation.isValid) return true;
+		const firstError = Object.values(validation.errors)[0] ?? 'Validation failed';
+		showMessage(firstError, 'error');
+		return false;
+	}
+
+	async function persistAndReport(): Promise<void> {
 		const result = await saveConfig(config);
 		if (result.success && result.config) {
 			config = result.config;
 			showMessage('Configuration saved', 'success');
-		} else {
-			showMessage(result.error ?? 'Save failed', 'error');
+			return;
 		}
+		showMessage(result.error ?? 'Save failed', 'error');
+	}
+
+	async function handleSave() {
+		isSaving = true;
+		if (!runValidation()) {
+			isSaving = false;
+			return;
+		}
+		await persistAndReport();
 		isSaving = false;
 	}
 

@@ -14,6 +14,32 @@ import { setupSecurityTest } from '../helpers/server-check';
 
 const { BASE_URL, API_KEY, canRun } = await setupSecurityTest();
 
+async function exhaustRateLimit(endpoint: string): Promise<void> {
+	for (let i = 0; i < 15; i++) {
+		await fetch(`${BASE_URL}${endpoint}`, { headers: { 'X-API-Key': API_KEY } });
+	}
+}
+
+function assertNumericHeaderIfPresent(
+	response: Response,
+	name: string,
+	check: (n: number) => void
+): void {
+	const value = response.headers.get(name);
+	if (!value) return;
+	check(parseInt(value, 10));
+}
+
+function assertRateLimitHeaders(response: Response): void {
+	expect(response.headers.get('Retry-After')).toBeTruthy();
+	assertNumericHeaderIfPresent(response, 'X-RateLimit-Limit', (n) => {
+		expect(n).toBeGreaterThan(0);
+	});
+	assertNumericHeaderIfPresent(response, 'X-RateLimit-Remaining', (n) => {
+		expect(n).toBeGreaterThanOrEqual(0);
+	});
+}
+
 describe.runIf(canRun)('Rate Limiting Security', () => {
 	describe('Hardware Endpoint Rate Limiting', () => {
 		const hardwareEndpoints = [
@@ -194,36 +220,11 @@ describe.runIf(canRun)('Rate Limiting Security', () => {
 			'Rate limit headers are present on 429 response',
 			async () => {
 				const endpoint = '/api/hackrf/status';
-
-				// Exhaust rate limit
-				for (let i = 0; i < 15; i++) {
-					await fetch(`${BASE_URL}${endpoint}`, {
-						headers: { 'X-API-Key': API_KEY }
-					});
-				}
-
-				// Get 429 response
+				await exhaustRateLimit(endpoint);
 				const response = await fetch(`${BASE_URL}${endpoint}`, {
 					headers: { 'X-API-Key': API_KEY }
 				});
-
-				if (response.status === 429) {
-					// Should have informative headers
-					const retryAfter = response.headers.get('Retry-After');
-					expect(retryAfter).toBeTruthy();
-
-					// May also have X-RateLimit-* headers
-					const rateLimitLimit = response.headers.get('X-RateLimit-Limit');
-					const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
-
-					// If present, they should be valid
-					if (rateLimitLimit) {
-						expect(parseInt(rateLimitLimit, 10)).toBeGreaterThan(0);
-					}
-					if (rateLimitRemaining) {
-						expect(parseInt(rateLimitRemaining, 10)).toBeGreaterThanOrEqual(0);
-					}
-				}
+				if (response.status === 429) assertRateLimitHeaders(response);
 			},
 			{ timeout: 10000 }
 		);

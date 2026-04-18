@@ -35,17 +35,17 @@ function validateTileRequest(params: { path?: string }): {
 }
 
 /** Rewrite Stadia Maps URLs to route through our proxy and strip leaked API keys.
- *  Uses fully-qualified `http://host/path` URLs because MapLibre's style
- *  validator rejects both relative and protocol-relative URLs for `sprite`.
- *  Scheme is hardcoded to `http` because prod-server.ts runs plain HTTP;
- *  if TLS is added in front, switch this to `https` (or honor a forwarded
- *  X-Forwarded-Proto header explicitly). */
+ *  Uses fully-qualified `<scheme>://host/path` URLs (MapLibre's style
+ *  validator rejects relative and protocol-relative URLs for `sprite`).
+ *  Scheme comes from ARGOS_PUBLIC_SCHEME env var (default 'http' matches
+ *  plain prod-server.ts; set 'https' when fronted by a TLS proxy). */
 function rewriteJsonBody(text: string, host: string): string {
 	const proxied = text.replace(
 		/https:\/\/tiles\.stadiamaps\.com\//g,
-		`http://${host}/api/map-tiles/`
+		`${env.ARGOS_PUBLIC_SCHEME}://${host}/api/map-tiles/`
 	);
-	return proxied.replace(/([?&])api_key=[^"&\s]+/g, () => '');
+	// Two-pass strip to handle api_key in any position without leaving a dangling '?'.
+	return proxied.replace(/\?api_key=[^"&\s]+&/g, '?').replace(/[?&]api_key=[^"&\s]+/g, '');
 }
 
 /** Build a tile response, rewriting JSON bodies to proxy through our server. */

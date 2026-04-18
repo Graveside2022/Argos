@@ -1,9 +1,18 @@
-import type { ZodSchema } from 'zod';
+import type { ZodIssue, ZodSchema } from 'zod';
 
 export interface FormValidationResult<T> {
 	data: T | null;
 	errors: Record<string, string>;
 	isValid: boolean;
+}
+
+function collectErrors(issues: readonly ZodIssue[]): Record<string, string> {
+	const errors: Record<string, string> = {};
+	for (const issue of issues) {
+		const key = issue.path.length > 0 ? issue.path.join('.') : '_root';
+		if (!errors[key]) errors[key] = issue.message;
+	}
+	return errors;
 }
 
 /**
@@ -12,18 +21,8 @@ export interface FormValidationResult<T> {
  */
 export function validateForm<T>(schema: ZodSchema<T>, data: unknown): FormValidationResult<T> {
 	const result = schema.safeParse(data);
-
 	if (result.success) {
 		return { data: result.data, errors: {}, isValid: true };
 	}
-
-	const errors: Record<string, string> = {};
-	for (const issue of result.error.issues) {
-		const key = issue.path.length > 0 ? issue.path.join('.') : '_root';
-		if (!errors[key]) {
-			errors[key] = issue.message;
-		}
-	}
-
-	return { data: null, errors, isValid: false };
+	return { data: null, errors: collectErrors(result.error.issues), isValid: false };
 }

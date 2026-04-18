@@ -10,8 +10,6 @@
  * Spec: 016-code-expressiveness FR-023, FR-024, FR-025
  */
 
-import type { z } from 'zod';
-
 // --- Target Schema Shape ---
 
 export interface ArgosEnv {
