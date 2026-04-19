@@ -14,7 +14,7 @@
  * @module
  */
 
-import { json, type RequestEvent } from '@sveltejs/kit';
+import { isHttpError, json, type RequestEvent } from '@sveltejs/kit';
 import type { z } from 'zod';
 
 import { logger } from '$lib/utils/logger';
@@ -100,8 +100,18 @@ function resolveContext(event: RequestEvent, options?: HandlerOptions): string {
 	return options?.method ?? event.url?.pathname ?? 'unknown';
 }
 
+/** Extract a human-readable message from a SvelteKit HttpError body */
+function httpErrorMessage(err: import('@sveltejs/kit').HttpError): string {
+	const body = err.body as { message?: string } | string | undefined;
+	if (typeof body === 'string') return body;
+	return body?.message ?? 'Request error';
+}
+
 /** Log the error and return a standardized 500 (or custom status) error response */
 function buildErrorResponse(err: unknown, event: RequestEvent, options?: HandlerOptions): Response {
+	if (isHttpError(err)) {
+		return json({ success: false, error: httpErrorMessage(err) }, { status: err.status });
+	}
 	logger.error(`[${resolveContext(event, options)}] ${errMsg(err)}`);
 	return json(
 		{ success: false, error: 'Internal server error' },

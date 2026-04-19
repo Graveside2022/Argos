@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
-import { existsSync, unlinkSync } from 'node:fs';
+import { once } from 'node:events';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 
 import { errMsg } from '$lib/server/api/error-utils';
 import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
@@ -21,9 +22,11 @@ const BD_BIN =
 	'/home/kali/Documents/Argos/Argos/tactical/blue-dragon/target/release/blue-dragon';
 const BD_PCAP_PATH = process.env.BD_PCAP_PATH ?? '/tmp/bd-live.fifo';
 const BD_INTERFACE = process.env.BD_INTERFACE ?? 'usrp-B205mini-329F4D0';
+const BD_PID_FILE = process.env.BD_PID_FILE ?? '/tmp/argos-bluedragon.pid';
 const PARSER_START_DELAY_MS = 1000;
 const SIGINT_GRACE_MS = 2000;
 const SIGKILL_GRACE_MS = 500;
+const SPAWN_WAIT_MS = 1500;
 
 interface ProfileArgs {
 	gain: number;
@@ -53,10 +56,6 @@ interface RuntimeState {
 	frozenPacketCount: number;
 }
 
-// TODO(jetson-port): Vite HMR re-imports this module on edit and drops `state`,
-// orphaning any spawned blue-dragon child. Stop click then sees status='stopped'
-// and no-ops while the OS process keeps holding the USRP. Persist PID to disk
-// or mark this module HMR-resistant in vite config.
 const state: RuntimeState = {
 	process: null,
 	parser: null,
@@ -85,6 +84,59 @@ function cleanupFifo(path: string): void {
 		/* ignore */
 	}
 }
+
+function persistPid(pid: number): void {
+	try {
+		writeFileSync(BD_PID_FILE, String(pid), 'utf8');
+	} catch (err) {
+		logger.warn('[bluedragon] could not persist pid file', { err: errMsg(err) });
+	}
+}
+
+function clearPidFile(): void {
+	try {
+		if (existsSync(BD_PID_FILE)) unlinkSync(BD_PID_FILE);
+	} catch {
+		/* ignore */
+	}
+}
+
+function readPidFile(): number | null {
+	try {
+		if (!existsSync(BD_PID_FILE)) return null;
+		const n = Number.parseInt(readFileSync(BD_PID_FILE, 'utf8').trim(), 10);
+		return Number.isFinite(n) && n > 0 ? n : null;
+	} catch {
+		return null;
+	}
+}
+
+function isStaleBlueDragon(pid: number): boolean {
+	try {
+		return readFileSync(`/proc/${pid}/comm`, 'utf8').trim() === 'blue-dragon';
+	} catch {
+		return false;
+	}
+}
+
+// Defends against Vite HMR re-importing this module: orphaned blue-dragon
+// children from a previous import would otherwise hold the USRP forever.
+function reapStaleChild(): void {
+	const pid = readPidFile();
+	if (pid === null) return;
+	if (isStaleBlueDragon(pid)) {
+		logger.warn('[bluedragon] reaping stale child from prior module load', { pid });
+		try {
+			process.kill(pid, 'SIGKILL');
+		} catch {
+			/* already gone */
+		}
+	}
+	clearPidFile();
+	cleanupFifo(BD_PCAP_PATH);
+}
+
+reapStaleChild();
 
 const OPTION_FLAGS: Array<[keyof BluedragonOptions, string]> = [
 	['activeScan', '--active-scan'],
@@ -178,6 +230,29 @@ function startParser(): void {
 	logger.info('[bluedragon] Parser attached');
 }
 
+async function waitForSpawn(proc: ChildProcess): Promise<void> {
+	const ac = new AbortController();
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(
+			() => reject(new Error(`spawn confirmation timed out after ${SPAWN_WAIT_MS}ms`)),
+			SPAWN_WAIT_MS
+		);
+	});
+	try {
+		await Promise.race([
+			once(proc, 'spawn', { signal: ac.signal }),
+			once(proc, 'error', { signal: ac.signal }).then(([err]) => {
+				throw err as Error;
+			}),
+			timeout
+		]);
+	} finally {
+		if (timer) clearTimeout(timer);
+		ac.abort();
+	}
+}
+
 function initRuntimeState(
 	proc: ChildProcess,
 	profile: BluedragonProfile,
@@ -188,6 +263,7 @@ function initRuntimeState(
 	state.startedAt = Date.now();
 	state.profile = profile;
 	state.options = options;
+	if (state.pid !== null) persistPid(state.pid);
 
 	const aggregator = new DeviceAggregator((op, device) => broadcastDevice(op, device));
 	aggregator.start();
@@ -213,6 +289,7 @@ function clearRuntimeState(): void {
 	state.options = null;
 	state.status = 'stopped';
 	cleanupFifo(BD_PCAP_PATH);
+	clearPidFile();
 }
 
 export async function startBluedragon(
@@ -235,13 +312,10 @@ export async function startBluedragon(
 
 	try {
 		ensureFifo(BD_PCAP_PATH);
-		// TODO(jetson-port): spawn() doesn't fail synchronously when BD_BIN is missing —
-		// it emits 'error' later. Currently we return success with PID=null and the UI
-		// flips back to 'stopped' silently. Should `await once(proc, 'spawn'|'error')`
-		// and surface failure to bluetoothStore.error so user sees the cause.
 		const proc = spawn(BD_BIN, buildArgs(profile, options), {
 			stdio: ['ignore', 'pipe', 'pipe']
 		});
+		await waitForSpawn(proc);
 		attachProcessListeners(proc);
 		initRuntimeState(proc, profile, options);
 		broadcastStatus();

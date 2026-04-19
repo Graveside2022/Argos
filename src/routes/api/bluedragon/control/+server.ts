@@ -12,6 +12,7 @@ const BluedragonOptionsSchema = z
 		gpsd: z.boolean().optional(),
 		codedScan: z.boolean().optional()
 	})
+	.strict()
 	.optional();
 
 const BluedragonControlSchema = z.object({
@@ -24,7 +25,7 @@ async function parseJsonBody(request: Request): Promise<unknown> {
 	try {
 		return await request.json();
 	} catch {
-		return error(400, 'Invalid JSON body');
+		throw error(400, 'Invalid JSON body');
 	}
 }
 
@@ -40,7 +41,7 @@ async function dispatchAction(input: ControlInput) {
 export const POST = createHandler(async ({ request }) => {
 	const rawBody = await parseJsonBody(request);
 	const validated = safeParseWithHandling(BluedragonControlSchema, rawBody, 'user-action');
-	if (!validated) return error(400, 'Invalid Blue Dragon control request');
+	if (!validated) throw error(400, 'Invalid Blue Dragon control request');
 
 	const result = await dispatchAction(validated);
 	return json(result, { status: result.success ? 200 : 500 });
