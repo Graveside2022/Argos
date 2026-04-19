@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 import type {
+	BluedragonOptions,
 	BluedragonProfile,
 	BluedragonStatus,
 	BluedragonStatusResult,
@@ -129,9 +130,10 @@ async function runControl(body: Record<string, unknown>, failLabel: string): Pro
 }
 
 export async function startBluedragonFromUi(
-	profile: BluedragonProfile = 'volume'
+	profile: BluedragonProfile = 'volume',
+	options: BluedragonOptions = {}
 ): Promise<boolean> {
-	return runControl({ action: 'start', profile }, 'start request failed');
+	return runControl({ action: 'start', profile, options }, 'start request failed');
 }
 
 export async function stopBluedragonFromUi(): Promise<boolean> {

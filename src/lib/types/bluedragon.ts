@@ -1,5 +1,12 @@
 export type BluedragonProfile = 'clean' | 'volume' | 'max';
 
+export interface BluedragonOptions {
+	allChannels?: boolean;
+	activeScan?: boolean;
+	gpsd?: boolean;
+	codedScan?: boolean;
+}
+
 export type BluedragonStatus = 'stopped' | 'starting' | 'running' | 'stopping';
 
 export type BluetoothAddrType =
@@ -65,11 +72,13 @@ export interface BluedragonStatusResult {
 	packetCount: number;
 	deviceCount: number;
 	profile: BluedragonProfile | null;
+	options: BluedragonOptions | null;
 }
 
 export interface BluedragonControlRequest {
 	action: 'start' | 'stop';
 	profile?: BluedragonProfile;
+	options?: BluedragonOptions;
 }
 
 export interface BluetoothDeviceUpdateMessage {

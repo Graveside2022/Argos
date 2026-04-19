@@ -5,6 +5,7 @@ import { errMsg } from '$lib/server/api/error-utils';
 import { WebSocketManager } from '$lib/server/kismet/web-socket-manager';
 import type {
 	BluedragonControlResult,
+	BluedragonOptions,
 	BluedragonProfile,
 	BluedragonStatusResult,
 	BluetoothDevice
@@ -45,12 +46,17 @@ interface RuntimeState {
 	pid: number | null;
 	startedAt: number | null;
 	profile: BluedragonProfile | null;
+	options: BluedragonOptions | null;
 	status: 'stopped' | 'starting' | 'running' | 'stopping';
 	parserStartTimer: ReturnType<typeof setTimeout> | null;
 	frozenDevices: BluetoothDevice[];
 	frozenPacketCount: number;
 }
 
+// TODO(jetson-port): Vite HMR re-imports this module on edit and drops `state`,
+// orphaning any spawned blue-dragon child. Stop click then sees status='stopped'
+// and no-ops while the OS process keeps holding the USRP. Persist PID to disk
+// or mark this module HMR-resistant in vite config.
 const state: RuntimeState = {
 	process: null,
 	parser: null,
@@ -58,6 +64,7 @@ const state: RuntimeState = {
 	pid: null,
 	startedAt: null,
 	profile: null,
+	options: null,
 	status: 'stopped',
 	parserStartTimer: null,
 	frozenDevices: [],
@@ -79,16 +86,27 @@ function cleanupFifo(path: string): void {
 	}
 }
 
-function buildArgs(profile: BluedragonProfile): string[] {
+const OPTION_FLAGS: Array<[keyof BluedragonOptions, string]> = [
+	['activeScan', '--active-scan'],
+	['gpsd', '--gpsd'],
+	['codedScan', '--coded-scan']
+];
+
+function captureRangeArgs(p: ProfileArgs, allChannels: boolean): string[] {
+	if (allChannels) return ['--all-channels'];
+	return ['-c', String(p.centerMhz), '-C', String(p.channels)];
+}
+
+function optionFlagArgs(options: BluedragonOptions): string[] {
+	return OPTION_FLAGS.filter(([key]) => options[key]).map(([, flag]) => flag);
+}
+
+function buildArgs(profile: BluedragonProfile, options: BluedragonOptions = {}): string[] {
 	const p = PROFILES[profile];
 	return [
 		'--live',
 		'--interface',
 		BD_INTERFACE,
-		'-c',
-		String(p.centerMhz),
-		'-C',
-		String(p.channels),
 		'-g',
 		String(p.gain),
 		'--antenna',
@@ -96,7 +114,9 @@ function buildArgs(profile: BluedragonProfile): string[] {
 		`--squelch=${p.squelch}`,
 		'--check-crc',
 		'-w',
-		BD_PCAP_PATH
+		BD_PCAP_PATH,
+		...captureRangeArgs(p, options.allChannels === true),
+		...optionFlagArgs(options)
 	];
 }
 
@@ -158,11 +178,16 @@ function startParser(): void {
 	logger.info('[bluedragon] Parser attached');
 }
 
-function initRuntimeState(proc: ChildProcess, profile: BluedragonProfile): void {
+function initRuntimeState(
+	proc: ChildProcess,
+	profile: BluedragonProfile,
+	options: BluedragonOptions
+): void {
 	state.process = proc;
 	state.pid = proc.pid ?? null;
 	state.startedAt = Date.now();
 	state.profile = profile;
+	state.options = options;
 
 	const aggregator = new DeviceAggregator((op, device) => broadcastDevice(op, device));
 	aggregator.start();
@@ -185,12 +210,14 @@ function clearRuntimeState(): void {
 	state.pid = null;
 	state.startedAt = null;
 	state.profile = null;
+	state.options = null;
 	state.status = 'stopped';
 	cleanupFifo(BD_PCAP_PATH);
 }
 
 export async function startBluedragon(
-	profile: BluedragonProfile = 'volume'
+	profile: BluedragonProfile = 'volume',
+	options: BluedragonOptions = {}
 ): Promise<BluedragonControlResult> {
 	if (state.status !== 'stopped') {
 		return {
@@ -204,13 +231,19 @@ export async function startBluedragon(
 	state.frozenDevices = [];
 	state.frozenPacketCount = 0;
 	broadcastStatus();
-	logger.info('[bluedragon] Starting', { profile, bin: BD_BIN });
+	logger.info('[bluedragon] Starting', { profile, options, bin: BD_BIN });
 
 	try {
 		ensureFifo(BD_PCAP_PATH);
-		const proc = spawn(BD_BIN, buildArgs(profile), { stdio: ['ignore', 'pipe', 'pipe'] });
+		// TODO(jetson-port): spawn() doesn't fail synchronously when BD_BIN is missing —
+		// it emits 'error' later. Currently we return success with PID=null and the UI
+		// flips back to 'stopped' silently. Should `await once(proc, 'spawn'|'error')`
+		// and surface failure to bluetoothStore.error so user sees the cause.
+		const proc = spawn(BD_BIN, buildArgs(profile, options), {
+			stdio: ['ignore', 'pipe', 'pipe']
+		});
 		attachProcessListeners(proc);
-		initRuntimeState(proc, profile);
+		initRuntimeState(proc, profile, options);
 		broadcastStatus();
 		return {
 			success: true,
@@ -308,7 +341,8 @@ export function getBluedragonStatusSync(): BluedragonStatusResult {
 		startedAt: state.startedAt,
 		packetCount: currentPacketCount(),
 		deviceCount: currentDeviceCount(),
-		profile: state.profile
+		profile: state.profile,
+		options: state.options
 	};
 }
 

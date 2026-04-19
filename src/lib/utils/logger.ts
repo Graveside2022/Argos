@@ -82,7 +82,7 @@ class Logger {
 				}
 			}
 		}, 60000); // Every minute
-		this.rateLimitCleanupInterval.unref();
+		(this.rateLimitCleanupInterval as { unref?: () => void }).unref?.();
 	}
 
 	dispose(): void {

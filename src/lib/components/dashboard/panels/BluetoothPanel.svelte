@@ -30,6 +30,10 @@
 		| 'last';
 
 	let profile: BluedragonProfile = $state('volume');
+	let allChannels = $state(false);
+	let activeScan = $state(false);
+	let gpsd = $state(false);
+	let codedScan = $state(false);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let starting = $state(false);
 	let stopping = $state(false);
@@ -70,7 +74,7 @@
 	async function onStart(): Promise<void> {
 		starting = true;
 		try {
-			await startBluedragonFromUi(profile);
+			await startBluedragonFromUi(profile, { allChannels, activeScan, gpsd, codedScan });
 		} finally {
 			starting = false;
 		}
@@ -217,6 +221,31 @@
 				<option value="volume">VOLUME (recommended)</option>
 				<option value="max">MAX DECODE</option>
 			</select>
+			<label
+				class="opt"
+				title="Capture full BLE band 2402–2480 MHz (96 channels). Default covers ch37+ch38 only."
+			>
+				<input type="checkbox" bind:checked={allChannels} disabled={starting} />
+				ALL CH
+			</label>
+			<label
+				class="opt"
+				title="HCI LE active scan via system Bluetooth — enriches device names + services"
+			>
+				<input type="checkbox" bind:checked={activeScan} disabled={starting} />
+				ACTIVE
+			</label>
+			<label class="opt" title="GPS-tag every packet via gpsd (requires gpsd running)">
+				<input type="checkbox" bind:checked={gpsd} disabled={starting} />
+				GPS
+			</label>
+			<label
+				class="opt"
+				title="Continuous LE Coded PHY (Long Range) scan on advertising channels — AirTag/IoT detection at distance"
+			>
+				<input type="checkbox" bind:checked={codedScan} disabled={starting} />
+				CODED
+			</label>
 			<button class="btn-start" onclick={onStart} disabled={starting}>
 				{starting ? 'Starting…' : 'Start'}
 			</button>
@@ -406,6 +435,28 @@
 		border: 1px solid var(--border);
 		color: var(--foreground);
 		font-family: inherit;
+	}
+
+	.opt {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.6px;
+		color: var(--foreground-secondary);
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.opt input {
+		margin: 0;
+		cursor: pointer;
+		accent-color: var(--primary);
+	}
+
+	.opt input:disabled {
+		cursor: not-allowed;
 	}
 
 	.btn-start,
