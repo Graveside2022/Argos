@@ -367,21 +367,15 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 		baseline: PngImage,
 		screenshot: PngImage
 	): { diff: InstanceType<NonNullable<typeof PNG>>; numDiffPixels: number; percentDiff: number } {
+		if (!PNG || !pixelmatch) throw new Error('PNG or pixelmatch not available');
 		const width = Math.min(baseline.width, screenshot.width);
 		const height = Math.min(baseline.height, screenshot.height);
-		const diff = new PNG!({ width, height });
-		const numDiffPixels = pixelmatch!(
-			baseline.data,
-			screenshot.data,
-			diff.data,
-			width,
-			height,
-			{
-				threshold: PI_VISUAL_CONFIG.threshold,
-				alpha: 0.1,
-				includeAA: true
-			}
-		);
+		const diff = new PNG({ width, height });
+		const numDiffPixels = pixelmatch(baseline.data, screenshot.data, diff.data, width, height, {
+			threshold: PI_VISUAL_CONFIG.threshold,
+			alpha: 0.1,
+			includeAA: true
+		});
 		const percentDiff = (numDiffPixels / (width * height)) * 100;
 		return { diff, numDiffPixels, percentDiff };
 	}
@@ -397,7 +391,8 @@ describe.runIf(canRun)('Grade A+ Visual Regression Tests - Raspberry Pi Optimize
 			`📏 ${label}: ${numDiffPixels} different pixels (${percentDiff.toFixed(3)}%)`
 		);
 		if (percentDiff > PI_VISUAL_CONFIG.diffThreshold) {
-			await fs.writeFile(diffPath, PNG!.sync.write(diff));
+			if (!PNG) throw new Error('PNG not available');
+			await fs.writeFile(diffPath, PNG.sync.write(diff));
 			throw new Error(
 				`Visual regression detected for ${label}: ${percentDiff.toFixed(3)}% difference exceeds Pi threshold of ${PI_VISUAL_CONFIG.diffThreshold}%`
 			);

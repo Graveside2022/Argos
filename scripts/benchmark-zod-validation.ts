@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable no-console -- benchmark CLI: console output IS the deliverable */
 /**
  * Benchmark script for Zod validation overhead
  * Target: < 5ms per API response validation (NFR-001)

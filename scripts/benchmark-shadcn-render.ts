@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable no-console -- benchmark CLI: console output IS the deliverable */
 /**
  * Benchmark script for Shadcn component render time
  * Target: < 16ms per render on Raspberry Pi 5 ARM CPU (NFR-002)

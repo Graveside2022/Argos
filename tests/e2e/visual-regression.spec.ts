@@ -132,7 +132,7 @@ test.describe('Visual Regression - Component Migration', () => {
 		const buttons = page.locator('button');
 		const count = await buttons.count();
 
-		console.log(`Found ${count} button elements to verify`);
+		console.warn(`Found ${count} button elements to verify`);
 
 		await expect(page).toHaveScreenshot('components-buttons.png', {
 			fullPage: true,
@@ -147,7 +147,7 @@ test.describe('Visual Regression - Component Migration', () => {
 		const inputs = page.locator('input');
 		const count = await inputs.count();
 
-		console.log(`Found ${count} input elements to verify`);
+		console.warn(`Found ${count} input elements to verify`);
 
 		await expect(page).toHaveScreenshot('components-inputs.png', {
 			fullPage: true,

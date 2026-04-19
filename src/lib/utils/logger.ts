@@ -71,7 +71,9 @@ class Logger {
 			this.currentLevel = LogLevel.WARN;
 		}
 
-		// Periodically clean up rate limit map
+		// Periodically clean up rate limit map. unref() so the interval does NOT
+		// keep the Node event loop alive — short-lived scripts (e.g. tsx CLIs that
+		// import logger) can exit cleanly when their main work finishes.
 		this.rateLimitCleanupInterval = setInterval(() => {
 			const now = Date.now();
 			for (const [key, limit] of this.rateLimits.entries()) {
@@ -80,6 +82,7 @@ class Logger {
 				}
 			}
 		}, 60000); // Every minute
+		this.rateLimitCleanupInterval.unref();
 	}
 
 	dispose(): void {
@@ -145,6 +148,8 @@ class Logger {
 	): void {
 		if (level === LogLevel.DEBUG && !this.isDevelopment) return;
 		const method = Logger.CONSOLE_METHODS[level];
+		// Logger's purpose is to write to console — `no-console` would be self-defeating here.
+		// eslint-disable-next-line no-console
 		console[method](prefix, message, context || '');
 	}
 
