@@ -17,6 +17,12 @@ const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 const STALE_THRESHOLD_MS = 120_000;
 
+/**
+ * TakServerConfig with the optional cert/key paths proven non-empty.
+ * Returned by `validateTlsConfig` so downstream methods don't need `!`.
+ */
+type ValidatedTakConfig = TakServerConfig & { certPath: string; keyPath: string };
+
 interface ThrottleEntry {
 	lastSent: number;
 	pendingTimeout: NodeJS.Timeout | null;
@@ -100,27 +106,30 @@ export class TakService extends EventEmitter {
 		};
 	}
 
-	/** Validate that config has TLS certs configured; returns false if not */
-	private validateTlsConfig(): boolean {
-		if (!this.config) {
+	/** Validate that config has TLS certs configured; returns the narrowed config or null. */
+	private validateTlsConfig(): ValidatedTakConfig | null {
+		const cfg = this.config;
+		if (!cfg) {
 			logger.warn('[TakService] No configuration found');
-			return false;
+			return null;
 		}
-		if (!this.config.certPath || !this.config.keyPath) {
+		if (!cfg.certPath || !cfg.keyPath) {
 			logger.warn('[TakService] TLS certificates not configured');
-			return false;
+			return null;
 		}
-		return true;
+		// TS can't widen the field-level narrowing back into the object type, so this
+		// assertion just expresses what the early-returns above already enforce.
+		return cfg as ValidatedTakConfig;
 	}
 
 	/** Load TLS certificate files from disk */
-	private async loadCertificates(): Promise<{ cert: string; key: string; ca?: string } | null> {
+	private async loadCertificates(
+		config: ValidatedTakConfig
+	): Promise<{ cert: string; key: string; ca?: string } | null> {
 		try {
-			const cert = await readFile(this.config!.certPath!, 'utf-8');
-			const key = await readFile(this.config!.keyPath!, 'utf-8');
-			const ca = this.config!.caPath
-				? await readFile(this.config!.caPath, 'utf-8')
-				: undefined;
+			const cert = await readFile(config.certPath, 'utf-8');
+			const key = await readFile(config.keyPath, 'utf-8');
+			const ca = config.caPath ? await readFile(config.caPath, 'utf-8') : undefined;
 			return { cert, key, ca };
 		} catch (err) {
 			logger.error('[TakService] Failed to load certificates', { error: String(err) });
@@ -134,12 +143,11 @@ export class TakService extends EventEmitter {
 	}
 
 	/** Establish the TAK TLS connection */
-	private async establishConnection(certs: {
-		cert: string;
-		key: string;
-		ca?: string;
-	}): Promise<void> {
-		const url = new URL(`ssl://${this.config!.hostname}:${this.config!.port}`);
+	private async establishConnection(
+		config: ValidatedTakConfig,
+		certs: { cert: string; key: string; ca?: string }
+	): Promise<void> {
+		const url = new URL(`ssl://${config.hostname}:${config.port}`);
 		process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 		this.tak = await TAK.connect(url, { ...certs, rejectUnauthorized: false });
 		this.setupEventHandlers();
@@ -166,14 +174,15 @@ export class TakService extends EventEmitter {
 	}
 
 	public async connect() {
-		if (!this.validateTlsConfig()) return;
+		const validated = this.validateTlsConfig();
+		if (!validated) return;
 		this.destroyExisting();
 
-		const certs = await this.loadCertificates();
+		const certs = await this.loadCertificates(validated);
 		if (!certs) return;
 
 		try {
-			await this.establishConnection(certs);
+			await this.establishConnection(validated, certs);
 		} catch (err) {
 			this.handleConnectError(err);
 		}
@@ -268,16 +277,12 @@ export class TakService extends EventEmitter {
 		broadcastTakStatus(this.broadcastState(), 'disconnected');
 	}
 
-	/** Whether a throttle entry is ready to send (no entry or cooldown elapsed) */
-	private isThrottleReady(entry: ThrottleEntry | undefined, now: number): boolean {
-		return !entry || now - entry.lastSent >= COT_THROTTLE_MS;
-	}
-
 	/** Send immediately and reset throttle entry */
 	private sendImmediate(uid: string, cot: CoT, entry: ThrottleEntry | undefined): void {
 		if (entry?.pendingTimeout) clearTimeout(entry.pendingTimeout);
 		this.throttleMap.set(uid, { lastSent: Date.now(), pendingTimeout: null, pendingCot: null });
-		this.tak!.write([cot]);
+		if (!this.tak) return;
+		this.tak.write([cot]);
 	}
 
 	/** Schedule a deferred send after the throttle cooldown */
@@ -297,6 +302,21 @@ export class TakService extends EventEmitter {
 		);
 	}
 
+	/** Route a uid'd CoT to immediate-send or deferred-send based on throttle state. */
+	private dispatchThrottledCot(uid: string, cot: CoT): void {
+		const now = Date.now();
+		const entry = this.throttleMap.get(uid);
+		if (!entry) {
+			this.sendImmediate(uid, cot, undefined);
+			return;
+		}
+		if (now - entry.lastSent >= COT_THROTTLE_MS) {
+			this.sendImmediate(uid, cot, entry);
+			return;
+		}
+		this.scheduleDeferredSend(entry, cot, now);
+	}
+
 	/** Sends a CoT message, throttled to max 1 update/sec per entity UID. */
 	public sendCot(cot: CoT) {
 		if (!this.tak?.open) return;
@@ -305,14 +325,7 @@ export class TakService extends EventEmitter {
 			this.tak.write([cot]);
 			return;
 		}
-
-		const now = Date.now();
-		const entry = this.throttleMap.get(uid);
-		if (this.isThrottleReady(entry, now)) {
-			this.sendImmediate(uid, cot, entry);
-		} else {
-			this.scheduleDeferredSend(entry!, cot, now);
-		}
+		this.dispatchThrottledCot(uid, cot);
 	}
 
 	public async saveConfig(config: TakServerConfig) {

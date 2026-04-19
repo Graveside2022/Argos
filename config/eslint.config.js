@@ -152,5 +152,14 @@ export default [
 			}
 		}
 	},
+	{
+		// Production code under src/ must not use the `!` non-null assertion.
+		// Tests/scripts stay at the global 'warn' level (mocking + setup code
+		// legitimately uses `!` for type narrowing on known-safe values).
+		files: ['src/**/*.{js,ts,svelte}'],
+		rules: {
+			'@typescript-eslint/no-non-null-assertion': 'error'
+		}
+	},
 	prettier
 ];

@@ -125,7 +125,8 @@ export function updateDeviceFromSignal(
 	statements: Map<string, Database.Statement>,
 	signal: DbSignal
 ): void {
-	const existing = fetchExistingDevice(db, signal.device_id!);
+	if (!signal.device_id) return; // No device association — nothing to update.
+	const existing = fetchExistingDevice(db, signal.device_id);
 	if (existing) {
 		updateExistingDevice(db, signal);
 	} else {

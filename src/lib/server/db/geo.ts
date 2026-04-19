@@ -30,6 +30,20 @@ export function hasValidGpsCoords(
 }
 
 /**
+ * Validate + narrow GPS coordinates in one step. Returns the typed pair when
+ * valid (non-null, non-zero), `null` otherwise. Lets callers avoid `!` after
+ * a separate boolean check by carrying the narrowed types through the result.
+ */
+export function validateGpsCoords(
+	lat: number | null | undefined,
+	lon: number | null | undefined
+): { lat: number; lon: number } | null {
+	if (lat == null || lon == null) return null;
+	if (lat === 0 && lon === 0) return null;
+	return { lat, lon };
+}
+
+/**
  * Convert a center point and radius in meters to a bounding box in the
  * spatial-grid coordinate system used by the signals table index
  * (lat/lon multiplied by 10000, then cast to integer).

@@ -12,12 +12,13 @@ import { env } from '$lib/server/env';
  */
 const ALLOWED_PREFIXES = ['styles/', 'tiles/', 'data/', 'fonts/'];
 
-/** Validate request params, returning error Response or validated { apiKey, path }. */
-function validateTileRequest(params: { path?: string }): {
-	error?: Response;
-	apiKey?: string;
-	path?: string;
-} {
+/** Discriminated union: TS narrows on the `error` property so callers never need `!`. */
+type TileRequestValidation =
+	| { error: Response }
+	| { error?: undefined; apiKey: string; path: string };
+
+/** Validate request params, returning either an error Response or validated { apiKey, path }. */
+function validateTileRequest(params: { path?: string }): TileRequestValidation {
 	const apiKey = env.STADIA_MAPS_API_KEY;
 	if (!apiKey) {
 		return {
@@ -75,7 +76,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	if (validated.error) return validated.error;
 
 	try {
-		return await fetchAndProxy(validated.path!, validated.apiKey!, url.host);
+		return await fetchAndProxy(validated.path, validated.apiKey, url.host);
 	} catch {
 		return new Response('Upstream error', { status: 502 });
 	}

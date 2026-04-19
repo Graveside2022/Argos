@@ -1,6 +1,6 @@
 import { RawKismetDeviceSchema, SimplifiedKismetDeviceSchema } from '$lib/schemas/kismet';
 import { errMsg } from '$lib/server/api/error-utils';
-import { hasValidGpsCoords } from '$lib/server/db/geo';
+import { validateGpsCoords } from '$lib/server/db/geo';
 import { KismetProxy } from '$lib/server/kismet/kismet-proxy';
 import { getGpsPosition } from '$lib/server/services/gps/gps-position-service';
 import { logger } from '$lib/utils/logger';
@@ -28,8 +28,9 @@ export class KismetService {
 			const position = await getGpsPosition();
 			if (!position.success || !position.data) return null;
 			const { latitude, longitude } = position.data;
-			if (!hasValidGpsCoords(latitude, longitude)) return null;
-			return { latitude: latitude!, longitude: longitude! };
+			const valid = validateGpsCoords(latitude, longitude);
+			if (!valid) return null;
+			return { latitude: valid.lat, longitude: valid.lon };
 		} catch (error) {
 			logger.warn('Could not get GPS position', { error });
 			return null;
@@ -116,9 +117,8 @@ export class KismetService {
 		mac: string,
 		signalDbm: number
 	): { lat: number; lon: number } {
-		if (hasValidGpsCoords(deviceLat, deviceLon)) {
-			return { lat: deviceLat!, lon: deviceLon! };
-		}
+		const validDevice = validateGpsCoords(deviceLat, deviceLon);
+		if (validDevice) return validDevice;
 		if (gpsPosition) {
 			const angle = hashMAC(mac) * 2 * Math.PI;
 			const dist = signalToDistance(signalDbm, mac);

@@ -131,8 +131,11 @@ function handlePositionQueryFailure(error: unknown): GpsPositionResponse {
  * - Graceful degradation (serves cached data when gpsd unavailable)
  */
 /** Check if cached TPV data is still fresh */
-function hasFreshCache(): boolean {
-	return Boolean(cachedTPV) && Date.now() - cachedTPVTimestamp < TPV_CACHE_TTL_MS;
+/** Return cached TPV when within TTL, else null. Lets callers narrow without `!`. */
+function getFreshCache(): TPVData | null {
+	if (!cachedTPV) return null;
+	if (Date.now() - cachedTPVTimestamp >= TPV_CACHE_TTL_MS) return null;
+	return cachedTPV;
 }
 
 /** Process a successful gpsd query result, updating cache and circuit breaker */
@@ -149,7 +152,8 @@ export async function getGpsPosition(): Promise<GpsPositionResponse> {
 	const circuitBreakerResponse = checkPositionCircuitBreaker();
 	if (circuitBreakerResponse) return circuitBreakerResponse;
 
-	if (hasFreshCache()) return buildGpsResponse(cachedTPV!.mode >= 2, cachedTPV);
+	const fresh = getFreshCache();
+	if (fresh) return buildGpsResponse(fresh.mode >= 2, fresh);
 
 	try {
 		const allLines = await queryGpsd({ timeoutMs: 3000, collectMs: 2000 });
