@@ -153,7 +153,13 @@ function optionFlagArgs(options: BluedragonOptions): string[] {
 	return OPTION_FLAGS.filter(([key]) => options[key] === true).map(([, flag]) => flag);
 }
 
-function buildArgs(profile: BluedragonProfile, options: BluedragonOptions = {}): string[] {
+function activeFlagSummary(options: BluedragonOptions): string[] {
+	const flags = optionFlagArgs(options);
+	if (options.allChannels === true) flags.unshift('--all-channels');
+	return flags;
+}
+
+export function buildArgs(profile: BluedragonProfile, options: BluedragonOptions = {}): string[] {
 	const p = PROFILES[profile];
 	return [
 		'--live',
@@ -308,7 +314,11 @@ export async function startBluedragon(
 	state.frozenDevices = [];
 	state.frozenPacketCount = 0;
 	broadcastStatus();
-	logger.info('[bluedragon] Starting', { profile, options, bin: BD_BIN });
+	logger.info('[bluedragon] Starting', {
+		profile,
+		flags: activeFlagSummary(options),
+		bin: BD_BIN
+	});
 
 	try {
 		ensureFifo(BD_PCAP_PATH);
