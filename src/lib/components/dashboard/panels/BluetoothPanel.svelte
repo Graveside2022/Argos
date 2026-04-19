@@ -37,6 +37,9 @@
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let starting = $state(false);
 	let stopping = $state(false);
+	const togglesDisabled = $derived(
+		starting || $bluetoothStore.status === 'running' || $bluetoothStore.status === 'stopping'
+	);
 	let sortKey: SortKey = $state('last');
 	let sortDir: 'asc' | 'desc' = $state('desc');
 	let activeResizeCleanup: (() => void) | null = null;
@@ -216,7 +219,7 @@
 		<span class="packets">{$bluetoothStore.packetCount} pkts</span>
 		<button class="btn-clear" onclick={onClear}>Clear</button>
 		{#if $bluetoothStore.status === 'stopped'}
-			<select class="profile-select" bind:value={profile} disabled={starting}>
+			<select class="profile-select" bind:value={profile} disabled={togglesDisabled}>
 				<option value="clean">CLEAN (98% CRC)</option>
 				<option value="volume">VOLUME (recommended)</option>
 				<option value="max">MAX DECODE</option>
@@ -225,25 +228,45 @@
 				class="opt"
 				title="Capture full BLE band 2402–2480 MHz (96 channels). Default covers ch37+ch38 only."
 			>
-				<input type="checkbox" bind:checked={allChannels} disabled={starting} />
+				<input
+					type="checkbox"
+					bind:checked={allChannels}
+					disabled={togglesDisabled}
+					aria-label="All BLE channels (96 ch wideband)"
+				/>
 				ALL CH
 			</label>
 			<label
 				class="opt"
 				title="HCI LE active scan via system Bluetooth — enriches device names + services"
 			>
-				<input type="checkbox" bind:checked={activeScan} disabled={starting} />
+				<input
+					type="checkbox"
+					bind:checked={activeScan}
+					disabled={togglesDisabled}
+					aria-label="Active scan via system Bluetooth"
+				/>
 				ACTIVE
 			</label>
 			<label class="opt" title="GPS-tag every packet via gpsd (requires gpsd running)">
-				<input type="checkbox" bind:checked={gpsd} disabled={starting} />
+				<input
+					type="checkbox"
+					bind:checked={gpsd}
+					disabled={togglesDisabled}
+					aria-label="GPS tag every packet via gpsd"
+				/>
 				GPS
 			</label>
 			<label
 				class="opt"
 				title="Continuous LE Coded PHY (Long Range) scan on advertising channels — AirTag/IoT detection at distance"
 			>
-				<input type="checkbox" bind:checked={codedScan} disabled={starting} />
+				<input
+					type="checkbox"
+					bind:checked={codedScan}
+					disabled={togglesDisabled}
+					aria-label="LE Coded PHY long-range scan"
+				/>
 				CODED
 			</label>
 			<button class="btn-start" onclick={onStart} disabled={starting}>

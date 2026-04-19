@@ -72,13 +72,13 @@ export interface BluedragonStatusResult {
 	packetCount: number;
 	deviceCount: number;
 	profile: BluedragonProfile | null;
-	options: BluedragonOptions | null;
+	options?: BluedragonOptions | null;
 }
 
 export interface BluedragonControlRequest {
 	action: 'start' | 'stop';
 	profile?: BluedragonProfile;
-	options?: BluedragonOptions;
+	options?: BluedragonOptions | null;
 }
 
 export interface BluetoothDeviceUpdateMessage {

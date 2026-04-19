@@ -138,11 +138,11 @@ function reapStaleChild(): void {
 
 reapStaleChild();
 
-const OPTION_FLAGS: Array<[keyof BluedragonOptions, string]> = [
+const OPTION_FLAGS = [
 	['activeScan', '--active-scan'],
 	['gpsd', '--gpsd'],
 	['codedScan', '--coded-scan']
-];
+] as const satisfies ReadonlyArray<readonly [keyof BluedragonOptions, string]>;
 
 function captureRangeArgs(p: ProfileArgs, allChannels: boolean): string[] {
 	if (allChannels) return ['--all-channels'];
@@ -150,7 +150,7 @@ function captureRangeArgs(p: ProfileArgs, allChannels: boolean): string[] {
 }
 
 function optionFlagArgs(options: BluedragonOptions): string[] {
-	return OPTION_FLAGS.filter(([key]) => options[key]).map(([, flag]) => flag);
+	return OPTION_FLAGS.filter(([key]) => options[key] === true).map(([, flag]) => flag);
 }
 
 function buildArgs(profile: BluedragonProfile, options: BluedragonOptions = {}): string[] {

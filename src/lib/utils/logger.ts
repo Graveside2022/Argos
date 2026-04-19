@@ -82,6 +82,9 @@ class Logger {
 				}
 			}
 		}, 60000); // Every minute
+		// `unref` is Node-only; this module ships in client bundles too, where
+		// setInterval returns a number with no `.unref()` method. Keep the cast
+		// narrow + call optional so the browser path is a no-op.
 		(this.rateLimitCleanupInterval as { unref?: () => void }).unref?.();
 	}
 
