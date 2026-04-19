@@ -7,7 +7,10 @@
 import { config } from 'dotenv';
 config();
 
-import { getInstallationInstructions, installContextBConfig } from '../../src/lib/server/mcp';
+import {
+	getInstallationInstructions,
+	installContextBConfig
+} from '../../src/lib/server/mcp/config-generator';
 
 const args = process.argv.slice(2);
 const command = args[0] ?? '';
